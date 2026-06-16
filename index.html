@@ -188,6 +188,19 @@
   /* LOADING */
   .loader { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--text-muted); font-size: 13px; }
 
+  /* PRINT */
+  @media print {
+    #login-screen { display: none !important; }
+    .sidebar { display: none !important; }
+    .btn-save, .btn-secondary, button[onclick*="print"], button[onclick*="navigate"] { display: none !important; }
+    .main { padding: 0 !important; }
+    body { background: white !important; color: black !important; }
+    .section-card { border: 1px solid #ccc !important; background: white !important; }
+    .section-card-header { background: #f5f5f5 !important; color: black !important; }
+    .info-block, .form-field { background: #fafafa !important; border: 1px solid #eee !important; }
+    .info-value, .info-label, .form-label, .form-input, .stat-value, .stat-label { color: black !important; }
+    h2 { color: black !important; }
+  }
   /* RESPONSIVE */
   @media (max-width: 768px) {
     .sidebar { width: 180px; }
@@ -275,7 +288,7 @@ const MSAL_CONFIG = {
   auth: {
     clientId: '4b0a711d-2bd4-41a8-9782-0b7be5daab68',
     authority: 'https://login.microsoftonline.com/a4b1f96c-aa53-4dfc-b2ed-465bb3188198',
-    redirectUri: window.location.href.split('?')[0],
+    redirectUri: 'https://varendel.github.io/crm-assurex',
   }
 };
 
@@ -345,7 +358,7 @@ async function initMSAL() {
 
 async function loginMicrosoft() {
   try {
-    if (!msalInstance) await initMSAL();
+    if (!msalInstance) { await initMSAL(); }
     if (!msalInstance) { showError('Erreur initialisation Microsoft. Utilisez la connexion email.'); return; }
     const result = await msalInstance.loginPopup({ scopes: ['openid', 'profile', 'email', 'User.Read'] });
     const email = result.account.username;
@@ -575,6 +588,37 @@ function viewDashboard() {
       ${statCard('Rappels urgents', urgents.length, urgents.length > 0 ? '#f87171' : '#64748b')}
       ${statCard('Agents', allAgents.length, '#a78bfa')}
     </div>
+    <!-- Graphiques commissions -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
+        <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px">📊 Commissions — Gestion vs Acquisition</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px">Cumul 2026</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          ${[['Gestion (récurrentes)','#38bdf8',0],['Acquisition (nouvelles)','#4ade80',0]].map(([l,c,v])=>`
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span style="font-size:12px;color:var(--text-muted)">${l}</span>
+              <span style="font-size:12px;font-weight:800;color:${c}">CHF ${v.toLocaleString()}</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" style="width:0%;background:${c}"></div></div>
+          </div>`).join('')}
+        </div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
+        <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px">💼 Pipeline</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px">Signé vs Prévu</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          ${[['Chiffre signé','#f59e0b',0],['Chiffre prévu (pipeline)','#a78bfa',0]].map(([l,c,v])=>`
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span style="font-size:12px;color:var(--text-muted)">${l}</span>
+              <span style="font-size:12px;font-weight:800;color:${c}">CHF ${v.toLocaleString()}</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" style="width:0%;background:${c}"></div></div>
+          </div>`).join('')}
+        </div>
+      </div>
+    </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
       <div class="table-wrap">
         <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
@@ -698,7 +742,7 @@ async function showClient(id) {
         ${infoBlock('LPP (2e pilier)', c.lpp_actuel ? '✓ Affilié' : '✗ Non affilié')}
         ${infoBlock('Pilier 3a', c.pilier3a ? '✓ Actif' : '✗ Aucun')}
         ${infoBlock('Cotisation 3a', c.montant_3a ? 'CHF ' + c.montant_3a : '—')}
-        ${infoBlock('Plafond légal 2026', "CHF 7'056")}
+        ${infoBlock('Plafond légal 2026', "CHF 7\'056")}
       </div>`)}
     </div>
 
@@ -1014,16 +1058,156 @@ async function saveClient() {
     revenu: parseInt(document.getElementById('f-revenu').value) || 0,
     taux_activite: parseInt(document.getElementById('f-taux').value) || 100,
     statut: document.getElementById('f-statut').value,
-    segment: document.getElementById('f-segment').value,
+    segment: 'Privé',
     apporteur_id: document.getElementById('f-agent').value || null,
     notes: document.getElementById('f-notes').value || null,
   };
   const btn = document.querySelector('.btn-save');
-  btn.textContent = 'Enregistrement...';
-  btn.disabled = true;
+  btn.textContent = 'Enregistrement...'; btn.disabled = true;
   await dbPost('clients', body);
   allClients = await dbGet('clients', 'select=*');
   navigate('clients');
+}
+
+function formEntreprise() {
+  const agentOptions = allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
+  return `
+    <button onclick="navigate('nouveau-client')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
+    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouveau client — Entreprise</h2>
+    <div style="display:flex;gap:10px;margin-bottom:20px">
+      <button onclick="printForm()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🖨️ Imprimer</button>
+    </div>
+    ${sectionCard('Identification', '#f59e0b', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">Raison sociale *</label><input class="form-input" id="e-nom" placeholder="Dupont SA"/></div>
+      <div class="form-field"><label class="form-label">Forme juridique</label><select class="form-select" id="e-forme"><option>SA</option><option>Sàrl</option><option>Association</option><option>Fondation</option><option>Indépendant</option><option>Autre</option></select></div>
+      <div class="form-field"><label class="form-label">N° IDE (CHE)</label><input class="form-input" id="e-ide" placeholder="CHE-123.456.789"/></div>
+      <div class="form-field"><label class="form-label">Secteur d'activité</label><input class="form-input" id="e-secteur" placeholder="Construction, Restauration..."/></div>
+      <div class="form-field"><label class="form-label">Activité principale</label><input class="form-input" id="e-activite" placeholder="Décrire l'activité"/></div>
+      <div class="form-field"><label class="form-label">Soumis SUVA ?</label><select class="form-select" id="e-suva"><option value="">—</option><option value="oui">Oui</option><option value="non">Non</option></select></div>
+    </div>`)}
+    ${sectionCard('Contact & Adresse', '#38bdf8', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">Adresse</label><input class="form-input" id="e-adresse" placeholder="Rue du Commerce 1"/></div>
+      <div class="form-field"><label class="form-label">NPA / Ville</label><input class="form-input" id="e-ville" placeholder="1000 Lausanne"/></div>
+      <div class="form-field"><label class="form-label">Téléphone</label><input class="form-input" id="e-tel" placeholder="+41 21 XXX XX XX"/></div>
+      <div class="form-field"><label class="form-label">Email</label><input class="form-input" id="e-email" type="email" placeholder="contact@entreprise.ch"/></div>
+      <div class="form-field"><label class="form-label">Lieu du risque</label><input class="form-input" id="e-risque" placeholder="Si différent de l'adresse"/></div>
+    </div>`)}
+    ${sectionCard('Interlocuteur principal', '#a78bfa', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">Prénom</label><input class="form-input" id="e-contact-prenom" placeholder="Jean"/></div>
+      <div class="form-field"><label class="form-label">Nom</label><input class="form-input" id="e-contact-nom" placeholder="Dupont"/></div>
+      <div class="form-field"><label class="form-label">Fonction</label><input class="form-input" id="e-contact-fonction" placeholder="Directeur, RH..."/></div>
+      <div class="form-field"><label class="form-label">Mobile direct</label><input class="form-input" id="e-contact-mobile" placeholder="+41 79 XXX XX XX"/></div>
+      <div class="form-field"><label class="form-label">N° AVS (pour LPP)</label><input class="form-input" id="e-avs" placeholder="756.XXXX.XXXX.XX"/></div>
+      <div class="form-field"><label class="form-label">Statut indépendant</label><select class="form-select" id="e-independant"><option value="non">Non</option><option value="oui">Oui</option></select></div>
+    </div>`)}
+    ${sectionCard('Données de base de calcul (masse salariale AVS — max. 90\'720)', '#4ade80', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">Chiffre d'affaires (CHF)</label><input class="form-input" id="e-ca" type="number" placeholder="500000"/></div>
+      <div class="form-field"><label class="form-label">Nb collaborateurs</label><input class="form-input" id="e-collaborateurs" type="number" placeholder="5"/></div>
+      <div class="form-field"><label class="form-label">Masse salariale totale (CHF)</label><input class="form-input" id="e-ms-total" type="number" placeholder="250000"/></div>
+      <div class="form-field"><label class="form-label">MS chef d'entreprise (CHF)</label><input class="form-input" id="e-ms-chef" type="number" placeholder="120000"/></div>
+      <div class="form-field"><label class="form-label">MS AP Hommes (CHF)</label><input class="form-input" id="e-ms-ap-h" type="number" placeholder="0"/></div>
+      <div class="form-field"><label class="form-label">MS AP Femmes (CHF)</label><input class="form-input" id="e-ms-ap-f" type="number" placeholder="0"/></div>
+      <div class="form-field"><label class="form-label">MS ANP Hommes (CHF)</label><input class="form-input" id="e-ms-anp-h" type="number" placeholder="0"/></div>
+      <div class="form-field"><label class="form-label">MS ANP Femmes (CHF)</label><input class="form-input" id="e-ms-anp-f" type="number" placeholder="0"/></div>
+      <div class="form-field"><label class="form-label">Sal. excéd. AVS H (CHF)</label><input class="form-input" id="e-exc-h" type="number" placeholder="0"/></div>
+      <div class="form-field"><label class="form-label">Sal. excéd. AVS F (CHF)</label><input class="form-input" id="e-exc-f" type="number" placeholder="0"/></div>
+    </div>`)}
+    ${sectionCard('Assurances de personnes', '#38bdf8', `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+      ${['Perte de gain maladie','LAA','LPP','LAAF (indépendant)','LAAC','Semi-privée'].map(l => `
+      <label style="display:flex;align-items:center;gap:8px;background:var(--surface-alt);border-radius:8px;padding:10px 12px;cursor:pointer">
+        <input type="checkbox" id="e-ap-${l.replace(/\s/g,'-').toLowerCase()}" style="width:14px;height:14px;accent-color:#38bdf8"/>
+        <span style="font-size:12px;color:var(--text);font-weight:600">${l}</span>
+      </label>`).join('')}
+    </div>
+    <div style="margin-top:12px">
+      <div style="font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-bottom:8px">Perte de gain — délai d'attente</div>
+      <div style="display:flex;gap:8px">
+        ${['14j','30j','60j'].map(d => `<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="e-delai" value="${d}" style="accent-color:#38bdf8"/><span style="font-size:12px;color:var(--text)">${d}</span></label>`).join('')}
+      </div>
+    </div>`)}
+    ${sectionCard('Assurances vie', '#a78bfa', `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px">
+      ${['3a','3a indépendant','3B','Risque pur','Versement unique'].map(l => `
+      <label style="display:flex;align-items:center;gap:8px;background:var(--surface-alt);border-radius:8px;padding:10px 12px;cursor:pointer">
+        <input type="checkbox" style="width:14px;height:14px;accent-color:#a78bfa"/>
+        <span style="font-size:12px;color:var(--text);font-weight:600">${l}</span>
+      </label>`).join('')}
+    </div>
+    <div class="form-grid" style="margin-top:12px">
+      <div class="form-field"><label class="form-label">Budget épargne (CHF/an)</label><input class="form-input" id="e-budget-epargne" type="number" placeholder="0"/></div>
+      <div class="form-field"><label class="form-label">PA (prime annuelle)</label><input class="form-input" id="e-pa" type="number" placeholder="0"/></div>
+    </div>`)}
+    ${sectionCard('LPP', '#4ade80', `<div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">Sal. min coord. LPP 3780 - max. 64260 CHF - seuil entree 22680 - plafond sans ded. coord. 90720 CHF</div>
+    <div class="form-grid">
+      <div class="form-field"><label class="form-label">Soumis CCT ?</label><select class="form-select" id="e-cct"><option value="non">Non</option><option value="oui">Oui</option></select></div>
+      <div class="form-field"><label class="form-label">Taux LPP souhaité</label><select class="form-select" id="e-taux-lpp"><option>Min. légal 7/10/15/18</option><option>Spécifique</option></select></div>
+      <div class="form-field"><label class="form-label">Capital invalidité souhaité (CHF)</label><input class="form-input" id="e-cap-invalidite" type="number" placeholder="0"/></div>
+      <div class="form-field"><label class="form-label">Capital décès souhaité (CHF)</label><input class="form-input" id="e-cap-deces" type="number" placeholder="0"/></div>
+      <div class="form-field"><label class="form-label">Améliorations</label><input class="form-input" id="e-ameliorations" placeholder="rentes, épargne, tranches..."/></div>
+      <div class="form-field"><label class="form-label">Déduction coordinée</label><select class="form-select" id="e-ded-coord"><option>Avec déd. coord.</option><option>Sans déd. coord.</option></select></div>
+    </div>`)}
+    ${sectionCard('Responsabilité civile & Assurances choses', '#f87171', `<div class="form-grid">
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Risque particulier dans le domaine d'activité ?</label><input class="form-input" id="e-rc-risque" placeholder="Décrire si applicable"/></div>
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Lieux d'exploitation</label><input class="form-input" id="e-lieux" placeholder="Tous les lieux de risque"/></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
+      ${['RC/Commerce','Inventaire','Protection juridique','Perte exploitation','Machines','Vol','All Risk','Transports','Cyber','Construction/MO'].map(l => `
+      <label style="display:flex;align-items:center;gap:8px;background:var(--surface-alt);border-radius:8px;padding:10px 12px;cursor:pointer">
+        <input type="checkbox" style="width:14px;height:14px;accent-color:#f87171"/>
+        <span style="font-size:12px;color:var(--text);font-weight:600">${l}</span>
+      </label>`).join('')}
+    </div>
+    <div class="form-grid" style="margin-top:12px">
+      <div class="form-field"><label class="form-label">Inventaire — somme assurée (CHF)</label><input class="form-input" id="e-inventaire" type="number" placeholder="0"/></div>
+      <div class="form-field"><label class="form-label">Perte exploitation (CHF)</label><input class="form-input" id="e-perte-exploit" type="number" placeholder="0"/></div>
+    </div>`)}
+    ${sectionCard('Véhicules', '#64748b', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">N° plaque 1</label><input class="form-input" id="e-plaque1" placeholder="VD 123456"/></div>
+      <div class="form-field"><label class="form-label">Modèle 1</label><input class="form-input" id="e-modele1" placeholder="VW Transporter"/></div>
+      <div class="form-field"><label class="form-label">N° plaque 2</label><input class="form-input" id="e-plaque2" placeholder="VD 654321"/></div>
+      <div class="form-field"><label class="form-label">Modèle 2</label><input class="form-input" id="e-modele2" placeholder=""/></div>
+    </div>`)}
+    ${sectionCard('CRM', '#38bdf8', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="e-statut"><option value="prospect">Prospect</option><option value="actif">Actif</option></select></div>
+      <div class="form-field"><label class="form-label">Agent responsable</label><select class="form-select" id="e-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Notes</label><textarea class="form-input" id="e-notes" rows="3" style="resize:vertical"></textarea></div>
+    </div>`)}
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn-secondary" onclick="navigate('clients')">Annuler</button>
+      <button onclick="printEntreprise()" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 20px;font-weight:700;font-size:13px;cursor:pointer;color:var(--text-muted)">🖨️ Imprimer PDF</button>
+      <button class="btn-save" onclick="saveEntreprise()">✓ Enregistrer</button>
+    </div>`;
+}
+
+async function saveEntreprise() {
+  const nom = document.getElementById('e-nom').value.trim();
+  if (!nom) { alert('Raison sociale obligatoire.'); return; }
+  const contact = (document.getElementById('e-contact-prenom').value + ' ' + document.getElementById('e-contact-nom').value).trim();
+  const body = {
+    prenom: document.getElementById('e-contact-prenom').value || '',
+    nom,
+    email: document.getElementById('e-email').value || null,
+    tel: document.getElementById('e-tel').value || null,
+    adresse: document.getElementById('e-adresse').value || null,
+    ville: document.getElementById('e-ville').value || null,
+    avs: document.getElementById('e-avs').value || null,
+    profession: document.getElementById('e-secteur').value || null,
+    employeur: nom,
+    revenu: parseInt(document.getElementById('e-ca').value) || 0,
+    taux_activite: parseInt(document.getElementById('e-collaborateurs').value) || 0,
+    statut: document.getElementById('e-statut').value,
+    segment: 'Entreprise',
+    apporteur_id: document.getElementById('e-agent').value || null,
+    notes: document.getElementById('e-notes').value || null,
+  };
+  const btn = document.querySelector('.btn-save');
+  btn.textContent = 'Enregistrement...'; btn.disabled = true;
+  await dbPost('clients', body);
+  allClients = await dbGet('clients', 'select=*');
+  navigate('clients');
+}
+
+function printEntreprise() {
+  window.print();
 }
 
 // NOUVELLE OPPORTUNITE

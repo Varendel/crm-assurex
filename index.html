@@ -1,0 +1,1006 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>CRM Assurex</title>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="Assurex CRM"/>
+<meta name="theme-color" content="#0f172a"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-authentication-library/3.18.0/msal-browser.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #111827; color: #e2e8f0; min-height: 100vh; }
+  :root {
+    --bg: #111827; --surface: #1a2235; --surface-alt: #1f2a40;
+    --surface-hover: #243050; --border: #2a3550;
+    --accent: #38bdf8; --accent-dim: rgba(56,189,248,0.1); --accent-border: rgba(56,189,248,0.3);
+    --text: #e2e8f0; --text-muted: #64748b; --text-dim: #334155;
+    --gold: #f59e0b; --gold-dim: rgba(245,158,11,0.1);
+    --red: #f87171; --red-dim: rgba(248,113,113,0.1);
+    --green: #4ade80; --green-dim: rgba(74,222,128,0.1);
+    --purple: #a78bfa; --navy: #0f172a;
+  }
+  input, select, textarea, button { font-family: inherit; }
+  .hidden { display: none !important; }
+
+  /* LOGIN */
+  #login-screen {
+    min-height: 100vh; background: var(--navy);
+    display: flex; align-items: center; justify-content: center;
+    background-image: radial-gradient(ellipse at 30% 20%, rgba(56,189,248,0.06) 0%, transparent 60%);
+  }
+  .login-box { width: 100%; max-width: 420px; padding: 0 24px; }
+  .login-logo { text-align: center; margin-bottom: 36px; }
+  .login-logo img { width: 200px; filter: brightness(0) invert(1); margin-bottom: 8px; }
+  .login-logo .sub { font-size: 10px; color: var(--text-muted); font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
+  .login-logo .subsub { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+  .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; }
+  .login-card h2 { font-size: 17px; font-weight: 800; color: var(--text); text-align: center; margin-bottom: 24px; }
+  .btn-microsoft {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: #fff; color: #1a1a1a; border: none; border-radius: 10px;
+    padding: 12px 20px; font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 20px;
+    transition: opacity 0.15s;
+  }
+  .btn-microsoft:hover { opacity: 0.9; }
+  .divider { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .divider hr { flex: 1; border: none; border-top: 1px solid var(--border); }
+  .divider span { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+  .field-label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.8px; text-transform: uppercase; }
+  .field-input {
+    width: 100%; background: var(--surface-alt); border: 1px solid var(--border);
+    border-radius: 9px; padding: 10px 14px; color: var(--text); font-size: 13px; outline: none;
+  }
+  .field-input:focus { border-color: var(--accent-border); }
+  .field-wrap { margin-bottom: 14px; }
+  .pass-wrap { position: relative; }
+  .pass-wrap .field-input { padding-right: 40px; }
+  .pass-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; }
+  .btn-primary {
+    width: 100%; background: var(--accent); color: var(--navy); border: none;
+    border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 800; cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn-primary:disabled { opacity: 0.5; cursor: default; }
+  .btn-primary:hover:not(:disabled) { opacity: 0.9; }
+  .error-box { background: var(--red-dim); border: 1px solid rgba(248,113,113,0.3); border-radius: 8px; padding: 8px 12px; font-size: 12px; color: var(--red); margin-bottom: 16px; font-weight: 600; }
+  .demo-box { margin-top: 18px; background: var(--surface-alt); border-radius: 9px; padding: 12px 14px; border: 1px solid var(--border); }
+  .demo-box .demo-title { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .demo-item { display: flex; justify-content: space-between; padding: 5px 0; cursor: pointer; border: none; background: none; width: 100%; }
+  .demo-item:hover .demo-email { opacity: 0.8; }
+  .demo-email { font-size: 11px; font-weight: 700; }
+  .demo-pass { font-size: 11px; color: var(--text-muted); font-family: monospace; }
+  .login-footer { text-align: center; margin-top: 16px; font-size: 11px; color: var(--text-dim); }
+
+  /* APP */
+  #app { display: none; min-height: 100vh; flex-direction: row; }
+  #app.active { display: flex; }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 215px; background: var(--navy); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 18px 10px;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto; flex-shrink: 0;
+  }
+  .sidebar-logo { padding: 2px 8px 22px; }
+  .sidebar-logo img { width: 100%; max-width: 155px; filter: brightness(0) invert(1); }
+  .sidebar-logo .cofidex { font-size: 9px; color: var(--text-muted); font-weight: 700; letter-spacing: 1.5px; margin-top: 4px; }
+  .nav-section-btn {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    padding: 8px 10px; background: none; border: none; cursor: pointer;
+    font-weight: 700; font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    text-align: left; color: var(--text-muted); transition: color 0.15s;
+  }
+  .nav-section-btn.active { color: var(--accent); }
+  .nav-section-btn .arrow { margin-left: auto; font-size: 9px; }
+  .nav-item {
+    display: flex; align-items: center; width: 100%;
+    padding: 7px 10px 7px 26px; background: none; border: none; cursor: pointer;
+    font-size: 12.5px; font-weight: 500; text-align: left; color: var(--text-muted);
+    border-radius: 7px; margin-bottom: 1px; transition: all 0.1s;
+  }
+  .nav-item:hover { background: var(--surface); color: var(--text); }
+  .nav-item.active { background: var(--accent-dim); color: var(--accent); font-weight: 700; }
+  .nav-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--accent); margin-right: 6px; }
+  .sidebar-team { margin-top: auto; border-top: 1px solid var(--border); padding-top: 14px; }
+  .team-title { font-size: 9px; font-weight: 700; color: var(--text-dim); letter-spacing: 1.5px; text-transform: uppercase; padding-left: 8px; margin-bottom: 8px; }
+  .team-member { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 7px; }
+  .team-member.me { background: var(--accent-dim); }
+  .avatar { border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-family: monospace; flex-shrink: 0; }
+  .online-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); margin-left: auto; }
+  .btn-logout { margin-top: 12px; width: 100%; background: none; border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; color: var(--text-muted); font-size: 11px; font-weight: 700; cursor: pointer; text-align: left; }
+  .btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+  /* MAIN */
+  .main { flex: 1; padding: 30px 34px; overflow-y: auto; }
+
+  /* CARDS */
+  .stat-grid { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; flex: 1; min-width: 120px; }
+  .stat-label { color: var(--text-muted); font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 7px; }
+  .stat-value { font-size: 22px; font-weight: 800; line-height: 1.1; }
+  .stat-sub { color: var(--text-muted); font-size: 11px; margin-top: 4px; }
+
+  /* TABLE */
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .table-header { display: grid; padding: 9px 16px; border-bottom: 1px solid var(--border); font-size: 10px; color: var(--text-muted); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+  .table-row { display: grid; padding: 11px 16px; border-bottom: 1px solid var(--border); align-items: center; transition: background 0.1s; cursor: pointer; }
+  .table-row:last-child { border-bottom: none; }
+  .table-row:hover { background: var(--surface-hover); }
+  .table-empty { padding: 24px 16px; color: var(--text-muted); font-size: 13px; text-align: center; }
+
+  /* BADGE */
+  .badge { border-radius: 5px; padding: 2px 8px; font-size: 11px; font-weight: 700; white-space: nowrap; display: inline-block; }
+
+  /* SECTION CARD */
+  .section-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 14px; }
+  .section-card-header { padding: 12px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; }
+  .section-card-body { padding: 18px; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .info-block { background: var(--surface-alt); border-radius: 9px; padding: 10px 14px; }
+  .info-label { color: var(--text-muted); font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+  .info-value { color: var(--text); font-size: 13px; font-weight: 600; }
+
+  /* TABS */
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
+  .tab-btn { background: none; border: none; cursor: pointer; padding: 9px 14px; font-size: 12.5px; color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; }
+  .tab-btn.active { color: var(--accent); font-weight: 800; border-bottom-color: var(--accent); }
+
+  /* FORM */
+  .form-field { background: var(--surface-alt); border-radius: 9px; padding: 10px 14px; margin-bottom: 10px; }
+  .form-label { color: var(--text-muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; display: block; }
+  .form-input { width: 100%; background: transparent; border: none; color: var(--text); font-size: 13px; outline: none; font-family: inherit; }
+  .form-select { width: 100%; background: transparent; border: none; color: var(--text); font-size: 13px; outline: none; font-family: inherit; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* KANBAN */
+  .kanban { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; }
+  .kanban-col { flex: 1; min-width: 170px; }
+  .kanban-col-title { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+  .kanban-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .kanban-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+  .kanban-empty { font-size: 11px; color: var(--text-dim); padding: 10px 0; text-align: center; }
+
+  /* RAPPEL */
+  .rappel-item { display: flex; align-items: center; gap: 14px; padding: 13px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; }
+  .urgence-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .btn-traite { background: var(--green-dim); color: var(--green); border: 1px solid rgba(74,222,128,0.3); border-radius: 7px; padding: 5px 12px; font-size: 11px; font-weight: 800; cursor: pointer; }
+
+  /* BORDEREAU */
+  .bordereau-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 10px; }
+  .bordereau-header { display: flex; align-items: center; gap: 16px; padding: 16px 18px; cursor: pointer; transition: background 0.1s; }
+  .bordereau-header:hover { background: var(--surface-hover); }
+  .bordereau-body { border-top: 1px solid var(--border); padding: 14px 18px; }
+
+  /* NOUVEAU CLIENT */
+  .btn-secondary { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); border-radius: 9px; padding: 10px 20px; font-weight: 700; font-size: 13px; cursor: pointer; }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-save { background: var(--accent); color: var(--navy); border: none; border-radius: 9px; padding: 10px 24px; font-weight: 800; font-size: 13px; cursor: pointer; }
+  .btn-save:hover { opacity: 0.9; }
+  .btn-add { background: var(--accent); color: var(--navy); border: none; border-radius: 8px; padding: 8px 16px; font-weight: 800; font-size: 13px; cursor: pointer; }
+
+  /* PROGRESS BAR */
+  .progress-bar { height: 4px; background: var(--border); border-radius: 99px; }
+  .progress-fill { height: 100%; border-radius: 99px; }
+
+  /* LOADING */
+  .loader { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--text-muted); font-size: 13px; }
+
+  /* RESPONSIVE */
+  @media (max-width: 768px) {
+    .sidebar { width: 180px; }
+    .main { padding: 20px 16px; }
+    .stat-card { min-width: 100px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .info-grid { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">
+      <img src="data:image/png;base64,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" alt="Assurex"/>
+      <div class="sub">GROUPE COFIDEX</div>
+      <div class="subsub">Plateforme CRM — Espace sécurisé</div>
+    </div>
+    <div class="login-card">
+      <h2>Connexion</h2>
+      <button class="btn-microsoft" onclick="loginMicrosoft()">
+        <svg width="18" height="18" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+        Se connecter avec Microsoft
+      </button>
+      <div class="divider"><hr/><span>ou</span><hr/></div>
+      <div class="field-wrap">
+        <label class="field-label">Email</label>
+        <input class="field-input" type="email" id="login-email" placeholder="prenom@cofidex.ch" onkeydown="if(event.key==='Enter')doLogin()"/>
+      </div>
+      <div class="field-wrap">
+        <label class="field-label">Mot de passe</label>
+        <div class="pass-wrap">
+          <input class="field-input" type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
+          <button class="pass-toggle" onclick="togglePass()">👁</button>
+        </div>
+      </div>
+      <div id="login-error" class="error-box hidden"></div>
+      <button class="btn-primary" onclick="doLogin()">Se connecter</button>
+      <div class="demo-box">
+        <div class="demo-title">Connexion rapide</div>
+        <button class="demo-item" onclick="quickLogin('jo@cofidex.ch','admin1234')">
+          <span class="demo-email" style="color:#38bdf8">Jonathan Özkan</span>
+          <span class="demo-pass">Signataire</span>
+        </button>
+        <button class="demo-item" onclick="quickLogin('d.pereira@cofidex.ch','david1234')">
+          <span class="demo-email" style="color:#f59e0b">David Pereira</span>
+          <span class="demo-pass">Apporteur</span>
+        </button>
+        <button class="demo-item" onclick="quickLogin('a.espinoza@cofidex.ch','alex1234')">
+          <span class="demo-email" style="color:#a78bfa">Alejandro Espinoza</span>
+          <span class="demo-pass">Apporteur</span>
+        </button>
+      </div>
+    </div>
+    <div class="login-footer">🔒 Données hébergées en Suisse · Zurich</div>
+  </div>
+</div>
+
+<!-- ═══ APP ═══ -->
+<div id="app">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <img src="data:image/png;base64,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" alt="Assurex"/>
+      <div class="cofidex">GROUPE COFIDEX</div>
+    </div>
+    <div id="nav"></div>
+    <div class="sidebar-team">
+      <div class="team-title">Équipe</div>
+      <div id="team-list"></div>
+      <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
+    </div>
+  </div>
+  <!-- MAIN -->
+  <div class="main" id="main-content"></div>
+</div>
+
+<script>
+// ═══ CONFIG ═══
+const SUPABASE_URL = 'https://gutlkjovmsyazwcomoyt.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_DJtZwHKeA5X1ck1coAQFOA_xOd7c02i';
+const MSAL_CONFIG = {
+  auth: {
+    clientId: '4b0a711d-2bd4-41a8-9782-0b7be5daab68',
+    authority: 'https://login.microsoftonline.com/a4b1f96c-aa53-4dfc-b2ed-465bb3188198',
+    redirectUri: window.location.href.split('?')[0],
+  }
+};
+
+// ═══ STATE ═══
+let currentUser = null;
+let currentView = 'dashboard';
+let openSections = { vente: true, clients: true, compta: true, settings: false };
+let allAgents = [];
+let allClients = [];
+let allRappels = [];
+let msalInstance = null;
+let openBordereaux = {};
+
+// ═══ PASSWORDS (démo) ═══
+const PASSWORDS = {
+  'jo@cofidex.ch': { pwd: 'admin1234', prenom: 'Jonathan', nom: 'Özkan', role: 'signataire', taux: 100 },
+  'd.pereira@cofidex.ch': { pwd: 'david1234', prenom: 'David', nom: 'Pereira', role: 'apporteur', taux: 50 },
+  'a.espinoza@cofidex.ch': { pwd: 'alex1234', prenom: 'Alejandro', nom: 'Espinoza', role: 'apporteur', taux: 50 },
+};
+
+// ═══ COULEURS AGENTS ═══
+function agentColor(agent) {
+  if (!agent) return '#38bdf8';
+  if (agent.role === 'signataire') return '#38bdf8';
+  if (agent.prenom === 'David') return '#f59e0b';
+  return '#a78bfa';
+}
+
+// ═══ SUPABASE ═══
+async function dbGet(table, params = '') {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, {
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+    });
+    return await r.json();
+  } catch(e) { return []; }
+}
+
+async function dbPost(table, body) {
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+      body: JSON.stringify(body)
+    });
+    return await r.json();
+  } catch(e) { return null; }
+}
+
+async function dbPatch(table, id, body) {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+  } catch(e) {}
+}
+
+// ═══ MSAL ═══
+async function initMSAL() {
+  try {
+    msalInstance = new msal.PublicClientApplication(MSAL_CONFIG);
+    await msalInstance.initialize();
+  } catch(e) { msalInstance = null; }
+}
+
+async function loginMicrosoft() {
+  if (!msalInstance) { showError('Microsoft login non disponible en mode preview.'); return; }
+  try {
+    const result = await msalInstance.loginPopup({ scopes: ['openid', 'profile', 'email', 'User.Read'] });
+    const email = result.account.username;
+    const userData = PASSWORDS[email];
+    if (userData) {
+      const agents = await dbGet('agents', `email=eq.${email}&select=*`);
+      const agent = agents && agents[0] ? agents[0] : { id: email, prenom: userData.prenom, nom: userData.nom, email, role: userData.role, taux: userData.taux };
+      enterApp(agent);
+    } else {
+      showError('Compte non autorisé.');
+    }
+  } catch(e) { showError('Connexion Microsoft annulée.'); }
+}
+
+// ═══ LOGIN ═══
+function togglePass() {
+  const inp = document.getElementById('login-pass');
+  inp.type = inp.type === 'password' ? 'text' : 'password';
+}
+
+function showError(msg) {
+  const el = document.getElementById('login-error');
+  el.textContent = '⚠ ' + msg;
+  el.classList.remove('hidden');
+}
+
+function quickLogin(email, pwd) {
+  document.getElementById('login-email').value = email;
+  document.getElementById('login-pass').value = pwd;
+  doLogin();
+}
+
+function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pwd = document.getElementById('login-pass').value;
+  const userData = PASSWORDS[email];
+  if (userData && userData.pwd === pwd) {
+    document.getElementById('login-error').classList.add('hidden');
+    enterApp({ id: email, prenom: userData.prenom, nom: userData.nom, email, role: userData.role, taux: userData.taux });
+  } else {
+    showError('Email ou mot de passe incorrect.');
+  }
+}
+
+async function enterApp(user) {
+  currentUser = user;
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app').classList.add('active');
+  allAgents = await dbGet('agents', 'select=*');
+  allClients = await dbGet('clients', 'select=*');
+  allRappels = await dbGet('rappels', 'select=*&statut=eq.ouvert');
+  renderSidebar();
+  navigate('dashboard');
+}
+
+function logout() {
+  currentUser = null;
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('app').classList.remove('active');
+  document.getElementById('login-email').value = '';
+  document.getElementById('login-pass').value = '';
+}
+
+// ═══ SIDEBAR ═══
+const SECTIONS = [
+  { id: 'vente', label: 'Vente', icon: '◈', sub: [
+    { id: 'dashboard', label: 'Dashboard' },
+    { id: 'opportunites', label: 'Opportunités' },
+    { id: 'suivi', label: 'Suivi des affaires' },
+    { id: 'rappels', label: 'Rappels' },
+  ]},
+  { id: 'clients', label: 'Clients', icon: '◉', sub: [
+    { id: 'clients', label: 'Fiches clients' },
+  ]},
+  { id: 'compta', label: 'Comptabilité', icon: '◎', sub: [
+    { id: 'bordereaux', label: 'Bordereaux' },
+    { id: 'commissions', label: 'Commissions' },
+  ]},
+  { id: 'settings', label: 'Paramètres', icon: '⊙', sub: [
+    { id: 'agents', label: 'Agents' },
+  ]},
+];
+
+function renderSidebar() {
+  // Nav
+  let nav = '';
+  SECTIONS.forEach(sec => {
+    const isActive = sec.sub.some(s => s.id === currentView);
+    nav += `<button class="nav-section-btn ${isActive ? 'active' : ''}" onclick="toggleSection('${sec.id}')">
+      <span style="font-size:14px">${sec.icon}</span>${sec.label}
+      <span class="arrow">${openSections[sec.id] ? '▲' : '▼'}</span>
+    </button>`;
+    if (openSections[sec.id]) {
+      sec.sub.forEach(s => {
+        const active = s.id === currentView;
+        nav += `<button class="nav-item ${active ? 'active' : ''}" onclick="navigate('${s.id}')">
+          ${active ? '<span class="nav-dot"></span>' : ''}${s.label}
+        </button>`;
+      });
+    }
+  });
+  document.getElementById('nav').innerHTML = nav;
+
+  // Team
+  let team = '';
+  const agents = allAgents.length > 0 ? allAgents : [currentUser];
+  agents.forEach(a => {
+    const isMe = a.email === currentUser.email;
+    const color = agentColor(a);
+    const initials = (a.prenom[0] + a.nom[0]).toUpperCase();
+    team += `<div class="team-member ${isMe ? 'me' : ''}">
+      <div class="avatar" style="width:24px;height:24px;font-size:8px;background:${color}18;border:1.5px solid ${color}44;color:${color}">${initials}</div>
+      <div style="font-size:11.5px;font-weight:700;color:${isMe ? color : 'var(--text)'};">${a.prenom}</div>
+      ${isMe ? '<div class="online-dot"></div>' : ''}
+    </div>`;
+  });
+  document.getElementById('team-list').innerHTML = team;
+}
+
+function toggleSection(id) {
+  openSections[id] = !openSections[id];
+  renderSidebar();
+}
+
+function navigate(view) {
+  currentView = view;
+  renderSidebar();
+  renderView();
+}
+
+// ═══ HELPERS ═══
+function badge(label, color) {
+  return `<span class="badge" style="background:${color}15;color:${color};border:1px solid ${color}30">${label}</span>`;
+}
+
+function avatar(agent, size = 28) {
+  if (!agent) return '';
+  const color = agentColor(agent);
+  const initials = (agent.prenom[0] + agent.nom[0]).toUpperCase();
+  return `<div class="avatar" style="width:${size}px;height:${size}px;font-size:${size*0.33}px;background:${color}18;border:1.5px solid ${color}44;color:${color}">${initials}</div>`;
+}
+
+function agentById(id) { return allAgents.find(a => a.id === id); }
+
+function statutColor(s) {
+  if (s === 'actif') return '#4ade80';
+  if (s === 'prospect') return '#f59e0b';
+  return '#64748b';
+}
+
+function statCard(label, value, color, sub = '') {
+  return `<div class="stat-card">
+    <div class="stat-label">${label}</div>
+    <div class="stat-value" style="color:${color}">${value}</div>
+    ${sub ? `<div class="stat-sub">${sub}</div>` : ''}
+  </div>`;
+}
+
+function infoBlock(label, value) {
+  return `<div class="info-block"><div class="info-label">${label}</div><div class="info-value">${value || '—'}</div></div>`;
+}
+
+function sectionCard(title, accentColor, content) {
+  return `<div class="section-card" style="border-color:${accentColor}33">
+    <div class="section-card-header" style="border-color:${accentColor}22">
+      <div style="width:3px;height:14px;border-radius:99px;background:${accentColor}"></div>
+      <span style="color:${accentColor}">${title}</span>
+    </div>
+    <div class="section-card-body">${content}</div>
+  </div>`;
+}
+
+// ═══ VIEWS ═══
+function renderView() {
+  const main = document.getElementById('main-content');
+  switch (currentView) {
+    case 'dashboard': main.innerHTML = viewDashboard(); break;
+    case 'clients': main.innerHTML = viewClients(); break;
+    case 'opportunites': main.innerHTML = viewOpportunites(); break;
+    case 'suivi': main.innerHTML = viewSuivi(); break;
+    case 'rappels': main.innerHTML = viewRappels(); break;
+    case 'bordereaux': main.innerHTML = viewBordereaux(); break;
+    case 'commissions': main.innerHTML = viewCommissions(); break;
+    case 'agents': main.innerHTML = viewAgents(); break;
+    default: main.innerHTML = viewDashboard();
+  }
+}
+
+// DASHBOARD
+function viewDashboard() {
+  const actifs = allClients.filter(c => c.statut === 'actif').length;
+  const totalCA = allClients.reduce((s, c) => s + (c.ca || 0), 0);
+  const urgents = allRappels.filter(r => r.urgence === 'haute');
+  const now = new Date().toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+
+  let rappelRows = urgents.length > 0 ? urgents.map(r => `
+    <div style="padding:11px 18px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:center">
+      <div style="width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0"></div>
+      <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--text)">${r.titre}</div><div style="font-size:11px;color:var(--text-muted)">${r.date_echeance || ''}</div></div>
+    </div>`).join('') : '<div style="padding:16px 18px;color:var(--text-muted);font-size:13px">Aucun rappel urgent</div>';
+
+  let teamRows = allAgents.map((a, i) => {
+    const nb = allClients.filter(c => c.apporteur_id === a.id).length;
+    const pct = allClients.length > 0 ? Math.round((nb / allClients.length) * 100) : 0;
+    const color = agentColor(a);
+    return `<div style="margin-bottom:14px">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:5px">
+        ${avatar(a, 24)}
+        <div style="flex:1"><div style="font-size:12px;font-weight:700;color:var(--text)">${a.prenom} ${a.nom}</div><div style="font-size:10px;color:var(--text-muted)">${nb} clients</div></div>
+        <span style="font-size:12px;font-weight:800;color:${color}">${pct}%</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${color}"></div></div>
+    </div>`;
+  }).join('');
+
+  return `
+    <div style="margin-bottom:4px;color:var(--text-muted);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase">${now}</div>
+    <h1 style="margin:0 0 4px;font-size:24px;font-weight:900;color:var(--text)">Bonjour, ${currentUser.prenom} 👋</h1>
+    <div style="color:var(--text-muted);font-size:13px;margin-bottom:24px">Assurex Sàrl · Groupe Cofidex</div>
+    <div class="stat-grid">
+      ${statCard('Clients actifs', actifs, '#38bdf8', `${allClients.length} total`)}
+      ${statCard('CA portefeuille', 'CHF ' + totalCA.toLocaleString(), '#f59e0b')}
+      ${statCard('Rappels urgents', urgents.length, urgents.length > 0 ? '#f87171' : '#64748b')}
+      ${statCard('Agents', allAgents.length, '#a78bfa')}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+      <div class="table-wrap">
+        <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+          <div style="font-weight:700;font-size:13px;color:var(--text)">🔔 Rappels urgents</div>
+          ${badge(urgents.length + ' urgents', '#f87171')}
+        </div>
+        ${rappelRows}
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
+        <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:16px">👥 Répartition équipe</div>
+        ${teamRows || '<div style="color:var(--text-muted);font-size:13px">Chargement...</div>'}
+      </div>
+    </div>`;
+}
+
+// CLIENTS
+function viewClients() {
+  const cols = '1fr 160px 85px 90px 55px';
+  let rows = allClients.map(c => {
+    const agent = agentById(c.apporteur_id);
+    return `<div class="table-row" style="grid-template-columns:${cols}" onclick="showClient('${c.id}')">
+      <div><div style="font-weight:700;font-size:13px;color:var(--text)">${c.prenom} ${c.nom}</div><div style="font-size:11px;color:var(--text-muted)">${c.ville || ''} · ${c.profession || ''}</div></div>
+      <div><div style="font-size:11px;color:var(--text)">${c.email || ''}</div><div style="font-size:11px;color:var(--text-muted)">${c.mobile || ''}</div></div>
+      <div>${badge(c.statut || '—', statutColor(c.statut))}</div>
+      <div style="font-size:12px;color:var(--text-muted)">${c.segment || '—'}</div>
+      <div>${agent ? avatar(agent, 26) : ''}</div>
+    </div>`;
+  }).join('') || '<div class="table-empty">Aucun client. Cliquez sur + Nouveau client.</div>';
+
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Clients (${allClients.length})</h2>
+      <button class="btn-add" onclick="navigate('nouveau-client')">+ Nouveau client</button>
+    </div>
+    <div class="table-wrap">
+      <div class="table-header" style="grid-template-columns:${cols}">
+        <div>Client</div><div>Contact</div><div>Statut</div><div>Segment</div><div>Agent</div>
+      </div>
+      ${rows}
+    </div>`;
+}
+
+// FICHE CLIENT
+async function showClient(id) {
+  currentView = 'fiche-client';
+  renderSidebar();
+  const main = document.getElementById('main-content');
+  main.innerHTML = '<div class="loader">Chargement...</div>';
+  const [clients, contrats, rappels] = await Promise.all([
+    dbGet('clients', `id=eq.${id}&select=*`),
+    dbGet('contrats', `client_id=eq.${id}&select=*`),
+    dbGet('rappels', `client_id=eq.${id}&select=*`),
+  ]);
+  const c = clients[0];
+  if (!c) { main.innerHTML = '<div class="loader">Client introuvable.</div>'; return; }
+  const agent = agentById(c.apporteur_id);
+  const color = agentColor(agent);
+
+  main.innerHTML = `
+    <button onclick="navigate('clients')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour aux clients</button>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:18px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
+        <div style="display:flex;gap:14px;align-items:center">
+          <div style="width:52px;height:52px;border-radius:50%;background:var(--accent-dim);border:2px solid var(--accent-border);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:var(--accent)">${c.prenom[0]}${c.nom[0]}</div>
+          <div>
+            <h2 style="margin:0;font-size:20px;font-weight:900;color:var(--text)">${c.prenom} ${c.nom}</h2>
+            <div style="color:var(--text-muted);font-size:12px;margin-top:2px">${c.profession || ''} · ${c.employeur || ''}</div>
+            <div style="color:var(--text-muted);font-size:12px">${c.adresse || ''} ${c.npa || ''} ${c.ville || ''}</div>
+          </div>
+        </div>
+        <div style="display:flex;gap:8px">${badge(c.segment || 'Privé', '#38bdf8')} ${badge(c.statut || 'prospect', statutColor(c.statut))}</div>
+      </div>
+      <div class="stat-grid" style="margin-bottom:16px">
+        ${statCard('Contrats', contrats.length, '#38bdf8')}
+        ${statCard('Rappels ouverts', rappels.filter(r => r.statut === 'ouvert').length, rappels.filter(r => r.statut === 'ouvert').length > 0 ? '#f87171' : '#64748b')}
+        ${statCard('CA annuel', c.ca ? 'CHF ' + Number(c.ca).toLocaleString() : '—', '#f59e0b')}
+      </div>
+      ${agent ? `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface-alt);border-radius:10px">
+        ${avatar(agent, 36)}
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">${agent.prenom} ${agent.nom}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${agent.role === 'signataire' ? 'Réseau Jonathan · 100%' : 'Apporteur · 50/50'}</div>
+        </div>
+        ${c.mobile ? `<a href="tel:${c.mobile}" style="margin-left:auto;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;text-decoration:none">📞</a>` : ''}
+        ${c.email ? `<a href="mailto:${c.email}" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;text-decoration:none">✉️</a>` : ''}
+      </div>` : ''}
+    </div>
+
+    <div class="tabs">
+      <button class="tab-btn active" onclick="switchTab(this,'tab-identite')">Identité</button>
+      <button class="tab-btn" onclick="switchTab(this,'tab-prevoyance')">Prévoyance</button>
+      <button class="tab-btn" onclick="switchTab(this,'tab-contrats')">Contrats (${contrats.length})</button>
+      <button class="tab-btn" onclick="switchTab(this,'tab-rappels')">Rappels (${rappels.length})</button>
+      <button class="tab-btn" onclick="switchTab(this,'tab-notes')">Notes</button>
+    </div>
+
+    <div id="tab-identite">
+      ${sectionCard('Coordonnées personnelles', '#38bdf8', `<div class="info-grid">
+        ${infoBlock('Prénom', c.prenom)} ${infoBlock('Nom', c.nom)}
+        ${infoBlock('Date de naissance', c.date_naissance)} ${infoBlock('Nationalité', c.nationalite)}
+        ${infoBlock('État civil', c.etat_civil)} ${infoBlock('Enfants', c.enfants > 0 ? c.enfants : 'Aucun')}
+        ${infoBlock('N° AVS', c.avs)} ${infoBlock('Langue', c.langue === 'FR' ? 'Français' : c.langue === 'DE' ? 'Allemand' : 'Italien')}
+      </div>`)}
+      ${sectionCard('Contact', '#f59e0b', `<div class="info-grid">
+        ${infoBlock('Adresse', c.adresse)} ${infoBlock('NPA / Ville', (c.npa || '') + ' ' + (c.ville || ''))}
+        ${infoBlock('Canton', c.canton)} ${infoBlock('Email', c.email)}
+        ${infoBlock('Téléphone fixe', c.tel)} ${infoBlock('Mobile', c.mobile)}
+      </div>`)}
+      ${sectionCard('Coordonnées bancaires', '#a78bfa', `<div class="info-grid">
+        ${infoBlock('Banque', c.banque)} ${infoBlock('IBAN', c.iban)}
+      </div>`)}
+      ${sectionCard('Situation professionnelle', '#4ade80', `<div class="info-grid">
+        ${infoBlock('Profession', c.profession)} ${infoBlock('Employeur', c.employeur)}
+        ${infoBlock('Revenu annuel brut', c.revenu ? 'CHF ' + Number(c.revenu).toLocaleString() : '—')}
+        ${infoBlock("Taux d'activité", c.taux_activite ? c.taux_activite + '%' : '—')}
+      </div>`)}
+    </div>
+
+    <div id="tab-prevoyance" class="hidden">
+      ${sectionCard('Prévoyance', '#38bdf8', `<div class="info-grid">
+        ${infoBlock('LPP (2e pilier)', c.lpp_actuel ? '✓ Affilié' : '✗ Non affilié')}
+        ${infoBlock('Pilier 3a', c.pilier3a ? '✓ Actif' : '✗ Aucun')}
+        ${infoBlock('Cotisation 3a', c.montant_3a ? 'CHF ' + c.montant_3a : '—')}
+        ${infoBlock('Plafond légal 2026', "CHF 7'056")}
+      </div>`)}
+    </div>
+
+    <div id="tab-contrats" class="hidden">
+      ${contrats.length > 0 ? `<div class="table-wrap"><div class="table-header" style="grid-template-columns:1fr 120px 100px 110px 100px"><div>Produit</div><div>Compagnie</div><div>Échéance</div><div>Prime/an</div><div>Statut</div></div>
+      ${contrats.map(ct => `<div class="table-row" style="grid-template-columns:1fr 120px 100px 110px 100px">
+        <div><div style="font-weight:700;font-size:13px;color:var(--text)">${ct.produit}</div><div style="font-size:11px;color:var(--text-muted)">${ct.numero_police || ''}</div></div>
+        <div style="font-size:13px;color:var(--text)">${ct.compagnie}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${ct.date_echeance || ''}</div>
+        <div style="font-weight:800;color:#f59e0b">CHF ${Number(ct.prime_annuelle || 0).toLocaleString()}</div>
+        <div>${badge(ct.statut, ct.statut === 'actif' ? '#4ade80' : ct.statut === 'renouveler' ? '#f59e0b' : '#f87171')}</div>
+      </div>`).join('')}</div>` : '<div class="table-empty">Aucun contrat.</div>'}
+    </div>
+
+    <div id="tab-rappels" class="hidden">
+      ${rappels.length > 0 ? rappels.map(r => `<div class="rappel-item">
+        <div class="urgence-dot" style="background:${r.urgence === 'haute' ? '#f87171' : r.urgence === 'moyenne' ? '#f59e0b' : '#64748b'}"></div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--text)">${r.titre}</div><div style="font-size:11px;color:var(--text-muted)">${r.type || ''}</div></div>
+        <span style="font-size:12px;color:var(--text-muted)">${r.date_echeance || ''}</span>
+      </div>`).join('') : '<div class="table-empty">Aucun rappel.</div>'}
+    </div>
+
+    <div id="tab-notes" class="hidden">
+      ${sectionCard('Notes', '#64748b', `
+        <div style="color:var(--text);font-size:13px;line-height:1.7;margin-bottom:16px">${c.notes || 'Aucune note.'}</div>
+        <textarea placeholder="Ajouter une note..." style="width:100%;background:var(--surface-alt);border:1px solid var(--border);border-radius:9px;padding:10px 14px;color:var(--text);font-size:13px;outline:none;resize:vertical;min-height:80px;font-family:inherit;box-sizing:border-box"></textarea>
+        <button class="btn-save" style="margin-top:8px">Enregistrer</button>
+      `)}
+    </div>`;
+}
+
+function switchTab(btn, tabId) {
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  ['tab-identite','tab-prevoyance','tab-contrats','tab-rappels','tab-notes'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('hidden', id !== tabId);
+  });
+}
+
+// OPPORTUNITÉS
+function viewOpportunites() {
+  const OPPS = [
+    { client:'Luca Rossi', titre:'Vie mixte 20 ans', compagnie:'Swiss Life', montant:3200, prob:70, stade:'Proposition', apporteur_id: allAgents[2]?.id },
+    { client:'Marc Fontaine', titre:'LPP cadre supérieur', compagnie:'Zurich', montant:12000, prob:85, stade:'Négociation', apporteur_id: allAgents[0]?.id },
+    { client:'Sophie Durand', titre:'Renouvellement multirisque', compagnie:'Generali', montant:1800, prob:90, stade:'Négociation', apporteur_id: allAgents[1]?.id },
+    { client:'Céline Martin', titre:'Pilier 3a', compagnie:'Helvetia', montant:2400, prob:60, stade:'Contact', apporteur_id: allAgents[2]?.id },
+    { client:'Thomas Weber', titre:'RC entreprise', compagnie:'AXA', montant:8500, prob:45, stade:'Analyse', apporteur_id: allAgents[0]?.id },
+  ];
+  const stadeColor = { Contact:'#64748b', Analyse:'#38bdf8', Proposition:'#f59e0b', Négociation:'#a78bfa' };
+  const stades = ['Contact','Analyse','Proposition','Négociation'];
+  const total = OPPS.reduce((s,o) => s+o.montant, 0);
+  const pondere = OPPS.reduce((s,o) => s+Math.round(o.montant*o.prob/100), 0);
+
+  let kanban = stades.map(stade => {
+    const opps = OPPS.filter(o => o.stade === stade);
+    const color = stadeColor[stade];
+    return `<div class="kanban-col">
+      <div class="kanban-col-title">
+        <div class="kanban-dot" style="background:${color}"></div>
+        <div style="font-size:11px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:0.8px">${stade}</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-left:auto">${opps.length}</div>
+      </div>
+      ${opps.map(o => `<div class="kanban-card">
+        <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:4px">${o.titre}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">${o.client} · ${o.compagnie}</div>
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <span style="font-size:13px;font-weight:800;color:#f59e0b">CHF ${o.montant.toLocaleString()}</span>
+          ${o.apporteur_id ? avatar(agentById(o.apporteur_id), 22) : ''}
+        </div>
+        <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:${o.prob}%;background:${color}"></div></div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:3px">${o.prob}%</div>
+      </div>`).join('')}
+      ${opps.length === 0 ? '<div class="kanban-empty">Aucune</div>' : ''}
+    </div>`;
+  }).join('');
+
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Opportunités</h2>
+      <button class="btn-add">+ Nouvelle opportunité</button>
+    </div>
+    <div class="stat-grid" style="margin-bottom:20px">
+      ${statCard('Pipeline total', 'CHF ' + total.toLocaleString(), '#f59e0b')}
+      ${statCard('Pondéré', 'CHF ' + pondere.toLocaleString(), '#38bdf8')}
+      ${statCard('En cours', OPPS.length, '#e2e8f0')}
+    </div>
+    <div class="kanban">${kanban}</div>`;
+}
+
+// SUIVI
+function viewSuivi() {
+  const CONTRATS = [
+    { produit:'Vie mixte', numero_police:'SL-2024-4521', client:'Marc Fontaine', compagnie:'Swiss Life', date_echeance:'01.01.2034', prime_annuelle:1400, statut:'actif' },
+    { produit:'RC privée', numero_police:'AX-2023-7832', client:'Sophie Durand', compagnie:'AXA', date_echeance:'01.03.2024', prime_annuelle:850, statut:'renouveler' },
+    { produit:'LPP', numero_police:'ZU-2022-1234', client:'Isabelle Müller', compagnie:'Zurich', date_echeance:'01.06.2037', prime_annuelle:2100, statut:'actif' },
+    { produit:'Multirisque', numero_police:'HE-2024-5678', client:'Pierre Blanc', compagnie:'Helvetia', date_echeance:'01.01.2025', prime_annuelle:640, statut:'résilié' },
+    { produit:'Pilier 3a', numero_police:'GE-2023-9012', client:'Céline Martin', compagnie:'Generali', date_echeance:'01.09.2043', prime_annuelle:5600, statut:'actif' },
+  ];
+  const cols = '1fr 140px 110px 100px 110px 100px';
+  const rows = CONTRATS.map(ct => `<div class="table-row" style="grid-template-columns:${cols}">
+    <div><div style="font-weight:700;font-size:13px;color:var(--text)">${ct.produit}</div><div style="font-size:11px;color:var(--text-muted)">${ct.numero_police}</div></div>
+    <div style="font-size:13px;color:var(--text)">${ct.client}</div>
+    <div style="font-size:13px;color:var(--text)">${ct.compagnie}</div>
+    <div style="font-size:12px;color:var(--text-muted)">${ct.date_echeance}</div>
+    <div style="font-weight:800;color:#f59e0b">CHF ${ct.prime_annuelle.toLocaleString()}</div>
+    <div>${badge(ct.statut, ct.statut === 'actif' ? '#4ade80' : ct.statut === 'renouveler' ? '#f59e0b' : '#f87171')}</div>
+  </div>`).join('');
+  return `
+    <h2 style="margin:0 0 18px;font-size:18px;font-weight:800;color:var(--text)">Suivi des affaires</h2>
+    <div class="table-wrap">
+      <div class="table-header" style="grid-template-columns:${cols}"><div>Produit</div><div>Client</div><div>Compagnie</div><div>Échéance</div><div>Prime/an</div><div>Statut</div></div>
+      ${rows}
+    </div>`;
+}
+
+// RAPPELS
+function viewRappels() {
+  const uc = u => u === 'haute' ? '#f87171' : u === 'moyenne' ? '#f59e0b' : '#64748b';
+  const sections = ['haute','moyenne','basse'].map(urg => {
+    const list = allRappels.filter(r => r.urgence === urg && r.statut === 'ouvert');
+    if (!list.length) return '';
+    return `<div style="margin-bottom:20px">
+      <div style="font-size:11px;font-weight:700;color:${uc(urg)};text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">${urg === 'haute' ? '🔴 Urgents' : urg === 'moyenne' ? '🟡 Cette semaine' : '⚪ À planifier'}</div>
+      ${list.map(r => `<div class="rappel-item">
+        <div class="urgence-dot" style="background:${uc(r.urgence)}"></div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--text)">${r.titre}</div><div style="font-size:11px;color:var(--text-muted)">${r.date_echeance || ''}</div></div>
+        ${badge(r.type || 'Suivi', '#64748b')}
+        <button class="btn-traite" onclick="traiterRappel('${r.id}')">✓ Traité</button>
+      </div>`).join('')}
+    </div>`;
+  }).join('');
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Rappels</h2>
+      <button class="btn-add">+ Nouveau rappel</button>
+    </div>
+    <div class="stat-grid" style="margin-bottom:20px">
+      ${statCard('Urgents', allRappels.filter(r=>r.urgence==='haute'&&r.statut==='ouvert').length, '#f87171')}
+      ${statCard('Cette semaine', allRappels.filter(r=>r.urgence==='moyenne'&&r.statut==='ouvert').length, '#f59e0b')}
+      ${statCard('À planifier', allRappels.filter(r=>r.urgence==='basse'&&r.statut==='ouvert').length, '#64748b')}
+    </div>
+    ${sections || '<div class="table-empty">Aucun rappel ouvert.</div>'}`;
+}
+
+async function traiterRappel(id) {
+  await dbPatch('rappels', id, { statut: 'traité' });
+  allRappels = allRappels.filter(r => r.id !== id);
+  navigate('rappels');
+}
+
+// BORDEREAUX
+function viewBordereaux() {
+  const BORDS = [
+    { id:'b1', compagnie:'Swiss Life', mois:'Juin 2026', montant_brut:3840, statut:'reçu', date_reception:'10.06.2026', commissions:[
+      { client:'Marc Fontaine', contrat:'SL-2024-4521', montant:1200, apporteur:'jonathan' },
+      { client:'Isabelle Müller', contrat:'ZU-2022-1234', montant:2100, apporteur:'jonathan' },
+      { client:'Marc Fontaine', contrat:'SL-2024-4521', montant:540, apporteur:'david' },
+    ]},
+    { id:'b2', compagnie:'AXA', mois:'Juin 2026', montant_brut:850, statut:'reçu', date_reception:'08.06.2026', commissions:[
+      { client:'Sophie Durand', contrat:'AX-2023-7832', montant:850, apporteur:'david' },
+    ]},
+    { id:'b3', compagnie:'Generali', mois:'Juin 2026', montant_brut:980, statut:'attendu', date_reception:null, commissions:[
+      { client:'Céline Martin', contrat:'GE-2023-9012', montant:980, apporteur:'alejandro' },
+    ]},
+  ];
+
+  const totalRecu = BORDS.filter(b=>b.statut==='reçu').reduce((s,b)=>s+b.montant_brut,0);
+  const totalAttendu = BORDS.filter(b=>b.statut==='attendu').reduce((s,b)=>s+b.montant_brut,0);
+
+  const cards = BORDS.map(b => {
+    const pJ = b.commissions.filter(c=>c.apporteur==='jonathan').reduce((s,c)=>s+c.montant,0)
+             + b.commissions.filter(c=>c.apporteur!=='jonathan').reduce((s,c)=>s+Math.round(c.montant*0.5),0);
+    const pA = b.commissions.filter(c=>c.apporteur!=='jonathan').reduce((s,c)=>s+Math.round(c.montant*0.5),0);
+    const isOpen = openBordereaux[b.id];
+
+    return `<div class="bordereau-card">
+      <div class="bordereau-header" onclick="toggleBordereau('${b.id}')">
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:800;color:var(--text)">${b.compagnie}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${b.mois}${b.date_reception ? ' · Reçu le ' + b.date_reception : ''}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:16px;font-weight:900;color:#f59e0b">CHF ${b.montant_brut.toLocaleString()}</div>
+          <div style="font-size:10px;color:var(--text-muted)">Brut</div>
+        </div>
+        ${badge(b.statut, b.statut === 'reçu' ? '#4ade80' : '#f59e0b')}
+        <div style="font-size:14px;color:var(--text-muted)">${isOpen ? '▲' : '▼'}</div>
+      </div>
+      ${isOpen ? `<div class="bordereau-body">
+        <div style="display:flex;gap:10px;margin-bottom:14px">
+          <div style="flex:1;background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:10px 14px">
+            <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Part Jonathan</div>
+            <div style="font-size:16px;font-weight:900;color:#38bdf8">CHF ${pJ}</div>
+          </div>
+          <div style="flex:1;background:var(--gold-dim);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:10px 14px">
+            <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Part apporteurs</div>
+            <div style="font-size:16px;font-weight:900;color:#f59e0b">CHF ${pA}</div>
+          </div>
+        </div>
+        ${b.commissions.map((c, i) => {
+          const isJ = c.apporteur === 'jonathan';
+          const pJc = isJ ? c.montant : Math.round(c.montant * 0.5);
+          const pAc = isJ ? 0 : Math.round(c.montant * 0.5);
+          const agentObj = allAgents.find(a => a.prenom.toLowerCase() === c.apporteur || a.role === 'signataire' && c.apporteur === 'jonathan');
+          return `<div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:${i < b.commissions.length-1 ? '1px solid var(--border)' : 'none'}">
+            ${agentObj ? avatar(agentObj, 24) : ''}
+            <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--text)">${c.client}</div><div style="font-size:11px;color:var(--text-muted)">${c.contrat}</div></div>
+            <div style="text-align:right"><div style="font-size:12px;color:#38bdf8;font-weight:700">J: CHF ${pJc}</div>${pAc > 0 ? `<div style="font-size:12px;color:#f59e0b;font-weight:700">A: CHF ${pAc}</div>` : ''}</div>
+            <div style="font-weight:800;color:var(--text);font-size:13px;min-width:70px;text-align:right">CHF ${c.montant}</div>
+          </div>`;
+        }).join('')}
+      </div>` : ''}
+    </div>`;
+  }).join('');
+
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Bordereaux de commissions</h2>
+      <button class="btn-add">+ Saisir bordereau</button>
+    </div>
+    <div class="stat-grid" style="margin-bottom:20px">
+      ${statCard('Reçus', 'CHF ' + totalRecu.toLocaleString(), '#4ade80')}
+      ${statCard('Attendus', 'CHF ' + totalAttendu.toLocaleString(), '#f59e0b')}
+    </div>
+    ${cards}`;
+}
+
+function toggleBordereau(id) {
+  openBordereaux[id] = !openBordereaux[id];
+  navigate('bordereaux');
+}
+
+// COMMISSIONS
+function viewCommissions() {
+  const COMMS = [
+    { client:'Marc Fontaine', contrat:'SL-2024-4521', montant:1200, apporteur:'jonathan' },
+    { client:'Isabelle Müller', contrat:'ZU-2022-1234', montant:2100, apporteur:'jonathan' },
+    { client:'Sophie Durand', contrat:'AX-2023-7832', montant:850, apporteur:'david' },
+    { client:'Céline Martin', contrat:'GE-2023-9012', montant:980, apporteur:'alejandro' },
+    { client:'Marc Fontaine', contrat:'SL-2024-4521', montant:540, apporteur:'david' },
+  ];
+  const totalBrut = COMMS.reduce((s,c)=>s+c.montant,0);
+  const partJ = COMMS.reduce((s,c)=>s+(c.apporteur==='jonathan'?c.montant:Math.round(c.montant*0.5)),0);
+  const partA = COMMS.filter(c=>c.apporteur!=='jonathan').reduce((s,c)=>s+Math.round(c.montant*0.5),0);
+  const cols = '1fr 130px 90px 100px 110px';
+  const rows = COMMS.map(c => {
+    const isJ = c.apporteur === 'jonathan';
+    const pJ = isJ ? c.montant : Math.round(c.montant * 0.5);
+    const pA = isJ ? 0 : Math.round(c.montant * 0.5);
+    const agentObj = allAgents.find(a => a.prenom.toLowerCase() === c.apporteur || (a.role === 'signataire' && c.apporteur === 'jonathan'));
+    return `<div class="table-row" style="grid-template-columns:${cols}">
+      <div style="font-size:13px;font-weight:600;color:var(--text)">${c.client}</div>
+      <div style="font-size:11px;color:var(--text-muted)">${c.contrat}</div>
+      <div style="font-weight:800;color:var(--text)">CHF ${c.montant}</div>
+      <div style="font-weight:800;color:#38bdf8">CHF ${pJ}</div>
+      <div>${pA > 0 ? `<div style="display:flex;align-items:center;gap:6px">${agentObj ? avatar(agentObj, 18) : ''}<span style="font-weight:700;color:#f59e0b">CHF ${pA}</span></div>` : '<span style="color:var(--text-dim)">—</span>'}</div>
+    </div>`;
+  }).join('');
+  return `
+    <h2 style="margin:0 0 18px;font-size:18px;font-weight:800;color:var(--text)">Commissions</h2>
+    <div class="stat-grid" style="margin-bottom:20px">
+      ${statCard('Brut total', 'CHF ' + totalBrut.toLocaleString(), '#e2e8f0')}
+      ${statCard('Part Jonathan', 'CHF ' + partJ.toLocaleString(), '#38bdf8')}
+      ${statCard('Part apporteurs', 'CHF ' + partA.toLocaleString(), '#f59e0b')}
+    </div>
+    <div class="table-wrap">
+      <div class="table-header" style="grid-template-columns:${cols}"><div>Client</div><div>Police</div><div>Brut</div><div>Jonathan</div><div>Apporteur</div></div>
+      ${rows}
+    </div>`;
+}
+
+// AGENTS
+function viewAgents() {
+  const agents = allAgents.length > 0 ? allAgents : [currentUser];
+  return `
+    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Paramètres — Agents</h2>
+    ${agents.map(a => {
+      const color = agentColor(a);
+      const nbClients = allClients.filter(c => c.apporteur_id === a.id).length;
+      const ca = allClients.filter(c => c.apporteur_id === a.id).reduce((s,c)=>s+(c.ca||0),0);
+      return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:12px">
+        <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
+          ${avatar(a, 44)}
+          <div>
+            <div style="font-size:15px;font-weight:800;color:var(--text)">${a.prenom} ${a.nom}</div>
+            <div style="font-size:12px;color:var(--text-muted)">${a.email} · ${a.tel || ''}</div>
+          </div>
+          ${currentUser.role === 'signataire' ? `<button class="btn-save" style="margin-left:auto">Modifier</button>` : ''}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px">
+          ${[['Rôle', a.role], ['Taux commission', a.taux + '%'], ['Clients', nbClients], ['CA géré', 'CHF ' + ca.toLocaleString()]].map(([l,v]) =>
+            `<div style="background:var(--surface-alt);border-radius:9px;padding:10px 14px">
+              <div style="color:var(--text-muted);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px">${l}</div>
+              <div style="color:var(--text);font-size:13px;font-weight:700">${v}</div>
+            </div>`).join('')}
+        </div>
+      </div>`;
+    }).join('')}
+    ${currentUser.role === 'signataire' ? `<button class="btn-save" style="margin-top:4px">+ Ajouter un agent</button>` : ''}
+    <div style="margin-top:20px">
+      <button onclick="logout()" style="background:var(--red-dim);color:var(--red);border:1px solid rgba(248,113,113,0.3);border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer">🚪 Se déconnecter</button>
+    </div>`;
+}
+
+// ═══ INIT ═══
+initMSAL();
+</script>
+</body>
+</html>

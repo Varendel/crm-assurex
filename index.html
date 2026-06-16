@@ -344,8 +344,9 @@ async function initMSAL() {
 }
 
 async function loginMicrosoft() {
-  if (!msalInstance) { showError('Microsoft login non disponible en mode preview.'); return; }
   try {
+    if (!msalInstance) await initMSAL();
+    if (!msalInstance) { showError('Erreur initialisation Microsoft. Utilisez la connexion email.'); return; }
     const result = await msalInstance.loginPopup({ scopes: ['openid', 'profile', 'email', 'User.Read'] });
     const email = result.account.username;
     const userData = PASSWORDS[email];
@@ -523,6 +524,10 @@ function renderView() {
   switch (currentView) {
     case 'dashboard': main.innerHTML = viewDashboard(); break;
     case 'clients': main.innerHTML = viewClients(); break;
+    case 'nouveau-client': main.innerHTML = viewNouveauClient(); break;
+    case 'nouvelle-opportunite': main.innerHTML = viewNouvelleOpportunite(); break;
+    case 'nouveau-rappel': main.innerHTML = viewNouveauRappel(); break;
+    case 'nouveau-bordereau': main.innerHTML = viewNouveauBordereau(); break;
     case 'opportunites': main.innerHTML = viewOpportunites(); break;
     case 'suivi': main.innerHTML = viewSuivi(); break;
     case 'rappels': main.innerHTML = viewRappels(); break;
@@ -736,13 +741,7 @@ function switchTab(btn, tabId) {
 
 // OPPORTUNITÉS
 function viewOpportunites() {
-  const OPPS = [
-    { client:'Luca Rossi', titre:'Vie mixte 20 ans', compagnie:'Swiss Life', montant:3200, prob:70, stade:'Proposition', apporteur_id: allAgents[2]?.id },
-    { client:'Marc Fontaine', titre:'LPP cadre supérieur', compagnie:'Zurich', montant:12000, prob:85, stade:'Négociation', apporteur_id: allAgents[0]?.id },
-    { client:'Sophie Durand', titre:'Renouvellement multirisque', compagnie:'Generali', montant:1800, prob:90, stade:'Négociation', apporteur_id: allAgents[1]?.id },
-    { client:'Céline Martin', titre:'Pilier 3a', compagnie:'Helvetia', montant:2400, prob:60, stade:'Contact', apporteur_id: allAgents[2]?.id },
-    { client:'Thomas Weber', titre:'RC entreprise', compagnie:'AXA', montant:8500, prob:45, stade:'Analyse', apporteur_id: allAgents[0]?.id },
-  ];
+  const OPPS = [];
   const stadeColor = { Contact:'#64748b', Analyse:'#38bdf8', Proposition:'#f59e0b', Négociation:'#a78bfa' };
   const stades = ['Contact','Analyse','Proposition','Négociation'];
   const total = OPPS.reduce((s,o) => s+o.montant, 0);
@@ -774,7 +773,7 @@ function viewOpportunites() {
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
       <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Opportunités</h2>
-      <button class="btn-add">+ Nouvelle opportunité</button>
+      <button class="btn-add" onclick="navigate('nouvelle-opportunite')">+ Nouvelle opportunité</button>
     </div>
     <div class="stat-grid" style="margin-bottom:20px">
       ${statCard('Pipeline total', 'CHF ' + total.toLocaleString(), '#f59e0b')}
@@ -786,13 +785,7 @@ function viewOpportunites() {
 
 // SUIVI
 function viewSuivi() {
-  const CONTRATS = [
-    { produit:'Vie mixte', numero_police:'SL-2024-4521', client:'Marc Fontaine', compagnie:'Swiss Life', date_echeance:'01.01.2034', prime_annuelle:1400, statut:'actif' },
-    { produit:'RC privée', numero_police:'AX-2023-7832', client:'Sophie Durand', compagnie:'AXA', date_echeance:'01.03.2024', prime_annuelle:850, statut:'renouveler' },
-    { produit:'LPP', numero_police:'ZU-2022-1234', client:'Isabelle Müller', compagnie:'Zurich', date_echeance:'01.06.2037', prime_annuelle:2100, statut:'actif' },
-    { produit:'Multirisque', numero_police:'HE-2024-5678', client:'Pierre Blanc', compagnie:'Helvetia', date_echeance:'01.01.2025', prime_annuelle:640, statut:'résilié' },
-    { produit:'Pilier 3a', numero_police:'GE-2023-9012', client:'Céline Martin', compagnie:'Generali', date_echeance:'01.09.2043', prime_annuelle:5600, statut:'actif' },
-  ];
+  const CONTRATS = [];
   const cols = '1fr 140px 110px 100px 110px 100px';
   const rows = CONTRATS.map(ct => `<div class="table-row" style="grid-template-columns:${cols}">
     <div><div style="font-weight:700;font-size:13px;color:var(--text)">${ct.produit}</div><div style="font-size:11px;color:var(--text-muted)">${ct.numero_police}</div></div>
@@ -829,7 +822,7 @@ function viewRappels() {
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
       <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Rappels</h2>
-      <button class="btn-add">+ Nouveau rappel</button>
+      <button class="btn-add" onclick="navigate('nouveau-rappel')">+ Nouveau rappel</button>
     </div>
     <div class="stat-grid" style="margin-bottom:20px">
       ${statCard('Urgents', allRappels.filter(r=>r.urgence==='haute'&&r.statut==='ouvert').length, '#f87171')}
@@ -847,19 +840,7 @@ async function traiterRappel(id) {
 
 // BORDEREAUX
 function viewBordereaux() {
-  const BORDS = [
-    { id:'b1', compagnie:'Swiss Life', mois:'Juin 2026', montant_brut:3840, statut:'reçu', date_reception:'10.06.2026', commissions:[
-      { client:'Marc Fontaine', contrat:'SL-2024-4521', montant:1200, apporteur:'jonathan' },
-      { client:'Isabelle Müller', contrat:'ZU-2022-1234', montant:2100, apporteur:'jonathan' },
-      { client:'Marc Fontaine', contrat:'SL-2024-4521', montant:540, apporteur:'david' },
-    ]},
-    { id:'b2', compagnie:'AXA', mois:'Juin 2026', montant_brut:850, statut:'reçu', date_reception:'08.06.2026', commissions:[
-      { client:'Sophie Durand', contrat:'AX-2023-7832', montant:850, apporteur:'david' },
-    ]},
-    { id:'b3', compagnie:'Generali', mois:'Juin 2026', montant_brut:980, statut:'attendu', date_reception:null, commissions:[
-      { client:'Céline Martin', contrat:'GE-2023-9012', montant:980, apporteur:'alejandro' },
-    ]},
-  ];
+  const BORDS = [];
 
   const totalRecu = BORDS.filter(b=>b.statut==='reçu').reduce((s,b)=>s+b.montant_brut,0);
   const totalAttendu = BORDS.filter(b=>b.statut==='attendu').reduce((s,b)=>s+b.montant_brut,0);
@@ -913,7 +894,7 @@ function viewBordereaux() {
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
       <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Bordereaux de commissions</h2>
-      <button class="btn-add">+ Saisir bordereau</button>
+      <button class="btn-add" onclick="navigate('nouveau-bordereau')">+ Saisir bordereau</button>
     </div>
     <div class="stat-grid" style="margin-bottom:20px">
       ${statCard('Reçus', 'CHF ' + totalRecu.toLocaleString(), '#4ade80')}
@@ -929,13 +910,7 @@ function toggleBordereau(id) {
 
 // COMMISSIONS
 function viewCommissions() {
-  const COMMS = [
-    { client:'Marc Fontaine', contrat:'SL-2024-4521', montant:1200, apporteur:'jonathan' },
-    { client:'Isabelle Müller', contrat:'ZU-2022-1234', montant:2100, apporteur:'jonathan' },
-    { client:'Sophie Durand', contrat:'AX-2023-7832', montant:850, apporteur:'david' },
-    { client:'Céline Martin', contrat:'GE-2023-9012', montant:980, apporteur:'alejandro' },
-    { client:'Marc Fontaine', contrat:'SL-2024-4521', montant:540, apporteur:'david' },
-  ];
+  const COMMS = [];
   const totalBrut = COMMS.reduce((s,c)=>s+c.montant,0);
   const partJ = COMMS.reduce((s,c)=>s+(c.apporteur==='jonathan'?c.montant:Math.round(c.montant*0.5)),0);
   const partA = COMMS.filter(c=>c.apporteur!=='jonathan').reduce((s,c)=>s+Math.round(c.montant*0.5),0);
@@ -964,6 +939,210 @@ function viewCommissions() {
       <div class="table-header" style="grid-template-columns:${cols}"><div>Client</div><div>Police</div><div>Brut</div><div>Jonathan</div><div>Apporteur</div></div>
       ${rows}
     </div>`;
+}
+
+// NOUVEAU CLIENT
+function viewNouveauClient() {
+  const agentOptions = allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
+  return `
+    <button onclick="navigate('clients')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour aux clients</button>
+    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouveau client</h2>
+    ${sectionCard('Identité', '#38bdf8', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">Prénom *</label><input class="form-input" id="f-prenom" placeholder="Jean"/></div>
+      <div class="form-field"><label class="form-label">Nom *</label><input class="form-input" id="f-nom" placeholder="Dupont"/></div>
+      <div class="form-field"><label class="form-label">Date de naissance</label><input class="form-input" id="f-dob" type="date"/></div>
+      <div class="form-field"><label class="form-label">Nationalité</label><input class="form-input" id="f-nationalite" placeholder="Suisse"/></div>
+      <div class="form-field"><label class="form-label">État civil</label><select class="form-select" id="f-etat"><option value="">—</option><option>Célibataire</option><option>Marié</option><option>Divorcé</option><option>Divorcée</option><option>Veuf</option><option>Veuve</option><option>Pacsé</option><option>Pacsée</option></select></div>
+      <div class="form-field"><label class="form-label">Enfants</label><input class="form-input" id="f-enfants" type="number" value="0"/></div>
+      <div class="form-field"><label class="form-label">N° AVS</label><input class="form-input" id="f-avs" placeholder="756.XXXX.XXXX.XX"/></div>
+      <div class="form-field"><label class="form-label">Langue</label><select class="form-select" id="f-langue"><option value="FR">Français</option><option value="DE">Allemand</option><option value="IT">Italien</option></select></div>
+    </div>`)}
+    ${sectionCard('Contact', '#f59e0b', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">Email</label><input class="form-input" id="f-email" type="email" placeholder="jean@email.ch"/></div>
+      <div class="form-field"><label class="form-label">Mobile</label><input class="form-input" id="f-mobile" placeholder="+41 79 XXX XX XX"/></div>
+      <div class="form-field"><label class="form-label">Téléphone fixe</label><input class="form-input" id="f-tel" placeholder="+41 21 XXX XX XX"/></div>
+      <div class="form-field"><label class="form-label">Adresse</label><input class="form-input" id="f-adresse" placeholder="Rue de la Paix 1"/></div>
+      <div class="form-field"><label class="form-label">NPA</label><input class="form-input" id="f-npa" placeholder="1000"/></div>
+      <div class="form-field"><label class="form-label">Ville</label><input class="form-input" id="f-ville" placeholder="Lausanne"/></div>
+      <div class="form-field"><label class="form-label">Canton</label><input class="form-input" id="f-canton" placeholder="VD"/></div>
+    </div>`)}
+    ${sectionCard('Coordonnées bancaires', '#a78bfa', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">Banque</label><input class="form-input" id="f-banque" placeholder="UBS SA Lausanne"/></div>
+      <div class="form-field"><label class="form-label">IBAN</label><input class="form-input" id="f-iban" placeholder="CH56 0483 5012 3456 7800 9"/></div>
+    </div>`)}
+    ${sectionCard('Situation professionnelle', '#4ade80', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">Profession</label><input class="form-input" id="f-profession" placeholder="Ingénieur"/></div>
+      <div class="form-field"><label class="form-label">Employeur</label><input class="form-input" id="f-employeur" placeholder="EPFL"/></div>
+      <div class="form-field"><label class="form-label">Revenu annuel brut (CHF)</label><input class="form-input" id="f-revenu" type="number" placeholder="80000"/></div>
+      <div class="form-field"><label class="form-label">Taux d'activité %</label><input class="form-input" id="f-taux" type="number" value="100"/></div>
+    </div>`)}
+    ${sectionCard('CRM', '#38bdf8', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="f-statut"><option value="prospect">Prospect</option><option value="actif">Actif</option><option value="inactif">Inactif</option></select></div>
+      <div class="form-field"><label class="form-label">Segment</label><select class="form-select" id="f-segment"><option value="Privé">Privé</option><option value="Entreprise">Entreprise</option></select></div>
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Agent responsable</label><select class="form-select" id="f-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Notes</label><textarea class="form-input" id="f-notes" rows="3" style="resize:vertical"></textarea></div>
+    </div>`)}
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn-secondary" onclick="navigate('clients')">Annuler</button>
+      <button class="btn-save" onclick="saveClient()">✓ Enregistrer le client</button>
+    </div>`;
+}
+
+async function saveClient() {
+  const prenom = document.getElementById('f-prenom').value.trim();
+  const nom = document.getElementById('f-nom').value.trim();
+  if (!prenom || !nom) { alert('Prénom et nom obligatoires.'); return; }
+  const body = {
+    prenom, nom,
+    date_naissance: document.getElementById('f-dob').value || null,
+    nationalite: document.getElementById('f-nationalite').value || null,
+    etat_civil: document.getElementById('f-etat').value || null,
+    enfants: parseInt(document.getElementById('f-enfants').value) || 0,
+    avs: document.getElementById('f-avs').value || null,
+    langue: document.getElementById('f-langue').value,
+    email: document.getElementById('f-email').value || null,
+    mobile: document.getElementById('f-mobile').value || null,
+    tel: document.getElementById('f-tel').value || null,
+    adresse: document.getElementById('f-adresse').value || null,
+    npa: document.getElementById('f-npa').value || null,
+    ville: document.getElementById('f-ville').value || null,
+    canton: document.getElementById('f-canton').value || null,
+    banque: document.getElementById('f-banque').value || null,
+    iban: document.getElementById('f-iban').value || null,
+    profession: document.getElementById('f-profession').value || null,
+    employeur: document.getElementById('f-employeur').value || null,
+    revenu: parseInt(document.getElementById('f-revenu').value) || 0,
+    taux_activite: parseInt(document.getElementById('f-taux').value) || 100,
+    statut: document.getElementById('f-statut').value,
+    segment: document.getElementById('f-segment').value,
+    apporteur_id: document.getElementById('f-agent').value || null,
+    notes: document.getElementById('f-notes').value || null,
+  };
+  const btn = document.querySelector('.btn-save');
+  btn.textContent = 'Enregistrement...';
+  btn.disabled = true;
+  await dbPost('clients', body);
+  allClients = await dbGet('clients', 'select=*');
+  navigate('clients');
+}
+
+// NOUVELLE OPPORTUNITE
+function viewNouvelleOpportunite() {
+  const agentOptions = allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
+  const clientOptions = allClients.map(c => `<option value="${c.id}">${c.prenom} ${c.nom}</option>`).join('');
+  return `
+    <button onclick="navigate('opportunites')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
+    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouvelle opportunité</h2>
+    ${sectionCard('Détails', '#f59e0b', `<div class="form-grid">
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Titre *</label><input class="form-input" id="o-titre" placeholder="Ex: Assurance vie mixte 20 ans"/></div>
+      <div class="form-field"><label class="form-label">Client</label><select class="form-select" id="o-client"><option value="">— Sélectionner —</option>${clientOptions}</select></div>
+      <div class="form-field"><label class="form-label">Compagnie</label><input class="form-input" id="o-compagnie" placeholder="Swiss Life, AXA..."/></div>
+      <div class="form-field"><label class="form-label">Montant potentiel (CHF)</label><input class="form-input" id="o-montant" type="number" placeholder="5000"/></div>
+      <div class="form-field"><label class="form-label">Probabilité %</label><input class="form-input" id="o-prob" type="number" value="50" min="0" max="100"/></div>
+      <div class="form-field"><label class="form-label">Stade</label><select class="form-select" id="o-stade"><option>Contact</option><option>Analyse</option><option>Proposition</option><option>Négociation</option><option>Gagné</option></select></div>
+      <div class="form-field"><label class="form-label">Échéance</label><input class="form-input" id="o-date" type="date"/></div>
+      <div class="form-field"><label class="form-label">Agent responsable</label><select class="form-select" id="o-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Notes</label><textarea class="form-input" id="o-notes" rows="3" style="resize:vertical"></textarea></div>
+    </div>`)}
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn-secondary" onclick="navigate('opportunites')">Annuler</button>
+      <button class="btn-save" onclick="saveOpportunite()">✓ Enregistrer</button>
+    </div>`;
+}
+
+async function saveOpportunite() {
+  const titre = document.getElementById('o-titre').value.trim();
+  if (!titre) { alert('Titre obligatoire.'); return; }
+  const body = {
+    titre,
+    client_id: document.getElementById('o-client').value || null,
+    compagnie: document.getElementById('o-compagnie').value || null,
+    montant_potentiel: parseInt(document.getElementById('o-montant').value) || 0,
+    probabilite: parseInt(document.getElementById('o-prob').value) || 50,
+    stade: document.getElementById('o-stade').value,
+    date_echeance: document.getElementById('o-date').value || null,
+    apporteur_id: document.getElementById('o-agent').value || null,
+    notes: document.getElementById('o-notes').value || null,
+  };
+  const btn = document.querySelector('.btn-save');
+  btn.textContent = 'Enregistrement...'; btn.disabled = true;
+  await dbPost('opportunites', body);
+  navigate('opportunites');
+}
+
+// NOUVEAU RAPPEL
+function viewNouveauRappel() {
+  const agentOptions = allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
+  const clientOptions = allClients.map(c => `<option value="${c.id}">${c.prenom} ${c.nom}</option>`).join('');
+  return `
+    <button onclick="navigate('rappels')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
+    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouveau rappel</h2>
+    ${sectionCard('Détails', '#38bdf8', `<div class="form-grid">
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Titre *</label><input class="form-input" id="r-titre" placeholder="Ex: Renouvellement RC à traiter"/></div>
+      <div class="form-field"><label class="form-label">Client</label><select class="form-select" id="r-client"><option value="">— Sélectionner —</option>${clientOptions}</select></div>
+      <div class="form-field"><label class="form-label">Type</label><select class="form-select" id="r-type"><option>Suivi</option><option>Contrat</option><option>Opportunité</option><option>Admin</option></select></div>
+      <div class="form-field"><label class="form-label">Urgence</label><select class="form-select" id="r-urgence"><option value="basse">Basse</option><option value="moyenne">Moyenne</option><option value="haute">Haute</option></select></div>
+      <div class="form-field"><label class="form-label">Date échéance</label><input class="form-input" id="r-date" type="date"/></div>
+      <div class="form-field"><label class="form-label">Agent</label><select class="form-select" id="r-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
+    </div>`)}
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn-secondary" onclick="navigate('rappels')">Annuler</button>
+      <button class="btn-save" onclick="saveRappel()">✓ Enregistrer</button>
+    </div>`;
+}
+
+async function saveRappel() {
+  const titre = document.getElementById('r-titre').value.trim();
+  if (!titre) { alert('Titre obligatoire.'); return; }
+  const body = {
+    titre,
+    client_id: document.getElementById('r-client').value || null,
+    type: document.getElementById('r-type').value,
+    urgence: document.getElementById('r-urgence').value,
+    date_echeance: document.getElementById('r-date').value || null,
+    apporteur_id: document.getElementById('r-agent').value || null,
+    statut: 'ouvert',
+  };
+  const btn = document.querySelector('.btn-save');
+  btn.textContent = 'Enregistrement...'; btn.disabled = true;
+  await dbPost('rappels', body);
+  allRappels = await dbGet('rappels', 'select=*&statut=eq.ouvert');
+  navigate('rappels');
+}
+
+// NOUVEAU BORDEREAU
+function viewNouveauBordereau() {
+  return `
+    <button onclick="navigate('bordereaux')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
+    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Saisir un bordereau</h2>
+    ${sectionCard('Informations bordereau', '#4ade80', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">Compagnie *</label><input class="form-input" id="b-compagnie" placeholder="Swiss Life, AXA..."/></div>
+      <div class="form-field"><label class="form-label">Mois *</label><input class="form-input" id="b-mois" placeholder="Juin 2026"/></div>
+      <div class="form-field"><label class="form-label">Montant brut (CHF) *</label><input class="form-input" id="b-montant" type="number" placeholder="1500"/></div>
+      <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="b-statut"><option value="attendu">Attendu</option><option value="reçu">Reçu</option></select></div>
+      <div class="form-field"><label class="form-label">Date de réception</label><input class="form-input" id="b-date" type="date"/></div>
+    </div>`)}
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn-secondary" onclick="navigate('bordereaux')">Annuler</button>
+      <button class="btn-save" onclick="saveBordereau()">✓ Enregistrer</button>
+    </div>`;
+}
+
+async function saveBordereau() {
+  const compagnie = document.getElementById('b-compagnie').value.trim();
+  const mois = document.getElementById('b-mois').value.trim();
+  const montant = parseInt(document.getElementById('b-montant').value) || 0;
+  if (!compagnie || !mois) { alert('Compagnie et mois obligatoires.'); return; }
+  const body = {
+    compagnie, mois,
+    montant_brut: montant,
+    statut: document.getElementById('b-statut').value,
+    date_reception: document.getElementById('b-date').value || null,
+  };
+  const btn = document.querySelector('.btn-save');
+  btn.textContent = 'Enregistrement...'; btn.disabled = true;
+  await dbPost('bordereaux', body);
+  navigate('bordereaux');
 }
 
 // AGENTS

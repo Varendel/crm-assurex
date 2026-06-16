@@ -295,7 +295,7 @@ const MSAL_CONFIG = {
 // ═══ STATE ═══
 let currentUser = null;
 let currentView = 'dashboard';
-let openSections = { vente: true, clients: true, compta: true, settings: false };
+let openSections = { vente: true, portefeuille: true, clients: true, compta: true, settings: false };
 let allAgents = [];
 let allClients = [];
 let allRappels = [];
@@ -430,6 +430,11 @@ const SECTIONS = [
     { id: 'suivi', label: 'Suivi des affaires' },
     { id: 'rappels', label: 'Rappels' },
   ]},
+  { id: 'portefeuille', label: 'Portefeuille', icon: '◑', sub: [
+    { id: 'portefeuille', label: 'Tous les clients' },
+    { id: 'clients-prives', label: 'Clients privés' },
+    { id: 'clients-entreprises', label: 'Entreprises' },
+  ]},
   { id: 'clients', label: 'Clients', icon: '◉', sub: [
     { id: 'clients', label: 'Fiches clients' },
   ]},
@@ -537,6 +542,9 @@ function renderView() {
   switch (currentView) {
     case 'dashboard': main.innerHTML = viewDashboard(); break;
     case 'clients': main.innerHTML = viewClients(); break;
+    case 'portefeuille': main.innerHTML = viewPortefeuille('tous'); break;
+    case 'clients-prives': main.innerHTML = viewPortefeuille('prive'); break;
+    case 'clients-entreprises': main.innerHTML = viewPortefeuille('entreprise'); break;
     case 'nouveau-client': main.innerHTML = viewNouveauClient(); break;
     case 'nouvelle-opportunite': main.innerHTML = viewNouvelleOpportunite(); break;
     case 'nouveau-rappel': main.innerHTML = viewNouveauRappel(); break;
@@ -631,6 +639,52 @@ function viewDashboard() {
         <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:16px">👥 Répartition équipe</div>
         ${teamRows || '<div style="color:var(--text-muted);font-size:13px">Chargement...</div>'}
       </div>
+    </div>`;
+}
+
+// PORTEFEUILLE
+function viewPortefeuille(filtre) {
+  const titre = filtre === 'prive' ? 'Clients privés' : filtre === 'entreprise' ? 'Entreprises' : 'Portefeuille complet';
+  const filtered = filtre === 'tous' ? allClients :
+    filtre === 'prive' ? allClients.filter(c => c.segment !== 'Entreprise') :
+    allClients.filter(c => c.segment === 'Entreprise');
+
+  const totalCA = filtered.reduce((s,c) => s + (c.ca || 0), 0);
+  const actifs = filtered.filter(c => c.statut === 'actif').length;
+  const prospects = filtered.filter(c => c.statut === 'prospect').length;
+
+  const cols = '1fr 140px 85px 90px 100px 55px';
+  const rows = filtered.map(c => {
+    const agent = agentById(c.apporteur_id);
+    return `<div class="table-row" style="grid-template-columns:${cols}" onclick="showClient('${c.id}')">
+      <div>
+        <div style="font-weight:700;font-size:13px;color:var(--text)">${c.prenom} ${c.nom}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${c.ville || ''} · ${c.profession || ''}</div>
+      </div>
+      <div><div style="font-size:11px;color:var(--text)">${c.email || ''}</div><div style="font-size:11px;color:var(--text-muted)">${c.mobile || ''}</div></div>
+      <div>${badge(c.statut || '—', statutColor(c.statut))}</div>
+      <div>${badge(c.segment || 'Privé', c.segment === 'Entreprise' ? '#f59e0b' : '#38bdf8')}</div>
+      <div style="font-size:12px;font-weight:700;color:#f59e0b">${c.ca ? 'CHF ' + Number(c.ca).toLocaleString() : '—'}</div>
+      <div>${agent ? avatar(agent, 26) : ''}</div>
+    </div>`;
+  }).join('') || '<div class="table-empty">Aucun client dans cette catégorie.</div>';
+
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">${titre} (${filtered.length})</h2>
+      <button class="btn-add" onclick="navigate('nouveau-client')">+ Nouveau client</button>
+    </div>
+    <div class="stat-grid" style="margin-bottom:20px">
+      ${statCard('Total', filtered.length, '#e2e8f0')}
+      ${statCard('Actifs', actifs, '#4ade80')}
+      ${statCard('Prospects', prospects, '#f59e0b')}
+      ${statCard('CA total', 'CHF ' + totalCA.toLocaleString(), '#38bdf8')}
+    </div>
+    <div class="table-wrap">
+      <div class="table-header" style="grid-template-columns:${cols}">
+        <div>Client</div><div>Contact</div><div>Statut</div><div>Segment</div><div>CA annuel</div><div>Agent</div>
+      </div>
+      ${rows}
     </div>`;
 }
 
@@ -1096,9 +1150,17 @@ async function saveClient() {
   };
   const btn = document.querySelector('.btn-save');
   btn.textContent = 'Enregistrement...'; btn.disabled = true;
-  await dbPost('clients', body);
-  allClients = await dbGet('clients', 'select=*');
-  navigate('clients');
+  const result = await dbPost('clients', body);
+  if (result && !result.error) {
+    allClients = await dbGet('clients', 'select=*');
+    currentView = 'clients';
+    renderSidebar();
+    document.getElementById('main-content').innerHTML = viewClients();
+  } else {
+    btn.textContent = 'Erreur — réessayer';
+    btn.disabled = false;
+    alert('Erreur lors de l\'enregistrement. Vérifiez votre connexion.');
+  }
 }
 
 function formEntreprise() {
@@ -1233,9 +1295,17 @@ async function saveEntreprise() {
   };
   const btn = document.querySelector('.btn-save');
   btn.textContent = 'Enregistrement...'; btn.disabled = true;
-  await dbPost('clients', body);
-  allClients = await dbGet('clients', 'select=*');
-  navigate('clients');
+  const result = await dbPost('clients', body);
+  if (result && !result.error) {
+    allClients = await dbGet('clients', 'select=*');
+    currentView = 'clients';
+    renderSidebar();
+    document.getElementById('main-content').innerHTML = viewClients();
+  } else {
+    btn.textContent = 'Erreur — réessayer';
+    btn.disabled = false;
+    alert('Erreur lors de l\'enregistrement.');
+  }
 }
 
 function printEntreprise() {

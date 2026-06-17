@@ -1088,11 +1088,11 @@ function formPrive() {
       <div class="form-field"><label class="form-label">Langue</label><select class="form-select" id="f-langue"><option value="FR">Français</option><option value="DE">Allemand</option><option value="IT">Italien</option></select></div>
     </div>`)}
     ${sectionCard('Contact', '#f59e0b', `<div class="form-grid">
-      <div class="form-field"><label class="form-label">Email</label><input class="form-input" id="f-email" type="email" placeholder="jean@email.ch"/></div>
+      <div class="form-field"><label class="form-label">Email *</label><input class="form-input" id="f-email" type="email" placeholder="jean@email.ch"/></div>
       <div class="form-field"><label class="form-label">Mobile</label><input class="form-input" id="f-mobile" placeholder="+41 79 XXX XX XX"/></div>
       <div class="form-field"><label class="form-label">Téléphone fixe</label><input class="form-input" id="f-tel" placeholder="+41 21 XXX XX XX"/></div>
-      <div class="form-field"><label class="form-label">Adresse</label><input class="form-input" id="f-adresse" placeholder="Rue de la Paix 1"/></div>
-      <div class="form-field"><label class="form-label">NPA</label><input class="form-input" id="f-npa" placeholder="1000"/></div>
+      <div class="form-field"><label class="form-label">Adresse *</label><input class="form-input" id="f-adresse" placeholder="Rue de la Paix 1"/></div>
+      <div class="form-field"><label class="form-label">NPA *</label><input class="form-input" id="f-npa" placeholder="1000"/></div>
       <div class="form-field"><label class="form-label">Ville</label><input class="form-input" id="f-ville" placeholder="Lausanne"/></div>
       <div class="form-field"><label class="form-label">Canton</label><input class="form-input" id="f-canton" placeholder="VD"/></div>
     </div>`)}
@@ -1121,7 +1121,16 @@ function formPrive() {
 async function saveClient() {
   const prenom = document.getElementById('f-prenom').value.trim();
   const nom = document.getElementById('f-nom').value.trim();
-  if (!prenom || !nom) { alert('Prénom et nom obligatoires.'); return; }
+  const email = document.getElementById('f-email').value.trim();
+  const adresse = document.getElementById('f-adresse').value.trim();
+  const npa = document.getElementById('f-npa').value.trim();
+  const missing = [];
+  if (!prenom) missing.push('Prénom');
+  if (!nom) missing.push('Nom');
+  if (!email) missing.push('Email');
+  if (!adresse) missing.push('Adresse');
+  if (!npa) missing.push('NPA');
+  if (missing.length > 0) { alert('Champs obligatoires manquants : ' + missing.join(', ')); return; }
   const body = {
     prenom, nom,
     date_naissance: document.getElementById('f-dob').value || null,
@@ -1180,10 +1189,10 @@ function formEntreprise() {
       <div class="form-field"><label class="form-label">Soumis SUVA ?</label><select class="form-select" id="e-suva"><option value="">—</option><option value="oui">Oui</option><option value="non">Non</option></select></div>
     </div>`)}
     ${sectionCard('Contact & Adresse', '#38bdf8', `<div class="form-grid">
-      <div class="form-field"><label class="form-label">Adresse</label><input class="form-input" id="e-adresse" placeholder="Rue du Commerce 1"/></div>
-      <div class="form-field"><label class="form-label">NPA / Ville</label><input class="form-input" id="e-ville" placeholder="1000 Lausanne"/></div>
+      <div class="form-field"><label class="form-label">Adresse *</label><input class="form-input" id="e-adresse" placeholder="Rue du Commerce 1"/></div>
+      <div class="form-field"><label class="form-label">NPA / Ville *</label><input class="form-input" id="e-ville" placeholder="1000 Lausanne"/></div>
       <div class="form-field"><label class="form-label">Téléphone</label><input class="form-input" id="e-tel" placeholder="+41 21 XXX XX XX"/></div>
-      <div class="form-field"><label class="form-label">Email</label><input class="form-input" id="e-email" type="email" placeholder="contact@entreprise.ch"/></div>
+      <div class="form-field"><label class="form-label">Email *</label><input class="form-input" id="e-email" type="email" placeholder="contact@entreprise.ch"/></div>
       <div class="form-field"><label class="form-label">Lieu du risque</label><input class="form-input" id="e-risque" placeholder="Si différent de l'adresse"/></div>
     </div>`)}
     ${sectionCard('Interlocuteur principal', '#a78bfa', `<div class="form-grid">
@@ -1274,7 +1283,15 @@ function formEntreprise() {
 
 async function saveEntreprise() {
   const nom = document.getElementById('e-nom').value.trim();
-  if (!nom) { alert('Raison sociale obligatoire.'); return; }
+  const email = document.getElementById('e-email').value.trim();
+  const adresse = document.getElementById('e-adresse').value.trim();
+  const ville = document.getElementById('e-ville').value.trim();
+  const missing = [];
+  if (!nom) missing.push('Raison sociale');
+  if (!email) missing.push('Email');
+  if (!adresse) missing.push('Adresse');
+  if (!ville) missing.push('NPA / Ville');
+  if (missing.length > 0) { alert('Champs obligatoires manquants : ' + missing.join(', ')); return; }
   const contact = (document.getElementById('e-contact-prenom').value + ' ' + document.getElementById('e-contact-nom').value).trim();
   const body = {
     prenom: document.getElementById('e-contact-prenom').value || '',

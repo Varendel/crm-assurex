@@ -1591,7 +1591,7 @@ async function saveBordereau() {
   const btn = document.querySelector('.btn-save');
   btn.textContent = 'Enregistrement...'; btn.disabled = true;
   const r = await dbPost('bordereaux', body);
-  if (r && r.error) { showError('Erreur lors de l\\'enregistrement: ' + (r.detail || r.status)); btn.textContent = '✓ Enregistrer'; btn.disabled = false; return; }
+  if (r && r.error) { showError("Erreur lors de l'enregistrement: " + (r.detail || r.status)); btn.textContent = '✓ Enregistrer'; btn.disabled = false; return; }
   allBordereaux = await dbGet('bordereaux', 'select=*');
   navigate('bordereaux');
 }

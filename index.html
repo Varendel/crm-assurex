@@ -334,8 +334,16 @@ async function dbPost(table, body) {
       headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
       body: JSON.stringify(body)
     });
-    return await r.json();
-  } catch(e) { return null; }
+    const data = await r.json();
+    if (!r.ok) {
+      console.error('Supabase error', r.status, data);
+      return { error: true, status: r.status, detail: data };
+    }
+    return data;
+  } catch(e) {
+    console.error('Network error', e);
+    return { error: true, detail: e.message };
+  }
 }
 
 async function dbPatch(table, id, body) {
@@ -1168,7 +1176,8 @@ async function saveClient() {
   } else {
     btn.textContent = 'Erreur — réessayer';
     btn.disabled = false;
-    alert('Erreur lors de l\'enregistrement. Vérifiez votre connexion.');
+    const detail = result && result.detail ? JSON.stringify(result.detail) : 'connexion';
+    alert('Erreur lors de l\'enregistrement (' + detail + '). Vérifiez les champs et réessayez.');
   }
 }
 
@@ -1321,7 +1330,8 @@ async function saveEntreprise() {
   } else {
     btn.textContent = 'Erreur — réessayer';
     btn.disabled = false;
-    alert('Erreur lors de l\'enregistrement.');
+    const detail = result && result.detail ? JSON.stringify(result.detail) : 'connexion';
+    alert('Erreur lors de l\'enregistrement (' + detail + '). Vérifiez les champs et réessayez.');
   }
 }
 

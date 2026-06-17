@@ -992,11 +992,11 @@ function viewRappels() {
     if (!list.length) return '';
     return `<div style="margin-bottom:20px">
       <div style="font-size:11px;font-weight:700;color:${uc(urg)};text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">${urg === 'haute' ? '🔴 Urgents' : urg === 'moyenne' ? '🟡 Cette semaine' : '⚪ À planifier'}</div>
-      ${list.map(r => `<div class="rappel-item">
+      ${list.map(r => `<div class="rappel-item" style="cursor:pointer" onclick="showRappel('${r.id}')">
         <div class="urgence-dot" style="background:${uc(r.urgence)}"></div>
-        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--text)">${r.titre}</div><div style="font-size:11px;color:var(--text-muted)">${r.date_echeance || ''}</div></div>
+        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--text)">${r.titre}</div><div style="font-size:11px;color:var(--text-muted)">${r.date_echeance || ''}${r.piece_jointe_nom ? ' · 📎 ' + r.piece_jointe_nom : ''}</div></div>
         ${badge(r.type || 'Suivi', '#64748b')}
-        <button class="btn-traite" onclick="traiterRappel('${r.id}')">✓ Traité</button>
+        <button class="btn-traite" onclick="event.stopPropagation(); traiterRappel('${r.id}')">✓ Traité</button>
       </div>`).join('')}
     </div>`;
   }).join('');
@@ -1017,12 +1017,12 @@ function viewRappels() {
           <th style="text-align:left;padding:8px 14px;font-size:11px;color:var(--text-muted);text-transform:uppercase">Statut</th>
           <th></th>
         </tr></thead>
-        <tbody>${fermes.map(r => `<tr style="opacity:.7">
-          <td style="padding:9px 14px;font-size:13px;color:var(--text)">${r.titre}</td>
+        <tbody>${fermes.map(r => `<tr style="opacity:.7;cursor:pointer" onclick="showRappel('${r.id}')">
+          <td style="padding:9px 14px;font-size:13px;color:var(--text)">${r.titre}${r.piece_jointe_nom ? ' 📎' : ''}</td>
           <td style="padding:9px 14px;font-size:12px;color:var(--text-muted)">${r.date_echeance || '—'}</td>
           <td style="padding:9px 14px">${badge(r.type || 'Suivi', '#64748b')}</td>
           <td style="padding:9px 14px">${badge(r.statut || 'traité', '#4ade80')}</td>
-          <td style="padding:9px 14px;text-align:right"><button onclick="rouvrirRappel('${r.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer">↺ Rouvrir</button></td>
+          <td style="padding:9px 14px;text-align:right"><button onclick="event.stopPropagation(); rouvrirRappel('${r.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer">↺ Rouvrir</button></td>
         </tr>`).join('')}</tbody>
       </table>
     </div>
@@ -1553,6 +1553,121 @@ async function saveRappel() {
   await dbPost('rappels', body);
   allRappels = await dbGet('rappels', 'select=*');
   navigate('rappels');
+}
+
+// ═══ DÉTAIL / ÉDITION RAPPEL ═══
+let currentRappelId = null;
+
+function showRappel(id) {
+  currentRappelId = id;
+  currentView = 'rappels';
+  renderSidebar();
+  const r = allRappels.find(x => x.id === id);
+  if (!r) { return; }
+  const client = allClients.find(c => c.id === r.client_id);
+  const clientNom = client ? (client.segment === 'Entreprise' ? client.nom : `${client.prenom} ${client.nom}`) : '';
+  const agentOptions = allAgents.map(a => `<option value="${a.id}" ${a.id === r.apporteur_id ? 'selected' : ''}>${a.prenom} ${a.nom}</option>`).join('');
+  const clientOptions = allClients.map(c => `<option value="${c.id}" ${c.id === r.client_id ? 'selected' : ''}>${c.segment === 'Entreprise' ? c.nom : c.prenom + ' ' + c.nom}</option>`).join('');
+
+  document.getElementById('main-content').innerHTML = `
+    <button onclick="navigate('rappels')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour aux rappels</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">${r.titre}</h2>
+      ${badge(r.statut === 'ouvert' ? 'Ouvert' : 'Traité', r.statut === 'ouvert' ? '#f59e0b' : '#4ade80')}
+    </div>
+
+    ${sectionCard('Détails', '#38bdf8', `<div class="form-grid">
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Titre *</label><input class="form-input" id="rd-titre" value="${r.titre || ''}"/></div>
+      <div class="form-field"><label class="form-label">Client</label><select class="form-select" id="rd-client"><option value="">— Sélectionner —</option>${clientOptions}</select></div>
+      <div class="form-field"><label class="form-label">Type</label><select class="form-select" id="rd-type">${['Suivi','Contrat','Opportunité','Admin'].map(t => `<option ${t === r.type ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+      <div class="form-field"><label class="form-label">Urgence</label><select class="form-select" id="rd-urgence">
+        <option value="basse" ${r.urgence === 'basse' ? 'selected' : ''}>Basse</option>
+        <option value="moyenne" ${r.urgence === 'moyenne' ? 'selected' : ''}>Moyenne</option>
+        <option value="haute" ${r.urgence === 'haute' ? 'selected' : ''}>Haute</option>
+      </select></div>
+      <div class="form-field"><label class="form-label">Date échéance</label><input class="form-input" id="rd-date" type="date" value="${r.date_echeance || ''}"/></div>
+      <div class="form-field"><label class="form-label">Agent</label><select class="form-select" id="rd-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
+    </div>`)}
+
+    ${sectionCard('Notes', '#a78bfa', `
+      <textarea id="rd-notes" placeholder="Ajouter des informations, un contexte, un suivi..." style="width:100%;background:var(--surface-alt);border:1px solid var(--border);border-radius:9px;padding:12px 14px;color:var(--text);font-size:13px;outline:none;resize:vertical;min-height:120px;font-family:inherit;box-sizing:border-box">${r.notes || ''}</textarea>
+    `)}
+
+    ${sectionCard('Pièce jointe', '#f59e0b', `
+      <div id="rd-attachment-zone">
+        ${r.piece_jointe_url ? `
+          <div style="display:flex;align-items:center;gap:10px;background:var(--surface-alt);border-radius:9px;padding:10px 14px">
+            <span style="font-size:18px">📎</span>
+            <a href="${r.piece_jointe_url}" target="_blank" style="flex:1;color:var(--accent);font-size:13px;font-weight:700;text-decoration:none">${r.piece_jointe_nom || 'Document joint'}</a>
+            <button onclick="supprimerPieceJointe()" style="background:var(--red-dim);color:var(--red);border:none;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">Retirer</button>
+          </div>
+        ` : `
+          <input type="file" id="rd-file-input" style="display:none" onchange="uploadPieceJointe()"/>
+          <button class="btn-secondary" onclick="document.getElementById('rd-file-input').click()">📎 Joindre un document (police, décompte...)</button>
+          <div id="rd-upload-status" style="font-size:11px;color:var(--text-muted);margin-top:8px"></div>
+        `}
+      </div>
+    `)}
+
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn-secondary" onclick="navigate('rappels')">Annuler</button>
+      <button class="btn-save" onclick="saveRappelEdit()">💾 Enregistrer les modifications</button>
+    </div>`;
+}
+
+async function saveRappelEdit() {
+  const titre = document.getElementById('rd-titre').value.trim();
+  if (!titre) { showError('Le titre est obligatoire.'); return; }
+  const body = {
+    titre,
+    client_id: document.getElementById('rd-client').value || null,
+    type: document.getElementById('rd-type').value,
+    urgence: document.getElementById('rd-urgence').value,
+    date_echeance: document.getElementById('rd-date').value || null,
+    apporteur_id: document.getElementById('rd-agent').value || null,
+    notes: document.getElementById('rd-notes').value || null,
+  };
+  const btn = document.querySelector('.btn-save');
+  btn.textContent = 'Enregistrement...'; btn.disabled = true;
+  const r = await dbPatch('rappels', currentRappelId, body);
+  if (r && r.error) { showError('Erreur lors de la mise à jour: ' + (r.detail || r.status)); btn.textContent = '💾 Enregistrer les modifications'; btn.disabled = false; return; }
+  allRappels = await dbGet('rappels', 'select=*');
+  navigate('rappels');
+}
+
+async function uploadPieceJointe() {
+  const input = document.getElementById('rd-file-input');
+  const file = input.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('rd-upload-status');
+  statusEl.textContent = 'Envoi en cours...';
+
+  try {
+    const ext = file.name.split('.').pop();
+    const path = `rappels/${currentRappelId}-${Date.now()}.${ext}`;
+    const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${path}`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': file.type || 'application/octet-stream' },
+      body: file,
+    });
+    if (!uploadRes.ok) {
+      const errText = await uploadRes.text();
+      statusEl.textContent = "Erreur lors de l'envoi: " + errText;
+      return;
+    }
+    const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/documents/${path}`;
+    await dbPatch('rappels', currentRappelId, { piece_jointe_url: publicUrl, piece_jointe_nom: file.name });
+    allRappels = await dbGet('rappels', 'select=*');
+    showRappel(currentRappelId);
+  } catch (e) {
+    statusEl.textContent = "Erreur lors de l'envoi du fichier.";
+  }
+}
+
+async function supprimerPieceJointe() {
+  await dbPatch('rappels', currentRappelId, { piece_jointe_url: null, piece_jointe_nom: null });
+  allRappels = await dbGet('rappels', 'select=*');
+  showRappel(currentRappelId);
 }
 
 // NOUVEAU BORDEREAU

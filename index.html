@@ -195,11 +195,15 @@
     .btn-save, .btn-secondary, button[onclick*="print"], button[onclick*="navigate"] { display: none !important; }
     .main { padding: 0 !important; }
     body { background: white !important; color: black !important; }
+    .print-header { display: block !important; }
     .section-card { border: 1px solid #ccc !important; background: white !important; }
     .section-card-header { background: #f5f5f5 !important; color: black !important; }
+    .section-card-header span, .section-card-header div { color: #7dd3fc !important; background: #7dd3fc !important; }
+    .section-card-header div[style*="background"] { background: #7dd3fc !important; }
     .info-block, .form-field { background: #fafafa !important; border: 1px solid #eee !important; }
     .info-value, .info-label, .form-label, .form-input, .stat-value, .stat-label { color: black !important; }
     h2 { color: black !important; }
+    [style*="color:#38bdf8"], [style*="color: #38bdf8"] { color: #7dd3fc !important; }
   }
   /* RESPONSIVE */
   @media (max-width: 768px) {
@@ -301,6 +305,15 @@ let allClients = [];
 let allRappels = [];
 let msalInstance = null;
 let openBordereaux = {};
+let contratClientId = null;
+let allCommissionsAttente = [];
+
+// Paramètres de taux de commission — modifiables via Paramètres (gestion récurrente)
+// Acquisition: santé = primemensuelle x ce facteur ; vie = primemensuelle x12 x facteur(par année du contrat)
+const TAUX_COMMISSION = {
+  sante_facteur_mensuel: 16,   // santé : prime mensuelle x 16
+  vie_taux_capital: 4,         // vie : 4% du capital de production (prime mensuelle x12 x nb années)
+};
 let msalAccessToken = null;
 let calendarEvents = [];
 
@@ -445,6 +458,8 @@ async function enterApp(user) {
   allAgents = await dbGet('agents', 'select=*');
   allClients = await dbGet('clients', 'select=*');
   allRappels = await dbGet('rappels', 'select=*');
+  allBordereaux = await dbGet('bordereaux', 'select=*');
+  allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
   renderSidebar();
   navigate('dashboard');
 }
@@ -478,6 +493,7 @@ const SECTIONS = [
   { id: 'compta', label: 'Comptabilité', icon: '◎', sub: [
     { id: 'bordereaux', label: 'Bordereaux' },
     { id: 'commissions', label: 'Commissions' },
+    { id: 'commissions-attente', label: 'Commissions en attente' },
   ]},
   { id: 'settings', label: 'Paramètres', icon: '⊙', sub: [
     { id: 'agents', label: 'Agents' },
@@ -586,11 +602,14 @@ function renderView() {
     case 'nouvelle-opportunite': main.innerHTML = viewNouvelleOpportunite(); break;
     case 'nouveau-rappel': main.innerHTML = viewNouveauRappel(); break;
     case 'nouveau-bordereau': main.innerHTML = viewNouveauBordereau(); break;
+    case 'nouveau-contrat': main.innerHTML = viewNouveauContrat(); break;
+    case 'commissions-attente': main.innerHTML = viewCommissionsAttente(); break;
     case 'opportunites': main.innerHTML = viewOpportunites(); break;
     case 'suivi': main.innerHTML = viewSuivi(); break;
     case 'rappels': main.innerHTML = viewRappels(); break;
     case 'agenda': main.innerHTML = viewAgenda(); break;
     case 'campagnes': main.innerHTML = viewCampagnes(); break;
+    case 'nouveau-agent': main.innerHTML = viewNouvelAgent(); break;
     case 'bordereaux': main.innerHTML = viewBordereaux(); break;
     case 'commissions': main.innerHTML = viewCommissions(); break;
     case 'agents': main.innerHTML = viewAgents(); break;
@@ -780,6 +799,12 @@ async function showClient(id) {
     : `<div style="width:52px;height:52px;border-radius:50%;background:var(--accent-dim);border:2px solid var(--accent-border);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:var(--accent)">${(c.prenom||'?')[0]}${(c.nom||'?')[0]}</div>`;
 
   main.innerHTML = `
+    <div class="print-header" style="display:none">
+      <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #38bdf8;padding-bottom:10px;margin-bottom:18px">
+        <div style="font-size:18px;font-weight:900;letter-spacing:1px">VARENDEL</div>
+        <img class="print-logo-cofidex" src="" alt="" style="height:32px;display:none"/>
+      </div>
+    </div>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
       <button onclick="navigate('clients')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px">← Retour aux clients</button>
       <button onclick="window.print()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🖨️ Imprimer la fiche</button>
@@ -856,6 +881,9 @@ async function showClient(id) {
     </div>
 
     <div id="tab-contrats" class="hidden">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn-add" onclick="contratClientId='${c.id}'; navigate('nouveau-contrat')">+ Nouveau contrat</button>
+      </div>
       ${contrats.length > 0 ? `<div class="table-wrap"><div class="table-header" style="grid-template-columns:1fr 120px 100px 110px 100px"><div>Produit</div><div>Compagnie</div><div>Échéance</div><div>Prime/an</div><div>Statut</div></div>
       ${contrats.map(ct => `<div class="table-row" style="grid-template-columns:1fr 120px 100px 110px 100px">
         <div><div style="font-weight:700;font-size:13px;color:var(--text)">${ct.produit}</div><div style="font-size:11px;color:var(--text-muted)">${ct.numero_police || ''}</div></div>
@@ -987,12 +1015,14 @@ function viewRappels() {
           <th style="text-align:left;padding:8px 14px;font-size:11px;color:var(--text-muted);text-transform:uppercase">Échéance</th>
           <th style="text-align:left;padding:8px 14px;font-size:11px;color:var(--text-muted);text-transform:uppercase">Type</th>
           <th style="text-align:left;padding:8px 14px;font-size:11px;color:var(--text-muted);text-transform:uppercase">Statut</th>
+          <th></th>
         </tr></thead>
         <tbody>${fermes.map(r => `<tr style="opacity:.7">
           <td style="padding:9px 14px;font-size:13px;color:var(--text)">${r.titre}</td>
           <td style="padding:9px 14px;font-size:12px;color:var(--text-muted)">${r.date_echeance || '—'}</td>
           <td style="padding:9px 14px">${badge(r.type || 'Suivi', '#64748b')}</td>
           <td style="padding:9px 14px">${badge(r.statut || 'traité', '#4ade80')}</td>
+          <td style="padding:9px 14px;text-align:right"><button onclick="rouvrirRappel('${r.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer">↺ Rouvrir</button></td>
         </tr>`).join('')}</tbody>
       </table>
     </div>
@@ -1019,33 +1049,58 @@ async function traiterRappel(id) {
   navigate('rappels');
 }
 
-// BORDEREAUX
-function viewBordereaux() {
-  const BORDS = [];
+async function rouvrirRappel(id) {
+  await dbPatch('rappels', id, { statut: 'ouvert' });
+  const r = allRappels.find(x => x.id === id);
+  if (r) r.statut = 'ouvert';
+  navigate('rappels');
+}
 
-  const totalRecu = BORDS.filter(b=>b.statut==='reçu').reduce((s,b)=>s+b.montant_brut,0);
-  const totalAttendu = BORDS.filter(b=>b.statut==='attendu').reduce((s,b)=>s+b.montant_brut,0);
+// BORDEREAUX
+let allBordereaux = [];
+
+function viewBordereaux() {
+  const BORDS = allBordereaux;
+
+  const totalRecu = BORDS.filter(b=>b.statut==='reçu').reduce((s,b)=>s+(b.montant_brut||0),0);
+  const totalAttendu = BORDS.filter(b=>b.statut==='attendu').reduce((s,b)=>s+(b.montant_brut||0),0);
+  const totalCaution = BORDS.reduce((s,b)=>s+Math.round((b.montant_brut||0)*((b.taux_caution||0)/100)),0);
 
   const cards = BORDS.map(b => {
-    const pJ = b.commissions.filter(c=>c.apporteur==='jonathan').reduce((s,c)=>s+c.montant,0)
-             + b.commissions.filter(c=>c.apporteur!=='jonathan').reduce((s,c)=>s+Math.round(c.montant*0.5),0);
-    const pA = b.commissions.filter(c=>c.apporteur!=='jonathan').reduce((s,c)=>s+Math.round(c.montant*0.5),0);
+    const commissions = b.commissions || [];
+    const tauxCaution = b.taux_caution || 0;
+    const montantCaution = Math.round((b.montant_brut||0) * (tauxCaution/100));
+    const montantNetApresCaution = (b.montant_brut||0) - montantCaution;
+
+    const pJ = commissions.filter(c=>c.apporteur==='jonathan').reduce((s,c)=>s+c.montant,0)
+             + commissions.filter(c=>c.apporteur!=='jonathan').reduce((s,c)=>s+Math.round(c.montant*0.5),0);
+    const pA = commissions.filter(c=>c.apporteur!=='jonathan').reduce((s,c)=>s+Math.round(c.montant*0.5),0);
     const isOpen = openBordereaux[b.id];
 
     return `<div class="bordereau-card">
       <div class="bordereau-header" onclick="toggleBordereau('${b.id}')">
         <div style="flex:1">
           <div style="font-size:14px;font-weight:800;color:var(--text)">${b.compagnie}</div>
-          <div style="font-size:11px;color:var(--text-muted)">${b.mois}${b.date_reception ? ' · Reçu le ' + b.date_reception : ''}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${b.mois}${b.date_reception ? ' · Reçu le ' + b.date_reception : ''}${tauxCaution > 0 ? ' · Caution ' + tauxCaution + '%' : ''}</div>
         </div>
         <div style="text-align:right">
-          <div style="font-size:16px;font-weight:900;color:#f59e0b">CHF ${b.montant_brut.toLocaleString()}</div>
+          <div style="font-size:16px;font-weight:900;color:#f59e0b">CHF ${(b.montant_brut||0).toLocaleString()}</div>
           <div style="font-size:10px;color:var(--text-muted)">Brut</div>
         </div>
         ${badge(b.statut, b.statut === 'reçu' ? '#4ade80' : '#f59e0b')}
         <div style="font-size:14px;color:var(--text-muted)">${isOpen ? '▲' : '▼'}</div>
       </div>
       ${isOpen ? `<div class="bordereau-body">
+        ${tauxCaution > 0 ? `<div style="display:flex;gap:10px;margin-bottom:14px">
+          <div style="flex:1;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);border-radius:8px;padding:10px 14px">
+            <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Caution retenue (${tauxCaution}%)</div>
+            <div style="font-size:16px;font-weight:900;color:#a78bfa">CHF ${montantCaution.toLocaleString()}</div>
+          </div>
+          <div style="flex:1;background:var(--surface-alt);border-radius:8px;padding:10px 14px">
+            <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Net après caution</div>
+            <div style="font-size:16px;font-weight:900;color:var(--text)">CHF ${montantNetApresCaution.toLocaleString()}</div>
+          </div>
+        </div>` : ''}
         <div style="display:flex;gap:10px;margin-bottom:14px">
           <div style="flex:1;background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:10px 14px">
             <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Part Jonathan</div>
@@ -1056,18 +1111,19 @@ function viewBordereaux() {
             <div style="font-size:16px;font-weight:900;color:#f59e0b">CHF ${pA}</div>
           </div>
         </div>
-        ${b.commissions.map((c, i) => {
+        ${commissions.map((c, i) => {
           const isJ = c.apporteur === 'jonathan';
           const pJc = isJ ? c.montant : Math.round(c.montant * 0.5);
           const pAc = isJ ? 0 : Math.round(c.montant * 0.5);
           const agentObj = allAgents.find(a => a.prenom.toLowerCase() === c.apporteur || a.role === 'signataire' && c.apporteur === 'jonathan');
-          return `<div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:${i < b.commissions.length-1 ? '1px solid var(--border)' : 'none'}">
+          return `<div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:${i < commissions.length-1 ? '1px solid var(--border)' : 'none'}">
             ${agentObj ? avatar(agentObj, 24) : ''}
             <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--text)">${c.client}</div><div style="font-size:11px;color:var(--text-muted)">${c.contrat}</div></div>
             <div style="text-align:right"><div style="font-size:12px;color:#38bdf8;font-weight:700">J: CHF ${pJc}</div>${pAc > 0 ? `<div style="font-size:12px;color:#f59e0b;font-weight:700">A: CHF ${pAc}</div>` : ''}</div>
             <div style="font-weight:800;color:var(--text);font-size:13px;min-width:70px;text-align:right">CHF ${c.montant}</div>
           </div>`;
         }).join('')}
+        ${commissions.length === 0 ? '<div class="table-empty">Aucun détail de commission saisi pour ce bordereau.</div>' : ''}
       </div>` : ''}
     </div>`;
   }).join('');
@@ -1080,8 +1136,9 @@ function viewBordereaux() {
     <div class="stat-grid" style="margin-bottom:20px">
       ${statCard('Reçus', 'CHF ' + totalRecu.toLocaleString(), '#4ade80')}
       ${statCard('Attendus', 'CHF ' + totalAttendu.toLocaleString(), '#f59e0b')}
+      ${statCard('Caution totale retenue', 'CHF ' + totalCaution.toLocaleString(), '#a78bfa')}
     </div>
-    ${cards}`;
+    ${cards || '<div class="table-empty">Aucun bordereau saisi.</div>'}`;
 }
 
 function toggleBordereau(id) {
@@ -1507,9 +1564,11 @@ function viewNouveauBordereau() {
       <div class="form-field"><label class="form-label">Compagnie *</label><input class="form-input" id="b-compagnie" placeholder="Swiss Life, AXA..."/></div>
       <div class="form-field"><label class="form-label">Mois *</label><input class="form-input" id="b-mois" placeholder="Juin 2026"/></div>
       <div class="form-field"><label class="form-label">Montant brut (CHF) *</label><input class="form-input" id="b-montant" type="number" placeholder="1500"/></div>
+      <div class="form-field"><label class="form-label">Taux de caution (%)</label><input class="form-input" id="b-caution" type="number" step="0.1" placeholder="5 à 10" min="0" max="100"/></div>
       <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="b-statut"><option value="attendu">Attendu</option><option value="reçu">Reçu</option></select></div>
       <div class="form-field"><label class="form-label">Date de réception</label><input class="form-input" id="b-date" type="date"/></div>
     </div>`)}
+    <div style="font-size:11px;color:var(--text-muted);margin-top:-6px;margin-bottom:8px">Certaines compagnies retiennent un pourcentage de la commission brute à titre de caution (généralement 5 à 10%). Laissez vide ou 0 si non applicable.</div>
     <div style="display:flex;gap:10px;margin-top:8px">
       <button class="btn-secondary" onclick="navigate('bordereaux')">Annuler</button>
       <button class="btn-save" onclick="saveBordereau()">✓ Enregistrer</button>
@@ -1520,17 +1579,162 @@ async function saveBordereau() {
   const compagnie = document.getElementById('b-compagnie').value.trim();
   const mois = document.getElementById('b-mois').value.trim();
   const montant = parseInt(document.getElementById('b-montant').value) || 0;
+  const tauxCaution = parseFloat(document.getElementById('b-caution').value) || 0;
   if (!compagnie || !mois) { alert('Compagnie et mois obligatoires.'); return; }
   const body = {
     compagnie, mois,
     montant_brut: montant,
+    taux_caution: tauxCaution,
     statut: document.getElementById('b-statut').value,
     date_reception: document.getElementById('b-date').value || null,
   };
   const btn = document.querySelector('.btn-save');
   btn.textContent = 'Enregistrement...'; btn.disabled = true;
-  await dbPost('bordereaux', body);
+  const r = await dbPost('bordereaux', body);
+  if (r && r.error) { showError('Erreur lors de l\\'enregistrement: ' + (r.detail || r.status)); btn.textContent = '✓ Enregistrer'; btn.disabled = false; return; }
+  allBordereaux = await dbGet('bordereaux', 'select=*');
   navigate('bordereaux');
+}
+
+// ═══ NOUVEAU CONTRAT + COMMISSION EN ATTENTE ═══
+function viewNouveauContrat() {
+  if (!contratClientId) { return '<div class="table-empty">Aucun client sélectionné.</div>'; }
+  return `
+    <button onclick="navigate('clients')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
+    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouveau contrat</h2>
+    ${sectionCard('Informations contrat', '#4ade80', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">Compagnie *</label><input class="form-input" id="ct-compagnie" placeholder="Swiss Life, AXA, Helsana..."/></div>
+      <div class="form-field"><label class="form-label">Produit / Type *</label><select class="form-select" id="ct-type" onchange="updateCommissionPreview()">
+        <option value="sante">Complémentaire santé</option>
+        <option value="vie">Assurance vie / 3a</option>
+        <option value="autre">Autre (LPP, RC, ménage, etc.)</option>
+      </select></div>
+      <div class="form-field"><label class="form-label">N° de police</label><input class="form-input" id="ct-police" placeholder="Optionnel"/></div>
+      <div class="form-field"><label class="form-label">Prime mensuelle (CHF) *</label><input class="form-input" id="ct-prime-mensuelle" type="number" placeholder="150" oninput="updateCommissionPreview()"/></div>
+      <div class="form-field" id="ct-duree-field" style="display:none"><label class="form-label">Durée du contrat (années)</label><input class="form-input" id="ct-duree" type="number" placeholder="10" value="1" oninput="updateCommissionPreview()"/></div>
+      <div class="form-field" id="ct-manuel-field" style="display:none"><label class="form-label">Commission estimée (CHF) — manuel</label><input class="form-input" id="ct-manuel" type="number" placeholder="0" oninput="updateCommissionPreview()"/></div>
+      <div class="form-field"><label class="form-label">Date de signature</label><input class="form-input" id="ct-date" type="date"/></div>
+      <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="ct-statut"><option value="actif">Actif</option><option value="en_cours">En cours de signature</option></select></div>
+    </div>`)}
+    <div id="commission-preview" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:14px 18px;margin-top:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Commission d'acquisition estimée</div>
+      <div id="commission-preview-value" style="font-size:20px;font-weight:900;color:var(--accent)">CHF 0</div>
+      <div id="commission-preview-detail" style="font-size:11px;color:var(--text-muted);margin-top:2px"></div>
+    </div>
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn-secondary" onclick="navigate('clients')">Annuler</button>
+      <button class="btn-save" onclick="saveContrat()">✓ Enregistrer le contrat</button>
+    </div>`;
+}
+
+function calculerCommissionEstimee() {
+  const type = document.getElementById('ct-type').value;
+  const primeMensuelle = parseFloat(document.getElementById('ct-prime-mensuelle').value) || 0;
+  if (type === 'sante') {
+    const montant = Math.round(primeMensuelle * TAUX_COMMISSION.sante_facteur_mensuel);
+    return { montant, detail: `CHF ${primeMensuelle} x ${TAUX_COMMISSION.sante_facteur_mensuel} (taux santé)` };
+  }
+  if (type === 'vie') {
+    const duree = parseFloat(document.getElementById('ct-duree')?.value) || 1;
+    const capitalProduction = primeMensuelle * 12 * duree;
+    const montant = Math.round(capitalProduction * (TAUX_COMMISSION.vie_taux_capital / 100));
+    return { montant, detail: `${TAUX_COMMISSION.vie_taux_capital}% de CHF ${capitalProduction.toLocaleString()} (capital de production : ${primeMensuelle} x 12 x ${duree} an(s))` };
+  }
+  const montant = parseFloat(document.getElementById('ct-manuel')?.value) || 0;
+  return { montant, detail: 'Saisie manuelle' };
+}
+
+function updateCommissionPreview() {
+  const type = document.getElementById('ct-type').value;
+  document.getElementById('ct-duree-field').style.display = type === 'vie' ? 'block' : 'none';
+  document.getElementById('ct-manuel-field').style.display = type === 'autre' ? 'block' : 'none';
+  const { montant, detail } = calculerCommissionEstimee();
+  document.getElementById('commission-preview-value').textContent = 'CHF ' + montant.toLocaleString();
+  document.getElementById('commission-preview-detail').textContent = detail;
+}
+
+async function saveContrat() {
+  const compagnie = document.getElementById('ct-compagnie').value.trim();
+  const type = document.getElementById('ct-type').value;
+  const primeMensuelle = parseFloat(document.getElementById('ct-prime-mensuelle').value) || 0;
+  if (!compagnie || !primeMensuelle) { showError('Compagnie et prime mensuelle sont obligatoires.'); return; }
+
+  const produitLabel = type === 'sante' ? 'Complémentaire santé' : type === 'vie' ? 'Assurance vie / 3a' : 'Autre';
+  const { montant: commissionEstimee, detail } = calculerCommissionEstimee();
+
+  const contratBody = {
+    client_id: contratClientId,
+    compagnie,
+    produit: produitLabel,
+    numero_police: document.getElementById('ct-police').value.trim() || null,
+    prime_annuelle: Math.round(primeMensuelle * 12),
+    date_signature: document.getElementById('ct-date').value || null,
+    statut: document.getElementById('ct-statut').value,
+  };
+
+  const btn = document.querySelector('.btn-save');
+  btn.textContent = 'Enregistrement...'; btn.disabled = true;
+
+  const rContrat = await dbPost('contrats', contratBody);
+  if (rContrat && rContrat.error) { showError('Erreur lors de la création du contrat: ' + (rContrat.detail || rContrat.status)); btn.textContent = '✓ Enregistrer le contrat'; btn.disabled = false; return; }
+
+  // Création automatique de la commission en attente
+  const client = allClients.find(c => c.id === contratClientId);
+  const commissionBody = {
+    client_id: contratClientId,
+    client_nom: client ? (client.segment === 'Entreprise' ? client.nom : `${client.prenom} ${client.nom}`) : '',
+    compagnie,
+    produit: produitLabel,
+    montant_estime: commissionEstimee,
+    detail_calcul: detail,
+    statut: 'en_attente',
+    date_creation: new Date().toISOString().split('T')[0],
+  };
+  await dbPost('commissions_attente', commissionBody);
+
+  showClient(contratClientId);
+}
+
+function viewCommissionsAttente() {
+  const enAttente = allCommissionsAttente.filter(c => c.statut === 'en_attente');
+  const totalAttente = enAttente.reduce((s, c) => s + (c.montant_estime || 0), 0);
+
+  const rows = enAttente.map(c => `<tr>
+    <td style="padding:10px 14px;font-size:13px;font-weight:700;color:var(--text)">${c.client_nom || '—'}</td>
+    <td style="padding:10px 14px;font-size:12px;color:var(--text-muted)">${c.compagnie}</td>
+    <td style="padding:10px 14px;font-size:12px;color:var(--text-muted)">${c.produit}</td>
+    <td style="padding:10px 14px;font-size:12px;color:var(--text-muted)">${c.date_creation || ''}</td>
+    <td style="padding:10px 14px;font-weight:800;color:#f59e0b;text-align:right">CHF ${(c.montant_estime||0).toLocaleString()}</td>
+    <td style="padding:10px 14px;text-align:right"><button onclick="marquerCommissionRecue('${c.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer">✓ Reçue</button></td>
+  </tr>`).join('');
+
+  return `
+    <h2 style="margin:0 0 6px;font-size:18px;font-weight:800;color:var(--text)">Commissions en attente</h2>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Générées automatiquement à chaque nouveau contrat. Marquez "Reçue" une fois le bordereau correspondant arrivé.</div>
+    <div class="stat-grid" style="margin-bottom:20px">
+      ${statCard('Total en attente', 'CHF ' + totalAttente.toLocaleString(), '#f59e0b')}
+      ${statCard('Nombre de dossiers', enAttente.length, '#38bdf8')}
+    </div>
+    <div class="table-wrap">
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr style="border-bottom:1px solid var(--border)">
+          <th style="text-align:left;padding:8px 14px;font-size:11px;color:var(--text-muted);text-transform:uppercase">Client</th>
+          <th style="text-align:left;padding:8px 14px;font-size:11px;color:var(--text-muted);text-transform:uppercase">Compagnie</th>
+          <th style="text-align:left;padding:8px 14px;font-size:11px;color:var(--text-muted);text-transform:uppercase">Produit</th>
+          <th style="text-align:left;padding:8px 14px;font-size:11px;color:var(--text-muted);text-transform:uppercase">Créée le</th>
+          <th style="text-align:right;padding:8px 14px;font-size:11px;color:var(--text-muted);text-transform:uppercase">Montant estimé</th>
+          <th></th>
+        </tr></thead>
+        <tbody>${rows || '<tr><td colspan="6" class="table-empty">Aucune commission en attente.</td></tr>'}</tbody>
+      </table>
+    </div>`;
+}
+
+async function marquerCommissionRecue(id) {
+  await dbPatch('commissions_attente', id, { statut: 'reçue' });
+  const c = allCommissionsAttente.find(x => x.id === id);
+  if (c) c.statut = 'reçue';
+  navigate('commissions-attente');
 }
 
 // AGENDA
@@ -1659,6 +1863,8 @@ function viewCampagnes() {
 function showCampagne(themeId) {
   const t = CAMPAGNES_THEMES.find(x => x.id === themeId);
   if (!t) return;
+  currentView = 'campagne-detail';
+  const main = document.getElementById('main-content');
   const cibles = allClients.filter(c => (c.segment || 'Privé') === t.segment && t.filtre(c));
 
   const rows = cibles.map(c => {
@@ -1711,6 +1917,8 @@ function showCampagne(themeId) {
 }
 
 // AGENTS
+let editingAgentId = null;
+
 function viewAgents() {
   const agents = allAgents.length > 0 ? allAgents : [currentUser];
   return `
@@ -1719,6 +1927,7 @@ function viewAgents() {
       const color = agentColor(a);
       const nbClients = allClients.filter(c => c.apporteur_id === a.id).length;
       const ca = allClients.filter(c => c.apporteur_id === a.id).reduce((s,c)=>s+(c.ca||0),0);
+      const isEditing = editingAgentId === a.id;
       return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:12px">
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
           ${avatar(a, 44)}
@@ -1726,8 +1935,24 @@ function viewAgents() {
             <div style="font-size:15px;font-weight:800;color:var(--text)">${a.prenom} ${a.nom}</div>
             <div style="font-size:12px;color:var(--text-muted)">${a.email} · ${a.tel || ''}</div>
           </div>
-          ${currentUser.role === 'signataire' ? `<button class="btn-save" style="margin-left:auto">Modifier</button>` : ''}
+          ${currentUser.role === 'signataire' ? `<button class="btn-save" style="margin-left:auto" onclick="toggleEditAgent('${a.id}')">${isEditing ? 'Annuler' : 'Modifier'}</button>` : ''}
         </div>
+        ${isEditing ? `<div style="background:var(--surface-alt);border-radius:10px;padding:16px;margin-bottom:14px">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+            <div class="form-field"><label class="form-label">Prénom</label><input id="edit-prenom-${a.id}" class="form-input" value="${a.prenom || ''}"></div>
+            <div class="form-field"><label class="form-label">Nom</label><input id="edit-nom-${a.id}" class="form-input" value="${a.nom || ''}"></div>
+            <div class="form-field"><label class="form-label">Email</label><input id="edit-email-${a.id}" class="form-input" value="${a.email || ''}"></div>
+            <div class="form-field"><label class="form-label">Téléphone</label><input id="edit-tel-${a.id}" class="form-input" value="${a.tel || ''}"></div>
+            <div class="form-field"><label class="form-label">Taux commission (%)</label><input id="edit-taux-${a.id}" type="number" class="form-input" value="${a.taux || ''}"></div>
+            <div class="form-field"><label class="form-label">Rôle</label>
+              <select id="edit-role-${a.id}" class="form-input">
+                <option value="signataire" ${a.role === 'signataire' ? 'selected' : ''}>Signataire</option>
+                <option value="apporteur" ${a.role === 'apporteur' ? 'selected' : ''}>Apporteur</option>
+              </select>
+            </div>
+          </div>
+          <button class="btn-save" onclick="saveAgent('${a.id}')">💾 Enregistrer</button>
+        </div>` : ''}
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px">
           ${[['Rôle', a.role], ['Taux commission', a.taux + '%'], ['Clients', nbClients], ['CA géré', 'CHF ' + ca.toLocaleString()]].map(([l,v]) =>
             `<div style="background:var(--surface-alt);border-radius:9px;padding:10px 14px">
@@ -1737,10 +1962,70 @@ function viewAgents() {
         </div>
       </div>`;
     }).join('')}
-    ${currentUser.role === 'signataire' ? `<button class="btn-save" style="margin-top:4px">+ Ajouter un agent</button>` : ''}
+    ${currentUser.role === 'signataire' ? `<button class="btn-save" style="margin-top:4px" onclick="navigate('nouveau-agent')">+ Ajouter un agent</button>` : ''}
     <div style="margin-top:20px">
       <button onclick="logout()" style="background:var(--red-dim);color:var(--red);border:1px solid rgba(248,113,113,0.3);border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer">🚪 Se déconnecter</button>
     </div>`;
+}
+
+function toggleEditAgent(id) {
+  editingAgentId = editingAgentId === id ? null : id;
+  navigate('agents');
+}
+
+async function saveAgent(id) {
+  const body = {
+    prenom: document.getElementById(`edit-prenom-${id}`).value.trim(),
+    nom: document.getElementById(`edit-nom-${id}`).value.trim(),
+    email: document.getElementById(`edit-email-${id}`).value.trim(),
+    tel: document.getElementById(`edit-tel-${id}`).value.trim(),
+    taux: Number(document.getElementById(`edit-taux-${id}`).value) || 0,
+    role: document.getElementById(`edit-role-${id}`).value,
+  };
+  if (!body.prenom || !body.nom || !body.email) { showError('Prénom, nom et email sont obligatoires.'); return; }
+  const r = await dbPatch('agents', id, body);
+  if (r && r.error) { showError('Erreur lors de la mise à jour: ' + (r.detail || r.status)); return; }
+  allAgents = await dbGet('agents', 'select=*');
+  editingAgentId = null;
+  navigate('agents');
+}
+
+function viewNouvelAgent() {
+  return `
+    <button onclick="navigate('agents')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour aux agents</button>
+    <h2 style="margin:0 0 18px;font-size:18px;font-weight:800;color:var(--text)">Nouvel agent</h2>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
+        <div class="form-field"><label class="form-label">Prénom *</label><input id="new-prenom" class="form-input"></div>
+        <div class="form-field"><label class="form-label">Nom *</label><input id="new-nom" class="form-input"></div>
+        <div class="form-field"><label class="form-label">Email *</label><input id="new-email" class="form-input" placeholder="prenom@cofidex.ch"></div>
+        <div class="form-field"><label class="form-label">Téléphone</label><input id="new-tel" class="form-input"></div>
+        <div class="form-field"><label class="form-label">Taux commission (%)</label><input id="new-taux" type="number" class="form-input" value="50"></div>
+        <div class="form-field"><label class="form-label">Rôle</label>
+          <select id="new-role" class="form-input">
+            <option value="apporteur">Apporteur</option>
+            <option value="signataire">Signataire</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-save" onclick="createAgent()">💾 Créer l'agent</button>
+    </div>`;
+}
+
+async function createAgent() {
+  const body = {
+    prenom: document.getElementById('new-prenom').value.trim(),
+    nom: document.getElementById('new-nom').value.trim(),
+    email: document.getElementById('new-email').value.trim(),
+    tel: document.getElementById('new-tel').value.trim(),
+    taux: Number(document.getElementById('new-taux').value) || 50,
+    role: document.getElementById('new-role').value,
+  };
+  if (!body.prenom || !body.nom || !body.email) { showError('Prénom, nom et email sont obligatoires.'); return; }
+  const r = await dbPost('agents', body);
+  if (r && r.error) { showError('Erreur lors de la création: ' + (r.detail || r.status)); return; }
+  allAgents = await dbGet('agents', 'select=*');
+  navigate('agents');
 }
 
 // ═══ INIT ═══

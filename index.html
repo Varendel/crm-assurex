@@ -301,6 +301,8 @@ let allClients = [];
 let allRappels = [];
 let msalInstance = null;
 let openBordereaux = {};
+let msalAccessToken = null;
+let calendarEvents = [];
 
 // ═══ PASSWORDS (démo) ═══
 const PASSWORDS = {
@@ -368,7 +370,8 @@ async function loginMicrosoft() {
   try {
     if (!msalInstance) { await initMSAL(); }
     if (!msalInstance) { showError('Erreur initialisation Microsoft. Utilisez la connexion email.'); return; }
-    const result = await msalInstance.loginPopup({ scopes: ['openid', 'profile', 'email', 'User.Read'] });
+    const result = await msalInstance.loginPopup({ scopes: ['openid', 'profile', 'email', 'User.Read', 'Calendars.Read'] });
+    msalAccessToken = result.accessToken;
     const email = result.account.username;
     const userData = PASSWORDS[email];
     if (userData) {
@@ -379,6 +382,28 @@ async function loginMicrosoft() {
       showError('Compte non autorisé.');
     }
   } catch(e) { showError('Connexion Microsoft annulée.'); }
+}
+
+// ═══ MICROSOFT GRAPH — AGENDA ═══
+async function fetchCalendarEvents() {
+  if (!msalAccessToken) return [];
+  try {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+    const end = new Date(now.getFullYear(), now.getMonth() + 2, 0).toISOString();
+    const url = `https://graph.microsoft.com/v1.0/me/calendarView?startDateTime=${start}&endDateTime=${end}&$orderby=start/dateTime&$top=50`;
+    const r = await fetch(url, { headers: { Authorization: `Bearer ${msalAccessToken}` } });
+    if (!r.ok) { console.error('Graph API error', r.status); return []; }
+    const data = await r.json();
+    return data.value || [];
+  } catch(e) { console.error('Graph fetch error', e); return []; }
+}
+
+async function refreshAgenda() {
+  calendarEvents = await fetchCalendarEvents();
+  if (currentView === 'agenda') {
+    document.getElementById('main-content').innerHTML = viewAgenda();
+  }
 }
 
 // ═══ LOGIN ═══
@@ -437,6 +462,7 @@ const SECTIONS = [
     { id: 'opportunites', label: 'Opportunités' },
     { id: 'suivi', label: 'Suivi des affaires' },
     { id: 'rappels', label: 'Rappels' },
+    { id: 'agenda', label: 'Agenda' },
   ]},
   { id: 'portefeuille', label: 'Portefeuille', icon: '◑', sub: [
     { id: 'portefeuille', label: 'Tous les clients' },
@@ -560,6 +586,7 @@ function renderView() {
     case 'opportunites': main.innerHTML = viewOpportunites(); break;
     case 'suivi': main.innerHTML = viewSuivi(); break;
     case 'rappels': main.innerHTML = viewRappels(); break;
+    case 'agenda': main.innerHTML = viewAgenda(); break;
     case 'bordereaux': main.innerHTML = viewBordereaux(); break;
     case 'commissions': main.innerHTML = viewCommissions(); break;
     case 'agents': main.innerHTML = viewAgents(); break;
@@ -739,19 +766,31 @@ async function showClient(id) {
   const agent = agentById(c.apporteur_id);
   const color = agentColor(agent);
 
+  const isEntreprise = c.segment === 'Entreprise';
+  const displayName = isEntreprise ? c.nom : `${c.prenom} ${c.nom}`;
+  const displaySub = isEntreprise
+    ? `${c.profession || 'Entreprise'}${c.prenom ? ' · Contact: ' + c.prenom : ''}`
+    : `${c.profession || ''}${c.employeur ? ' · ' + c.employeur : ''}`;
+  const headerIcon = isEntreprise
+    ? `<div style="width:52px;height:52px;border-radius:14px;background:rgba(245,158,11,0.12);border:2px solid rgba(245,158,11,0.35);display:flex;align-items:center;justify-content:center;font-size:24px">🏢</div>`
+    : `<div style="width:52px;height:52px;border-radius:50%;background:var(--accent-dim);border:2px solid var(--accent-border);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:var(--accent)">${(c.prenom||'?')[0]}${(c.nom||'?')[0]}</div>`;
+
   main.innerHTML = `
-    <button onclick="navigate('clients')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour aux clients</button>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <button onclick="navigate('clients')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;display:flex;align-items:center;gap:5px">← Retour aux clients</button>
+      <button onclick="window.print()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🖨️ Imprimer la fiche</button>
+    </div>
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:18px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:16px">
         <div style="display:flex;gap:14px;align-items:center">
-          <div style="width:52px;height:52px;border-radius:50%;background:var(--accent-dim);border:2px solid var(--accent-border);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:var(--accent)">${c.prenom[0]}${c.nom[0]}</div>
+          ${headerIcon}
           <div>
-            <h2 style="margin:0;font-size:20px;font-weight:900;color:var(--text)">${c.prenom} ${c.nom}</h2>
-            <div style="color:var(--text-muted);font-size:12px;margin-top:2px">${c.profession || ''} · ${c.employeur || ''}</div>
+            <h2 style="margin:0;font-size:20px;font-weight:900;color:var(--text)">${displayName}</h2>
+            <div style="color:var(--text-muted);font-size:12px;margin-top:2px">${displaySub}</div>
             <div style="color:var(--text-muted);font-size:12px">${c.adresse || ''} ${c.npa || ''} ${c.ville || ''}</div>
           </div>
         </div>
-        <div style="display:flex;gap:8px">${badge(c.segment || 'Privé', '#38bdf8')} ${badge(c.statut || 'prospect', statutColor(c.statut))}</div>
+        <div style="display:flex;gap:8px">${badge(c.segment || 'Privé', isEntreprise ? '#f59e0b' : '#38bdf8')} ${badge(c.statut || 'prospect', statutColor(c.statut))}</div>
       </div>
       <div class="stat-grid" style="margin-bottom:16px">
         ${statCard('Contrats', contrats.length, '#38bdf8')}
@@ -778,7 +817,11 @@ async function showClient(id) {
     </div>
 
     <div id="tab-identite">
-      ${sectionCard('Coordonnées personnelles', '#38bdf8', `<div class="info-grid">
+      ${isEntreprise ? sectionCard('Identification entreprise', '#f59e0b', `<div class="info-grid">
+        ${infoBlock('Raison sociale', c.nom)} ${infoBlock('Secteur d\'activité', c.profession)}
+        ${infoBlock('Contact principal', c.prenom)} ${infoBlock('Nb collaborateurs', c.taux_activite || '—')}
+        ${infoBlock('Chiffre d\'affaires', c.revenu ? 'CHF ' + Number(c.revenu).toLocaleString() : '—')} ${infoBlock('N° AVS (LPP)', c.avs)}
+      </div>`) : sectionCard('Coordonnées personnelles', '#38bdf8', `<div class="info-grid">
         ${infoBlock('Prénom', c.prenom)} ${infoBlock('Nom', c.nom)}
         ${infoBlock('Date de naissance', c.date_naissance)} ${infoBlock('Nationalité', c.nationalite)}
         ${infoBlock('État civil', c.etat_civil)} ${infoBlock('Enfants', c.enfants > 0 ? c.enfants : 'Aucun')}
@@ -792,11 +835,11 @@ async function showClient(id) {
       ${sectionCard('Coordonnées bancaires', '#a78bfa', `<div class="info-grid">
         ${infoBlock('Banque', c.banque)} ${infoBlock('IBAN', c.iban)}
       </div>`)}
-      ${sectionCard('Situation professionnelle', '#4ade80', `<div class="info-grid">
+      ${!isEntreprise ? sectionCard('Situation professionnelle', '#4ade80', `<div class="info-grid">
         ${infoBlock('Profession', c.profession)} ${infoBlock('Employeur', c.employeur)}
         ${infoBlock('Revenu annuel brut', c.revenu ? 'CHF ' + Number(c.revenu).toLocaleString() : '—')}
         ${infoBlock("Taux d'activité", c.taux_activite ? c.taux_activite + '%' : '—')}
-      </div>`)}
+      </div>`) : ''}
     </div>
 
     <div id="tab-prevoyance" class="hidden">
@@ -1456,6 +1499,63 @@ async function saveBordereau() {
   btn.textContent = 'Enregistrement...'; btn.disabled = true;
   await dbPost('bordereaux', body);
   navigate('bordereaux');
+}
+
+// AGENDA
+function viewAgenda() {
+  const isConnected = msalAccessToken !== null;
+
+  if (!isConnected) {
+    return `
+      <h2 style="margin:0 0 18px;font-size:18px;font-weight:800;color:var(--text)">Agenda</h2>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:40px;text-align:center">
+        <div style="font-size:36px;margin-bottom:12px">📅</div>
+        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px">Agenda Outlook non connecté</div>
+        <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px;max-width:380px;margin-left:auto;margin-right:auto">
+          Pour afficher vos rendez-vous Outlook ici, connectez-vous avec le bouton Microsoft sur l'écran de connexion (déconnexion puis reconnexion nécessaire).
+        </div>
+        <button class="btn-add" onclick="logout()">🚪 Se reconnecter avec Microsoft</button>
+      </div>`;
+  }
+
+  if (calendarEvents.length === 0) {
+    refreshAgenda();
+    return `
+      <h2 style="margin:0 0 18px;font-size:18px;font-weight:800;color:var(--text)">Agenda</h2>
+      <div class="loader">Chargement des événements Outlook...</div>`;
+  }
+
+  const grouped = {};
+  calendarEvents.forEach(ev => {
+    const d = new Date(ev.start.dateTime).toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long' });
+    if (!grouped[d]) grouped[d] = [];
+    grouped[d].push(ev);
+  });
+
+  const days = Object.keys(grouped).map(day => {
+    const events = grouped[day].map(ev => {
+      const start = new Date(ev.start.dateTime).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
+      const end = new Date(ev.end.dateTime).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
+      return `<div style="display:flex;gap:14px;padding:11px 18px;border-bottom:1px solid var(--border)">
+        <div style="font-size:12px;color:var(--accent);font-weight:700;min-width:90px">${start} - ${end}</div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--text)">${ev.subject || 'Sans titre'}</div>
+          ${ev.location && ev.location.displayName ? `<div style="font-size:11px;color:var(--text-muted)">${ev.location.displayName}</div>` : ''}
+        </div>
+      </div>`;
+    }).join('');
+    return `<div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">${day}</div>
+      <div class="table-wrap">${events}</div>
+    </div>`;
+  }).join('');
+
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Agenda — ${currentUser.email}</h2>
+      <button class="btn-secondary" onclick="refreshAgenda()">↻ Actualiser</button>
+    </div>
+    ${days || '<div class="table-empty">Aucun événement à venir.</div>'}`;
 }
 
 // AGENTS

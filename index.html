@@ -11,7 +11,7 @@
 <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #111827; color: #e2e8f0; min-height: 100vh; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #111827; color: #e2e8f0; min-height: 100vh; font-weight: 700; }
   :root {
     --bg: #111827; --surface: #1a2235; --surface-alt: #1f2a40;
     --surface-hover: #243050; --border: #2a3550;
@@ -98,7 +98,7 @@
   .nav-item {
     display: flex; align-items: center; width: 100%;
     padding: 7px 10px 7px 26px; background: none; border: none; cursor: pointer;
-    font-size: 12.5px; font-weight: 500; text-align: left; color: var(--text-muted);
+    font-size: 12.5px; font-weight: 700; text-align: left; color: var(--text-muted);
     border-radius: 7px; margin-bottom: 1px; transition: all 0.1s;
   }
   .nav-item:hover { background: var(--surface); color: var(--text); }
@@ -151,8 +151,8 @@
   /* FORM */
   .form-field { background: var(--surface-alt); border-radius: 9px; padding: 10px 14px; margin-bottom: 10px; }
   .form-label { color: var(--text-muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; display: block; }
-  .form-input { width: 100%; background: transparent; border: none; color: var(--text); font-size: 13px; outline: none; font-family: inherit; }
-  .form-select { width: 100%; background: transparent; border: none; color: var(--text); font-size: 13px; outline: none; font-family: inherit; }
+  .form-input { width: 100%; background: transparent; border: none; color: var(--text); font-size: 13px; outline: none; font-family: inherit; font-weight: 700; }
+  .form-select { width: 100%; background: transparent; border: none; color: var(--text); font-size: 13px; outline: none; font-family: inherit; font-weight: 700; }
   .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 
   /* KANBAN */
@@ -1529,6 +1529,14 @@ function viewNouveauRappel() {
       <div class="form-field"><label class="form-label">Date échéance</label><input class="form-input" id="r-date" type="date"/></div>
       <div class="form-field"><label class="form-label">Agent</label><select class="form-select" id="r-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
     </div>`)}
+    ${sectionCard('Notes', '#a78bfa', `
+      <textarea id="r-notes" placeholder="Ajouter des informations, un contexte..." style="width:100%;background:var(--surface-alt);border:1px solid var(--border);border-radius:9px;padding:12px 14px;color:var(--text);font-size:13px;outline:none;resize:vertical;min-height:90px;font-family:inherit;box-sizing:border-box"></textarea>
+    `)}
+    ${sectionCard('Pièce jointe', '#f59e0b', `
+      <input type="file" id="r-file-input" style="display:none"/>
+      <button type="button" class="btn-secondary" onclick="document.getElementById('r-file-input').click()">📎 Joindre un document (police, décompte...)</button>
+      <div id="r-file-name" style="font-size:12px;color:var(--text-muted);margin-top:8px"></div>
+    `)}
     <div style="display:flex;gap:10px;margin-top:8px">
       <button class="btn-secondary" onclick="navigate('rappels')">Annuler</button>
       <button class="btn-save" onclick="saveRappel()">✓ Enregistrer</button>
@@ -1545,11 +1553,34 @@ async function saveRappel() {
     urgence: document.getElementById('r-urgence').value,
     date_echeance: document.getElementById('r-date').value || null,
     apporteur_id: document.getElementById('r-agent').value || null,
+    notes: document.getElementById('r-notes').value || null,
     statut: 'ouvert',
   };
   const btn = document.querySelector('.btn-save');
   btn.textContent = 'Enregistrement...'; btn.disabled = true;
-  await dbPost('rappels', body);
+  const created = await dbPost('rappels', body);
+  if (created && created.error) { showError('Erreur lors de la création: ' + (created.detail || created.status)); btn.textContent = '✓ Enregistrer'; btn.disabled = false; return; }
+
+  // Si un fichier a été sélectionné, on l'upload une fois le rappel créé (on a alors son ID)
+  const fileInput = document.getElementById('r-file-input');
+  const file = fileInput && fileInput.files[0];
+  if (file && created && created[0] && created[0].id) {
+    const newId = created[0].id;
+    try {
+      const ext = file.name.split('.').pop();
+      const path = `rappels/${newId}-${Date.now()}.${ext}`;
+      const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${path}`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': file.type || 'application/octet-stream' },
+        body: file,
+      });
+      if (uploadRes.ok) {
+        const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/documents/${path}`;
+        await dbPatch('rappels', newId, { piece_jointe_url: publicUrl, piece_jointe_nom: file.name });
+      }
+    } catch (e) { /* upload échoué, le rappel reste créé sans pièce jointe */ }
+  }
+
   allRappels = await dbGet('rappels', 'select=*');
   navigate('rappels');
 }
@@ -2057,7 +2088,15 @@ function viewAgents() {
             <div class="form-field"><label class="form-label">Nom</label><input id="edit-nom-${a.id}" class="form-input" value="${a.nom || ''}"></div>
             <div class="form-field"><label class="form-label">Email</label><input id="edit-email-${a.id}" class="form-input" value="${a.email || ''}"></div>
             <div class="form-field"><label class="form-label">Téléphone</label><input id="edit-tel-${a.id}" class="form-input" value="${a.tel || ''}"></div>
-            <div class="form-field"><label class="form-label">Taux commission (%)</label><input id="edit-taux-${a.id}" type="number" class="form-input" value="${a.taux || ''}"></div>
+            <div class="form-field"><label class="form-label">Taux commission (%)</label>
+              <select id="edit-taux-select-${a.id}" class="form-input" onchange="toggleTauxLibre('${a.id}')">
+                <option value="0" ${a.taux === 0 ? 'selected' : ''}>0%</option>
+                <option value="50" ${a.taux === 50 ? 'selected' : ''}>50%</option>
+                <option value="100" ${a.taux === 100 ? 'selected' : ''}>100%</option>
+                <option value="autre" ${![0,50,100].includes(a.taux) ? 'selected' : ''}>Autre…</option>
+              </select>
+              <input id="edit-taux-${a.id}" type="number" class="form-input" value="${a.taux || ''}" placeholder="Saisir le taux exact" style="margin-top:6px;${[0,50,100].includes(a.taux) ? 'display:none' : ''}">
+            </div>
             <div class="form-field"><label class="form-label">Rôle</label>
               <select id="edit-role-${a.id}" class="form-input">
                 <option value="signataire" ${a.role === 'signataire' ? 'selected' : ''}>Signataire</option>
@@ -2080,6 +2119,19 @@ function viewAgents() {
     <div style="margin-top:20px">
       <button onclick="logout()" style="background:var(--red-dim);color:var(--red);border:1px solid rgba(248,113,113,0.3);border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer">🚪 Se déconnecter</button>
     </div>`;
+}
+
+function toggleTauxLibre(id) {
+  const select = document.getElementById(`edit-taux-select-${id}`);
+  const input = document.getElementById(`edit-taux-${id}`);
+  if (select.value === 'autre') {
+    input.style.display = 'block';
+    input.value = '';
+    input.focus();
+  } else {
+    input.style.display = 'none';
+    input.value = select.value;
+  }
 }
 
 function toggleEditAgent(id) {

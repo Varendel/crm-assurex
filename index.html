@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Assurex CRM"/>
 <meta name="theme-color" content="#0f172a"/>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-authentication-library/3.18.0/msal-browser.min.js"></script>
+<script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #111827; color: #e2e8f0; min-height: 100vh; }
@@ -362,7 +362,9 @@ async function dbPatch(table, id, body) {
 async function initMSAL() {
   try {
     msalInstance = new msal.PublicClientApplication(MSAL_CONFIG);
-    await msalInstance.initialize();
+    if (typeof msalInstance.initialize === 'function') {
+      await msalInstance.initialize();
+    }
   } catch(e) { msalInstance = null; }
 }
 

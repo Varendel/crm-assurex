@@ -444,7 +444,7 @@ async function loginMicrosoft() {
   try {
     if (!msalInstance) { await initMSAL(); }
     if (!msalInstance) { showError('Erreur initialisation Microsoft. Utilisez la connexion email.'); return; }
-    const result = await msalInstance.loginPopup({ scopes: ['openid', 'profile', 'email', 'User.Read', 'Calendars.Read'] });
+    const result = await msalInstance.loginPopup({ scopes: ['openid', 'profile', 'email', 'User.Read', 'Calendars.ReadWrite'] });
     msalAccessToken = result.accessToken;
     const email = result.account.username;
     const userData = PASSWORDS[email];
@@ -471,6 +471,40 @@ async function fetchCalendarEvents() {
     const data = await r.json();
     return data.value || [];
   } catch(e) { console.error('Graph fetch error', e); return []; }
+}
+
+// ═══ MICROSOFT GRAPH — SYNC RAPPELS → OUTLOOK ═══
+async function createOutlookEventFromRappel(rappel) {
+  if (!msalAccessToken || !rappel.date_echeance) return null;
+  try {
+    const client = rappel.client_id ? allClients.find(c => c.id === rappel.client_id) : null;
+    const clientLine = client ? `Client : ${client.prenom} ${client.nom}\n` : '';
+    const body = {
+      subject: `🔔 ${rappel.titre}`,
+      isAllDay: true,
+      start: { dateTime: rappel.date_echeance, timeZone: 'Europe/Zurich' },
+      end: { dateTime: rappel.date_echeance, timeZone: 'Europe/Zurich' },
+      body: { contentType: 'text', content: `${clientLine}Type : ${rappel.type || ''}\nUrgence : ${rappel.urgence || ''}\n\n${rappel.notes || ''}` },
+    };
+    const r = await fetch('https://graph.microsoft.com/v1.0/me/events', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) { console.error('Graph create event error', r.status); return null; }
+    const data = await r.json();
+    return data.id || null;
+  } catch(e) { console.error('Graph create event exception', e); return null; }
+}
+
+async function deleteOutlookEvent(eventId) {
+  if (!msalAccessToken || !eventId) return;
+  try {
+    await fetch(`https://graph.microsoft.com/v1.0/me/events/${eventId}`, {
+      method: 'DELETE',
+      headers: { Authorization: `Bearer ${msalAccessToken}` },
+    });
+  } catch(e) { console.error('Graph delete event exception', e); }
 }
 
 async function refreshAgenda() {
@@ -1258,16 +1292,31 @@ function viewRappels() {
 }
 
 async function traiterRappel(id) {
-  await dbPatch('rappels', id, { statut: 'traité' });
   const r = allRappels.find(x => x.id === id);
+  if (r && r.outlook_event_id) {
+    try { await deleteOutlookEvent(r.outlook_event_id); } catch(e) {}
+    await dbPatch('rappels', id, { statut: 'traité', outlook_event_id: null });
+    r.outlook_event_id = null;
+  } else {
+    await dbPatch('rappels', id, { statut: 'traité' });
+  }
   if (r) r.statut = 'traité';
   navigate('rappels');
 }
 
 async function rouvrirRappel(id) {
-  await dbPatch('rappels', id, { statut: 'ouvert' });
   const r = allRappels.find(x => x.id === id);
+  await dbPatch('rappels', id, { statut: 'ouvert' });
   if (r) r.statut = 'ouvert';
+  if (r && r.date_echeance) {
+    try {
+      const eventId = await createOutlookEventFromRappel(r);
+      if (eventId) {
+        await dbPatch('rappels', id, { outlook_event_id: eventId });
+        r.outlook_event_id = eventId;
+      }
+    } catch(e) {}
+  }
   navigate('rappels');
 }
 
@@ -1795,6 +1844,14 @@ async function saveRappel() {
         await dbPatch('rappels', newId, { piece_jointe_url: publicUrl, piece_jointe_nom: file.name });
       }
     } catch (e) { /* upload échoué, le rappel reste créé sans pièce jointe */ }
+  }
+
+  // Création de l'événement Outlook correspondant (si une date d'échéance est définie)
+  if (created && created[0] && created[0].id && body.date_echeance) {
+    try {
+      const eventId = await createOutlookEventFromRappel(created[0]);
+      if (eventId) await dbPatch('rappels', created[0].id, { outlook_event_id: eventId });
+    } catch (e) { /* sync Outlook échouée, le rappel reste créé dans le CRM */ }
   }
 
   allRappels = await dbGet('rappels', 'select=*');

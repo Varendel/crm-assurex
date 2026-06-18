@@ -289,81 +289,84 @@
 const SUPABASE_URL = 'https://gutlkjovmsyazwcomoyt.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_DJtZwHKeA5X1ck1coAQFOA_xOd7c02i';
 
-// ═══ AUTOCOMPLÉTION ADRESSES SUISSES (Nominatim / OpenStreetMap) ═══
+// ═══ AUTOCOMPLÉTION ADRESSES SUISSES (swisstopo geo.admin.ch — sans clé, CORS OK) ═══
 const CANTON_MAP = {
   'AG':'AG','AI':'AI','AR':'AR','BE':'BE','BL':'BL','BS':'BS','FR':'FR','GE':'GE',
   'GL':'GL','GR':'GR','JU':'JU','LU':'LU','NE':'NE','NW':'NW','OW':'OW','SG':'SG',
   'SH':'SH','SO':'SO','SZ':'SZ','TG':'TG','TI':'TI','UR':'UR','VD':'VD','VS':'VS',
   'ZG':'ZG','ZH':'ZH',
-  'Aargau':'AG','Appenzell Innerrhoden':'AI','Appenzell Ausserrhoden':'AR','Bern':'BE',
-  'Basel-Landschaft':'BL','Basel-Stadt':'BS','Fribourg':'FR','Freiburg':'FR',
-  'Genève':'GE','Genf':'GE','Glarus':'GL','Graubünden':'GR','Grisons':'GR',
-  'Jura':'JU','Luzern':'LU','Lucerne':'LU','Neuchâtel':'NE','Nidwalden':'NW',
-  'Obwalden':'OW','Sankt Gallen':'SG','Schaffhausen':'SH','Solothurn':'SO',
-  'Schwyz':'SZ','Thurgau':'TG','Ticino':'TI','Tessin':'TI','Uri':'UR',
-  'Vaud':'VD','Valais':'VS','Wallis':'VS','Zug':'ZG','Zürich':'ZH','Zurich':'ZH',
 };
 
 let _addrDebounceTimer = null;
 let _addrDropdown = null;
 
+// Parse le champ "detail" de geo.admin.ch : "rue de la paix 1 1003 lausanne 5586 lausanne ch vd"
+function _parseGeoDetail(detail) {
+  if (!detail) return {};
+  const parts = detail.trim().split(' ');
+  const canton = CANTON_MAP[parts[parts.length - 1]?.toUpperCase()] || '';
+  // NPA = premier token qui est un nombre à 4 chiffres
+  let npaIdx = -1;
+  for (let i = 0; i < parts.length; i++) {
+    if (/^\d{4}$/.test(parts[i])) { npaIdx = i; break; }
+  }
+  const npa = npaIdx >= 0 ? parts[npaIdx] : '';
+  const rue = npaIdx > 0 ? parts.slice(0, npaIdx).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : '';
+  // Ville = mot(s) après NPA jusqu'au prochain nombre ou "ch"
+  let ville = '';
+  if (npaIdx >= 0) {
+    const rest = parts.slice(npaIdx + 1);
+    const stopIdx = rest.findIndex(w => /^\d+$/.test(w) || w === 'ch');
+    const villeWords = stopIdx >= 0 ? rest.slice(0, stopIdx) : rest.slice(0, 2);
+    ville = villeWords.map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+  }
+  return { rue, npa, ville, canton };
+}
+
 function initAdresseAutocomplete(inputId, onSelect) {
   const input = document.getElementById(inputId);
   if (!input) return;
   input.setAttribute('autocomplete', 'off');
-
   input.addEventListener('input', () => {
     clearTimeout(_addrDebounceTimer);
     const q = input.value.trim();
     if (q.length < 3) { _closeAddrDropdown(); return; }
-    _addrDebounceTimer = setTimeout(() => _fetchAddrSuggestions(q, input, onSelect), 320);
+    _addrDebounceTimer = setTimeout(() => _fetchAddrSuggestions(q, input, onSelect), 300);
   });
-
   input.addEventListener('blur', () => setTimeout(_closeAddrDropdown, 200));
 }
 
 async function _fetchAddrSuggestions(q, input, onSelect) {
   try {
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&countrycodes=CH&format=json&limit=6&addressdetails=1`;
-    const r = await fetch(url, { headers: { 'User-Agent': 'CRM-Assurex/1.0' } });
+    const url = `https://api3.geo.admin.ch/rest/services/api/SearchServer?searchText=${encodeURIComponent(q)}&type=locations&origins=address&limit=8&lang=fr`;
+    const r = await fetch(url);
     if (!r.ok) return;
-    const results = await r.json();
-    _showAddrDropdown(results, input, onSelect);
-  } catch(e) {}
+    const data = await r.json();
+    _showAddrDropdown(data.results || [], input, onSelect);
+  } catch(e) { console.error('Addr autocomplete error', e); }
 }
 
 function _showAddrDropdown(results, input, onSelect) {
   _closeAddrDropdown();
-  if (!results || results.length === 0) return;
-
+  if (!results.length) return;
   const rect = input.getBoundingClientRect();
   const dd = document.createElement('div');
   dd.id = 'addr-autocomplete-dd';
-  dd.style.cssText = `position:fixed;top:${rect.bottom + window.scrollY + 2}px;left:${rect.left}px;width:${rect.width}px;background:#1e293b;border:1px solid #334155;border-radius:10px;z-index:99999;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.5);max-height:260px;overflow-y:auto`;
-
+  dd.style.cssText = `position:fixed;top:${rect.bottom + 2}px;left:${rect.left}px;width:${Math.max(rect.width, 320)}px;background:#1e293b;border:1px solid #334155;border-radius:10px;z-index:99999;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.5);max-height:260px;overflow-y:auto`;
   results.forEach(res => {
-    const addr = res.address || {};
-    const rue = addr.road || '';
-    const npa = addr.postcode || '';
-    const ville = addr.city || addr.town || addr.village || addr.municipality || '';
-    const stateRaw = addr.state || '';
-    const canton = CANTON_MAP[stateRaw] || stateRaw;
-    const label = [rue, npa && ville ? npa + ' ' + ville : ville].filter(Boolean).join(', ');
+    const attrs = res.attrs || {};
+    const parsed = _parseGeoDetail(attrs.detail);
+    const label = attrs.label ? attrs.label.replace(/<[^>]+>/g, '') : '';
     if (!label) return;
-
     const item = document.createElement('div');
-    item.style.cssText = 'padding:10px 14px;cursor:pointer;font-size:13px;color:#e2e8f0;border-bottom:1px solid #334155;line-height:1.4';
-    item.innerHTML = `<div style="font-weight:700">${rue || ville}</div><div style="font-size:11px;color:#94a3b8">${[npa, ville, canton].filter(Boolean).join(' · ')}</div>`;
-    item.addEventListener('mousedown', () => {
-      onSelect({ rue, npa, ville, canton });
-      _closeAddrDropdown();
-    });
+    item.style.cssText = 'padding:10px 14px;cursor:pointer;font-size:13px;color:#e2e8f0;border-bottom:1px solid #1e293b;line-height:1.4;transition:background 0.1s';
+    item.innerHTML = `<div style="font-weight:700">${label}</div>${parsed.canton ? `<div style="font-size:11px;color:#94a3b8">Canton ${parsed.canton}</div>` : ''}`;
+    item.addEventListener('mousedown', () => { onSelect(parsed); _closeAddrDropdown(); });
     item.addEventListener('mouseover', () => item.style.background = '#0f172a');
     item.addEventListener('mouseout', () => item.style.background = 'transparent');
     dd.appendChild(item);
   });
-
-  if (dd.children.length === 0) return;
+  if (!dd.children.length) return;
   document.body.appendChild(dd);
   _addrDropdown = dd;
 }
@@ -372,8 +375,6 @@ function _closeAddrDropdown() {
   if (_addrDropdown) { _addrDropdown.remove(); _addrDropdown = null; }
 }
 
-// Initialise l'autocomplete sur les champs adresse d'un formulaire donné
-// fieldMap = { adresse, npa, ville, canton } → IDs des inputs correspondants
 function bindAdresseAutocomplete(fieldMap) {
   const { adresseId, npaId, villeId, cantonId } = fieldMap;
   const adresseInput = document.getElementById(adresseId);
@@ -692,6 +693,7 @@ const SECTIONS = [
     { id: 'portefeuille', label: 'Tous les clients' },
     { id: 'clients-prives', label: 'Clients privés' },
     { id: 'clients-entreprises', label: 'Entreprises' },
+    { id: 'volume-primes', label: 'Volume de primes' },
   ]},
   { id: 'clients', label: 'Clients', icon: '◉', sub: [
     { id: 'clients', label: 'Fiches clients' },
@@ -747,10 +749,10 @@ function toggleSection(id) {
   renderSidebar();
 }
 
-function navigate(view) {
+async function navigate(view) {
   currentView = view;
   renderSidebar();
-  renderView();
+  await renderView();
 }
 
 // ═══ HELPERS ═══
@@ -796,7 +798,7 @@ function sectionCard(title, accentColor, content) {
 }
 
 // ═══ VIEWS ═══
-function renderView() {
+async function renderView() {
   const main = document.getElementById('main-content');
   switch (currentView) {
     case 'dashboard': main.innerHTML = viewDashboard(); break;
@@ -804,6 +806,7 @@ function renderView() {
     case 'portefeuille': main.innerHTML = viewPortefeuille('tous'); break;
     case 'clients-prives': main.innerHTML = viewPortefeuille('prive'); break;
     case 'clients-entreprises': main.innerHTML = viewPortefeuille('entreprise'); break;
+    case 'volume-primes': main.innerHTML = '<div class="loader">Calcul en cours...</div>'; main.innerHTML = await viewVolumePrimes(); break;
     case 'nouveau-client': main.innerHTML = viewNouveauClient(); break;
     case 'nouvelle-opportunite': main.innerHTML = viewNouvelleOpportunite(); break;
     case 'nouveau-rappel': main.innerHTML = viewNouveauRappel(); break;
@@ -832,9 +835,10 @@ function viewDashboard() {
   const now = new Date().toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
   let rappelRows = urgents.length > 0 ? urgents.map(r => `
-    <div style="padding:11px 18px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:center">
+    <div style="padding:11px 18px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:center;cursor:pointer;transition:background 0.1s" onclick="showRappel('${r.id}')" onmouseover="this.style.background='rgba(56,189,248,0.06)'" onmouseout="this.style.background='transparent'">
       <div style="width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0"></div>
       <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--text)">${r.titre}</div><div style="font-size:11px;color:var(--text-muted)">${r.date_echeance || ''}</div></div>
+      <span style="font-size:11px;color:var(--accent)">&#8594;</span>
     </div>`).join('') : '<div style="padding:16px 18px;color:var(--text-muted);font-size:13px">Aucun rappel urgent</div>';
 
   let teamRows = allAgents.map((a, i) => {
@@ -908,6 +912,166 @@ function viewDashboard() {
 }
 
 // PORTEFEUILLE
+// ═══ CLASSIFICATION VIE / NON-VIE ═══
+// Produits VIE = prévoyance, vie, 3a, LPP, perte de gain, santé collective, LAA, IJM
+const PRODUITS_VIE_KEYWORDS = [
+  'vie','3a','lpp','libre passage','prévoyance','perte de gain','perte gain',
+  'laa','ijm','santé collective','maladie collective','accident collective',
+  'sursalaire','complémentaire santé','sante_complementaire','prevoyance',
+  'libre_passage','vie_3a','lpp_entreprise','laa','perte_gain','sante_collective',
+  'prevoyance_enfant'
+];
+
+function classifierContrat(ct, clientsMap) {
+  const produit = (ct.produit || '').toLowerCase();
+  const isVie = PRODUITS_VIE_KEYWORDS.some(kw => produit.includes(kw));
+  const client = clientsMap[ct.client_id];
+  const isEntreprise = client && client.segment === 'Entreprise';
+  return { isVie, isEntreprise };
+}
+
+async function viewVolumePrimes() {
+  // Charger tous les contrats actifs
+  const [contrats, clients] = await Promise.all([
+    dbGet('contrats', 'statut=eq.actif&select=*'),
+    dbGet('clients', 'select=id,segment,prenom,nom'),
+  ]);
+  const clientsMap = {};
+  (clients || []).forEach(c => clientsMap[c.id] = c);
+
+  // Totaux globaux
+  let totalVie = 0, totalNonVie = 0, totalPrive = 0, totalEntreprise = 0;
+
+  // Détail par catégorie produit
+  const parCategorie = {};
+  // Détail par produit (top 10)
+  const parProduit = {};
+
+  (contrats || []).forEach(ct => {
+    const prime = Number(ct.prime_annuelle || 0);
+    if (!prime) return;
+    const { isVie, isEntreprise } = classifierContrat(ct, clientsMap);
+    if (isVie) totalVie += prime; else totalNonVie += prime;
+    if (isEntreprise) totalEntreprise += prime; else totalPrive += prime;
+
+    // Catégorie = première partie du produit avant "/" ou "("
+    const catLabel = (ct.produit || 'Autre').split(/[/(]/)[0].trim();
+    parCategorie[catLabel] = (parCategorie[catLabel] || 0) + prime;
+    parProduit[ct.produit || 'Autre'] = (parProduit[ct.produit || 'Autre'] || 0) + prime;
+  });
+
+  const total = totalVie + totalNonVie;
+
+  // Trier catégories par volume décroissant
+  const categories = Object.entries(parCategorie).sort((a,b) => b[1]-a[1]);
+  const topProduits = Object.entries(parProduit).sort((a,b) => b[1]-a[1]).slice(0, 10);
+
+  function pct(val) { return total > 0 ? Math.round(val / total * 100) : 0; }
+  function chf(val) { return 'CHF ' + Math.round(val).toLocaleString('fr-CH'); }
+  function bar(val, color, maxVal) {
+    const w = maxVal > 0 ? Math.round(val / maxVal * 100) : 0;
+    return `<div style="height:8px;border-radius:4px;background:var(--border);margin-top:6px;overflow:hidden">
+      <div style="height:100%;width:${w}%;background:${color};border-radius:4px;transition:width 0.4s"></div></div>`;
+  }
+
+  const maxCat = categories.length > 0 ? categories[0][1] : 1;
+
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Volume de primes</h2>
+      <div style="font-size:13px;color:var(--text-muted)">Contrats actifs uniquement · ${(contrats||[]).filter(ct=>ct.prime_annuelle>0).length} contrats</div>
+    </div>
+
+    <!-- KPIs globaux -->
+    <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px">
+      ${[
+        { label:'Total portefeuille', val:chf(total), color:'var(--accent)', sub:'' },
+        { label:'Contrats actifs', val:(contrats||[]).length, color:'#64748b', sub:'avec prime' },
+      ].map(k => `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px">
+          <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">${k.label}</div>
+          <div style="font-size:22px;font-weight:900;color:${k.color}">${k.val}</div>
+          ${k.sub ? `<div style="font-size:11px;color:var(--text-muted);margin-top:2px">${k.sub}</div>` : ''}
+        </div>`).join('')}
+    </div>
+
+    <!-- VIE vs NON-VIE -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+      <div style="background:var(--surface);border:2px solid rgba(167,139,250,0.3);border-radius:14px;padding:20px">
+        <div style="font-size:11px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🫀 VIE & Prévoyance</div>
+        <div style="font-size:26px;font-weight:900;color:#a78bfa">${chf(totalVie)}</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-top:4px">${pct(totalVie)}% du total</div>
+        <div style="height:8px;border-radius:4px;background:var(--border);margin-top:12px;overflow:hidden">
+          <div style="height:100%;width:${pct(totalVie)}%;background:#a78bfa;border-radius:4px"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:8px">Vie, 3a, LPP, LAA, IJM, Prévoyance, Perte de gain, Santé collective</div>
+      </div>
+      <div style="background:var(--surface);border:2px solid rgba(56,189,248,0.3);border-radius:14px;padding:20px">
+        <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🛡️ NON-VIE (IARD)</div>
+        <div style="font-size:26px;font-weight:900;color:var(--accent)">${chf(totalNonVie)}</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-top:4px">${pct(totalNonVie)}% du total</div>
+        <div style="height:8px;border-radius:4px;background:var(--border);margin-top:12px;overflow:hidden">
+          <div style="height:100%;width:${pct(totalNonVie)}%;background:var(--accent);border-radius:4px"></div>
+        </div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:8px">RC, Ménage, Véhicule, Bâtiment, PJ, Cyber, Choses</div>
+      </div>
+    </div>
+
+    <!-- PRIVÉ vs ENTREPRISE -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+      <div style="background:var(--surface);border:2px solid rgba(74,222,128,0.3);border-radius:14px;padding:20px">
+        <div style="font-size:11px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">👤 Clients privés</div>
+        <div style="font-size:26px;font-weight:900;color:#4ade80">${chf(totalPrive)}</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-top:4px">${pct(totalPrive)}% du total</div>
+        <div style="height:8px;border-radius:4px;background:var(--border);margin-top:12px;overflow:hidden">
+          <div style="height:100%;width:${pct(totalPrive)}%;background:#4ade80;border-radius:4px"></div>
+        </div>
+      </div>
+      <div style="background:var(--surface);border:2px solid rgba(245,158,11,0.3);border-radius:14px;padding:20px">
+        <div style="font-size:11px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🏢 Entreprises</div>
+        <div style="font-size:26px;font-weight:900;color:#f59e0b">${chf(totalEntreprise)}</div>
+        <div style="font-size:13px;color:var(--text-muted);margin-top:4px">${pct(totalEntreprise)}% du total</div>
+        <div style="height:8px;border-radius:4px;background:var(--border);margin-top:12px;overflow:hidden">
+          <div style="height:100%;width:${pct(totalEntreprise)}%;background:#f59e0b;border-radius:4px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Détail par catégorie -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:16px">Répartition par type de produit</div>
+      ${categories.map(([cat, val]) => `
+        <div style="margin-bottom:14px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <div style="font-size:13px;font-weight:700;color:var(--text)">${cat}</div>
+            <div style="font-size:13px;font-weight:800;color:var(--accent)">${chf(val)} <span style="font-size:11px;color:var(--text-muted);font-weight:400">(${pct(val)}%)</span></div>
+          </div>
+          ${bar(val, 'var(--accent)', maxCat)}
+        </div>`).join('')}
+    </div>
+
+    <!-- Top 10 produits -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px">
+      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:16px">Top produits par volume</div>
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="color:var(--text-muted);font-size:11px;text-transform:uppercase">
+          <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border)">#</th>
+          <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border)">Produit</th>
+          <th style="padding:6px 10px;text-align:right;border-bottom:1px solid var(--border)">Volume annuel</th>
+          <th style="padding:6px 10px;text-align:right;border-bottom:1px solid var(--border)">Part</th>
+        </tr></thead>
+        <tbody>${topProduits.map(([prod, val], i) => `
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:10px;color:var(--text-muted);font-weight:700">${i+1}</td>
+            <td style="padding:10px;color:var(--text);font-weight:600">${prod}</td>
+            <td style="padding:10px;text-align:right;font-weight:800;color:#f59e0b">${chf(val)}</td>
+            <td style="padding:10px;text-align:right;color:var(--text-muted)">${pct(val)}%</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
 function viewPortefeuille(filtre) {
   const titre = filtre === 'prive' ? 'Clients privés' : filtre === 'entreprise' ? 'Entreprises' : 'Portefeuille complet';
   const filtered = filtre === 'tous' ? allClients :
@@ -1150,13 +1314,14 @@ async function showClient(id) {
       <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
         <button class="btn-add" onclick="contratClientId='${c.id}'; navigate('nouveau-contrat')">+ Nouveau contrat</button>
       </div>
-      ${contrats.length > 0 ? `<div class="table-wrap"><div class="table-header" style="grid-template-columns:1fr 120px 100px 110px 100px"><div>Produit</div><div>Compagnie</div><div>Échéance</div><div>Prime/an</div><div>Statut</div></div>
-      ${contrats.map(ct => `<div class="table-row" style="grid-template-columns:1fr 120px 100px 110px 100px">
+      ${contrats.length > 0 ? `<div class="table-wrap"><div class="table-header" style="grid-template-columns:1fr 120px 100px 110px 100px 40px"><div>Produit</div><div>Compagnie</div><div>Échéance</div><div>Prime/an</div><div>Statut</div><div></div></div>
+      ${contrats.map(ct => `<div class="table-row" style="grid-template-columns:1fr 120px 100px 110px 100px 40px">
         <div><div style="font-weight:700;font-size:13px;color:var(--text)">${ct.produit}</div><div style="font-size:11px;color:var(--text-muted)">${ct.numero_police || ''}</div></div>
         <div style="font-size:13px;color:var(--text)">${ct.compagnie}</div>
         <div style="font-size:12px;color:var(--text-muted)">${ct.date_echeance || ''}</div>
         <div style="font-weight:800;color:#f59e0b">CHF ${Number(ct.prime_annuelle || 0).toLocaleString()}</div>
         <div>${badge(ct.statut, ct.statut === 'actif' ? '#4ade80' : ct.statut === 'renouveler' ? '#f59e0b' : '#f87171')}</div>
+        <div><button onclick="showEditContrat('${ct.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer;line-height:1" title="Modifier">✏️</button></div>
       </div>`).join('')}</div>` : '<div class="table-empty">Aucun contrat.</div>'}
     </div>
 
@@ -1994,6 +2159,77 @@ async function saveRappel() {
   navigate('rappels');
 }
 
+// ═══ ÉDITION CONTRAT ═══
+async function showEditContrat(contratId) {
+  const contrats = await dbGet('contrats', `id=eq.${contratId}&select=*`);
+  const ct = contrats && contrats[0];
+  if (!ct) return;
+
+  // Déduire périodicité depuis prime_annuelle si on peut
+  const perioOpts = [
+    { value:'1', label:'Annuelle' },
+    { value:'2', label:'Semestrielle' },
+    { value:'4', label:'Trimestrielle' },
+    { value:'12', label:'Mensuelle' },
+  ];
+  const primeAff = ct.prime_annuelle || 0;
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-edit-contrat';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:520px">
+      <h3 style="margin:0 0 20px;font-size:16px;font-weight:800;color:var(--text)">Modifier le contrat</h3>
+      <div class="form-grid">
+        <div class="form-field"><label class="form-label">Produit</label><input class="form-input" id="ect-produit" value="${ct.produit || ''}"/></div>
+        <div class="form-field"><label class="form-label">Compagnie</label><input class="form-input" id="ect-compagnie" value="${ct.compagnie || ''}"/></div>
+        <div class="form-field"><label class="form-label">N° de police</label><input class="form-input" id="ect-police" value="${ct.numero_police || ''}"/></div>
+        <div class="form-field"><label class="form-label">Date d'échéance</label><input class="form-input" id="ect-echeance" type="date" value="${ct.date_echeance || ''}"/></div>
+        <div class="form-field"><label class="form-label">Prime (CHF)</label><input class="form-input" id="ect-prime" type="number" value="${primeAff}"/></div>
+        <div class="form-field"><label class="form-label">Périodicité</label>
+          <select class="form-select" id="ect-periodicite">
+            ${perioOpts.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-field"><label class="form-label">Statut</label>
+          <select class="form-select" id="ect-statut">
+            <option value="actif" ${ct.statut==='actif'?'selected':''}>Actif</option>
+            <option value="renouveler" ${ct.statut==='renouveler'?'selected':''}>À renouveler</option>
+            <option value="résilié" ${ct.statut==='résilié'?'selected':''}>Résilié</option>
+            <option value="en_cours" ${ct.statut==='en_cours'?'selected':''}>En cours de signature</option>
+          </select>
+        </div>
+        <div class="form-field"><label class="form-label">Modules / options</label><input class="form-input" id="ect-modules" value="${ct.modules || ''}"/></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:20px">
+        <button class="btn-secondary" onclick="document.getElementById('modal-edit-contrat').remove()">Annuler</button>
+        <button class="btn-save" onclick="saveEditContrat('${contratId}','${ct.client_id}')">✓ Enregistrer</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function saveEditContrat(contratId, clientId) {
+  const periodicite = parseInt(document.getElementById('ect-periodicite').value) || 12;
+  const primeInput = parseFloat(document.getElementById('ect-prime').value) || 0;
+  const primeAnnuelle = Math.round(primeInput * periodicite);
+  const body = {
+    produit: document.getElementById('ect-produit').value.trim(),
+    compagnie: document.getElementById('ect-compagnie').value.trim(),
+    numero_police: document.getElementById('ect-police').value.trim() || null,
+    date_echeance: document.getElementById('ect-echeance').value || null,
+    prime_annuelle: primeAnnuelle,
+    statut: document.getElementById('ect-statut').value,
+    modules: document.getElementById('ect-modules').value.trim() || null,
+  };
+  const btn = document.querySelector('#modal-edit-contrat .btn-save');
+  if (btn) { btn.textContent = 'Enregistrement...'; btn.disabled = true; }
+  const r = await dbPatch('contrats', contratId, body);
+  if (r && r.error) { showError('Erreur: ' + (r.detail || r.status)); if (btn) { btn.textContent = '✓ Enregistrer'; btn.disabled = false; } return; }
+  document.getElementById('modal-edit-contrat').remove();
+  showClient(clientId);
+}
+
 // ═══ COLLABORATEURS ═══
 function showFormCollaborateur(clientId) {
   const modal = document.createElement('div');
@@ -2228,7 +2464,13 @@ function viewNouveauContrat() {
         <button type="button" class="btn-secondary" style="margin-top:8px;font-size:12px;padding:6px 14px" onclick="ajouterPlaqueFlotte()">+ Ajouter une plaque</button>
       </div>
       <div class="form-field"><label class="form-label">N° de police</label><input class="form-input" id="ct-police" placeholder="Optionnel"/></div>
-      <div class="form-field"><label class="form-label">Prime mensuelle (CHF) *</label><input class="form-input" id="ct-prime-mensuelle" type="number" placeholder="150" oninput="updateCommissionPreview()"/></div>
+      <div class="form-field"><label class="form-label">Prime (CHF) *</label><input class="form-input" id="ct-prime-mensuelle" type="number" placeholder="150" oninput="updateCommissionPreview()"/></div>
+      <div class="form-field"><label class="form-label">Périodicité</label><select class="form-select" id="ct-periodicite" onchange="updateCommissionPreview()">
+        <option value="12">Mensuelle</option>
+        <option value="4">Trimestrielle</option>
+        <option value="2">Semestrielle</option>
+        <option value="1">Annuelle</option>
+      </select></div>
       <div class="form-field" id="ct-duree-field" style="display:none"><label class="form-label">Durée du contrat (années)</label><input class="form-input" id="ct-duree" type="number" placeholder="10" value="1" oninput="updateCommissionPreview()"/></div>
       <div class="form-field" id="ct-manuel-field" style="display:none"><label class="form-label">Commission estimée (CHF) — manuel</label><input class="form-input" id="ct-manuel" type="number" placeholder="0" oninput="updateCommissionPreview()"/></div>
       <div class="form-field"><label class="form-label">Date de signature</label><input class="form-input" id="ct-date" type="date"/></div>
@@ -2465,7 +2707,7 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
     modules: modules && modules.length > 0 ? modules.join(', ') : null,
     plaques: plaques && plaques.length > 0 ? plaques.join(', ') : null,
     numero_police: document.getElementById('ct-police').value.trim() || null,
-    prime_annuelle: Math.round(primeMensuelle * 12),
+    prime_annuelle: Math.round(primeMensuelle * (parseInt(document.getElementById('ct-periodicite')?.value) || 12)),
     date_debut: document.getElementById('ct-date').value || null,
     statut: document.getElementById('ct-statut').value,
   };

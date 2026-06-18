@@ -95,6 +95,15 @@
   }
   .nav-section-btn.active { color: var(--accent); }
   .nav-section-btn .arrow { margin-left: auto; font-size: 9px; }
+  .nav-solo-btn {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    padding: 9px 10px; background: none; border: none; cursor: pointer;
+    font-weight: 800; font-size: 13px; letter-spacing: 0;
+    text-align: left; color: #ffffff; transition: all 0.15s;
+    border-radius: 8px; margin-bottom: 6px;
+  }
+  .nav-solo-btn:hover { background: var(--surface); }
+  .nav-solo-btn.active { background: var(--accent-dim); color: var(--accent); }
   .nav-item {
     display: flex; align-items: center; width: 100%;
     padding: 7px 10px 7px 26px; background: none; border: none; cursor: pointer;
@@ -428,7 +437,10 @@ const CATALOGUE_PRODUITS = {
     { id: 'rc_commerce', label: 'RC commerce / exploitation commerciale', segment: 'entreprise', modules: ['Rappel de produits', 'Pollution accidentelle'] },
     { id: 'rc_do', label: 'RC D&O (administrateurs et dirigeants)', segment: 'entreprise', modules: ['Frais de défense', 'Extension filiales', 'Extension mandats externes (fondations, associations)', 'Side A/B/C'] },
     { id: 'rc_batiment', label: 'RC bâtiments / propriétaire immobilier', segment: 'tous', modules: ['Bris de glace bâtiment', 'Dommages aux locataires'] },
-    { id: 'rc_vehicule', label: 'RC véhicule à moteur (obligatoire)', segment: 'tous', modules: [], combinables: ['casco_partielle', 'casco_complete'] },
+    { id: 'rc_vehicule', label: 'RC véhicule à moteur (obligatoire)', segment: 'tous', modules: [], options: [
+        { id: 'casco_partielle', label: 'Casco partielle', modules: ['Bris de glace étendu (phares, rétroviseurs)', 'Dommages au véhicule parqué', 'Véhicule de remplacement', 'Dépannage / assistance', 'Objets transportés', 'Batterie / borne e-mobilité'] },
+        { id: 'casco_complete', label: 'Casco complète', modules: ['Bris de glace étendu (phares, rétroviseurs)', 'Protection du bonus', 'Faute grave', 'Dommages au véhicule parqué', 'Véhicule de remplacement', 'Dépannage / assistance', 'Objets transportés', 'Batterie / borne e-mobilité'] },
+      ]},
     { id: 'rc_drone', label: 'RC drone', segment: 'tous', modules: [] },
   ],
   'Ménage / habitation': [
@@ -439,9 +451,12 @@ const CATALOGUE_PRODUITS = {
     { id: 'batiment_entreprise', label: 'Bâtiment commercial / locaux professionnels', segment: 'entreprise', modules: ['Bris de glace bâtiment', 'Pertes d\'exploitation suite sinistre', 'Tremblement de terre', 'Vol et vandalisme'] },
   ],
   'Véhicule': [
-    { id: 'vehicule_rc', label: 'RC véhicule (obligatoire)', segment: 'tous', modules: [], combinables: ['casco_partielle', 'casco_complete'] },
-    { id: 'casco_partielle', label: 'Casco partielle', segment: 'tous', modules: ['Bris de glace étendu (phares, rétroviseurs)', 'Dommages au véhicule parqué', 'Véhicule de remplacement', 'Dépannage / assistance', 'Objets transportés', 'Batterie / borne e-mobilité'] },
-    { id: 'casco_complete', label: 'Casco complète', segment: 'tous', modules: ['Bris de glace étendu (phares, rétroviseurs)', 'Protection du bonus', 'Faute grave', 'Dommages au véhicule parqué', 'Véhicule de remplacement', 'Dépannage / assistance', 'Objets transportés', 'Batterie / borne e-mobilité'] },
+    { id: 'vehicule_rc', label: 'RC véhicule (obligatoire)', segment: 'tous', modules: [], options: [
+        { id: 'casco_partielle', label: 'Casco partielle', modules: ['Bris de glace étendu (phares, rétroviseurs)', 'Dommages au véhicule parqué', 'Véhicule de remplacement', 'Dépannage / assistance'] },
+        { id: 'casco_complete', label: 'Casco complète', modules: ['Bris de glace étendu (phares, rétroviseurs)', 'Protection du bonus', 'Faute grave', 'Dommages au véhicule parqué', 'Véhicule de remplacement'] },
+      ]},
+    { id: 'casco_partielle', label: 'Casco partielle (seule)', segment: 'tous', modules: ['Bris de glace étendu (phares, rétroviseurs)', 'Dommages au véhicule parqué', 'Véhicule de remplacement', 'Dépannage / assistance', 'Objets transportés', 'Batterie / borne e-mobilité'] },
+    { id: 'casco_complete', label: 'Casco complète (seule)', segment: 'tous', modules: ['Bris de glace étendu (phares, rétroviseurs)', 'Protection du bonus', 'Faute grave', 'Dommages au véhicule parqué', 'Véhicule de remplacement', 'Dépannage / assistance', 'Objets transportés', 'Batterie / borne e-mobilité'] },
     { id: 'flotte_entreprise', label: 'Flotte véhicules entreprise (plaques multiples)', segment: 'entreprise', modules: ['Casco partielle flotte', 'Casco complète flotte', 'Conducteurs multiples', 'Véhicules de remplacement flotte'], flotte: true },
   ],
   'Protection juridique': [
@@ -528,6 +543,15 @@ async function dbPatch(table, id, body) {
       method: 'PATCH',
       headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
+    });
+  } catch(e) {}
+}
+
+async function dbDelete(table, id) {
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
     });
   } catch(e) {}
 }
@@ -684,8 +708,8 @@ function logout() {
 
 // ═══ SIDEBAR ═══
 const SECTIONS = [
+  { id: 'dashboard-solo', label: 'Dashboard', icon: '⬛', solo: true, target: 'dashboard' },
   { id: 'vente', label: 'Vente', icon: '◈', sub: [
-    { id: 'dashboard', label: 'Dashboard' },
     { id: 'opportunites', label: 'Opportunités' },
     { id: 'suivi', label: 'Suivi des affaires' },
     { id: 'nouveau-contrat-direct', label: 'Nouveau contrat' },
@@ -717,6 +741,15 @@ function renderSidebar() {
   // Nav
   let nav = '';
   SECTIONS.forEach(sec => {
+    if (sec.solo) {
+      // Item standalone — Dashboard en blanc gras au-dessus
+      const active = currentView === sec.target;
+      nav += `<button class="nav-solo-btn ${active ? 'active' : ''}" onclick="navigate('${sec.target}')">
+        <span style="font-size:13px">📊</span>${sec.label}
+        ${active ? '<span class="nav-dot" style="margin-left:auto"></span>' : ''}
+      </button>`;
+      return;
+    }
     const isActive = sec.sub.some(s => s.id === currentView);
     nav += `<button class="nav-section-btn ${isActive ? 'active' : ''}" onclick="toggleSection('${sec.id}')">
       <span style="font-size:14px">${sec.icon}</span>${sec.label}
@@ -1102,6 +1135,16 @@ const PRODUITS_VIE_KEYWORDS = [
   'prevoyance_enfant'
 ];
 
+// Produits dont la prime saisie est MENSUELLE (× 12 pour obtenir la prime annuelle)
+const PRODUITS_PRIME_MENSUELLE = [
+  'sante_complementaire','sante_collective_entreprise','lamal','lamal_base',
+  'complementaire_sante','sante','maladie_collective'
+];
+
+function isPrimeMensuelle(produitId) {
+  return PRODUITS_PRIME_MENSUELLE.includes(produitId);
+}
+
 function classifierContrat(ct, clientsMap) {
   const produit = (ct.produit || '').toLowerCase();
   const isVie = PRODUITS_VIE_KEYWORDS.some(kw => produit.includes(kw));
@@ -1379,7 +1422,7 @@ async function showClient(id) {
       <div class="stat-grid" style="margin-bottom:16px">
         ${statCard('Contrats', contrats.length, '#38bdf8')}
         ${statCard('Rappels ouverts', rappels.filter(r => r.statut === 'ouvert').length, rappels.filter(r => r.statut === 'ouvert').length > 0 ? '#f87171' : '#64748b')}
-        ${statCard('CA annuel', c.ca ? 'CHF ' + Number(c.ca).toLocaleString() : '—', '#f59e0b')}
+        ${statCard('CA annuel (primes)', contrats.length > 0 ? 'CHF ' + contrats.reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0).toLocaleString() : '—', '#f59e0b')}
       </div>
       ${agent ? `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface-alt);border-radius:10px">
         ${avatar(agent, 36)}
@@ -1397,6 +1440,7 @@ async function showClient(id) {
       <button class="tab-btn" onclick="switchTab(this,'tab-prevoyance')">Prévoyance</button>
       ${isEntreprise ? `<button class="tab-btn" onclick="switchTab(this,'tab-collaborateurs')">Collaborateurs (${collaborateurs.length})</button>` : ''}
       <button class="tab-btn" onclick="switchTab(this,'tab-contrats')">Contrats (${contrats.length})</button>
+      <button class="tab-btn" onclick="switchTab(this,'tab-polices')">📎 Polices & Documents</button>
       <button class="tab-btn" onclick="switchTab(this,'tab-rappels')">Rappels (${rappels.length})</button>
       <button class="tab-btn" onclick="switchTab(this,'tab-notes')">Notes</button>
     </div>
@@ -1453,6 +1497,14 @@ async function showClient(id) {
         <div style="display:flex;gap:10px;margin-top:14px">
           <button class="btn-secondary" onclick="toggleEditClient()">Annuler</button>
           <button class="btn-save" onclick="saveClientEdit('${c.id}', ${isEntreprise})">💾 Enregistrer les modifications</button>
+        </div>
+        <div style="margin-top:12px;padding:12px 14px;background:var(--surface-alt);border-radius:8px;display:flex;align-items:center;gap:12px">
+          <label style="font-size:12px;font-weight:700;color:var(--text-muted);white-space:nowrap">Statut du client :</label>
+          <select id="ec-statut" class="form-select" style="max-width:180px">
+            <option value="prospect" ${c.statut === 'prospect' ? 'selected' : ''}>Prospect</option>
+            <option value="actif" ${c.statut === 'actif' ? 'selected' : ''}>Actif</option>
+            <option value="inactif" ${c.statut === 'inactif' ? 'selected' : ''}>Inactif</option>
+          </select>
         </div>
       ` : `
       ${isEntreprise ? sectionCard('Identification entreprise', '#f59e0b', `<div class="info-grid">
@@ -1513,24 +1565,56 @@ async function showClient(id) {
       ${collaborateurs.length > 0 ? `
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px">
-          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Nom</th>
-          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Prénom</th>
-          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Adresse privée</th>
+          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Nom / Prénom</th>
+          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Naissance · Sexe</th>
           <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">N° AVS</th>
+          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Fonction</th>
+          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Salaire</th>
+          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Contact</th>
           <th style="padding:8px 12px;border-bottom:1px solid var(--border)"></th>
         </tr></thead>
         <tbody>${collaborateurs.map(col => `
           <tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:10px 12px;font-weight:700;color:var(--text)">${col.nom || '—'}</td>
-            <td style="padding:10px 12px;color:var(--text)">${col.prenom || '—'}</td>
-            <td style="padding:10px 12px;color:var(--text-muted)">${col.adresse || '—'}</td>
-            <td style="padding:10px 12px;color:var(--text-muted);font-family:monospace">${col.avs || '—'}</td>
+            <td style="padding:10px 12px">
+              <div style="font-weight:700;color:var(--text)">${col.nom || ''} ${col.prenom || ''}</div>
+              <div style="font-size:11px;color:var(--text-muted)">${col.adresse || '—'}</div>
+            </td>
+            <td style="padding:10px 12px;color:var(--text-muted);font-size:12px">${col.date_naissance || '—'}<br><span style="color:var(--text)">${col.sexe || '—'}</span></td>
+            <td style="padding:10px 12px;color:var(--text-muted);font-family:monospace;font-size:11px">${col.avs || '—'}</td>
+            <td style="padding:10px 12px;font-size:12px;color:var(--text)">${col.fonction || '—'}<br><span style="color:var(--text-muted);font-size:11px">${col.taux_activite ? col.taux_activite + '%' : ''} ${col.date_entree ? '· dès ' + col.date_entree : ''}</span></td>
+            <td style="padding:10px 12px;font-weight:700;color:var(--gold)">${col.salaire ? 'CHF ' + Number(col.salaire).toLocaleString() : '—'}</td>
+            <td style="padding:10px 12px;font-size:11px;color:var(--text-muted)">${col.email || ''}<br>${col.mobile || ''}</td>
             <td style="padding:10px 12px;text-align:right">
               <button onclick="deleteCollaborateur('${col.id}','${c.id}')" style="background:rgba(248,113,113,0.1);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">Supprimer</button>
             </td>
           </tr>`).join('')}
         </tbody>
-      </table>` : '<div class="table-empty">Aucun collaborateur enregistré.</div>'}
+      </table>` : '<div class="table-empty">Aucun collaborateur enregistré. Clique sur "+ Ajouter" pour commencer.</div>'}
+    </div>
+
+    <div id="tab-polices" class="hidden">
+      ${sectionCard('📎 Polices & Documents', '#a78bfa', `
+        <div style="margin-bottom:16px">
+          <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Upload des polices d'assurance, avenants, correspondances et tout document lié à ce client.</div>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+            <select id="police-categorie" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:12px;font-weight:700">
+              <option value="police">Police d'assurance</option>
+              <option value="avenant">Avenant / Modification</option>
+              <option value="decompte">Décompte / Facture</option>
+              <option value="sinistre">Sinistre</option>
+              <option value="correspondance">Correspondance</option>
+              <option value="autre">Autre document</option>
+            </select>
+            <input id="police-label" type="text" placeholder="Libellé (ex: Police RC AXA 2024)" style="flex:1;min-width:180px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:12px">
+            <input id="police-file-input" type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" style="display:none" onchange="uploadPoliceDoc('${id}')">
+            <button onclick="document.getElementById('police-file-input').click()" class="btn-add" style="padding:8px 14px;font-size:12px">+ Ajouter un document</button>
+          </div>
+          <div id="police-upload-status" style="font-size:11px;color:var(--text-muted);margin-bottom:8px"></div>
+        </div>
+        <div id="police-docs-list">
+          <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px">Chargement des documents...</div>
+        </div>
+      `)}
     </div>
 
     <div id="tab-rappels" class="hidden">
@@ -1628,6 +1712,10 @@ async function saveClientEdit(id, isEntreprise) {
 
   if (!body.prenom && !body.nom) { showError('Le nom est obligatoire.'); return; }
 
+  // Statut (commun à tous)
+  const statutEl = document.getElementById('ec-statut');
+  if (statutEl) body.statut = statutEl.value;
+
   const btn = document.querySelector('.btn-save');
   if (btn) { btn.textContent = 'Enregistrement...'; btn.disabled = true; }
 
@@ -1642,10 +1730,80 @@ async function saveClientEdit(id, isEntreprise) {
 function switchTab(btn, tabId) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  ['tab-identite','tab-prevoyance','tab-contrats','tab-rappels','tab-notes'].forEach(id => {
+  ['tab-identite','tab-prevoyance','tab-collaborateurs','tab-contrats','tab-polices','tab-rappels','tab-notes'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('hidden', id !== tabId);
   });
+  if (tabId === 'tab-polices') loadPoliceDocs(currentClientId);
+}
+
+// POLICES & DOCUMENTS
+async function loadPoliceDocs(clientId) {
+  const listEl = document.getElementById('police-docs-list');
+  if (!listEl) return;
+  const docs = await dbGet('pieces_jointes', `client_id=eq.${clientId}&order=date_ajout.desc&select=*`);
+  if (!docs || docs.length === 0) {
+    listEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px">Aucun document enregistré pour ce client.</div>';
+    return;
+  }
+  const catIcon = { police:'📋', avenant:'✏️', decompte:'🧾', sinistre:'🚨', correspondance:'✉️', autre:'📄' };
+  const catLabel = { police:'Police', avenant:'Avenant', decompte:'Décompte', sinistre:'Sinistre', correspondance:'Correspondance', autre:'Document' };
+  listEl.innerHTML = docs.map(d => `
+    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border)">
+      <div style="font-size:20px">${catIcon[d.section] || '📄'}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:var(--text)">${d.reference_label || d.nom_fichier}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${catLabel[d.section] || d.section} · ${d.date_ajout || ''}</div>
+      </div>
+      <a href="${d.url}" target="_blank" style="padding:5px 12px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;font-size:11px;font-weight:700;text-decoration:none">↗ Ouvrir</a>
+      <button onclick="deletePoliceDoc('${d.id}','${clientId}')" style="padding:5px 10px;background:var(--red-dim);color:var(--red);border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">✕</button>
+    </div>`).join('');
+}
+
+async function uploadPoliceDoc(clientId) {
+  const fileInput = document.getElementById('police-file-input');
+  const file = fileInput.files[0];
+  if (!file) return;
+  const label = (document.getElementById('police-label').value.trim()) || file.name;
+  const categorie = document.getElementById('police-categorie').value;
+  const statusEl = document.getElementById('police-upload-status');
+  if (statusEl) statusEl.textContent = '⏳ Upload en cours...';
+
+  const timestamp = Date.now();
+  const ext = file.name.split('.').pop();
+  const path = `clients/${clientId}/${timestamp}.${ext}`;
+
+  try {
+    const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/pieces-jointes/${path}`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': file.type },
+      body: file,
+    });
+    if (!uploadRes.ok) { const err = await uploadRes.text(); showError('Erreur upload: ' + err); if (statusEl) statusEl.textContent = ''; return; }
+
+    const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/pieces-jointes/${path}`;
+    const meta = {
+      client_id: clientId,
+      section: categorie,
+      reference_label: label,
+      nom_fichier: file.name,
+      url: publicUrl,
+      date_ajout: new Date().toISOString().split('T')[0],
+    };
+    const r = await dbPost('pieces_jointes', meta);
+    if (r && r.error) { showError('Erreur enregistrement: ' + (r.detail || r.message || '')); if (statusEl) statusEl.textContent = ''; return; }
+    if (statusEl) statusEl.textContent = '✅ Document ajouté avec succès';
+    fileInput.value = '';
+    document.getElementById('police-label').value = '';
+    setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
+    loadPoliceDocs(clientId);
+  } catch(e) { showError('Erreur réseau: ' + e.message); if (statusEl) statusEl.textContent = ''; }
+}
+
+async function deletePoliceDoc(docId, clientId) {
+  if (!confirm('Supprimer ce document ?')) return;
+  await dbDelete('pieces_jointes', docId);
+  loadPoliceDocs(clientId);
 }
 
 // OPPORTUNITÉS
@@ -2414,25 +2572,63 @@ async function saveEditContrat(contratId, clientId) {
 function showFormCollaborateur(clientId) {
   const modal = document.createElement('div');
   modal.id = 'modal-collaborateur';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
   modal.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto">
       <h3 style="margin:0 0 20px;font-size:16px;font-weight:800;color:var(--text)">Nouveau collaborateur</h3>
-      <div class="form-grid">
+      <div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Identité</div>
+      <div class="form-grid" style="margin-bottom:16px">
         <div class="form-field"><label class="form-label">Nom *</label><input class="form-input" id="col-nom" placeholder="Dupont"/></div>
         <div class="form-field"><label class="form-label">Prénom *</label><input class="form-input" id="col-prenom" placeholder="Jean"/></div>
-        <div class="form-field" style="grid-column:span 2"><label class="form-label">Adresse privée</label><input class="form-input" id="col-adresse" placeholder="Rue des Alpes 12, 1000 Lausanne"/></div>
-        <div class="form-field" style="grid-column:span 2"><label class="form-label">N° AVS</label><input class="form-input" id="col-avs" placeholder="756.1234.5678.90" maxlength="16"/></div>
+        <div class="form-field"><label class="form-label">Date de naissance</label><input class="form-input" id="col-naissance" type="date"/></div>
+        <div class="form-field"><label class="form-label">Sexe</label>
+          <select class="form-select" id="col-sexe">
+            <option value="">—</option>
+            <option value="H">Homme</option>
+            <option value="F">Femme</option>
+          </select>
+        </div>
+        <div class="form-field"><label class="form-label">N° AVS (756.XXXX.XXXX.XX)</label><input class="form-input" id="col-avs" placeholder="756.1234.5678.90" maxlength="16"/></div>
+        <div class="form-field"><label class="form-label">Nationalité / Permis</label>
+          <select class="form-select" id="col-permis">
+            <option value="">—</option>
+            <option value="CH">Suisse (CH)</option>
+            <option value="B">Permis B</option>
+            <option value="C">Permis C</option>
+            <option value="G">Frontalier G</option>
+            <option value="L">Permis L</option>
+            <option value="autre">Autre</option>
+          </select>
+        </div>
       </div>
-      <div style="display:flex;gap:10px;margin-top:20px">
+      <div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Adresse privée</div>
+      <div class="form-grid" style="margin-bottom:16px">
+        <div class="form-field" style="grid-column:span 2"><label class="form-label">Rue et numéro</label><input class="form-input" id="col-adresse" placeholder="Rue des Alpes 12"/></div>
+        <div class="form-field"><label class="form-label">NPA</label><input class="form-input" id="col-npa" placeholder="1000" maxlength="4"/></div>
+        <div class="form-field"><label class="form-label">Ville</label><input class="form-input" id="col-ville" placeholder="Lausanne"/></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#38bdf8;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Données salariales (LAA / LPP)</div>
+      <div class="form-grid" style="margin-bottom:16px">
+        <div class="form-field"><label class="form-label">Salaire annuel brut (CHF)</label><input class="form-input" id="col-salaire" type="number" placeholder="72000"/></div>
+        <div class="form-field"><label class="form-label">Taux d'activité (%)</label><input class="form-input" id="col-taux" type="number" min="0" max="100" placeholder="100"/></div>
+        <div class="form-field"><label class="form-label">Fonction / Titre</label><input class="form-input" id="col-fonction" placeholder="Responsable commercial"/></div>
+        <div class="form-field"><label class="form-label">Entrée en service</label><input class="form-input" id="col-entree" type="date"/></div>
+      </div>
+      <div style="font-size:10px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Contact</div>
+      <div class="form-grid" style="margin-bottom:20px">
+        <div class="form-field"><label class="form-label">Email pro</label><input class="form-input" id="col-email" type="email" placeholder="j.dupont@entreprise.ch"/></div>
+        <div class="form-field"><label class="form-label">Mobile</label><input class="form-input" id="col-mobile" placeholder="+41 79 000 00 00"/></div>
+      </div>
+      <div style="display:flex;gap:10px">
         <button class="btn-secondary" onclick="document.getElementById('modal-collaborateur').remove()">Annuler</button>
         <button class="btn-save" onclick="saveCollaborateur('${clientId}')">✓ Enregistrer</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
-  setTimeout(() => initAdresseAutocomplete('col-adresse', ({ rue, npa, ville, canton }) => {
-    const el = document.getElementById('col-adresse');
-    if (el) el.value = [rue, npa, ville].filter(Boolean).join(', ');
+  setTimeout(() => initAdresseAutocomplete('col-adresse', ({ rue, npa, ville }) => {
+    const elR = document.getElementById('col-adresse'); if (elR) elR.value = rue;
+    const elN = document.getElementById('col-npa'); if (elN) elN.value = npa;
+    const elV = document.getElementById('col-ville'); if (elV) elV.value = ville;
   }), 0);
 }
 
@@ -2442,10 +2638,18 @@ async function saveCollaborateur(clientId) {
   if (!nom || !prenom) { showError('Nom et prénom obligatoires.'); return; }
   const body = {
     client_id: clientId,
-    nom,
-    prenom,
-    adresse: document.getElementById('col-adresse').value.trim() || null,
+    nom, prenom,
+    date_naissance: document.getElementById('col-naissance').value || null,
+    sexe: document.getElementById('col-sexe').value || null,
     avs: document.getElementById('col-avs').value.trim() || null,
+    permis: document.getElementById('col-permis').value || null,
+    adresse: [document.getElementById('col-adresse').value.trim(), document.getElementById('col-npa').value.trim(), document.getElementById('col-ville').value.trim()].filter(Boolean).join(', ') || null,
+    salaire: Number(document.getElementById('col-salaire').value) || null,
+    taux_activite: Number(document.getElementById('col-taux').value) || null,
+    fonction: document.getElementById('col-fonction').value.trim() || null,
+    date_entree: document.getElementById('col-entree').value || null,
+    email: document.getElementById('col-email').value.trim() || null,
+    mobile: document.getElementById('col-mobile').value.trim() || null,
   };
   const btn = document.querySelector('#modal-collaborateur .btn-save');
   if (btn) { btn.textContent = 'Enregistrement...'; btn.disabled = true; }
@@ -2644,25 +2848,62 @@ function viewNouveauContrat() {
         <button type="button" class="btn-secondary" style="margin-top:8px;font-size:12px;padding:6px 14px" onclick="ajouterPlaqueFlotte()">+ Ajouter une plaque</button>
       </div>
       <div class="form-field"><label class="form-label">N° de police</label><input class="form-input" id="ct-police" placeholder="Optionnel"/></div>
-      <div class="form-field"><label class="form-label">Prime (CHF) *</label><input class="form-input" id="ct-prime-mensuelle" type="number" placeholder="150" oninput="updateCommissionPreview()"/></div>
-      <div class="form-field"><label class="form-label">Périodicité</label><select class="form-select" id="ct-periodicite" onchange="updateCommissionPreview()">
-        <option value="12">Mensuelle</option>
-        <option value="4">Trimestrielle</option>
-        <option value="2">Semestrielle</option>
-        <option value="1">Annuelle</option>
+      <div class="form-field"><label class="form-label" id="ct-prime-label">Prime annuelle (CHF) *</label><input class="form-input" id="ct-prime-mensuelle" type="number" placeholder="Ex: 960" oninput="updateCommissionPreview()"/></div>
+      <div class="form-field"><label class="form-label">Périodicité de paiement</label><select class="form-select" id="ct-periodicite" onchange="updateCommissionPreview()">
+        <option value="12">Mensuelle (12×/an)</option>
+        <option value="4">Trimestrielle (4×/an)</option>
+        <option value="2">Semestrielle (2×/an)</option>
+        <option value="1">Annuelle (1×/an)</option>
       </select></div>
       <div class="form-field" id="ct-duree-field" style="display:none"><label class="form-label">Durée du contrat (années)</label><input class="form-input" id="ct-duree" type="number" placeholder="10" value="1" oninput="updateCommissionPreview()"/></div>
       <div class="form-field" id="ct-manuel-field" style="display:none"><label class="form-label">Commission estimée (CHF) — manuel</label><input class="form-input" id="ct-manuel" type="number" placeholder="0" oninput="updateCommissionPreview()"/></div>
       <div class="form-field"><label class="form-label">Date de signature</label><input class="form-input" id="ct-date" type="date"/></div>
       <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="ct-statut"><option value="actif">Actif</option><option value="en_cours">En cours de signature</option></select></div>
     </div>`)}
-    <div id="commission-preview" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:14px 18px;margin-top:14px">
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Commission d'acquisition estimée</div>
-      <div id="commission-preview-value" style="font-size:20px;font-weight:900;color:var(--accent)">CHF 0</div>
-      <div id="commission-preview-detail" style="font-size:11px;color:var(--text-muted);margin-top:2px"></div>
+    <div id="commission-preview" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-top:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">Commissions estimées</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
+        <div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:14px">
+          <div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🎯 Acquisition (unique)</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <label style="font-size:11px;color:var(--text-muted);white-space:nowrap">Taux %</label>
+            <input id="ct-taux-acq" type="number" min="0" max="100" step="0.1" value="0" oninput="updateCommissionPreview()"
+              style="width:70px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px;font-weight:700">
+            <span style="font-size:11px;color:var(--text-muted)">de la prime annuelle</span>
+          </div>
+          <div id="comm-acq-value" style="font-size:22px;font-weight:900;color:var(--accent)">CHF 0</div>
+          <div id="comm-acq-detail" style="font-size:11px;color:var(--text-muted);margin-top:2px"></div>
+          <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
+            <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">Ou montant fixe manuel (CHF) :</div>
+            <input id="ct-acq-manuel" type="number" placeholder="0" min="0" oninput="updateCommissionPreview()"
+              style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:12px;box-sizing:border-box">
+          </div>
+        </div>
+        <div style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.2);border-radius:10px;padding:14px">
+          <div style="font-size:10px;font-weight:700;color:#38bdf8;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🔄 Gestion (récurrente)</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <label style="font-size:11px;color:var(--text-muted);white-space:nowrap">Taux %</label>
+            <input id="ct-taux-gest" type="number" min="0" max="100" step="0.1" value="0" oninput="updateCommissionPreview()"
+              style="width:70px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px;font-weight:700">
+            <span style="font-size:11px;color:var(--text-muted)">par versement client</span>
+          </div>
+          <div id="comm-gest-value" style="font-size:22px;font-weight:900;color:#38bdf8">CHF 0</div>
+          <div id="comm-gest-detail" style="font-size:11px;color:var(--text-muted);margin-top:2px"></div>
+          <div id="comm-gest-annuel" style="font-size:12px;font-weight:800;color:#4ade80;margin-top:6px"></div>
+        </div>
+      </div>
+      <div id="comm-resume" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px">
+        <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Impact sur le CA</div>
+        <div style="display:flex;gap:20px;flex-wrap:wrap">
+          <div><div style="font-size:10px;color:var(--text-muted)">Acquisition (1x)</div><div id="ca-acq" style="font-size:15px;font-weight:800;color:var(--accent)">CHF 0</div></div>
+          <div><div style="font-size:10px;color:var(--text-muted)">Gestion / versement</div><div id="ca-gest-versement" style="font-size:15px;font-weight:800;color:#38bdf8">CHF 0</div></div>
+          <div><div style="font-size:10px;color:var(--text-muted)">Gestion annuelle totale</div><div id="ca-gest-annuel" style="font-size:15px;font-weight:800;color:#4ade80">CHF 0</div></div>
+          <div><div style="font-size:10px;color:var(--text-muted)">CA total N+1</div><div id="ca-total" style="font-size:15px;font-weight:800;color:var(--gold)">CHF 0</div></div>
+        </div>
+      </div>
     </div>
     <div style="display:flex;gap:10px;margin-top:14px">
-      <button class="btn-secondary" onclick="navigate(contratClientId ? 'clients' : 'suivi')">Annuler</button>
+      <button class="btn-secondary" onclick="navigate(contratClientId ? \'clients\' : \'suivi\')">Annuler</button>
       <button class="btn-save" onclick="saveContrat()">✓ Enregistrer le contrat</button>
     </div>`;
 }
@@ -2756,31 +2997,71 @@ function updateModulesOptions() {
   if (!modulesList) return;
   const produit = getProduitSelectionne();
   const modules = produit ? produit.modules : [];
+  const estMensuelle = produit ? isPrimeMensuelle(produit.id) : false;
+
+  // Label prime : mensuelle pour santé, annuelle pour tout le reste
+  const primeLabel = document.getElementById('ct-prime-label');
+  const primePlaceholder = document.getElementById('ct-prime-mensuelle');
+  if (primeLabel) {
+    const nomProduit = produit ? produit.label : '';
+    if (estMensuelle) {
+      primeLabel.innerHTML = `Prime mensuelle <strong>${nomProduit}</strong> (CHF) * <span style="color:#38bdf8;font-size:10px;font-weight:700">→ ×12 pour annualiser</span>`;
+      if (primePlaceholder) primePlaceholder.placeholder = 'Ex: 180';
+    } else if (produit && produit.options && produit.options.length > 0) {
+      primeLabel.innerHTML = `Prime annuelle <strong>${nomProduit}</strong> (CHF) *`;
+      if (primePlaceholder) primePlaceholder.placeholder = 'Ex: 960';
+    } else {
+      primeLabel.textContent = produit ? `Prime annuelle ${nomProduit} (CHF) *` : 'Prime annuelle (CHF) *';
+      if (primePlaceholder) primePlaceholder.placeholder = 'Ex: 960';
+    }
+  }
+
+  // Modules
   if (modules.length === 0) {
     modulesList.innerHTML = '<span style="font-size:12px;color:var(--text-muted)">Aucun module complémentaire pour ce produit.</span>';
     document.getElementById('ct-modules-field').style.display = 'none';
   } else {
     document.getElementById('ct-modules-field').style.display = 'block';
-    modulesList.innerHTML = modules.map((m, i) => `
+    modulesList.innerHTML = modules.map(m => `
       <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text);cursor:pointer">
         <input type="checkbox" class="ct-module-checkbox" value="${m}" style="width:15px;height:15px;cursor:pointer"/>${m}
       </label>`).join('');
   }
 
+  // OPTIONS (casco etc.) — sous-éléments avec prime + taux propres, PAS des contrats séparés
+  const options = produit ? (produit.options || []) : [];
   if (combinablesField && combinablesList) {
-    const combinablesIds = produit ? (produit.combinables || []) : [];
-    if (combinablesIds.length === 0) {
+    if (options.length === 0) {
       combinablesField.style.display = 'none';
       combinablesList.innerHTML = '';
     } else {
+      combinablesField.querySelector('label.form-label') && (combinablesField.querySelector('label.form-label').textContent = 'Options incluses dans ce contrat');
       combinablesField.style.display = 'block';
-      combinablesList.innerHTML = combinablesIds.map(id => {
-        const p = getProduitParId(id);
-        return p ? `
-        <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text);cursor:pointer">
-          <input type="checkbox" class="ct-combinable-checkbox" value="${p.id}" onchange="toggleCombinablePrime('${p.id}')" style="width:15px;height:15px;cursor:pointer"/>+ ${p.label}
-        </label>` : '';
-      }).join('') + '<div id="ct-combinables-primes" style="width:100%;margin-top:8px"></div>';
+      combinablesList.innerHTML = options.map(opt => `
+        <div style="width:100%;background:var(--surface-alt);border:1px solid var(--border);border-radius:9px;padding:12px 14px;margin-bottom:8px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:0">
+            <input type="checkbox" class="ct-option-checkbox" value="${opt.id}" onchange="toggleOptionBloc('${opt.id}')" style="width:15px;height:15px;cursor:pointer"/>
+            <span style="font-size:13px;font-weight:700;color:var(--text)">${opt.label}</span>
+            <span style="font-size:10px;color:var(--text-muted);font-weight:400">— option du même contrat</span>
+          </label>
+          <div id="ct-option-bloc-${opt.id}" style="display:none;margin-top:10px;display:none">
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
+              <div>
+                <label style="font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;display:block;margin-bottom:4px">Prime annuelle (CHF)</label>
+                <input class="form-input ct-option-prime" data-option-id="${opt.id}" type="number" placeholder="Ex: 480" oninput="updateCommissionPreview()" style="font-size:13px"/>
+              </div>
+              <div>
+                <label style="font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;display:block;margin-bottom:4px">Taux acquisition %</label>
+                <input class="form-input ct-option-taux-acq" data-option-id="${opt.id}" type="number" min="0" max="100" step="0.1" placeholder="0" oninput="updateCommissionPreview()" style="font-size:13px"/>
+              </div>
+              <div>
+                <label style="font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;display:block;margin-bottom:4px">Taux gestion %</label>
+                <input class="form-input ct-option-taux-gest" data-option-id="${opt.id}" type="number" min="0" max="100" step="0.1" placeholder="0" oninput="updateCommissionPreview()" style="font-size:13px"/>
+              </div>
+            </div>
+            <div id="ct-option-preview-${opt.id}" style="font-size:11px;color:var(--text-muted);margin-top:6px"></div>
+          </div>
+        </div>`).join('');
     }
   }
 
@@ -2796,6 +3077,14 @@ function updateModulesOptions() {
   }
 }
 
+function toggleOptionBloc(optionId) {
+  const cb = document.querySelector(`.ct-option-checkbox[value="${optionId}"]`);
+  const bloc = document.getElementById(`ct-option-bloc-${optionId}`);
+  if (!cb || !bloc) return;
+  bloc.style.display = cb.checked ? 'block' : 'none';
+  updateCommissionPreview();
+}
+
 function ajouterPlaqueFlotte() {
   const list = document.getElementById('ct-plaques-list');
   if (!list) return;
@@ -2807,23 +3096,6 @@ function ajouterPlaqueFlotte() {
     <button type="button" onclick="this.parentElement.remove()" style="background:var(--red-dim);color:var(--red);border:none;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">✕</button>
   `;
   list.appendChild(ligne);
-}
-
-function toggleCombinablePrime(produitId) {
-  const checkbox = document.querySelector(`.ct-combinable-checkbox[value="${produitId}"]`);
-  const primesZone = document.getElementById('ct-combinables-primes');
-  if (!checkbox || !primesZone) return;
-  const produit = getProduitParId(produitId);
-  const existant = document.getElementById(`ct-combinable-prime-${produitId}`);
-  if (checkbox.checked && !existant) {
-    const div = document.createElement('div');
-    div.id = `ct-combinable-prime-${produitId}`;
-    div.style.cssText = 'margin-top:6px';
-    div.innerHTML = `<label class="form-label">Prime mensuelle pour "${produit.label}" (CHF)</label><input class="form-input ct-combinable-prime-input" data-produit-id="${produitId}" type="number" placeholder="50"/>`;
-    primesZone.appendChild(div);
-  } else if (!checkbox.checked && existant) {
-    existant.remove();
-  }
 }
 
 function getCompagniesConnues() {
@@ -2844,33 +3116,87 @@ function memoriserCompagnie(nom) {
   }
 }
 
-function calculerCommissionEstimee() {
+function getPeriodiciteLabel(val) {
+  return { '12': 'mensuelle', '4': 'trimestrielle', '2': 'semestrielle', '1': 'annuelle' }[String(val)] || 'mensuelle';
+}
+
+function calculerCommissions() {
+  const primeAnnuelle = parseFloat(document.getElementById('ct-prime-mensuelle')?.value) || 0;
+  const periodicite = parseInt(document.getElementById('ct-periodicite')?.value) || 12;
   const produit = getProduitSelectionne();
-  const produitId = produit ? produit.id : null;
-  const primeMensuelle = parseFloat(document.getElementById('ct-prime-mensuelle').value) || 0;
-  if (produitId === 'sante_complementaire') {
-    const montant = Math.round(primeMensuelle * TAUX_COMMISSION.sante_facteur_mensuel);
-    return { montant, detail: `CHF ${primeMensuelle} x ${TAUX_COMMISSION.sante_facteur_mensuel} (taux santé)` };
-  }
-  if (produitId === 'vie_3a') {
-    const duree = parseFloat(document.getElementById('ct-duree')?.value) || 1;
-    const capitalProduction = primeMensuelle * 12 * duree;
-    const montant = Math.round(capitalProduction * (TAUX_COMMISSION.vie_taux_capital / 100));
-    return { montant, detail: `${TAUX_COMMISSION.vie_taux_capital}% de CHF ${capitalProduction.toLocaleString()} (capital de production : ${primeMensuelle} x 12 x ${duree} an(s))` };
-  }
-  const montant = parseFloat(document.getElementById('ct-manuel')?.value) || 0;
-  return { montant, detail: 'Saisie manuelle' };
+  const estMensuelle = produit ? isPrimeMensuelle(produit.id) : false;
+
+  // Si prime mensuelle (santé) : annualiser
+  const primeAnnuelleReelle = estMensuelle ? primeAnnuelle * 12 : primeAnnuelle;
+  const primeParVersement = primeAnnuelleReelle / periodicite;
+
+  const tauxAcq = parseFloat(document.getElementById('ct-taux-acq')?.value) || 0;
+  const tauxGest = parseFloat(document.getElementById('ct-taux-gest')?.value) || 0;
+  const manuelAcq = parseFloat(document.getElementById('ct-acq-manuel')?.value) || 0;
+
+  const commAcq = manuelAcq > 0 ? manuelAcq : Math.round(primeAnnuelleReelle * tauxAcq / 100);
+  const commGestParVersement = Math.round(primeParVersement * tauxGest / 100);
+  const commGestAnnuelle = commGestParVersement * periodicite;
+
+  // Options (casco etc.) — prime + commission propres, incluses dans le même contrat
+  const options = [];
+  document.querySelectorAll('.ct-option-checkbox:checked').forEach(cb => {
+    const optId = cb.value;
+    const primeOpt = parseFloat(document.querySelector(`.ct-option-prime[data-option-id="${optId}"]`)?.value) || 0;
+    const tauxAcqOpt = parseFloat(document.querySelector(`.ct-option-taux-acq[data-option-id="${optId}"]`)?.value) || 0;
+    const tauxGestOpt = parseFloat(document.querySelector(`.ct-option-taux-gest[data-option-id="${optId}"]`)?.value) || 0;
+    const commAcqOpt = Math.round(primeOpt * tauxAcqOpt / 100);
+    const commGestOptParVers = Math.round((primeOpt / periodicite) * tauxGestOpt / 100);
+    // Mettre à jour le preview de l'option
+    const prev = document.getElementById(`ct-option-preview-${optId}`);
+    if (prev && primeOpt > 0) {
+      prev.textContent = `Acq: CHF ${commAcqOpt.toLocaleString()} · Gestion: CHF ${commGestOptParVers.toLocaleString()}/${periodicite === 12 ? 'mois' : periodicite === 2 ? 'semestre' : periodicite === 4 ? 'trim.' : 'an'} (CHF ${(commGestOptParVers * periodicite).toLocaleString()}/an)`;
+    }
+    options.push({ id: optId, primeOpt, tauxAcqOpt, tauxGestOpt, commAcqOpt, commGestOptParVers });
+  });
+
+  const totalCommAcq = commAcq + options.reduce((s, o) => s + o.commAcqOpt, 0);
+  const totalCommGestParVers = commGestParVersement + options.reduce((s, o) => s + o.commGestOptParVers, 0);
+  const totalCommGestAnnuelle = totalCommGestParVers * periodicite;
+
+  return { primeAnnuelle: primeAnnuelleReelle, primeParVersement, periodicite, tauxAcq, tauxGest, commAcq, commGestParVersement, commGestAnnuelle, options, totalCommAcq, totalCommGestParVers, totalCommGestAnnuelle, estMensuelle };
+}
+
+function calculerCommissionEstimee() {
+  const { commAcq } = calculerCommissions();
+  return { montant: commAcq, detail: 'Commission acquisition' };
 }
 
 function updateCommissionPreview() {
-  const produit = getProduitSelectionne();
-  const produitId = produit ? produit.id : null;
-  if (!produitId) return;
-  document.getElementById('ct-duree-field').style.display = produitId === 'vie_3a' ? 'block' : 'none';
-  document.getElementById('ct-manuel-field').style.display = (produitId !== 'sante_complementaire' && produitId !== 'vie_3a') ? 'block' : 'none';
-  const { montant, detail } = calculerCommissionEstimee();
-  document.getElementById('commission-preview-value').textContent = 'CHF ' + montant.toLocaleString();
-  document.getElementById('commission-preview-detail').textContent = detail;
+  const { primeAnnuelle, primeParVersement, periodicite, tauxAcq, tauxGest, commAcq, commGestParVersement, commGestAnnuelle, totalCommAcq, totalCommGestParVers, totalCommGestAnnuelle, estMensuelle } = calculerCommissions();
+  const periLabel = getPeriodiciteLabel(periodicite);
+
+  const elAcqVal = document.getElementById('comm-acq-value');
+  const elAcqDetail = document.getElementById('comm-acq-detail');
+  if (elAcqVal) elAcqVal.textContent = 'CHF ' + commAcq.toLocaleString();
+  if (elAcqDetail) elAcqDetail.textContent = tauxAcq > 0
+    ? `${tauxAcq}% × CHF ${Math.round(primeAnnuelle).toLocaleString()} prime annuelle${estMensuelle ? ' (×12 mensuelle)' : ''}`
+    : 'Saisir un taux ou un montant manuel';
+
+  const elGestVal = document.getElementById('comm-gest-value');
+  const elGestDetail = document.getElementById('comm-gest-detail');
+  const elGestAnnuel = document.getElementById('comm-gest-annuel');
+  if (elGestVal) elGestVal.textContent = 'CHF ' + commGestParVersement.toLocaleString();
+  if (elGestDetail) elGestDetail.textContent = tauxGest > 0
+    ? `${tauxGest}% × CHF ${Math.round(primeParVersement).toLocaleString()} (prime ${periLabel})`
+    : 'Saisir un taux de gestion';
+  if (elGestAnnuel) elGestAnnuel.textContent = commGestAnnuelle > 0
+    ? `→ CHF ${commGestAnnuelle.toLocaleString()} / an (${periodicite}× versement${periodicite > 1 ? 's' : ''})`
+    : '';
+
+  const resume = document.getElementById('comm-resume');
+  const caTotal = totalCommAcq + totalCommGestAnnuelle;
+  if (resume) resume.style.display = caTotal > 0 ? 'block' : 'none';
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = 'CHF ' + val.toLocaleString(); };
+  set('ca-acq', totalCommAcq);
+  set('ca-gest-versement', totalCommGestParVers);
+  set('ca-gest-annuel', totalCommGestAnnuelle);
+  set('ca-total', caTotal);
 }
 
 function getProduitLabel(categorie, produitId) {
@@ -2879,7 +3205,12 @@ function getProduitLabel(categorie, produitId) {
   return produit ? produit.label : produitId;
 }
 
-async function creerContratEtCommission(clientId, compagnie, produitLabel, primeMensuelle, modules, montantCommission, detailCommission, plaques) {
+async function creerContratEtCommission(clientId, compagnie, produitLabel, primeAnnuelle, modules, montantCommission, detailCommission, plaques, commGestion, optionsComm) {
+  const periodicite = parseInt(document.getElementById('ct-periodicite')?.value) || 12;
+  // Calculer la prime totale annuelle = prime principale + primes des options
+  const primeTotaleOptions = (optionsComm || []).reduce((s, o) => s + (o.primeOpt || 0), 0);
+  const primeTotaleAnnuelle = Math.round(primeAnnuelle + primeTotaleOptions);
+
   const contratBody = {
     client_id: clientId,
     compagnie,
@@ -2887,7 +3218,7 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
     modules: modules && modules.length > 0 ? modules.join(', ') : null,
     plaques: plaques && plaques.length > 0 ? plaques.join(', ') : null,
     numero_police: document.getElementById('ct-police').value.trim() || null,
-    prime_annuelle: Math.round(primeMensuelle * (parseInt(document.getElementById('ct-periodicite')?.value) || 12)),
+    prime_annuelle: primeTotaleAnnuelle,
     date_debut: document.getElementById('ct-date').value || null,
     statut: document.getElementById('ct-statut').value,
   };
@@ -2895,18 +3226,60 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
   if (rContrat && rContrat.error) return { error: true, detail: rContrat.detail || rContrat.status };
 
   const client = allClients.find(c => c.id === clientId);
-  const commissionBody = {
-    client_id: clientId,
-    client_nom: client ? (client.segment === 'Entreprise' ? client.nom : `${client.prenom} ${client.nom}`) : '',
-    compagnie,
-    produit: produitLabel,
-    montant_estime: montantCommission,
-    detail_calcul: detailCommission,
-    statut: 'en_attente',
-    date_creation: new Date().toISOString().split('T')[0],
-  };
-  const rComm = await dbPost('commissions_attente', commissionBody);
-  return { error: false, commissionError: rComm && rComm.error };
+  const clientNomAff = client ? (client.segment === 'Entreprise' ? client.nom : `${client.prenom} ${client.nom}`) : '';
+  const today = new Date().toISOString().split('T')[0];
+
+  // Commission ACQUISITION principale
+  if (montantCommission > 0) {
+    await dbPost('commissions_attente', {
+      client_id: clientId, client_nom: clientNomAff, compagnie, produit: produitLabel,
+      montant_estime: montantCommission, detail_calcul: detailCommission,
+      statut: 'en_attente', date_creation: today, type_commission: 'acquisition',
+    });
+  }
+
+  // Commissions ACQUISITION des options (casco etc.)
+  for (const opt of (optionsComm || [])) {
+    if (opt.commAcqOpt > 0) {
+      await dbPost('commissions_attente', {
+        client_id: clientId, client_nom: clientNomAff, compagnie,
+        produit: `${produitLabel} — option ${opt.id}`,
+        montant_estime: opt.commAcqOpt,
+        detail_calcul: `Acquisition option ${opt.id} — ${opt.tauxAcqOpt}% × CHF ${opt.primeOpt}`,
+        statut: 'en_attente', date_creation: today, type_commission: 'acquisition',
+      });
+    }
+  }
+
+  // Commissions GESTION principale — une entrée par versement
+  if (commGestion && commGestion.parVersement > 0) {
+    const periLabel = getPeriodiciteLabel(periodicite);
+    for (let i = 1; i <= periodicite; i++) {
+      await dbPost('commissions_attente', {
+        client_id: clientId, client_nom: clientNomAff, compagnie, produit: produitLabel,
+        montant_estime: commGestion.parVersement,
+        detail_calcul: `Gestion ${periLabel} — versement ${i}/${periodicite} · ${commGestion.tauxGest}% × CHF ${Math.round(commGestion.primeParVersement)}`,
+        statut: 'en_attente', date_creation: today, type_commission: 'gestion',
+      });
+    }
+  }
+
+  // Commissions GESTION des options
+  for (const opt of (optionsComm || [])) {
+    if (opt.commGestOptParVers > 0) {
+      for (let i = 1; i <= periodicite; i++) {
+        await dbPost('commissions_attente', {
+          client_id: clientId, client_nom: clientNomAff, compagnie,
+          produit: `${produitLabel} — option ${opt.id}`,
+          montant_estime: opt.commGestOptParVers,
+          detail_calcul: `Gestion option ${opt.id} — versement ${i}/${periodicite} · ${opt.tauxGestOpt}%`,
+          statut: 'en_attente', date_creation: today, type_commission: 'gestion',
+        });
+      }
+    }
+  }
+
+  return { error: false };
 }
 
 async function saveContrat() {
@@ -2916,38 +3289,46 @@ async function saveContrat() {
 
   const compagnie = document.getElementById('ct-compagnie').value.trim();
   const produitSelectionne = getProduitSelectionne();
-  const primeMensuelle = parseFloat(document.getElementById('ct-prime-mensuelle').value) || 0;
-  if (!compagnie || !primeMensuelle) { showError('Compagnie et prime mensuelle sont obligatoires.'); return; }
+  const primeAnnuelle = parseFloat(document.getElementById('ct-prime-mensuelle').value) || 0;
+  if (!compagnie || !primeAnnuelle) { showError('Compagnie et prime annuelle sont obligatoires.'); return; }
   if (!produitSelectionne) { showError('Sélectionne un produit valide dans la liste proposée.'); return; }
 
-  // Vérifier que les produits combinés cochés ont bien une prime renseignée
-  const combinablesCoches = Array.from(document.querySelectorAll('.ct-combinable-checkbox:checked')).map(cb => cb.value);
-  for (const id of combinablesCoches) {
-    const input = document.querySelector(`.ct-combinable-prime-input[data-produit-id="${id}"]`);
-    if (!input || !parseFloat(input.value)) { showError('Renseigne la prime mensuelle pour chaque produit combiné coché.'); return; }
+  // Vérifier les options cochées (casco etc.) — elles font partie du même contrat
+  const optionsActivesCB = Array.from(document.querySelectorAll('.ct-option-checkbox:checked'));
+  for (const cb of optionsActivesCB) {
+    const primeInput = document.querySelector(`.ct-option-prime[data-option-id="${cb.value}"]`);
+    if (!primeInput || !parseFloat(primeInput.value)) {
+      showError(`Renseigne la prime annuelle pour l'option "${cb.value}".`);
+      return;
+    }
   }
 
   const produitLabel = produitSelectionne.label;
   const modulesChoisis = Array.from(document.querySelectorAll('.ct-module-checkbox:checked')).map(cb => cb.value);
-  const { montant: commissionEstimee, detail } = calculerCommissionEstimee();
+  const { commAcq, commGestParVersement, tauxAcq, tauxGest, primeParVersement, options, totalCommAcq, totalCommGestParVers } = calculerCommissions();
+
+  // Construire le détail des options pour stockage dans le contrat
+  const optionsTexte = optionsActivesCB.map(cb => {
+    const id = cb.value;
+    const prime = parseFloat(document.querySelector(`.ct-option-prime[data-option-id="${id}"]`)?.value) || 0;
+    const tAcq = parseFloat(document.querySelector(`.ct-option-taux-acq[data-option-id="${id}"]`)?.value) || 0;
+    const tGest = parseFloat(document.querySelector(`.ct-option-taux-gest[data-option-id="${id}"]`)?.value) || 0;
+    return `${id}:prime=${prime}:acq=${tAcq}%:gest=${tGest}%`;
+  }).join(' | ');
+
+  const commGestion = { parVersement: commGestParVersement, tauxGest, primeParVersement };
 
   const btn = document.querySelector('.btn-save');
   btn.textContent = 'Enregistrement...'; btn.disabled = true;
 
   const plaquesValeurs = Array.from(document.querySelectorAll('.ct-plaque-input')).map(inp => inp.value.trim()).filter(Boolean);
-  const resultPrincipal = await creerContratEtCommission(clientId, compagnie, produitLabel, primeMensuelle, modulesChoisis, commissionEstimee, detail, plaquesValeurs);
+  const detailAcq = `Acquisition ${tauxAcq > 0 ? tauxAcq + '% prime' : 'montant manuel'}${optionsTexte ? ' + options: ' + optionsTexte : ''}`;
+
+  // UN SEUL contrat — options casco incluses dedans
+  const resultPrincipal = await creerContratEtCommission(clientId, compagnie, produitLabel, primeAnnuelle, modulesChoisis, commAcq, detailAcq, plaquesValeurs, commGestion, options);
   if (resultPrincipal.error) { showError('Erreur lors de la création du contrat: ' + resultPrincipal.detail); btn.textContent = '✓ Enregistrer le contrat'; btn.disabled = false; return; }
 
   memoriserCompagnie(compagnie);
-
-  // Créer un contrat + commission distincts pour chaque produit combiné coché
-  for (const id of combinablesCoches) {
-    const produitCombinable = getProduitParId(id);
-    const input = document.querySelector(`.ct-combinable-prime-input[data-produit-id="${id}"]`);
-    const primeCombinable = parseFloat(input.value) || 0;
-    const montantCombinable = parseFloat((primeCombinable * 12 * 0.1).toFixed(0)); // estimation par défaut, ajustable manuellement ensuite
-    await creerContratEtCommission(clientId, compagnie, produitCombinable.label, primeCombinable, [], montantCombinable, 'Produit combiné — commission estimée à ajuster');
-  }
 
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
   allContrats = await dbGet('contrats', 'select=*');

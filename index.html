@@ -98,6 +98,14 @@
   }
   .nav-section-btn.active { color: var(--accent); }
   .nav-section-btn .arrow { margin-left: auto; font-size: 9px; }
+  .nav-solo-btn {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    padding: 10px 10px; background: none; border: none; cursor: pointer;
+    font-weight: 800; font-size: 13.5px; text-align: left; color: var(--text);
+    border-radius: 8px; margin-bottom: 14px; transition: all 0.1s;
+  }
+  .nav-solo-btn:hover { background: var(--surface); }
+  .nav-solo-btn.active { background: var(--accent-dim); color: var(--accent); }
   .nav-item {
     display: flex; align-items: center; width: 100%;
     padding: 7px 10px 7px 26px; background: none; border: none; cursor: pointer;
@@ -788,8 +796,8 @@ async function tryRestoreSession() {
 
 // ═══ SIDEBAR ═══
 const SECTIONS = [
+  { id: 'dashboard-solo', label: 'Dashboard', icon: '⬛', solo: true, target: 'dashboard' },
   { id: 'vente', label: 'Vente', icon: '◈', sub: [
-    { id: 'dashboard', label: 'Dashboard' },
     { id: 'opportunites', label: 'Opportunités' },
     { id: 'suivi', label: 'Suivi des affaires' },
     { id: 'nouveau-contrat-direct', label: 'Nouveau contrat' },
@@ -821,6 +829,14 @@ function renderSidebar() {
   // Nav
   let nav = '';
   SECTIONS.forEach(sec => {
+    if (sec.solo) {
+      const active = currentView === sec.target;
+      nav += `<button class="nav-solo-btn ${active ? 'active' : ''}" onclick="navigate('${sec.target}')">
+        <span style="font-size:13px">📊</span>${sec.label}
+        ${active ? '<span class="nav-dot" style="margin-left:auto"></span>' : ''}
+      </button>`;
+      return;
+    }
     const isActive = sec.sub.some(s => s.id === currentView);
     nav += `<button class="nav-section-btn ${isActive ? 'active' : ''}" onclick="toggleSection('${sec.id}')">
       <span style="font-size:14px">${sec.icon}</span>${sec.label}

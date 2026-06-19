@@ -1343,7 +1343,15 @@ async function showClient(id) {
         ${avatar(agent, 36)}
         <div>
           <div style="font-size:13px;font-weight:700;color:var(--text)">${agent.prenom} ${agent.nom}</div>
-          <div style="font-size:11px;color:var(--text-muted)">${agent.role === 'signataire' ? 'Réseau Jonathan · 100%' : 'Apporteur · 50/50'}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${agent.role === 'signataire' ? 'Agent signataire Assurex' : 'Apporteur · 50/50'}</div>
+        </div>
+        ${c.mobile ? `<a href="tel:${c.mobile}" style="margin-left:auto;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;text-decoration:none">📞</a>` : ''}
+        ${c.email ? `<a href="mailto:${c.email}" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;text-decoration:none">✉️</a>` : ''}
+      </div>` : c.apporteur_externe ? `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface-alt);border-radius:10px">
+        <div style="width:36px;height:36px;border-radius:50%;background:rgba(167,139,250,0.15);border:2px solid rgba(167,139,250,0.4);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:#a78bfa;flex-shrink:0">${c.apporteur_externe.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">${c.apporteur_externe}</div>
+          <div style="font-size:11px;color:var(--text-muted)">🤝 Recommandation / Apporteur externe</div>
         </div>
         ${c.mobile ? `<a href="tel:${c.mobile}" style="margin-left:auto;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;text-decoration:none">📞</a>` : ''}
         ${c.email ? `<a href="mailto:${c.email}" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;text-decoration:none">✉️</a>` : ''}
@@ -1408,6 +1416,9 @@ async function showClient(id) {
           <div class="form-field"><label class="form-label">Revenu annuel brut</label><input id="ec-revenu" type="number" class="form-input" value="${c.revenu || ''}"></div>
           <div class="form-field"><label class="form-label">Taux d'activité (%)</label><input id="ec-taux-activite" type="number" class="form-input" value="${c.taux_activite || ''}"></div>
         </div>`) : ''}
+        ${sectionCard('Origine client', '#a78bfa', `<div class="form-grid">
+          <div class="form-field" style="grid-column:span 2"><label class="form-label">Apporteur / Recommandation externe</label><input id="ec-apporteur-ext" class="form-input" placeholder="Ex: Luca Renda, BNI Lavaux, Hôtel Modern Times…" value="${c.apporteur_externe || ''}"></div>
+        </div>`)}
         <div style="display:flex;gap:10px;margin-top:14px">
           <button class="btn-secondary" onclick="toggleEditClient()">Annuler</button>
           <button class="btn-save" onclick="saveClientEdit('${c.id}', ${isEntreprise})">💾 Enregistrer les modifications</button>
@@ -1571,6 +1582,7 @@ async function saveClientEdit(id, isEntreprise) {
     mobile: document.getElementById('ec-mobile').value.trim(),
     banque: document.getElementById('ec-banque').value.trim(),
     iban: document.getElementById('ec-iban').value.trim(),
+    apporteur_externe: document.getElementById('ec-apporteur-ext') ? (document.getElementById('ec-apporteur-ext').value.trim() || null) : undefined,
   });
 
   if (!isEntreprise) {
@@ -2023,6 +2035,7 @@ function formPrive() {
     ${sectionCard('CRM', '#38bdf8', `<div class="form-grid">
       <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="f-statut"><option value="prospect">Prospect</option><option value="actif">Actif</option><option value="inactif">Inactif</option></select></div>
       <div class="form-field"><label class="form-label">Agent responsable</label><select class="form-select" id="f-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Apporteur / Recommandation externe</label><input class="form-input" id="f-apporteur-ext" placeholder="Ex: Luca Renda, BNI Lavaux, Hôtel Modern Times…"/></div>
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Notes</label><textarea class="form-input" id="f-notes" rows="3" style="resize:vertical"></textarea></div>
     </div>`)}
     <div style="display:flex;gap:10px;margin-top:8px">
@@ -2069,6 +2082,7 @@ async function saveClient() {
     statut: document.getElementById('f-statut').value,
     segment: 'Privé',
     apporteur_id: document.getElementById('f-agent').value || null,
+    apporteur_externe: document.getElementById('f-apporteur-ext').value.trim() || null,
     notes: document.getElementById('f-notes').value || null,
   };
   const btn = document.querySelector('.btn-save');
@@ -2187,6 +2201,7 @@ function formEntreprise() {
     ${sectionCard('CRM', '#38bdf8', `<div class="form-grid">
       <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="e-statut"><option value="prospect">Prospect</option><option value="actif">Actif</option></select></div>
       <div class="form-field"><label class="form-label">Agent responsable</label><select class="form-select" id="e-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Apporteur / Recommandation externe</label><input class="form-input" id="e-apporteur-ext" placeholder="Ex: Luca Renda, BNI Lavaux, Hôtel Modern Times…"/></div>
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Notes</label><textarea class="form-input" id="e-notes" rows="3" style="resize:vertical"></textarea></div>
     </div>`)}
     <div style="display:flex;gap:10px;margin-top:8px">
@@ -2223,6 +2238,7 @@ async function saveEntreprise() {
     statut: document.getElementById('e-statut').value,
     segment: 'Entreprise',
     apporteur_id: document.getElementById('e-agent').value || null,
+    apporteur_externe: document.getElementById('e-apporteur-ext').value.trim() || null,
     notes: document.getElementById('e-notes').value || null,
   };
   const btn = document.querySelector('.btn-save');

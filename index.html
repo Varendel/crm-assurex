@@ -106,6 +106,9 @@
   }
   .nav-solo-btn:hover { background: var(--surface); }
   .nav-solo-btn.active { background: var(--accent-dim); color: var(--accent); }
+  .nav-solo-logo { padding: 12px 14px; }
+  .nav-solo-logo.active { background: rgba(255,255,255,0.08); }
+  .nav-solo-logo .oz-logo-svg { height: 16px; width: auto; display: block; }
   .nav-item {
     display: flex; align-items: center; width: 100%;
     padding: 7px 10px 7px 26px; background: none; border: none; cursor: pointer;
@@ -486,6 +489,37 @@ let msalAccessToken = null;
 let calendarEvents = [];
 
 // ═══ RÔLES (non sensible — les mots de passe sont gérés par Supabase Auth) ═══
+// ═══ LOGO OZ ASSURE (navigation) ═══
+const OZASSURE_LOGO_SVG = `<svg class="oz-logo-svg" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 1920 434">
+  <defs>
+    <style>
+      .st0 {
+        fill: #fff;
+        stroke: #fff;
+        stroke-miterlimit: 10;
+      }
+    </style>
+  </defs>
+  <g>
+    <path class="st0" d="M412.66,315.97c-20.52,0-38.83-4.73-54.95-14.19-16.12-9.45-28.84-22.38-38.17-38.77-9.33-16.39-13.99-35.1-13.99-56.15s4.66-39.76,13.99-56.15c9.32-16.39,22.04-29.3,38.17-38.76,16.12-9.45,34.43-14.19,54.95-14.19s38.43,4.73,54.55,14.19c16.12,9.46,28.84,22.38,38.17,38.76,9.32,16.39,13.99,35.11,13.99,56.15s-4.67,39.76-13.99,56.15c-9.33,16.39-22.05,29.31-38.17,38.77-16.12,9.46-34.31,14.19-54.55,14.19ZM412.66,278.41c12.52,0,23.71-3.13,33.57-9.39,9.85-6.26,17.58-14.79,23.18-25.58,5.59-10.79,8.25-22.98,7.99-36.57.26-13.85-2.4-26.18-7.99-36.97-5.59-10.79-13.33-19.25-23.18-25.38-9.86-6.13-21.05-9.19-33.57-9.19s-23.78,3.13-33.77,9.39c-9.99,6.26-17.78,14.79-23.38,25.58-5.59,10.79-8.26,22.98-7.99,36.57-.27,13.59,2.4,25.78,7.99,36.57,5.59,10.79,13.39,19.32,23.38,25.58,9.99,6.26,21.24,9.39,33.77,9.39Z"/>
+    <path class="st0" d="M551.33,311.98v-34.37l108.3-144.67v4.8h-108.3v-35.57h153.06v33.57l-106.7,142.67-1.6-2h110.7v35.57h-155.46Z"/>
+    <path class="st0" d="M842.26,315.97c-19.45,0-36.84-4.6-52.15-13.79-15.32-9.19-27.38-21.84-36.17-37.97-8.79-16.12-13.19-34.57-13.19-55.35s4.53-39.76,13.59-56.15c9.05-16.39,21.11-29.24,36.17-38.57,15.05-9.32,31.77-13.99,50.15-13.99,11.19,0,21.84,1.74,31.97,5.2,10.12,3.47,19.18,8.39,27.17,14.79,7.99,6.39,14.72,13.99,20.18,22.78,5.46,8.79,9.12,18.52,10.99,29.17l-2.4-1.2.8-68.74h7.99v209.81h-8.79v-68.74l3.6-1.2c-2.4,10.66-6.33,20.52-11.79,29.57-5.46,9.06-12.19,16.92-20.18,23.58-7.99,6.66-16.85,11.79-26.58,15.39-9.73,3.6-20.18,5.4-31.37,5.4ZM842.26,307.18c16.25,0,30.97-4.2,44.16-12.59s23.58-20.04,31.17-34.97c7.59-14.92,11.39-32.1,11.39-51.55s-3.8-36.23-11.39-51.15c-7.59-14.92-17.98-26.64-31.17-35.17-13.19-8.52-28.17-12.79-44.96-12.79-17.85,0-33.71,4.27-47.56,12.79-13.86,8.53-24.65,20.32-32.37,35.37-7.73,15.06-11.59,32.31-11.59,51.75s3.86,35.77,11.59,50.55c7.72,14.79,18.51,26.44,32.37,34.97,13.85,8.53,29.97,12.79,48.36,12.79Z"/>
+    <path class="st0" d="M1064.46,315.97c-17.58,0-33.57-3.33-47.96-9.99-14.39-6.66-25.45-15.45-33.17-26.38l6.79-5.99c7.46,9.86,17.58,17.92,30.37,24.18,12.79,6.26,27.71,9.39,44.76,9.39,10.92,0,20.24-1.33,27.97-4,7.72-2.66,13.99-6.26,18.78-10.79,4.8-4.53,8.39-9.65,10.79-15.39,2.4-5.73,3.6-11.79,3.6-18.18,0-13.05-5.59-23.31-16.79-30.77-5.33-4-11.99-7.46-19.98-10.39-7.99-2.93-17.32-5.6-27.97-7.99-11.99-2.93-22.58-6.26-31.77-9.99-9.19-3.73-16.72-7.99-22.58-12.79-5.33-4.53-9.33-9.39-11.99-14.59-2.67-5.2-4-10.99-4-17.38,0-8.25,1.66-15.72,5-22.38,3.33-6.66,7.99-12.45,13.99-17.38,5.99-4.93,13.32-8.65,21.98-11.19,8.66-2.53,18.32-3.8,28.97-3.8,9.32,0,18.38,1.34,27.17,4,8.79,2.67,17.05,6.53,24.78,11.59,7.72,5.06,14.65,11.19,20.78,18.38l-6.39,7.19c-5.86-6.66-12.26-12.45-19.18-17.38-6.93-4.93-14.33-8.65-22.18-11.19-7.86-2.53-16.18-3.8-24.98-3.8-9.59,0-18.18,1.14-25.78,3.4-7.59,2.27-14.06,5.46-19.38,9.59-5.33,4.13-9.33,8.93-11.99,14.39-2.67,5.46-4,11.53-4,18.18,0,4.53.93,8.93,2.8,13.19,1.86,4.27,4.93,8.13,9.19,11.59,5.33,4.53,12.32,8.53,20.98,11.99,8.65,3.47,18.71,6.53,30.17,9.19,11.99,2.67,22.44,5.66,31.37,8.99,8.92,3.33,16.32,7.26,22.18,11.79,6.12,4.53,10.72,9.86,13.79,15.99,3.06,6.13,4.6,13.33,4.6,21.58,0,11.46-2.8,21.52-8.39,30.17-5.59,8.66-13.72,15.32-24.38,19.98-10.66,4.66-23.32,6.99-37.97,6.99Z"/>
+    <path class="st0" d="M1255.88,315.97c-17.58,0-33.57-3.33-47.96-9.99-14.39-6.66-25.45-15.45-33.17-26.38l6.79-5.99c7.46,9.86,17.58,17.92,30.37,24.18,12.79,6.26,27.71,9.39,44.76,9.39,10.92,0,20.24-1.33,27.97-4,7.72-2.66,13.99-6.26,18.78-10.79,4.8-4.53,8.39-9.65,10.79-15.39,2.4-5.73,3.6-11.79,3.6-18.18,0-13.05-5.59-23.31-16.79-30.77-5.33-4-11.99-7.46-19.98-10.39-7.99-2.93-17.32-5.6-27.97-7.99-11.99-2.93-22.58-6.26-31.77-9.99-9.19-3.73-16.72-7.99-22.58-12.79-5.33-4.53-9.33-9.39-11.99-14.59-2.67-5.2-4-10.99-4-17.38,0-8.25,1.66-15.72,5-22.38,3.33-6.66,7.99-12.45,13.99-17.38,5.99-4.93,13.32-8.65,21.98-11.19,8.66-2.53,18.32-3.8,28.97-3.8,9.32,0,18.38,1.34,27.17,4,8.79,2.67,17.05,6.53,24.78,11.59,7.72,5.06,14.65,11.19,20.78,18.38l-6.39,7.19c-5.86-6.66-12.26-12.45-19.18-17.38-6.93-4.93-14.33-8.65-22.18-11.19-7.86-2.53-16.18-3.8-24.98-3.8-9.59,0-18.18,1.14-25.78,3.4-7.59,2.27-14.06,5.46-19.38,9.59-5.33,4.13-9.33,8.93-11.99,14.39-2.67,5.46-4,11.53-4,18.18,0,4.53.93,8.93,2.8,13.19,1.86,4.27,4.93,8.13,9.19,11.59,5.33,4.53,12.32,8.53,20.98,11.99,8.65,3.47,18.71,6.53,30.17,9.19,11.99,2.67,22.44,5.66,31.37,8.99,8.92,3.33,16.32,7.26,22.18,11.79,6.12,4.53,10.72,9.86,13.79,15.99,3.06,6.13,4.6,13.33,4.6,21.58,0,11.46-2.8,21.52-8.39,30.17-5.59,8.66-13.72,15.32-24.38,19.98-10.66,4.66-23.32,6.99-37.97,6.99Z"/>
+    <path class="st0" d="M1453.3,315.97c-16.25,0-30.04-2.87-41.36-8.59-11.33-5.73-19.92-14.72-25.78-26.98-5.86-12.25-8.79-27.97-8.79-47.16V102.17h8.79v131.08c0,17.32,2.6,31.44,7.79,42.36,5.2,10.93,12.85,18.92,22.98,23.98,10.12,5.06,22.51,7.59,37.17,7.59,9.59,0,18.71-2,27.38-5.99,8.65-4,16.32-8.99,22.98-14.99,6.66-5.99,11.85-12.05,15.59-18.18,3.73-6.13,5.6-11.32,5.6-15.59V102.17h8.79v209.81h-7.99l-.8-48.36,3.6-.8c-3.2,9.59-8.53,18.38-15.99,26.38-7.46,7.99-16.32,14.46-26.58,19.38-10.26,4.93-21.38,7.39-33.37,7.39Z"/>
+    <path class="st0" d="M1591.18,311.98V102.17h7.99l.4,50.75-2.4.8c1.86-8.79,5.66-17.25,11.39-25.38,5.73-8.12,13.45-14.85,23.18-20.18,9.72-5.33,21.24-7.99,34.57-7.99,4.53,0,8.72.27,12.59.8,3.86.54,7.39,1.34,10.59,2.4l-2.8,9.19c-4.26-1.33-8.33-2.26-12.19-2.8-3.87-.53-7.26-.8-10.19-.8-10.66,0-20.05,2.14-28.17,6.39-8.13,4.27-14.86,9.86-20.18,16.79-5.33,6.93-9.33,14.32-11.99,22.18-2.67,7.86-4,15.39-4,22.58v135.08h-8.79Z"/>
+    <path class="st0" d="M1797.39,315.97c-20.25,0-38.1-4.66-53.55-13.99-15.46-9.32-27.51-22.24-36.17-38.76-8.66-16.52-12.99-35.3-12.99-56.35,0-15.72,2.4-30.1,7.19-43.16,4.8-13.05,11.52-24.31,20.18-33.77,8.65-9.45,18.98-16.78,30.97-21.98s25.18-7.79,39.56-7.79c13.32,0,25.58,2.2,36.77,6.59,11.19,4.4,20.84,10.79,28.97,19.18,8.12,8.39,14.32,18.45,18.58,30.17,4.26,11.73,6.12,24.92,5.59,39.56l-.4,10.39h-182.64v-8.79h178.24l-4.8,6.79.8-9.99c0-17.05-3.6-31.97-10.79-44.76-7.19-12.79-16.85-22.71-28.97-29.77-12.13-7.06-25.51-10.59-40.16-10.59-18.12,0-33.91,4.2-47.36,12.59-13.46,8.39-23.92,19.98-31.37,34.77-7.46,14.79-11.33,31.64-11.59,50.55.26,19.45,4.4,36.77,12.39,51.95,7.99,15.19,18.98,27.04,32.97,35.57,13.99,8.53,30.17,12.79,48.56,12.79,13.85,0,26.64-2.53,38.37-7.59,11.72-5.06,22.24-11.99,31.57-20.78l4.8,7.19c-6.66,6.13-13.79,11.39-21.38,15.79s-15.85,7.86-24.78,10.39c-8.93,2.53-18.45,3.8-28.57,3.8Z"/>
+  </g>
+  <g>
+    <path class="st0" d="M134.26,156.95c0,18.34-8.92,34.6-22.66,44.69l-52.84,6.92c-20.63-8.06-35.26-28.12-35.26-51.61,0-30.58,24.8-55.38,55.38-55.38,30.58,0,55.38,24.8,55.38,55.38Z"/>
+    <path class="st0" d="M188.32,192.54l-.43.43c-10.37.86-19.64,1.51-29.8,2.58l-7.23.95c-10.25-10.06-16.6-24.06-16.6-39.55,0-5.6.83-11,2.38-16.09l51.67,51.67Z"/>
+    <path class="st0" d="M245.03,156.95c0,16.89-7.55,32-19.48,42.17l-78.06-78.07c10.15-11.92,25.26-19.48,42.15-19.48,30.58,0,55.38,24.8,55.38,55.38Z"/>
+    <path class="st0" d="M245.03,269.25c0,30.58-24.8,55.38-55.38,55.38-30.58,0-55.38-24.8-55.38-55.38,0-23.17,14.25-43.03,34.44-51.27l27.97-3.66h.02c27.26,3.46,48.34,26.74,48.34,54.94Z"/>
+    <path class="st0" d="M121.77,304.28c-10.15,12.41-25.6,20.35-42.89,20.35-30.58,0-55.38-24.8-55.38-55.38,0-17.29,7.94-32.74,20.35-42.89l77.92,77.92Z"/>
+    <path class="st0" d="M134.26,269.25c0,5.26-.74,10.37-2.11,15.18l-55-55,.43-.43c10.14-.65,19.65-1.51,29.78-3.02l5.22-.68c13.18,10.11,21.68,26.03,21.68,43.94Z"/>
+  </g>
+</svg>`;
+
 const USER_ROLES = {
   'jo@cofidex.ch': { prenom: 'Jonathan', nom: 'Özkan', role: 'signataire', taux: 100 },
   'dp@cofidex.ch': { prenom: 'David', nom: 'Pereira', role: 'apporteur', taux: 50 },
@@ -803,6 +837,7 @@ async function tryRestoreSession() {
 const SECTIONS = [
   { id: 'dashboard-solo', label: 'Dashboard', icon: '⬛', solo: true, target: 'dashboard' },
   { id: 'pipeline-solo', label: 'Pipeline', icon: '📈', solo: true, target: 'opportunites' },
+  { id: 'oz-assure-solo', label: 'OZ Assure', solo: true, logo: true, target: 'oz-assure' },
   { id: 'vente', label: 'Vente', icon: '◈', sub: [
     { id: 'suivi', label: 'Suivi des affaires' },
     { id: 'nouveau-contrat-direct', label: 'Nouveau contrat' },
@@ -836,6 +871,12 @@ function renderSidebar() {
   SECTIONS.forEach(sec => {
     if (sec.solo) {
       const active = currentView === sec.target;
+      if (sec.logo) {
+        nav += `<button class="nav-solo-btn nav-solo-logo ${active ? 'active' : ''}" onclick="navigate('${sec.target}')" title="OZ Assure">
+          ${OZASSURE_LOGO_SVG}
+        </button>`;
+        return;
+      }
       nav += `<button class="nav-solo-btn ${active ? 'active' : ''}" onclick="navigate('${sec.target}')">
         <span style="font-size:13px">📊</span>${sec.label}
         ${active ? '<span class="nav-dot" style="margin-left:auto"></span>' : ''}
@@ -959,6 +1000,7 @@ async function renderView() {
     case 'commissions': main.innerHTML = viewCommissions(); break;
     case 'agents': main.innerHTML = viewAgents(); break;
     case 'audit-log': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewAuditLog(); break;
+    case 'oz-assure': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewOzAssure(); break;
     default: main.innerHTML = viewDashboard();
   }
 }
@@ -3274,6 +3316,71 @@ const ACTION_LABELS = {
   create_contrat: '📄 Création contrat',
   edit_contrat: '✏️ Modification contrat',
 };
+
+// ═══ OZ ASSURE — ARCHIVE COMMISSIONS HISTORIQUES ═══
+async function viewOzAssure() {
+  const rows = await dbGet('commissions_oz', 'select=*&order=date_mouvement.desc');
+  const data = rows || [];
+
+  function chf(v) { return 'CHF ' + Math.round(v).toLocaleString('fr-CH'); }
+
+  const parAnnee = {};
+  const parCompagnie = {};
+  let totalDebit = 0, totalCredit = 0;
+
+  data.forEach(r => {
+    const annee = (r.date_mouvement || '').slice(0, 4);
+    const net = Number(r.credit || 0) - Number(r.debit || 0);
+    parAnnee[annee] = (parAnnee[annee] || 0) + net;
+    parCompagnie[r.compagnie] = (parCompagnie[r.compagnie] || 0) + net;
+    totalDebit += Number(r.debit || 0);
+    totalCredit += Number(r.credit || 0);
+  });
+
+  const totalNet = totalCredit - totalDebit;
+  const annees = Object.keys(parAnnee).sort();
+  const compagnies = Object.entries(parCompagnie).sort((a,b) => b[1]-a[1]);
+  const maxCompagnie = compagnies.length ? compagnies[0][1] : 1;
+
+  return `
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:6px">
+      <div style="background:var(--navy);border-radius:10px;padding:10px 16px">${OZASSURE_LOGO_SVG.replace('class="oz-logo-svg"', 'class="oz-logo-svg" style="height:22px;width:auto;display:block"')}</div>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">Archive des commissions perçues sous l'entité OZ Assure (sole proprietorship de Jonathan Özkan).</div>
+
+    <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:12px 16px;margin-bottom:22px;font-size:12.5px;color:var(--text)">
+      ⚠ Depuis le <strong>01.06.2026</strong>, le portefeuille OZ Assure est considéré comme <strong>virtuellement transféré à Assurex Sàrl</strong> — les mandats principaux seront resignés progressivement sous Assurex. Cette page reste une <strong>archive historique</strong>, elle ne reçoit plus de nouvelles affaires actives.
+    </div>
+
+    <div class="stat-grid" style="margin-bottom:24px">
+      ${statCard('Total net perçu', chf(totalNet), '#f59e0b')}
+      ${statCard('Mouvements', data.length, '#e2e8f0')}
+      ${statCard('Compagnies', compagnies.length, '#38bdf8')}
+      ${statCard('Période', annees.length ? annees[0] + '–' + annees[annees.length-1] : '—', '#a78bfa')}
+    </div>
+
+    <div style="display:grid;grid-template-columns:repeat(${Math.min(annees.length,4) || 1},1fr);gap:12px;margin-bottom:24px">
+      ${annees.map(a => `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px">
+          <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">${a}</div>
+          <div style="font-size:20px;font-weight:900;color:#f59e0b">${chf(parAnnee[a])}</div>
+        </div>`).join('')}
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px">
+      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:16px">Répartition par compagnie</div>
+      ${compagnies.map(([comp, val]) => `
+        <div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <div style="font-size:13px;font-weight:700;color:var(--text)">${comp}</div>
+            <div style="font-size:13px;font-weight:800;color:var(--accent)">${chf(val)}</div>
+          </div>
+          <div style="height:7px;border-radius:4px;background:var(--border);margin-top:5px;overflow:hidden">
+            <div style="height:100%;width:${maxCompagnie > 0 ? Math.round(val/maxCompagnie*100) : 0}%;background:var(--accent);border-radius:4px"></div>
+          </div>
+        </div>`).join('')}
+    </div>`;
+}
 
 async function viewAuditLog() {
   if (!currentUser || currentUser.role !== 'signataire') {

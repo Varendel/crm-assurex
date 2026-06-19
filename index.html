@@ -688,12 +688,16 @@ async function enterApp(user) {
   currentUser = user;
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').classList.add('active');
-  allAgents = await dbGet('agents', 'select=*');
-  allClients = await dbGet('clients', 'select=*');
-  allContrats = await dbGet('contrats', 'select=*');
-  allRappels = await dbGet('rappels', 'select=*');
-  allBordereaux = await dbGet('bordereaux', 'select=*');
-  allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
+  try {
+    allAgents = await dbGet('agents', 'select=*') || [];
+    allClients = await dbGet('clients', 'select=*') || [];
+    allContrats = await dbGet('contrats', 'select=*') || [];
+    allRappels = await dbGet('rappels', 'select=*') || [];
+    allBordereaux = await dbGet('bordereaux', 'select=*') || [];
+    allCommissionsAttente = await dbGet('commissions_attente', 'select=*') || [];
+  } catch(e) {
+    console.error('Erreur chargement données:', e);
+  }
   renderSidebar();
   navigate('dashboard');
 }
@@ -839,13 +843,13 @@ function sectionCard(title, accentColor, content) {
 async function renderView() {
   const main = document.getElementById('main-content');
   switch (currentView) {
-    case 'dashboard': main.innerHTML = viewDashboard(); break;
+    case 'dashboard': main.innerHTML = viewDashboard(); _initDashboardRappels(); break;
     case 'clients': main.innerHTML = viewClients(); break;
     case 'portefeuille': main.innerHTML = viewPortefeuille('tous'); break;
     case 'clients-prives': main.innerHTML = viewPortefeuille('prive'); break;
     case 'clients-entreprises': main.innerHTML = viewPortefeuille('entreprise'); break;
     case 'volume-primes': main.innerHTML = '<div class="loader">Calcul en cours...</div>'; main.innerHTML = await viewVolumePrimes(); break;
-    case 'tous-contrats': main.innerHTML = viewTousContrats(); break;
+    case 'tous-contrats': main.innerHTML = viewTousContrats(); setTimeout(filterTousContrats, 50); break;
     case 'nouveau-client': main.innerHTML = viewNouveauClient(); break;
     case 'nouvelle-opportunite': main.innerHTML = viewNouvelleOpportunite(); break;
     case 'nouveau-rappel': main.innerHTML = viewNouveauRappel(); break;
@@ -1014,8 +1018,17 @@ function viewDashboard() {
         ${teamRows || '<div style="color:var(--text-muted);font-size:13px">Aucun agent enregistré</div>'}
       </div>
     </div>
-    <script>(function(){setTimeout(function(){var w=document.getElementById('dashboard-rappels-wrap');if(w)w.addEventListener('click',function(e){var r=e.target.closest('[data-rappel-id]');if(r)showRappel(r.getAttribute('data-rappel-id'));});},0);})();</script>`;
+`;
+}
 
+function _initDashboardRappels() {
+  setTimeout(function() {
+    var w = document.getElementById('dashboard-rappels-wrap');
+    if (w) w.addEventListener('click', function(e) {
+      var r = e.target.closest('[data-rappel-id]');
+      if (r) showRappel(r.getAttribute('data-rappel-id'));
+    });
+  }, 0);
 }
 
 // TOUS LES CONTRATS
@@ -1064,64 +1077,69 @@ function viewTousContrats() {
         <tbody id="tc-tbody"></tbody>
       </table>
     </div>
-    <script>
-    (function() {
-      function isVie(produit) {
-        const kw = ['vie','vie','3a','3b','lpp','pilier','prévoyance','prevoyance','term','risque décès','capital décès','rente','ijm','iag','perte de gain','laa','perte gain','maladie collective','accident collectif'];
-        const p = (produit||'').toLowerCase();
-        return kw.some(k => p.includes(k));
-      }
-      window.filterTousContrats = function() {
-        const q = (document.getElementById('tc-search')?.value||'').toLowerCase();
-        const statut = document.getElementById('tc-statut')?.value||'';
-        const segment = document.getElementById('tc-segment')?.value||'';
-        const type = document.getElementById('tc-type')?.value||'';
-        let list = allContrats || [];
-        if (statut) list = list.filter(c => c.statut === statut);
-        if (type === 'vie') list = list.filter(c => isVie(c.produit));
-        if (type === 'nonvie') list = list.filter(c => !isVie(c.produit));
-        if (segment) {
-          list = list.filter(c => {
-            const cl = (allClients||[]).find(x => x.id === c.client_id);
-            if (!cl) return true;
-            if (segment === 'prive') return (cl.segment||'') !== 'Entreprise';
-            if (segment === 'entreprise') return (cl.segment||'') === 'Entreprise';
-            return true;
-          });
-        }
-        if (q) list = list.filter(c => {
-          const cl = (allClients||[]).find(x => x.id === c.client_id);
-          const nom = cl ? (cl.segment==='Entreprise' ? cl.nom : cl.prenom+' '+cl.nom) : '';
-          return nom.toLowerCase().includes(q) || (c.produit||'').toLowerCase().includes(q) || (c.compagnie||'').toLowerCase().includes(q) || (c.numero_police||'').toLowerCase().includes(q);
-        });
-        const totalPrimes = list.reduce((s,c)=>s+Number(c.prime_annuelle||0),0);
-        const countEl = document.getElementById('tc-count');
-        if (countEl) countEl.textContent = list.length + ' contrat(s) · CHF ' + totalPrimes.toLocaleString() + ' de primes';
-        const tbody = document.getElementById('tc-tbody');
-        if (!tbody) return;
-        if (list.length === 0) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">Aucun contrat trouvé</td></tr>'; return; }
-        const vie = isVie;
-        tbody.innerHTML = list.map(c => {
-          const cl = (allClients||[]).find(x => x.id === c.client_id);
-          const nom = cl ? (cl.segment==='Entreprise' ? cl.nom : cl.prenom+' '+cl.nom) : '—';
-          const statutColor = c.statut==='actif'?'#4ade80':c.statut==='résilié'?'#f87171':'#f59e0b';
-          const typeColor = vie(c.produit)?'#a78bfa':'#38bdf8';
-          const typeLabel = vie(c.produit)?'Vie':'Non-Vie';
-          return \`<tr onclick="c_id='${c.client_id}';if(c_id)showClient(c_id)" style="cursor:pointer" onmouseover="this.style.background='rgba(56,189,248,0.04)'" onmouseout="this.style.background=''">
-            <td style="font-weight:700">\${nom}<br><span style="font-size:10px;font-weight:700;color:\${typeColor}">\${typeLabel}</span></td>
-            <td style="font-size:12px">\${c.produit||'—'}</td>
-            <td style="font-size:12px;color:var(--text-muted)">\${c.compagnie||'—'}</td>
-            <td style="font-size:11px;color:var(--text-muted)">\${c.numero_police||'—'}</td>
-            <td style="font-weight:800;color:var(--gold)">CHF \${Number(c.prime_annuelle||0).toLocaleString()}</td>
-            <td style="font-size:12px;color:var(--text-muted)">\${c.date_debut||'—'}</td>
-            <td><span style="font-size:10px;font-weight:700;color:\${statutColor};background:\${statutColor}18;padding:3px 8px;border-radius:99px">\${(c.statut||'').toUpperCase()}</span></td>
-            <td><button onclick="event.stopPropagation();c_id='${c.client_id}';if(c_id)showClient(c_id)" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:11px;font-weight:700">→ Fiche</button></td>
-          </tr>\`;
-        }).join('');
-      };
-      setTimeout(filterTousContrats, 50);
-    })();
-    <\/script>`;
+    </div>`;
+}
+
+function filterTousContrats() {
+  function isVie(produit) {
+    const kw = ['vie','3a','3b','lpp','pilier','prévoyance','prevoyance','term','risque décès','capital décès','rente','ijm','iag','perte de gain','laa','perte gain','maladie collective','accident collectif'];
+    const p = (produit||'').toLowerCase();
+    return kw.some(k => p.includes(k));
+  }
+  const q = (document.getElementById('tc-search')?.value||'').toLowerCase();
+  const statut = document.getElementById('tc-statut')?.value||'';
+  const segment = document.getElementById('tc-segment')?.value||'';
+  const type = document.getElementById('tc-type')?.value||'';
+  let list = allContrats || [];
+  if (statut) list = list.filter(c => c.statut === statut);
+  if (type === 'vie') list = list.filter(c => isVie(c.produit));
+  if (type === 'nonvie') list = list.filter(c => !isVie(c.produit));
+  if (segment) {
+    list = list.filter(c => {
+      const cl = (allClients||[]).find(x => x.id === c.client_id);
+      if (!cl) return true;
+      if (segment === 'prive') return (cl.segment||'') !== 'Entreprise';
+      if (segment === 'entreprise') return (cl.segment||'') === 'Entreprise';
+      return true;
+    });
+  }
+  if (q) list = list.filter(c => {
+    const cl = (allClients||[]).find(x => x.id === c.client_id);
+    const nom = cl ? (cl.segment==='Entreprise' ? cl.nom : cl.prenom+' '+cl.nom) : '';
+    return nom.toLowerCase().includes(q) || (c.produit||'').toLowerCase().includes(q) || (c.compagnie||'').toLowerCase().includes(q) || (c.numero_police||'').toLowerCase().includes(q);
+  });
+  const totalPrimes = list.reduce((s,c)=>s+Number(c.prime_annuelle||0),0);
+  const countEl = document.getElementById('tc-count');
+  if (countEl) countEl.textContent = list.length + ' contrat(s) · CHF ' + totalPrimes.toLocaleString() + ' de primes';
+  const tbody = document.getElementById('tc-tbody');
+  if (!tbody) return;
+  if (list.length === 0) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">Aucun contrat trouvé</td></tr>'; return; }
+  tbody.innerHTML = list.map(c => {
+    const cl = (allClients||[]).find(x => x.id === c.client_id);
+    const nom = cl ? (cl.segment==='Entreprise' ? cl.nom : cl.prenom+' '+cl.nom) : '—';
+    const sc = c.statut==='actif'?'#4ade80':c.statut==='résilié'?'#f87171':'#f59e0b';
+    const tc = isVie(c.produit)?'#a78bfa':'#38bdf8';
+    const tl = isVie(c.produit)?'Vie':'Non-Vie';
+    return '<tr data-client-id="'+c.client_id+'" style="cursor:pointer" onmouseover="this.style.background=\'rgba(56,189,248,0.04)\'" onmouseout="this.style.background=\'\'">'
+      +'<td style="font-weight:700;padding:10px 12px">'+nom+'<br><span style="font-size:10px;font-weight:700;color:'+tc+'">'+tl+'</span></td>'
+      +'<td style="font-size:12px;padding:10px 12px">'+(c.produit||'—')+'</td>'
+      +'<td style="font-size:12px;color:var(--text-muted);padding:10px 12px">'+(c.compagnie||'—')+'</td>'
+      +'<td style="font-size:11px;color:var(--text-muted);padding:10px 12px">'+(c.numero_police||'—')+'</td>'
+      +'<td style="font-weight:800;color:var(--gold);padding:10px 12px">CHF '+Number(c.prime_annuelle||0).toLocaleString()+'</td>'
+      +'<td style="font-size:12px;color:var(--text-muted);padding:10px 12px">'+(c.date_debut||'—')+'</td>'
+      +'<td style="padding:10px 12px"><span style="font-size:10px;font-weight:700;color:'+sc+';background:'+sc+'18;padding:3px 8px;border-radius:99px">'+(c.statut||'').toUpperCase()+'</span></td>'
+      +'<td style="padding:10px 12px"><button onclick="event.stopPropagation();showClient(\'' + c.client_id + '\')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:11px;font-weight:700">→ Fiche</button></td>'
+      +'</tr>';
+  }).join('');
+  // Event delegation pour les clics sur les lignes
+  const wrap = document.getElementById('tc-tbody');
+  if (wrap && !wrap._delegated) {
+    wrap._delegated = true;
+    wrap.addEventListener('click', function(e) {
+      const row = e.target.closest('tr[data-client-id]');
+      if (row) showClient(row.getAttribute('data-client-id'));
+    });
+  }
 }
 
 // PORTEFEUILLE

@@ -36,6 +36,9 @@
   .login-logo img { width: 200px; filter: brightness(0) invert(1); margin-bottom: 8px; }
   .login-logo .sub { font-size: 10px; color: var(--text-muted); font-weight: 700; letter-spacing: 2px; text-transform: uppercase; }
   .login-logo .subsub { font-size: 12px; color: var(--text-dim); margin-top: 4px; }
+  .exgroupe-mention { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 18px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08); }
+  .exgroupe-mention span { font-size: 10px; color: var(--text-muted); font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+  .exgroupe-logo { width: 130px; height: auto; }
   .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; }
   .login-card h2 { font-size: 17px; font-weight: 800; color: var(--text); text-align: center; margin-bottom: 24px; }
   .btn-microsoft {
@@ -95,15 +98,6 @@
   }
   .nav-section-btn.active { color: var(--accent); }
   .nav-section-btn .arrow { margin-left: auto; font-size: 9px; }
-  .nav-solo-btn {
-    display: flex; align-items: center; gap: 8px; width: 100%;
-    padding: 9px 10px; background: none; border: none; cursor: pointer;
-    font-weight: 800; font-size: 13px; letter-spacing: 0;
-    text-align: left; color: #ffffff; transition: all 0.15s;
-    border-radius: 8px; margin-bottom: 6px;
-  }
-  .nav-solo-btn:hover { background: var(--surface); }
-  .nav-solo-btn.active { background: var(--accent-dim); color: var(--accent); }
   .nav-item {
     display: flex; align-items: center; width: 100%;
     padding: 7px 10px 7px 26px; background: none; border: none; cursor: pointer;
@@ -231,44 +225,40 @@
   <div class="login-box">
     <div class="login-logo">
       <img src="data:image/png;base64,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" alt="Assurex"/>
-      <div class="sub">GROUPE EX</div>
       <div class="subsub">Plateforme CRM — Espace sécurisé</div>
+      <div class="exgroupe-mention">
+        <span>Une entreprise de</span>
+        <svg viewBox="670 488 580 100" xmlns="http://www.w3.org/2000/svg" class="exgroupe-logo">
+          <rect x="829.47" y="551.34" width="18.15" height="18.15" fill="#00cfff"/>
+          <rect x="686.18" y="538.2" width="48.56" height="10.09" fill="#ffffff"/>
+          <rect x="686.18" y="558.47" width="53.17" height="10.09" fill="#ffffff"/>
+          <rect x="686.18" y="518.73" width="53.17" height="10.01" fill="#ffffff"/>
+          <polygon points="829.47 496.06 827.87 506.11 827.61 507.83 825.24 522.76 818.89 517.34 801.9 535.92 787.85 535.92 794.91 543.55 817.93 568.41 803 568.41 787.47 551.6 758.21 583.94 743.55 583.94 780.04 543.54 757.11 518.73 771.94 518.73 787.72 535.76 810.6 510.28 804.33 504.93 829.47 496.06" fill="#ffffff"/>
+          <path d="M1152.37,518.74v32.87c0,9.37-7.59,16.96-16.96,16.96h-22.52c-9.37,0-16.96-7.59-16.96-16.96v-32.87h11.3v32.58c0,3.29,2.67,5.96,5.96,5.96h21.93c3.29,0,5.96-2.67,5.96-5.96v-32.58h11.3Z" fill="#ffffff"/>
+          <path d="M996.21,537.33v-6.44c0-7.31-5.4-12.16-13.19-12.16h-43.31v10.01h41.01c2.54,0,4.45,1.59,4.45,4.13v3.1c0,2.54-1.59,4.21-4.45,4.21h-41.01v28.37h11.2v-18.36h21.86l11.6,18.36h12.64l-11.36-18.52c6.68-.95,10.57-5.8,10.57-12.72" fill="#ffffff"/>
+          <path d="M1062.96,519.69c-1.76-.63-3.66-.97-5.66-.97h-22.53c-1.99,0-3.9.34-5.66.97-6.58,2.33-11.3,8.6-11.3,15.98v15.91c0,7.38,4.72,13.67,11.3,16,1.76.63,3.66.97,5.66.97h22.53c1.99,0,3.9-.34,5.66-.97,6.58-2.33,11.3-8.61,11.3-16v-15.91c0-7.38-4.72-13.65-11.3-15.98ZM1062.96,551.29c0,3.3-2.67,5.96-5.96,5.96h-21.92c-3.3,0-5.96-2.67-5.96-5.96v-15.32c0-3.28,2.67-5.95,5.96-5.95h21.92c3.3,0,5.96,2.67,5.96,5.95v15.32Z" fill="#ffffff"/>
+          <path d="M880.28,530.04h39.18v-11.3h-39.48c-1.99,0-3.9.34-5.66.97-6.58,2.33-11.3,8.6-11.3,15.98v15.91c0,7.38,4.72,13.67,11.3,16,1.76.63,3.66.97,5.66.97h22.53c1.99,0,3.9-.34,5.66-.97,6.58-2.33,11.3-8.61,11.3-16v-13.11h-22.57v11.3h11.27v1.52c0,3.3-2.67,5.96-5.96,5.96h-21.92c-3.3,0-5.96-2.67-5.96-5.96v-15.32c0-3.28,2.67-5.95,5.96-5.95Z" fill="#ffffff"/>
+          <path d="M1220.63,518.74h-43.32v49.83h11.21v-18.36h21.86l11.39-.14c1.22-.02,2.44-.13,3.61-.48,5.37-1.6,8.45-6.11,8.45-12.26v-6.43c0-7.31-5.41-12.16-13.19-12.16ZM1222.77,535.99c0,2.55-1.58,4.22-4.45,4.22h-29.8v-11.44h30.12c2.28,0,4.13,1.85,4.13,4.13v3.09Z" fill="#ffffff"/>
+        </svg>
+      </div>
     </div>
     <div class="login-card">
       <h2>Connexion</h2>
-      <button class="btn-microsoft" onclick="loginMicrosoft()">
-        <svg width="18" height="18" viewBox="0 0 21 21"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
-        Se connecter avec Microsoft
-      </button>
-      <div class="divider"><hr/><span>ou</span><hr/></div>
-      <div class="field-wrap">
-        <label class="field-label">Email</label>
-        <input class="field-input" type="email" id="login-email" placeholder="prenom@cofidex.ch" onkeydown="if(event.key==='Enter')doLogin()"/>
-      </div>
-      <div class="field-wrap">
-        <label class="field-label">Mot de passe</label>
-        <div class="pass-wrap">
-          <input class="field-input" type="password" id="login-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/>
-          <button class="pass-toggle" onclick="togglePass()">👁</button>
+      <form id="login-form" autocomplete="on" onsubmit="event.preventDefault(); doLogin();">
+        <div class="field-wrap">
+          <label class="field-label" for="login-email">Email</label>
+          <input class="field-input" type="email" id="login-email" name="username" autocomplete="username" placeholder="prenom@cofidex.ch"/>
         </div>
-      </div>
-      <div id="login-error" class="error-box hidden"></div>
-      <button class="btn-primary" onclick="doLogin()">Se connecter</button>
-      <div class="demo-box">
-        <div class="demo-title">Connexion rapide</div>
-        <button class="demo-item" onclick="quickLogin('jo@cofidex.ch','admin1234')">
-          <span class="demo-email" style="color:#38bdf8">Jonathan Özkan</span>
-          <span class="demo-pass">Signataire</span>
-        </button>
-        <button class="demo-item" onclick="quickLogin('d.pereira@cofidex.ch','david1234')">
-          <span class="demo-email" style="color:#f59e0b">David Pereira</span>
-          <span class="demo-pass">Apporteur</span>
-        </button>
-        <button class="demo-item" onclick="quickLogin('a.espinoza@cofidex.ch','alex1234')">
-          <span class="demo-email" style="color:#a78bfa">Alejandro Espinoza</span>
-          <span class="demo-pass">Apporteur</span>
-        </button>
-      </div>
+        <div class="field-wrap">
+          <label class="field-label" for="login-pass">Mot de passe</label>
+          <div class="pass-wrap">
+            <input class="field-input" type="password" id="login-pass" name="password" autocomplete="current-password" placeholder="••••••••"/>
+            <button type="button" class="pass-toggle" onclick="togglePass()">👁</button>
+          </div>
+        </div>
+        <div id="login-error" class="error-box hidden"></div>
+        <button type="submit" class="btn-primary">Se connecter</button>
+      </form>
     </div>
     <div class="login-footer">🔒 Données hébergées en Suisse · Zurich</div>
   </div>
@@ -359,11 +349,9 @@ function _showAddrDropdown(results, input, onSelect) {
   _closeAddrDropdown();
   if (!results.length) return;
   const rect = input.getBoundingClientRect();
-  const scrollTop = window.scrollY || document.documentElement.scrollTop;
-  const scrollLeft = window.scrollX || document.documentElement.scrollLeft;
   const dd = document.createElement('div');
   dd.id = 'addr-autocomplete-dd';
-  dd.style.cssText = `position:absolute;top:${rect.bottom + scrollTop + 2}px;left:${rect.left + scrollLeft}px;width:${Math.max(rect.width, 320)}px;background:#1e293b;border:1px solid #334155;border-radius:10px;z-index:99999;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.5);max-height:260px;overflow-y:auto`;
+  dd.style.cssText = `position:fixed;top:${rect.bottom + 2}px;left:${rect.left}px;width:${Math.max(rect.width, 320)}px;background:#1e293b;border:1px solid #334155;border-radius:10px;z-index:99999;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.5);max-height:260px;overflow-y:auto`;
   results.forEach(res => {
     const attrs = res.attrs || {};
     const parsed = _parseGeoDetail(attrs.detail);
@@ -417,10 +405,6 @@ let msalInstance = null;
 let openBordereaux = {};
 let contratClientId = null;
 let allCommissionsAttente = [];
-let allContrats = [];
-let allOpportunites = [];
-let allPostits = [];
-let allFactures = [];
 let currentClientId = null;
 
 // Paramètres de taux de commission — modifiables via Paramètres (gestion récurrente)
@@ -440,10 +424,7 @@ const CATALOGUE_PRODUITS = {
     { id: 'rc_commerce', label: 'RC commerce / exploitation commerciale', segment: 'entreprise', modules: ['Rappel de produits', 'Pollution accidentelle'] },
     { id: 'rc_do', label: 'RC D&O (administrateurs et dirigeants)', segment: 'entreprise', modules: ['Frais de défense', 'Extension filiales', 'Extension mandats externes (fondations, associations)', 'Side A/B/C'] },
     { id: 'rc_batiment', label: 'RC bâtiments / propriétaire immobilier', segment: 'tous', modules: ['Bris de glace bâtiment', 'Dommages aux locataires'] },
-    { id: 'rc_vehicule', label: 'RC véhicule à moteur (obligatoire)', segment: 'tous', modules: [], options: [
-        { id: 'casco_partielle', label: 'Casco partielle', modules: ['Bris de glace étendu (phares, rétroviseurs)', 'Dommages au véhicule parqué', 'Véhicule de remplacement', 'Dépannage / assistance', 'Objets transportés', 'Batterie / borne e-mobilité'] },
-        { id: 'casco_complete', label: 'Casco complète', modules: ['Bris de glace étendu (phares, rétroviseurs)', 'Protection du bonus', 'Faute grave', 'Dommages au véhicule parqué', 'Véhicule de remplacement', 'Dépannage / assistance', 'Objets transportés', 'Batterie / borne e-mobilité'] },
-      ]},
+    { id: 'rc_vehicule', label: 'RC véhicule à moteur (obligatoire)', segment: 'tous', modules: [], combinables: ['casco_partielle', 'casco_complete'] },
     { id: 'rc_drone', label: 'RC drone', segment: 'tous', modules: [] },
   ],
   'Ménage / habitation': [
@@ -454,12 +435,9 @@ const CATALOGUE_PRODUITS = {
     { id: 'batiment_entreprise', label: 'Bâtiment commercial / locaux professionnels', segment: 'entreprise', modules: ['Bris de glace bâtiment', 'Pertes d\'exploitation suite sinistre', 'Tremblement de terre', 'Vol et vandalisme'] },
   ],
   'Véhicule': [
-    { id: 'vehicule_rc', label: 'RC véhicule (obligatoire)', segment: 'tous', modules: [], options: [
-        { id: 'casco_partielle', label: 'Casco partielle', modules: ['Bris de glace étendu (phares, rétroviseurs)', 'Dommages au véhicule parqué', 'Véhicule de remplacement', 'Dépannage / assistance'] },
-        { id: 'casco_complete', label: 'Casco complète', modules: ['Bris de glace étendu (phares, rétroviseurs)', 'Protection du bonus', 'Faute grave', 'Dommages au véhicule parqué', 'Véhicule de remplacement'] },
-      ]},
-    { id: 'casco_partielle', label: 'Casco partielle (seule)', segment: 'tous', modules: ['Bris de glace étendu (phares, rétroviseurs)', 'Dommages au véhicule parqué', 'Véhicule de remplacement', 'Dépannage / assistance', 'Objets transportés', 'Batterie / borne e-mobilité'] },
-    { id: 'casco_complete', label: 'Casco complète (seule)', segment: 'tous', modules: ['Bris de glace étendu (phares, rétroviseurs)', 'Protection du bonus', 'Faute grave', 'Dommages au véhicule parqué', 'Véhicule de remplacement', 'Dépannage / assistance', 'Objets transportés', 'Batterie / borne e-mobilité'] },
+    { id: 'vehicule_rc', label: 'RC véhicule (obligatoire)', segment: 'tous', modules: [], combinables: ['casco_partielle', 'casco_complete'] },
+    { id: 'casco_partielle', label: 'Casco partielle', segment: 'tous', modules: ['Bris de glace étendu (phares, rétroviseurs)', 'Dommages au véhicule parqué', 'Véhicule de remplacement', 'Dépannage / assistance', 'Objets transportés', 'Batterie / borne e-mobilité'] },
+    { id: 'casco_complete', label: 'Casco complète', segment: 'tous', modules: ['Bris de glace étendu (phares, rétroviseurs)', 'Protection du bonus', 'Faute grave', 'Dommages au véhicule parqué', 'Véhicule de remplacement', 'Dépannage / assistance', 'Objets transportés', 'Batterie / borne e-mobilité'] },
     { id: 'flotte_entreprise', label: 'Flotte véhicules entreprise (plaques multiples)', segment: 'entreprise', modules: ['Casco partielle flotte', 'Casco complète flotte', 'Conducteurs multiples', 'Véhicules de remplacement flotte'], flotte: true },
   ],
   'Protection juridique': [
@@ -496,12 +474,104 @@ const CATALOGUE_PRODUITS = {
 let msalAccessToken = null;
 let calendarEvents = [];
 
-// ═══ PASSWORDS (démo) ═══
-const PASSWORDS = {
-  'jo@cofidex.ch': { pwd: 'admin1234', prenom: 'Jonathan', nom: 'Özkan', role: 'signataire', taux: 100 },
-  'd.pereira@cofidex.ch': { pwd: 'david1234', prenom: 'David', nom: 'Pereira', role: 'apporteur', taux: 50 },
-  'a.espinoza@cofidex.ch': { pwd: 'alex1234', prenom: 'Alejandro', nom: 'Espinoza', role: 'apporteur', taux: 50 },
+// ═══ RÔLES (non sensible — les mots de passe sont gérés par Supabase Auth) ═══
+const USER_ROLES = {
+  'jo@cofidex.ch': { prenom: 'Jonathan', nom: 'Özkan', role: 'signataire', taux: 100 },
+  'dp@cofidex.ch': { prenom: 'David', nom: 'Pereira', role: 'apporteur', taux: 50 },
+  'ae@cofidex.ch': { prenom: 'Alejandro', nom: 'Espinoza', role: 'apporteur', taux: 50 },
 };
+
+// ═══ SESSION SUPABASE AUTH ═══
+let supaSession = null; // { access_token, refresh_token, expires_at, email }
+
+function saveSession(s) {
+  supaSession = s;
+  try { localStorage.setItem('crm_session', JSON.stringify(s)); } catch(e) {}
+}
+
+function clearSession() {
+  supaSession = null;
+  try { localStorage.removeItem('crm_session'); } catch(e) {}
+}
+
+function loadStoredSession() {
+  try {
+    const raw = localStorage.getItem('crm_session');
+    if (raw) supaSession = JSON.parse(raw);
+  } catch(e) { supaSession = null; }
+  return supaSession;
+}
+
+// Retourne un token d'accès valide, en le rafraîchissant si besoin
+// ═══ JOURNAL D'AUDIT (traçabilité nLPD) ═══
+async function logAction(action, tableName, recordId, detail) {
+  try {
+    if (!supaSession || !supaSession.email) return; // pas de log si pas connecté
+    await dbPost('audit_log', {
+      user_email: supaSession.email,
+      action,
+      table_name: tableName || null,
+      record_id: recordId || null,
+      detail: detail || null,
+    });
+  } catch(e) { /* le journal ne doit jamais bloquer l'usage normal */ }
+}
+
+async function getValidAccessToken() {
+  if (!supaSession) return null;
+  const now = Math.floor(Date.now() / 1000);
+  if (supaSession.expires_at && supaSession.expires_at - now > 60) {
+    return supaSession.access_token;
+  }
+  // Token expiré ou proche de l'expiration → refresh
+  try {
+    const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=refresh_token`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refresh_token: supaSession.refresh_token }),
+    });
+    if (!r.ok) { clearSession(); return null; }
+    const data = await r.json();
+    saveSession({
+      access_token: data.access_token,
+      refresh_token: data.refresh_token,
+      expires_at: now + (data.expires_in || 3600),
+      email: supaSession.email,
+    });
+    return supaSession.access_token;
+  } catch(e) { return null; }
+}
+
+async function supabaseAuthLogin(email, password) {
+  const r = await fetch(`${SUPABASE_URL}/auth/v1/token?grant_type=password`, {
+    method: 'POST',
+    headers: { apikey: SUPABASE_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password }),
+  });
+  const data = await r.json();
+  if (!r.ok) return { error: true, message: data.error_description || data.msg || 'Échec de connexion' };
+  const now = Math.floor(Date.now() / 1000);
+  saveSession({
+    access_token: data.access_token,
+    refresh_token: data.refresh_token,
+    expires_at: now + (data.expires_in || 3600),
+    email,
+  });
+  return { error: false };
+}
+
+async function supabaseAuthLogout() {
+  try {
+    const token = await getValidAccessToken();
+    if (token) {
+      await fetch(`${SUPABASE_URL}/auth/v1/logout`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
+      });
+    }
+  } catch(e) {}
+  clearSession();
+}
 
 // ═══ COULEURS AGENTS ═══
 function agentColor(agent) {
@@ -514,8 +584,9 @@ function agentColor(agent) {
 // ═══ SUPABASE ═══
 async function dbGet(table, params = '') {
   try {
+    const token = await getValidAccessToken() || SUPABASE_KEY;
     const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?${params}`, {
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` }
     });
     return await r.json();
   } catch(e) { return []; }
@@ -523,9 +594,10 @@ async function dbGet(table, params = '') {
 
 async function dbPost(table, body) {
   try {
+    const token = await getValidAccessToken() || SUPABASE_KEY;
     const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
       method: 'POST',
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
       body: JSON.stringify(body)
     });
     const data = await r.json();
@@ -542,19 +614,11 @@ async function dbPost(table, body) {
 
 async function dbPatch(table, id, body) {
   try {
+    const token = await getValidAccessToken() || SUPABASE_KEY;
     await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
       method: 'PATCH',
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json' },
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify(body)
-    });
-  } catch(e) {}
-}
-
-async function dbDelete(table, id) {
-  try {
-    await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
-      method: 'DELETE',
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` }
     });
   } catch(e) {}
 }
@@ -572,19 +636,13 @@ async function initMSAL() {
 async function loginMicrosoft() {
   try {
     if (!msalInstance) { await initMSAL(); }
-    if (!msalInstance) { showError('Erreur initialisation Microsoft. Utilisez la connexion email.'); return; }
+    if (!msalInstance) { showError('Erreur initialisation Microsoft.'); return; }
     const result = await msalInstance.loginPopup({ scopes: ['openid', 'profile', 'email', 'User.Read', 'Calendars.ReadWrite'] });
     msalAccessToken = result.accessToken;
-    const email = result.account.username;
-    const userData = PASSWORDS[email];
-    if (userData) {
-      const agents = await dbGet('agents', `email=eq.${email}&select=*`);
-      const agent = agents && agents[0] ? agents[0] : { id: email, prenom: userData.prenom, nom: userData.nom, email, role: userData.role, taux: userData.taux };
-      enterApp(agent);
-    } else {
-      showError('Compte non autorisé.');
-    }
-  } catch(e) { showError('Connexion Microsoft annulée.'); }
+    calendarEvents = await fetchCalendarEvents();
+    showError('✓ Outlook connecté — synchronisation activée.');
+    if (currentView === 'agenda') navigate('agenda');
+  } catch(e) { showError('Connexion Outlook annulée.'); }
 }
 
 // ═══ MICROSOFT GRAPH — AGENDA ═══
@@ -669,46 +727,47 @@ function showError(msg) {
   window._errorToastTimeout = setTimeout(() => { toast.style.display = 'none'; }, 6000);
 }
 
-function quickLogin(email, pwd) {
-  document.getElementById('login-email').value = email;
-  document.getElementById('login-pass').value = pwd;
-  doLogin();
-}
-
-function doLogin() {
+async function doLogin() {
   const email = document.getElementById('login-email').value.trim();
   const pwd = document.getElementById('login-pass').value;
-  const userData = PASSWORDS[email];
-  if (userData && userData.pwd === pwd) {
-    document.getElementById('login-error').classList.add('hidden');
-    enterApp({ id: email, prenom: userData.prenom, nom: userData.nom, email, role: userData.role, taux: userData.taux });
-  } else {
-    showError('Email ou mot de passe incorrect.');
+  if (!email || !pwd) { showError('Email et mot de passe requis.'); return; }
+  const btn = document.querySelector('.btn-primary');
+  if (btn) { btn.textContent = 'Connexion...'; btn.disabled = true; }
+  const res = await supabaseAuthLogin(email, pwd);
+  if (btn) { btn.textContent = 'Se connecter'; btn.disabled = false; }
+  if (res.error) { showError('Email ou mot de passe incorrect.'); return; }
+  document.getElementById('login-error').classList.add('hidden');
+
+  // Propose au navigateur d'enregistrer les identifiants (SPA = pas de rechargement de page,
+  // donc on déclenche explicitement la sauvegarde via l'API Credential Management)
+  if (window.PasswordCredential) {
+    try {
+      const cred = new PasswordCredential({ id: email, password: pwd, name: email });
+      await navigator.credentials.store(cred);
+    } catch(e) { /* ignore si non supporté */ }
   }
+
+  const userData = USER_ROLES[email] || { prenom: email.split('@')[0], nom: '', role: 'apporteur', taux: 50 };
+  enterApp({ id: email, prenom: userData.prenom, nom: userData.nom, email, role: userData.role, taux: userData.taux });
 }
 
 async function enterApp(user) {
   currentUser = user;
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').classList.add('active');
-  try {
-    allAgents = await dbGet('agents', 'select=*') || [];
-    allClients = await dbGet('clients', 'select=*') || [];
-    allContrats = await dbGet('contrats', 'select=*') || [];
-    allRappels = await dbGet('rappels', 'select=*') || [];
-    allBordereaux = await dbGet('bordereaux', 'select=*') || [];
-    allCommissionsAttente = await dbGet('commissions_attente', 'select=*') || [];
-    allOpportunites = await dbGet('opportunites', 'select=*') || [];
-    allPostits = await dbGet('postits', 'select=*') || [];
-    allFactures = await dbGet('factures', 'select=*') || [];
-  } catch(e) {
-    console.error('Erreur chargement données:', e);
-  }
+  logAction('login', null, null, `${user.prenom} ${user.nom}`);
+  allAgents = await dbGet('agents', 'select=*');
+  allClients = await dbGet('clients', 'select=*');
+  allRappels = await dbGet('rappels', 'select=*');
+  allBordereaux = await dbGet('bordereaux', 'select=*');
+  allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
   renderSidebar();
   navigate('dashboard');
 }
 
-function logout() {
+async function logout() {
+  logAction('logout', null, null, currentUser ? `${currentUser.prenom} ${currentUser.nom}` : null);
+  await supabaseAuthLogout();
   currentUser = null;
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app').classList.remove('active');
@@ -716,23 +775,32 @@ function logout() {
   document.getElementById('login-pass').value = '';
 }
 
+// Tentative de restauration de session au chargement de la page
+async function tryRestoreSession() {
+  const s = loadStoredSession();
+  if (!s || !s.email) return false;
+  const token = await getValidAccessToken();
+  if (!token) return false;
+  const userData = USER_ROLES[s.email] || { prenom: s.email.split('@')[0], nom: '', role: 'apporteur', taux: 50 };
+  await enterApp({ id: s.email, prenom: userData.prenom, nom: userData.nom, email: s.email, role: userData.role, taux: userData.taux });
+  return true;
+}
+
 // ═══ SIDEBAR ═══
 const SECTIONS = [
-  { id: 'dashboard-solo', label: 'Dashboard', icon: '⬛', solo: true, target: 'dashboard' },
   { id: 'vente', label: 'Vente', icon: '◈', sub: [
+    { id: 'dashboard', label: 'Dashboard' },
     { id: 'opportunites', label: 'Opportunités' },
     { id: 'suivi', label: 'Suivi des affaires' },
     { id: 'nouveau-contrat-direct', label: 'Nouveau contrat' },
     { id: 'rappels', label: 'Rappels' },
     { id: 'agenda', label: 'Agenda' },
     { id: 'campagnes', label: 'Campagnes' },
-    { id: 'postits', label: 'Post-its' },
   ]},
   { id: 'portefeuille', label: 'Portefeuille', icon: '◑', sub: [
     { id: 'portefeuille', label: 'Tous les clients' },
     { id: 'clients-prives', label: 'Clients privés' },
     { id: 'clients-entreprises', label: 'Entreprises' },
-    { id: 'tous-contrats', label: 'Tous les contrats' },
     { id: 'volume-primes', label: 'Volume de primes' },
   ]},
   { id: 'clients', label: 'Clients', icon: '◉', sub: [
@@ -742,14 +810,10 @@ const SECTIONS = [
     { id: 'bordereaux', label: 'Bordereaux' },
     { id: 'commissions', label: 'Commissions' },
     { id: 'commissions-attente', label: 'Commissions en attente' },
-    { id: 'factures', label: 'Factures' },
-  ]},
-  { id: 'conformite', label: 'Conformité', icon: '◈', sub: [
-    { id: 'rapport-finma', label: 'Rapport FINMA' },
   ]},
   { id: 'settings', label: 'Paramètres', icon: '⊙', sub: [
     { id: 'agents', label: 'Agents' },
-    { id: 'parametres', label: 'Réglages généraux' },
+    { id: 'audit-log', label: 'Journal d\'audit' },
   ]},
 ];
 
@@ -757,15 +821,6 @@ function renderSidebar() {
   // Nav
   let nav = '';
   SECTIONS.forEach(sec => {
-    if (sec.solo) {
-      // Item standalone — Dashboard en blanc gras au-dessus
-      const active = currentView === sec.target;
-      nav += `<button class="nav-solo-btn ${active ? 'active' : ''}" onclick="navigate('${sec.target}')">
-        <span style="font-size:13px">📊</span>${sec.label}
-        ${active ? '<span class="nav-dot" style="margin-left:auto"></span>' : ''}
-      </button>`;
-      return;
-    }
     const isActive = sec.sub.some(s => s.id === currentView);
     nav += `<button class="nav-section-btn ${isActive ? 'active' : ''}" onclick="toggleSection('${sec.id}')">
       <span style="font-size:14px">${sec.icon}</span>${sec.label}
@@ -855,13 +910,12 @@ function sectionCard(title, accentColor, content) {
 async function renderView() {
   const main = document.getElementById('main-content');
   switch (currentView) {
-    case 'dashboard': main.innerHTML = viewDashboard(); _initDashboardRappels(); break;
+    case 'dashboard': main.innerHTML = viewDashboard(); break;
     case 'clients': main.innerHTML = viewClients(); break;
     case 'portefeuille': main.innerHTML = viewPortefeuille('tous'); break;
     case 'clients-prives': main.innerHTML = viewPortefeuille('prive'); break;
     case 'clients-entreprises': main.innerHTML = viewPortefeuille('entreprise'); break;
     case 'volume-primes': main.innerHTML = '<div class="loader">Calcul en cours...</div>'; main.innerHTML = await viewVolumePrimes(); break;
-    case 'tous-contrats': main.innerHTML = viewTousContrats(); setTimeout(filterTousContrats, 50); break;
     case 'nouveau-client': main.innerHTML = viewNouveauClient(); break;
     case 'nouvelle-opportunite': main.innerHTML = viewNouvelleOpportunite(); break;
     case 'nouveau-rappel': main.innerHTML = viewNouveauRappel(); break;
@@ -869,7 +923,7 @@ async function renderView() {
     case 'nouveau-contrat': main.innerHTML = viewNouveauContrat(); initSegmentContrat(); break;
     case 'nouveau-contrat-direct': contratClientId = null; main.innerHTML = viewNouveauContrat(); initSegmentContrat(); break;
     case 'commissions-attente': main.innerHTML = viewCommissionsAttente(); break;
-    case 'opportunites': main.innerHTML = viewOpportunites(); setTimeout(_initOpportunitesDragDrop, 50); break;
+    case 'opportunites': main.innerHTML = viewOpportunites(); break;
     case 'suivi': main.innerHTML = viewSuivi(); break;
     case 'rappels': main.innerHTML = viewRappels(); break;
     case 'agenda': main.innerHTML = viewAgenda(); break;
@@ -878,73 +932,26 @@ async function renderView() {
     case 'bordereaux': main.innerHTML = viewBordereaux(); break;
     case 'commissions': main.innerHTML = viewCommissions(); break;
     case 'agents': main.innerHTML = viewAgents(); break;
-    case 'postits': main.innerHTML = viewPostits(); break;
-    case 'factures': main.innerHTML = viewFactures(); break;
-    case 'nouvelle-facture': main.innerHTML = viewNouvelleFacture(); break;
-    case 'rapport-finma': main.innerHTML = '<div class="loader">Calcul en cours...</div>'; main.innerHTML = await viewRapportFinma(); break;
-    case 'parametres': main.innerHTML = viewParametres(); break;
+    case 'audit-log': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewAuditLog(); break;
     default: main.innerHTML = viewDashboard();
   }
 }
 
 // DASHBOARD
-function getDashboardObjectifs() {
-  try { return JSON.parse(localStorage.getItem('crm_objectifs') || '{}'); } catch(e) { return {}; }
-}
-function saveDashboardObjectifs(obj) {
-  localStorage.setItem('crm_objectifs', JSON.stringify(obj));
-}
-function sauvegarderObjectif() {
-  const annee = new Date().getFullYear();
-  const val = parseFloat(document.getElementById('obj-input').value.replace(/[^0-9.]/g,''));
-  if (!val || val <= 0) { showError('Montant invalide.'); return; }
-  const obj = getDashboardObjectifs();
-  obj[annee] = val;
-  saveDashboardObjectifs(obj);
-  navigate('dashboard');
-}
-
 function viewDashboard() {
-  const anneeN = new Date().getFullYear();
-  const anneeN1 = anneeN - 1;
   const actifs = allClients.filter(c => c.statut === 'actif').length;
+  const totalCA = allClients.reduce((s, c) => s + (c.ca || 0), 0);
   const urgents = allRappels.filter(r => r.urgence === 'haute' && r.statut === 'ouvert');
   const now = new Date().toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-  // ── Calculs vrais depuis allContrats ──
-  const contratsActifs = allContrats.filter(c => c.statut === 'actif');
-  const portefeuillePrimes = contratsActifs.reduce((s, c) => s + Number(c.prime_annuelle || 0), 0);
-  const nbContrats = contratsActifs.length;
-
-  // Commissions encaissées N et N-1 (depuis commissions_attente statut='reçue')
-  const commN = allCommissionsAttente
-    .filter(c => c.statut === 'reçue' && c.date_creation && c.date_creation.startsWith(String(anneeN)))
-    .reduce((s, c) => s + Number(c.montant_estime || 0), 0);
-  const commN1 = allCommissionsAttente
-    .filter(c => c.statut === 'reçue' && c.date_creation && c.date_creation.startsWith(String(anneeN1)))
-    .reduce((s, c) => s + Number(c.montant_estime || 0), 0);
-  const commEnAttente = allCommissionsAttente
-    .filter(c => c.statut === 'en_attente')
-    .reduce((s, c) => s + Number(c.montant_estime || 0), 0);
-
-  // Objectifs
-  const objData = getDashboardObjectifs();
-  const objectifN = objData[anneeN] || 0;
-  const pctObjectif = objectifN > 0 ? Math.min(100, Math.round((commN / objectifN) * 100)) : 0;
-  const deltaVsN1 = commN1 > 0 ? Math.round(((commN - commN1) / commN1) * 100) : null;
-
-  // Nouveaux contrats ce mois
-  const moisCourant = new Date().toISOString().slice(0, 7);
-  const contratsNouveaux = allContrats.filter(c => (c.date_debut || '').startsWith(moisCourant)).length;
-
   let rappelRows = urgents.length > 0 ? urgents.map(r => `
-    <div data-rappel-id="${r.id}" style="padding:11px 18px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:center;cursor:pointer;transition:background 0.1s" onmouseover="this.style.background='rgba(56,189,248,0.06)'" onmouseout="this.style.background='transparent'">
+    <div style="padding:11px 18px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:center;cursor:pointer;transition:background 0.1s" onclick="showRappel('${r.id}')" onmouseover="this.style.background='rgba(56,189,248,0.06)'" onmouseout="this.style.background='transparent'">
       <div style="width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0"></div>
-      <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--text)">${(r.titre||'').replace(/'/g,"&#39;")}</div><div style="font-size:11px;color:var(--text-muted)">${r.date_echeance || ''}</div></div>
+      <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--text)">${r.titre}</div><div style="font-size:11px;color:var(--text-muted)">${r.date_echeance || ''}</div></div>
       <span style="font-size:11px;color:var(--accent)">&#8594;</span>
     </div>`).join('') : '<div style="padding:16px 18px;color:var(--text-muted);font-size:13px">Aucun rappel urgent</div>';
 
-  let teamRows = allAgents.map((a) => {
+  let teamRows = allAgents.map((a, i) => {
     const nb = allClients.filter(c => c.apporteur_id === a.id).length;
     const pct = allClients.length > 0 ? Math.round((nb / allClients.length) * 100) : 0;
     const color = agentColor(a);
@@ -958,70 +965,47 @@ function viewDashboard() {
     </div>`;
   }).join('');
 
-  // Bloc objectif
-  const objectifBlock = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:20px">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-        <div>
-          <div style="font-weight:800;font-size:13px;color:var(--text)">🎯 Objectif ${anneeN}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">Commissions encaissées vs objectif annuel</div>
-        </div>
-        <button onclick="document.getElementById('obj-zone').classList.toggle('hidden')" style="background:none;border:1px solid var(--border);border-radius:6px;padding:5px 12px;color:var(--text-muted);font-size:11px;cursor:pointer;font-weight:700">✏️ Modifier</button>
-      </div>
-      <div id="obj-zone" class="hidden" style="margin-bottom:14px;display:flex;gap:8px;align-items:center">
-        <input id="obj-input" type="number" placeholder="Ex: 80000" style="flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px" value="${objectifN || ''}">
-        <button onclick="sauvegarderObjectif()" style="padding:8px 14px;background:var(--gold);color:#0f172a;border:none;border-radius:6px;font-weight:800;cursor:pointer;font-size:12px">Enregistrer</button>
-      </div>
-      ${objectifN > 0 ? `
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px">
-        <span style="font-size:13px;font-weight:800;color:#4ade80">CHF ${commN.toLocaleString()} encaissés</span>
-        <span style="font-size:13px;color:var(--text-muted)">sur CHF ${objectifN.toLocaleString()} · <strong style="color:${pctObjectif >= 100 ? '#4ade80' : '#f59e0b'}">${pctObjectif}%</strong></span>
-      </div>
-      <div class="progress-bar" style="height:10px;border-radius:6px">
-        <div class="progress-fill" style="width:${pctObjectif}%;background:${pctObjectif >= 100 ? '#4ade80' : pctObjectif >= 60 ? '#f59e0b' : '#f87171'};height:10px;border-radius:6px"></div>
-      </div>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:6px">Reste CHF ${Math.max(0, objectifN - commN).toLocaleString()} à encaisser</div>
-      ` : `<div style="font-size:13px;color:var(--text-muted);text-align:center;padding:8px 0">Aucun objectif défini — clique sur <strong>Modifier</strong> pour en fixer un</div>`}
-    </div>`;
-
   return `
     <div style="margin-bottom:4px;color:var(--text-muted);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase">${now}</div>
     <h1 style="margin:0 0 4px;font-size:24px;font-weight:900;color:var(--text)">Bonjour, ${currentUser.prenom} 👋</h1>
     <div style="color:var(--text-muted);font-size:13px;margin-bottom:24px">Assurex Sàrl · Groupe EX</div>
-
-    <div class="stat-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px">
+    <div class="stat-grid">
       ${statCard('Clients actifs', actifs, '#38bdf8', `${allClients.length} total`)}
-      ${statCard('Portefeuille (primes)', 'CHF ' + portefeuillePrimes.toLocaleString(), '#f59e0b', `${nbContrats} contrats actifs`)}
-      ${statCard('Commissions ' + anneeN, 'CHF ' + commN.toLocaleString(), '#4ade80', deltaVsN1 !== null ? (deltaVsN1 >= 0 ? '▲ +' : '▼ ') + deltaVsN1 + '% vs ' + anneeN1 : 'vs ' + anneeN1 + ' : N/A')}
-      ${statCard('En attente', 'CHF ' + commEnAttente.toLocaleString(), '#a78bfa', allCommissionsAttente.filter(c=>c.statut==='en_attente').length + ' commissions')}
+      ${statCard('CA portefeuille', 'CHF ' + totalCA.toLocaleString(), '#f59e0b')}
+      ${statCard('Rappels urgents', urgents.length, urgents.length > 0 ? '#f87171' : '#64748b')}
+      ${statCard('Agents', allAgents.length, '#a78bfa')}
     </div>
-
+    <!-- Graphiques commissions -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-      ${objectifBlock}
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
-        <div style="font-weight:800;font-size:13px;color:var(--text);margin-bottom:14px">📊 Comparaison N / N-1</div>
-        ${[
-          ['Commissions ' + anneeN, commN, '#4ade80'],
-          ['Commissions ' + anneeN1, commN1, '#38bdf8'],
-          ['En attente', commEnAttente, '#a78bfa'],
-        ].map(([l, v, c]) => {
-          const max = Math.max(commN, commN1, commEnAttente, 1);
-          const pct = Math.round((v / max) * 100);
-          return `<div style="margin-bottom:12px">
+        <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px">📊 Commissions — Gestion vs Acquisition</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px">Cumul 2026</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          ${[['Gestion (récurrentes)','#38bdf8',0],['Acquisition (nouvelles)','#4ade80',0]].map(([l,c,v])=>`
+          <div>
             <div style="display:flex;justify-content:space-between;margin-bottom:4px">
               <span style="font-size:12px;color:var(--text-muted)">${l}</span>
               <span style="font-size:12px;font-weight:800;color:${c}">CHF ${v.toLocaleString()}</span>
             </div>
-            <div class="progress-bar"><div class="progress-fill" style="width:${pct}%;background:${c}"></div></div>
-          </div>`;
-        }).join('')}
-        <div style="margin-top:14px;padding-top:12px;border-top:1px solid var(--border)">
-          <div style="font-size:11px;color:var(--text-muted)">Nouveaux contrats ce mois</div>
-          <div style="font-size:20px;font-weight:900;color:var(--gold)">${contratsNouveaux}</div>
+            <div class="progress-bar"><div class="progress-fill" style="width:0%;background:${c}"></div></div>
+          </div>`).join('')}
+        </div>
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
+        <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px">💼 Pipeline</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px">Signé vs Prévu</div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          ${[['Chiffre signé','#f59e0b',0],['Chiffre prévu (pipeline)','#a78bfa',0]].map(([l,c,v])=>`
+          <div>
+            <div style="display:flex;justify-content:space-between;margin-bottom:4px">
+              <span style="font-size:12px;color:var(--text-muted)">${l}</span>
+              <span style="font-size:12px;font-weight:800;color:${c}">CHF ${v.toLocaleString()}</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" style="width:0%;background:${c}"></div></div>
+          </div>`).join('')}
         </div>
       </div>
     </div>
-
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
       <div class="table-wrap">
         <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
@@ -1032,131 +1016,9 @@ function viewDashboard() {
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
         <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:16px">👥 Répartition équipe</div>
-        ${teamRows || '<div style="color:var(--text-muted);font-size:13px">Aucun agent enregistré</div>'}
+        ${teamRows || '<div style="color:var(--text-muted);font-size:13px">Chargement...</div>'}
       </div>
-    </div>
-`;
-}
-
-function _initDashboardRappels() {
-  setTimeout(function() {
-    var w = document.getElementById('dashboard-rappels-wrap');
-    if (w) w.addEventListener('click', function(e) {
-      var r = e.target.closest('[data-rappel-id]');
-      if (r) showRappel(r.getAttribute('data-rappel-id'));
-    });
-  }, 0);
-}
-
-// TOUS LES CONTRATS
-function viewTousContrats() {
-  const urlParams = new URLSearchParams(window.location.__tousContratsFilters || '');
-  return `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px">
-      <div>
-        <h2 style="margin:0;font-size:20px;font-weight:900;color:var(--text)">📋 Tous les contrats</h2>
-        <div style="font-size:12px;color:var(--text-muted);margin-top:2px" id="tc-count">Chargement...</div>
-      </div>
-      <button onclick="contratClientId=null;navigate('nouveau-contrat-direct')" class="btn-add">+ Nouveau contrat</button>
-    </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
-      <input id="tc-search" type="text" placeholder="🔍 Rechercher client, produit, compagnie..." oninput="filterTousContrats()"
-        style="flex:1;min-width:200px;padding:8px 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px">
-      <select id="tc-statut" onchange="filterTousContrats()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:12px">
-        <option value="">Tous les statuts</option>
-        <option value="actif">Actif</option>
-        <option value="en_attente">En attente</option>
-        <option value="résilié">Résilié</option>
-      </select>
-      <select id="tc-segment" onchange="filterTousContrats()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:12px">
-        <option value="">Privé + Entreprise</option>
-        <option value="prive">Privé</option>
-        <option value="entreprise">Entreprise</option>
-      </select>
-      <select id="tc-type" onchange="filterTousContrats()" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:12px">
-        <option value="">Vie + Non-Vie</option>
-        <option value="vie">Vie / Prévoyance</option>
-        <option value="nonvie">Non-Vie</option>
-      </select>
-    </div>
-    <div class="table-wrap">
-      <table class="data-table" style="width:100%">
-        <thead><tr>
-          <th>Client</th>
-          <th>Produit</th>
-          <th>Compagnie</th>
-          <th>N° Police</th>
-          <th>Prime annuelle</th>
-          <th>Début</th>
-          <th>Statut</th>
-          <th></th>
-        </tr></thead>
-        <tbody id="tc-tbody"></tbody>
-      </table>
-    </div>
     </div>`;
-}
-
-function filterTousContrats() {
-  function isVie(produit) {
-    const kw = ['vie','3a','3b','lpp','pilier','prévoyance','prevoyance','term','risque décès','capital décès','rente','ijm','iag','perte de gain','laa','perte gain','maladie collective','accident collectif'];
-    const p = (produit||'').toLowerCase();
-    return kw.some(k => p.includes(k));
-  }
-  const q = (document.getElementById('tc-search')?.value||'').toLowerCase();
-  const statut = document.getElementById('tc-statut')?.value||'';
-  const segment = document.getElementById('tc-segment')?.value||'';
-  const type = document.getElementById('tc-type')?.value||'';
-  let list = allContrats || [];
-  if (statut) list = list.filter(c => c.statut === statut);
-  if (type === 'vie') list = list.filter(c => isVie(c.produit));
-  if (type === 'nonvie') list = list.filter(c => !isVie(c.produit));
-  if (segment) {
-    list = list.filter(c => {
-      const cl = (allClients||[]).find(x => x.id === c.client_id);
-      if (!cl) return true;
-      if (segment === 'prive') return (cl.segment||'') !== 'Entreprise';
-      if (segment === 'entreprise') return (cl.segment||'') === 'Entreprise';
-      return true;
-    });
-  }
-  if (q) list = list.filter(c => {
-    const cl = (allClients||[]).find(x => x.id === c.client_id);
-    const nom = cl ? (cl.segment==='Entreprise' ? cl.nom : cl.prenom+' '+cl.nom) : '';
-    return nom.toLowerCase().includes(q) || (c.produit||'').toLowerCase().includes(q) || (c.compagnie||'').toLowerCase().includes(q) || (c.numero_police||'').toLowerCase().includes(q);
-  });
-  const totalPrimes = list.reduce((s,c)=>s+Number(c.prime_annuelle||0),0);
-  const countEl = document.getElementById('tc-count');
-  if (countEl) countEl.textContent = list.length + ' contrat(s) · CHF ' + totalPrimes.toLocaleString() + ' de primes';
-  const tbody = document.getElementById('tc-tbody');
-  if (!tbody) return;
-  if (list.length === 0) { tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:32px;color:var(--text-muted)">Aucun contrat trouvé</td></tr>'; return; }
-  tbody.innerHTML = list.map(c => {
-    const cl = (allClients||[]).find(x => x.id === c.client_id);
-    const nom = cl ? (cl.segment==='Entreprise' ? cl.nom : cl.prenom+' '+cl.nom) : '—';
-    const sc = c.statut==='actif'?'#4ade80':c.statut==='résilié'?'#f87171':'#f59e0b';
-    const tc = isVie(c.produit)?'#a78bfa':'#38bdf8';
-    const tl = isVie(c.produit)?'Vie':'Non-Vie';
-    return '<tr data-client-id="'+c.client_id+'" style="cursor:pointer" onmouseover="this.style.background=\'rgba(56,189,248,0.04)\'" onmouseout="this.style.background=\'\'">'
-      +'<td style="font-weight:700;padding:10px 12px">'+nom+'<br><span style="font-size:10px;font-weight:700;color:'+tc+'">'+tl+'</span></td>'
-      +'<td style="font-size:12px;padding:10px 12px">'+(c.produit||'—')+'</td>'
-      +'<td style="font-size:12px;color:var(--text-muted);padding:10px 12px">'+(c.compagnie||'—')+'</td>'
-      +'<td style="font-size:11px;color:var(--text-muted);padding:10px 12px">'+(c.numero_police||'—')+'</td>'
-      +'<td style="font-weight:800;color:var(--gold);padding:10px 12px">CHF '+Number(c.prime_annuelle||0).toLocaleString()+'</td>'
-      +'<td style="font-size:12px;color:var(--text-muted);padding:10px 12px">'+(c.date_debut||'—')+'</td>'
-      +'<td style="padding:10px 12px"><span style="font-size:10px;font-weight:700;color:'+sc+';background:'+sc+'18;padding:3px 8px;border-radius:99px">'+(c.statut||'').toUpperCase()+'</span></td>'
-      +'<td style="padding:10px 12px"><button onclick="event.stopPropagation();showClient(\'' + c.client_id + '\')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:11px;font-weight:700">→ Fiche</button></td>'
-      +'</tr>';
-  }).join('');
-  // Event delegation pour les clics sur les lignes
-  const wrap = document.getElementById('tc-tbody');
-  if (wrap && !wrap._delegated) {
-    wrap._delegated = true;
-    wrap.addEventListener('click', function(e) {
-      const row = e.target.closest('tr[data-client-id]');
-      if (row) showClient(row.getAttribute('data-client-id'));
-    });
-  }
 }
 
 // PORTEFEUILLE
@@ -1169,16 +1031,6 @@ const PRODUITS_VIE_KEYWORDS = [
   'libre_passage','vie_3a','lpp_entreprise','laa','perte_gain','sante_collective',
   'prevoyance_enfant'
 ];
-
-// Produits dont la prime saisie est MENSUELLE (× 12 pour obtenir la prime annuelle)
-const PRODUITS_PRIME_MENSUELLE = [
-  'sante_complementaire','sante_collective_entreprise','lamal','lamal_base',
-  'complementaire_sante','sante','maladie_collective'
-];
-
-function isPrimeMensuelle(produitId) {
-  return PRODUITS_PRIME_MENSUELLE.includes(produitId);
-}
 
 function classifierContrat(ct, clientsMap) {
   const produit = (ct.produit || '').toLowerCase();
@@ -1417,6 +1269,7 @@ async function showClient(id) {
   ]);
   const c = clients[0];
   if (!c) { main.innerHTML = '<div class="loader">Client introuvable.</div>'; return; }
+  logAction('view_client', 'clients', id, c.segment === 'Entreprise' ? c.nom : `${c.prenom} ${c.nom}`);
   const agent = agentById(c.apporteur_id);
   const color = agentColor(agent);
 
@@ -1457,7 +1310,7 @@ async function showClient(id) {
       <div class="stat-grid" style="margin-bottom:16px">
         ${statCard('Contrats', contrats.length, '#38bdf8')}
         ${statCard('Rappels ouverts', rappels.filter(r => r.statut === 'ouvert').length, rappels.filter(r => r.statut === 'ouvert').length > 0 ? '#f87171' : '#64748b')}
-        ${statCard('CA annuel (primes)', contrats.length > 0 ? 'CHF ' + contrats.reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0).toLocaleString() : '—', '#f59e0b')}
+        ${statCard('CA annuel', c.ca ? 'CHF ' + Number(c.ca).toLocaleString() : '—', '#f59e0b')}
       </div>
       ${agent ? `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface-alt);border-radius:10px">
         ${avatar(agent, 36)}
@@ -1475,7 +1328,6 @@ async function showClient(id) {
       <button class="tab-btn" onclick="switchTab(this,'tab-prevoyance')">Prévoyance</button>
       ${isEntreprise ? `<button class="tab-btn" onclick="switchTab(this,'tab-collaborateurs')">Collaborateurs (${collaborateurs.length})</button>` : ''}
       <button class="tab-btn" onclick="switchTab(this,'tab-contrats')">Contrats (${contrats.length})</button>
-      <button class="tab-btn" onclick="switchTab(this,'tab-polices')">📎 Polices & Documents</button>
       <button class="tab-btn" onclick="switchTab(this,'tab-rappels')">Rappels (${rappels.length})</button>
       <button class="tab-btn" onclick="switchTab(this,'tab-notes')">Notes</button>
     </div>
@@ -1532,14 +1384,6 @@ async function showClient(id) {
         <div style="display:flex;gap:10px;margin-top:14px">
           <button class="btn-secondary" onclick="toggleEditClient()">Annuler</button>
           <button class="btn-save" onclick="saveClientEdit('${c.id}', ${isEntreprise})">💾 Enregistrer les modifications</button>
-        </div>
-        <div style="margin-top:12px;padding:12px 14px;background:var(--surface-alt);border-radius:8px;display:flex;align-items:center;gap:12px">
-          <label style="font-size:12px;font-weight:700;color:var(--text-muted);white-space:nowrap">Statut du client :</label>
-          <select id="ec-statut" class="form-select" style="max-width:180px">
-            <option value="prospect" ${c.statut === 'prospect' ? 'selected' : ''}>Prospect</option>
-            <option value="actif" ${c.statut === 'actif' ? 'selected' : ''}>Actif</option>
-            <option value="inactif" ${c.statut === 'inactif' ? 'selected' : ''}>Inactif</option>
-          </select>
         </div>
       ` : `
       ${isEntreprise ? sectionCard('Identification entreprise', '#f59e0b', `<div class="info-grid">
@@ -1600,56 +1444,24 @@ async function showClient(id) {
       ${collaborateurs.length > 0 ? `
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px">
-          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Nom / Prénom</th>
-          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Naissance · Sexe</th>
+          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Nom</th>
+          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Prénom</th>
+          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Adresse privée</th>
           <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">N° AVS</th>
-          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Fonction</th>
-          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Salaire</th>
-          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Contact</th>
           <th style="padding:8px 12px;border-bottom:1px solid var(--border)"></th>
         </tr></thead>
         <tbody>${collaborateurs.map(col => `
           <tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:10px 12px">
-              <div style="font-weight:700;color:var(--text)">${col.nom || ''} ${col.prenom || ''}</div>
-              <div style="font-size:11px;color:var(--text-muted)">${col.adresse || '—'}</div>
-            </td>
-            <td style="padding:10px 12px;color:var(--text-muted);font-size:12px">${col.date_naissance || '—'}<br><span style="color:var(--text)">${col.sexe || '—'}</span></td>
-            <td style="padding:10px 12px;color:var(--text-muted);font-family:monospace;font-size:11px">${col.avs || '—'}</td>
-            <td style="padding:10px 12px;font-size:12px;color:var(--text)">${col.fonction || '—'}<br><span style="color:var(--text-muted);font-size:11px">${col.taux_activite ? col.taux_activite + '%' : ''} ${col.date_entree ? '· dès ' + col.date_entree : ''}</span></td>
-            <td style="padding:10px 12px;font-weight:700;color:var(--gold)">${col.salaire ? 'CHF ' + Number(col.salaire).toLocaleString() : '—'}</td>
-            <td style="padding:10px 12px;font-size:11px;color:var(--text-muted)">${col.email || ''}<br>${col.mobile || ''}</td>
+            <td style="padding:10px 12px;font-weight:700;color:var(--text)">${col.nom || '—'}</td>
+            <td style="padding:10px 12px;color:var(--text)">${col.prenom || '—'}</td>
+            <td style="padding:10px 12px;color:var(--text-muted)">${col.adresse || '—'}</td>
+            <td style="padding:10px 12px;color:var(--text-muted);font-family:monospace">${col.avs || '—'}</td>
             <td style="padding:10px 12px;text-align:right">
               <button onclick="deleteCollaborateur('${col.id}','${c.id}')" style="background:rgba(248,113,113,0.1);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">Supprimer</button>
             </td>
           </tr>`).join('')}
         </tbody>
-      </table>` : '<div class="table-empty">Aucun collaborateur enregistré. Clique sur "+ Ajouter" pour commencer.</div>'}
-    </div>
-
-    <div id="tab-polices" class="hidden">
-      ${sectionCard('📎 Polices & Documents', '#a78bfa', `
-        <div style="margin-bottom:16px">
-          <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px">Upload des polices d'assurance, avenants, correspondances et tout document lié à ce client.</div>
-          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
-            <select id="police-categorie" style="padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:12px;font-weight:700">
-              <option value="police">Police d'assurance</option>
-              <option value="avenant">Avenant / Modification</option>
-              <option value="decompte">Décompte / Facture</option>
-              <option value="sinistre">Sinistre</option>
-              <option value="correspondance">Correspondance</option>
-              <option value="autre">Autre document</option>
-            </select>
-            <input id="police-label" type="text" placeholder="Libellé (ex: Police RC AXA 2024)" style="flex:1;min-width:180px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:12px">
-            <input id="police-file-input" type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg" style="display:none" onchange="uploadPoliceDoc('${id}')">
-            <button onclick="document.getElementById('police-file-input').click()" class="btn-add" style="padding:8px 14px;font-size:12px">+ Ajouter un document</button>
-          </div>
-          <div id="police-upload-status" style="font-size:11px;color:var(--text-muted);margin-bottom:8px"></div>
-        </div>
-        <div id="police-docs-list">
-          <div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px">Chargement des documents...</div>
-        </div>
-      `)}
+      </table>` : '<div class="table-empty">Aucun collaborateur enregistré.</div>'}
     </div>
 
     <div id="tab-rappels" class="hidden">
@@ -1747,15 +1559,12 @@ async function saveClientEdit(id, isEntreprise) {
 
   if (!body.prenom && !body.nom) { showError('Le nom est obligatoire.'); return; }
 
-  // Statut (commun à tous)
-  const statutEl = document.getElementById('ec-statut');
-  if (statutEl) body.statut = statutEl.value;
-
   const btn = document.querySelector('.btn-save');
   if (btn) { btn.textContent = 'Enregistrement...'; btn.disabled = true; }
 
   const r = await dbPatch('clients', id, body);
   if (r && r.error) { showError('Erreur lors de la mise à jour: ' + (r.detail || r.status)); if (btn) { btn.textContent = '💾 Enregistrer les modifications'; btn.disabled = false; } return; }
+  logAction('edit_client', 'clients', id, `${body.prenom || ''} ${body.nom || ''}`.trim());
 
   editingClient = false;
   allClients = await dbGet('clients', 'select=*');
@@ -1765,115 +1574,38 @@ async function saveClientEdit(id, isEntreprise) {
 function switchTab(btn, tabId) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  ['tab-identite','tab-prevoyance','tab-collaborateurs','tab-contrats','tab-polices','tab-rappels','tab-notes'].forEach(id => {
+  ['tab-identite','tab-prevoyance','tab-contrats','tab-rappels','tab-notes'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('hidden', id !== tabId);
   });
-  if (tabId === 'tab-polices') loadPoliceDocs(currentClientId);
-}
-
-// POLICES & DOCUMENTS
-async function loadPoliceDocs(clientId) {
-  const listEl = document.getElementById('police-docs-list');
-  if (!listEl) return;
-  const docs = await dbGet('pieces_jointes', `client_id=eq.${clientId}&order=date_ajout.desc&select=*`);
-  if (!docs || docs.length === 0) {
-    listEl.innerHTML = '<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px">Aucun document enregistré pour ce client.</div>';
-    return;
-  }
-  const catIcon = { police:'📋', avenant:'✏️', decompte:'🧾', sinistre:'🚨', correspondance:'✉️', autre:'📄' };
-  const catLabel = { police:'Police', avenant:'Avenant', decompte:'Décompte', sinistre:'Sinistre', correspondance:'Correspondance', autre:'Document' };
-  listEl.innerHTML = docs.map(d => `
-    <div style="display:flex;align-items:center;gap:12px;padding:12px 14px;border-bottom:1px solid var(--border)">
-      <div style="font-size:20px">${catIcon[d.section] || '📄'}</div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:700;color:var(--text)">${d.reference_label || d.nom_fichier}</div>
-        <div style="font-size:11px;color:var(--text-muted)">${catLabel[d.section] || d.section} · ${d.date_ajout || ''}</div>
-      </div>
-      <a href="${d.url}" target="_blank" style="padding:5px 12px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;font-size:11px;font-weight:700;text-decoration:none">↗ Ouvrir</a>
-      <button onclick="deletePoliceDoc('${d.id}','${clientId}')" style="padding:5px 10px;background:var(--red-dim);color:var(--red);border:none;border-radius:7px;font-size:11px;font-weight:700;cursor:pointer">✕</button>
-    </div>`).join('');
-}
-
-async function uploadPoliceDoc(clientId) {
-  const fileInput = document.getElementById('police-file-input');
-  const file = fileInput.files[0];
-  if (!file) return;
-  const label = (document.getElementById('police-label').value.trim()) || file.name;
-  const categorie = document.getElementById('police-categorie').value;
-  const statusEl = document.getElementById('police-upload-status');
-  if (statusEl) statusEl.textContent = '⏳ Upload en cours...';
-
-  const timestamp = Date.now();
-  const ext = file.name.split('.').pop();
-  const path = `clients/${clientId}/${timestamp}.${ext}`;
-
-  try {
-    const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/pieces-jointes/${path}`, {
-      method: 'POST',
-      headers: { 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': file.type },
-      body: file,
-    });
-    if (!uploadRes.ok) { const err = await uploadRes.text(); showError('Erreur upload: ' + err); if (statusEl) statusEl.textContent = ''; return; }
-
-    const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/pieces-jointes/${path}`;
-    const meta = {
-      client_id: clientId,
-      section: categorie,
-      reference_label: label,
-      nom_fichier: file.name,
-      url: publicUrl,
-      date_ajout: new Date().toISOString().split('T')[0],
-    };
-    const r = await dbPost('pieces_jointes', meta);
-    if (r && r.error) { showError('Erreur enregistrement: ' + (r.detail || r.message || '')); if (statusEl) statusEl.textContent = ''; return; }
-    if (statusEl) statusEl.textContent = '✅ Document ajouté avec succès';
-    fileInput.value = '';
-    document.getElementById('police-label').value = '';
-    setTimeout(() => { if (statusEl) statusEl.textContent = ''; }, 3000);
-    loadPoliceDocs(clientId);
-  } catch(e) { showError('Erreur réseau: ' + e.message); if (statusEl) statusEl.textContent = ''; }
-}
-
-async function deletePoliceDoc(docId, clientId) {
-  if (!confirm('Supprimer ce document ?')) return;
-  await dbDelete('pieces_jointes', docId);
-  loadPoliceDocs(clientId);
 }
 
 // OPPORTUNITÉS
 function viewOpportunites() {
-  const OPPS = allOpportunites.filter(o => o.stade !== 'Gagné' && o.stade !== 'Perdu');
+  const OPPS = [];
   const stadeColor = { Contact:'#64748b', Analyse:'#38bdf8', Proposition:'#f59e0b', Négociation:'#a78bfa' };
   const stades = ['Contact','Analyse','Proposition','Négociation'];
-  const total = OPPS.reduce((s,o) => s+(o.montant_potentiel||0), 0);
-  const pondere = OPPS.reduce((s,o) => s+Math.round((o.montant_potentiel||0)*(o.probabilite||0)/100), 0);
-  const gagnees = allOpportunites.filter(o => o.stade === 'Gagné');
-  const perdues = allOpportunites.filter(o => o.stade === 'Perdu');
-
-  function clientNomOpp(o) {
-    const cl = allClients.find(x => x.id === o.client_id);
-    return cl ? (cl.segment === 'Entreprise' ? cl.nom : `${cl.prenom} ${cl.nom}`) : (o.client_nom_libre || '—');
-  }
+  const total = OPPS.reduce((s,o) => s+o.montant, 0);
+  const pondere = OPPS.reduce((s,o) => s+Math.round(o.montant*o.prob/100), 0);
 
   let kanban = stades.map(stade => {
     const opps = OPPS.filter(o => o.stade === stade);
     const color = stadeColor[stade];
-    return `<div class="kanban-col" data-stade="${stade}">
+    return `<div class="kanban-col">
       <div class="kanban-col-title">
         <div class="kanban-dot" style="background:${color}"></div>
         <div style="font-size:11px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:0.8px">${stade}</div>
         <div style="font-size:10px;color:var(--text-muted);margin-left:auto">${opps.length}</div>
       </div>
-      ${opps.map(o => `<div class="kanban-card" draggable="true" data-opp-id="${o.id}" ondragstart="event.dataTransfer.setData('text/plain','${o.id}')" onclick="showOpportuniteDetail('${o.id}')" style="cursor:pointer">
+      ${opps.map(o => `<div class="kanban-card">
         <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:4px">${o.titre}</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">${clientNomOpp(o)} ${o.compagnie ? '· '+o.compagnie : ''}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">${o.client} · ${o.compagnie}</div>
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:13px;font-weight:800;color:#f59e0b">CHF ${(o.montant_potentiel||0).toLocaleString()}</span>
+          <span style="font-size:13px;font-weight:800;color:#f59e0b">CHF ${o.montant.toLocaleString()}</span>
           ${o.apporteur_id ? avatar(agentById(o.apporteur_id), 22) : ''}
         </div>
-        <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:${o.probabilite||0}%;background:${color}"></div></div>
-        <div style="font-size:10px;color:var(--text-muted);margin-top:3px">${o.probabilite||0}%${o.date_echeance ? ' · ' + o.date_echeance : ''}</div>
+        <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:${o.prob}%;background:${color}"></div></div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:3px">${o.prob}%</div>
       </div>`).join('')}
       ${opps.length === 0 ? '<div class="kanban-empty">Aucune</div>' : ''}
     </div>`;
@@ -1888,83 +1620,8 @@ function viewOpportunites() {
       ${statCard('Pipeline total', 'CHF ' + total.toLocaleString(), '#f59e0b')}
       ${statCard('Pondéré', 'CHF ' + pondere.toLocaleString(), '#38bdf8')}
       ${statCard('En cours', OPPS.length, '#e2e8f0')}
-      ${statCard('Gagnées', gagnees.length, '#4ade80')}
     </div>
-    <div class="kanban" id="opp-kanban">${kanban}</div>
-    ${perdues.length > 0 ? `<div style="margin-top:20px;font-size:11px;color:var(--text-muted)">${perdues.length} opportunité(s) perdue(s) — <a href="#" onclick="event.preventDefault();navigate('opportunites-historique')" style="color:var(--accent)">voir l'historique</a></div>` : ''}`;
-}
-
-function _initOpportunitesDragDrop() {
-  document.querySelectorAll('.kanban-col').forEach(function(col) {
-    col.addEventListener('dragover', function(e) { e.preventDefault(); col.style.background = 'rgba(56,189,248,0.04)'; });
-    col.addEventListener('dragleave', function(e) { col.style.background = ''; });
-    col.addEventListener('drop', function(e) {
-      e.preventDefault();
-      col.style.background = '';
-      const oppId = e.dataTransfer.getData('text/plain');
-      const newStade = col.getAttribute('data-stade');
-      if (oppId && newStade) changerStadeOpportunite(oppId, newStade);
-    });
-  });
-}
-
-async function changerStadeOpportunite(oppId, newStade) {
-  await dbPatch('opportunites', oppId, { stade: newStade });
-  allOpportunites = await dbGet('opportunites', 'select=*') || [];
-  navigate('opportunites');
-}
-
-function showOpportuniteDetail(oppId) {
-  const o = allOpportunites.find(x => x.id === oppId);
-  if (!o) return;
-  const cl = allClients.find(x => x.id === o.client_id);
-  const clientNom = cl ? (cl.segment === 'Entreprise' ? cl.nom : `${cl.prenom} ${cl.nom}`) : (o.client_nom_libre || '—');
-  const modal = document.createElement('div');
-  modal.id = 'modal-opp-detail';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-  modal.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
-      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px">
-        <h3 style="margin:0;font-size:16px;font-weight:800;color:var(--text)">${o.titre}</h3>
-        <button onclick="document.getElementById('modal-opp-detail').remove()" style="background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer">✕</button>
-      </div>
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">Client : <strong style="color:var(--text)">${clientNom}</strong></div>
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">Compagnie : <strong style="color:var(--text)">${o.compagnie || '—'}</strong></div>
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">Montant potentiel : <strong style="color:#f59e0b">CHF ${(o.montant_potentiel||0).toLocaleString()}</strong></div>
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">Probabilité : <strong style="color:var(--text)">${o.probabilite || 0}%</strong></div>
-      <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Échéance : <strong style="color:var(--text)">${o.date_echeance || '—'}</strong></div>
-      ${o.notes ? `<div style="background:var(--surface-alt);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--text);margin-bottom:16px">${o.notes}</div>` : ''}
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
-        <button onclick="document.getElementById('modal-opp-detail').remove();marquerOpportunite('${o.id}','Gagné')" style="flex:1;padding:9px;background:rgba(74,222,128,0.12);color:#4ade80;border:1px solid rgba(74,222,128,0.3);border-radius:8px;font-weight:700;font-size:12px;cursor:pointer">✓ Marquer Gagné</button>
-        <button onclick="document.getElementById('modal-opp-detail').remove();marquerOpportunite('${o.id}','Perdu')" style="flex:1;padding:9px;background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:8px;font-weight:700;font-size:12px;cursor:pointer">✕ Marquer Perdu</button>
-      </div>
-      <div style="display:flex;gap:8px">
-        <button onclick="document.getElementById('modal-opp-detail').remove();supprimerOpportunite('${o.id}')" style="flex:1;padding:8px;background:none;border:1px solid var(--border);border-radius:8px;color:var(--text-muted);font-size:12px;cursor:pointer">Supprimer</button>
-        ${cl ? `<button onclick="document.getElementById('modal-opp-detail').remove();showClient('${cl.id}')" style="flex:1;padding:8px;background:none;border:1px solid var(--accent-border);border-radius:8px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">→ Fiche client</button>` : ''}
-      </div>
-    </div>`;
-  document.body.appendChild(modal);
-}
-
-async function marquerOpportunite(oppId, stade) {
-  await dbPatch('opportunites', oppId, { stade });
-  allOpportunites = await dbGet('opportunites', 'select=*') || [];
-  if (stade === 'Gagné') {
-    const o = allOpportunites.find(x => x.id === oppId);
-    if (o && o.client_id && confirm('Opportunité gagnée ! Veux-tu créer le contrat correspondant maintenant ?')) {
-      contratClientId = o.client_id;
-      navigate('nouveau-contrat');
-      return;
-    }
-  }
-  navigate('opportunites');
-}
-
-async function supprimerOpportunite(oppId) {
-  if (!confirm('Supprimer définitivement cette opportunité ?')) return;
-  await dbDelete('opportunites', oppId);
-  allOpportunites = await dbGet('opportunites', 'select=*') || [];
-  navigate('opportunites');
+    <div class="kanban">${kanban}</div>`;
 }
 
 // SUIVI
@@ -2532,7 +2189,6 @@ async function saveOpportunite() {
   const btn = document.querySelector('.btn-save');
   btn.textContent = 'Enregistrement...'; btn.disabled = true;
   await dbPost('opportunites', body);
-  allOpportunites = await dbGet('opportunites', 'select=*') || [];
   navigate('opportunites');
 }
 
@@ -2591,14 +2247,14 @@ async function saveRappel() {
     try {
       const ext = file.name.split('.').pop();
       const path = `rappels/${newId}-${Date.now()}.${ext}`;
+      const uploadToken = await getValidAccessToken() || SUPABASE_KEY;
       const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${path}`, {
         method: 'POST',
-        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': file.type || 'application/octet-stream' },
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${uploadToken}`, 'Content-Type': file.type || 'application/octet-stream' },
         body: file,
       });
       if (uploadRes.ok) {
-        const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/documents/${path}`;
-        await dbPatch('rappels', newId, { piece_jointe_url: publicUrl, piece_jointe_nom: file.name });
+        await dbPatch('rappels', newId, { piece_jointe_path: path, piece_jointe_nom: file.name, piece_jointe_url: null });
       }
     } catch (e) { /* upload échoué, le rappel reste créé sans pièce jointe */ }
   }
@@ -2613,6 +2269,22 @@ async function saveRappel() {
 
   allRappels = await dbGet('rappels', 'select=*');
   navigate('rappels');
+}
+
+// ═══ ACCÈS SÉCURISÉ AUX PIÈCES JOINTES (bucket privé → URL signée temporaire) ═══
+async function ouvrirPieceJointe(path) {
+  if (!path) return;
+  try {
+    const token = await getValidAccessToken() || SUPABASE_KEY;
+    const r = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/documents/${path}`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expiresIn: 60 }),
+    });
+    if (!r.ok) { showError("Impossible d'ouvrir le document (accès refusé)."); return; }
+    const data = await r.json();
+    if (data.signedURL) window.open(`${SUPABASE_URL}/storage/v1${data.signedURL}`, '_blank');
+  } catch(e) { showError("Erreur lors de l'ouverture du document."); }
 }
 
 // ═══ ÉDITION CONTRAT ═══
@@ -2682,6 +2354,7 @@ async function saveEditContrat(contratId, clientId) {
   if (btn) { btn.textContent = 'Enregistrement...'; btn.disabled = true; }
   const r = await dbPatch('contrats', contratId, body);
   if (r && r.error) { showError('Erreur: ' + (r.detail || r.status)); if (btn) { btn.textContent = '✓ Enregistrer'; btn.disabled = false; } return; }
+  logAction('edit_contrat', 'contrats', contratId, `${body.produit} — ${body.compagnie}`);
   document.getElementById('modal-edit-contrat').remove();
   showClient(clientId);
 }
@@ -2690,63 +2363,25 @@ async function saveEditContrat(contratId, clientId) {
 function showFormCollaborateur(clientId) {
   const modal = document.createElement('div');
   modal.id = 'modal-collaborateur';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
   modal.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:600px;max-height:90vh;overflow-y:auto">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
       <h3 style="margin:0 0 20px;font-size:16px;font-weight:800;color:var(--text)">Nouveau collaborateur</h3>
-      <div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Identité</div>
-      <div class="form-grid" style="margin-bottom:16px">
+      <div class="form-grid">
         <div class="form-field"><label class="form-label">Nom *</label><input class="form-input" id="col-nom" placeholder="Dupont"/></div>
         <div class="form-field"><label class="form-label">Prénom *</label><input class="form-input" id="col-prenom" placeholder="Jean"/></div>
-        <div class="form-field"><label class="form-label">Date de naissance</label><input class="form-input" id="col-naissance" type="date"/></div>
-        <div class="form-field"><label class="form-label">Sexe</label>
-          <select class="form-select" id="col-sexe">
-            <option value="">—</option>
-            <option value="H">Homme</option>
-            <option value="F">Femme</option>
-          </select>
-        </div>
-        <div class="form-field"><label class="form-label">N° AVS (756.XXXX.XXXX.XX)</label><input class="form-input" id="col-avs" placeholder="756.1234.5678.90" maxlength="16"/></div>
-        <div class="form-field"><label class="form-label">Nationalité / Permis</label>
-          <select class="form-select" id="col-permis">
-            <option value="">—</option>
-            <option value="CH">Suisse (CH)</option>
-            <option value="B">Permis B</option>
-            <option value="C">Permis C</option>
-            <option value="G">Frontalier G</option>
-            <option value="L">Permis L</option>
-            <option value="autre">Autre</option>
-          </select>
-        </div>
+        <div class="form-field" style="grid-column:span 2"><label class="form-label">Adresse privée</label><input class="form-input" id="col-adresse" placeholder="Rue des Alpes 12, 1000 Lausanne"/></div>
+        <div class="form-field" style="grid-column:span 2"><label class="form-label">N° AVS</label><input class="form-input" id="col-avs" placeholder="756.1234.5678.90" maxlength="16"/></div>
       </div>
-      <div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Adresse privée</div>
-      <div class="form-grid" style="margin-bottom:16px">
-        <div class="form-field" style="grid-column:span 2"><label class="form-label">Rue et numéro</label><input class="form-input" id="col-adresse" placeholder="Rue des Alpes 12"/></div>
-        <div class="form-field"><label class="form-label">NPA</label><input class="form-input" id="col-npa" placeholder="1000" maxlength="4"/></div>
-        <div class="form-field"><label class="form-label">Ville</label><input class="form-input" id="col-ville" placeholder="Lausanne"/></div>
-      </div>
-      <div style="font-size:10px;font-weight:700;color:#38bdf8;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Données salariales (LAA / LPP)</div>
-      <div class="form-grid" style="margin-bottom:16px">
-        <div class="form-field"><label class="form-label">Salaire annuel brut (CHF)</label><input class="form-input" id="col-salaire" type="number" placeholder="72000"/></div>
-        <div class="form-field"><label class="form-label">Taux d'activité (%)</label><input class="form-input" id="col-taux" type="number" min="0" max="100" placeholder="100"/></div>
-        <div class="form-field"><label class="form-label">Fonction / Titre</label><input class="form-input" id="col-fonction" placeholder="Responsable commercial"/></div>
-        <div class="form-field"><label class="form-label">Entrée en service</label><input class="form-input" id="col-entree" type="date"/></div>
-      </div>
-      <div style="font-size:10px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Contact</div>
-      <div class="form-grid" style="margin-bottom:20px">
-        <div class="form-field"><label class="form-label">Email pro</label><input class="form-input" id="col-email" type="email" placeholder="j.dupont@entreprise.ch"/></div>
-        <div class="form-field"><label class="form-label">Mobile</label><input class="form-input" id="col-mobile" placeholder="+41 79 000 00 00"/></div>
-      </div>
-      <div style="display:flex;gap:10px">
+      <div style="display:flex;gap:10px;margin-top:20px">
         <button class="btn-secondary" onclick="document.getElementById('modal-collaborateur').remove()">Annuler</button>
         <button class="btn-save" onclick="saveCollaborateur('${clientId}')">✓ Enregistrer</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
-  setTimeout(() => initAdresseAutocomplete('col-adresse', ({ rue, npa, ville }) => {
-    const elR = document.getElementById('col-adresse'); if (elR) elR.value = rue;
-    const elN = document.getElementById('col-npa'); if (elN) elN.value = npa;
-    const elV = document.getElementById('col-ville'); if (elV) elV.value = ville;
+  setTimeout(() => initAdresseAutocomplete('col-adresse', ({ rue, npa, ville, canton }) => {
+    const el = document.getElementById('col-adresse');
+    if (el) el.value = [rue, npa, ville].filter(Boolean).join(', ');
   }), 0);
 }
 
@@ -2756,32 +2391,26 @@ async function saveCollaborateur(clientId) {
   if (!nom || !prenom) { showError('Nom et prénom obligatoires.'); return; }
   const body = {
     client_id: clientId,
-    nom, prenom,
-    date_naissance: document.getElementById('col-naissance').value || null,
-    sexe: document.getElementById('col-sexe').value || null,
+    nom,
+    prenom,
+    adresse: document.getElementById('col-adresse').value.trim() || null,
     avs: document.getElementById('col-avs').value.trim() || null,
-    permis: document.getElementById('col-permis').value || null,
-    adresse: [document.getElementById('col-adresse').value.trim(), document.getElementById('col-npa').value.trim(), document.getElementById('col-ville').value.trim()].filter(Boolean).join(', ') || null,
-    salaire: Number(document.getElementById('col-salaire').value) || null,
-    taux_activite: Number(document.getElementById('col-taux').value) || null,
-    fonction: document.getElementById('col-fonction').value.trim() || null,
-    date_entree: document.getElementById('col-entree').value || null,
-    email: document.getElementById('col-email').value.trim() || null,
-    mobile: document.getElementById('col-mobile').value.trim() || null,
   };
   const btn = document.querySelector('#modal-collaborateur .btn-save');
   if (btn) { btn.textContent = 'Enregistrement...'; btn.disabled = true; }
   const res = await dbPost('collaborateurs', body);
   if (res && res.error) { showError('Erreur: ' + (res.detail || res.status)); if (btn) { btn.textContent = '✓ Enregistrer'; btn.disabled = false; } return; }
+  logAction('add_collaborateur_avs', 'collaborateurs', res && res[0] ? res[0].id : null, `${prenom} ${nom}`);
   document.getElementById('modal-collaborateur').remove();
   showClient(clientId);
 }
 
 async function deleteCollaborateur(colId, clientId) {
   if (!confirm('Supprimer ce collaborateur ?')) return;
+  const token = await getValidAccessToken() || SUPABASE_KEY;
   await fetch(`${SUPABASE_URL}/rest/v1/collaborateurs?id=eq.${colId}`, {
     method: 'DELETE',
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}` },
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
   });
   showClient(clientId);
 }
@@ -2827,10 +2456,10 @@ function showRappel(id) {
 
     ${sectionCard('Pièce jointe', '#f59e0b', `
       <div id="rd-attachment-zone">
-        ${r.piece_jointe_url ? `
+        ${(r.piece_jointe_path || r.piece_jointe_url) ? `
           <div style="display:flex;align-items:center;gap:10px;background:var(--surface-alt);border-radius:9px;padding:10px 14px">
             <span style="font-size:18px">📎</span>
-            <a href="${r.piece_jointe_url}" target="_blank" style="flex:1;color:var(--accent);font-size:13px;font-weight:700;text-decoration:none">${r.piece_jointe_nom || 'Document joint'}</a>
+            <a href="#" onclick="ouvrirPieceJointe('${r.piece_jointe_path || ''}'); return false;" style="flex:1;color:var(--accent);font-size:13px;font-weight:700;text-decoration:none">${r.piece_jointe_nom || 'Document joint'}</a>
             <button onclick="supprimerPieceJointe()" style="background:var(--red-dim);color:var(--red);border:none;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">Retirer</button>
           </div>
         ` : `
@@ -2877,9 +2506,10 @@ async function uploadPieceJointe() {
   try {
     const ext = file.name.split('.').pop();
     const path = `rappels/${currentRappelId}-${Date.now()}.${ext}`;
+    const uploadToken2 = await getValidAccessToken() || SUPABASE_KEY;
     const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${path}`, {
       method: 'POST',
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': file.type || 'application/octet-stream' },
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${uploadToken2}`, 'Content-Type': file.type || 'application/octet-stream' },
       body: file,
     });
     if (!uploadRes.ok) {
@@ -2887,8 +2517,7 @@ async function uploadPieceJointe() {
       statusEl.textContent = "Erreur lors de l'envoi: " + errText;
       return;
     }
-    const publicUrl = `${SUPABASE_URL}/storage/v1/object/public/documents/${path}`;
-    await dbPatch('rappels', currentRappelId, { piece_jointe_url: publicUrl, piece_jointe_nom: file.name });
+    await dbPatch('rappels', currentRappelId, { piece_jointe_path: path, piece_jointe_nom: file.name, piece_jointe_url: null });
     allRappels = await dbGet('rappels', 'select=*');
     showRappel(currentRappelId);
   } catch (e) {
@@ -2897,7 +2526,7 @@ async function uploadPieceJointe() {
 }
 
 async function supprimerPieceJointe() {
-  await dbPatch('rappels', currentRappelId, { piece_jointe_url: null, piece_jointe_nom: null });
+  await dbPatch('rappels', currentRappelId, { piece_jointe_url: null, piece_jointe_path: null, piece_jointe_nom: null });
   allRappels = await dbGet('rappels', 'select=*');
   showRappel(currentRappelId);
 }
@@ -2966,62 +2595,25 @@ function viewNouveauContrat() {
         <button type="button" class="btn-secondary" style="margin-top:8px;font-size:12px;padding:6px 14px" onclick="ajouterPlaqueFlotte()">+ Ajouter une plaque</button>
       </div>
       <div class="form-field"><label class="form-label">N° de police</label><input class="form-input" id="ct-police" placeholder="Optionnel"/></div>
-      <div class="form-field"><label class="form-label" id="ct-prime-label">Prime annuelle (CHF) *</label><input class="form-input" id="ct-prime-mensuelle" type="number" placeholder="Ex: 960" oninput="updateCommissionPreview()"/></div>
-      <div class="form-field"><label class="form-label">Périodicité de paiement</label><select class="form-select" id="ct-periodicite" onchange="updateCommissionPreview()">
-        <option value="12">Mensuelle (12×/an)</option>
-        <option value="4">Trimestrielle (4×/an)</option>
-        <option value="2">Semestrielle (2×/an)</option>
-        <option value="1">Annuelle (1×/an)</option>
+      <div class="form-field"><label class="form-label">Prime (CHF) *</label><input class="form-input" id="ct-prime-mensuelle" type="number" placeholder="150" oninput="updateCommissionPreview()"/></div>
+      <div class="form-field"><label class="form-label">Périodicité</label><select class="form-select" id="ct-periodicite" onchange="updateCommissionPreview()">
+        <option value="12">Mensuelle</option>
+        <option value="4">Trimestrielle</option>
+        <option value="2">Semestrielle</option>
+        <option value="1">Annuelle</option>
       </select></div>
       <div class="form-field" id="ct-duree-field" style="display:none"><label class="form-label">Durée du contrat (années)</label><input class="form-input" id="ct-duree" type="number" placeholder="10" value="1" oninput="updateCommissionPreview()"/></div>
       <div class="form-field" id="ct-manuel-field" style="display:none"><label class="form-label">Commission estimée (CHF) — manuel</label><input class="form-input" id="ct-manuel" type="number" placeholder="0" oninput="updateCommissionPreview()"/></div>
       <div class="form-field"><label class="form-label">Date de signature</label><input class="form-input" id="ct-date" type="date"/></div>
       <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="ct-statut"><option value="actif">Actif</option><option value="en_cours">En cours de signature</option></select></div>
     </div>`)}
-    <div id="commission-preview" style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px;margin-top:14px">
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">Commissions estimées</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px">
-        <div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:14px">
-          <div style="font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🎯 Acquisition (unique)</div>
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-            <label style="font-size:11px;color:var(--text-muted);white-space:nowrap">Taux %</label>
-            <input id="ct-taux-acq" type="number" min="0" max="100" step="0.1" value="0" oninput="updateCommissionPreview()"
-              style="width:70px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px;font-weight:700">
-            <span style="font-size:11px;color:var(--text-muted)">de la prime annuelle</span>
-          </div>
-          <div id="comm-acq-value" style="font-size:22px;font-weight:900;color:var(--accent)">CHF 0</div>
-          <div id="comm-acq-detail" style="font-size:11px;color:var(--text-muted);margin-top:2px"></div>
-          <div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--border)">
-            <div style="font-size:10px;color:var(--text-muted);margin-bottom:4px">Ou montant fixe manuel (CHF) :</div>
-            <input id="ct-acq-manuel" type="number" placeholder="0" min="0" oninput="updateCommissionPreview()"
-              style="width:100%;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:12px;box-sizing:border-box">
-          </div>
-        </div>
-        <div style="background:rgba(56,189,248,0.06);border:1px solid rgba(56,189,248,0.2);border-radius:10px;padding:14px">
-          <div style="font-size:10px;font-weight:700;color:#38bdf8;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🔄 Gestion (récurrente)</div>
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-            <label style="font-size:11px;color:var(--text-muted);white-space:nowrap">Taux %</label>
-            <input id="ct-taux-gest" type="number" min="0" max="100" step="0.1" value="0" oninput="updateCommissionPreview()"
-              style="width:70px;padding:5px 8px;border:1px solid var(--border);border-radius:6px;background:var(--bg);color:var(--text);font-size:13px;font-weight:700">
-            <span style="font-size:11px;color:var(--text-muted)">par versement client</span>
-          </div>
-          <div id="comm-gest-value" style="font-size:22px;font-weight:900;color:#38bdf8">CHF 0</div>
-          <div id="comm-gest-detail" style="font-size:11px;color:var(--text-muted);margin-top:2px"></div>
-          <div id="comm-gest-annuel" style="font-size:12px;font-weight:800;color:#4ade80;margin-top:6px"></div>
-        </div>
-      </div>
-      <div id="comm-resume" style="background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:12px">
-        <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Impact sur le CA</div>
-        <div style="display:flex;gap:20px;flex-wrap:wrap">
-          <div><div style="font-size:10px;color:var(--text-muted)">Acquisition (1x)</div><div id="ca-acq" style="font-size:15px;font-weight:800;color:var(--accent)">CHF 0</div></div>
-          <div><div style="font-size:10px;color:var(--text-muted)">Gestion / versement</div><div id="ca-gest-versement" style="font-size:15px;font-weight:800;color:#38bdf8">CHF 0</div></div>
-          <div><div style="font-size:10px;color:var(--text-muted)">Gestion annuelle totale</div><div id="ca-gest-annuel" style="font-size:15px;font-weight:800;color:#4ade80">CHF 0</div></div>
-          <div><div style="font-size:10px;color:var(--text-muted)">CA total N+1</div><div id="ca-total" style="font-size:15px;font-weight:800;color:var(--gold)">CHF 0</div></div>
-        </div>
-      </div>
+    <div id="commission-preview" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:14px 18px;margin-top:14px">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Commission d'acquisition estimée</div>
+      <div id="commission-preview-value" style="font-size:20px;font-weight:900;color:var(--accent)">CHF 0</div>
+      <div id="commission-preview-detail" style="font-size:11px;color:var(--text-muted);margin-top:2px"></div>
     </div>
     <div style="display:flex;gap:10px;margin-top:14px">
-      <button class="btn-secondary" onclick="navigate(contratClientId ? \'clients\' : \'suivi\')">Annuler</button>
+      <button class="btn-secondary" onclick="navigate(contratClientId ? 'clients' : 'suivi')">Annuler</button>
       <button class="btn-save" onclick="saveContrat()">✓ Enregistrer le contrat</button>
     </div>`;
 }
@@ -3115,71 +2707,31 @@ function updateModulesOptions() {
   if (!modulesList) return;
   const produit = getProduitSelectionne();
   const modules = produit ? produit.modules : [];
-  const estMensuelle = produit ? isPrimeMensuelle(produit.id) : false;
-
-  // Label prime : mensuelle pour santé, annuelle pour tout le reste
-  const primeLabel = document.getElementById('ct-prime-label');
-  const primePlaceholder = document.getElementById('ct-prime-mensuelle');
-  if (primeLabel) {
-    const nomProduit = produit ? produit.label : '';
-    if (estMensuelle) {
-      primeLabel.innerHTML = `Prime mensuelle <strong>${nomProduit}</strong> (CHF) * <span style="color:#38bdf8;font-size:10px;font-weight:700">→ ×12 pour annualiser</span>`;
-      if (primePlaceholder) primePlaceholder.placeholder = 'Ex: 180';
-    } else if (produit && produit.options && produit.options.length > 0) {
-      primeLabel.innerHTML = `Prime annuelle <strong>${nomProduit}</strong> (CHF) *`;
-      if (primePlaceholder) primePlaceholder.placeholder = 'Ex: 960';
-    } else {
-      primeLabel.textContent = produit ? `Prime annuelle ${nomProduit} (CHF) *` : 'Prime annuelle (CHF) *';
-      if (primePlaceholder) primePlaceholder.placeholder = 'Ex: 960';
-    }
-  }
-
-  // Modules
   if (modules.length === 0) {
     modulesList.innerHTML = '<span style="font-size:12px;color:var(--text-muted)">Aucun module complémentaire pour ce produit.</span>';
     document.getElementById('ct-modules-field').style.display = 'none';
   } else {
     document.getElementById('ct-modules-field').style.display = 'block';
-    modulesList.innerHTML = modules.map(m => `
+    modulesList.innerHTML = modules.map((m, i) => `
       <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text);cursor:pointer">
         <input type="checkbox" class="ct-module-checkbox" value="${m}" style="width:15px;height:15px;cursor:pointer"/>${m}
       </label>`).join('');
   }
 
-  // OPTIONS (casco etc.) — sous-éléments avec prime + taux propres, PAS des contrats séparés
-  const options = produit ? (produit.options || []) : [];
   if (combinablesField && combinablesList) {
-    if (options.length === 0) {
+    const combinablesIds = produit ? (produit.combinables || []) : [];
+    if (combinablesIds.length === 0) {
       combinablesField.style.display = 'none';
       combinablesList.innerHTML = '';
     } else {
-      combinablesField.querySelector('label.form-label') && (combinablesField.querySelector('label.form-label').textContent = 'Options incluses dans ce contrat');
       combinablesField.style.display = 'block';
-      combinablesList.innerHTML = options.map(opt => `
-        <div style="width:100%;background:var(--surface-alt);border:1px solid var(--border);border-radius:9px;padding:12px 14px;margin-bottom:8px">
-          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:0">
-            <input type="checkbox" class="ct-option-checkbox" value="${opt.id}" onchange="toggleOptionBloc('${opt.id}')" style="width:15px;height:15px;cursor:pointer"/>
-            <span style="font-size:13px;font-weight:700;color:var(--text)">${opt.label}</span>
-            <span style="font-size:10px;color:var(--text-muted);font-weight:400">— option du même contrat</span>
-          </label>
-          <div id="ct-option-bloc-${opt.id}" style="display:none;margin-top:10px;display:none">
-            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
-              <div>
-                <label style="font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;display:block;margin-bottom:4px">Prime annuelle (CHF)</label>
-                <input class="form-input ct-option-prime" data-option-id="${opt.id}" type="number" placeholder="Ex: 480" oninput="updateCommissionPreview()" style="font-size:13px"/>
-              </div>
-              <div>
-                <label style="font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;display:block;margin-bottom:4px">Taux acquisition %</label>
-                <input class="form-input ct-option-taux-acq" data-option-id="${opt.id}" type="number" min="0" max="100" step="0.1" placeholder="0" oninput="updateCommissionPreview()" style="font-size:13px"/>
-              </div>
-              <div>
-                <label style="font-size:10px;color:var(--text-muted);font-weight:700;text-transform:uppercase;display:block;margin-bottom:4px">Taux gestion %</label>
-                <input class="form-input ct-option-taux-gest" data-option-id="${opt.id}" type="number" min="0" max="100" step="0.1" placeholder="0" oninput="updateCommissionPreview()" style="font-size:13px"/>
-              </div>
-            </div>
-            <div id="ct-option-preview-${opt.id}" style="font-size:11px;color:var(--text-muted);margin-top:6px"></div>
-          </div>
-        </div>`).join('');
+      combinablesList.innerHTML = combinablesIds.map(id => {
+        const p = getProduitParId(id);
+        return p ? `
+        <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text);cursor:pointer">
+          <input type="checkbox" class="ct-combinable-checkbox" value="${p.id}" onchange="toggleCombinablePrime('${p.id}')" style="width:15px;height:15px;cursor:pointer"/>+ ${p.label}
+        </label>` : '';
+      }).join('') + '<div id="ct-combinables-primes" style="width:100%;margin-top:8px"></div>';
     }
   }
 
@@ -3195,14 +2747,6 @@ function updateModulesOptions() {
   }
 }
 
-function toggleOptionBloc(optionId) {
-  const cb = document.querySelector(`.ct-option-checkbox[value="${optionId}"]`);
-  const bloc = document.getElementById(`ct-option-bloc-${optionId}`);
-  if (!cb || !bloc) return;
-  bloc.style.display = cb.checked ? 'block' : 'none';
-  updateCommissionPreview();
-}
-
 function ajouterPlaqueFlotte() {
   const list = document.getElementById('ct-plaques-list');
   if (!list) return;
@@ -3214,6 +2758,23 @@ function ajouterPlaqueFlotte() {
     <button type="button" onclick="this.parentElement.remove()" style="background:var(--red-dim);color:var(--red);border:none;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">✕</button>
   `;
   list.appendChild(ligne);
+}
+
+function toggleCombinablePrime(produitId) {
+  const checkbox = document.querySelector(`.ct-combinable-checkbox[value="${produitId}"]`);
+  const primesZone = document.getElementById('ct-combinables-primes');
+  if (!checkbox || !primesZone) return;
+  const produit = getProduitParId(produitId);
+  const existant = document.getElementById(`ct-combinable-prime-${produitId}`);
+  if (checkbox.checked && !existant) {
+    const div = document.createElement('div');
+    div.id = `ct-combinable-prime-${produitId}`;
+    div.style.cssText = 'margin-top:6px';
+    div.innerHTML = `<label class="form-label">Prime mensuelle pour "${produit.label}" (CHF)</label><input class="form-input ct-combinable-prime-input" data-produit-id="${produitId}" type="number" placeholder="50"/>`;
+    primesZone.appendChild(div);
+  } else if (!checkbox.checked && existant) {
+    existant.remove();
+  }
 }
 
 function getCompagniesConnues() {
@@ -3234,87 +2795,33 @@ function memoriserCompagnie(nom) {
   }
 }
 
-function getPeriodiciteLabel(val) {
-  return { '12': 'mensuelle', '4': 'trimestrielle', '2': 'semestrielle', '1': 'annuelle' }[String(val)] || 'mensuelle';
-}
-
-function calculerCommissions() {
-  const primeAnnuelle = parseFloat(document.getElementById('ct-prime-mensuelle')?.value) || 0;
-  const periodicite = parseInt(document.getElementById('ct-periodicite')?.value) || 12;
-  const produit = getProduitSelectionne();
-  const estMensuelle = produit ? isPrimeMensuelle(produit.id) : false;
-
-  // Si prime mensuelle (santé) : annualiser
-  const primeAnnuelleReelle = estMensuelle ? primeAnnuelle * 12 : primeAnnuelle;
-  const primeParVersement = primeAnnuelleReelle / periodicite;
-
-  const tauxAcq = parseFloat(document.getElementById('ct-taux-acq')?.value) || 0;
-  const tauxGest = parseFloat(document.getElementById('ct-taux-gest')?.value) || 0;
-  const manuelAcq = parseFloat(document.getElementById('ct-acq-manuel')?.value) || 0;
-
-  const commAcq = manuelAcq > 0 ? manuelAcq : Math.round(primeAnnuelleReelle * tauxAcq / 100);
-  const commGestParVersement = Math.round(primeParVersement * tauxGest / 100);
-  const commGestAnnuelle = commGestParVersement * periodicite;
-
-  // Options (casco etc.) — prime + commission propres, incluses dans le même contrat
-  const options = [];
-  document.querySelectorAll('.ct-option-checkbox:checked').forEach(cb => {
-    const optId = cb.value;
-    const primeOpt = parseFloat(document.querySelector(`.ct-option-prime[data-option-id="${optId}"]`)?.value) || 0;
-    const tauxAcqOpt = parseFloat(document.querySelector(`.ct-option-taux-acq[data-option-id="${optId}"]`)?.value) || 0;
-    const tauxGestOpt = parseFloat(document.querySelector(`.ct-option-taux-gest[data-option-id="${optId}"]`)?.value) || 0;
-    const commAcqOpt = Math.round(primeOpt * tauxAcqOpt / 100);
-    const commGestOptParVers = Math.round((primeOpt / periodicite) * tauxGestOpt / 100);
-    // Mettre à jour le preview de l'option
-    const prev = document.getElementById(`ct-option-preview-${optId}`);
-    if (prev && primeOpt > 0) {
-      prev.textContent = `Acq: CHF ${commAcqOpt.toLocaleString()} · Gestion: CHF ${commGestOptParVers.toLocaleString()}/${periodicite === 12 ? 'mois' : periodicite === 2 ? 'semestre' : periodicite === 4 ? 'trim.' : 'an'} (CHF ${(commGestOptParVers * periodicite).toLocaleString()}/an)`;
-    }
-    options.push({ id: optId, primeOpt, tauxAcqOpt, tauxGestOpt, commAcqOpt, commGestOptParVers });
-  });
-
-  const totalCommAcq = commAcq + options.reduce((s, o) => s + o.commAcqOpt, 0);
-  const totalCommGestParVers = commGestParVersement + options.reduce((s, o) => s + o.commGestOptParVers, 0);
-  const totalCommGestAnnuelle = totalCommGestParVers * periodicite;
-
-  return { primeAnnuelle: primeAnnuelleReelle, primeParVersement, periodicite, tauxAcq, tauxGest, commAcq, commGestParVersement, commGestAnnuelle, options, totalCommAcq, totalCommGestParVers, totalCommGestAnnuelle, estMensuelle };
-}
-
 function calculerCommissionEstimee() {
-  const { commAcq } = calculerCommissions();
-  return { montant: commAcq, detail: 'Commission acquisition' };
+  const produit = getProduitSelectionne();
+  const produitId = produit ? produit.id : null;
+  const primeMensuelle = parseFloat(document.getElementById('ct-prime-mensuelle').value) || 0;
+  if (produitId === 'sante_complementaire') {
+    const montant = Math.round(primeMensuelle * TAUX_COMMISSION.sante_facteur_mensuel);
+    return { montant, detail: `CHF ${primeMensuelle} x ${TAUX_COMMISSION.sante_facteur_mensuel} (taux santé)` };
+  }
+  if (produitId === 'vie_3a') {
+    const duree = parseFloat(document.getElementById('ct-duree')?.value) || 1;
+    const capitalProduction = primeMensuelle * 12 * duree;
+    const montant = Math.round(capitalProduction * (TAUX_COMMISSION.vie_taux_capital / 100));
+    return { montant, detail: `${TAUX_COMMISSION.vie_taux_capital}% de CHF ${capitalProduction.toLocaleString()} (capital de production : ${primeMensuelle} x 12 x ${duree} an(s))` };
+  }
+  const montant = parseFloat(document.getElementById('ct-manuel')?.value) || 0;
+  return { montant, detail: 'Saisie manuelle' };
 }
 
 function updateCommissionPreview() {
-  const { primeAnnuelle, primeParVersement, periodicite, tauxAcq, tauxGest, commAcq, commGestParVersement, commGestAnnuelle, totalCommAcq, totalCommGestParVers, totalCommGestAnnuelle, estMensuelle } = calculerCommissions();
-  const periLabel = getPeriodiciteLabel(periodicite);
-
-  const elAcqVal = document.getElementById('comm-acq-value');
-  const elAcqDetail = document.getElementById('comm-acq-detail');
-  if (elAcqVal) elAcqVal.textContent = 'CHF ' + commAcq.toLocaleString();
-  if (elAcqDetail) elAcqDetail.textContent = tauxAcq > 0
-    ? `${tauxAcq}% × CHF ${Math.round(primeAnnuelle).toLocaleString()} prime annuelle${estMensuelle ? ' (×12 mensuelle)' : ''}`
-    : 'Saisir un taux ou un montant manuel';
-
-  const elGestVal = document.getElementById('comm-gest-value');
-  const elGestDetail = document.getElementById('comm-gest-detail');
-  const elGestAnnuel = document.getElementById('comm-gest-annuel');
-  if (elGestVal) elGestVal.textContent = 'CHF ' + commGestParVersement.toLocaleString();
-  if (elGestDetail) elGestDetail.textContent = tauxGest > 0
-    ? `${tauxGest}% × CHF ${Math.round(primeParVersement).toLocaleString()} (prime ${periLabel})`
-    : 'Saisir un taux de gestion';
-  if (elGestAnnuel) elGestAnnuel.textContent = commGestAnnuelle > 0
-    ? `→ CHF ${commGestAnnuelle.toLocaleString()} / an (${periodicite}× versement${periodicite > 1 ? 's' : ''})`
-    : '';
-
-  const resume = document.getElementById('comm-resume');
-  const caTotal = totalCommAcq + totalCommGestAnnuelle;
-  if (resume) resume.style.display = caTotal > 0 ? 'block' : 'none';
-  const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = 'CHF ' + val.toLocaleString(); };
-  set('ca-acq', totalCommAcq);
-  set('ca-gest-versement', totalCommGestParVers);
-  set('ca-gest-annuel', totalCommGestAnnuelle);
-  set('ca-total', caTotal);
+  const produit = getProduitSelectionne();
+  const produitId = produit ? produit.id : null;
+  if (!produitId) return;
+  document.getElementById('ct-duree-field').style.display = produitId === 'vie_3a' ? 'block' : 'none';
+  document.getElementById('ct-manuel-field').style.display = (produitId !== 'sante_complementaire' && produitId !== 'vie_3a') ? 'block' : 'none';
+  const { montant, detail } = calculerCommissionEstimee();
+  document.getElementById('commission-preview-value').textContent = 'CHF ' + montant.toLocaleString();
+  document.getElementById('commission-preview-detail').textContent = detail;
 }
 
 function getProduitLabel(categorie, produitId) {
@@ -3323,12 +2830,7 @@ function getProduitLabel(categorie, produitId) {
   return produit ? produit.label : produitId;
 }
 
-async function creerContratEtCommission(clientId, compagnie, produitLabel, primeAnnuelle, modules, montantCommission, detailCommission, plaques, commGestion, optionsComm) {
-  const periodicite = parseInt(document.getElementById('ct-periodicite')?.value) || 12;
-  // Calculer la prime totale annuelle = prime principale + primes des options
-  const primeTotaleOptions = (optionsComm || []).reduce((s, o) => s + (o.primeOpt || 0), 0);
-  const primeTotaleAnnuelle = Math.round(primeAnnuelle + primeTotaleOptions);
-
+async function creerContratEtCommission(clientId, compagnie, produitLabel, primeMensuelle, modules, montantCommission, detailCommission, plaques) {
   const contratBody = {
     client_id: clientId,
     compagnie,
@@ -3336,68 +2838,27 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
     modules: modules && modules.length > 0 ? modules.join(', ') : null,
     plaques: plaques && plaques.length > 0 ? plaques.join(', ') : null,
     numero_police: document.getElementById('ct-police').value.trim() || null,
-    prime_annuelle: primeTotaleAnnuelle,
+    prime_annuelle: Math.round(primeMensuelle * (parseInt(document.getElementById('ct-periodicite')?.value) || 12)),
     date_debut: document.getElementById('ct-date').value || null,
     statut: document.getElementById('ct-statut').value,
   };
   const rContrat = await dbPost('contrats', contratBody);
   if (rContrat && rContrat.error) return { error: true, detail: rContrat.detail || rContrat.status };
+  logAction('create_contrat', 'contrats', rContrat && rContrat[0] ? rContrat[0].id : null, `${produitLabel} — ${compagnie}`);
 
   const client = allClients.find(c => c.id === clientId);
-  const clientNomAff = client ? (client.segment === 'Entreprise' ? client.nom : `${client.prenom} ${client.nom}`) : '';
-  const today = new Date().toISOString().split('T')[0];
-
-  // Commission ACQUISITION principale
-  if (montantCommission > 0) {
-    await dbPost('commissions_attente', {
-      client_id: clientId, client_nom: clientNomAff, compagnie, produit: produitLabel,
-      montant_estime: montantCommission, detail_calcul: detailCommission,
-      statut: 'en_attente', date_creation: today, type_commission: 'acquisition',
-    });
-  }
-
-  // Commissions ACQUISITION des options (casco etc.)
-  for (const opt of (optionsComm || [])) {
-    if (opt.commAcqOpt > 0) {
-      await dbPost('commissions_attente', {
-        client_id: clientId, client_nom: clientNomAff, compagnie,
-        produit: `${produitLabel} — option ${opt.id}`,
-        montant_estime: opt.commAcqOpt,
-        detail_calcul: `Acquisition option ${opt.id} — ${opt.tauxAcqOpt}% × CHF ${opt.primeOpt}`,
-        statut: 'en_attente', date_creation: today, type_commission: 'acquisition',
-      });
-    }
-  }
-
-  // Commissions GESTION principale — une entrée par versement
-  if (commGestion && commGestion.parVersement > 0) {
-    const periLabel = getPeriodiciteLabel(periodicite);
-    for (let i = 1; i <= periodicite; i++) {
-      await dbPost('commissions_attente', {
-        client_id: clientId, client_nom: clientNomAff, compagnie, produit: produitLabel,
-        montant_estime: commGestion.parVersement,
-        detail_calcul: `Gestion ${periLabel} — versement ${i}/${periodicite} · ${commGestion.tauxGest}% × CHF ${Math.round(commGestion.primeParVersement)}`,
-        statut: 'en_attente', date_creation: today, type_commission: 'gestion',
-      });
-    }
-  }
-
-  // Commissions GESTION des options
-  for (const opt of (optionsComm || [])) {
-    if (opt.commGestOptParVers > 0) {
-      for (let i = 1; i <= periodicite; i++) {
-        await dbPost('commissions_attente', {
-          client_id: clientId, client_nom: clientNomAff, compagnie,
-          produit: `${produitLabel} — option ${opt.id}`,
-          montant_estime: opt.commGestOptParVers,
-          detail_calcul: `Gestion option ${opt.id} — versement ${i}/${periodicite} · ${opt.tauxGestOpt}%`,
-          statut: 'en_attente', date_creation: today, type_commission: 'gestion',
-        });
-      }
-    }
-  }
-
-  return { error: false };
+  const commissionBody = {
+    client_id: clientId,
+    client_nom: client ? (client.segment === 'Entreprise' ? client.nom : `${client.prenom} ${client.nom}`) : '',
+    compagnie,
+    produit: produitLabel,
+    montant_estime: montantCommission,
+    detail_calcul: detailCommission,
+    statut: 'en_attente',
+    date_creation: new Date().toISOString().split('T')[0],
+  };
+  const rComm = await dbPost('commissions_attente', commissionBody);
+  return { error: false, commissionError: rComm && rComm.error };
 }
 
 async function saveContrat() {
@@ -3407,49 +2868,40 @@ async function saveContrat() {
 
   const compagnie = document.getElementById('ct-compagnie').value.trim();
   const produitSelectionne = getProduitSelectionne();
-  const primeAnnuelle = parseFloat(document.getElementById('ct-prime-mensuelle').value) || 0;
-  if (!compagnie || !primeAnnuelle) { showError('Compagnie et prime annuelle sont obligatoires.'); return; }
+  const primeMensuelle = parseFloat(document.getElementById('ct-prime-mensuelle').value) || 0;
+  if (!compagnie || !primeMensuelle) { showError('Compagnie et prime mensuelle sont obligatoires.'); return; }
   if (!produitSelectionne) { showError('Sélectionne un produit valide dans la liste proposée.'); return; }
 
-  // Vérifier les options cochées (casco etc.) — elles font partie du même contrat
-  const optionsActivesCB = Array.from(document.querySelectorAll('.ct-option-checkbox:checked'));
-  for (const cb of optionsActivesCB) {
-    const primeInput = document.querySelector(`.ct-option-prime[data-option-id="${cb.value}"]`);
-    if (!primeInput || !parseFloat(primeInput.value)) {
-      showError(`Renseigne la prime annuelle pour l'option "${cb.value}".`);
-      return;
-    }
+  // Vérifier que les produits combinés cochés ont bien une prime renseignée
+  const combinablesCoches = Array.from(document.querySelectorAll('.ct-combinable-checkbox:checked')).map(cb => cb.value);
+  for (const id of combinablesCoches) {
+    const input = document.querySelector(`.ct-combinable-prime-input[data-produit-id="${id}"]`);
+    if (!input || !parseFloat(input.value)) { showError('Renseigne la prime mensuelle pour chaque produit combiné coché.'); return; }
   }
 
   const produitLabel = produitSelectionne.label;
   const modulesChoisis = Array.from(document.querySelectorAll('.ct-module-checkbox:checked')).map(cb => cb.value);
-  const { commAcq, commGestParVersement, tauxAcq, tauxGest, primeParVersement, options, totalCommAcq, totalCommGestParVers } = calculerCommissions();
-
-  // Construire le détail des options pour stockage dans le contrat
-  const optionsTexte = optionsActivesCB.map(cb => {
-    const id = cb.value;
-    const prime = parseFloat(document.querySelector(`.ct-option-prime[data-option-id="${id}"]`)?.value) || 0;
-    const tAcq = parseFloat(document.querySelector(`.ct-option-taux-acq[data-option-id="${id}"]`)?.value) || 0;
-    const tGest = parseFloat(document.querySelector(`.ct-option-taux-gest[data-option-id="${id}"]`)?.value) || 0;
-    return `${id}:prime=${prime}:acq=${tAcq}%:gest=${tGest}%`;
-  }).join(' | ');
-
-  const commGestion = { parVersement: commGestParVersement, tauxGest, primeParVersement };
+  const { montant: commissionEstimee, detail } = calculerCommissionEstimee();
 
   const btn = document.querySelector('.btn-save');
   btn.textContent = 'Enregistrement...'; btn.disabled = true;
 
   const plaquesValeurs = Array.from(document.querySelectorAll('.ct-plaque-input')).map(inp => inp.value.trim()).filter(Boolean);
-  const detailAcq = `Acquisition ${tauxAcq > 0 ? tauxAcq + '% prime' : 'montant manuel'}${optionsTexte ? ' + options: ' + optionsTexte : ''}`;
-
-  // UN SEUL contrat — options casco incluses dedans
-  const resultPrincipal = await creerContratEtCommission(clientId, compagnie, produitLabel, primeAnnuelle, modulesChoisis, commAcq, detailAcq, plaquesValeurs, commGestion, options);
+  const resultPrincipal = await creerContratEtCommission(clientId, compagnie, produitLabel, primeMensuelle, modulesChoisis, commissionEstimee, detail, plaquesValeurs);
   if (resultPrincipal.error) { showError('Erreur lors de la création du contrat: ' + resultPrincipal.detail); btn.textContent = '✓ Enregistrer le contrat'; btn.disabled = false; return; }
 
   memoriserCompagnie(compagnie);
 
+  // Créer un contrat + commission distincts pour chaque produit combiné coché
+  for (const id of combinablesCoches) {
+    const produitCombinable = getProduitParId(id);
+    const input = document.querySelector(`.ct-combinable-prime-input[data-produit-id="${id}"]`);
+    const primeCombinable = parseFloat(input.value) || 0;
+    const montantCombinable = parseFloat((primeCombinable * 12 * 0.1).toFixed(0)); // estimation par défaut, ajustable manuellement ensuite
+    await creerContratEtCommission(clientId, compagnie, produitCombinable.label, primeCombinable, [], montantCombinable, 'Produit combiné — commission estimée à ajuster');
+  }
+
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
-  allContrats = await dbGet('contrats', 'select=*');
 
   if (contratClientId) {
     showClient(contratClientId);
@@ -3511,9 +2963,12 @@ function viewAgenda() {
         <div style="font-size:36px;margin-bottom:12px">📅</div>
         <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px">Agenda Outlook non connecté</div>
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px;max-width:380px;margin-left:auto;margin-right:auto">
-          Pour afficher vos rendez-vous Outlook ici, connectez-vous avec le bouton Microsoft sur l'écran de connexion (déconnexion puis reconnexion nécessaire).
+          Connecte ton compte Outlook pour afficher tes rendez-vous et synchroniser tes rappels.
         </div>
-        <button class="btn-add" onclick="logout()">🚪 Se reconnecter avec Microsoft</button>
+        <button class="btn-add" onclick="loginMicrosoft()">
+          <svg width="14" height="14" viewBox="0 0 21 21" style="vertical-align:-2px;margin-right:6px"><rect x="1" y="1" width="9" height="9" fill="#f25022"/><rect x="11" y="1" width="9" height="9" fill="#7fba00"/><rect x="1" y="11" width="9" height="9" fill="#00a4ef"/><rect x="11" y="11" width="9" height="9" fill="#ffb900"/></svg>
+          Connecter Outlook
+        </button>
       </div>`;
   }
 
@@ -3679,283 +3134,41 @@ function showCampagne(themeId) {
     </div>`;
 }
 
-// POST-ITS
-const POSTIT_COLORS = ['#fde047','#fca5a5','#86efac','#93c5fd','#d8b4fe','#fdba74'];
-
-function viewPostits() {
-  const postits = (allPostits || []).sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
-  return `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">📌 Post-its</h2>
-      <button class="btn-add" onclick="ajouterPostit()">+ Nouveau post-it</button>
-    </div>
-    <div id="postits-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px">
-      ${postits.length === 0 ? '<div style="color:var(--text-muted);font-size:13px">Aucun post-it. Clique sur "+ Nouveau post-it" pour commencer.</div>' : postits.map(p => `
-      <div style="background:${p.couleur || '#fde047'};border-radius:4px;padding:16px;min-height:140px;display:flex;flex-direction:column;box-shadow:0 4px 12px rgba(0,0,0,0.25);transform:rotate(${(p.id.charCodeAt(0) % 3) - 1}deg);position:relative">
-        <button onclick="supprimerPostit('${p.id}')" style="position:absolute;top:6px;right:8px;background:none;border:none;color:#00000066;font-size:14px;cursor:pointer;font-weight:900">✕</button>
-        <textarea onblur="modifierPostit('${p.id}', this.value)" style="background:transparent;border:none;outline:none;flex:1;font-family:'Century Gothic',sans-serif;font-size:13px;font-weight:600;color:#1f2937;resize:none;width:100%">${p.contenu || ''}</textarea>
-        <div style="font-size:10px;color:#1f293799;font-weight:700;margin-top:6px">${p.created_at ? new Date(p.created_at).toLocaleDateString('fr-CH') : ''}</div>
-      </div>`).join('')}
-    </div>`;
-}
-
-async function ajouterPostit() {
-  const couleur = POSTIT_COLORS[Math.floor(Math.random() * POSTIT_COLORS.length)];
-  await dbPost('postits', { contenu: '', couleur, created_at: new Date().toISOString() });
-  allPostits = await dbGet('postits', 'select=*') || [];
-  navigate('postits');
-}
-
-async function modifierPostit(id, contenu) {
-  await dbPatch('postits', id, { contenu });
-  allPostits = await dbGet('postits', 'select=*') || [];
-}
-
-async function supprimerPostit(id) {
-  await dbDelete('postits', id);
-  allPostits = await dbGet('postits', 'select=*') || [];
-  navigate('postits');
-}
-
-// FACTURES
-function viewFactures() {
-  const factures = (allFactures || []).sort((a,b) => new Date(b.date_emission||0) - new Date(a.date_emission||0));
-  const totalEnAttente = factures.filter(f => f.statut === 'en_attente').reduce((s,f) => s + Number(f.montant||0), 0);
-  const totalPayees = factures.filter(f => f.statut === 'payee').reduce((s,f) => s + Number(f.montant||0), 0);
-  const totalEnRetard = factures.filter(f => f.statut === 'en_attente' && f.date_echeance && f.date_echeance < new Date().toISOString().split('T')[0]).length;
-
-  return `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">🧾 Factures</h2>
-      <button class="btn-add" onclick="navigate('nouvelle-facture')">+ Nouvelle facture</button>
-    </div>
-    <div class="stat-grid" style="margin-bottom:20px">
-      ${statCard('En attente', 'CHF ' + totalEnAttente.toLocaleString(), '#f59e0b')}
-      ${statCard('Payées', 'CHF ' + totalPayees.toLocaleString(), '#4ade80')}
-      ${statCard('En retard', totalEnRetard, totalEnRetard > 0 ? '#f87171' : '#64748b')}
-      ${statCard('Total factures', factures.length, '#38bdf8')}
-    </div>
-    <div class="table-wrap">
-      <table class="data-table" style="width:100%">
-        <thead><tr><th>N° Facture</th><th>Client</th><th>Émission</th><th>Échéance</th><th>Montant</th><th>Statut</th><th></th></tr></thead>
-        <tbody>
-          ${factures.length === 0 ? '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">Aucune facture enregistrée</td></tr>' : factures.map(f => {
-            const cl = allClients.find(c => c.id === f.client_id);
-            const nom = cl ? (cl.segment === 'Entreprise' ? cl.nom : `${cl.prenom} ${cl.nom}`) : (f.client_nom || '—');
-            const enRetard = f.statut === 'en_attente' && f.date_echeance && f.date_echeance < new Date().toISOString().split('T')[0];
-            const statutColor = f.statut === 'payee' ? '#4ade80' : enRetard ? '#f87171' : '#f59e0b';
-            const statutLabel = f.statut === 'payee' ? 'PAYÉE' : enRetard ? 'EN RETARD' : 'EN ATTENTE';
-            return `<tr>
-              <td style="font-weight:700;font-family:monospace;font-size:12px">${f.numero || '—'}</td>
-              <td>${nom}</td>
-              <td style="font-size:12px;color:var(--text-muted)">${f.date_emission || '—'}</td>
-              <td style="font-size:12px;color:var(--text-muted)">${f.date_echeance || '—'}</td>
-              <td style="font-weight:800;color:var(--gold)">CHF ${Number(f.montant||0).toLocaleString()}</td>
-              <td><span style="font-size:10px;font-weight:700;color:${statutColor};background:${statutColor}18;padding:3px 8px;border-radius:99px">${statutLabel}</span></td>
-              <td style="text-align:right">${f.statut !== 'payee' ? `<button onclick="marquerFacturePayee('${f.id}')" style="background:rgba(74,222,128,0.1);color:#4ade80;border:1px solid rgba(74,222,128,0.3);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">✓ Payée</button>` : ''}</td>
-            </tr>`;
-          }).join('')}
-        </tbody>
-      </table>
-    </div>`;
-}
-
-function viewNouvelleFacture() {
-  const clientOptions = allClients.map(c => `<option value="${c.id}">${c.segment === 'Entreprise' ? c.nom : c.prenom + ' ' + c.nom}</option>`).join('');
-  const numeroAuto = 'F-' + new Date().getFullYear() + '-' + String((allFactures||[]).length + 1).padStart(4,'0');
-  return `
-    <button onclick="navigate('factures')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
-    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouvelle facture</h2>
-    ${sectionCard('Détails', '#f59e0b', `<div class="form-grid">
-      <div class="form-field"><label class="form-label">N° Facture</label><input class="form-input" id="f-numero" value="${numeroAuto}"/></div>
-      <div class="form-field"><label class="form-label">Client</label><select class="form-select" id="f-client"><option value="">— Sélectionner —</option>${clientOptions}</select></div>
-      <div class="form-field"><label class="form-label">Montant (CHF) *</label><input class="form-input" id="f-montant" type="number" placeholder="500"/></div>
-      <div class="form-field"><label class="form-label">Date d'émission</label><input class="form-input" id="f-emission" type="date" value="${new Date().toISOString().split('T')[0]}"/></div>
-      <div class="form-field"><label class="form-label">Date d'échéance</label><input class="form-input" id="f-echeance" type="date"/></div>
-      <div class="form-field" style="grid-column:span 2"><label class="form-label">Description</label><textarea class="form-input" id="f-description" rows="2" style="resize:vertical"></textarea></div>
-    </div>`)}
-    <div style="display:flex;gap:10px;margin-top:8px">
-      <button class="btn-secondary" onclick="navigate('factures')">Annuler</button>
-      <button class="btn-save" onclick="saveFacture()">✓ Enregistrer</button>
-    </div>`;
-}
-
-async function saveFacture() {
-  const montant = parseFloat(document.getElementById('f-montant').value);
-  if (!montant) { showError('Le montant est obligatoire.'); return; }
-  const clientId = document.getElementById('f-client').value || null;
-  const cl = clientId ? allClients.find(c => c.id === clientId) : null;
-  const body = {
-    numero: document.getElementById('f-numero').value.trim() || null,
-    client_id: clientId,
-    client_nom: cl ? (cl.segment === 'Entreprise' ? cl.nom : `${cl.prenom} ${cl.nom}`) : null,
-    montant,
-    date_emission: document.getElementById('f-emission').value || null,
-    date_echeance: document.getElementById('f-echeance').value || null,
-    description: document.getElementById('f-description').value.trim() || null,
-    statut: 'en_attente',
-  };
-  const btn = document.querySelector('.btn-save');
-  btn.textContent = 'Enregistrement...'; btn.disabled = true;
-  await dbPost('factures', body);
-  allFactures = await dbGet('factures', 'select=*') || [];
-  navigate('factures');
-}
-
-async function marquerFacturePayee(id) {
-  await dbPatch('factures', id, { statut: 'payee', date_paiement: new Date().toISOString().split('T')[0] });
-  allFactures = await dbGet('factures', 'select=*') || [];
-  navigate('factures');
-}
-
-// RAPPORT FINMA
-const FINMA_BRANCHES = ['LCA','LAMal','3a','3b','LPP','VIE','TERM','RC','Ménage','Bâtiment','Véhicule','Voyage','PJ','IJM','LAA','LAA-C','PGM','RCE',"Perte d'exploitation",'Hypothèque','Crédit'];
-
-function classifierBranche(produit) {
-  const p = (produit || '').toLowerCase();
-  if (p.includes('lca') || p.includes('complémentaire') || p.includes('complementaire')) return 'LCA';
-  if (p.includes('lamal') || p.includes('base')) return 'LAMal';
-  if (p.includes('3a')) return '3a';
-  if (p.includes('3b')) return '3b';
-  if (p.includes('lpp')) return 'LPP';
-  if (p.includes('vie') && !p.includes('3a')) return 'VIE';
-  if (p.includes('terme') || p.includes('term')) return 'TERM';
-  if (p.includes('rc ') || p.includes('responsabilité civile') || p.includes('rc privée') || p.includes('rc entreprise')) return 'RC';
-  if (p.includes('ménage') || p.includes('menage')) return 'Ménage';
-  if (p.includes('bâtiment') || p.includes('batiment') || p.includes('immeuble')) return 'Bâtiment';
-  if (p.includes('véhicule') || p.includes('vehicule') || p.includes('casco') || p.includes('auto')) return 'Véhicule';
-  if (p.includes('voyage') || p.includes('annulation')) return 'Voyage';
-  if (p.includes('protection juridique') || p.includes(' pj')) return 'PJ';
-  if (p.includes('ijm') || p.includes('indemnité journalière') || p.includes('perte de gain maladie')) return 'IJM';
-  if (p.includes('laa-c') || p.includes('accident complémentaire')) return 'LAA-C';
-  if (p.includes('laa')) return 'LAA';
-  if (p.includes('pgm')) return 'PGM';
-  if (p.includes('rce') || p.includes('rc entreprise')) return 'RCE';
-  if (p.includes("perte d'exploitation") || p.includes('perte exploitation')) return "Perte d'exploitation";
-  if (p.includes('hypothèque') || p.includes('hypotheque')) return 'Hypothèque';
-  if (p.includes('crédit') || p.includes('credit')) return 'Crédit';
-  return 'Autre';
-}
-
-async function viewRapportFinma() {
-  const annee = new Date().getFullYear();
-  const contratsActifs = allContrats.filter(c => c.statut === 'actif');
-  const parBranche = {};
-  FINMA_BRANCHES.forEach(b => parBranche[b] = { count: 0, primes: 0 });
-  parBranche['Autre'] = { count: 0, primes: 0 };
-
-  contratsActifs.forEach(c => {
-    const branche = classifierBranche(c.produit);
-    if (!parBranche[branche]) parBranche[branche] = { count: 0, primes: 0 };
-    parBranche[branche].count++;
-    parBranche[branche].primes += Number(c.prime_annuelle || 0);
-  });
-
-  const totalContrats = contratsActifs.length;
-  const totalPrimes = contratsActifs.reduce((s,c) => s + Number(c.prime_annuelle||0), 0);
-  const clientsPrives = allClients.filter(c => (c.segment || 'Privé') !== 'Entreprise').length;
-  const clientsEntreprises = allClients.filter(c => c.segment === 'Entreprise').length;
-
-  const rows = Object.entries(parBranche).filter(([b,d]) => d.count > 0).sort((a,b) => b[1].primes - a[1].primes).map(([branche, d]) => `
-    <tr>
-      <td style="font-weight:700;padding:10px 14px">${branche}</td>
-      <td style="padding:10px 14px">${d.count}</td>
-      <td style="padding:10px 14px;font-weight:800;color:var(--gold)">CHF ${d.primes.toLocaleString()}</td>
-      <td style="padding:10px 14px;color:var(--text-muted)">${totalPrimes > 0 ? Math.round(d.primes / totalPrimes * 100) : 0}%</td>
-    </tr>`).join('');
-
-  return `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">⚖️ Rapport FINMA ${annee}</h2>
-      <div style="display:flex;gap:8px">
-        <button class="btn-secondary" onclick="exporterRapportFinma('csv')">⬇ Export CSV</button>
-        <button class="btn-secondary" onclick="exporterRapportFinma('txt')">⬇ Export TXT</button>
-      </div>
-    </div>
-    <div class="stat-grid" style="margin-bottom:20px">
-      ${statCard('§3.1 — Contrats actifs', totalContrats, '#38bdf8')}
-      ${statCard('§3.2 — Primes totales', 'CHF ' + totalPrimes.toLocaleString(), '#f59e0b')}
-      ${statCard('§3.3 — Clients privés', clientsPrives, '#a78bfa')}
-      ${statCard('§3.4 — Clients entreprises', clientsEntreprises, '#4ade80')}
-    </div>
-    <div class="table-wrap">
-      <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-weight:700;font-size:13px;color:var(--text)">§3.5 — Répartition par branche d'assurance</div>
-      <table class="data-table" style="width:100%">
-        <thead><tr><th>Branche</th><th>Contrats</th><th>Primes</th><th>% du total</th></tr></thead>
-        <tbody>${rows || '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-muted)">Aucune donnée</td></tr>'}</tbody>
-      </table>
-    </div>
-    <div style="font-size:11px;color:var(--text-muted);margin-top:14px">Rapport généré automatiquement à partir des contrats actifs en base. Conforme à la taxonomie des branches FINMA pour courtier en assurance (art. 40 LSA).</div>`;
-}
-
-function exporterRapportFinma(format) {
-  const annee = new Date().getFullYear();
-  const contratsActifs = allContrats.filter(c => c.statut === 'actif');
-  const parBranche = {};
-  contratsActifs.forEach(c => {
-    const branche = classifierBranche(c.produit);
-    if (!parBranche[branche]) parBranche[branche] = { count: 0, primes: 0 };
-    parBranche[branche].count++;
-    parBranche[branche].primes += Number(c.prime_annuelle || 0);
-  });
-  let content, mime, filename;
-  if (format === 'csv') {
-    content = 'Branche;Nombre de contrats;Primes annuelles (CHF)\n' + Object.entries(parBranche).map(([b,d]) => `${b};${d.count};${d.primes}`).join('\n');
-    mime = 'text/csv'; filename = `rapport_finma_${annee}.csv`;
-  } else {
-    content = `RAPPORT FINMA ${annee}\nAssurex Sàrl\n\n` + Object.entries(parBranche).map(([b,d]) => `${b.padEnd(20)} ${String(d.count).padStart(5)} contrats   CHF ${d.primes.toLocaleString()}`).join('\n');
-    mime = 'text/plain'; filename = `rapport_finma_${annee}.txt`;
-  }
-  const blob = new Blob([content], { type: mime });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-}
-
-// PARAMÈTRES
-function viewParametres() {
-  const objData = getDashboardObjectifs();
-  const anneeN = new Date().getFullYear();
-  return `
-    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">⚙️ Réglages généraux</h2>
-    ${sectionCard('Informations entreprise', '#38bdf8', `
-      <div class="form-grid">
-        <div class="form-field"><label class="form-label">Raison sociale</label><input class="form-input" value="Assurex Sàrl" readonly/></div>
-        <div class="form-field"><label class="form-label">Adresse</label><input class="form-input" value="Rue du Centre 142, 1025 St-Sulpice VD" readonly/></div>
-        <div class="form-field"><label class="form-label">QR-IBAN</label><input class="form-input" value="CH23 3080 8006 2520 9940 1" readonly/></div>
-        <div class="form-field"><label class="form-label">Capital social</label><input class="form-input" value="CHF 20'000" readonly/></div>
-      </div>
-    `)}
-    ${sectionCard('Objectif annuel ' + anneeN, '#4ade80', `
-      <div style="display:flex;gap:10px;align-items:center">
-        <input id="param-objectif" type="number" placeholder="Ex: 80000" value="${objData[anneeN] || ''}" style="flex:1;padding:9px 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px"/>
-        <button class="btn-save" onclick="sauvegarderObjectifParam()" style="white-space:nowrap">Enregistrer</button>
-      </div>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:8px">Modifie le même objectif que celui affiché sur le Dashboard.</div>
-    `)}
-    ${sectionCard('Données & confidentialité', '#a78bfa', `
-      <div style="font-size:12.5px;color:var(--text-muted);line-height:1.6">
-        Données hébergées en Suisse (Supabase, région Zurich).<br>
-        Authentification via Microsoft Entra ID (tenant COFIDEX SA).<br>
-        Conformité FINMA — courtier indépendant art. 43 LSA.
-      </div>
-    `)}`;
-}
-
-function sauvegarderObjectifParam() {
-  const anneeN = new Date().getFullYear();
-  const val = parseFloat(document.getElementById('param-objectif').value);
-  if (!val || val <= 0) { showError('Montant invalide.'); return; }
-  const obj = getDashboardObjectifs();
-  obj[anneeN] = val;
-  saveDashboardObjectifs(obj);
-  showError('Objectif enregistré avec succès.');
-}
-
 // AGENTS
 let editingAgentId = null;
+
+// ═══ JOURNAL D'AUDIT ═══
+const ACTION_LABELS = {
+  login: '🔓 Connexion',
+  logout: '🔒 Déconnexion',
+  view_client: '👁 Consultation fiche client',
+  edit_client: '✏️ Modification fiche client',
+  add_collaborateur_avs: '🆔 Ajout collaborateur (AVS)',
+  create_contrat: '📄 Création contrat',
+  edit_contrat: '✏️ Modification contrat',
+};
+
+async function viewAuditLog() {
+  if (!currentUser || currentUser.role !== 'signataire') {
+    return `<h2 style="margin:0 0 18px;font-size:18px;font-weight:800;color:var(--text)">Journal d'audit</h2>
+      <div class="table-empty">Accès réservé au signataire.</div>`;
+  }
+  const logs = await dbGet('audit_log', 'select=*&order=created_at.desc&limit=200');
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Journal d'audit</h2>
+      <div style="font-size:12px;color:var(--text-muted)">200 dernières actions — traçabilité nLPD</div>
+    </div>
+    <div class="table-wrap">
+      <div class="table-header" style="grid-template-columns:140px 1fr 200px 160px"><div>Date/heure</div><div>Action</div><div>Détail</div><div>Utilisateur</div></div>
+      ${(logs || []).map(l => `<div class="table-row" style="grid-template-columns:140px 1fr 200px 160px">
+        <div style="font-size:11px;color:var(--text-muted)">${new Date(l.created_at).toLocaleString('fr-CH', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' })}</div>
+        <div style="font-size:12.5px;font-weight:600;color:var(--text)">${ACTION_LABELS[l.action] || l.action}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${l.detail || ''}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${l.user_email}</div>
+      </div>`).join('') || '<div class="table-empty">Aucune entrée pour le moment.</div>'}
+    </div>`;
+}
 
 function viewAgents() {
   const agents = allAgents.length > 0 ? allAgents : [currentUser];
@@ -4093,6 +3306,7 @@ async function createAgent() {
 
 // ═══ INIT ═══
 initMSAL();
+tryRestoreSession();
 </script>
 </body>
 </html>

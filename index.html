@@ -520,6 +520,37 @@ const OZASSURE_LOGO_SVG = `<svg class="oz-logo-svg" xmlns="http://www.w3.org/200
   </g>
 </svg>`;
 
+const OZASSURE_LOGO_PRIMARY_SVG = `<svg class="oz-logo-primary-svg" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 1920 1080">
+  <defs>
+    <style>
+      .st0 {
+        fill: #fff;
+        stroke: #fff;
+        stroke-miterlimit: 10;
+      }
+    </style>
+  </defs>
+  <g>
+    <path class="st0" d="M147.57,870.67c-24.52,0-46.4-5.65-65.66-16.95-19.26-11.3-34.46-26.74-45.6-46.32-11.15-19.58-16.71-41.94-16.71-67.09s5.57-47.51,16.71-67.09c11.14-19.58,26.34-35.01,45.6-46.32,19.26-11.3,41.14-16.95,65.66-16.95s45.91,5.66,65.18,16.95c19.26,11.3,34.45,26.74,45.6,46.32,11.14,19.58,16.71,41.95,16.71,67.09s-5.57,47.51-16.71,67.09c-11.15,19.58-26.34,35.02-45.6,46.32-19.26,11.3-40.99,16.95-65.18,16.95ZM147.57,825.79c14.96,0,28.33-3.74,40.11-11.22,11.77-7.48,21.01-17.67,27.69-30.56s9.86-27.46,9.55-43.69c.31-16.55-2.87-31.28-9.55-44.17s-15.92-22.99-27.69-30.32c-11.78-7.32-25.15-10.98-40.11-10.98s-28.41,3.75-40.35,11.22c-11.94,7.48-21.25,17.67-27.93,30.56-6.68,12.89-9.87,27.46-9.55,43.69-.32,16.23,2.87,30.8,9.55,43.69,6.69,12.89,16,23.08,27.93,30.56,11.94,7.48,25.38,11.22,40.35,11.22Z"/>
+    <path class="st0" d="M313.26,865.9v-41.06l129.4-172.85v5.73h-129.4v-42.5h182.88v40.11l-127.49,170.47-1.91-2.39h132.27v42.5h-185.75Z"/>
+    <path class="st0" d="M660.88,870.67c-23.24,0-44.01-5.49-62.31-16.47-18.31-10.98-32.71-26.1-43.21-45.36-10.5-19.26-15.76-41.3-15.76-66.13s5.41-47.51,16.23-67.09c10.82-19.58,25.23-34.93,43.21-46.08,17.98-11.14,37.96-16.71,59.93-16.71,13.37,0,26.1,2.07,38.2,6.21,12.09,4.14,22.92,10.03,32.47,17.67,9.55,7.64,17.59,16.71,24.11,27.22,6.52,10.5,10.9,22.13,13.13,34.86l-2.87-1.43.96-82.13h9.55v250.69h-10.5v-82.13l4.3-1.43c-2.87,12.74-7.57,24.52-14.09,35.33-6.53,10.83-14.56,20.22-24.11,28.17-9.55,7.96-20.14,14.09-31.75,18.38-11.62,4.3-24.11,6.45-37.48,6.45ZM660.88,860.17c19.41,0,37.01-5.01,52.76-15.04,15.76-10.03,28.17-23.95,37.24-41.78,9.07-17.82,13.61-38.36,13.61-61.6s-4.54-43.29-13.61-61.12c-9.07-17.82-21.49-31.83-37.24-42.02-15.76-10.18-33.66-15.28-53.72-15.28-21.33,0-40.27,5.1-56.82,15.28-16.56,10.19-29.45,24.28-38.68,42.26-9.24,17.99-13.85,38.6-13.85,61.84s4.61,42.74,13.85,60.4c9.23,17.67,22.12,31.6,38.68,41.78,16.55,10.19,35.81,15.28,57.78,15.28Z"/>
+    <path class="st0" d="M926.36,870.67c-21.01,0-40.11-3.98-57.3-11.94-17.19-7.95-30.4-18.46-39.63-31.51l8.12-7.16c8.91,11.78,21.01,21.41,36.29,28.89,15.28,7.48,33.1,11.22,53.48,11.22,13.05,0,24.19-1.59,33.42-4.77,9.23-3.18,16.71-7.48,22.44-12.89,5.73-5.41,10.03-11.53,12.89-18.38,2.87-6.84,4.3-14.09,4.3-21.73,0-15.59-6.69-27.85-20.05-36.77-6.37-4.77-14.33-8.91-23.88-12.42-9.55-3.5-20.7-6.69-33.43-9.55-14.32-3.5-26.98-7.48-37.96-11.94-10.98-4.45-19.98-9.55-26.98-15.28-6.37-5.41-11.15-11.22-14.32-17.43-3.19-6.21-4.77-13.13-4.77-20.77,0-9.86,1.98-18.78,5.97-26.74,3.98-7.95,9.55-14.88,16.71-20.77,7.16-5.89,15.91-10.34,26.26-13.37,10.34-3.02,21.88-4.54,34.62-4.54,11.14,0,21.97,1.6,32.47,4.78,10.51,3.19,20.37,7.8,29.61,13.85,9.23,6.05,17.5,13.37,24.83,21.96l-7.64,8.6c-7.01-7.95-14.64-14.88-22.92-20.77-8.28-5.89-17.12-10.34-26.5-13.37-9.39-3.02-19.34-4.54-29.84-4.54-11.46,0-21.73,1.36-30.8,4.06-9.07,2.71-16.79,6.53-23.16,11.46-6.37,4.94-11.15,10.67-14.33,17.19-3.19,6.53-4.77,13.77-4.77,21.73,0,5.42,1.11,10.67,3.34,15.76,2.22,5.1,5.89,9.71,10.98,13.85,6.36,5.42,14.72,10.19,25.07,14.33,10.34,4.14,22.36,7.8,36.05,10.98,14.32,3.19,26.81,6.77,37.48,10.74,10.66,3.98,19.5,8.68,26.5,14.09,7.32,5.42,12.81,11.78,16.47,19.1,3.66,7.33,5.49,15.92,5.49,25.79,0,13.69-3.34,25.71-10.03,36.05-6.68,10.35-16.4,18.31-29.13,23.88-12.73,5.57-27.86,8.36-45.36,8.36Z"/>
+    <path class="st0" d="M1155.08,870.67c-21.01,0-40.11-3.98-57.3-11.94-17.19-7.95-30.4-18.46-39.63-31.51l8.12-7.16c8.91,11.78,21.01,21.41,36.29,28.89,15.28,7.48,33.1,11.22,53.48,11.22,13.05,0,24.19-1.59,33.42-4.77,9.23-3.18,16.71-7.48,22.44-12.89,5.73-5.41,10.03-11.53,12.89-18.38,2.87-6.84,4.3-14.09,4.3-21.73,0-15.59-6.68-27.85-20.05-36.77-6.37-4.77-14.33-8.91-23.88-12.42-9.55-3.5-20.7-6.69-33.42-9.55-14.33-3.5-26.98-7.48-37.96-11.94-10.98-4.45-19.98-9.55-26.98-15.28-6.37-5.41-11.15-11.22-14.33-17.43-3.19-6.21-4.78-13.13-4.78-20.77,0-9.86,1.99-18.78,5.97-26.74,3.98-7.95,9.55-14.88,16.71-20.77,7.16-5.89,15.91-10.34,26.26-13.37,10.34-3.02,21.88-4.54,34.62-4.54,11.14,0,21.96,1.6,32.47,4.78,10.5,3.19,20.37,7.8,29.61,13.85,9.23,6.05,17.5,13.37,24.83,21.96l-7.64,8.6c-7.01-7.95-14.65-14.88-22.92-20.77-8.28-5.89-17.12-10.34-26.5-13.37-9.39-3.02-19.34-4.54-29.84-4.54-11.46,0-21.73,1.36-30.8,4.06-9.07,2.71-16.79,6.53-23.16,11.46-6.37,4.94-11.15,10.67-14.33,17.19-3.19,6.53-4.78,13.77-4.78,21.73,0,5.42,1.11,10.67,3.34,15.76,2.22,5.1,5.89,9.71,10.98,13.85,6.36,5.42,14.72,10.19,25.07,14.33,10.34,4.14,22.36,7.8,36.05,10.98,14.33,3.19,26.81,6.77,37.48,10.74,10.66,3.98,19.5,8.68,26.5,14.09,7.32,5.42,12.81,11.78,16.47,19.1,3.66,7.33,5.49,15.92,5.49,25.79,0,13.69-3.34,25.71-10.03,36.05-6.68,10.35-16.4,18.31-29.13,23.88-12.74,5.57-27.86,8.36-45.36,8.36Z"/>
+    <path class="st0" d="M1390.96,870.67c-19.42,0-35.89-3.42-49.42-10.27-13.53-6.84-23.8-17.59-30.8-32.23-7.01-14.64-10.5-33.42-10.5-56.34v-156.62h10.5v156.62c0,20.7,3.1,37.57,9.31,50.61,6.21,13.06,15.35,22.61,27.46,28.65,12.09,6.05,26.9,9.07,44.41,9.07,11.46,0,22.36-2.39,32.71-7.16,10.34-4.77,19.5-10.74,27.46-17.91,7.95-7.16,14.16-14.4,18.62-21.73,4.45-7.32,6.69-13.53,6.69-18.62v-179.54h10.5v250.69h-9.55l-.96-57.78,4.3-.96c-3.82,11.46-10.19,21.96-19.1,31.52-8.92,9.55-19.5,17.27-31.75,23.16-12.26,5.89-25.55,8.83-39.87,8.83Z"/>
+    <path class="st0" d="M1555.69,865.9v-250.69h9.55l.48,60.64-2.86.95c2.22-10.5,6.76-20.61,13.61-30.32,6.84-9.71,16.07-17.74,27.69-24.11,11.62-6.36,25.38-9.55,41.3-9.55,5.41,0,10.42.32,15.04.96,4.61.64,8.83,1.6,12.65,2.87l-3.34,10.98c-5.1-1.59-9.95-2.7-14.56-3.34-4.62-.63-8.68-.95-12.18-.95-12.74,0-23.96,2.55-33.66,7.64-9.71,5.1-17.75,11.78-24.11,20.06-6.37,8.28-11.15,17.12-14.33,26.5-3.19,9.39-4.78,18.38-4.78,26.98v161.39h-10.5Z"/>
+    <path class="st0" d="M1802.08,870.67c-24.2,0-45.53-5.57-63.99-16.71-18.47-11.14-32.87-26.58-43.21-46.32-10.35-19.73-15.52-42.18-15.52-67.33,0-18.78,2.87-35.97,8.6-51.57,5.73-15.59,13.76-29.05,24.11-40.35,10.34-11.3,22.68-20.05,37.01-26.26,14.33-6.21,30.08-9.31,47.27-9.31,15.91,0,30.56,2.63,43.93,7.88,13.37,5.25,24.9,12.89,34.62,22.92,9.71,10.03,17.11,22.05,22.2,36.05,5.09,14.01,7.32,29.77,6.68,47.27l-.48,12.42h-218.22v-10.5h212.96l-5.73,8.12.96-11.94c0-20.37-4.3-38.2-12.89-53.48-8.59-15.28-20.14-27.14-34.62-35.57-14.49-8.43-30.49-12.65-47.99-12.65-21.65,0-40.51,5.01-56.58,15.04-16.08,10.03-28.58,23.88-37.48,41.54-8.92,17.67-13.53,37.8-13.85,60.4.31,23.24,5.25,43.93,14.8,62.07s22.68,32.31,39.39,42.5c16.71,10.19,36.05,15.28,58.02,15.28,16.55,0,31.83-3.02,45.84-9.07,14-6.04,26.58-14.33,37.72-24.83l5.73,8.59c-7.96,7.33-16.47,13.61-25.55,18.86s-18.94,9.39-29.61,12.42c-10.67,3.02-22.05,4.54-34.14,4.54Z"/>
+  </g>
+  <g>
+    <path class="st0" d="M960.5,223.62c0,31.69-15.42,59.8-39.16,77.24l-91.33,11.96c-35.65-13.93-60.94-48.6-60.94-89.2,0-52.86,42.86-95.72,95.72-95.72,52.86,0,95.72,42.86,95.72,95.72Z"/>
+    <path class="st0" d="M1053.93,285.12l-.74.74c-17.92,1.49-33.95,2.61-51.5,4.47l-12.5,1.65c-17.71-17.39-28.69-41.58-28.69-68.36,0-9.68,1.44-19.01,4.12-27.81l89.31,89.31Z"/>
+    <path class="st0" d="M1151.93,223.62c0,29.19-13.05,55.3-33.66,72.88l-134.91-134.93c17.55-20.61,43.66-33.66,72.85-33.66,52.86,0,95.72,42.86,95.72,95.72Z"/>
+    <path class="st0" d="M1068.37,322.77l-48.34,6.33c11.17-4.57,23.37-7.1,36.19-7.1,4.12,0,8.19.27,12.15.77Z"/>
+    <path class="st0" d="M1151.93,417.71c0,52.86-42.86,95.72-95.72,95.72-52.86,0-95.72-42.86-95.72-95.72,0-40.04,24.62-74.37,59.53-88.62l48.34-6.33h.03c47.11,5.98,83.54,46.21,83.54,94.94Z"/>
+    <path class="st0" d="M938.91,478.25c-17.55,21.46-44.24,35.18-74.13,35.18-52.86,0-95.72-42.86-95.72-95.72,0-29.88,13.72-56.58,35.18-74.13l134.67,134.67Z"/>
+    <path class="st0" d="M960.5,417.71c0,9.09-1.28,17.92-3.64,26.24l-95.05-95.05.74-.74c17.52-1.12,33.95-2.61,51.47-5.21l9.01-1.17c22.79,17.47,37.46,44.99,37.46,75.93Z"/>
+  </g>
+</svg>`;
+
 const USER_ROLES = {
   'jo@cofidex.ch': { prenom: 'Jonathan', nom: 'Özkan', role: 'signataire', taux: 100 },
   'dp@cofidex.ch': { prenom: 'David', nom: 'Pereira', role: 'apporteur', taux: 50 },
@@ -3319,20 +3350,27 @@ const ACTION_LABELS = {
 
 // ═══ OZ ASSURE — ARCHIVE COMMISSIONS HISTORIQUES ═══
 async function viewOzAssure() {
-  const rows = await dbGet('commissions_oz', 'select=*&order=date_mouvement.desc');
+  const rows = await dbGet('commissions_oz', 'select=*&order=date_mouvement.asc');
   const data = rows || [];
 
   function chf(v) { return 'CHF ' + Math.round(v).toLocaleString('fr-CH'); }
+  const PALETTE = ['#38bdf8','#f59e0b','#a78bfa','#4ade80','#f87171','#fb923c','#22d3ee','#e879f9','#64748b'];
 
   const parAnnee = {};
   const parCompagnie = {};
+  const parMois = {}; // 'YYYY-MM' -> net
+  const parClient = {};
   let totalDebit = 0, totalCredit = 0;
 
   data.forEach(r => {
-    const annee = (r.date_mouvement || '').slice(0, 4);
+    const date = r.date_mouvement || '';
+    const annee = date.slice(0, 4);
+    const mois = date.slice(0, 7);
     const net = Number(r.credit || 0) - Number(r.debit || 0);
     parAnnee[annee] = (parAnnee[annee] || 0) + net;
     parCompagnie[r.compagnie] = (parCompagnie[r.compagnie] || 0) + net;
+    parMois[mois] = (parMois[mois] || 0) + net;
+    if (r.client_nom && r.client_nom !== '-') parClient[r.client_nom] = (parClient[r.client_nom] || 0) + net;
     totalDebit += Number(r.debit || 0);
     totalCredit += Number(r.credit || 0);
   });
@@ -3340,23 +3378,54 @@ async function viewOzAssure() {
   const totalNet = totalCredit - totalDebit;
   const annees = Object.keys(parAnnee).sort();
   const compagnies = Object.entries(parCompagnie).sort((a,b) => b[1]-a[1]);
-  const maxCompagnie = compagnies.length ? compagnies[0][1] : 1;
+  const mois = Object.keys(parMois).sort();
+  const topClients = Object.entries(parClient).sort((a,b) => b[1]-a[1]).slice(0, 8);
+  const nbClients = Object.keys(parClient).length;
+  const moyenneMensuelle = mois.length ? totalNet / mois.length : 0;
+
+  // ── Donut SVG : répartition par compagnie ──
+  const totalCompagnies = compagnies.reduce((s,[,v]) => s+v, 0) || 1;
+  let cumul = 0;
+  const R = 70, C = 2 * Math.PI * R;
+  const donutSegments = compagnies.map(([comp, val], i) => {
+    const frac = val / totalCompagnies;
+    const dash = frac * C;
+    const offset = cumul * C;
+    cumul += frac;
+    return `<circle cx="90" cy="90" r="${R}" fill="none" stroke="${PALETTE[i % PALETTE.length]}" stroke-width="22"
+      stroke-dasharray="${dash.toFixed(1)} ${(C-dash).toFixed(1)}" stroke-dashoffset="${(-offset).toFixed(1)}" transform="rotate(-90 90 90)"/>`;
+  }).join('');
+
+  // ── Bar chart : évolution mensuelle ──
+  const maxMois = Math.max(...mois.map(m => parMois[m]), 1);
+  const moisLabels = { '01':'Jan','02':'Fév','03':'Mar','04':'Avr','05':'Mai','06':'Jun','07':'Jul','08':'Aoû','09':'Sep','10':'Oct','11':'Nov','12':'Déc' };
+  const barsHtml = mois.map(m => {
+    const val = parMois[m];
+    const h = Math.max(Math.round(val / maxMois * 100), 3);
+    const [y, mm] = m.split('-');
+    return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0">
+      <div title="${chf(val)}" style="width:100%;max-width:22px;height:${h}px;background:linear-gradient(180deg,#38bdf8,#0ea5e9);border-radius:4px 4px 2px 2px;"></div>
+      <div style="font-size:8.5px;color:var(--text-muted);margin-top:5px;white-space:nowrap">${moisLabels[mm]}<br>'${y.slice(2)}</div>
+    </div>`;
+  }).join('');
 
   return `
-    <div style="display:flex;align-items:center;gap:14px;margin-bottom:6px">
-      <div style="background:var(--navy);border-radius:10px;padding:10px 16px">${OZASSURE_LOGO_SVG.replace('class="oz-logo-svg"', 'class="oz-logo-svg" style="height:22px;width:auto;display:block"')}</div>
-    </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">Archive des commissions perçues sous l'entité OZ Assure (sole proprietorship de Jonathan Özkan).</div>
-
-    <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:12px 16px;margin-bottom:22px;font-size:12.5px;color:var(--text)">
-      ⚠ Depuis le <strong>01.06.2026</strong>, le portefeuille OZ Assure est considéré comme <strong>virtuellement transféré à Assurex Sàrl</strong> — les mandats principaux seront resignés progressivement sous Assurex. Cette page reste une <strong>archive historique</strong>, elle ne reçoit plus de nouvelles affaires actives.
+    <div style="display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:8px;padding:28px 0 18px;background:radial-gradient(ellipse at 50% 0%, rgba(56,189,248,0.08) 0%, transparent 70%)">
+      <div style="background:var(--navy);border-radius:18px;padding:18px 36px;box-shadow:0 8px 30px rgba(0,0,0,0.35)">
+        ${OZASSURE_LOGO_PRIMARY_SVG.replace('class="oz-logo-primary-svg"', 'class="oz-logo-primary-svg" style="height:80px;width:auto;display:block"')}
+      </div>
+      <div style="font-size:12px;color:var(--text-muted);margin-top:14px;max-width:480px">Bilan de 2 ans d'exploitation — entité OZ Assure (entreprise individuelle de Jonathan Özkan)</div>
     </div>
 
-    <div class="stat-grid" style="margin-bottom:24px">
+    <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:12px 16px;margin-bottom:24px;font-size:12.5px;color:var(--text)">
+      ⚠ Depuis le <strong>01.06.2026</strong>, le portefeuille OZ Assure est considéré comme <strong>virtuellement transféré à Assurex Sàrl</strong> — les mandats principaux seront resignés progressivement sous Assurex. Cette page reste une <strong>archive historique</strong>.
+    </div>
+
+    <div class="stat-grid" style="margin-bottom:20px">
       ${statCard('Total net perçu', chf(totalNet), '#f59e0b')}
+      ${statCard('Moyenne mensuelle', chf(moyenneMensuelle), '#38bdf8')}
       ${statCard('Mouvements', data.length, '#e2e8f0')}
-      ${statCard('Compagnies', compagnies.length, '#38bdf8')}
-      ${statCard('Période', annees.length ? annees[0] + '–' + annees[annees.length-1] : '—', '#a78bfa')}
+      ${statCard('Clients distincts', nbClients, '#4ade80')}
     </div>
 
     <div style="display:grid;grid-template-columns:repeat(${Math.min(annees.length,4) || 1},1fr);gap:12px;margin-bottom:24px">
@@ -3367,18 +3436,39 @@ async function viewOzAssure() {
         </div>`).join('')}
     </div>
 
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px">
-      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:16px">Répartition par compagnie</div>
-      ${compagnies.map(([comp, val]) => `
-        <div style="margin-bottom:12px">
-          <div style="display:flex;justify-content:space-between;align-items:baseline">
-            <div style="font-size:13px;font-weight:700;color:var(--text)">${comp}</div>
-            <div style="font-size:13px;font-weight:800;color:var(--accent)">${chf(val)}</div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:18px">Évolution mensuelle des commissions nettes</div>
+      <div style="display:flex;align-items:flex-end;gap:4px;height:130px;overflow-x:auto;padding-bottom:4px">${barsHtml}</div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px">
+        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:16px">Répartition par compagnie</div>
+        <div style="display:flex;align-items:center;gap:20px">
+          <svg width="180" height="180" viewBox="0 0 180 180">${donutSegments}
+            <text x="90" y="86" text-anchor="middle" font-size="18" font-weight="900" fill="#fff">${compagnies.length}</text>
+            <text x="90" y="104" text-anchor="middle" font-size="9" fill="#94a3b8">compagnies</text>
+          </svg>
+          <div style="flex:1;min-width:0">
+            ${compagnies.slice(0,6).map(([comp,val],i) => `
+              <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;font-size:11.5px">
+                <div style="width:9px;height:9px;border-radius:50%;background:${PALETTE[i % PALETTE.length]};flex-shrink:0"></div>
+                <div style="color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${comp}</div>
+                <div style="color:var(--text-muted);font-weight:700;flex-shrink:0">${Math.round(val/totalCompagnies*100)}%</div>
+              </div>`).join('')}
           </div>
-          <div style="height:7px;border-radius:4px;background:var(--border);margin-top:5px;overflow:hidden">
-            <div style="height:100%;width:${maxCompagnie > 0 ? Math.round(val/maxCompagnie*100) : 0}%;background:var(--accent);border-radius:4px"></div>
-          </div>
-        </div>`).join('')}
+        </div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px">
+        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:16px">Top clients (commissions cumulées)</div>
+        ${topClients.map(([client, val], i) => `
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
+            <div style="width:20px;height:20px;border-radius:50%;background:var(--accent-dim);color:var(--accent);font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
+            <div style="flex:1;font-size:12.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${client}</div>
+            <div style="font-size:12.5px;font-weight:800;color:#f59e0b;flex-shrink:0">${chf(val)}</div>
+          </div>`).join('') || '<div class="table-empty">Aucune donnée.</div>'}
+      </div>
     </div>`;
 }
 

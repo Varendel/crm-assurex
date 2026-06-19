@@ -412,6 +412,9 @@ let allRappels = [];
 let msalInstance = null;
 let openBordereaux = {};
 let contratClientId = null;
+let allContrats = [];
+let allOpportunites = [];
+let prefillOpportunite = null;
 let allCommissionsAttente = [];
 let currentClientId = null;
 
@@ -769,6 +772,8 @@ async function enterApp(user) {
   allRappels = await dbGet('rappels', 'select=*');
   allBordereaux = await dbGet('bordereaux', 'select=*');
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
+  allContrats = await dbGet('contrats', 'select=*');
+  allOpportunites = await dbGet('opportunites', 'select=*');
   renderSidebar();
   navigate('dashboard');
 }
@@ -797,8 +802,8 @@ async function tryRestoreSession() {
 // ═══ SIDEBAR ═══
 const SECTIONS = [
   { id: 'dashboard-solo', label: 'Dashboard', icon: '⬛', solo: true, target: 'dashboard' },
+  { id: 'pipeline-solo', label: 'Pipeline', icon: '📈', solo: true, target: 'opportunites' },
   { id: 'vente', label: 'Vente', icon: '◈', sub: [
-    { id: 'opportunites', label: 'Opportunités' },
     { id: 'suivi', label: 'Suivi des affaires' },
     { id: 'nouveau-contrat-direct', label: 'Nouveau contrat' },
     { id: 'rappels', label: 'Rappels' },
@@ -894,6 +899,11 @@ function avatar(agent, size = 28) {
 
 function agentById(id) { return allAgents.find(a => a.id === id); }
 
+function caClient(clientId) {
+  return allContrats.filter(ct => ct.client_id === clientId && ct.statut === 'actif')
+    .reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
+}
+
 function statutColor(s) {
   if (s === 'actif') return '#4ade80';
   if (s === 'prospect') return '#f59e0b';
@@ -956,7 +966,7 @@ async function renderView() {
 // DASHBOARD
 function viewDashboard() {
   const actifs = allClients.filter(c => c.statut === 'actif').length;
-  const totalCA = allClients.reduce((s, c) => s + (c.ca || 0), 0);
+  const totalCA = allContrats.filter(ct => ct.statut === 'actif').reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
   const urgents = allRappels.filter(r => r.urgence === 'haute' && r.statut === 'ouvert');
   const now = new Date().toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -1204,13 +1214,14 @@ function viewPortefeuille(filtre) {
     filtre === 'prive' ? allClients.filter(c => c.segment !== 'Entreprise') :
     allClients.filter(c => c.segment === 'Entreprise');
 
-  const totalCA = filtered.reduce((s,c) => s + (c.ca || 0), 0);
+  const totalCA = filtered.reduce((s,c) => s + caClient(c.id), 0);
   const actifs = filtered.filter(c => c.statut === 'actif').length;
   const prospects = filtered.filter(c => c.statut === 'prospect').length;
 
   const cols = '1fr 140px 85px 90px 100px 55px';
   const rows = filtered.map(c => {
     const agent = agentById(c.apporteur_id);
+    const ca = caClient(c.id);
     return `<div class="table-row" style="grid-template-columns:${cols}" onclick="showClient('${c.id}')">
       <div>
         <div style="font-weight:700;font-size:13px;color:var(--text)">${c.prenom} ${c.nom}</div>
@@ -1219,7 +1230,7 @@ function viewPortefeuille(filtre) {
       <div><div style="font-size:11px;color:var(--text)">${c.email || ''}</div><div style="font-size:11px;color:var(--text-muted)">${c.mobile || ''}</div></div>
       <div>${badge(c.statut || '—', statutColor(c.statut))}</div>
       <div>${badge(c.segment || 'Privé', c.segment === 'Entreprise' ? '#f59e0b' : '#38bdf8')}</div>
-      <div style="font-size:12px;font-weight:700;color:#f59e0b">${c.ca ? 'CHF ' + Number(c.ca).toLocaleString() : '—'}</div>
+      <div style="font-size:12px;font-weight:700;color:#f59e0b">${ca ? 'CHF ' + ca.toLocaleString() : '—'}</div>
       <div>${agent ? avatar(agent, 26) : ''}</div>
     </div>`;
   }).join('') || '<div class="table-empty">Aucun client dans cette catégorie.</div>';
@@ -1326,7 +1337,7 @@ async function showClient(id) {
       <div class="stat-grid" style="margin-bottom:16px">
         ${statCard('Contrats', contrats.length, '#38bdf8')}
         ${statCard('Rappels ouverts', rappels.filter(r => r.statut === 'ouvert').length, rappels.filter(r => r.statut === 'ouvert').length > 0 ? '#f87171' : '#64748b')}
-        ${statCard('CA annuel', c.ca ? 'CHF ' + Number(c.ca).toLocaleString() : '—', '#f59e0b')}
+        ${statCard('CA annuel', caClient(c.id) ? 'CHF ' + caClient(c.id).toLocaleString() : '—', '#f59e0b')}
       </div>
       ${agent ? `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface-alt);border-radius:10px">
         ${avatar(agent, 36)}
@@ -1598,11 +1609,18 @@ function switchTab(btn, tabId) {
 
 // OPPORTUNITÉS
 function viewOpportunites() {
-  const OPPS = [];
   const stadeColor = { Contact:'#64748b', Analyse:'#38bdf8', Proposition:'#f59e0b', Négociation:'#a78bfa' };
   const stades = ['Contact','Analyse','Proposition','Négociation'];
-  const total = OPPS.reduce((s,o) => s+o.montant, 0);
-  const pondere = OPPS.reduce((s,o) => s+Math.round(o.montant*o.prob/100), 0);
+  const OPPS = allOpportunites.filter(o => o.stade !== 'Gagné' && o.stade !== 'Perdu');
+  const gagnees = allOpportunites.filter(o => o.stade === 'Gagné');
+  const perdues = allOpportunites.filter(o => o.stade === 'Perdu');
+  const total = OPPS.reduce((s,o) => s+(o.montant_potentiel||0), 0);
+  const pondere = OPPS.reduce((s,o) => s+Math.round((o.montant_potentiel||0)*(o.probabilite||0)/100), 0);
+
+  function nomClient(o) {
+    const c = allClients.find(cl => cl.id === o.client_id);
+    return c ? (c.segment === 'Entreprise' ? c.nom : `${c.prenom} ${c.nom}`) : '—';
+  }
 
   let kanban = stades.map(stade => {
     const opps = OPPS.filter(o => o.stade === stade);
@@ -1615,13 +1633,21 @@ function viewOpportunites() {
       </div>
       ${opps.map(o => `<div class="kanban-card">
         <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:4px">${o.titre}</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">${o.client} · ${o.compagnie}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">${nomClient(o)}${o.compagnie ? ' · ' + o.compagnie : ''}</div>
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:13px;font-weight:800;color:#f59e0b">CHF ${o.montant.toLocaleString()}</span>
+          <span style="font-size:13px;font-weight:800;color:#f59e0b">CHF ${(o.montant_potentiel||0).toLocaleString()}</span>
           ${o.apporteur_id ? avatar(agentById(o.apporteur_id), 22) : ''}
         </div>
-        <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:${o.prob}%;background:${color}"></div></div>
-        <div style="font-size:10px;color:var(--text-muted);margin-top:3px">${o.prob}%</div>
+        <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:${o.probabilite||0}%;background:${color}"></div></div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:6px;display:flex;justify-content:space-between;align-items:center">
+          <span>${o.probabilite||0}%</span>
+          <select onchange="changerStadeOpportunite('${o.id}', this.value)" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);font-size:10px;border-radius:5px;padding:2px 4px">
+            <option value="">Changer →</option>
+            ${stades.filter(s => s !== stade).map(s => `<option value="${s}">${s}</option>`).join('')}
+            <option value="Gagné">✓ Gagné</option>
+            <option value="Perdu">✕ Perdu</option>
+          </select>
+        </div>
       </div>`).join('')}
       ${opps.length === 0 ? '<div class="kanban-empty">Aucune</div>' : ''}
     </div>`;
@@ -1629,35 +1655,90 @@ function viewOpportunites() {
 
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Opportunités</h2>
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Pipeline — Opportunités</h2>
       <button class="btn-add" onclick="navigate('nouvelle-opportunite')">+ Nouvelle opportunité</button>
     </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Suivi des affaires en négociation, avant signature. Une fois "Gagnée", l'opportunité ouvre directement le formulaire de contrat pré-rempli.</div>
     <div class="stat-grid" style="margin-bottom:20px">
       ${statCard('Pipeline total', 'CHF ' + total.toLocaleString(), '#f59e0b')}
       ${statCard('Pondéré', 'CHF ' + pondere.toLocaleString(), '#38bdf8')}
       ${statCard('En cours', OPPS.length, '#e2e8f0')}
+      ${statCard('Gagnées', gagnees.length, '#4ade80')}
     </div>
-    <div class="kanban">${kanban}</div>`;
+    <div class="kanban">${kanban}</div>
+    ${gagnees.length > 0 ? `<div style="margin-top:24px">
+      <div style="font-size:11px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">✓ Gagnées (${gagnees.length})</div>
+      <div class="table-wrap">${gagnees.map(o => `<div class="table-row" style="grid-template-columns:1fr 140px 100px 80px">
+        <div style="font-weight:700;font-size:13px;color:var(--text)">${o.titre}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${nomClient(o)}</div>
+        <div style="font-size:12px;font-weight:700;color:#f59e0b">CHF ${(o.montant_potentiel||0).toLocaleString()}</div>
+        <div>${o.contrat_id ? badge('Contrat créé', '#4ade80') : badge('À finaliser', '#f59e0b')}</div>
+      </div>`).join('')}</div>
+    </div>` : ''}`;
 }
 
-// SUIVI
+async function changerStadeOpportunite(id, nouveauStade) {
+  if (!nouveauStade) return;
+  const opp = allOpportunites.find(o => o.id === id);
+  if (!opp) return;
+  await dbPatch('opportunites', id, { stade: nouveauStade });
+  opp.stade = nouveauStade;
+
+  if (nouveauStade === 'Gagné') {
+    prefillOpportunite = opp;
+    contratClientId = opp.client_id || null;
+    navigate('nouveau-contrat');
+  } else {
+    navigate('opportunites');
+  }
+}
+
+// SUIVI — tableau de bord du portefeuille signé (après signature, distinct du Pipeline)
 function viewSuivi() {
-  const CONTRATS = [];
   const cols = '1fr 140px 110px 100px 110px 100px';
-  const rows = CONTRATS.map(ct => `<div class="table-row" style="grid-template-columns:${cols}">
-    <div><div style="font-weight:700;font-size:13px;color:var(--text)">${ct.produit}</div><div style="font-size:11px;color:var(--text-muted)">${ct.numero_police}</div></div>
-    <div style="font-size:13px;color:var(--text)">${ct.client}</div>
-    <div style="font-size:13px;color:var(--text)">${ct.compagnie}</div>
-    <div style="font-size:12px;color:var(--text-muted)">${ct.date_echeance}</div>
-    <div style="font-weight:800;color:#f59e0b">CHF ${ct.prime_annuelle.toLocaleString()}</div>
-    <div>${badge(ct.statut, ct.statut === 'actif' ? '#4ade80' : ct.statut === 'renouveler' ? '#f59e0b' : '#f87171')}</div>
-  </div>`).join('');
+  const today = new Date();
+  const in60 = new Date(today.getTime() + 60*24*60*60*1000);
+
+  function nomClient(ct) {
+    const c = allClients.find(cl => cl.id === ct.client_id);
+    return c ? (c.segment === 'Entreprise' ? c.nom : `${c.prenom} ${c.nom}`) : '—';
+  }
+
+  const aRenouveler = allContrats.filter(ct => ct.statut === 'renouveler');
+  const echeanceProche = allContrats.filter(ct => {
+    if (ct.statut !== 'actif' || !ct.date_echeance) return false;
+    const d = new Date(ct.date_echeance);
+    return d >= today && d <= in60;
+  });
+  const actifs = allContrats.filter(ct => ct.statut === 'actif');
+  const totalPrimes = actifs.reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
+
+  function table(list, emptyMsg) {
+    if (!list.length) return `<div class="table-empty">${emptyMsg}</div>`;
+    return `<div class="table-wrap"><div class="table-header" style="grid-template-columns:${cols}"><div>Produit</div><div>Client</div><div>Compagnie</div><div>Échéance</div><div>Prime/an</div><div>Statut</div></div>
+      ${list.map(ct => `<div class="table-row" style="grid-template-columns:${cols};cursor:pointer" onclick="showClient('${ct.client_id}')">
+        <div><div style="font-weight:700;font-size:13px;color:var(--text)">${ct.produit}</div><div style="font-size:11px;color:var(--text-muted)">${ct.numero_police || ''}</div></div>
+        <div style="font-size:13px;color:var(--text)">${nomClient(ct)}</div>
+        <div style="font-size:13px;color:var(--text)">${ct.compagnie}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${ct.date_echeance || ''}</div>
+        <div style="font-weight:800;color:#f59e0b">CHF ${Number(ct.prime_annuelle||0).toLocaleString()}</div>
+        <div>${badge(ct.statut, ct.statut === 'actif' ? '#4ade80' : ct.statut === 'renouveler' ? '#f59e0b' : '#f87171')}</div>
+      </div>`).join('')}</div>`;
+  }
+
   return `
-    <h2 style="margin:0 0 18px;font-size:18px;font-weight:800;color:var(--text)">Suivi des affaires</h2>
-    <div class="table-wrap">
-      <div class="table-header" style="grid-template-columns:${cols}"><div>Produit</div><div>Client</div><div>Compagnie</div><div>Échéance</div><div>Prime/an</div><div>Statut</div></div>
-      ${rows}
-    </div>`;
+    <h2 style="margin:0 0 4px;font-size:18px;font-weight:800;color:var(--text)">Suivi des affaires</h2>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Portefeuille signé : ce qui nécessite une action (renouvellement, échéance proche). Pour les ventes en cours, voir le Pipeline.</div>
+    <div class="stat-grid" style="margin-bottom:24px">
+      ${statCard('Contrats actifs', actifs.length, '#4ade80')}
+      ${statCard('Primes annuelles', 'CHF ' + totalPrimes.toLocaleString(), '#f59e0b')}
+      ${statCard('À renouveler', aRenouveler.length, '#f87171')}
+      ${statCard('Échéance < 60j', echeanceProche.length, '#fbbf24')}
+    </div>
+    <div style="font-size:11px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">⚠ À renouveler (${aRenouveler.length})</div>
+    ${table(aRenouveler, 'Aucun contrat à renouveler.')}
+    <div style="font-size:11px;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:1px;margin:24px 0 10px">⏳ Échéance dans moins de 60 jours (${echeanceProche.length})</div>
+    ${table(echeanceProche, 'Aucune échéance proche.')}`;
 }
 
 // RAPPELS
@@ -2205,6 +2286,7 @@ async function saveOpportunite() {
   const btn = document.querySelector('.btn-save');
   btn.textContent = 'Enregistrement...'; btn.disabled = true;
   await dbPost('opportunites', body);
+  allOpportunites = await dbGet('opportunites', 'select=*');
   navigate('opportunites');
 }
 
@@ -2371,6 +2453,7 @@ async function saveEditContrat(contratId, clientId) {
   const r = await dbPatch('contrats', contratId, body);
   if (r && r.error) { showError('Erreur: ' + (r.detail || r.status)); if (btn) { btn.textContent = '✓ Enregistrer'; btn.disabled = false; } return; }
   logAction('edit_contrat', 'contrats', contratId, `${body.produit} — ${body.compagnie}`);
+  allContrats = await dbGet('contrats', 'select=*');
   document.getElementById('modal-edit-contrat').remove();
   showClient(clientId);
 }
@@ -2591,18 +2674,22 @@ async function saveBordereau() {
 // ═══ NOUVEAU CONTRAT + COMMISSION EN ATTENTE ═══
 function viewNouveauContrat() {
   const clientOptions = allClients.map(c => `<option value="${c.id}" data-segment="${c.segment === 'Entreprise' ? 'entreprise' : 'prive'}">${c.segment === 'Entreprise' ? c.nom : c.prenom + ' ' + c.nom}</option>`).join('');
+  const opp = prefillOpportunite;
   return `
     <button onclick="navigate(contratClientId ? 'clients' : 'suivi')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
     <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouveau contrat</h2>
+    ${opp ? `<div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:12.5px;color:var(--text)">
+      ✓ Pré-rempli depuis l'opportunité gagnée <strong>"${opp.titre}"</strong> — montant potentiel estimé : <strong>CHF ${(opp.montant_potentiel||0).toLocaleString()}</strong>. Vérifie/ajuste la prime exacte ci-dessous avant d'enregistrer.
+    </div>` : ''}
     ${sectionCard('Informations contrat', '#4ade80', `<div class="form-grid">
       ${!contratClientId ? `<div class="form-field" style="grid-column:span 2"><label class="form-label">Client *</label><select class="form-select" id="ct-client" onchange="syncSegmentFromClient()"><option value="">— Sélectionner un client —</option>${clientOptions}</select></div>` : ''}
       <div class="form-field"><label class="form-label">Type de client *</label><select class="form-select" id="ct-segment" onchange="updateCategorieOptions()">
         <option value="prive">Privé</option>
         <option value="entreprise">Entreprise</option>
       </select></div>
-      <div class="form-field"><label class="form-label">Compagnie *</label><input class="form-input" id="ct-compagnie" placeholder="Swiss Life, AXA, Helsana..." list="compagnies-suggestions" autocomplete="off"/><datalist id="compagnies-suggestions">${getCompagniesConnues().map(c => `<option value="${c}">`).join('')}</datalist></div>
+      <div class="form-field"><label class="form-label">Compagnie *</label><input class="form-input" id="ct-compagnie" value="${opp && opp.compagnie ? opp.compagnie : ''}" placeholder="Swiss Life, AXA, Helsana..." list="compagnies-suggestions" autocomplete="off"/><datalist id="compagnies-suggestions">${getCompagniesConnues().map(c => `<option value="${c}">`).join('')}</datalist></div>
       <div class="form-field"><label class="form-label">Catégorie *</label><select class="form-select" id="ct-categorie" onchange="updateProduitOptions()"></select></div>
-      <div class="form-field"><label class="form-label">Produit * <span style="color:var(--text-muted);font-weight:400">(tape pour rechercher)</span></label><input class="form-input" id="ct-produit" list="produits-suggestions" autocomplete="off" placeholder="Ex: RC privée, Casco..." onchange="updateModulesOptions(); updateCommissionPreview()" oninput="updateModulesOptions(); updateCommissionPreview()"/><datalist id="produits-suggestions"></datalist></div>
+      <div class="form-field"><label class="form-label">Produit * <span style="color:var(--text-muted);font-weight:400">(tape pour rechercher)</span></label><input class="form-input" id="ct-produit" value="${opp && opp.titre ? opp.titre : ''}" list="produits-suggestions" autocomplete="off" placeholder="Ex: RC privée, Casco..." onchange="updateModulesOptions(); updateCommissionPreview()" oninput="updateModulesOptions(); updateCommissionPreview()"/><datalist id="produits-suggestions"></datalist></div>
       <div class="form-field" style="grid-column:span 2" id="ct-modules-field"><label class="form-label">Modules complémentaires</label><div id="ct-modules-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div></div>
       <div class="form-field" style="grid-column:span 2" id="ct-combinables-field"><label class="form-label">Produits souvent combinés</label><div id="ct-combinables-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div></div>
       <div class="form-field" style="grid-column:span 2;display:none" id="ct-plaques-field">
@@ -2629,7 +2716,7 @@ function viewNouveauContrat() {
       <div id="commission-preview-detail" style="font-size:11px;color:var(--text-muted);margin-top:2px"></div>
     </div>
     <div style="display:flex;gap:10px;margin-top:14px">
-      <button class="btn-secondary" onclick="navigate(contratClientId ? 'clients' : 'suivi')">Annuler</button>
+      <button class="btn-secondary" onclick="prefillOpportunite=null; navigate(contratClientId ? 'clients' : 'suivi')">Annuler</button>
       <button class="btn-save" onclick="saveContrat()">✓ Enregistrer le contrat</button>
     </div>`;
 }
@@ -2874,7 +2961,7 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
     date_creation: new Date().toISOString().split('T')[0],
   };
   const rComm = await dbPost('commissions_attente', commissionBody);
-  return { error: false, commissionError: rComm && rComm.error };
+  return { error: false, commissionError: rComm && rComm.error, contrat: rContrat && rContrat[0] ? rContrat[0] : null };
 }
 
 async function saveContrat() {
@@ -2918,6 +3005,14 @@ async function saveContrat() {
   }
 
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
+  allContrats = await dbGet('contrats', 'select=*');
+
+  // Si ce contrat provient d'une opportunité passée en "Gagné", on la lie au contrat créé
+  if (prefillOpportunite && prefillOpportunite.id && resultPrincipal.contrat && resultPrincipal.contrat.id) {
+    await dbPatch('opportunites', prefillOpportunite.id, { contrat_id: resultPrincipal.contrat.id });
+    allOpportunites = await dbGet('opportunites', 'select=*');
+    prefillOpportunite = null;
+  }
 
   if (contratClientId) {
     showClient(contratClientId);
@@ -3193,7 +3288,7 @@ function viewAgents() {
     ${agents.map(a => {
       const color = agentColor(a);
       const nbClients = allClients.filter(c => c.apporteur_id === a.id).length;
-      const ca = allClients.filter(c => c.apporteur_id === a.id).reduce((s,c)=>s+(c.ca||0),0);
+      const ca = allClients.filter(c => c.apporteur_id === a.id).reduce((s,c)=>s+caClient(c.id),0);
       const isEditing = editingAgentId === a.id;
       return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:12px">
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">

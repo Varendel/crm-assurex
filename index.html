@@ -418,6 +418,9 @@ let openBordereaux = {};
 let contratClientId = null;
 let allCommissionsAttente = [];
 let allContrats = [];
+let allOpportunites = [];
+let allPostits = [];
+let allFactures = [];
 let currentClientId = null;
 
 // Paramètres de taux de commission — modifiables via Paramètres (gestion récurrente)
@@ -695,6 +698,9 @@ async function enterApp(user) {
     allRappels = await dbGet('rappels', 'select=*') || [];
     allBordereaux = await dbGet('bordereaux', 'select=*') || [];
     allCommissionsAttente = await dbGet('commissions_attente', 'select=*') || [];
+    allOpportunites = await dbGet('opportunites', 'select=*') || [];
+    allPostits = await dbGet('postits', 'select=*') || [];
+    allFactures = await dbGet('factures', 'select=*') || [];
   } catch(e) {
     console.error('Erreur chargement données:', e);
   }
@@ -720,6 +726,7 @@ const SECTIONS = [
     { id: 'rappels', label: 'Rappels' },
     { id: 'agenda', label: 'Agenda' },
     { id: 'campagnes', label: 'Campagnes' },
+    { id: 'postits', label: 'Post-its' },
   ]},
   { id: 'portefeuille', label: 'Portefeuille', icon: '◑', sub: [
     { id: 'portefeuille', label: 'Tous les clients' },
@@ -735,9 +742,14 @@ const SECTIONS = [
     { id: 'bordereaux', label: 'Bordereaux' },
     { id: 'commissions', label: 'Commissions' },
     { id: 'commissions-attente', label: 'Commissions en attente' },
+    { id: 'factures', label: 'Factures' },
+  ]},
+  { id: 'conformite', label: 'Conformité', icon: '◈', sub: [
+    { id: 'rapport-finma', label: 'Rapport FINMA' },
   ]},
   { id: 'settings', label: 'Paramètres', icon: '⊙', sub: [
     { id: 'agents', label: 'Agents' },
+    { id: 'parametres', label: 'Réglages généraux' },
   ]},
 ];
 
@@ -857,7 +869,7 @@ async function renderView() {
     case 'nouveau-contrat': main.innerHTML = viewNouveauContrat(); initSegmentContrat(); break;
     case 'nouveau-contrat-direct': contratClientId = null; main.innerHTML = viewNouveauContrat(); initSegmentContrat(); break;
     case 'commissions-attente': main.innerHTML = viewCommissionsAttente(); break;
-    case 'opportunites': main.innerHTML = viewOpportunites(); break;
+    case 'opportunites': main.innerHTML = viewOpportunites(); setTimeout(_initOpportunitesDragDrop, 50); break;
     case 'suivi': main.innerHTML = viewSuivi(); break;
     case 'rappels': main.innerHTML = viewRappels(); break;
     case 'agenda': main.innerHTML = viewAgenda(); break;
@@ -866,6 +878,11 @@ async function renderView() {
     case 'bordereaux': main.innerHTML = viewBordereaux(); break;
     case 'commissions': main.innerHTML = viewCommissions(); break;
     case 'agents': main.innerHTML = viewAgents(); break;
+    case 'postits': main.innerHTML = viewPostits(); break;
+    case 'factures': main.innerHTML = viewFactures(); break;
+    case 'nouvelle-facture': main.innerHTML = viewNouvelleFacture(); break;
+    case 'rapport-finma': main.innerHTML = '<div class="loader">Calcul en cours...</div>'; main.innerHTML = await viewRapportFinma(); break;
+    case 'parametres': main.innerHTML = viewParametres(); break;
     default: main.innerHTML = viewDashboard();
   }
 }
@@ -1826,30 +1843,37 @@ async function deletePoliceDoc(docId, clientId) {
 
 // OPPORTUNITÉS
 function viewOpportunites() {
-  const OPPS = [];
+  const OPPS = allOpportunites.filter(o => o.stade !== 'Gagné' && o.stade !== 'Perdu');
   const stadeColor = { Contact:'#64748b', Analyse:'#38bdf8', Proposition:'#f59e0b', Négociation:'#a78bfa' };
   const stades = ['Contact','Analyse','Proposition','Négociation'];
-  const total = OPPS.reduce((s,o) => s+o.montant, 0);
-  const pondere = OPPS.reduce((s,o) => s+Math.round(o.montant*o.prob/100), 0);
+  const total = OPPS.reduce((s,o) => s+(o.montant_potentiel||0), 0);
+  const pondere = OPPS.reduce((s,o) => s+Math.round((o.montant_potentiel||0)*(o.probabilite||0)/100), 0);
+  const gagnees = allOpportunites.filter(o => o.stade === 'Gagné');
+  const perdues = allOpportunites.filter(o => o.stade === 'Perdu');
+
+  function clientNomOpp(o) {
+    const cl = allClients.find(x => x.id === o.client_id);
+    return cl ? (cl.segment === 'Entreprise' ? cl.nom : `${cl.prenom} ${cl.nom}`) : (o.client_nom_libre || '—');
+  }
 
   let kanban = stades.map(stade => {
     const opps = OPPS.filter(o => o.stade === stade);
     const color = stadeColor[stade];
-    return `<div class="kanban-col">
+    return `<div class="kanban-col" data-stade="${stade}">
       <div class="kanban-col-title">
         <div class="kanban-dot" style="background:${color}"></div>
         <div style="font-size:11px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:0.8px">${stade}</div>
         <div style="font-size:10px;color:var(--text-muted);margin-left:auto">${opps.length}</div>
       </div>
-      ${opps.map(o => `<div class="kanban-card">
+      ${opps.map(o => `<div class="kanban-card" draggable="true" data-opp-id="${o.id}" ondragstart="event.dataTransfer.setData('text/plain','${o.id}')" onclick="showOpportuniteDetail('${o.id}')" style="cursor:pointer">
         <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:4px">${o.titre}</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">${o.client} · ${o.compagnie}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">${clientNomOpp(o)} ${o.compagnie ? '· '+o.compagnie : ''}</div>
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:13px;font-weight:800;color:#f59e0b">CHF ${o.montant.toLocaleString()}</span>
+          <span style="font-size:13px;font-weight:800;color:#f59e0b">CHF ${(o.montant_potentiel||0).toLocaleString()}</span>
           ${o.apporteur_id ? avatar(agentById(o.apporteur_id), 22) : ''}
         </div>
-        <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:${o.prob}%;background:${color}"></div></div>
-        <div style="font-size:10px;color:var(--text-muted);margin-top:3px">${o.prob}%</div>
+        <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:${o.probabilite||0}%;background:${color}"></div></div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:3px">${o.probabilite||0}%${o.date_echeance ? ' · ' + o.date_echeance : ''}</div>
       </div>`).join('')}
       ${opps.length === 0 ? '<div class="kanban-empty">Aucune</div>' : ''}
     </div>`;
@@ -1864,8 +1888,83 @@ function viewOpportunites() {
       ${statCard('Pipeline total', 'CHF ' + total.toLocaleString(), '#f59e0b')}
       ${statCard('Pondéré', 'CHF ' + pondere.toLocaleString(), '#38bdf8')}
       ${statCard('En cours', OPPS.length, '#e2e8f0')}
+      ${statCard('Gagnées', gagnees.length, '#4ade80')}
     </div>
-    <div class="kanban">${kanban}</div>`;
+    <div class="kanban" id="opp-kanban">${kanban}</div>
+    ${perdues.length > 0 ? `<div style="margin-top:20px;font-size:11px;color:var(--text-muted)">${perdues.length} opportunité(s) perdue(s) — <a href="#" onclick="event.preventDefault();navigate('opportunites-historique')" style="color:var(--accent)">voir l'historique</a></div>` : ''}`;
+}
+
+function _initOpportunitesDragDrop() {
+  document.querySelectorAll('.kanban-col').forEach(function(col) {
+    col.addEventListener('dragover', function(e) { e.preventDefault(); col.style.background = 'rgba(56,189,248,0.04)'; });
+    col.addEventListener('dragleave', function(e) { col.style.background = ''; });
+    col.addEventListener('drop', function(e) {
+      e.preventDefault();
+      col.style.background = '';
+      const oppId = e.dataTransfer.getData('text/plain');
+      const newStade = col.getAttribute('data-stade');
+      if (oppId && newStade) changerStadeOpportunite(oppId, newStade);
+    });
+  });
+}
+
+async function changerStadeOpportunite(oppId, newStade) {
+  await dbPatch('opportunites', oppId, { stade: newStade });
+  allOpportunites = await dbGet('opportunites', 'select=*') || [];
+  navigate('opportunites');
+}
+
+function showOpportuniteDetail(oppId) {
+  const o = allOpportunites.find(x => x.id === oppId);
+  if (!o) return;
+  const cl = allClients.find(x => x.id === o.client_id);
+  const clientNom = cl ? (cl.segment === 'Entreprise' ? cl.nom : `${cl.prenom} ${cl.nom}`) : (o.client_nom_libre || '—');
+  const modal = document.createElement('div');
+  modal.id = 'modal-opp-detail';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
+      <div style="display:flex;justify-content:space-between;align-items:start;margin-bottom:16px">
+        <h3 style="margin:0;font-size:16px;font-weight:800;color:var(--text)">${o.titre}</h3>
+        <button onclick="document.getElementById('modal-opp-detail').remove()" style="background:none;border:none;color:var(--text-muted);font-size:18px;cursor:pointer">✕</button>
+      </div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">Client : <strong style="color:var(--text)">${clientNom}</strong></div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">Compagnie : <strong style="color:var(--text)">${o.compagnie || '—'}</strong></div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">Montant potentiel : <strong style="color:#f59e0b">CHF ${(o.montant_potentiel||0).toLocaleString()}</strong></div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:4px">Probabilité : <strong style="color:var(--text)">${o.probabilite || 0}%</strong></div>
+      <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">Échéance : <strong style="color:var(--text)">${o.date_echeance || '—'}</strong></div>
+      ${o.notes ? `<div style="background:var(--surface-alt);border-radius:8px;padding:10px 12px;font-size:12px;color:var(--text);margin-bottom:16px">${o.notes}</div>` : ''}
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px">
+        <button onclick="document.getElementById('modal-opp-detail').remove();marquerOpportunite('${o.id}','Gagné')" style="flex:1;padding:9px;background:rgba(74,222,128,0.12);color:#4ade80;border:1px solid rgba(74,222,128,0.3);border-radius:8px;font-weight:700;font-size:12px;cursor:pointer">✓ Marquer Gagné</button>
+        <button onclick="document.getElementById('modal-opp-detail').remove();marquerOpportunite('${o.id}','Perdu')" style="flex:1;padding:9px;background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:8px;font-weight:700;font-size:12px;cursor:pointer">✕ Marquer Perdu</button>
+      </div>
+      <div style="display:flex;gap:8px">
+        <button onclick="document.getElementById('modal-opp-detail').remove();supprimerOpportunite('${o.id}')" style="flex:1;padding:8px;background:none;border:1px solid var(--border);border-radius:8px;color:var(--text-muted);font-size:12px;cursor:pointer">Supprimer</button>
+        ${cl ? `<button onclick="document.getElementById('modal-opp-detail').remove();showClient('${cl.id}')" style="flex:1;padding:8px;background:none;border:1px solid var(--accent-border);border-radius:8px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">→ Fiche client</button>` : ''}
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function marquerOpportunite(oppId, stade) {
+  await dbPatch('opportunites', oppId, { stade });
+  allOpportunites = await dbGet('opportunites', 'select=*') || [];
+  if (stade === 'Gagné') {
+    const o = allOpportunites.find(x => x.id === oppId);
+    if (o && o.client_id && confirm('Opportunité gagnée ! Veux-tu créer le contrat correspondant maintenant ?')) {
+      contratClientId = o.client_id;
+      navigate('nouveau-contrat');
+      return;
+    }
+  }
+  navigate('opportunites');
+}
+
+async function supprimerOpportunite(oppId) {
+  if (!confirm('Supprimer définitivement cette opportunité ?')) return;
+  await dbDelete('opportunites', oppId);
+  allOpportunites = await dbGet('opportunites', 'select=*') || [];
+  navigate('opportunites');
 }
 
 // SUIVI
@@ -2433,6 +2532,7 @@ async function saveOpportunite() {
   const btn = document.querySelector('.btn-save');
   btn.textContent = 'Enregistrement...'; btn.disabled = true;
   await dbPost('opportunites', body);
+  allOpportunites = await dbGet('opportunites', 'select=*') || [];
   navigate('opportunites');
 }
 
@@ -3577,6 +3677,281 @@ function showCampagne(themeId) {
         </table>
       </div>
     </div>`;
+}
+
+// POST-ITS
+const POSTIT_COLORS = ['#fde047','#fca5a5','#86efac','#93c5fd','#d8b4fe','#fdba74'];
+
+function viewPostits() {
+  const postits = (allPostits || []).sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">📌 Post-its</h2>
+      <button class="btn-add" onclick="ajouterPostit()">+ Nouveau post-it</button>
+    </div>
+    <div id="postits-grid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:16px">
+      ${postits.length === 0 ? '<div style="color:var(--text-muted);font-size:13px">Aucun post-it. Clique sur "+ Nouveau post-it" pour commencer.</div>' : postits.map(p => `
+      <div style="background:${p.couleur || '#fde047'};border-radius:4px;padding:16px;min-height:140px;display:flex;flex-direction:column;box-shadow:0 4px 12px rgba(0,0,0,0.25);transform:rotate(${(p.id.charCodeAt(0) % 3) - 1}deg);position:relative">
+        <button onclick="supprimerPostit('${p.id}')" style="position:absolute;top:6px;right:8px;background:none;border:none;color:#00000066;font-size:14px;cursor:pointer;font-weight:900">✕</button>
+        <textarea onblur="modifierPostit('${p.id}', this.value)" style="background:transparent;border:none;outline:none;flex:1;font-family:'Century Gothic',sans-serif;font-size:13px;font-weight:600;color:#1f2937;resize:none;width:100%">${p.contenu || ''}</textarea>
+        <div style="font-size:10px;color:#1f293799;font-weight:700;margin-top:6px">${p.created_at ? new Date(p.created_at).toLocaleDateString('fr-CH') : ''}</div>
+      </div>`).join('')}
+    </div>`;
+}
+
+async function ajouterPostit() {
+  const couleur = POSTIT_COLORS[Math.floor(Math.random() * POSTIT_COLORS.length)];
+  await dbPost('postits', { contenu: '', couleur, created_at: new Date().toISOString() });
+  allPostits = await dbGet('postits', 'select=*') || [];
+  navigate('postits');
+}
+
+async function modifierPostit(id, contenu) {
+  await dbPatch('postits', id, { contenu });
+  allPostits = await dbGet('postits', 'select=*') || [];
+}
+
+async function supprimerPostit(id) {
+  await dbDelete('postits', id);
+  allPostits = await dbGet('postits', 'select=*') || [];
+  navigate('postits');
+}
+
+// FACTURES
+function viewFactures() {
+  const factures = (allFactures || []).sort((a,b) => new Date(b.date_emission||0) - new Date(a.date_emission||0));
+  const totalEnAttente = factures.filter(f => f.statut === 'en_attente').reduce((s,f) => s + Number(f.montant||0), 0);
+  const totalPayees = factures.filter(f => f.statut === 'payee').reduce((s,f) => s + Number(f.montant||0), 0);
+  const totalEnRetard = factures.filter(f => f.statut === 'en_attente' && f.date_echeance && f.date_echeance < new Date().toISOString().split('T')[0]).length;
+
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">🧾 Factures</h2>
+      <button class="btn-add" onclick="navigate('nouvelle-facture')">+ Nouvelle facture</button>
+    </div>
+    <div class="stat-grid" style="margin-bottom:20px">
+      ${statCard('En attente', 'CHF ' + totalEnAttente.toLocaleString(), '#f59e0b')}
+      ${statCard('Payées', 'CHF ' + totalPayees.toLocaleString(), '#4ade80')}
+      ${statCard('En retard', totalEnRetard, totalEnRetard > 0 ? '#f87171' : '#64748b')}
+      ${statCard('Total factures', factures.length, '#38bdf8')}
+    </div>
+    <div class="table-wrap">
+      <table class="data-table" style="width:100%">
+        <thead><tr><th>N° Facture</th><th>Client</th><th>Émission</th><th>Échéance</th><th>Montant</th><th>Statut</th><th></th></tr></thead>
+        <tbody>
+          ${factures.length === 0 ? '<tr><td colspan="7" style="text-align:center;padding:32px;color:var(--text-muted)">Aucune facture enregistrée</td></tr>' : factures.map(f => {
+            const cl = allClients.find(c => c.id === f.client_id);
+            const nom = cl ? (cl.segment === 'Entreprise' ? cl.nom : `${cl.prenom} ${cl.nom}`) : (f.client_nom || '—');
+            const enRetard = f.statut === 'en_attente' && f.date_echeance && f.date_echeance < new Date().toISOString().split('T')[0];
+            const statutColor = f.statut === 'payee' ? '#4ade80' : enRetard ? '#f87171' : '#f59e0b';
+            const statutLabel = f.statut === 'payee' ? 'PAYÉE' : enRetard ? 'EN RETARD' : 'EN ATTENTE';
+            return `<tr>
+              <td style="font-weight:700;font-family:monospace;font-size:12px">${f.numero || '—'}</td>
+              <td>${nom}</td>
+              <td style="font-size:12px;color:var(--text-muted)">${f.date_emission || '—'}</td>
+              <td style="font-size:12px;color:var(--text-muted)">${f.date_echeance || '—'}</td>
+              <td style="font-weight:800;color:var(--gold)">CHF ${Number(f.montant||0).toLocaleString()}</td>
+              <td><span style="font-size:10px;font-weight:700;color:${statutColor};background:${statutColor}18;padding:3px 8px;border-radius:99px">${statutLabel}</span></td>
+              <td style="text-align:right">${f.statut !== 'payee' ? `<button onclick="marquerFacturePayee('${f.id}')" style="background:rgba(74,222,128,0.1);color:#4ade80;border:1px solid rgba(74,222,128,0.3);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">✓ Payée</button>` : ''}</td>
+            </tr>`;
+          }).join('')}
+        </tbody>
+      </table>
+    </div>`;
+}
+
+function viewNouvelleFacture() {
+  const clientOptions = allClients.map(c => `<option value="${c.id}">${c.segment === 'Entreprise' ? c.nom : c.prenom + ' ' + c.nom}</option>`).join('');
+  const numeroAuto = 'F-' + new Date().getFullYear() + '-' + String((allFactures||[]).length + 1).padStart(4,'0');
+  return `
+    <button onclick="navigate('factures')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
+    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouvelle facture</h2>
+    ${sectionCard('Détails', '#f59e0b', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">N° Facture</label><input class="form-input" id="f-numero" value="${numeroAuto}"/></div>
+      <div class="form-field"><label class="form-label">Client</label><select class="form-select" id="f-client"><option value="">— Sélectionner —</option>${clientOptions}</select></div>
+      <div class="form-field"><label class="form-label">Montant (CHF) *</label><input class="form-input" id="f-montant" type="number" placeholder="500"/></div>
+      <div class="form-field"><label class="form-label">Date d'émission</label><input class="form-input" id="f-emission" type="date" value="${new Date().toISOString().split('T')[0]}"/></div>
+      <div class="form-field"><label class="form-label">Date d'échéance</label><input class="form-input" id="f-echeance" type="date"/></div>
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Description</label><textarea class="form-input" id="f-description" rows="2" style="resize:vertical"></textarea></div>
+    </div>`)}
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn-secondary" onclick="navigate('factures')">Annuler</button>
+      <button class="btn-save" onclick="saveFacture()">✓ Enregistrer</button>
+    </div>`;
+}
+
+async function saveFacture() {
+  const montant = parseFloat(document.getElementById('f-montant').value);
+  if (!montant) { showError('Le montant est obligatoire.'); return; }
+  const clientId = document.getElementById('f-client').value || null;
+  const cl = clientId ? allClients.find(c => c.id === clientId) : null;
+  const body = {
+    numero: document.getElementById('f-numero').value.trim() || null,
+    client_id: clientId,
+    client_nom: cl ? (cl.segment === 'Entreprise' ? cl.nom : `${cl.prenom} ${cl.nom}`) : null,
+    montant,
+    date_emission: document.getElementById('f-emission').value || null,
+    date_echeance: document.getElementById('f-echeance').value || null,
+    description: document.getElementById('f-description').value.trim() || null,
+    statut: 'en_attente',
+  };
+  const btn = document.querySelector('.btn-save');
+  btn.textContent = 'Enregistrement...'; btn.disabled = true;
+  await dbPost('factures', body);
+  allFactures = await dbGet('factures', 'select=*') || [];
+  navigate('factures');
+}
+
+async function marquerFacturePayee(id) {
+  await dbPatch('factures', id, { statut: 'payee', date_paiement: new Date().toISOString().split('T')[0] });
+  allFactures = await dbGet('factures', 'select=*') || [];
+  navigate('factures');
+}
+
+// RAPPORT FINMA
+const FINMA_BRANCHES = ['LCA','LAMal','3a','3b','LPP','VIE','TERM','RC','Ménage','Bâtiment','Véhicule','Voyage','PJ','IJM','LAA','LAA-C','PGM','RCE',"Perte d'exploitation",'Hypothèque','Crédit'];
+
+function classifierBranche(produit) {
+  const p = (produit || '').toLowerCase();
+  if (p.includes('lca') || p.includes('complémentaire') || p.includes('complementaire')) return 'LCA';
+  if (p.includes('lamal') || p.includes('base')) return 'LAMal';
+  if (p.includes('3a')) return '3a';
+  if (p.includes('3b')) return '3b';
+  if (p.includes('lpp')) return 'LPP';
+  if (p.includes('vie') && !p.includes('3a')) return 'VIE';
+  if (p.includes('terme') || p.includes('term')) return 'TERM';
+  if (p.includes('rc ') || p.includes('responsabilité civile') || p.includes('rc privée') || p.includes('rc entreprise')) return 'RC';
+  if (p.includes('ménage') || p.includes('menage')) return 'Ménage';
+  if (p.includes('bâtiment') || p.includes('batiment') || p.includes('immeuble')) return 'Bâtiment';
+  if (p.includes('véhicule') || p.includes('vehicule') || p.includes('casco') || p.includes('auto')) return 'Véhicule';
+  if (p.includes('voyage') || p.includes('annulation')) return 'Voyage';
+  if (p.includes('protection juridique') || p.includes(' pj')) return 'PJ';
+  if (p.includes('ijm') || p.includes('indemnité journalière') || p.includes('perte de gain maladie')) return 'IJM';
+  if (p.includes('laa-c') || p.includes('accident complémentaire')) return 'LAA-C';
+  if (p.includes('laa')) return 'LAA';
+  if (p.includes('pgm')) return 'PGM';
+  if (p.includes('rce') || p.includes('rc entreprise')) return 'RCE';
+  if (p.includes("perte d'exploitation") || p.includes('perte exploitation')) return "Perte d'exploitation";
+  if (p.includes('hypothèque') || p.includes('hypotheque')) return 'Hypothèque';
+  if (p.includes('crédit') || p.includes('credit')) return 'Crédit';
+  return 'Autre';
+}
+
+async function viewRapportFinma() {
+  const annee = new Date().getFullYear();
+  const contratsActifs = allContrats.filter(c => c.statut === 'actif');
+  const parBranche = {};
+  FINMA_BRANCHES.forEach(b => parBranche[b] = { count: 0, primes: 0 });
+  parBranche['Autre'] = { count: 0, primes: 0 };
+
+  contratsActifs.forEach(c => {
+    const branche = classifierBranche(c.produit);
+    if (!parBranche[branche]) parBranche[branche] = { count: 0, primes: 0 };
+    parBranche[branche].count++;
+    parBranche[branche].primes += Number(c.prime_annuelle || 0);
+  });
+
+  const totalContrats = contratsActifs.length;
+  const totalPrimes = contratsActifs.reduce((s,c) => s + Number(c.prime_annuelle||0), 0);
+  const clientsPrives = allClients.filter(c => (c.segment || 'Privé') !== 'Entreprise').length;
+  const clientsEntreprises = allClients.filter(c => c.segment === 'Entreprise').length;
+
+  const rows = Object.entries(parBranche).filter(([b,d]) => d.count > 0).sort((a,b) => b[1].primes - a[1].primes).map(([branche, d]) => `
+    <tr>
+      <td style="font-weight:700;padding:10px 14px">${branche}</td>
+      <td style="padding:10px 14px">${d.count}</td>
+      <td style="padding:10px 14px;font-weight:800;color:var(--gold)">CHF ${d.primes.toLocaleString()}</td>
+      <td style="padding:10px 14px;color:var(--text-muted)">${totalPrimes > 0 ? Math.round(d.primes / totalPrimes * 100) : 0}%</td>
+    </tr>`).join('');
+
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">⚖️ Rapport FINMA ${annee}</h2>
+      <div style="display:flex;gap:8px">
+        <button class="btn-secondary" onclick="exporterRapportFinma('csv')">⬇ Export CSV</button>
+        <button class="btn-secondary" onclick="exporterRapportFinma('txt')">⬇ Export TXT</button>
+      </div>
+    </div>
+    <div class="stat-grid" style="margin-bottom:20px">
+      ${statCard('§3.1 — Contrats actifs', totalContrats, '#38bdf8')}
+      ${statCard('§3.2 — Primes totales', 'CHF ' + totalPrimes.toLocaleString(), '#f59e0b')}
+      ${statCard('§3.3 — Clients privés', clientsPrives, '#a78bfa')}
+      ${statCard('§3.4 — Clients entreprises', clientsEntreprises, '#4ade80')}
+    </div>
+    <div class="table-wrap">
+      <div style="padding:14px 18px;border-bottom:1px solid var(--border);font-weight:700;font-size:13px;color:var(--text)">§3.5 — Répartition par branche d'assurance</div>
+      <table class="data-table" style="width:100%">
+        <thead><tr><th>Branche</th><th>Contrats</th><th>Primes</th><th>% du total</th></tr></thead>
+        <tbody>${rows || '<tr><td colspan="4" style="text-align:center;padding:24px;color:var(--text-muted)">Aucune donnée</td></tr>'}</tbody>
+      </table>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:14px">Rapport généré automatiquement à partir des contrats actifs en base. Conforme à la taxonomie des branches FINMA pour courtier en assurance (art. 40 LSA).</div>`;
+}
+
+function exporterRapportFinma(format) {
+  const annee = new Date().getFullYear();
+  const contratsActifs = allContrats.filter(c => c.statut === 'actif');
+  const parBranche = {};
+  contratsActifs.forEach(c => {
+    const branche = classifierBranche(c.produit);
+    if (!parBranche[branche]) parBranche[branche] = { count: 0, primes: 0 };
+    parBranche[branche].count++;
+    parBranche[branche].primes += Number(c.prime_annuelle || 0);
+  });
+  let content, mime, filename;
+  if (format === 'csv') {
+    content = 'Branche;Nombre de contrats;Primes annuelles (CHF)\n' + Object.entries(parBranche).map(([b,d]) => `${b};${d.count};${d.primes}`).join('\n');
+    mime = 'text/csv'; filename = `rapport_finma_${annee}.csv`;
+  } else {
+    content = `RAPPORT FINMA ${annee}\nAssurex Sàrl\n\n` + Object.entries(parBranche).map(([b,d]) => `${b.padEnd(20)} ${String(d.count).padStart(5)} contrats   CHF ${d.primes.toLocaleString()}`).join('\n');
+    mime = 'text/plain'; filename = `rapport_finma_${annee}.txt`;
+  }
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// PARAMÈTRES
+function viewParametres() {
+  const objData = getDashboardObjectifs();
+  const anneeN = new Date().getFullYear();
+  return `
+    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">⚙️ Réglages généraux</h2>
+    ${sectionCard('Informations entreprise', '#38bdf8', `
+      <div class="form-grid">
+        <div class="form-field"><label class="form-label">Raison sociale</label><input class="form-input" value="Assurex Sàrl" readonly/></div>
+        <div class="form-field"><label class="form-label">Adresse</label><input class="form-input" value="Rue du Centre 142, 1025 St-Sulpice VD" readonly/></div>
+        <div class="form-field"><label class="form-label">QR-IBAN</label><input class="form-input" value="CH23 3080 8006 2520 9940 1" readonly/></div>
+        <div class="form-field"><label class="form-label">Capital social</label><input class="form-input" value="CHF 20'000" readonly/></div>
+      </div>
+    `)}
+    ${sectionCard('Objectif annuel ' + anneeN, '#4ade80', `
+      <div style="display:flex;gap:10px;align-items:center">
+        <input id="param-objectif" type="number" placeholder="Ex: 80000" value="${objData[anneeN] || ''}" style="flex:1;padding:9px 14px;border:1px solid var(--border);border-radius:8px;background:var(--bg);color:var(--text);font-size:13px"/>
+        <button class="btn-save" onclick="sauvegarderObjectifParam()" style="white-space:nowrap">Enregistrer</button>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:8px">Modifie le même objectif que celui affiché sur le Dashboard.</div>
+    `)}
+    ${sectionCard('Données & confidentialité', '#a78bfa', `
+      <div style="font-size:12.5px;color:var(--text-muted);line-height:1.6">
+        Données hébergées en Suisse (Supabase, région Zurich).<br>
+        Authentification via Microsoft Entra ID (tenant COFIDEX SA).<br>
+        Conformité FINMA — courtier indépendant art. 43 LSA.
+      </div>
+    `)}`;
+}
+
+function sauvegarderObjectifParam() {
+  const anneeN = new Date().getFullYear();
+  const val = parseFloat(document.getElementById('param-objectif').value);
+  if (!val || val <= 0) { showError('Montant invalide.'); return; }
+  const obj = getDashboardObjectifs();
+  obj[anneeN] = val;
+  saveDashboardObjectifs(obj);
+  showError('Objectif enregistré avec succès.');
 }
 
 // AGENTS

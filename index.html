@@ -218,7 +218,10 @@
     .info-value, .info-label, .form-label, .form-input, .stat-value, .stat-label { color: black !important; }
     h2 { color: black !important; }
     [style*="color:#38bdf8"], [style*="color: #38bdf8"] { color: #0284c7 !important; }
+    .oz-screen-only { display: none !important; }
+    .oz-print-report { display: block !important; color: black !important; }
   }
+  .oz-print-report { display: none; }
   /* RESPONSIVE */
   @media (max-width: 768px) {
     .sidebar { width: 180px; }
@@ -281,7 +284,20 @@
   <div class="sidebar">
     <div class="sidebar-logo">
       <img src="data:image/png;base64,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" alt="Assurex"/>
-      <div class="cofidex">GROUPE EX</div>
+      <div class="cofidex" style="margin-top:8px">
+        <svg viewBox="670 488 580 100" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:120px;height:auto">
+          <rect x="829.47" y="551.34" width="18.15" height="18.15" fill="#fff"/>
+          <rect x="686.18" y="538.2" width="48.56" height="10.09" fill="#fff"/>
+          <rect x="686.18" y="558.47" width="53.17" height="10.09" fill="#fff"/>
+          <rect x="686.18" y="518.73" width="53.17" height="10.01" fill="#fff"/>
+          <polygon points="829.47 496.06 827.87 506.11 827.61 507.83 825.24 522.76 818.89 517.34 801.9 535.92 787.85 535.92 794.91 543.55 817.93 568.41 803 568.41 787.47 551.6 758.21 583.94 743.55 583.94 780.04 543.54 757.11 518.73 771.94 518.73 787.72 535.76 810.6 510.28 804.33 504.93 829.47 496.06" fill="#fff"/>
+          <path d="M1152.37,518.74v32.87c0,9.37-7.59,16.96-16.96,16.96h-22.52c-9.37,0-16.96-7.59-16.96-16.96v-32.87h11.3v32.58c0,3.29,2.67,5.96,5.96,5.96h21.93c3.29,0,5.96-2.67,5.96-5.96v-32.58h11.3Z" fill="#fff"/>
+          <path d="M996.21,537.33v-6.44c0-7.31-5.4-12.16-13.19-12.16h-43.31v10.01h41.01c2.54,0,4.45,1.59,4.45,4.13v3.1c0,2.54-1.59,4.21-4.45,4.21h-41.01v28.37h11.2v-18.36h21.86l11.6,18.36h12.64l-11.36-18.52c6.68-.95,10.57-5.8,10.57-12.72" fill="#fff"/>
+          <path d="M1062.96,519.69c-1.76-.63-3.66-.97-5.66-.97h-22.53c-1.99,0-3.9.34-5.66.97-6.58,2.33-11.3,8.6-11.3,15.98v15.91c0,7.38,4.72,13.67,11.3,16,1.76.63,3.66.97,5.66.97h22.53c1.99,0,3.9-.34,5.66-.97,6.58-2.33,11.3-8.61,11.3-16v-15.91c0-7.38-4.72-13.65-11.3-15.98ZM1062.96,551.29c0,3.3-2.67,5.96-5.96,5.96h-21.92c-3.3,0-5.96-2.67-5.96-5.96v-15.32c0-3.28,2.67-5.95,5.96-5.95h21.92c3.3,0,5.96,2.67,5.96,5.95v15.32Z" fill="#fff"/>
+          <path d="M880.28,530.04h39.18v-11.3h-39.48c-1.99,0-3.9.34-5.66.97-6.58,2.33-11.3,8.6-11.3,15.98v15.91c0,7.38,4.72,13.67,11.3,16,1.76.63,3.66.97,5.66.97h22.53c1.99,0,3.9-.34,5.66-.97,6.58-2.33,11.3-8.61,11.3-16v-13.11h-22.57v11.3h11.27v1.52c0,3.3-2.67,5.96-5.96,5.96h-21.92c-3.3,0-5.96-2.67-5.96-5.96v-15.32c0-3.28,2.67-5.95,5.96-5.95Z" fill="#fff"/>
+          <path d="M1220.63,518.74h-43.32v49.83h11.21v-18.36h21.86l11.39-.14c1.22-.02,2.44-.13,3.61-.48,5.37-1.6,8.45-6.11,8.45-12.26v-6.43c0-7.31-5.41-12.16-13.19-12.16ZM1222.77,535.99c0,2.55-1.58,4.22-4.45,4.22h-29.8v-11.44h30.12c2.28,0,4.13,1.85,4.13,4.13v3.09Z" fill="#fff"/>
+        </svg>
+      </div>
     </div>
     <div id="nav"></div>
     <div class="sidebar-team">
@@ -868,7 +884,7 @@ async function tryRestoreSession() {
 const SECTIONS = [
   { id: 'dashboard-solo', label: 'Dashboard', icon: '⬛', solo: true, target: 'dashboard' },
   { id: 'pipeline-solo', label: 'Pipeline', icon: '📈', solo: true, target: 'opportunites' },
-  { id: 'oz-assure-solo', label: 'OZ Assure', solo: true, logo: true, target: 'oz-assure' },
+  { id: 'oz-assure-solo', label: 'OZ Assure', solo: true, logo: true, target: 'oz-assure', signataireOnly: true },
   { id: 'vente', label: 'Vente', icon: '◈', sub: [
     { id: 'suivi', label: 'Suivi des affaires' },
     { id: 'nouveau-contrat-direct', label: 'Nouveau contrat' },
@@ -900,6 +916,7 @@ function renderSidebar() {
   // Nav
   let nav = '';
   SECTIONS.forEach(sec => {
+    if (sec.signataireOnly && (!currentUser || currentUser.role !== 'signataire')) return;
     if (sec.solo) {
       const active = currentView === sec.target;
       if (sec.logo) {
@@ -3350,16 +3367,26 @@ const ACTION_LABELS = {
 
 // ═══ OZ ASSURE — ARCHIVE COMMISSIONS HISTORIQUES ═══
 async function viewOzAssure() {
-  const rows = await dbGet('commissions_oz', 'select=*&order=date_mouvement.asc');
-  const data = rows || [];
+  if (!currentUser || currentUser.role !== 'signataire') {
+    return `<div class="table-empty">Accès réservé.</div>`;
+  }
+  const [commRows, contratRows] = await Promise.all([
+    dbGet('commissions_oz', 'select=*&order=date_mouvement.asc'),
+    dbGet('contrats_oz', 'select=*&order=client_nom.asc'),
+  ]);
+  const data = commRows || [];
+  const contrats = contratRows || [];
 
   function chf(v) { return 'CHF ' + Math.round(v).toLocaleString('fr-CH'); }
+  function dch(v) { return v ? new Date(v).toLocaleDateString('fr-CH') : '—'; }
   const PALETTE = ['#38bdf8','#f59e0b','#a78bfa','#4ade80','#f87171','#fb923c','#22d3ee','#e879f9','#64748b'];
+  const today = new Date();
 
+  // ── Commissions ──
   const parAnnee = {};
   const parCompagnie = {};
-  const parMois = {}; // 'YYYY-MM' -> net
-  const parClient = {};
+  const parMois = {};
+  const parClientComm = {};
   let totalDebit = 0, totalCredit = 0;
 
   data.forEach(r => {
@@ -3370,7 +3397,7 @@ async function viewOzAssure() {
     parAnnee[annee] = (parAnnee[annee] || 0) + net;
     parCompagnie[r.compagnie] = (parCompagnie[r.compagnie] || 0) + net;
     parMois[mois] = (parMois[mois] || 0) + net;
-    if (r.client_nom && r.client_nom !== '-') parClient[r.client_nom] = (parClient[r.client_nom] || 0) + net;
+    if (r.client_nom && r.client_nom !== '-') parClientComm[r.client_nom] = (parClientComm[r.client_nom] || 0) + net;
     totalDebit += Number(r.debit || 0);
     totalCredit += Number(r.credit || 0);
   });
@@ -3379,11 +3406,30 @@ async function viewOzAssure() {
   const annees = Object.keys(parAnnee).sort();
   const compagnies = Object.entries(parCompagnie).sort((a,b) => b[1]-a[1]);
   const mois = Object.keys(parMois).sort();
-  const topClients = Object.entries(parClient).sort((a,b) => b[1]-a[1]).slice(0, 8);
-  const nbClients = Object.keys(parClient).length;
+  const nbClientsComm = Object.keys(parClientComm).length;
   const moyenneMensuelle = mois.length ? totalNet / mois.length : 0;
 
-  // ── Donut SVG : répartition par compagnie ──
+  // ── Contrats / Volume de primes ──
+  const contratsActifs = contrats.filter(c => !c.date_fin || new Date(c.date_fin) >= today);
+  const volumeTotal = contrats.reduce((s,c) => s + Number(c.prime_annuelle||0), 0);
+  const volumeActif = contratsActifs.reduce((s,c) => s + Number(c.prime_annuelle||0), 0);
+  const sansPrimeAnnuelle = contrats.filter(c => Number(c.prime_annuelle||0) === 0 && Number(c.prime||0) > 0).length;
+
+  // ── Données clients (agrégées depuis contrats_oz) ──
+  const clientsMap = {};
+  contrats.forEach(c => {
+    const key = c.client_nom || '—';
+    if (!clientsMap[key]) clientsMap[key] = {
+      nom: key, titre: c.titre_client, npa: c.npa, naissance: c.date_naissance,
+      tel: c.tel_mobile || c.tel_perso, nbContrats: 0, primeAnnuelle: 0,
+    };
+    clientsMap[key].nbContrats++;
+    clientsMap[key].primeAnnuelle += Number(c.prime_annuelle||0);
+  });
+  const clientsList = Object.values(clientsMap).sort((a,b) => b.primeAnnuelle - a.primeAnnuelle);
+  const topClientsComm = Object.entries(parClientComm).sort((a,b) => b[1]-a[1]).slice(0, 8);
+
+  // ── Donut SVG : répartition par compagnie (commissions) ──
   const totalCompagnies = compagnies.reduce((s,[,v]) => s+v, 0) || 1;
   let cumul = 0;
   const R = 70, C = 2 * Math.PI * R;
@@ -3409,7 +3455,13 @@ async function viewOzAssure() {
     </div>`;
   }).join('');
 
+  const dateRapport = today.toLocaleDateString('fr-CH', { day:'2-digit', month:'long', year:'numeric' });
+
   return `
+    <div class="oz-screen-only">
+    <div style="display:flex;justify-content:flex-end;margin-bottom:-10px">
+      <button onclick="window.print()" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:9px 18px;font-weight:700;font-size:12.5px;cursor:pointer;color:var(--text-muted);display:flex;align-items:center;gap:6px">🖨️ Imprimer / Export PDF</button>
+    </div>
     <div style="display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:8px;padding:28px 0 18px;background:radial-gradient(ellipse at 50% 0%, rgba(56,189,248,0.08) 0%, transparent 70%)">
       <div style="background:var(--navy);border-radius:18px;padding:18px 36px;box-shadow:0 8px 30px rgba(0,0,0,0.35)">
         ${OZASSURE_LOGO_PRIMARY_SVG.replace('class="oz-logo-primary-svg"', 'class="oz-logo-primary-svg" style="height:80px;width:auto;display:block"')}
@@ -3421,12 +3473,19 @@ async function viewOzAssure() {
       ⚠ Depuis le <strong>01.06.2026</strong>, le portefeuille OZ Assure est considéré comme <strong>virtuellement transféré à Assurex Sàrl</strong> — les mandats principaux seront resignés progressivement sous Assurex. Cette page reste une <strong>archive historique</strong>.
     </div>
 
+    <div class="stat-grid" style="margin-bottom:14px">
+      ${statCard('Volume de primes (actif)', chf(volumeActif), '#4ade80')}
+      ${statCard('Volume de primes (total)', chf(volumeTotal), '#64748b')}
+      ${statCard('Commissions perçues', chf(totalNet), '#f59e0b')}
+      ${statCard('Contrats', contrats.length, '#38bdf8')}
+    </div>
     <div class="stat-grid" style="margin-bottom:20px">
-      ${statCard('Total net perçu', chf(totalNet), '#f59e0b')}
+      ${statCard('Clients (contrats)', clientsList.length, '#a78bfa')}
+      ${statCard('Clients (commissions)', nbClientsComm, '#a78bfa')}
       ${statCard('Moyenne mensuelle', chf(moyenneMensuelle), '#38bdf8')}
       ${statCard('Mouvements', data.length, '#e2e8f0')}
-      ${statCard('Clients distincts', nbClients, '#4ade80')}
     </div>
+    ${sansPrimeAnnuelle > 0 ? `<div style="font-size:11px;color:var(--text-muted);margin:-8px 0 20px">ℹ️ ${sansPrimeAnnuelle} contrat(s) (principalement LAMal) sans prime annuelle renseignée dans la source — non comptabilisés dans le volume de primes.</div>` : ''}
 
     <div style="display:grid;grid-template-columns:repeat(${Math.min(annees.length,4) || 1},1fr);gap:12px;margin-bottom:24px">
       ${annees.map(a => `
@@ -3443,7 +3502,7 @@ async function viewOzAssure() {
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px">
-        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:16px">Répartition par compagnie</div>
+        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:16px">Répartition par compagnie (commissions)</div>
         <div style="display:flex;align-items:center;gap:20px">
           <svg width="180" height="180" viewBox="0 0 180 180">${donutSegments}
             <text x="90" y="86" text-anchor="middle" font-size="18" font-weight="900" fill="#fff">${compagnies.length}</text>
@@ -3462,15 +3521,96 @@ async function viewOzAssure() {
 
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px">
         <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:16px">Top clients (commissions cumulées)</div>
-        ${topClients.map(([client, val], i) => `
+        ${topClientsComm.map(([client, val], i) => `
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
             <div style="width:20px;height:20px;border-radius:50%;background:var(--accent-dim);color:var(--accent);font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
             <div style="flex:1;font-size:12.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${client}</div>
             <div style="font-size:12.5px;font-weight:800;color:#f59e0b;flex-shrink:0">${chf(val)}</div>
           </div>`).join('') || '<div class="table-empty">Aucune donnée.</div>'}
       </div>
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:800;color:var(--text)">Données clients (${clientsList.length})</div>
+        <div style="font-size:11px;color:var(--text-muted)">Triés par volume de prime annuelle</div>
+      </div>
+      <div style="max-height:480px;overflow-y:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <thead><tr style="color:var(--text-muted);font-size:10.5px;text-transform:uppercase;position:sticky;top:0;background:var(--surface)">
+          <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">Client</th>
+          <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">NPA</th>
+          <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">Né(e) le</th>
+          <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">Téléphone</th>
+          <th style="padding:8px 10px;text-align:center;border-bottom:1px solid var(--border)">Contrats</th>
+          <th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border)">Prime/an</th>
+        </tr></thead>
+        <tbody>${clientsList.map(c => `
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:8px 10px;font-weight:700;color:var(--text)">${c.titre ? c.titre + ' ' : ''}${c.nom}</td>
+            <td style="padding:8px 10px;color:var(--text-muted)">${c.npa || '—'}</td>
+            <td style="padding:8px 10px;color:var(--text-muted)">${dch(c.naissance)}</td>
+            <td style="padding:8px 10px;color:var(--text-muted)">${c.tel || '—'}</td>
+            <td style="padding:8px 10px;text-align:center;color:var(--text-muted)">${c.nbContrats}</td>
+            <td style="padding:8px 10px;text-align:right;font-weight:800;color:#f59e0b">${c.primeAnnuelle ? chf(c.primeAnnuelle) : '—'}</td>
+          </tr>`).join('')}
+        </tbody>
+      </table>
+      </div>
+    </div>
+    </div>
+
+    <!-- ═══ RÉSUMÉ IMPRIMABLE / PDF ═══ -->
+    <div class="oz-print-report">
+      <div style="text-align:center;margin-bottom:24px">
+        <div style="font-size:20px;font-weight:900;color:black">OZ ASSURE — Résumé d'exploitation</div>
+        <div style="font-size:12px;color:#555;margin-top:4px">Entreprise individuelle de Jonathan Özkan · Rapport généré le ${dateRapport}</div>
+        <div style="font-size:11px;color:#888;margin-top:2px">Portefeuille virtuellement transféré à Assurex Sàrl depuis le 01.06.2026</div>
+      </div>
+
+      <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
+        <tr>
+          <td style="border:1px solid #ccc;padding:10px;width:25%"><div style="font-size:9px;color:#666;text-transform:uppercase">Volume primes actif</div><div style="font-size:16px;font-weight:800">${chf(volumeActif)}</div></td>
+          <td style="border:1px solid #ccc;padding:10px;width:25%"><div style="font-size:9px;color:#666;text-transform:uppercase">Volume primes total</div><div style="font-size:16px;font-weight:800">${chf(volumeTotal)}</div></td>
+          <td style="border:1px solid #ccc;padding:10px;width:25%"><div style="font-size:9px;color:#666;text-transform:uppercase">Commissions perçues</div><div style="font-size:16px;font-weight:800">${chf(totalNet)}</div></td>
+          <td style="border:1px solid #ccc;padding:10px;width:25%"><div style="font-size:9px;color:#666;text-transform:uppercase">Contrats / Clients</div><div style="font-size:16px;font-weight:800">${contrats.length} / ${clientsList.length}</div></td>
+        </tr>
+      </table>
+
+      <div style="font-size:13px;font-weight:800;margin-bottom:8px">Commissions par année</div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+        <thead><tr style="background:#f0f0f0"><th style="border:1px solid #ccc;padding:6px 10px;text-align:left;font-size:11px">Année</th><th style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-size:11px">Total net</th></tr></thead>
+        <tbody>${annees.map(a => `<tr><td style="border:1px solid #ccc;padding:6px 10px">${a}</td><td style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-weight:700">${chf(parAnnee[a])}</td></tr>`).join('')}</tbody>
+      </table>
+
+      <div style="font-size:13px;font-weight:800;margin-bottom:8px">Répartition par compagnie</div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+        <thead><tr style="background:#f0f0f0"><th style="border:1px solid #ccc;padding:6px 10px;text-align:left;font-size:11px">Compagnie</th><th style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-size:11px">Commissions</th><th style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-size:11px">Part</th></tr></thead>
+        <tbody>${compagnies.map(([comp,val]) => `<tr><td style="border:1px solid #ccc;padding:6px 10px">${comp}</td><td style="border:1px solid #ccc;padding:6px 10px;text-align:right">${chf(val)}</td><td style="border:1px solid #ccc;padding:6px 10px;text-align:right">${Math.round(val/totalCompagnies*100)}%</td></tr>`).join('')}</tbody>
+      </table>
+
+      <div style="font-size:13px;font-weight:800;margin-bottom:8px">Données clients complètes (${clientsList.length})</div>
+      <table style="width:100%;border-collapse:collapse;font-size:10.5px">
+        <thead><tr style="background:#f0f0f0">
+          <th style="border:1px solid #ccc;padding:5px 8px;text-align:left">Client</th>
+          <th style="border:1px solid #ccc;padding:5px 8px;text-align:left">NPA</th>
+          <th style="border:1px solid #ccc;padding:5px 8px;text-align:left">Né(e) le</th>
+          <th style="border:1px solid #ccc;padding:5px 8px;text-align:left">Téléphone</th>
+          <th style="border:1px solid #ccc;padding:5px 8px;text-align:center">Contrats</th>
+          <th style="border:1px solid #ccc;padding:5px 8px;text-align:right">Prime/an</th>
+        </tr></thead>
+        <tbody>${clientsList.map(c => `<tr>
+          <td style="border:1px solid #ccc;padding:5px 8px">${c.titre ? c.titre + ' ' : ''}${c.nom}</td>
+          <td style="border:1px solid #ccc;padding:5px 8px">${c.npa || '—'}</td>
+          <td style="border:1px solid #ccc;padding:5px 8px">${dch(c.naissance)}</td>
+          <td style="border:1px solid #ccc;padding:5px 8px">${c.tel || '—'}</td>
+          <td style="border:1px solid #ccc;padding:5px 8px;text-align:center">${c.nbContrats}</td>
+          <td style="border:1px solid #ccc;padding:5px 8px;text-align:right;font-weight:700">${c.primeAnnuelle ? chf(c.primeAnnuelle) : '—'}</td>
+        </tr>`).join('')}</tbody>
+      </table>
     </div>`;
 }
+
 
 async function viewAuditLog() {
   if (!currentUser || currentUser.role !== 'signataire') {

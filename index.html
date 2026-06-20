@@ -434,6 +434,7 @@ let contratClientId = null;
 let allContrats = [];
 let allOpportunites = [];
 let prefillOpportunite = null;
+let ozAnnualSummary = null;
 let allCommissionsAttente = [];
 let currentClientId = null;
 
@@ -566,6 +567,30 @@ const OZASSURE_LOGO_PRIMARY_SVG = `<svg class="oz-logo-primary-svg" xmlns="http:
     <path class="st0" d="M960.5,417.71c0,9.09-1.28,17.92-3.64,26.24l-95.05-95.05.74-.74c17.52-1.12,33.95-2.61,51.47-5.21l9.01-1.17c22.79,17.47,37.46,44.99,37.46,75.93Z"/>
   </g>
 </svg>`;
+const OZASSURE_LOGO_TERTIARY_SVG = `<svg class="oz-logo-tertiary-svg" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 1920 1080">
+  <defs>
+    <style>
+      .st0 {
+        fill: #fff;
+        stroke: #fff;
+        stroke-miterlimit: 10;
+      }
+    </style>
+  </defs>
+  <g>
+    <path class="st0" d="M1088.65,823.72c-55.56,0-105.16-12.8-148.8-38.42-43.66-25.61-78.11-60.59-103.36-104.97s-37.88-95.06-37.88-152.06,12.62-107.66,37.88-152.03,59.7-79.36,103.36-104.98c43.64-25.61,93.23-38.42,148.8-38.42s104.06,12.81,147.72,38.42c43.66,25.62,78.11,60.61,103.36,104.98s37.88,95.05,37.88,152.03-12.62,107.69-37.88,152.06-59.7,79.36-103.36,104.97c-43.66,25.62-92.89,38.42-147.72,38.42ZM1088.65,721.99c33.91,0,64.22-8.47,90.91-25.42s47.61-40.05,62.77-69.27,22.38-62.22,21.66-99.03c.72-37.5-6.5-70.88-21.66-100.09s-36.08-52.12-62.77-68.72-57-24.89-90.91-24.89-64.39,8.48-91.44,25.44c-27.06,16.95-48.16,40.03-63.31,69.25s-22.36,62.23-21.64,99.02c-.72,36.81,6.48,69.81,21.64,99.03s36.25,52.31,63.31,69.27c27.05,16.95,57.53,25.42,91.44,25.42Z"/>
+    <path class="st0" d="M1464.17,812.89v-93.06l293.28-391.77v12.98h-293.28v-96.31h414.48v90.91l-288.95,386.34-4.33-5.41h299.78v96.31h-420.98Z"/>
+  </g>
+  <g>
+    <path class="st0" d="M334.78,393.09c0,49.66-24.16,93.69-61.36,121.02l-143.1,18.75c-55.86-21.83-95.48-76.15-95.48-139.76,0-82.82,67.15-149.97,149.97-149.97,82.82,0,149.97,67.15,149.97,149.97Z"/>
+    <path class="st0" d="M481.17,489.45l-1.17,1.17c-28.08,2.33-53.2,4.08-80.69,7l-19.58,2.58c-27.74-27.24-44.95-65.15-44.95-107.1,0-15.16,2.25-29.79,6.46-43.57l139.93,139.93Z"/>
+    <path class="st0" d="M634.72,393.09c0,45.74-20.45,86.65-52.74,114.18l-211.37-211.42c27.49-32.29,68.4-52.74,114.14-52.74,82.82,0,149.97,67.15,149.97,149.97Z"/>
+    <path class="st0" d="M634.72,697.2c0,82.82-67.15,149.97-149.97,149.97-82.82,0-149.97-67.15-149.97-149.97,0-62.74,38.58-116.52,93.27-138.85l75.73-9.91h.04c73.82,9.37,130.89,72.4,130.89,148.76Z"/>
+    <path class="st0" d="M300.95,792.05c-27.49,33.62-69.32,55.11-116.14,55.11-82.82,0-149.97-67.15-149.97-149.97,0-46.82,21.5-88.65,55.11-116.14l211,211Z"/>
+    <path class="st0" d="M334.78,697.2c0,14.25-2,28.08-5.71,41.12l-148.93-148.93,1.17-1.17c27.45-1.75,53.2-4.08,80.65-8.16l14.12-1.83c35.7,27.37,58.7,70.49,58.7,118.98Z"/>
+  </g>
+</svg>`;
+
 
 const USER_ROLES = {
   'jo@cofidex.ch': { prenom: 'Jonathan', nom: 'Özkan', role: 'signataire', taux: 100 },
@@ -855,6 +880,20 @@ async function enterApp(user) {
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
   allContrats = await dbGet('contrats', 'select=*');
   allOpportunites = await dbGet('opportunites', 'select=*');
+
+  if (user.role === 'signataire') {
+    try {
+      const ozRows = await dbGet('commissions_oz', 'select=date_mouvement,debit,credit');
+      const parAnnee = {};
+      (ozRows || []).forEach(r => {
+        const annee = (r.date_mouvement || '').slice(0, 4);
+        if (!annee) return;
+        parAnnee[annee] = (parAnnee[annee] || 0) + (Number(r.credit||0) - Number(r.debit||0));
+      });
+      ozAnnualSummary = parAnnee;
+    } catch(e) { ozAnnualSummary = null; }
+  }
+
   renderSidebar();
   navigate('dashboard');
 }
@@ -905,6 +944,7 @@ const SECTIONS = [
     { id: 'bordereaux', label: 'Bordereaux' },
     { id: 'commissions', label: 'Commissions' },
     { id: 'commissions-attente', label: 'Commissions en attente' },
+    { id: 'rapport-finma', label: 'Rapport FINMA' },
   ]},
   { id: 'settings', label: 'Paramètres', icon: '⊙', sub: [
     { id: 'agents', label: 'Agents' },
@@ -1038,6 +1078,7 @@ async function renderView() {
     case 'nouveau-contrat': main.innerHTML = viewNouveauContrat(); initSegmentContrat(); break;
     case 'nouveau-contrat-direct': contratClientId = null; main.innerHTML = viewNouveauContrat(); initSegmentContrat(); break;
     case 'commissions-attente': main.innerHTML = viewCommissionsAttente(); break;
+    case 'rapport-finma': main.innerHTML = viewRapportFinma(); break;
     case 'opportunites': main.innerHTML = viewOpportunites(); break;
     case 'suivi': main.innerHTML = viewSuivi(); break;
     case 'rappels': main.innerHTML = viewRappels(); break;
@@ -1091,6 +1132,23 @@ function viewDashboard() {
       ${statCard('Rappels urgents', urgents.length, urgents.length > 0 ? '#f87171' : '#64748b')}
       ${statCard('Agents', allAgents.length, '#a78bfa')}
     </div>
+
+    ${(currentUser.role === 'signataire' && ozAnnualSummary) ? `
+    <div style="background:var(--navy);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:18px 22px;margin-bottom:20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap">
+      <div style="background:rgba(255,255,255,0.06);border-radius:10px;padding:8px 12px;display:flex;align-items:center">
+        ${OZASSURE_LOGO_TERTIARY_SVG.replace('class="oz-logo-tertiary-svg"', 'class="oz-logo-tertiary-svg" style="height:22px;width:22px;display:block"')}
+      </div>
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-right:6px">CA OZ Assure (archive)</div>
+      <div style="display:flex;gap:22px;flex:1;flex-wrap:wrap">
+        ${['2024','2025','2026'].map(a => `
+          <div>
+            <div style="font-size:10px;color:var(--text-muted)">${a}</div>
+            <div style="font-size:15px;font-weight:800;color:#f59e0b">CHF ${Math.round(ozAnnualSummary[a]||0).toLocaleString('fr-CH')}</div>
+          </div>`).join('')}
+      </div>
+      <button onclick="navigate('oz-assure')" style="background:none;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:6px 14px;color:var(--text-muted);font-size:11px;font-weight:700;cursor:pointer">Voir le détail →</button>
+    </div>` : ''}
+
     <!-- Graphiques commissions -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
@@ -1148,6 +1206,132 @@ const PRODUITS_VIE_KEYWORDS = [
   'prevoyance_enfant'
 ];
 
+// ═══ TAXONOMIE FINMA — Classification des contrats par branche d'assurance ═══
+// Mapping mots-clés produit → branche FINMA (registre des intermédiaires, art. 183 OS)
+const BRANCHES_FINMA = [
+  { code: 'A1', label: 'Vie individuelle (LCA)', keywords: ['vie privé','vie individuelle','assurance vie'] },
+  { code: 'A2', label: 'Prévoyance liée (3a)', keywords: ['3a','pilier 3a'] },
+  { code: 'A3', label: 'Libre passage / LPP', keywords: ['lpp','libre passage','2e pilier'] },
+  { code: 'B1', label: 'Maladie de base (LAMal)', keywords: ['lamal','maladie de base','assurance maladie (lamal)'] },
+  { code: 'B2', label: 'Maladie complémentaire (LCA)', keywords: ['complémentaire','maladie (complémentaire)'] },
+  { code: 'B3', label: 'Perte de gain maladie', keywords: ['perte de gain (maladie','perte de gain maladie'] },
+  { code: 'C1', label: 'Accidents (LAA / LAA-C)', keywords: ['laa','accident'] },
+  { code: 'C2', label: 'Indemnités journalières (IJM)', keywords: ['ijm','indemnité journalière'] },
+  { code: 'D1', label: 'RC privée / Ménage', keywords: ['responsabilité civile (ménage','rc privée','rc ménage'] },
+  { code: 'D2', label: 'RC entreprise / professionnelle', keywords: ['responsabilité civile (entreprise','rc professionnelle','rc d&o','rc dirigeants'] },
+  { code: 'E1', label: 'Véhicule à moteur', keywords: ['véhicule à moteur','casco','rc véhicule'] },
+  { code: 'E2', label: 'Bâtiment / Choses', keywords: ['bâtiment','choses','inventaire ménage'] },
+  { code: 'F1', label: 'Protection juridique', keywords: ['protection juridique'] },
+  { code: 'F2', label: 'Voyage / Assistance', keywords: ['voyage','assistance'] },
+  { code: 'G1', label: 'Garantie de loyer / Caution', keywords: ['garantie de loyer','caution'] },
+  { code: 'H1', label: 'Animaux', keywords: ['animalière','animaux'] },
+  { code: 'Z9', label: 'Autre / Non classé', keywords: [] },
+];
+
+function classifierBrancheFinma(produit) {
+  const p = (produit || '').toLowerCase();
+  for (const b of BRANCHES_FINMA) {
+    if (b.keywords.some(kw => p.includes(kw))) return b;
+  }
+  return BRANCHES_FINMA[BRANCHES_FINMA.length - 1];
+}
+
+function downloadBlob(content, filename, mime) {
+  const blob = new Blob([content], { type: mime });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  URL.revokeObjectURL(url);
+}
+
+function viewRapportFinma() {
+  const actifs = allContrats.filter(ct => ct.statut === 'actif');
+  const parBranche = {};
+  BRANCHES_FINMA.forEach(b => parBranche[b.code] = { label: b.label, nb: 0, prime: 0 });
+  actifs.forEach(ct => {
+    const b = classifierBrancheFinma(ct.produit);
+    parBranche[b.code].nb++;
+    parBranche[b.code].prime += Number(ct.prime_annuelle || 0);
+  });
+  const lignes = Object.entries(parBranche).filter(([,v]) => v.nb > 0).sort((a,b) => b[1].prime - a[1].prime);
+  const totalPrime = lignes.reduce((s,[,v]) => s + v.prime, 0);
+  const totalNb = lignes.reduce((s,[,v]) => s + v.nb, 0);
+  const dateRapport = new Date().toLocaleDateString('fr-CH', { day:'2-digit', month:'long', year:'numeric' });
+
+  window._finmaLignes = lignes;
+  window._finmaTotalPrime = totalPrime;
+  window._finmaTotalNb = totalNb;
+  window._finmaDate = dateRapport;
+
+  function chf(v) { return 'CHF ' + Math.round(v).toLocaleString('fr-CH'); }
+
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Rapport FINMA</h2>
+      <div style="display:flex;gap:8px">
+        <button onclick="exportFinmaCsv()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer">⬇ Export CSV</button>
+        <button onclick="exportFinmaTxt()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer">⬇ Export TXT</button>
+        <button onclick="window.print()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🖨️ Imprimer</button>
+      </div>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">Classification automatique des contrats actifs par branche d'assurance (registre des intermédiaires) — généré le ${dateRapport}</div>
+
+    <div class="stat-grid" style="margin-bottom:24px">
+      ${statCard('Contrats classés', totalNb, '#38bdf8')}
+      ${statCard('Primes annuelles totales', chf(totalPrime), '#f59e0b')}
+      ${statCard('Branches représentées', lignes.length, '#4ade80')}
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px">
+      <table style="width:100%;border-collapse:collapse;font-size:13px">
+        <thead><tr style="color:var(--text-muted);font-size:10.5px;text-transform:uppercase">
+          <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">Code</th>
+          <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">Branche FINMA</th>
+          <th style="padding:8px 10px;text-align:center;border-bottom:1px solid var(--border)">Contrats</th>
+          <th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border)">Prime annuelle</th>
+          <th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border)">Part</th>
+        </tr></thead>
+        <tbody>${lignes.map(([code, v]) => `
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:9px 10px;font-weight:800;color:var(--accent)">${code}</td>
+            <td style="padding:9px 10px;color:var(--text)">${v.label}</td>
+            <td style="padding:9px 10px;text-align:center;color:var(--text-muted)">${v.nb}</td>
+            <td style="padding:9px 10px;text-align:right;font-weight:700;color:#f59e0b">${chf(v.prime)}</td>
+            <td style="padding:9px 10px;text-align:right;color:var(--text-muted)">${totalPrime > 0 ? Math.round(v.prime/totalPrime*100) : 0}%</td>
+          </tr>`).join('') || '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted)">Aucun contrat actif classé.</td></tr>'}
+        </tbody>
+      </table>
+    </div>
+    <div style="font-size:11px;color:var(--text-muted);margin-top:14px">⚠ Classification automatique basée sur le libellé produit — à vérifier avant transmission officielle à la FINMA.</div>`;
+}
+
+function exportFinmaCsv() {
+  const lignes = window._finmaLignes || [];
+  let csv = 'Code;Branche FINMA;Nombre de contrats;Prime annuelle (CHF);Part (%)\n';
+  const total = window._finmaTotalPrime || 1;
+  lignes.forEach(([code, v]) => {
+    csv += `${code};${v.label};${v.nb};${v.prime.toFixed(2)};${Math.round(v.prime/total*100)}\n`;
+  });
+  csv += `;TOTAL;${window._finmaTotalNb};${total.toFixed(2)};100\n`;
+  downloadBlob(csv, `rapport_finma_${new Date().toISOString().slice(0,10)}.csv`, 'text/csv;charset=utf-8');
+}
+
+function exportFinmaTxt() {
+  const lignes = window._finmaLignes || [];
+  const total = window._finmaTotalPrime || 0;
+  let txt = `RAPPORT FINMA — Assurex Sàrl\n`;
+  txt += `Généré le ${window._finmaDate}\n`;
+  txt += `${'='.repeat(60)}\n\n`;
+  lignes.forEach(([code, v]) => {
+    txt += `${code}  ${v.label}\n`;
+    txt += `     Contrats: ${v.nb}   Prime annuelle: CHF ${v.prime.toFixed(2)}   Part: ${total > 0 ? Math.round(v.prime/total*100) : 0}%\n\n`;
+  });
+  txt += `${'-'.repeat(60)}\n`;
+  txt += `TOTAL — Contrats: ${window._finmaTotalNb}   Prime annuelle: CHF ${total.toFixed(2)}\n`;
+  downloadBlob(txt, `rapport_finma_${new Date().toISOString().slice(0,10)}.txt`, 'text/plain;charset=utf-8');
+}
+
 function classifierContrat(ct, clientsMap) {
   const produit = (ct.produit || '').toLowerCase();
   const isVie = PRODUITS_VIE_KEYWORDS.some(kw => produit.includes(kw));
@@ -1172,19 +1356,40 @@ async function viewVolumePrimes() {
   const parCategorie = {};
   // Détail par produit (top 10)
   const parProduit = {};
+  // Détail par catégorie, à l'intérieur de chaque segment (pour sous-détail des 4 carrés)
+  const parCategorieVie = {}, parCategorieNonVie = {}, parCategoriePrive = {}, parCategorieEntreprise = {};
 
   (contrats || []).forEach(ct => {
     const prime = Number(ct.prime_annuelle || 0);
     if (!prime) return;
     const { isVie, isEntreprise } = classifierContrat(ct, clientsMap);
-    if (isVie) totalVie += prime; else totalNonVie += prime;
-    if (isEntreprise) totalEntreprise += prime; else totalPrive += prime;
-
-    // Catégorie = première partie du produit avant "/" ou "("
     const catLabel = (ct.produit || 'Autre').split(/[/(]/)[0].trim();
+
+    if (isVie) { totalVie += prime; parCategorieVie[catLabel] = (parCategorieVie[catLabel]||0) + prime; }
+    else { totalNonVie += prime; parCategorieNonVie[catLabel] = (parCategorieNonVie[catLabel]||0) + prime; }
+    if (isEntreprise) { totalEntreprise += prime; parCategorieEntreprise[catLabel] = (parCategorieEntreprise[catLabel]||0) + prime; }
+    else { totalPrive += prime; parCategoriePrive[catLabel] = (parCategoriePrive[catLabel]||0) + prime; }
+
     parCategorie[catLabel] = (parCategorie[catLabel] || 0) + prime;
     parProduit[ct.produit || 'Autre'] = (parProduit[ct.produit || 'Autre'] || 0) + prime;
   });
+
+  function topDetail(obj, segTotal, max) {
+    return Object.entries(obj).sort((a,b) => b[1]-a[1]).slice(0, max || 5).map(([label, val]) => ({
+      label, val, pct: segTotal > 0 ? Math.round(val/segTotal*100) : 0,
+    }));
+  }
+  function detailHtml(obj, segTotal, color) {
+    const items = topDetail(obj, segTotal);
+    if (!items.length) return '';
+    return `<div style="margin-top:12px;border-top:1px solid rgba(255,255,255,0.08);padding-top:10px">
+      ${items.map(it => `
+        <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-bottom:5px">
+          <div style="color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%">${it.label}</div>
+          <div style="color:${color};font-weight:700;white-space:nowrap">${Math.round(it.val).toLocaleString('fr-CH')} CHF · ${it.pct}%</div>
+        </div>`).join('')}
+    </div>`;
+  }
 
   const total = totalVie + totalNonVie;
 
@@ -1230,7 +1435,7 @@ async function viewVolumePrimes() {
         <div style="height:8px;border-radius:4px;background:var(--border);margin-top:12px;overflow:hidden">
           <div style="height:100%;width:${pct(totalVie)}%;background:#a78bfa;border-radius:4px"></div>
         </div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:8px">Vie, 3a, LPP, LAA, IJM, Prévoyance, Perte de gain, Santé collective</div>
+        ${detailHtml(parCategorieVie, totalVie, '#a78bfa')}
       </div>
       <div style="background:var(--surface);border:2px solid rgba(56,189,248,0.3);border-radius:14px;padding:20px">
         <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🛡️ NON-VIE (IARD)</div>
@@ -1239,7 +1444,7 @@ async function viewVolumePrimes() {
         <div style="height:8px;border-radius:4px;background:var(--border);margin-top:12px;overflow:hidden">
           <div style="height:100%;width:${pct(totalNonVie)}%;background:var(--accent);border-radius:4px"></div>
         </div>
-        <div style="font-size:11px;color:var(--text-muted);margin-top:8px">RC, Ménage, Véhicule, Bâtiment, PJ, Cyber, Choses</div>
+        ${detailHtml(parCategorieNonVie, totalNonVie, 'var(--accent)')}
       </div>
     </div>
 
@@ -1252,6 +1457,7 @@ async function viewVolumePrimes() {
         <div style="height:8px;border-radius:4px;background:var(--border);margin-top:12px;overflow:hidden">
           <div style="height:100%;width:${pct(totalPrive)}%;background:#4ade80;border-radius:4px"></div>
         </div>
+        ${detailHtml(parCategoriePrive, totalPrive, '#4ade80')}
       </div>
       <div style="background:var(--surface);border:2px solid rgba(245,158,11,0.3);border-radius:14px;padding:20px">
         <div style="font-size:11px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🏢 Entreprises</div>
@@ -1260,6 +1466,7 @@ async function viewVolumePrimes() {
         <div style="height:8px;border-radius:4px;background:var(--border);margin-top:12px;overflow:hidden">
           <div style="height:100%;width:${pct(totalEntreprise)}%;background:#f59e0b;border-radius:4px"></div>
         </div>
+        ${detailHtml(parCategorieEntreprise, totalEntreprise, '#f59e0b')}
       </div>
     </div>
 
@@ -3387,6 +3594,8 @@ async function viewOzAssure() {
   const parCompagnie = {};
   const parMois = {};
   const parClientComm = {};
+  const parProduitComm = {};
+  let totalVieComm = 0, totalNonVieComm = 0;
   let totalDebit = 0, totalCredit = 0;
 
   data.forEach(r => {
@@ -3398,6 +3607,10 @@ async function viewOzAssure() {
     parCompagnie[r.compagnie] = (parCompagnie[r.compagnie] || 0) + net;
     parMois[mois] = (parMois[mois] || 0) + net;
     if (r.client_nom && r.client_nom !== '-') parClientComm[r.client_nom] = (parClientComm[r.client_nom] || 0) + net;
+    const catLabel = (r.produit || 'Autre').split(/[/(]/)[0].trim();
+    parProduitComm[catLabel] = (parProduitComm[catLabel] || 0) + net;
+    const isVie = PRODUITS_VIE_KEYWORDS.some(kw => (r.produit||'').toLowerCase().includes(kw));
+    if (isVie) totalVieComm += net; else totalNonVieComm += net;
     totalDebit += Number(r.debit || 0);
     totalCredit += Number(r.credit || 0);
   });
@@ -3405,6 +3618,7 @@ async function viewOzAssure() {
   const totalNet = totalCredit - totalDebit;
   const annees = Object.keys(parAnnee).sort();
   const compagnies = Object.entries(parCompagnie).sort((a,b) => b[1]-a[1]);
+  const produitsComm = Object.entries(parProduitComm).sort((a,b) => b[1]-a[1]);
   const mois = Object.keys(parMois).sort();
   const nbClientsComm = Object.keys(parClientComm).length;
   const moyenneMensuelle = mois.length ? totalNet / mois.length : 0;
@@ -3414,6 +3628,34 @@ async function viewOzAssure() {
   const volumeTotal = contrats.reduce((s,c) => s + Number(c.prime_annuelle||0), 0);
   const volumeActif = contratsActifs.reduce((s,c) => s + Number(c.prime_annuelle||0), 0);
   const sansPrimeAnnuelle = contrats.filter(c => Number(c.prime_annuelle||0) === 0 && Number(c.prime||0) > 0).length;
+
+  // ── Segmentation du volume de primes par type de produit (actifs uniquement) ──
+  const parProduitPrime = {};
+  const parProduitPrimeVie = {}, parProduitPrimeNonVie = {};
+  let volumeVie = 0, volumeNonVie = 0;
+  contratsActifs.forEach(c => {
+    const prime = Number(c.prime_annuelle||0);
+    if (!prime) return;
+    const catLabel = (c.produit || 'Autre').split(/[/(]/)[0].trim();
+    parProduitPrime[catLabel] = (parProduitPrime[catLabel] || 0) + prime;
+    const isVie = PRODUITS_VIE_KEYWORDS.some(kw => (c.produit||'').toLowerCase().includes(kw));
+    if (isVie) { volumeVie += prime; parProduitPrimeVie[catLabel] = (parProduitPrimeVie[catLabel]||0) + prime; }
+    else { volumeNonVie += prime; parProduitPrimeNonVie[catLabel] = (parProduitPrimeNonVie[catLabel]||0) + prime; }
+  });
+  const produitsPrime = Object.entries(parProduitPrime).sort((a,b) => b[1]-a[1]);
+  const maxProduitPrime = produitsPrime.length ? produitsPrime[0][1] : 1;
+
+  function ozDetailHtml(obj, segTotal, color) {
+    const items = Object.entries(obj).sort((a,b) => b[1]-a[1]).slice(0, 5);
+    if (!items.length) return '';
+    return `<div style="margin-top:12px;border-top:1px solid rgba(255,255,255,0.08);padding-top:10px">
+      ${items.map(([label, val]) => `
+        <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-bottom:5px">
+          <div style="color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%">${label}</div>
+          <div style="color:${color};font-weight:700;white-space:nowrap">${Math.round(val).toLocaleString('fr-CH')} CHF · ${segTotal>0?Math.round(val/segTotal*100):0}%</div>
+        </div>`).join('')}
+    </div>`;
+  }
 
   // ── Données clients (agrégées depuis contrats_oz) ──
   const clientsMap = {};
@@ -3486,6 +3728,55 @@ async function viewOzAssure() {
       ${statCard('Mouvements', data.length, '#e2e8f0')}
     </div>
     ${sansPrimeAnnuelle > 0 ? `<div style="font-size:11px;color:var(--text-muted);margin:-8px 0 20px">ℹ️ ${sansPrimeAnnuelle} contrat(s) (principalement LAMal) sans prime annuelle renseignée dans la source — non comptabilisés dans le volume de primes.</div>` : ''}
+
+    <!-- VIE vs NON-VIE — volume de primes (actif) -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
+      <div style="background:var(--surface);border:2px solid rgba(167,139,250,0.3);border-radius:14px;padding:18px 20px">
+        <div style="font-size:11px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🫀 VIE & Prévoyance (primes actives)</div>
+        <div style="font-size:22px;font-weight:900;color:#a78bfa">${chf(volumeVie)}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${volumeActif > 0 ? Math.round(volumeVie/volumeActif*100) : 0}% du volume actif</div>
+        ${ozDetailHtml(parProduitPrimeVie, volumeVie, '#a78bfa')}
+      </div>
+      <div style="background:var(--surface);border:2px solid rgba(56,189,248,0.3);border-radius:14px;padding:18px 20px">
+        <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🛡️ NON-VIE / IARD (primes actives)</div>
+        <div style="font-size:22px;font-weight:900;color:var(--accent)">${chf(volumeNonVie)}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${volumeActif > 0 ? Math.round(volumeNonVie/volumeActif*100) : 0}% du volume actif</div>
+        ${ozDetailHtml(parProduitPrimeNonVie, volumeNonVie, 'var(--accent)')}
+      </div>
+    </div>
+
+    <!-- Répartition du volume de primes par type de produit -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:16px">Volume de primes par type de produit (contrats actifs)</div>
+      ${produitsPrime.map(([cat, val]) => `
+        <div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <div style="font-size:13px;font-weight:700;color:var(--text)">${cat}</div>
+            <div style="font-size:13px;font-weight:800;color:#4ade80">${chf(val)}</div>
+          </div>
+          <div style="height:7px;border-radius:4px;background:var(--border);margin-top:5px;overflow:hidden">
+            <div style="height:100%;width:${Math.round(val/maxProduitPrime*100)}%;background:#4ade80;border-radius:4px"></div>
+          </div>
+        </div>`).join('') || '<div class="table-empty">Aucune donnée.</div>'}
+    </div>
+
+    <!-- Répartition des commissions par type de produit -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px">
+        <div style="font-size:13px;font-weight:800;color:var(--text)">Commissions par type de produit</div>
+        <div style="font-size:11px;color:var(--text-muted)">Vie : ${chf(totalVieComm)} · Non-vie : ${chf(totalNonVieComm)}</div>
+      </div>
+      ${produitsComm.map(([cat, val]) => `
+        <div style="margin-bottom:12px">
+          <div style="display:flex;justify-content:space-between;align-items:baseline">
+            <div style="font-size:13px;font-weight:700;color:var(--text)">${cat}</div>
+            <div style="font-size:13px;font-weight:800;color:#f59e0b">${chf(val)}</div>
+          </div>
+          <div style="height:7px;border-radius:4px;background:var(--border);margin-top:5px;overflow:hidden">
+            <div style="height:100%;width:${Math.round(val/(produitsComm.length?produitsComm[0][1]:1)*100)}%;background:#f59e0b;border-radius:4px"></div>
+          </div>
+        </div>`).join('') || '<div class="table-empty">Aucune donnée.</div>'}
+    </div>
 
     <div style="display:grid;grid-template-columns:repeat(${Math.min(annees.length,4) || 1},1fr);gap:12px;margin-bottom:24px">
       ${annees.map(a => `
@@ -3587,6 +3878,18 @@ async function viewOzAssure() {
       <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
         <thead><tr style="background:#f0f0f0"><th style="border:1px solid #ccc;padding:6px 10px;text-align:left;font-size:11px">Compagnie</th><th style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-size:11px">Commissions</th><th style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-size:11px">Part</th></tr></thead>
         <tbody>${compagnies.map(([comp,val]) => `<tr><td style="border:1px solid #ccc;padding:6px 10px">${comp}</td><td style="border:1px solid #ccc;padding:6px 10px;text-align:right">${chf(val)}</td><td style="border:1px solid #ccc;padding:6px 10px;text-align:right">${Math.round(val/totalCompagnies*100)}%</td></tr>`).join('')}</tbody>
+      </table>
+
+      <div style="font-size:13px;font-weight:800;margin-bottom:8px">Volume de primes par type de produit (contrats actifs) — Vie: ${chf(volumeVie)} · Non-vie: ${chf(volumeNonVie)}</div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+        <thead><tr style="background:#f0f0f0"><th style="border:1px solid #ccc;padding:6px 10px;text-align:left;font-size:11px">Type de produit</th><th style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-size:11px">Volume prime/an</th></tr></thead>
+        <tbody>${produitsPrime.map(([cat,val]) => `<tr><td style="border:1px solid #ccc;padding:6px 10px">${cat}</td><td style="border:1px solid #ccc;padding:6px 10px;text-align:right">${chf(val)}</td></tr>`).join('')}</tbody>
+      </table>
+
+      <div style="font-size:13px;font-weight:800;margin-bottom:8px">Commissions par type de produit</div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+        <thead><tr style="background:#f0f0f0"><th style="border:1px solid #ccc;padding:6px 10px;text-align:left;font-size:11px">Type de produit</th><th style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-size:11px">Commissions</th></tr></thead>
+        <tbody>${produitsComm.map(([cat,val]) => `<tr><td style="border:1px solid #ccc;padding:6px 10px">${cat}</td><td style="border:1px solid #ccc;padding:6px 10px;text-align:right">${chf(val)}</td></tr>`).join('')}</tbody>
       </table>
 
       <div style="font-size:13px;font-weight:800;margin-bottom:8px">Données clients complètes (${clientsList.length})</div>

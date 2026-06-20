@@ -818,6 +818,116 @@ async function refreshAgenda() {
   }
 }
 
+// ═══ WIDGET CALENDRIER (style "widget iPhone") sur le Dashboard ═══
+let dashboardFocusDay = new Date(); // jour mis en avant dans la vue agrandie
+
+function startOfWeek(d) {
+  const date = new Date(d);
+  const day = date.getDay(); // 0=dim
+  const diff = day === 0 ? -6 : 1 - day; // lundi = début de semaine
+  date.setDate(date.getDate() + diff);
+  date.setHours(0,0,0,0);
+  return date;
+}
+function isSameDay(a, b) { return a.toDateString() === b.toDateString(); }
+function isoDay(d) { return d.toISOString().slice(0,10); }
+
+function eventsForDay(d) {
+  return calendarEvents.filter(ev => {
+    const start = ev.start && ev.start.dateTime ? new Date(ev.start.dateTime) : null;
+    return start && isSameDay(start, d);
+  }).sort((a,b) => new Date(a.start.dateTime) - new Date(b.start.dateTime));
+}
+
+function selectDashboardDay(iso) {
+  dashboardFocusDay = new Date(iso + 'T12:00:00');
+  renderCalendarWidget();
+}
+
+async function mountCalendarWidget() {
+  const el = document.getElementById('calendar-widget-container');
+  if (!el) return;
+  if (!msalAccessToken) {
+    el.innerHTML = `
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:20px">📅</span>
+          <div>
+            <div style="font-size:13px;font-weight:700;color:var(--text)">Agenda non connecté</div>
+            <div style="font-size:11px;color:var(--text-muted)">Connecte Outlook pour voir tes rendez-vous ici</div>
+          </div>
+        </div>
+        <button onclick="loginMicrosoft().then(()=>mountCalendarWidget())" class="btn-add">Connecter Outlook</button>
+      </div>`;
+    return;
+  }
+  if (!calendarEvents || calendarEvents.length === 0) {
+    el.innerHTML = `<div class="loader" style="padding:20px">Chargement de l'agenda...</div>`;
+    calendarEvents = await fetchCalendarEvents();
+  }
+  dashboardFocusDay = new Date();
+  renderCalendarWidget();
+}
+
+function renderCalendarWidget() {
+  const el = document.getElementById('calendar-widget-container');
+  if (!el) return;
+  const today = new Date();
+  const weekStart = startOfWeek(dashboardFocusDay);
+  const joursLabels = ['L','M','M','J','V','S','D'];
+  const weekDays = [...Array(7)].map((_,i) => { const d = new Date(weekStart); d.setDate(weekStart.getDate()+i); return d; });
+
+  const dayPills = weekDays.map((d, i) => {
+    const isToday = isSameDay(d, today);
+    const isFocus = isSameDay(d, dashboardFocusDay);
+    const nbEv = eventsForDay(d).length;
+    return `<button onclick="selectDashboardDay('${isoDay(d)}')" style="
+      display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;background:none;border:none;cursor:pointer;padding:6px 2px;border-radius:10px;
+      ${isFocus ? 'background:var(--accent-dim);' : ''}">
+      <span style="font-size:10px;color:var(--text-muted);font-weight:700">${joursLabels[i]}</span>
+      <span style="width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;
+        ${isToday ? 'background:var(--accent);color:#fff;' : isFocus ? 'color:var(--accent);' : 'color:var(--text);'}">${d.getDate()}</span>
+      ${nbEv > 0 ? `<span style="width:4px;height:4px;border-radius:50%;background:${isFocus?'var(--accent)':'var(--text-muted)'}"></span>` : '<span style="width:4px;height:4px"></span>'}
+    </button>`;
+  }).join('');
+
+  // Vue agrandie : jour sélectionné + jour suivant
+  const dayNext = new Date(dashboardFocusDay); dayNext.setDate(dashboardFocusDay.getDate() + 1);
+  const focusLabel = isSameDay(dashboardFocusDay, today) ? "Aujourd'hui" : dashboardFocusDay.toLocaleDateString('fr-CH', { weekday:'long', day:'numeric', month:'long' });
+  const nextLabel = isSameDay(dayNext, today) ? "Aujourd'hui" : dayNext.toLocaleDateString('fr-CH', { weekday:'long', day:'numeric', month:'long' });
+
+  function dayCard(date, label) {
+    const evs = eventsForDay(date);
+    return `<div style="flex:1;min-width:0">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">${label}</div>
+      ${evs.length ? evs.map(ev => {
+        const start = new Date(ev.start.dateTime);
+        const end = ev.end && ev.end.dateTime ? new Date(ev.end.dateTime) : null;
+        const heure = ev.isAllDay ? 'Jour entier' : start.toLocaleTimeString('fr-CH', { hour:'2-digit', minute:'2-digit' }) + (end ? ' – ' + end.toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit'}) : '');
+        return `<div style="display:flex;gap:8px;margin-bottom:8px;background:var(--surface-alt);border-left:3px solid var(--accent);border-radius:8px;padding:8px 10px">
+          <div style="flex:1;min-width:0">
+            <div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ev.subject || 'Sans titre'}</div>
+            <div style="font-size:10.5px;color:var(--text-muted);margin-top:1px">${heure}${ev.location && ev.location.displayName ? ' · ' + ev.location.displayName : ''}</div>
+          </div>
+        </div>`;
+      }).join('') : `<div style="font-size:11.5px;color:var(--text-muted);padding:8px 0">Aucun rendez-vous</div>`}
+    </div>`;
+  }
+
+  el.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+        <div style="font-size:13px;font-weight:800;color:var(--text)">📅 Agenda de la semaine</div>
+        <button onclick="navigate('agenda')" style="background:none;border:none;color:var(--accent);font-size:11px;font-weight:700;cursor:pointer">Vue complète →</button>
+      </div>
+      <div style="display:flex;gap:2px;margin-bottom:16px">${dayPills}</div>
+      <div style="display:flex;gap:18px;border-top:1px solid var(--border);padding-top:14px;flex-wrap:wrap">
+        ${dayCard(dashboardFocusDay, focusLabel)}
+        ${dayCard(dayNext, nextLabel)}
+      </div>
+    </div>`;
+}
+
 // ═══ LOGIN ═══
 function togglePass() {
   const inp = document.getElementById('login-pass');
@@ -1065,7 +1175,7 @@ function sectionCard(title, accentColor, content) {
 async function renderView() {
   const main = document.getElementById('main-content');
   switch (currentView) {
-    case 'dashboard': main.innerHTML = viewDashboard(); break;
+    case 'dashboard': main.innerHTML = viewDashboard(); mountCalendarWidget(); break;
     case 'clients': main.innerHTML = viewClients(); break;
     case 'portefeuille': main.innerHTML = viewPortefeuille('tous'); break;
     case 'clients-prives': main.innerHTML = viewPortefeuille('prive'); break;
@@ -1090,7 +1200,7 @@ async function renderView() {
     case 'agents': main.innerHTML = viewAgents(); break;
     case 'audit-log': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewAuditLog(); break;
     case 'oz-assure': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewOzAssure(); break;
-    default: main.innerHTML = viewDashboard();
+    default: main.innerHTML = viewDashboard(); mountCalendarWidget();
   }
 }
 
@@ -1133,21 +1243,7 @@ function viewDashboard() {
       ${statCard('Agents', allAgents.length, '#a78bfa')}
     </div>
 
-    ${(currentUser.role === 'signataire' && ozAnnualSummary) ? `
-    <div style="background:var(--navy);border:1px solid rgba(255,255,255,0.08);border-radius:14px;padding:18px 22px;margin-bottom:20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap">
-      <div style="background:rgba(255,255,255,0.06);border-radius:10px;padding:8px 12px;display:flex;align-items:center">
-        ${OZASSURE_LOGO_TERTIARY_SVG.replace('class="oz-logo-tertiary-svg"', 'class="oz-logo-tertiary-svg" style="height:22px;width:22px;display:block"')}
-      </div>
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-right:6px">CA OZ Assure (archive)</div>
-      <div style="display:flex;gap:22px;flex:1;flex-wrap:wrap">
-        ${['2024','2025','2026'].map(a => `
-          <div>
-            <div style="font-size:10px;color:var(--text-muted)">${a}</div>
-            <div style="font-size:15px;font-weight:800;color:#f59e0b">CHF ${Math.round(ozAnnualSummary[a]||0).toLocaleString('fr-CH')}</div>
-          </div>`).join('')}
-      </div>
-      <button onclick="navigate('oz-assure')" style="background:none;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:6px 14px;color:var(--text-muted);font-size:11px;font-weight:700;cursor:pointer">Voir le détail →</button>
-    </div>` : ''}
+    <div id="calendar-widget-container" style="margin-bottom:20px"></div>
 
     <!-- Graphiques commissions -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
@@ -1928,7 +2024,8 @@ function viewOpportunites() {
 
   function nomClient(o) {
     const c = allClients.find(cl => cl.id === o.client_id);
-    return c ? (c.segment === 'Entreprise' ? c.nom : `${c.prenom} ${c.nom}`) : '—';
+    if (c) return c.segment === 'Entreprise' ? c.nom : `${c.prenom} ${c.nom}`;
+    return o.prospect_nom ? `${o.prospect_nom} 🆕` : '—';
   }
 
   let kanban = stades.map(stade => {
@@ -2567,7 +2664,8 @@ function viewNouvelleOpportunite() {
     <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouvelle opportunité</h2>
     ${sectionCard('Détails', '#f59e0b', `<div class="form-grid">
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Titre *</label><input class="form-input" id="o-titre" placeholder="Ex: Assurance vie mixte 20 ans"/></div>
-      <div class="form-field"><label class="form-label">Client</label><select class="form-select" id="o-client"><option value="">— Sélectionner —</option>${clientOptions}</select></div>
+      <div class="form-field"><label class="form-label">Client (si déjà fiché)</label><select class="form-select" id="o-client" onchange="document.getElementById('o-prospect-field').style.display = this.value ? 'none' : ''"><option value="">— Prospect non encore fiché —</option>${clientOptions}</select></div>
+      <div class="form-field" id="o-prospect-field"><label class="form-label">Nom du prospect</label><input class="form-input" id="o-prospect-nom" placeholder="Ex: Jean Dupont (pas encore client)"/></div>
       <div class="form-field"><label class="form-label">Compagnie</label><input class="form-input" id="o-compagnie" placeholder="Swiss Life, AXA..."/></div>
       <div class="form-field"><label class="form-label">Montant potentiel (CHF)</label><input class="form-input" id="o-montant" type="number" placeholder="5000"/></div>
       <div class="form-field"><label class="form-label">Probabilité %</label><input class="form-input" id="o-prob" type="number" value="50" min="0" max="100"/></div>
@@ -2588,6 +2686,7 @@ async function saveOpportunite() {
   const body = {
     titre,
     client_id: document.getElementById('o-client').value || null,
+    prospect_nom: document.getElementById('o-client').value ? null : (document.getElementById('o-prospect-nom').value.trim() || null),
     compagnie: document.getElementById('o-compagnie').value || null,
     montant_potentiel: parseInt(document.getElementById('o-montant').value) || 0,
     probabilite: parseInt(document.getElementById('o-prob').value) || 50,
@@ -2993,6 +3092,7 @@ function viewNouveauContrat() {
     <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouveau contrat</h2>
     ${opp ? `<div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:12.5px;color:var(--text)">
       ✓ Pré-rempli depuis l'opportunité gagnée <strong>"${opp.titre}"</strong> — montant potentiel estimé : <strong>CHF ${(opp.montant_potentiel||0).toLocaleString()}</strong>. Vérifie/ajuste la prime exacte ci-dessous avant d'enregistrer.
+      ${!opp.client_id && opp.prospect_nom ? `<div style="margin-top:8px;color:#f59e0b">⚠ "<strong>${opp.prospect_nom}</strong>" n'a pas encore de fiche client — sélectionne un client existant ci-dessous, ou <a href="#" onclick="navigate('nouveau-client'); return false;" style="color:#f59e0b;text-decoration:underline">crée sa fiche maintenant</a> puis reviens enregistrer ce contrat.</div>` : ''}
     </div>` : ''}
     ${sectionCard('Informations contrat', '#4ade80', `<div class="form-grid">
       ${!contratClientId ? `<div class="form-field" style="grid-column:span 2"><label class="form-label">Client *</label><select class="form-select" id="ct-client" onchange="syncSegmentFromClient()"><option value="">— Sélectionner un client —</option>${clientOptions}</select></div>` : ''}

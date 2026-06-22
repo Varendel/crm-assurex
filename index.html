@@ -220,6 +220,9 @@
     [style*="color:#38bdf8"], [style*="color: #38bdf8"] { color: #0284c7 !important; }
     .oz-screen-only { display: none !important; }
     .oz-print-report { display: block !important; color: black !important; }
+    .fiche-commission-print { background: white !important; border: 1px solid #ccc !important; }
+    .fiche-commission-print * { color: black !important; }
+    .fiche-commission-print button { display: none !important; }
   }
   .oz-print-report { display: none; }
   /* RESPONSIVE */
@@ -1197,6 +1200,7 @@ async function renderView() {
     case 'nouveau-agent': main.innerHTML = viewNouvelAgent(); break;
     case 'bordereaux': main.innerHTML = viewBordereaux(); break;
     case 'commissions': main.innerHTML = viewCommissions(); break;
+    case 'fiche-commission': main.innerHTML = viewFicheCommission(); break;
     case 'agents': main.innerHTML = viewAgents(); break;
     case 'audit-log': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewAuditLog(); break;
     case 'oz-assure': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewOzAssure(); break;
@@ -2462,35 +2466,179 @@ async function saveValidationCommission(bordereauId) {
 }
 
 // COMMISSIONS
+function splitMontantAgent(montant, contratId) {
+  const contrat = contratId ? allContrats.find(ct => ct.id === contratId) : null;
+  const agent = contrat ? allAgents.find(a => a.id === contrat.apporteur_id) : null;
+  const tauxAgent = (agent && agent.role !== 'signataire') ? (agent.taux || 0) : 0;
+  const pA = Math.round(montant * tauxAgent / 100);
+  const pJ = montant - pA;
+  return { pJ, pA, agent };
+}
+
 function viewCommissions() {
-  const COMMS = [];
-  const totalBrut = COMMS.reduce((s,c)=>s+c.montant,0);
-  const partJ = COMMS.reduce((s,c)=>s+(c.apporteur==='jonathan'?c.montant:Math.round(c.montant*0.5)),0);
-  const partA = COMMS.filter(c=>c.apporteur!=='jonathan').reduce((s,c)=>s+Math.round(c.montant*0.5),0);
+  const COMMS = allCommissionsAttente.filter(c => c.statut === 'reçue');
+  function montantC(c) { return c.montant_final != null ? c.montant_final : (c.montant_estime || 0); }
+
+  let totalBrut = 0, partJ = 0, partA = 0;
+  COMMS.forEach(c => { const m = montantC(c); const s = splitMontantAgent(m, c.contrat_id); totalBrut += m; partJ += s.pJ; partA += s.pA; });
+
+  // ── Commissions de gestion (récurrentes) ──
+  const gestion = COMMS.filter(c => (c.mouvement || '').toLowerCase().includes('gestion'));
+  const parMoisGestion = {};
+  const parCompagnieGestion = {};
+  let totalGestion = 0;
+  gestion.forEach(c => {
+    const m = montantC(c);
+    totalGestion += m;
+    const b = c.bordereau_id ? allBordereaux.find(bd => bd.id === c.bordereau_id) : null;
+    const moisKey = b ? b.mois : (c.date_creation || '').slice(0,7);
+    parMoisGestion[moisKey] = (parMoisGestion[moisKey] || 0) + m;
+    parCompagnieGestion[c.compagnie] = (parCompagnieGestion[c.compagnie] || 0) + m;
+  });
+  const moisGestionKeys = Object.keys(parMoisGestion).sort();
+  const maxMoisGestion = Math.max(...moisGestionKeys.map(k => parMoisGestion[k]), 1);
+  const compGestion = Object.entries(parCompagnieGestion).sort((a,b)=>b[1]-a[1]);
+
   const cols = '1fr 130px 90px 100px 110px';
   const rows = COMMS.map(c => {
-    const isJ = c.apporteur === 'jonathan';
-    const pJ = isJ ? c.montant : Math.round(c.montant * 0.5);
-    const pA = isJ ? 0 : Math.round(c.montant * 0.5);
-    const agentObj = allAgents.find(a => a.prenom.toLowerCase() === c.apporteur || (a.role === 'signataire' && c.apporteur === 'jonathan'));
+    const m = montantC(c);
+    const s = splitMontantAgent(m, c.contrat_id);
     return `<div class="table-row" style="grid-template-columns:${cols}">
-      <div style="font-size:13px;font-weight:600;color:var(--text)">${c.client}</div>
-      <div style="font-size:11px;color:var(--text-muted)">${c.contrat}</div>
-      <div style="font-weight:800;color:var(--text)">CHF ${c.montant}</div>
-      <div style="font-weight:800;color:#38bdf8">CHF ${pJ}</div>
-      <div>${pA > 0 ? `<div style="display:flex;align-items:center;gap:6px">${agentObj ? avatar(agentObj, 18) : ''}<span style="font-weight:700;color:#f59e0b">CHF ${pA}</span></div>` : '<span style="color:var(--text-dim)">—</span>'}</div>
+      <div style="font-size:13px;font-weight:600;color:var(--text)">${c.client_nom || '—'}</div>
+      <div style="font-size:11px;color:var(--text-muted)">${c.produit || ''}${c.mouvement ? ' · ' + c.mouvement : ''}</div>
+      <div style="font-weight:800;color:var(--text)">CHF ${m.toLocaleString()}</div>
+      <div style="font-weight:800;color:#38bdf8">CHF ${s.pJ.toLocaleString()}</div>
+      <div>${s.pA > 0 ? `<div style="display:flex;align-items:center;gap:6px">${s.agent ? avatar(s.agent, 18) : ''}<span style="font-weight:700;color:#f59e0b">CHF ${s.pA.toLocaleString()}</span></div>` : '<span style="color:var(--text-dim)">—</span>'}</div>
     </div>`;
   }).join('');
+
   return `
-    <h2 style="margin:0 0 18px;font-size:18px;font-weight:800;color:var(--text)">Commissions</h2>
-    <div class="stat-grid" style="margin-bottom:20px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Commissions</h2>
+      <button class="btn-add" onclick="navigate('fiche-commission')">📄 Générer une fiche de commission</button>
+    </div>
+    <div class="stat-grid" style="margin-bottom:24px">
       ${statCard('Brut total', 'CHF ' + totalBrut.toLocaleString(), '#e2e8f0')}
       ${statCard('Part Jonathan', 'CHF ' + partJ.toLocaleString(), '#38bdf8')}
       ${statCard('Part apporteurs', 'CHF ' + partA.toLocaleString(), '#f59e0b')}
     </div>
+
+    <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">🔁 Commissions de gestion (récurrentes)</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Suivi de ce qui a été reçu — total : <strong style="color:#4ade80">CHF ${totalGestion.toLocaleString()}</strong> sur ${gestion.length} mouvement(s)</div>
+    <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:24px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px">
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:14px">Évolution par période</div>
+        ${moisGestionKeys.length ? `<div style="display:flex;align-items:flex-end;gap:6px;height:110px">
+          ${moisGestionKeys.map(k => {
+            const h = Math.max(Math.round(parMoisGestion[k]/maxMoisGestion*100), 3);
+            return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0">
+              <div title="CHF ${Math.round(parMoisGestion[k]).toLocaleString()}" style="width:100%;max-width:28px;height:${h}px;background:linear-gradient(180deg,#4ade80,#16a34a);border-radius:4px 4px 2px 2px"></div>
+              <div style="font-size:8.5px;color:var(--text-muted);margin-top:5px;white-space:nowrap;overflow:hidden;max-width:40px">${k}</div>
+            </div>`;
+          }).join('')}
+        </div>` : '<div class="table-empty">Aucune commission de gestion encore rapprochée.</div>'}
+      </div>
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px">
+        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:14px">Par compagnie</div>
+        ${compGestion.map(([comp,val]) => `
+          <div style="margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--text)">${comp}</span><span style="color:#4ade80;font-weight:700">CHF ${Math.round(val).toLocaleString()}</span></div>
+            <div style="height:6px;border-radius:3px;background:var(--border);margin-top:4px;overflow:hidden"><div style="height:100%;width:${compGestion.length?Math.round(val/compGestion[0][1]*100):0}%;background:#4ade80;border-radius:3px"></div></div>
+          </div>`).join('') || '<div class="table-empty">—</div>'}
+      </div>
+    </div>
+
+    <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px">Toutes les commissions reçues (${COMMS.length})</div>
     <div class="table-wrap">
-      <div class="table-header" style="grid-template-columns:${cols}"><div>Client</div><div>Police</div><div>Brut</div><div>Jonathan</div><div>Apporteur</div></div>
-      ${rows}
+      <div class="table-header" style="grid-template-columns:${cols}"><div>Client</div><div>Produit / Mouvement</div><div>Brut</div><div>Jonathan</div><div>Apporteur</div></div>
+      ${rows || '<div class="table-empty">Aucune commission reçue encore rapprochée.</div>'}
+    </div>`;
+}
+
+// ═══ FICHE DE COMMISSION ═══
+function viewFicheCommission() {
+  const moisDisponibles = [...new Set(allBordereaux.map(b => b.mois).filter(Boolean))].sort();
+  const agentOptions = allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom} (${a.role})</option>`).join('');
+
+  return `
+    <button onclick="navigate('commissions')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour aux commissions</button>
+    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Fiche de commission</h2>
+    ${sectionCard('Sélection', '#38bdf8', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">Agent *</label><select class="form-select" id="fs-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
+      <div class="form-field"><label class="form-label">Période (mois du bordereau) *</label><select class="form-select" id="fs-mois">
+        <option value="">— Sélectionner —</option>
+        ${moisDisponibles.map(m => `<option value="${m}">${m}</option>`).join('')}
+      </select></div>
+    </div>
+    <button class="btn-add" style="margin-top:16px" onclick="genererFicheCommission()">⚙ Générer la fiche</button>`)}
+
+    <div id="fiche-commission-resultat" style="margin-top:24px"></div>`;
+}
+
+function genererFicheCommission() {
+  const agentId = document.getElementById('fs-agent').value;
+  const mois = document.getElementById('fs-mois').value;
+  const zone = document.getElementById('fiche-commission-resultat');
+  if (!agentId || !mois) { zone.innerHTML = '<div class="table-empty">Sélectionne un agent et une période.</div>'; return; }
+
+  const agent = allAgents.find(a => a.id === agentId);
+  const bordereauxMois = allBordereaux.filter(b => b.mois === mois).map(b => b.id);
+  const lignes = allCommissionsAttente.filter(c =>
+    c.statut === 'reçue' && bordereauxMois.includes(c.bordereau_id) &&
+    c.contrat_id && allContrats.find(ct => ct.id === c.contrat_id && ct.apporteur_id === agentId)
+  );
+
+  function montantC(c) { return c.montant_final != null ? c.montant_final : (c.montant_estime || 0); }
+  const isSignataire = agent.role === 'signataire';
+  let totalBrut = 0, totalPart = 0;
+  const detail = lignes.map(c => {
+    const m = montantC(c);
+    const tauxAgent = isSignataire ? 100 : (agent.taux || 0);
+    const part = Math.round(m * tauxAgent / 100);
+    totalBrut += m; totalPart += part;
+    return { ...c, montant: m, part, tauxAgent };
+  });
+
+  const dateGen = new Date().toLocaleDateString('fr-CH', { day:'2-digit', month:'long', year:'numeric' });
+
+  zone.innerHTML = `
+    <div class="fiche-commission-print" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px">
+        <div>
+          <div style="font-size:16px;font-weight:900;color:var(--text)">FICHE DE COMMISSION</div>
+          <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Assurex Sàrl · Rue du Centre 142, 1025 St-Sulpice VD</div>
+        </div>
+        <button onclick="window.print()" style="background:var(--surface-alt);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🖨️ Imprimer / PDF</button>
+      </div>
+      <div style="display:flex;gap:30px;margin-bottom:20px;font-size:13px">
+        <div><div style="color:var(--text-muted);font-size:11px;text-transform:uppercase">Bénéficiaire</div><div style="font-weight:700;color:var(--text)">${agent.prenom} ${agent.nom} (${agent.role})</div></div>
+        <div><div style="color:var(--text-muted);font-size:11px;text-transform:uppercase">Période</div><div style="font-weight:700;color:var(--text)">${mois}</div></div>
+        <div><div style="color:var(--text-muted);font-size:11px;text-transform:uppercase">Généré le</div><div style="font-weight:700;color:var(--text)">${dateGen}</div></div>
+      </div>
+
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:20px">
+        <thead><tr style="color:var(--text-muted);font-size:10.5px;text-transform:uppercase">
+          <th style="padding:7px 10px;text-align:left;border-bottom:1px solid var(--border)">Client</th>
+          <th style="padding:7px 10px;text-align:left;border-bottom:1px solid var(--border)">Produit</th>
+          <th style="padding:7px 10px;text-align:right;border-bottom:1px solid var(--border)">Commission brute</th>
+          <th style="padding:7px 10px;text-align:right;border-bottom:1px solid var(--border)">Taux</th>
+          <th style="padding:7px 10px;text-align:right;border-bottom:1px solid var(--border)">Part due</th>
+        </tr></thead>
+        <tbody>${detail.map(d => `
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:7px 10px;color:var(--text)">${d.client_nom || '—'}</td>
+            <td style="padding:7px 10px;color:var(--text-muted)">${d.produit || ''}</td>
+            <td style="padding:7px 10px;text-align:right;color:var(--text)">CHF ${d.montant.toLocaleString()}</td>
+            <td style="padding:7px 10px;text-align:right;color:var(--text-muted)">${d.tauxAgent}%</td>
+            <td style="padding:7px 10px;text-align:right;font-weight:700;color:#f59e0b">CHF ${d.part.toLocaleString()}</td>
+          </tr>`).join('') || `<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted)">Aucune commission rapprochée pour cet agent sur cette période.</td></tr>`}
+        </tbody>
+      </table>
+
+      <div style="display:flex;justify-content:flex-end;gap:30px;border-top:1px solid var(--border);padding-top:14px">
+        <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Total brut</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${totalBrut.toLocaleString()}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Total dû à ${agent.prenom}</div><div style="font-size:20px;font-weight:900;color:#f59e0b">CHF ${totalPart.toLocaleString()}</div></div>
+      </div>
     </div>`;
 }
 

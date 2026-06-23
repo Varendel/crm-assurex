@@ -404,6 +404,16 @@ function _closeAddrDropdown() {
   if (_addrDropdown) { _addrDropdown.remove(); _addrDropdown = null; }
 }
 
+// Raccourci recherche Zefix (registre du commerce) — ouvre la recherche pré-remplie dans un nouvel onglet
+// À remplacer par une auto-complétion intégrée une fois les identifiants API obtenus (zefix@bj.admin.ch)
+function rechercheZefix(inputId) {
+  const nom = (document.getElementById(inputId)?.value || '').trim();
+  const url = nom
+    ? `https://www.zefix.ch/fr/search/entity/list?name=${encodeURIComponent(nom)}&searchType=exact`
+    : `https://www.zefix.ch/fr/search/entity/list`;
+  window.open(url, '_blank');
+}
+
 function bindAdresseAutocomplete(fieldMap) {
   const { adresseId, npaId, villeId, cantonId } = fieldMap;
   const adresseInput = document.getElementById(adresseId);
@@ -847,6 +857,12 @@ function selectDashboardDay(iso) {
   renderCalendarWidget();
 }
 
+function shiftDashboardWeek(days) {
+  if (days === 0) { dashboardFocusDay = new Date(); }
+  else { const d = new Date(dashboardFocusDay); d.setDate(d.getDate() + days); dashboardFocusDay = d; }
+  renderCalendarWidget();
+}
+
 async function mountCalendarWidget() {
   const el = document.getElementById('calendar-widget-container');
   if (!el) return;
@@ -921,7 +937,12 @@ function renderCalendarWidget() {
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 20px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <div style="font-size:13px;font-weight:800;color:var(--text)">📅 Agenda de la semaine</div>
-        <button onclick="navigate('agenda')" style="background:none;border:none;color:var(--accent);font-size:11px;font-weight:700;cursor:pointer">Vue complète →</button>
+        <div style="display:flex;align-items:center;gap:10px">
+          <button onclick="shiftDashboardWeek(-7)" style="background:var(--surface-alt);border:1px solid var(--border);border-radius:7px;width:26px;height:26px;color:var(--text-muted);cursor:pointer;font-size:13px;line-height:1">‹</button>
+          <button onclick="shiftDashboardWeek(0)" style="background:none;border:none;color:var(--text-muted);font-size:10.5px;font-weight:700;cursor:pointer">Aujourd'hui</button>
+          <button onclick="shiftDashboardWeek(7)" style="background:var(--surface-alt);border:1px solid var(--border);border-radius:7px;width:26px;height:26px;color:var(--text-muted);cursor:pointer;font-size:13px;line-height:1">›</button>
+          <button onclick="navigate('agenda')" style="background:none;border:none;color:var(--accent);font-size:11px;font-weight:700;cursor:pointer;margin-left:4px">Vue complète →</button>
+        </div>
       </div>
       <div style="display:flex;gap:2px;margin-bottom:16px">${dayPills}</div>
       <div style="display:flex;gap:18px;border-top:1px solid var(--border);padding-top:14px;flex-wrap:wrap">
@@ -1850,7 +1871,7 @@ async function showClient(id) {
     <div id="tab-identite">
       ${editingClient ? `
         ${sectionCard(isEntreprise ? 'Identification entreprise' : 'Coordonnées personnelles', isEntreprise ? '#f59e0b' : '#38bdf8', isEntreprise ? `<div class="form-grid">
-          <div class="form-field"><label class="form-label">Raison sociale</label><input id="ec-nom" class="form-input" value="${c.nom || ''}"></div>
+          <div class="form-field"><label class="form-label">Raison sociale</label><div style="display:flex;gap:6px"><input id="ec-nom" class="form-input" value="${c.nom || ''}" style="flex:1"><button type="button" onclick="rechercheZefix('ec-nom')" title="Rechercher sur Zefix" style="background:var(--surface-alt);border:1px solid var(--border);border-radius:8px;padding:0 12px;color:var(--text-muted);cursor:pointer;font-size:14px">🔍</button></div></div>
           <div class="form-field"><label class="form-label">Secteur d'activité</label><input id="ec-profession" class="form-input" value="${c.profession || ''}"></div>
           <div class="form-field"><label class="form-label">Contact principal</label><input id="ec-prenom" class="form-input" value="${c.prenom || ''}"></div>
           <div class="form-field"><label class="form-label">Nb collaborateurs</label><input id="ec-taux-activite" type="number" class="form-input" value="${c.taux_activite || ''}"></div>
@@ -1949,7 +1970,7 @@ async function showClient(id) {
         <div style="font-size:13px;color:var(--text)">${ct.compagnie}</div>
         <div style="font-size:12px;color:var(--text-muted)">${ct.date_echeance || ''}</div>
         <div style="font-weight:800;color:#f59e0b">CHF ${Number(ct.prime_annuelle || 0).toLocaleString()}</div>
-        <div>${badge(ct.statut, ct.statut === 'actif' ? '#4ade80' : ct.statut === 'renouveler' ? '#f59e0b' : '#f87171')}</div>
+        <div>${badge(ct.statut === 'non_gere' ? 'Non géré' : ct.statut, ct.statut === 'actif' ? '#4ade80' : ct.statut === 'renouveler' ? '#f59e0b' : ct.statut === 'non_gere' ? '#64748b' : '#f87171')}</div>
         <div><button onclick="showEditContrat('${ct.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer;line-height:1" title="Modifier">✏️</button></div>
       </div>`).join('')}</div>` : '<div class="table-empty">Aucun contrat.</div>'}
     </div>
@@ -2084,6 +2105,14 @@ async function saveClientEdit(id, isEntreprise) {
   const r = await dbPatch('clients', id, body);
   if (r && r.error) { showError('Erreur lors de la mise à jour: ' + (r.detail || r.status)); if (btn) { btn.textContent = '💾 Enregistrer les modifications'; btn.disabled = false; } return; }
   logAction('edit_client', 'clients', id, `${body.prenom || ''} ${body.nom || ''}`.trim());
+
+  // Resynchronise le nom dupliqué dans les commissions en attente liées à ce client
+  if (body.prenom !== undefined || body.nom !== undefined) {
+    const nomComplet = isEntreprise ? body.nom : `${body.prenom} ${body.nom}`;
+    const liees = allCommissionsAttente.filter(c => c.client_id === id);
+    await Promise.all(liees.map(c => dbPatch('commissions_attente', c.id, { client_nom: nomComplet })));
+    allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
+  }
 
   editingClient = false;
   allClients = await dbGet('clients', 'select=*');
@@ -2254,7 +2283,7 @@ function renderSuiviTables() {
         <div style="font-size:13px;color:var(--text)">${ct.compagnie}</div>
         <div style="font-size:12px;color:var(--text-muted)">${ct.date_echeance || ''}</div>
         <div style="font-weight:800;color:#f59e0b">CHF ${Number(ct.prime_annuelle||0).toLocaleString()}</div>
-        <div>${badge(ct.statut, ct.statut === 'actif' ? '#4ade80' : ct.statut === 'renouveler' ? '#f59e0b' : '#f87171')}</div>
+        <div>${badge(ct.statut === 'non_gere' ? 'Non géré' : ct.statut, ct.statut === 'actif' ? '#4ade80' : ct.statut === 'renouveler' ? '#f59e0b' : ct.statut === 'non_gere' ? '#64748b' : '#f87171')}</div>
       </div>`).join('')}</div>`;
   }
 
@@ -2791,7 +2820,7 @@ function showFormClient(type) {
 }
 
 function formPrive() {
-  const agentOptions = allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
+  const agentOptions = allAgents.map(a => `<option value="${a.id}" ${currentUser && a.email === currentUser.email ? 'selected' : ''}>${a.prenom} ${a.nom}</option>`).join('');
   return `
     <button onclick="navigate('nouveau-client')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
     <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouveau client — Privé</h2>
@@ -2894,7 +2923,7 @@ async function saveClient() {
 }
 
 function formEntreprise() {
-  const agentOptions = allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
+  const agentOptions = allAgents.map(a => `<option value="${a.id}" ${currentUser && a.email === currentUser.email ? 'selected' : ''}>${a.prenom} ${a.nom}</option>`).join('');
   return `
     <button onclick="navigate('nouveau-client')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
     <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouveau client — Entreprise</h2>
@@ -2902,7 +2931,12 @@ function formEntreprise() {
       <button onclick="printForm()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🖨️ Imprimer</button>
     </div>
     ${sectionCard('Identification', '#f59e0b', `<div class="form-grid">
-      <div class="form-field"><label class="form-label">Raison sociale *</label><input class="form-input" id="e-nom" placeholder="Dupont SA"/></div>
+      <div class="form-field"><label class="form-label">Raison sociale *</label>
+        <div style="display:flex;gap:6px">
+          <input class="form-input" id="e-nom" placeholder="Dupont SA" style="flex:1"/>
+          <button type="button" onclick="rechercheZefix('e-nom')" title="Rechercher sur le registre du commerce (Zefix)" style="background:var(--surface-alt);border:1px solid var(--border);border-radius:8px;padding:0 12px;color:var(--text-muted);cursor:pointer;font-size:14px;white-space:nowrap">🔍 Zefix</button>
+        </div>
+      </div>
       <div class="form-field"><label class="form-label">Forme juridique</label><select class="form-select" id="e-forme"><option>SA</option><option>Sàrl</option><option>Association</option><option>Fondation</option><option>Indépendant</option><option>Autre</option></select></div>
       <div class="form-field"><label class="form-label">N° IDE (CHE)</label><input class="form-input" id="e-ide" placeholder="CHE-123.456.789"/></div>
       <div class="form-field"><label class="form-label">Secteur d'activité</label><input class="form-input" id="e-secteur" placeholder="Construction, Restauration..."/></div>
@@ -3374,12 +3408,14 @@ async function showEditContrat(contratId) {
           </select>
         </div>
         <div class="form-field"><label class="form-label">Statut</label>
-          <select class="form-select" id="ect-statut">
+          <select class="form-select" id="ect-statut" onchange="document.getElementById('ect-rappel-note').style.display = this.value==='non_gere' ? '' : 'none'">
             <option value="actif" ${ct.statut==='actif'?'selected':''}>Actif</option>
             <option value="renouveler" ${ct.statut==='renouveler'?'selected':''}>À renouveler</option>
             <option value="résilié" ${ct.statut==='résilié'?'selected':''}>Résilié</option>
             <option value="en_cours" ${ct.statut==='en_cours'?'selected':''}>En cours de signature</option>
+            <option value="non_gere" ${ct.statut==='non_gere'?'selected':''}>Non géré (hors collaboration)</option>
           </select>
+          <div id="ect-rappel-note" style="display:${ct.statut==='non_gere'?'':'none'};font-size:10.5px;color:var(--text-muted);margin-top:4px">ℹ️ Un rappel sera créé 6 mois avant la date d'échéance ci-dessous, pour proposer un transfert vers une compagnie partenaire.</div>
         </div>
         <div class="form-field"><label class="form-label">Modules / options</label><input class="form-input" id="ect-modules" value="${ct.modules || ''}"/></div>
       </div>
@@ -3409,6 +3445,26 @@ async function saveEditContrat(contratId, clientId) {
   const r = await dbPatch('contrats', contratId, body);
   if (r && r.error) { showError('Erreur: ' + (r.detail || r.status)); if (btn) { btn.textContent = '✓ Enregistrer'; btn.disabled = false; } return; }
   logAction('edit_contrat', 'contrats', contratId, `${body.produit} — ${body.compagnie}`);
+
+  // Police passée en "Non géré" : créer le rappel de transfert 6 mois avant échéance (si pas déjà fait)
+  if (body.statut === 'non_gere' && body.date_echeance) {
+    const dejaCree = allRappels.some(r => r.client_id === clientId && r.type === 'Contrat' && (r.titre||'').includes(body.produit) && (r.titre||'').includes(body.compagnie));
+    if (!dejaCree) {
+      const client = allClients.find(c => c.id === clientId);
+      const nomClient = client ? (client.segment === 'Entreprise' ? client.nom : `${client.prenom} ${client.nom}`) : '';
+      const dEch = new Date(body.date_echeance);
+      dEch.setMonth(dEch.getMonth() - 6);
+      await dbPost('rappels', {
+        titre: `Reprendre "${body.produit}" de ${nomClient} (actuellement ${body.compagnie}, non partenaire)`,
+        client_id: clientId, type: 'Contrat', urgence: 'moyenne',
+        date_echeance: dEch.toISOString().split('T')[0],
+        notes: `Police actuellement chez ${body.compagnie} (compagnie non partenaire) — échéance le ${body.date_echeance}. Objectif : proposer un transfert vers une compagnie partenaire pour générer une commission.`,
+        statut: 'ouvert',
+      });
+      allRappels = await dbGet('rappels', 'select=*');
+    }
+  }
+
   allContrats = await dbGet('contrats', 'select=*');
   document.getElementById('modal-edit-contrat').remove();
   showClient(clientId);
@@ -3665,7 +3721,10 @@ function viewNouveauContrat() {
       <div class="form-field" id="ct-duree-field" style="display:none"><label class="form-label">Durée du contrat (années)</label><input class="form-input" id="ct-duree" type="number" placeholder="10" value="1" oninput="updateCommissionPreview()"/></div>
       <div class="form-field" id="ct-manuel-field" style="display:none"><label class="form-label">Commission estimée (CHF) — manuel</label><input class="form-input" id="ct-manuel" type="number" placeholder="0" oninput="updateCommissionPreview()"/></div>
       <div class="form-field"><label class="form-label">Date de signature</label><input class="form-input" id="ct-date" type="date"/></div>
-      <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="ct-statut"><option value="actif">Actif</option><option value="en_cours">En cours de signature</option></select></div>
+      <div class="form-field"><label class="form-label">Date d'échéance</label><input class="form-input" id="ct-echeance" type="date"/></div>
+      <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="ct-statut" onchange="document.getElementById('ct-rappel-note').style.display = this.value==='non_gere' ? '' : 'none'"><option value="actif">Actif</option><option value="en_cours">En cours de signature</option><option value="non_gere">Non géré (hors collaboration)</option></select>
+        <div id="ct-rappel-note" style="display:none;font-size:10.5px;color:var(--text-muted);margin-top:4px">ℹ️ Pas de commission créée. Un rappel sera généré 6 mois avant la date d'échéance pour proposer un transfert vers une compagnie partenaire.</div>
+      </div>
     </div>`)}
     <div id="commission-preview" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:14px 18px;margin-top:14px">
       <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Commission d'acquisition estimée</div>
@@ -3900,6 +3959,7 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
     numero_police: document.getElementById('ct-police').value.trim() || null,
     prime_annuelle: Math.round(primeMensuelle * (parseInt(document.getElementById('ct-periodicite')?.value) || 12)),
     date_debut: document.getElementById('ct-date').value || null,
+    date_echeance: document.getElementById('ct-echeance').value || null,
     statut: document.getElementById('ct-statut').value,
   };
   const rContrat = await dbPost('contrats', contratBody);
@@ -3907,6 +3967,26 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
   logAction('create_contrat', 'contrats', rContrat && rContrat[0] ? rContrat[0].id : null, `${produitLabel} — ${compagnie}`);
 
   const client = allClients.find(c => c.id === clientId);
+
+  // Police non gérée (hors collaboration) : pas de commission, mais rappel automatique 6 mois avant échéance
+  if (contratBody.statut === 'non_gere') {
+    if (contratBody.date_echeance) {
+      const dEch = new Date(contratBody.date_echeance);
+      dEch.setMonth(dEch.getMonth() - 6);
+      const nomClient = client ? (client.segment === 'Entreprise' ? client.nom : `${client.prenom} ${client.nom}`) : '';
+      await dbPost('rappels', {
+        titre: `Reprendre "${produitLabel}" de ${nomClient} (actuellement ${compagnie}, non partenaire)`,
+        client_id: clientId,
+        type: 'Contrat',
+        urgence: 'moyenne',
+        date_echeance: dEch.toISOString().split('T')[0],
+        notes: `Police actuellement chez ${compagnie} (compagnie non partenaire) — échéance le ${contratBody.date_echeance}. Objectif : proposer un transfert vers une compagnie partenaire pour générer une commission.`,
+        statut: 'ouvert',
+      });
+      allRappels = await dbGet('rappels', 'select=*');
+    }
+    return { error: false, contrat: rContrat && rContrat[0] ? rContrat[0] : null };
+  }
   const commissionBody = {
     client_id: clientId,
     client_nom: client ? (client.segment === 'Entreprise' ? client.nom : `${client.prenom} ${client.nom}`) : '',

@@ -159,6 +159,32 @@
 
   /* TABS */
   .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
+  .postit-note {
+    position: relative; width: 150px; min-height: 130px; padding: 16px 12px 10px;
+    box-shadow: 2px 4px 10px rgba(0,0,0,0.35), 0 1px 0 rgba(255,255,255,0.4) inset;
+    font-family: 'Comic Sans MS', 'Marker Felt', cursive, sans-serif;
+    flex-shrink: 0; transition: transform 0.15s;
+  }
+  .postit-note:hover { transform: rotate(0deg) scale(1.04) !important; z-index: 5; box-shadow: 3px 6px 16px rgba(0,0,0,0.45); }
+  .postit-note::before {
+    content: ''; position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+    width: 26px; height: 14px; background: rgba(255,255,255,0.55); border-radius: 2px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+  .postit-text {
+    width: 100%; height: 100px; background: transparent; border: none; resize: none;
+    font-family: inherit; font-size: 13.5px; color: #3a3a1a; line-height: 1.4; outline: none;
+  }
+  .postit-close {
+    position: absolute; top: 2px; right: 6px; background: none; border: none; cursor: pointer;
+    font-size: 15px; color: rgba(0,0,0,0.35); font-weight: 700; line-height: 1; padding: 2px;
+  }
+  .postit-close:hover { color: rgba(0,0,0,0.7); }
+  .postit-add {
+    width: 60px; height: 130px; border: 2px dashed var(--border); background: none; border-radius: 6px;
+    color: var(--text-muted); font-size: 13px; cursor: pointer; flex-shrink: 0;
+  }
+  .postit-add:hover { border-color: var(--accent); color: var(--accent); }
   .tab-btn { background: none; border: none; cursor: pointer; padding: 9px 14px; font-size: 12.5px; color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; }
   .tab-btn.active { color: var(--accent); font-weight: 800; border-bottom-color: var(--accent); }
 
@@ -232,6 +258,9 @@
     .stat-card { min-width: 100px; }
     .form-grid { grid-template-columns: 1fr; }
     .info-grid { grid-template-columns: 1fr; }
+    .table-header { display: none !important; }
+    .table-row { grid-template-columns: 1fr !important; gap: 4px !important; padding: 12px !important; }
+    .table-row > div { white-space: normal !important; }
   }
 </style>
 </head>
@@ -1789,11 +1818,13 @@ async function showClient(id) {
   renderSidebar();
   const main = document.getElementById('main-content');
   main.innerHTML = '<div class="loader">Chargement...</div>';
-  const [clients, contrats, rappels, collaborateurs] = await Promise.all([
+  const [clients, contrats, rappels, collaborateurs, factures, postits] = await Promise.all([
     dbGet('clients', `id=eq.${id}&select=*`),
     dbGet('contrats', `client_id=eq.${id}&select=*`),
     dbGet('rappels', `client_id=eq.${id}&select=*`),
     dbGet('collaborateurs', `client_id=eq.${id}&select=*&order=nom.asc`),
+    dbGet('factures', `client_id=eq.${id}&select=*&order=date_emission.desc`),
+    dbGet('postits', `client_id=eq.${id}&select=*&order=created_at.asc`),
   ]);
   const c = clients[0];
   if (!c) { main.innerHTML = '<div class="loader">Client introuvable.</div>'; return; }
@@ -1859,11 +1890,21 @@ async function showClient(id) {
       </div>` : ''}
     </div>
 
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;padding:6px 2px 14px">
+      ${postits.map(p => `
+        <div class="postit-note" style="background:${p.couleur || '#fde047'};transform:rotate(${p.rotation || 0}deg)">
+          <button onclick="deletePostit('${p.id}','${c.id}')" class="postit-close">×</button>
+          <textarea class="postit-text" onblur="savePostitContenu('${p.id}', this.value)" placeholder="Écris ici...">${p.contenu || ''}</textarea>
+        </div>`).join('')}
+      <button onclick="addPostit('${c.id}')" class="postit-add" title="Ajouter un post-it">📌 +</button>
+    </div>
+
     <div class="tabs">
       <button class="tab-btn active" onclick="switchTab(this,'tab-identite')">Identité</button>
       <button class="tab-btn" onclick="switchTab(this,'tab-prevoyance')">Prévoyance</button>
       ${isEntreprise ? `<button class="tab-btn" onclick="switchTab(this,'tab-collaborateurs')">Collaborateurs (${collaborateurs.length})</button>` : ''}
       <button class="tab-btn" onclick="switchTab(this,'tab-contrats')">Contrats (${contrats.length})</button>
+      <button class="tab-btn" onclick="switchTab(this,'tab-factures')">Factures (${factures.length})</button>
       <button class="tab-btn" onclick="switchTab(this,'tab-rappels')">Rappels (${rappels.length})</button>
       <button class="tab-btn" onclick="switchTab(this,'tab-notes')">Notes</button>
     </div>
@@ -1973,6 +2014,26 @@ async function showClient(id) {
         <div>${badge(ct.statut === 'non_gere' ? 'Non géré' : ct.statut, ct.statut === 'actif' ? '#4ade80' : ct.statut === 'renouveler' ? '#f59e0b' : ct.statut === 'non_gere' ? '#64748b' : '#f87171')}</div>
         <div><button onclick="showEditContrat('${ct.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer;line-height:1" title="Modifier">✏️</button></div>
       </div>`).join('')}</div>` : '<div class="table-empty">Aucun contrat.</div>'}
+    </div>
+
+    <div id="tab-factures" class="hidden">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn-add" onclick="showFormFacture('${c.id}')">+ Nouvelle facture</button>
+      </div>
+      ${factures.length > 0 ? `<div class="table-wrap"><div class="table-header" style="grid-template-columns:120px 1fr 100px 100px 100px 90px"><div>N°</div><div>Objet</div><div>Émission</div><div>Échéance</div><div>Montant</div><div>Statut</div></div>
+      ${factures.map(f => {
+        const enRetard = f.statut === 'envoyee' && f.date_echeance && new Date(f.date_echeance) < new Date();
+        const statutLabel = f.statut === 'payee' ? 'Payée' : enRetard ? 'En retard' : f.statut === 'annulee' ? 'Annulée' : 'Envoyée';
+        const statutColor2 = f.statut === 'payee' ? '#4ade80' : enRetard ? '#f87171' : f.statut === 'annulee' ? '#64748b' : '#f59e0b';
+        return `<div class="table-row" style="grid-template-columns:120px 1fr 100px 100px 100px 90px;cursor:pointer" onclick="toggleFactureStatut('${f.id}','${f.statut}','${c.id}')" title="Cliquer pour changer le statut">
+          <div style="font-weight:700;font-size:13px;color:var(--text);font-family:monospace">${f.numero}</div>
+          <div style="font-size:13px;color:var(--text)">${f.objet || '—'}</div>
+          <div style="font-size:12px;color:var(--text-muted)">${f.date_emission || ''}</div>
+          <div style="font-size:12px;color:var(--text-muted)">${f.date_echeance || ''}</div>
+          <div style="font-weight:800;color:#f59e0b">CHF ${Number(f.montant||0).toLocaleString()}</div>
+          <div>${badge(statutLabel, statutColor2)}</div>
+        </div>`;
+      }).join('')}</div>` : '<div class="table-empty">Aucune facture.</div>'}
     </div>
 
     <div id="tab-collaborateurs" class="hidden">
@@ -2122,7 +2183,7 @@ async function saveClientEdit(id, isEntreprise) {
 function switchTab(btn, tabId) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  ['tab-identite','tab-prevoyance','tab-contrats','tab-rappels','tab-notes'].forEach(id => {
+  ['tab-identite','tab-prevoyance','tab-contrats','tab-factures','tab-rappels','tab-notes'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('hidden', id !== tabId);
   });
@@ -2399,13 +2460,9 @@ function viewBordereaux() {
     const montantNetApresCaution = (b.montant_brut||0) - montantCaution;
 
     function splitAgent(c) {
-      const contrat = c.contrat_id ? allContrats.find(ct => ct.id === c.contrat_id) : null;
-      const agent = contrat ? allAgents.find(a => a.id === contrat.apporteur_id) : null;
-      const tauxAgent = (agent && agent.role !== 'signataire') ? (agent.taux || 0) : 0;
       const montant = c.montant_final != null ? c.montant_final : (c.montant_estime || 0);
-      const pA = Math.round(montant * tauxAgent / 100);
-      const pJ = montant - pA;
-      return { pJ, pA, agent, montant };
+      const s = splitMontantAgent(montant, c.contrat_id);
+      return { ...s, montant };
     }
 
     let pJ = 0, pA = 0;
@@ -2735,8 +2792,9 @@ function genererFicheCommission() {
   let totalBrut = 0, totalPart = 0;
   const detail = lignes.map(c => {
     const m = montantC(c);
+    const s = splitMontantAgent(m, c.contrat_id);
     const tauxAgent = isSignataire ? 100 : (agent.taux || 0);
-    const part = Math.round(m * tauxAgent / 100);
+    const part = isSignataire ? s.pJ : s.pA;
     totalBrut += m; totalPart += part;
     return { ...c, montant: m, part, tauxAgent };
   });
@@ -3516,6 +3574,87 @@ async function saveCollaborateur(clientId) {
   showClient(clientId);
 }
 
+// ═══ POST-ITS (collés sur la fiche client) ═══
+const POSTIT_COULEURS = ['#fde047', '#fda4af', '#93c5fd', '#86efac', '#fdba74'];
+
+async function addPostit(clientId) {
+  const couleur = POSTIT_COULEURS[Math.floor(Math.random() * POSTIT_COULEURS.length)];
+  const rotation = Math.round((Math.random() * 8 - 4) * 10) / 10; // entre -4° et +4°
+  await dbPost('postits', { client_id: clientId, contenu: '', couleur, rotation });
+  showClient(clientId);
+}
+
+async function savePostitContenu(postitId, contenu) {
+  await dbPatch('postits', postitId, { contenu });
+}
+
+async function deletePostit(postitId, clientId) {
+  const token = await getValidAccessToken() || SUPABASE_KEY;
+  await fetch(`${SUPABASE_URL}/rest/v1/postits?id=eq.${postitId}`, {
+    method: 'DELETE',
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
+  });
+  showClient(clientId);
+}
+
+// ═══ FACTURES ═══
+async function showFormFacture(clientId) {
+  const allFactures = await dbGet('factures', 'select=numero&order=created_at.desc&limit=1');
+  let prochainNumero = 'FAC-0001';
+  if (allFactures && allFactures[0] && allFactures[0].numero) {
+    const m = allFactures[0].numero.match(/(\d+)$/);
+    if (m) prochainNumero = 'FAC-' + String(parseInt(m[1], 10) + 1).padStart(4, '0');
+  }
+
+  const modal = document.createElement('div');
+  modal.id = 'modal-facture';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
+      <h3 style="margin:0 0 20px;font-size:16px;font-weight:800;color:var(--text)">Nouvelle facture</h3>
+      <div class="form-grid">
+        <div class="form-field"><label class="form-label">N° de facture</label><input class="form-input" id="fac-numero" value="${prochainNumero}"/></div>
+        <div class="form-field"><label class="form-label">Montant (CHF) *</label><input class="form-input" id="fac-montant" type="number" step="0.05" placeholder="250.00"/></div>
+        <div class="form-field" style="grid-column:span 2"><label class="form-label">Objet</label><input class="form-input" id="fac-objet" placeholder="Honoraires de conseil, frais de dossier..."/></div>
+        <div class="form-field"><label class="form-label">Date d'émission</label><input class="form-input" id="fac-emission" type="date" value="${new Date().toISOString().split('T')[0]}"/></div>
+        <div class="form-field"><label class="form-label">Date d'échéance</label><input class="form-input" id="fac-echeance" type="date"/></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:20px">
+        <button class="btn-secondary" onclick="document.getElementById('modal-facture').remove()">Annuler</button>
+        <button class="btn-save" onclick="saveFacture('${clientId}')">✓ Créer la facture</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function saveFacture(clientId) {
+  const montant = Number(document.getElementById('fac-montant').value) || 0;
+  if (!montant) { showError('Le montant est obligatoire.'); return; }
+  const body = {
+    numero: document.getElementById('fac-numero').value.trim(),
+    client_id: clientId,
+    objet: document.getElementById('fac-objet').value.trim() || null,
+    montant,
+    date_emission: document.getElementById('fac-emission').value || null,
+    date_echeance: document.getElementById('fac-echeance').value || null,
+    statut: 'envoyee',
+  };
+  const btn = document.querySelector('#modal-facture .btn-save');
+  if (btn) { btn.textContent = 'Création...'; btn.disabled = true; }
+  const res = await dbPost('factures', body);
+  if (res && res.error) { showError('Erreur: ' + (res.detail || res.status)); if (btn) { btn.textContent = '✓ Créer la facture'; btn.disabled = false; } return; }
+  logAction('create_facture', 'factures', res && res[0] ? res[0].id : null, `${body.numero} — CHF ${montant}`);
+  document.getElementById('modal-facture').remove();
+  showClient(clientId);
+}
+
+async function toggleFactureStatut(factureId, statutActuel, clientId) {
+  const prochain = statutActuel === 'envoyee' ? 'payee' : statutActuel === 'payee' ? 'annulee' : 'envoyee';
+  if (!confirm(`Marquer cette facture comme "${prochain === 'payee' ? 'Payée' : prochain === 'annulee' ? 'Annulée' : 'Envoyée'}" ?`)) return;
+  await dbPatch('factures', factureId, { statut: prochain });
+  showClient(clientId);
+}
+
 async function deleteCollaborateur(colId, clientId) {
   if (!confirm('Supprimer ce collaborateur ?')) return;
   const token = await getValidAccessToken() || SUPABASE_KEY;
@@ -3523,6 +3662,7 @@ async function deleteCollaborateur(colId, clientId) {
     method: 'DELETE',
     headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
   });
+  logAction('delete_collaborateur_avs', 'collaborateurs', colId, null);
   showClient(clientId);
 }
 

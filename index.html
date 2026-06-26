@@ -1217,6 +1217,13 @@ async function navigate(view) {
 }
 
 // ═══ HELPERS ═══
+// Extrait un message d'erreur lisible depuis une réponse {error, detail, status} de dbPost/dbPatch
+function errMsg(r) {
+  if (!r) return 'Erreur inconnue';
+  if (r.detail && typeof r.detail === 'object') return r.detail.message || r.detail.hint || JSON.stringify(r.detail);
+  return r.detail || r.status || 'Erreur inconnue';
+}
+
 function badge(label, color) {
   return `<span class="badge" style="background:${color}15;color:${color};border:1px solid ${color}30">${label}</span>`;
 }
@@ -2179,7 +2186,7 @@ async function saveClientNote(clientId) {
   if (btn) { btn.textContent = 'Enregistrement...'; btn.disabled = true; }
 
   const r = await dbPatch('clients', clientId, { notes: notesCompletes });
-  if (r && r.error) { showError('Erreur lors de l\'enregistrement de la note: ' + (r.detail || r.status)); if (btn) { btn.textContent = 'Enregistrer'; btn.disabled = false; } return; }
+  if (r && r.error) { showError('Erreur lors de l\'enregistrement de la note: ' + errMsg(r)); if (btn) { btn.textContent = 'Enregistrer'; btn.disabled = false; } return; }
 
   allClients = await dbGet('clients', 'select=*');
   await showClient(clientId);
@@ -2256,7 +2263,7 @@ async function saveClientEdit(id, isEntreprise) {
   if (btn) { btn.textContent = 'Enregistrement...'; btn.disabled = true; }
 
   const r = await dbPatch('clients', id, body);
-  if (r && r.error) { showError('Erreur lors de la mise à jour: ' + (r.detail || r.status)); if (btn) { btn.textContent = '💾 Enregistrer les modifications'; btn.disabled = false; } return; }
+  if (r && r.error) { showError('Erreur lors de la mise à jour: ' + errMsg(r)); if (btn) { btn.textContent = '💾 Enregistrer les modifications'; btn.disabled = false; } return; }
   logAction('edit_client', 'clients', id, `${body.prenom || ''} ${body.nom || ''}`.trim());
 
   // Resynchronise le nom dupliqué dans les commissions en attente liées à ce client
@@ -3462,7 +3469,7 @@ async function saveDemandeOffre() {
   };
 
   const res = await dbPost('demandes_offre', body);
-  if (res && res.error) { showError('Erreur: ' + (res.detail || res.status)); return; }
+  if (res && res.error) { showError('Erreur: ' + errMsg(res)); return; }
   logAction('create_demande_offre', 'demandes_offre', res && res[0] ? res[0].id : null, body.prospect_nom || 'Client existant');
   showError('✓ Demande d\'offre enregistrée.');
   navigate('suivi');
@@ -3677,7 +3684,7 @@ async function saveEditContrat(contratId, clientId) {
   const btn = document.querySelector('#modal-edit-contrat .btn-save');
   if (btn) { btn.textContent = 'Enregistrement...'; btn.disabled = true; }
   const r = await dbPatch('contrats', contratId, body);
-  if (r && r.error) { showError('Erreur: ' + (r.detail || r.status)); if (btn) { btn.textContent = '✓ Enregistrer'; btn.disabled = false; } return; }
+  if (r && r.error) { showError('Erreur: ' + errMsg(r)); if (btn) { btn.textContent = '✓ Enregistrer'; btn.disabled = false; } return; }
   logAction('edit_contrat', 'contrats', contratId, `${body.produit} — ${body.compagnie}`);
 
   // Police passée en "Non géré" : créer le rappel de transfert 6 mois avant échéance (si pas déjà fait)
@@ -3744,7 +3751,7 @@ async function saveCollaborateur(clientId) {
   const btn = document.querySelector('#modal-collaborateur .btn-save');
   if (btn) { btn.textContent = 'Enregistrement...'; btn.disabled = true; }
   const res = await dbPost('collaborateurs', body);
-  if (res && res.error) { showError('Erreur: ' + (res.detail || res.status)); if (btn) { btn.textContent = '✓ Enregistrer'; btn.disabled = false; } return; }
+  if (res && res.error) { showError('Erreur: ' + errMsg(res)); if (btn) { btn.textContent = '✓ Enregistrer'; btn.disabled = false; } return; }
   logAction('add_collaborateur_avs', 'collaborateurs', res && res[0] ? res[0].id : null, `${prenom} ${nom}`);
   document.getElementById('modal-collaborateur').remove();
   showClient(clientId);
@@ -3819,7 +3826,7 @@ async function saveFacture(clientId) {
   const btn = document.querySelector('#modal-facture .btn-save');
   if (btn) { btn.textContent = 'Création...'; btn.disabled = true; }
   const res = await dbPost('factures', body);
-  if (res && res.error) { showError('Erreur: ' + (res.detail || res.status)); if (btn) { btn.textContent = '✓ Créer la facture'; btn.disabled = false; } return; }
+  if (res && res.error) { showError('Erreur: ' + errMsg(res)); if (btn) { btn.textContent = '✓ Créer la facture'; btn.disabled = false; } return; }
   logAction('create_facture', 'factures', res && res[0] ? res[0].id : null, `${body.numero} — CHF ${montant}`);
   document.getElementById('modal-facture').remove();
   showClient(clientId);
@@ -3919,7 +3926,7 @@ async function saveRappelEdit() {
   const btn = document.querySelector('.btn-save');
   btn.textContent = 'Enregistrement...'; btn.disabled = true;
   const r = await dbPatch('rappels', currentRappelId, body);
-  if (r && r.error) { showError('Erreur lors de la mise à jour: ' + (r.detail || r.status)); btn.textContent = '💾 Enregistrer les modifications'; btn.disabled = false; return; }
+  if (r && r.error) { showError('Erreur lors de la mise à jour: ' + errMsg(r)); btn.textContent = '💾 Enregistrer les modifications'; btn.disabled = false; return; }
   allRappels = await dbGet('rappels', 'select=*');
   navigate('rappels');
 }
@@ -4085,7 +4092,7 @@ async function saveBordereau() {
   const btn = document.querySelector('.btn-save');
   btn.textContent = 'Enregistrement...'; btn.disabled = true;
   const r = await dbPost('bordereaux', body);
-  if (r && r.error) { showError("Erreur lors de l'enregistrement: " + (r.detail || r.status)); btn.textContent = '✓ Enregistrer'; btn.disabled = false; return; }
+  if (r && r.error) { showError("Erreur lors de l'enregistrement: " + errMsg(r)); btn.textContent = '✓ Enregistrer'; btn.disabled = false; return; }
   allBordereaux = await dbGet('bordereaux', 'select=*');
   navigate('bordereaux');
 }
@@ -5385,7 +5392,7 @@ async function saveAgent(id) {
   };
   if (!body.prenom || !body.nom || !body.email) { showError('Prénom, nom et email sont obligatoires.'); return; }
   const r = await dbPatch('agents', id, body);
-  if (r && r.error) { showError('Erreur lors de la mise à jour: ' + (r.detail || r.status)); return; }
+  if (r && r.error) { showError('Erreur lors de la mise à jour: ' + errMsg(r)); return; }
   allAgents = await dbGet('agents', 'select=*');
   editingAgentId = null;
   navigate('agents');
@@ -5424,7 +5431,7 @@ async function createAgent() {
   };
   if (!body.prenom || !body.nom || !body.email) { showError('Prénom, nom et email sont obligatoires.'); return; }
   const r = await dbPost('agents', body);
-  if (r && r.error) { showError('Erreur lors de la création: ' + (r.detail || r.status)); return; }
+  if (r && r.error) { showError('Erreur lors de la création: ' + errMsg(r)); return; }
   allAgents = await dbGet('agents', 'select=*');
   navigate('agents');
 }

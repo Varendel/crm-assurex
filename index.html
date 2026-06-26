@@ -3691,7 +3691,8 @@ const POSTIT_COULEURS = ['#fde047', '#fda4af', '#93c5fd', '#86efac', '#fdba74'];
 async function addPostit(clientId) {
   const couleur = POSTIT_COULEURS[Math.floor(Math.random() * POSTIT_COULEURS.length)];
   const rotation = Math.round((Math.random() * 8 - 4) * 10) / 10; // entre -4° et +4°
-  await dbPost('postits', { client_id: clientId, contenu: '', couleur, rotation });
+  const res = await dbPost('postits', { client_id: clientId, contenu: '', couleur, rotation });
+  if (res && res.error) { showError("Erreur lors de l'ajout du post-it : " + (res.detail?.message || res.detail || res.status) + ' — vérifie que la table "postits" a bien été créée dans Supabase.'); return; }
   showClient(clientId);
 }
 

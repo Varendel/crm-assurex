@@ -346,6 +346,7 @@
 <script>
 // ═══ CONFIG ═══
 const SUPABASE_URL = 'https://gutlkjovmsyazwcomoyt.supabase.co';
+const AI_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/ai-assistant`;
 const SUPABASE_KEY = 'sb_publishable_DJtZwHKeA5X1ck1coAQFOA_xOd7c02i';
 
 // ═══ AUTOCOMPLÉTION ADRESSES SUISSES (swisstopo geo.admin.ch — sans clé, CORS OK) ═══
@@ -1911,22 +1912,24 @@ async function showClient(id) {
         ${statCard('Rappels ouverts', rappels.filter(r => r.statut === 'ouvert').length, rappels.filter(r => r.statut === 'ouvert').length > 0 ? '#f87171' : '#64748b')}
         ${statCard('CA annuel', caClient(c.id) ? 'CHF ' + caClient(c.id).toLocaleString() : '—', '#f59e0b')}
       </div>
-      ${agent ? `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface-alt);border-radius:10px">
-        ${avatar(agent, 36)}
-        <div>
-          <div style="font-size:13px;font-weight:700;color:var(--text)">${agent.prenom} ${agent.nom}</div>
-          <div style="font-size:11px;color:var(--text-muted)">${agent.role === 'signataire' ? 'Agent signataire Assurex' : 'Apporteur · 50/50'}</div>
+      <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:${agent ? 'var(--surface-alt)' : 'rgba(248,113,113,0.08)'};border:1px solid ${agent ? 'var(--border)' : 'rgba(248,113,113,0.25)'};border-radius:10px;margin-bottom:${c.apporteur_externe ? '8px' : '0'}">
+        ${agent ? avatar(agent, 36) : `<div style="width:36px;height:36px;border-radius:50%;background:rgba(248,113,113,0.15);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">⚠</div>`}
+        <div style="flex:1;min-width:0">
+          <div style="font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px">Agent interne responsable</div>
+          <select onchange="changerAgentClient('${c.id}', this.value)" style="background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:5px 8px;color:var(--text);font-size:13px;font-weight:700;max-width:220px">
+            <option value="">— Aucun agent assigné —</option>
+            ${allAgents.map(a => `<option value="${a.id}" ${c.apporteur_id === a.id ? 'selected' : ''}>${a.prenom} ${a.nom} (${a.role === 'signataire' ? 'signataire' : 'apporteur'})</option>`).join('')}
+          </select>
         </div>
-        ${c.mobile ? `<a href="tel:${c.mobile}" style="margin-left:auto;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;text-decoration:none">📞</a>` : ''}
-        ${c.email ? `<a href="mailto:${c.email}" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;text-decoration:none">✉️</a>` : ''}
-      </div>` : c.apporteur_externe ? `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface-alt);border-radius:10px">
-        <div style="width:36px;height:36px;border-radius:50%;background:rgba(167,139,250,0.15);border:2px solid rgba(167,139,250,0.4);display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:900;color:#a78bfa;flex-shrink:0">${c.apporteur_externe.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
+        ${agent && c.mobile ? `<a href="tel:${c.mobile}" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;text-decoration:none">📞</a>` : ''}
+        ${agent && c.email ? `<a href="mailto:${c.email}" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;text-decoration:none">✉️</a>` : ''}
+      </div>
+      ${c.apporteur_externe ? `<div style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--surface-alt);border-radius:10px">
+        <div style="width:32px;height:32px;border-radius:50%;background:rgba(167,139,250,0.15);border:2px solid rgba(167,139,250,0.4);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:900;color:#a78bfa;flex-shrink:0">${c.apporteur_externe.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase()}</div>
         <div>
-          <div style="font-size:13px;font-weight:700;color:var(--text)">${c.apporteur_externe}</div>
-          <div style="font-size:11px;color:var(--text-muted)">🤝 Recommandation / Apporteur externe</div>
+          <div style="font-size:12.5px;font-weight:700;color:var(--text)">${c.apporteur_externe}</div>
+          <div style="font-size:10.5px;color:var(--text-muted)">🤝 Origine du lead — recommandation externe</div>
         </div>
-        ${c.mobile ? `<a href="tel:${c.mobile}" style="margin-left:auto;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;text-decoration:none">📞</a>` : ''}
-        ${c.email ? `<a href="mailto:${c.email}" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:5px 12px;font-size:11px;font-weight:700;text-decoration:none">✉️</a>` : ''}
       </div>` : ''}
     </div>
 
@@ -2152,6 +2155,14 @@ function toggleEditClient() {
       bindAdresseAutocomplete({ adresseId:'ec-adresse', npaId:'ec-npa', villeId:'ec-ville', cantonId:'ec-canton' });
     }, 0);
   }
+}
+
+async function changerAgentClient(clientId, agentId) {
+  await dbPatch('clients', clientId, { apporteur_id: agentId || null });
+  const agent = allAgents.find(a => a.id === agentId);
+  logAction('edit_client', 'clients', clientId, `Agent réassigné → ${agent ? agent.prenom + ' ' + agent.nom : 'aucun'}`);
+  allClients = await dbGet('clients', 'select=*');
+  showClient(clientId);
 }
 
 async function saveClientEdit(id, isEntreprise) {
@@ -3200,6 +3211,14 @@ async function viewNouvelleDemandeOffre() {
     <h2 style="margin:0 0 6px;font-size:18px;font-weight:800;color:var(--text)">Demande d'offre</h2>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">Version digitale du formulaire papier — à remplir directement en clientèle, sans ressaisie ensuite.</div>
 
+    <div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:12px;padding:16px 18px;margin-bottom:24px">
+      <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:8px">🤖 Remplissage automatique par IA</div>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:10px">Décris la situation à l'oral (utilise le micro 🎤 du clavier de ton téléphone) ou par écrit — les cases et champs ci-dessous se rempliront automatiquement. Tu pourras tout vérifier/corriger avant d'enregistrer.</div>
+      <textarea id="do-texte-libre" rows="4" placeholder="Ex: Client Dupont SA, 8 employés, CA 1.2 millions, souhaite une perte de gain maladie délai 30 jours, LPP, et une RC commerce. Pas de protection juridique pour l'instant." style="width:100%;background:var(--surface-alt);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;resize:vertical"></textarea>
+      <button type="button" class="btn-add" style="margin-top:10px" onclick="remplirDemandeOffreParIA()">✨ Remplir automatiquement</button>
+      <div id="do-ia-status" style="font-size:11.5px;color:var(--text-muted);margin-top:8px"></div>
+    </div>
+
     ${sectionCard('Identité', '#38bdf8', `<div class="form-grid">
       <div class="form-field"><label class="form-label">Client existant (optionnel)</label><select class="form-select" id="do-client" onchange="document.getElementById('do-prospect-field').style.display=this.value?'none':''"><option value="">— Prospect non fiché —</option>${clientOptions}</select></div>
       <div class="form-field" id="do-prospect-field"><label class="form-label">Nom/raison sociale</label><input class="form-input" id="do-prospect-nom" placeholder="Si pas encore client"/></div>
@@ -3895,10 +3914,99 @@ async function supprimerPieceJointe() {
 }
 
 // NOUVEAU BORDEREAU
+// ═══ AGENT IA — Remplissage Demande d'offre depuis texte libre ═══
+async function remplirDemandeOffreParIA() {
+  const texte = document.getElementById('do-texte-libre').value.trim();
+  if (!texte) { showError('Décris la situation du client d\'abord.'); return; }
+  const statusEl = document.getElementById('do-ia-status');
+  statusEl.textContent = '🤖 Analyse en cours...';
+  statusEl.style.color = 'var(--text-muted)';
+
+  try {
+    const token = await getValidAccessToken() || SUPABASE_KEY;
+    const r = await fetch(AI_FUNCTION_URL, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'parse_demande_offre', texte }),
+    });
+    const data = await r.json();
+    if (!r.ok || data.error) throw new Error(data.error || 'Erreur inconnue');
+
+    let nbRemplis = 0;
+    Object.entries(data).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (!el) return;
+      if (el.type === 'checkbox') { el.checked = !!val; }
+      else { el.value = val; }
+      nbRemplis++;
+    });
+
+    statusEl.textContent = `✓ ${nbRemplis} champ(s) rempli(s) automatiquement — vérifie avant d'enregistrer.`;
+    statusEl.style.color = '#4ade80';
+  } catch (e) {
+    statusEl.textContent = '✗ Erreur : ' + e.message;
+    statusEl.style.color = '#f87171';
+  }
+}
+
+// ═══ AGENT IA — Import bordereau PDF ═══
+async function importBordereauPdf(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const statusEl = document.getElementById('bord-pdf-status');
+  statusEl.textContent = '🤖 Lecture du PDF en cours...';
+  statusEl.style.color = 'var(--text-muted)';
+
+  try {
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const token = await getValidAccessToken() || SUPABASE_KEY;
+    const r = await fetch(AI_FUNCTION_URL, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'parse_bordereau', pdf_base64: base64 }),
+    });
+    const data = await r.json();
+    if (!r.ok || data.error) throw new Error(data.error || 'Erreur inconnue');
+
+    document.getElementById('b-compagnie').value = data.compagnie || '';
+    document.getElementById('b-mois').value = data.mois || '';
+    document.getElementById('b-montant').value = data.montant_brut || '';
+
+    window._bordereauLignesExtraites = data.lignes || [];
+    const zone = document.getElementById('bord-lignes-extraites');
+    if (data.lignes && data.lignes.length) {
+      zone.innerHTML = `
+        <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
+          <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:10px">📋 ${data.lignes.length} ligne(s) détectée(s) — à vérifier avant d'enregistrer</div>
+          ${data.lignes.map(l => `<div style="font-size:11.5px;color:var(--text-muted);padding:4px 0;border-bottom:1px solid var(--border)">${l.client_nom || '—'} · ${l.produit || ''} · ${l.type_mouvement || ''} · CHF ${l.credit || l.debit || 0}</div>`).join('')}
+        </div>`;
+    }
+    statusEl.textContent = '✓ Champs remplis automatiquement — vérifie avant d\'enregistrer.';
+    statusEl.style.color = '#4ade80';
+  } catch (e) {
+    statusEl.textContent = '✗ Erreur : ' + e.message;
+    statusEl.style.color = '#f87171';
+  }
+}
+
 function viewNouveauBordereau() {
   return `
     <button onclick="navigate('bordereaux')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
     <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Saisir un bordereau</h2>
+
+    <div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:12px;padding:16px 18px;margin-bottom:20px">
+      <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:8px">🤖 Remplissage automatique par IA</div>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:10px">Importe le PDF du bordereau reçu de la compagnie — les champs ci-dessous se rempliront automatiquement.</div>
+      <input type="file" id="bord-pdf-input" accept="application/pdf" onchange="importBordereauPdf(this)" style="font-size:12.5px;color:var(--text-muted)"/>
+      <div id="bord-pdf-status" style="font-size:11.5px;color:var(--text-muted);margin-top:8px"></div>
+    </div>
+
     ${sectionCard('Informations bordereau', '#4ade80', `<div class="form-grid">
       <div class="form-field"><label class="form-label">Compagnie *</label><input class="form-input" id="b-compagnie" placeholder="Swiss Life, AXA..."/></div>
       <div class="form-field"><label class="form-label">Mois *</label><input class="form-input" id="b-mois" placeholder="Juin 2026"/></div>
@@ -3908,6 +4016,7 @@ function viewNouveauBordereau() {
       <div class="form-field"><label class="form-label">Date de réception</label><input class="form-input" id="b-date" type="date"/></div>
     </div>`)}
     <div style="font-size:11px;color:var(--text-muted);margin-top:-6px;margin-bottom:8px">Certaines compagnies retiennent un pourcentage de la commission brute à titre de caution (généralement 5 à 10%). Laissez vide ou 0 si non applicable.</div>
+    <div id="bord-lignes-extraites"></div>
     <div style="display:flex;gap:10px;margin-top:8px">
       <button class="btn-secondary" onclick="navigate('bordereaux')">Annuler</button>
       <button class="btn-save" onclick="saveBordereau()">✓ Enregistrer</button>

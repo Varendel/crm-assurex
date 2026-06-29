@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-06-26 18:00</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-06-26 18:30</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -1150,6 +1150,7 @@ const SECTIONS = [
     { id: 'commissions', label: 'Commissions' },
     { id: 'commissions-attente', label: 'Toutes les commissions' },
     { id: 'rapport-finma', label: 'Rapport FINMA' },
+    { id: 'production', label: 'Production (par période)' },
   ]},
   { id: 'settings', label: 'Paramètres', icon: '⊙', sub: [
     { id: 'agents', label: 'Agents' },
@@ -1293,6 +1294,7 @@ async function renderView() {
     case 'nouvelle-demande-offre': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewNouvelleDemandeOffre(); break;
     case 'commissions-attente': main.innerHTML = viewCommissionsAttente(); break;
     case 'rapport-finma': main.innerHTML = viewRapportFinma(); break;
+    case 'production': main.innerHTML = viewProduction(); break;
     case 'opportunites': main.innerHTML = viewOpportunites(); break;
     case 'suivi': main.innerHTML = viewSuivi(); break;
     case 'rappels': main.innerHTML = viewRappels(); break;
@@ -1318,12 +1320,16 @@ function viewDashboard() {
   const urgents = allRappels.filter(r => r.urgence === 'haute' && r.statut === 'ouvert');
   const now = new Date().toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-  let rappelRows = urgents.length > 0 ? urgents.map(r => `
+  let rappelRows = urgents.length > 0 ? urgents.map(r => {
+    const cl = r.client_id ? allClients.find(c => c.id === r.client_id) : null;
+    const nomCl = cl ? (cl.segment === 'Entreprise' ? cl.nom : `${cl.prenom} ${cl.nom}`) : '';
+    return `
     <div style="padding:11px 18px;border-bottom:1px solid var(--border);display:flex;gap:12px;align-items:center;cursor:pointer;transition:background 0.1s" onclick="showRappel('${r.id}')" onmouseover="this.style.background='rgba(56,189,248,0.06)'" onmouseout="this.style.background='transparent'">
       <div style="width:8px;height:8px;border-radius:50%;background:var(--red);flex-shrink:0"></div>
-      <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--text)">${r.titre}</div><div style="font-size:11px;color:var(--text-muted)">${r.date_echeance || ''}</div></div>
+      <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--text)">${r.titre}</div><div style="font-size:11px;color:var(--text-muted)">${nomCl ? '👤 ' + nomCl + ' · ' : ''}${r.date_echeance || ''}</div></div>
       <span style="font-size:11px;color:var(--accent)">&#8594;</span>
-    </div>`).join('') : '<div style="padding:16px 18px;color:var(--text-muted);font-size:13px">Aucun rappel urgent</div>';
+    </div>`;
+  }).join('') : '<div style="padding:16px 18px;color:var(--text-muted);font-size:13px">Aucun rappel urgent</div>';
 
   let teamRows = allAgents.map((a, i) => {
     const nb = allClients.filter(c => c.apporteur_id === a.id).length;
@@ -1488,6 +1494,91 @@ function downloadBlob(content, filename, mime) {
   a.href = url; a.download = filename;
   document.body.appendChild(a); a.click(); a.remove();
   URL.revokeObjectURL(url);
+}
+
+// ═══ PRODUCTION PAR PÉRIODE — contrats signés entre deux dates + CA ═══
+function viewProduction() {
+  const aujourd = new Date().toISOString().split('T')[0];
+  const debutAnnee = new Date().getFullYear() + '-01-01';
+  setTimeout(() => renderProduction(), 0);
+  return `
+    <h2 style="margin:0 0 6px;font-size:18px;font-weight:800;color:var(--text)">Production par période</h2>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Contrats signés entre deux dates, avec la prime annuelle (CA) générée — par agent et par type de produit.</div>
+    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
+      <div><label style="font-size:10.5px;color:var(--text-muted);display:block;margin-bottom:3px">Du</label><input class="form-input" id="prod-debut" type="date" value="${debutAnnee}" onchange="renderProduction()"/></div>
+      <div><label style="font-size:10.5px;color:var(--text-muted);display:block;margin-bottom:3px">Au</label><input class="form-input" id="prod-fin" type="date" value="${aujourd}" onchange="renderProduction()"/></div>
+      <select class="form-select" id="prod-agent" style="max-width:200px;margin-top:18px" onchange="renderProduction()">
+        <option value="">Tous les agents</option>
+        ${allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('')}
+      </select>
+    </div>
+    <div id="prod-stats" class="stat-grid" style="margin-bottom:20px"></div>
+    <div id="prod-detail"></div>
+    <div id="prod-table"></div>`;
+}
+
+function renderProduction() {
+  const debut = document.getElementById('prod-debut')?.value;
+  const fin = document.getElementById('prod-fin')?.value;
+  const agentFilter = document.getElementById('prod-agent')?.value || '';
+
+  const filtered = allContrats.filter(ct => {
+    if (!ct.date_debut) return false;
+    if (debut && ct.date_debut < debut) return false;
+    if (fin && ct.date_debut > fin) return false;
+    if (agentFilter && ct.apporteur_id !== agentFilter) return false;
+    return true;
+  }).sort((a,b) => new Date(b.date_debut) - new Date(a.date_debut));
+
+  function nomClient(ct) {
+    const c = allClients.find(cl => cl.id === ct.client_id);
+    return c ? (c.segment === 'Entreprise' ? c.nom : `${c.prenom} ${c.nom}`) : '—';
+  }
+
+  const totalCA = filtered.reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0);
+  const commissionnes = filtered.filter(ct => ct.commissionne !== false);
+  const totalCommissionne = commissionnes.reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0);
+
+  document.getElementById('prod-stats').innerHTML = `
+    ${statCard('Contrats signés', filtered.length, '#38bdf8')}
+    ${statCard('CA total (production)', 'CHF ' + Math.round(totalCA).toLocaleString(), '#f59e0b')}
+    ${statCard('Dont commissionné', 'CHF ' + Math.round(totalCommissionne).toLocaleString(), '#4ade80')}
+  `;
+
+  // Détail par agent
+  const parAgent = {};
+  filtered.forEach(ct => {
+    const a = allAgents.find(ag => ag.id === ct.apporteur_id);
+    const key = a ? `${a.prenom} ${a.nom}` : 'Non assigné';
+    parAgent[key] = (parAgent[key] || 0) + Number(ct.prime_annuelle||0);
+  });
+  const agentsTries = Object.entries(parAgent).sort((a,b) => b[1]-a[1]);
+  const maxAgent = agentsTries.length ? agentsTries[0][1] : 1;
+
+  document.getElementById('prod-detail').innerHTML = agentsTries.length ? `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:14px">Production par agent</div>
+      ${agentsTries.map(([nom,val]) => `
+        <div style="margin-bottom:10px">
+          <div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--text)">${nom}</span><span style="color:#f59e0b;font-weight:700">CHF ${Math.round(val).toLocaleString()}</span></div>
+          <div style="height:7px;border-radius:4px;background:var(--border);margin-top:4px;overflow:hidden"><div style="height:100%;width:${Math.round(val/maxAgent*100)}%;background:#38bdf8;border-radius:4px"></div></div>
+        </div>`).join('')}
+    </div>` : '';
+
+  const cols = '1fr 1fr 110px 100px 90px';
+  const rows = filtered.map(ct => `<div class="table-row" style="grid-template-columns:${cols};cursor:pointer" onclick="showClient('${ct.client_id}')">
+    <div style="font-size:13px;font-weight:700;color:var(--text)">${nomClient(ct)}</div>
+    <div style="font-size:12px;color:var(--text-muted)">${ct.produit || ''} · ${ct.compagnie || ''}</div>
+    <div style="font-size:12px;color:var(--text-muted)">${ct.date_debut || ''}</div>
+    <div style="font-weight:800;color:#f59e0b;text-align:right">CHF ${Number(ct.prime_annuelle||0).toLocaleString()}</div>
+    <div>${ct.commissionne === false ? badge('Non comm.', '#64748b') : badge('OK', '#4ade80')}</div>
+  </div>`).join('');
+
+  document.getElementById('prod-table').innerHTML = `
+    <div class="table-wrap">
+      <div class="table-header" style="grid-template-columns:${cols}"><div>Client</div><div>Produit / Compagnie</div><div>Date signature</div><div>Prime/an</div><div>Commission</div></div>
+      ${rows || '<div class="table-empty">Aucun contrat signé sur cette période.</div>'}
+    </div>`;
 }
 
 function viewRapportFinma() {
@@ -2503,14 +2594,33 @@ function renderSuiviTables() {
 // RAPPELS
 function viewRappels() {
   const uc = u => u === 'haute' ? '#f87171' : u === 'moyenne' ? '#f59e0b' : '#64748b';
+  function nomClientRappel(r) {
+    if (!r.client_id) return '';
+    const c = allClients.find(cl => cl.id === r.client_id);
+    return c ? (c.segment === 'Entreprise' ? c.nom : `${c.prenom} ${c.nom}`) : '';
+  }
+  function dateRelative(dateStr) {
+    if (!dateStr) return '';
+    const j = Math.round((new Date(dateStr) - new Date()) / 86400000);
+    if (j < 0) return ` · en retard de ${Math.abs(j)}j`;
+    if (j === 0) return ` · aujourd'hui`;
+    if (j <= 31) return ` · dans ${j}j`;
+    if (j <= 365) return ` · dans ${Math.round(j/30)} mois`;
+    return ` · dans ${Math.round(j/365*10)/10} ans`;
+  }
+  const labels = { haute: '🔴 Priorité haute', moyenne: '🟡 Priorité moyenne', basse: '⚪ Priorité basse' };
   const sections = ['haute','moyenne','basse'].map(urg => {
-    const list = allRappels.filter(r => r.urgence === urg && r.statut === 'ouvert');
+    const list = allRappels.filter(r => r.urgence === urg && r.statut === 'ouvert')
+      .sort((a,b) => new Date(a.date_echeance || '9999-12-31') - new Date(b.date_echeance || '9999-12-31'));
     if (!list.length) return '';
     return `<div style="margin-bottom:20px">
-      <div style="font-size:11px;font-weight:700;color:${uc(urg)};text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">${urg === 'haute' ? '🔴 Urgents' : urg === 'moyenne' ? '🟡 Cette semaine' : '⚪ À planifier'}</div>
+      <div style="font-size:11px;font-weight:700;color:${uc(urg)};text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">${labels[urg]}</div>
       ${list.map(r => `<div class="rappel-item" style="cursor:pointer" onclick="showRappel('${r.id}')">
         <div class="urgence-dot" style="background:${uc(r.urgence)}"></div>
-        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--text)">${r.titre}</div><div style="font-size:11px;color:var(--text-muted)">${r.date_echeance || ''}${r.piece_jointe_nom ? ' · 📎 ' + r.piece_jointe_nom : ''}</div></div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:700;color:var(--text)">${r.titre}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${nomClientRappel(r) ? '👤 ' + nomClientRappel(r) + ' · ' : ''}${r.date_echeance || 'Sans échéance'}${dateRelative(r.date_echeance)}${r.piece_jointe_nom ? ' · 📎 ' + r.piece_jointe_nom : ''}</div>
+        </div>
         ${badge(r.type || 'Suivi', '#64748b')}
         <button class="btn-traite" onclick="event.stopPropagation(); traiterRappel('${r.id}')">✓ Traité</button>
       </div>`).join('')}
@@ -2528,6 +2638,7 @@ function viewRappels() {
       <table style="width:100%;border-collapse:collapse">
         <thead><tr style="border-bottom:1px solid var(--border)">
           <th style="text-align:left;padding:8px 14px;font-size:11px;color:var(--text-muted);text-transform:uppercase">Titre</th>
+          <th style="text-align:left;padding:8px 14px;font-size:11px;color:var(--text-muted);text-transform:uppercase">Client</th>
           <th style="text-align:left;padding:8px 14px;font-size:11px;color:var(--text-muted);text-transform:uppercase">Échéance</th>
           <th style="text-align:left;padding:8px 14px;font-size:11px;color:var(--text-muted);text-transform:uppercase">Type</th>
           <th style="text-align:left;padding:8px 14px;font-size:11px;color:var(--text-muted);text-transform:uppercase">Statut</th>
@@ -2535,6 +2646,7 @@ function viewRappels() {
         </tr></thead>
         <tbody>${fermes.map(r => `<tr style="opacity:.7;cursor:pointer" onclick="showRappel('${r.id}')">
           <td style="padding:9px 14px;font-size:13px;color:var(--text)">${r.titre}${r.piece_jointe_nom ? ' 📎' : ''}</td>
+          <td style="padding:9px 14px;font-size:12px;color:var(--text-muted)">${nomClientRappel(r) || '—'}</td>
           <td style="padding:9px 14px;font-size:12px;color:var(--text-muted)">${r.date_echeance || '—'}</td>
           <td style="padding:9px 14px">${badge(r.type || 'Suivi', '#64748b')}</td>
           <td style="padding:9px 14px">${badge(r.statut || 'traité', '#4ade80')}</td>
@@ -2550,9 +2662,9 @@ function viewRappels() {
       <button class="btn-add" onclick="navigate('nouveau-rappel')">+ Nouveau rappel</button>
     </div>
     <div class="stat-grid" style="margin-bottom:20px">
-      ${statCard('Urgents', allRappels.filter(r=>r.urgence==='haute'&&r.statut==='ouvert').length, '#f87171')}
-      ${statCard('Cette semaine', allRappels.filter(r=>r.urgence==='moyenne'&&r.statut==='ouvert').length, '#f59e0b')}
-      ${statCard('À planifier', allRappels.filter(r=>r.urgence==='basse'&&r.statut==='ouvert').length, '#64748b')}
+      ${statCard('Priorité haute', allRappels.filter(r=>r.urgence==='haute'&&r.statut==='ouvert').length, '#f87171')}
+      ${statCard('Priorité moyenne', allRappels.filter(r=>r.urgence==='moyenne'&&r.statut==='ouvert').length, '#f59e0b')}
+      ${statCard('Priorité basse', allRappels.filter(r=>r.urgence==='basse'&&r.statut==='ouvert').length, '#64748b')}
     </div>
     ${sections || '<div class="table-empty">Aucun rappel ouvert.</div>'}
     ${fermesHtml}`;

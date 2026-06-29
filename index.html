@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-06-26 19:10</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-06-26 19:25</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -1137,20 +1137,20 @@ const SECTIONS = [
     { id: 'campagnes', label: 'Campagnes' },
   ]},
   { id: 'portefeuille', label: 'Portefeuille', icon: '◑', sub: [
-    { id: 'portefeuille', label: 'Tous les clients' },
+    { id: 'portefeuille', label: 'Tous les clients', staff: true },
     { id: 'clients-prives', label: 'Clients privés' },
     { id: 'clients-entreprises', label: 'Entreprises' },
-    { id: 'volume-primes', label: 'Volume de primes' },
+    { id: 'volume-primes', label: 'Volume de primes', staff: true },
   ]},
   { id: 'clients', label: 'Clients', icon: '◉', sub: [
     { id: 'clients', label: 'Fiches clients' },
   ]},
   { id: 'compta', label: 'Comptabilité', icon: '◎', sub: [
     { id: 'bordereaux', label: 'Bordereaux' },
-    { id: 'commissions', label: 'Commissions' },
+    { id: 'commissions', label: 'Commissions', staff: true },
     { id: 'commissions-attente', label: 'Toutes les commissions' },
     { id: 'rapport-finma', label: 'Rapport FINMA' },
-    { id: 'production', label: 'Production (par période)' },
+    { id: 'production', label: 'Production (par période)', staff: true },
   ]},
   { id: 'settings', label: 'Paramètres', icon: '⊙', sub: [
     { id: 'agents', label: 'Agents' },
@@ -1186,8 +1186,8 @@ function renderSidebar() {
     if (openSections[sec.id]) {
       sec.sub.forEach(s => {
         const active = s.id === currentView;
-        nav += `<button class="nav-item ${active ? 'active' : ''}" onclick="navigate('${s.id}')">
-          ${active ? '<span class="nav-dot"></span>' : ''}${s.label}
+        nav += `<button class="nav-item ${active ? 'active' : ''}" onclick="navigate('${s.id}')" style="${s.staff ? `color:#fb923c;font-weight:700;${active ? 'background:rgba(251,146,60,0.12);' : ''}` : ''}">
+          ${active ? `<span class="nav-dot" style="${s.staff ? 'background:#fb923c' : ''}"></span>` : ''}${s.label}
         </button>`;
       });
     }

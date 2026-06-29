@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-06-26 18:30</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-06-26 19:10</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -1500,18 +1500,26 @@ function downloadBlob(content, filename, mime) {
 function viewProduction() {
   const aujourd = new Date().toISOString().split('T')[0];
   const debutAnnee = new Date().getFullYear() + '-01-01';
+  const produitsDistincts = [...new Set(allContrats.map(ct => ct.produit).filter(Boolean))].sort();
   setTimeout(() => renderProduction(), 0);
   return `
     <h2 style="margin:0 0 6px;font-size:18px;font-weight:800;color:var(--text)">Production par période</h2>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Contrats signés entre deux dates, avec la prime annuelle (CA) générée — par agent et par type de produit.</div>
-    <div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
+    <div style="display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap;align-items:flex-end">
       <div><label style="font-size:10.5px;color:var(--text-muted);display:block;margin-bottom:3px">Du</label><input class="form-input" id="prod-debut" type="date" value="${debutAnnee}" onchange="renderProduction()"/></div>
       <div><label style="font-size:10.5px;color:var(--text-muted);display:block;margin-bottom:3px">Au</label><input class="form-input" id="prod-fin" type="date" value="${aujourd}" onchange="renderProduction()"/></div>
-      <select class="form-select" id="prod-agent" style="max-width:200px;margin-top:18px" onchange="renderProduction()">
+      <select class="form-select" id="prod-agent" style="max-width:200px" onchange="renderProduction()">
         <option value="">Tous les agents</option>
         ${allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('')}
       </select>
+      <select class="form-select" id="prod-produit" style="max-width:240px" onchange="renderProduction()">
+        <option value="">Tous les types de produit</option>
+        ${produitsDistincts.map(p => `<option value="${p}">${p}</option>`).join('')}
+      </select>
     </div>
+    <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text-muted);cursor:pointer;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 14px;width:fit-content;margin-bottom:18px">
+      <input type="checkbox" id="prod-hide-lamal" checked onchange="renderProduction()"/> Masquer LAMal (fausse la lecture du CA produit, quasi pas commissionné)
+    </label>
     <div id="prod-stats" class="stat-grid" style="margin-bottom:20px"></div>
     <div id="prod-detail"></div>
     <div id="prod-table"></div>`;
@@ -1521,12 +1529,16 @@ function renderProduction() {
   const debut = document.getElementById('prod-debut')?.value;
   const fin = document.getElementById('prod-fin')?.value;
   const agentFilter = document.getElementById('prod-agent')?.value || '';
+  const produitFilter = document.getElementById('prod-produit')?.value || '';
+  const hideLamal = document.getElementById('prod-hide-lamal')?.checked;
 
   const filtered = allContrats.filter(ct => {
     if (!ct.date_debut) return false;
     if (debut && ct.date_debut < debut) return false;
     if (fin && ct.date_debut > fin) return false;
     if (agentFilter && ct.apporteur_id !== agentFilter) return false;
+    if (produitFilter && ct.produit !== produitFilter) return false;
+    if (hideLamal && (ct.produit||'').toLowerCase().includes('lamal')) return false;
     return true;
   }).sort((a,b) => new Date(b.date_debut) - new Date(a.date_debut));
 
@@ -1542,7 +1554,7 @@ function renderProduction() {
   document.getElementById('prod-stats').innerHTML = `
     ${statCard('Contrats signés', filtered.length, '#38bdf8')}
     ${statCard('CA total (production)', 'CHF ' + Math.round(totalCA).toLocaleString(), '#f59e0b')}
-    ${statCard('Dont commissionné', 'CHF ' + Math.round(totalCommissionne).toLocaleString(), '#4ade80')}
+    ${statCard('CA des contrats commissionnés', 'CHF ' + Math.round(totalCommissionne).toLocaleString(), '#4ade80', `${commissionnes.length}/${filtered.length} contrats`)}
   `;
 
   // Détail par agent
@@ -3862,6 +3874,10 @@ async function showEditContrat(contratId) {
             ${perioOpts.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
           </select>
         </div>
+        <div class="form-field"><label class="form-label">Agent / Apporteur</label><select class="form-select" id="ect-apporteur">
+          <option value="">— Aucun / pas de partage —</option>
+          ${allAgents.map(a => `<option value="${a.id}" ${ct.apporteur_id===a.id?'selected':''}>${a.prenom} ${a.nom}${a.role==='signataire'?' (moi-même)':''}</option>`).join('')}
+        </select></div>
         <div class="form-field"><label class="form-label">Statut</label>
           <select class="form-select" id="ect-statut">
             <option value="actif" ${ct.statut==='actif'?'selected':''}>Actif</option>
@@ -3916,6 +3932,7 @@ async function saveEditContrat(contratId, clientId) {
     prime_annuelle: primeAnnuelle,
     statut: document.getElementById('ect-statut').value,
     commissionne,
+    apporteur_id: document.getElementById('ect-apporteur').value || null,
     modules: document.getElementById('ect-modules').value.trim() || null,
   };
   const btn = document.querySelector('#modal-edit-contrat .btn-save');
@@ -4409,6 +4426,10 @@ function viewNouveauContrat() {
       <div class="form-field" id="ct-manuel-field" style="display:none"><label class="form-label">Commission estimée (CHF) — manuel</label><input class="form-input" id="ct-manuel" type="number" placeholder="0" oninput="updateCommissionPreview()"/></div>
       <div class="form-field"><label class="form-label">Date de signature</label><input class="form-input" id="ct-date" type="date"/></div>
       <div class="form-field"><label class="form-label">Date d'échéance</label><input class="form-input" id="ct-echeance" type="date"/></div>
+      <div class="form-field"><label class="form-label">Agent / Apporteur</label><select class="form-select" id="ct-apporteur">
+        <option value="">— Aucun / pas de partage —</option>
+        ${allAgents.map(a => `<option value="${a.id}" ${contratClientId && allClients.find(c=>c.id===contratClientId)?.apporteur_id===a.id ? 'selected' : ''}>${a.prenom} ${a.nom}${a.role==='signataire'?' (moi-même)':''}</option>`).join('')}
+      </select></div>
       <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="ct-statut"><option value="actif">Actif</option><option value="en_cours">En cours de signature</option></select></div>
       <div class="form-field"><label class="form-label">Commissionné ?</label><select class="form-select" id="ct-commissionne" onchange="document.getElementById('ct-rappel-note').style.display = this.value==='non' ? '' : 'none'"><option value="oui">Oui</option><option value="non">Non (pas de convention de collaboration)</option></select>
         <div id="ct-rappel-note" style="display:none;font-size:10.5px;color:var(--text-muted);margin-top:4px">ℹ️ Pas de commission créée. Un rappel sera généré 6 mois avant la date d'échéance pour proposer un transfert vers une compagnie partenaire.</div>
@@ -4641,6 +4662,7 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
   const commissionne = document.getElementById('ct-commissionne').value !== 'non';
   const contratBody = {
     client_id: clientId,
+    apporteur_id: document.getElementById('ct-apporteur').value || null,
     compagnie,
     produit: produitLabel,
     modules: modules && modules.length > 0 ? modules.join(', ') : null,

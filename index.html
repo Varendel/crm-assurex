@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-06-26 17:20</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-06-26 18:00</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -1339,6 +1339,24 @@ function viewDashboard() {
     </div>`;
   }).join('');
 
+  // ── Polices non commissionnées "à bouger" — regroupées par horizon d'échéance ──
+  const today = new Date();
+  const nonGerees = allContrats.filter(ct => ct.commissionne === false && ct.statut !== 'résilié');
+  function joursRestants(ct) { return ct.date_echeance ? Math.floor((new Date(ct.date_echeance) - today) / 86400000) : null; }
+  const horizons = [
+    { label: 'En retard', test: j => j !== null && j < 0, color: '#f87171' },
+    { label: '0-3 mois', test: j => j !== null && j >= 0 && j <= 90, color: '#fb923c' },
+    { label: '3-6 mois', test: j => j !== null && j > 90 && j <= 180, color: '#f59e0b' },
+    { label: '6-12 mois', test: j => j !== null && j > 180 && j <= 365, color: '#a78bfa' },
+    { label: '+12 mois / inconnue', test: j => j === null || j > 365, color: '#64748b' },
+  ];
+  const horizonsData = horizons.map(h => {
+    const liste = nonGerees.filter(ct => h.test(joursRestants(ct)));
+    return { ...h, nb: liste.length, montant: liste.reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0) };
+  });
+  const totalNonGere = nonGerees.reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0);
+  const maxHorizon = Math.max(...horizonsData.map(h => h.montant), 1);
+
   return `
     <div style="margin-bottom:4px;color:var(--text-muted);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase">${now}</div>
     <h1 style="margin:0 0 4px;font-size:24px;font-weight:900;color:var(--text)">Bonjour, ${currentUser.prenom} 👋</h1>
@@ -1349,6 +1367,30 @@ function viewDashboard() {
       ${statCard('Rappels urgents', urgents.length, urgents.length > 0 ? '#f87171' : '#64748b')}
       ${statCard('Agents', allAgents.length, '#a78bfa')}
     </div>
+
+    ${nonGerees.length > 0 ? `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+        <div style="font-size:13px;font-weight:800;color:var(--text)">🎯 Polices non commissionnées à bouger</div>
+        <div style="font-size:18px;font-weight:900;color:#fb923c">CHF ${Math.round(totalNonGere).toLocaleString()}</div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:18px">${nonGerees.length} contrat(s) sans convention de collaboration — volume de primes potentiellement récupérable par transfert, classé par proximité d'échéance</div>
+      <div style="display:flex;align-items:flex-end;gap:14px;height:120px;margin-bottom:6px">
+        ${horizonsData.map(h => {
+          const heightPx = Math.max(Math.round(h.montant / maxHorizon * 95), h.montant > 0 ? 6 : 2);
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
+            <div style="font-size:10.5px;font-weight:800;color:${h.color};margin-bottom:4px">${h.montant > 0 ? Math.round(h.montant/1000) + 'k' : '—'}</div>
+            <div style="width:100%;max-width:50px;height:${heightPx}px;background:${h.color};border-radius:5px 5px 2px 2px;opacity:${h.nb>0?1:0.25}"></div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;gap:14px">
+        ${horizonsData.map(h => `<div style="flex:1;text-align:center"><div style="font-size:10px;color:var(--text-muted)">${h.label}</div><div style="font-size:10px;color:var(--text-dim)">${h.nb} contrat(s)</div></div>`).join('')}
+      </div>
+      <div style="margin-top:14px;text-align:right">
+        <button onclick="navigate('suivi')" style="background:none;border:none;color:var(--accent);font-size:11px;font-weight:700;cursor:pointer">Voir le détail →</button>
+      </div>
+    </div>` : ''}
 
     <div id="calendar-widget-container" style="margin-bottom:20px"></div>
 
@@ -3726,11 +3768,27 @@ async function showEditContrat(contratId) {
         <div class="form-field"><label class="form-label">Modules / options</label><input class="form-input" id="ect-modules" value="${ct.modules || ''}"/></div>
       </div>
       <div style="display:flex;gap:10px;margin-top:20px">
+        <button onclick="deleteContrat('${ct.id}','${ct.client_id}')" style="background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>
         <button class="btn-secondary" onclick="document.getElementById('modal-edit-contrat').remove()">Annuler</button>
-        <button class="btn-save" onclick="saveEditContrat('${contratId}','${ct.client_id}')">✓ Enregistrer</button>
+        <button class="btn-save" onclick="saveEditContrat('${ct.id}','${ct.client_id}')">✓ Enregistrer</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
+}
+
+async function deleteContrat(contratId, clientId) {
+  if (!confirm('Supprimer définitivement ce contrat ? Cette action est irréversible.')) return;
+  const token = await getValidAccessToken() || SUPABASE_KEY;
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/contrats?id=eq.${contratId}`, {
+    method: 'DELETE',
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
+  });
+  if (!r.ok) { showError('Erreur lors de la suppression du contrat.'); return; }
+  logAction('delete_contrat', 'contrats', contratId, null);
+  allContrats = await dbGet('contrats', 'select=*');
+  const modal = document.getElementById('modal-edit-contrat');
+  if (modal) modal.remove();
+  showClient(clientId);
 }
 
 async function saveEditContrat(contratId, clientId) {

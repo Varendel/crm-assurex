@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-06-26 20:45</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-06-27 09:00</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -1956,7 +1956,7 @@ function renderPortefeuilleTable(filtre) {
     const ca = caClient(c.id);
     return `<div class="table-row" style="grid-template-columns:${cols}" onclick="showClient('${c.id}')">
       <div>
-        <div style="font-weight:700;font-size:13px;color:var(--text)">${c.prenom} ${c.nom}</div>
+        <div style="font-weight:700;font-size:13px;color:var(--text)">${c.prenom} ${c.nom}${c.source_oz ? OZ_MINI_LOGO : ''}</div>
         <div style="font-size:11px;color:var(--text-muted)">${c.ville || ''} · ${c.profession || ''}</div>
       </div>
       <div><div style="font-size:11px;color:var(--text)">${c.email || ''}</div><div style="font-size:11px;color:var(--text-muted)">${c.mobile || ''}</div></div>
@@ -2112,6 +2112,7 @@ async function showClient(id) {
           <div style="font-size:12.5px;font-weight:700;color:var(--text)">${signataire.prenom} ${signataire.nom}</div>
           <div style="font-size:10.5px;color:var(--text-muted)">👤 Agent signataire — toujours responsable, touche systématiquement sa part</div>
         </div>
+        <button onclick="toggleSourceOz('${c.id}', ${!c.source_oz})" title="${c.source_oz ? 'Client OZ Assure — cliquer pour retirer le marquage' : 'Marquer comme client OZ Assure'}" style="margin-left:auto;background:${c.source_oz ? 'rgba(74,144,226,0.15)' : 'var(--surface-alt)'};border:1px solid ${c.source_oz ? 'rgba(74,144,226,0.4)' : 'var(--border)'};border-radius:7px;padding:4px 8px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:10.5px;color:${c.source_oz ? '#4a90e2' : 'var(--text-muted)'};font-weight:700">${c.source_oz ? OZASSURE_LOGO_SVG.replace('class="oz-logo-svg"', 'style="height:18px;width:auto"') + ' Client OZ' : '+ Marquer OZ'}</button>
       </div>` : ''; })()}
       <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface-alt);border:1px solid var(--border);border-radius:10px;margin-bottom:${c.apporteur_externe ? '8px' : '0'}">
         ${agent ? avatar(agent, 36) : `<div style="width:36px;height:36px;border-radius:50%;background:rgba(148,163,184,0.15);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🤷</div>`}
@@ -2365,6 +2366,17 @@ function toggleEditClient() {
       bindAdresseAutocomplete({ adresseId:'ec-adresse', npaId:'ec-npa', villeId:'ec-ville', cantonId:'ec-canton' });
     }, 0);
   }
+}
+
+// ═══ MARQUAGE CLIENT OZ ASSURE ═══
+const OZ_MINI_LOGO = `<span title="Client OZ Assure" style="display:inline-flex;align-items:center;margin-left:4px;vertical-align:middle">${'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="height:14px;width:14px"><circle cx="50" cy="50" r="45" fill="#1a56db" opacity="0.9"/><text x="50" y="67" text-anchor="middle" font-size="44" font-weight="900" fill="white" font-family="Arial,sans-serif">OZ</text></svg>'}</span>`;
+
+async function toggleSourceOz(clientId, valeur) {
+  const r = await dbPatch('clients', clientId, { source_oz: valeur });
+  if (r && r.error) { showError('Erreur : ' + errMsg(r)); return; }
+  logAction('toggle_source_oz', 'clients', clientId, valeur ? 'Client marqué OZ' : 'Marquage OZ retiré');
+  allClients = await dbGet('clients', 'select=*');
+  showClient(clientId);
 }
 
 async function changerAgentClient(clientId, agentId) {
@@ -4986,7 +4998,7 @@ function renderToutesCommissions() {
   const rows = filtered.map(c => {
     const numBord = numeroBordereauDe(c);
     return `<div class="table-row" style="grid-template-columns:${cols};cursor:pointer" onclick="showModalEditCommission('${c.id}')">
-      <div><div style="font-size:13px;font-weight:700;color:var(--text)">${c.client_nom || '—'}</div><div style="font-size:11px;color:var(--text-muted)">${c.produit || ''}</div></div>
+      <div><div style="font-size:13px;font-weight:700;color:var(--text)">${c.client_nom || '—'}${(() => { const cl = allClients.find(x => x.id === c.client_id); return cl && cl.source_oz ? OZ_MINI_LOGO : ''; })()}</div><div style="font-size:11px;color:var(--text-muted)">${c.produit || ''}</div></div>
       <div style="font-size:12px;color:var(--text-muted)">${c.compagnie || ''}</div>
       <div style="font-size:11px;color:var(--text-muted)">${numBord ? `<span style="font-family:monospace">${numBord}</span>` : '—'}</div>
       <div style="font-size:12px;color:var(--text-muted)">${c.date_creation || ''}</div>

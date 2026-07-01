@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-06-26 19:25</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-06-26 20:00</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -494,7 +494,12 @@ let currentClientId = null;
 // Acquisition: santé = primemensuelle x ce facteur ; vie = primemensuelle x12 x facteur(par année du contrat)
 const TAUX_COMMISSION = {
   sante_facteur_mensuel: 16,   // santé : prime mensuelle x 16
-  vie_taux_capital: 4,         // vie : 4% du capital de production (prime mensuelle x12 x nb années)
+  vie_taux_capital: 4,         // vie 3a : 4% du capital de production (prime mensuelle x12 x nb années)
+  lpp_fp: 1.20,                // LPP Swiss Life : facteur produit 1.20 (Business Invest/Premium/Select)
+  lpp_taux: 6.3,               // LPP Swiss Life : taux de commissionnement 6.3% (Annexe B convention SL1102)
+  // COG annuelle LPP = prime_annuelle × 1.20 × 6.3% (versée trimestriellement)
+  // Minimum de prime annuelle pour déclencher une COG : CHF 2'000
+  // Plafond COG annuelle : CHF 120'000 ou 70% des primes de frais de gestion
 };
 
 // Catalogue des produits d'assurance par catégorie, avec modules complémentaires (à enrichir au fur et à mesure)
@@ -4627,18 +4632,41 @@ function calculerCommissionEstimee() {
   const produit = getProduitSelectionne();
   const produitId = produit ? produit.id : null;
   const primeMensuelle = parseFloat(document.getElementById('ct-prime-mensuelle').value) || 0;
+  const periodicite = parseInt(document.getElementById('ct-periodicite')?.value) || 12;
+  const primeAnnuelle = Math.round(primeMensuelle * periodicite);
+
+  // ── Santé / complémentaire ──────────────────────────────────────────────
   if (produitId === 'sante_complementaire') {
     const montant = Math.round(primeMensuelle * TAUX_COMMISSION.sante_facteur_mensuel);
-    return { montant, detail: `CHF ${primeMensuelle} x ${TAUX_COMMISSION.sante_facteur_mensuel} (taux santé)` };
+    return { montant, detail: `CHF ${primeMensuelle}/mois × ${TAUX_COMMISSION.sante_facteur_mensuel} (taux santé) = CHF ${montant}` };
   }
+
+  // ── Vie / 3a ────────────────────────────────────────────────────────────
   if (produitId === 'vie_3a') {
     const duree = parseFloat(document.getElementById('ct-duree')?.value) || 1;
     const capitalProduction = primeMensuelle * 12 * duree;
     const montant = Math.round(capitalProduction * (TAUX_COMMISSION.vie_taux_capital / 100));
-    return { montant, detail: `${TAUX_COMMISSION.vie_taux_capital}% de CHF ${capitalProduction.toLocaleString()} (capital de production : ${primeMensuelle} x 12 x ${duree} an(s))` };
+    return { montant, detail: `${TAUX_COMMISSION.vie_taux_capital}% × CHF ${capitalProduction.toLocaleString()} (capital = ${primeMensuelle} × 12 × ${duree} ans) = CHF ${montant}` };
   }
+
+  // ── LPP (prévoyance professionnelle 2e pilier) ─────────────────────────
+  // Formule COG Swiss Life : prime annuelle × FP 1.20 × taux 6.3%
+  // Source : Annexe B convention SL1102, valable dès 01.01.2024
+  if (produitId === 'lpp_entreprise') {
+    if (primeAnnuelle < 2000) {
+      return { montant: 0, detail: `Prime annuelle CHF ${primeAnnuelle} < CHF 2\'000 minimum — aucune COG Swiss Life` };
+    }
+    const cogAnnuelle = Math.round(primeAnnuelle * TAUX_COMMISSION.lpp_fp * (TAUX_COMMISSION.lpp_taux / 100));
+    const cogTrimestrielle = Math.round(cogAnnuelle / 4);
+    return {
+      montant: cogAnnuelle,
+      detail: `COG Swiss Life : CHF ${primeAnnuelle} × ${TAUX_COMMISSION.lpp_fp} (FP) × ${TAUX_COMMISSION.lpp_taux}% = CHF ${cogAnnuelle}/an (CHF ${cogTrimestrielle}/trimestre, versée en mars/juin/sept/déc)`,
+    };
+  }
+
+  // ── Autres produits : saisie manuelle ───────────────────────────────────
   const montant = parseFloat(document.getElementById('ct-manuel')?.value) || 0;
-  return { montant, detail: 'Saisie manuelle' };
+  return { montant, detail: montant > 0 ? 'Saisie manuelle' : 'Saisis le montant estimé ci-dessous' };
 }
 
 function updateCommissionPreview() {

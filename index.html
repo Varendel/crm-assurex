@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-02 12:45</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-02 13:30</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -574,7 +574,31 @@ const CATALOGUE_PRODUITS = {
     { id: 'lpp_entreprise', label: 'LPP collective (2e pilier entreprise)', segment: 'entreprise', modules: [] },
   ],
   'Santé': [
-    { id: 'sante_complementaire', label: 'Complémentaire santé', segment: 'prive', modules: [] },
+    { id: 'lamal', label: 'LAMal (assurance de base)', segment: 'prive', compagnie_fixe: null, modules: [] },
+    // ── CSS ──────────────────────────────────────────────────────────────
+    { id: 'css_myflex_ambulatoire', label: 'CSS myFlex — Ambulatoire', segment: 'prive', compagnie_fixe: 'CSS', modules: ['Médecin de famille (telmed)', 'Pharmacie directe', 'Libre choix du médecin'] },
+    { id: 'css_myflex_hospitalisation', label: 'CSS myFlex — Hospitalisation', segment: 'prive', compagnie_fixe: 'CSS', modules: ['Division commune', 'Semi-privée', 'Privée', 'Toute la Suisse', 'Monde entier'] },
+    { id: 'css_myflex_medecines', label: 'CSS myFlex — Médecines naturelles', segment: 'prive', compagnie_fixe: 'CSS', modules: [] },
+    { id: 'css_myflex_dental', label: 'CSS myFlex — Dental', segment: 'prive', compagnie_fixe: 'CSS', modules: [] },
+    // ── Helsana ──────────────────────────────────────────────────────────
+    { id: 'helsana_top', label: 'Helsana TOP (ambulatoire)', segment: 'prive', compagnie_fixe: 'Helsana', modules: [] },
+    { id: 'helsana_completa', label: 'Helsana COMPLETA (ambulatoire + hospit.)', segment: 'prive', compagnie_fixe: 'Helsana', modules: ['Division commune', 'Semi-privée', 'Privée'] },
+    { id: 'helsana_sana', label: 'Helsana SANA (médecines alternatives)', segment: 'prive', compagnie_fixe: 'Helsana', modules: [] },
+    { id: 'helsana_dental', label: 'Helsana DENTAL', segment: 'prive', compagnie_fixe: 'Helsana', modules: [] },
+    { id: 'helsana_plus', label: 'Helsana PLUS (prévention & fitness)', segment: 'prive', compagnie_fixe: 'Helsana', modules: [] },
+    // ── Groupe Mutuel ─────────────────────────────────────────────────────
+    { id: 'gm_optisana', label: 'GM Optisana A (ambulatoire)', segment: 'prive', compagnie_fixe: 'Groupe Mutuel', modules: [] },
+    { id: 'gm_hopital', label: 'GM Complément Hôpital', segment: 'prive', compagnie_fixe: 'Groupe Mutuel', modules: ['Division commune', 'Semi-privée', 'Privée'] },
+    { id: 'gm_globalcare', label: 'GM Global Care', segment: 'prive', compagnie_fixe: 'Groupe Mutuel', modules: [] },
+    { id: 'gm_denta', label: 'GM Denta Plus', segment: 'prive', compagnie_fixe: 'Groupe Mutuel', modules: [] },
+    { id: 'gm_medoucine', label: 'GM Médecines douces', segment: 'prive', compagnie_fixe: 'Groupe Mutuel', modules: [] },
+    // ── SWICA ─────────────────────────────────────────────────────────────
+    { id: 'swica_completa', label: 'SWICA COMPLETA (ambulatoire)', segment: 'prive', compagnie_fixe: 'SWICA', modules: [] },
+    { id: 'swica_hospita', label: 'SWICA HOSPITA (hospitalisation)', segment: 'prive', compagnie_fixe: 'SWICA', modules: ['Division commune', 'Semi-privée', 'Privée', 'Monde entier'] },
+    { id: 'swica_denta', label: 'SWICA DENTA', segment: 'prive', compagnie_fixe: 'SWICA', modules: [] },
+    { id: 'swica_praeventa', label: 'SWICA PRAEVENTA (prévention)', segment: 'prive', compagnie_fixe: 'SWICA', modules: [] },
+    // ── Complémentaire générique (autres compagnies) ───────────────────────
+    { id: 'sante_complementaire', label: 'Complémentaire santé — autre compagnie', segment: 'prive', modules: [] },
   ],
   'Assurances de personnes (entreprise)': [
     { id: 'laa', label: 'LAA (assurance-accidents obligatoire)', segment: 'entreprise', modules: ['Accidents professionnels (AP)', 'Accidents non professionnels (ANP)', 'Sursalaire LAA complémentaire'] },
@@ -2448,8 +2472,34 @@ async function showClient(id) {
         ${infoBlock('LPP (2e pilier)', c.lpp_actuel ? '✓ Affilié' : '✗ Non affilié')}
         ${infoBlock('Pilier 3a', c.pilier3a ? '✓ Actif' : '✗ Aucun')}
         ${infoBlock('Cotisation 3a', c.montant_3a ? 'CHF ' + c.montant_3a : '—')}
-        ${infoBlock('Plafond légal 2026', "CHF 7\'056")}
+        ${infoBlock('Plafond légal 2026', "CHF 7'056")}
       </div>`)}
+      ${(() => {
+        const santeContrats = contrats.filter(ct => {
+          const p = (ct.produit||'').toLowerCase();
+          return p.includes('completa') || p.includes('myflex') || p.includes('top') || 
+                 p.includes('sana') || p.includes('dental') || p.includes('hospita') ||
+                 p.includes('optisana') || p.includes('praeventa') || p.includes('global care') ||
+                 p.includes('complémentaire') || p.includes('complementaire') || p.includes('lamal');
+        });
+        if (!santeContrats.length) return '';
+        return sectionCard('Santé — couvertures actives', '#22c55e', `
+          <div style="display:flex;flex-direction:column;gap:10px">
+            ${santeContrats.map(ct => `
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface-alt);border-radius:9px;border:1px solid var(--border)">
+                <div>
+                  <div style="font-size:13px;font-weight:700;color:var(--text)">${ct.produit}</div>
+                  <div style="font-size:11px;color:var(--text-muted)">${ct.compagnie || ''}${ct.date_debut ? ' · Dès le ' + ct.date_debut : ''}${ct.date_echeance ? ' → ' + ct.date_echeance : ''}</div>
+                  <div style="font-size:11px;color:var(--text-muted)">${ct.numero_police ? 'Police № ' + ct.numero_police : ''}</div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-weight:800;color:#f59e0b;font-size:13px">CHF ${Number(ct.prime_annuelle||0).toLocaleString()}/an</div>
+                  <div style="font-size:10px;color:var(--text-muted)">CHF ${Math.round(Number(ct.prime_annuelle||0)/12)}/mois</div>
+                  ${badge(ct.statut, ct.statut==='actif'?'#4ade80':'#f59e0b')}
+                </div>
+              </div>`).join('')}
+          </div>`);
+      })()}
     </div>
 
     <div id="tab-contrats" class="hidden">
@@ -2460,7 +2510,7 @@ async function showClient(id) {
       ${contrats.map(ct => `<div class="table-row" style="grid-template-columns:1fr 120px 100px 110px 100px 80px">
         <div>
           <div style="font-weight:700;font-size:13px;color:var(--text)">${ct.produit}</div>
-          <div style="font-size:11px;color:var(--text-muted)">${ct.numero_police || ''}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${ct.numero_police ? '№ ' + ct.numero_police : ''}${ct.date_debut ? ' · Dès le ' + ct.date_debut : ''}${ct.date_echeance ? ' → ' + ct.date_echeance : ''}</div>
         </div>
         <div style="font-size:13px;color:var(--text)">${ct.compagnie}</div>
         <div style="font-size:12px;color:var(--text-muted)">${ct.date_echeance || ''}</div>
@@ -4807,6 +4857,17 @@ function updateProduitOptions() {
   const produits = tousProduits.filter(p => p.segment === segment || p.segment === 'tous');
   datalist.innerHTML = produits.map(p => `<option value="${p.label}">`).join('');
   produitInput.value = '';
+  // Pré-remplir la compagnie si le produit a une compagnie fixe
+  produitInput.oninput = function() {
+    const val = this.value.trim().toLowerCase();
+    const prodTrouve = produits.find(p => p.label.toLowerCase() === val);
+    if (prodTrouve && prodTrouve.compagnie_fixe) {
+      const compField = document.getElementById('ct-compagnie');
+      if (compField && !compField.value) compField.value = prodTrouve.compagnie_fixe;
+    }
+    updateModulesOptions();
+    updateCommissionPreview();
+  };
   updateModulesOptions();
   updateCommissionPreview();
 }
@@ -5217,6 +5278,11 @@ function renderToutesCommissions() {
   function montantC(c) { return c.montant_final != null ? c.montant_final : (c.montant_estime || 0); }
 
   const filtered = allCommissionsAttente.filter(c => {
+    // Exclure les commissions liées à un contrat marqué "non commissionné"
+    if (c.contrat_id) {
+      const ct = allContrats.find(x => x.id === c.contrat_id);
+      if (ct && ct.commissionne === false) return false;
+    }
     if (statutFilter && c.statut !== statutFilter) return false;
     if (search) {
       const haystack = `${c.client_nom||''} ${c.compagnie||''} ${c.produit||''} ${numeroBordereauDe(c)}`.toLowerCase();

@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-02 11:30</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-02 12:20</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -350,6 +350,7 @@
 <script>
 // ═══ CONFIG ═══
 const SUPABASE_URL = 'https://gutlkjovmsyazwcomoyt.supabase.co';
+const DATE_BASCULE_ASSUREX = '2026-06-01'; // Date à partir de laquelle les commissions sont versées à Assurex
 const AI_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/clever-worker`;
 const SUPABASE_KEY = 'sb_publishable_DJtZwHKeA5X1ck1coAQFOA_xOd7c02i';
 
@@ -1353,6 +1354,13 @@ async function renderView() {
 function viewDashboard() {
   const actifs = allClients.filter(c => c.statut === 'actif').length;
   const totalCA = allContrats.filter(ct => ct.statut === 'actif').reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
+  // Commissions actives depuis la date de bascule Assurex (01.06.2026)
+  const commissionsActives = allCommissionsAttente.filter(ca => {
+    const ct = allContrats.find(c => c.id === ca.contrat_id);
+    return ct && ct.date_debut >= DATE_BASCULE_ASSUREX && ca.statut === 'en_attente';
+  });
+  const totalCommActives = commissionsActives.reduce((s, ca) => s + Number(ca.montant_estime || 0), 0);
+  const nbContratsActifs = allContrats.filter(ct => ct.statut !== 'résilié' && ct.commissionne !== false).length;
   const urgents = allRappels.filter(r => r.urgence === 'haute' && r.statut === 'ouvert');
   const now = new Date().toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -1402,12 +1410,12 @@ function viewDashboard() {
   return `
     <div style="margin-bottom:4px;color:var(--text-muted);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase">${now}</div>
     <h1 style="margin:0 0 4px;font-size:24px;font-weight:900;color:var(--text)">Bonjour, ${currentUser.prenom} 👋</h1>
-    <div style="color:var(--text-muted);font-size:13px;margin-bottom:24px">Assurex Sàrl · Groupe EX</div>
+    <div style="color:var(--text-muted);font-size:13px;margin-bottom:24px">Assurex Sàrl · EX Groupe · Commissions actives depuis le 01.06.2026</div>
     <div class="stat-grid">
-      ${statCard('Clients actifs', actifs, '#38bdf8', `${allClients.length} total`)}
-      ${statCard('CA portefeuille', 'CHF ' + totalCA.toLocaleString(), '#f59e0b')}
+      ${statCard('Clients', allClients.length, '#38bdf8', `${actifs} actifs`)}
+      ${statCard('CA portefeuille /an', 'CHF ' + Math.round(totalCA).toLocaleString(), '#f59e0b', `${nbContratsActifs} contrats`)}
+      ${statCard('Commissions en attente', 'CHF ' + Math.round(totalCommActives).toLocaleString(), '#4ade80', `depuis 01.06.2026`)}
       ${statCard('Rappels urgents', urgents.length, urgents.length > 0 ? '#f87171' : '#64748b')}
-      ${statCard('Agents', allAgents.length, '#a78bfa')}
     </div>
 
     ${nonGerees.length > 0 ? `
@@ -1939,7 +1947,7 @@ function viewTousContrats() {
       <input class="form-input" id="tc-search" placeholder="🔍 Client, compagnie, produit, n° police..." style="flex:1;min-width:180px" oninput="renderTousContrats()"/>
       <select class="form-select" id="tc-agent" style="max-width:180px" onchange="renderTousContrats()">
         <option value="">Tous les agents</option>
-        <option value="__sans__">— Sans agent assigné</option>
+        <option value="__sans__">— Sans apporteur (moi seul)</option>
         ${agentOptions}
       </select>
       <select class="form-select" id="tc-compagnie" style="max-width:160px" onchange="renderTousContrats()">
@@ -1992,7 +2000,7 @@ function renderTousContrats() {
   document.getElementById('tc-stats').innerHTML = `
     ${statCard('Contrats', filtered.length, '#38bdf8')}
     ${statCard('Primes/an', 'CHF ' + Math.round(totalPrimes).toLocaleString(), '#f59e0b')}
-    ${sanAgent > 0 ? statCard('⚠️ Sans agent', sanAgent, '#f87171') : ''}`;
+    ${sanAgent > 0 ? statCard('Sans apporteur', sanAgent, '#64748b', 'toi seul') : ''}`;
 
   const cols = '1fr 110px 110px 100px 90px 70px 36px';
   const rows = filtered.map(ct => {
@@ -2008,7 +2016,11 @@ function renderTousContrats() {
       <div style="font-size:12px;color:var(--text-muted)">${ct.date_debut||'—'}</div>
       <div style="font-weight:800;color:#f59e0b;text-align:right">CHF ${Number(ct.prime_annuelle||0).toLocaleString()}</div>
       <div>${badge(ct.statut, ct.statut==='actif'?'#4ade80':ct.statut==='résilié'?'#f87171':'#f59e0b')}</div>
-      <div style="font-size:11px;color:var(--text-muted)">${agent ? agent.prenom : '<span style="color:#f87171">⚠️ —</span>'}</div>
+      <div style="font-size:11px;color:var(--text-muted)">${(() => {
+        if (agent) return agent.prenom + ' ' + agent.nom;
+        const sig = allAgents.find(a => a.role === 'signataire');
+        return sig ? '<span style="color:var(--text-muted)">' + sig.prenom + ' ' + sig.nom + '</span>' : '—';
+      })()}</div>
       <div><button onclick="showEditContrat('${ct.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:4px 7px;font-size:12px;cursor:pointer">✏️</button></div>
     </div>`;
   }).join('');
@@ -2016,7 +2028,7 @@ function renderTousContrats() {
   document.getElementById('tc-body').innerHTML = `
     <div class="table-wrap">
       <div class="table-header" style="grid-template-columns:${cols}">
-        <div>Client / Produit</div><div>Compagnie</div><div>Date signature</div><div>Prime/an</div><div>Statut</div><div>Agent</div><div></div>
+        <div>Client / Produit</div><div>Compagnie</div><div>Date signature</div><div>Prime/an</div><div>Statut</div><div>Signataire / Apporteur</div><div></div>
       </div>
       ${rows || '<div class="table-empty">Aucun contrat ne correspond aux filtres.</div>'}
     </div>`;
@@ -2079,7 +2091,7 @@ function viewPortefeuille(filtre) {
       <input class="form-input" id="pf-search" placeholder="🔍 Rechercher un nom, ville, email..." style="flex:1;min-width:200px" oninput="renderPortefeuilleTable('${filtre}')"/>
       <select class="form-select" id="pf-agent" style="max-width:200px" onchange="renderPortefeuilleTable('${filtre}')">
         <option value="">Tous les agents</option>
-        <option value="__sans__">— Sans agent assigné</option>
+        <option value="__sans__">— Sans apporteur (moi seul)</option>
         ${agentOptions}
       </select>
       <select class="form-select" id="pf-statut" style="max-width:160px" onchange="renderPortefeuilleTable('${filtre}')">
@@ -5142,7 +5154,8 @@ async function deleteCommission(commId) {
   logAction('delete_commission', 'commissions_attente', commId, label);
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
   document.getElementById('modal-edit-commission')?.remove();
-  navigate('commissions-attente');
+  // Rerendre sans réinitialiser les filtres
+  renderToutesCommissions();
 }
 
 async function saveEditCommission(commId) {
@@ -5163,7 +5176,8 @@ async function saveEditCommission(commId) {
   logAction('edit_commission', 'commissions_attente', commId, body.client_nom);
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
   document.getElementById('modal-edit-commission').remove();
-  navigate('commissions-attente');
+  // Rerendre sans réinitialiser les filtres — les sélections restent actives
+  renderToutesCommissions();
 }
 
 function viewCommissionsAttente() {

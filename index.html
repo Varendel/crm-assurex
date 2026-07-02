@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-02 11:00</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-02 11:30</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -1176,8 +1176,8 @@ const SECTIONS = [
     { id: 'clients-prives', label: 'Clients privés' },
     { id: 'clients-entreprises', label: 'Entreprises' },
     { id: 'clients-oz', label: 'Clients OZ Assure', staff: true },
-    { id: 'contrats-sans-agent', label: '⚠️ Contrats sans agent (21)' },
     { id: 'volume-primes', label: 'Volume de primes', staff: true },
+    { id: 'tous-contrats', label: 'Tous les contrats' },
   ]},
   { id: 'compta', label: 'Comptabilité', icon: '◎', sub: [
     { id: 'bordereaux', label: 'Bordereaux' },
@@ -1319,7 +1319,7 @@ async function renderView() {
     case 'clients-prives': main.innerHTML = viewPortefeuille('prive'); break;
     case 'clients-entreprises': main.innerHTML = viewPortefeuille('entreprise'); break;
     case 'clients-oz': main.innerHTML = viewPortefeuille('oz'); break;
-    case 'contrats-sans-agent': main.innerHTML = viewContratsSansAgent(); break;
+    case 'tous-contrats': main.innerHTML = viewTousContrats(); break;
     case 'volume-primes': main.innerHTML = '<div class="loader">Calcul en cours...</div>'; main.innerHTML = await viewVolumePrimes(); break;
     case 'nouveau-client': main.innerHTML = viewNouveauClient(); break;
     case 'nouvelle-opportunite': main.innerHTML = viewNouvelleOpportunite(); break;
@@ -1924,8 +1924,107 @@ async function viewVolumePrimes() {
     </div>`;
 }
 
-function viewContratsSansAgent() {
-  const sanAgent = allContrats.filter(ct => !ct.apporteur_id && ct.commissionne !== false && ct.statut !== 'résilié');
+// ═══ TOUS LES CONTRATS — vue filtrée ═══
+function viewTousContrats() {
+  const agentOptions = allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
+  const compagnies = [...new Set(allContrats.map(c => c.compagnie).filter(Boolean))].sort();
+  const compagnieOptions = compagnies.map(c => `<option value="${c}">${c}</option>`).join('');
+  setTimeout(() => renderTousContrats(), 0);
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Tous les contrats</h2>
+      <div id="tc-count" style="font-size:12px;color:var(--text-muted)"></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <input class="form-input" id="tc-search" placeholder="🔍 Client, compagnie, produit, n° police..." style="flex:1;min-width:180px" oninput="renderTousContrats()"/>
+      <select class="form-select" id="tc-agent" style="max-width:180px" onchange="renderTousContrats()">
+        <option value="">Tous les agents</option>
+        <option value="__sans__">— Sans agent assigné</option>
+        ${agentOptions}
+      </select>
+      <select class="form-select" id="tc-compagnie" style="max-width:160px" onchange="renderTousContrats()">
+        <option value="">Toutes compagnies</option>${compagnieOptions}
+      </select>
+      <select class="form-select" id="tc-statut" style="max-width:140px" onchange="renderTousContrats()">
+        <option value="">Tous statuts</option>
+        <option value="actif">Actif</option>
+        <option value="en_cours">En cours</option>
+        <option value="résilié">Résilié</option>
+        <option value="renouveler">À renouveler</option>
+      </select>
+      <select class="form-select" id="tc-comm" style="max-width:160px" onchange="renderTousContrats()">
+        <option value="">Commissionné/Non</option>
+        <option value="oui">Commissionné</option>
+        <option value="non">Non commissionné</option>
+      </select>
+    </div>
+    <div id="tc-stats" class="stat-grid" style="margin-bottom:16px"></div>
+    <div id="tc-body"></div>`;
+}
+
+function renderTousContrats() {
+  const search = (document.getElementById('tc-search')?.value || '').toLowerCase().trim();
+  const agentF = document.getElementById('tc-agent')?.value || '';
+  const compagnieF = document.getElementById('tc-compagnie')?.value || '';
+  const statutF = document.getElementById('tc-statut')?.value || '';
+  const commF = document.getElementById('tc-comm')?.value || '';
+
+  const filtered = allContrats.filter(ct => {
+    if (agentF === '__sans__' && ct.apporteur_id) return false;
+    if (agentF && agentF !== '__sans__' && ct.apporteur_id !== agentF) return false;
+    if (compagnieF && ct.compagnie !== compagnieF) return false;
+    if (statutF && ct.statut !== statutF) return false;
+    if (commF === 'oui' && ct.commissionne === false) return false;
+    if (commF === 'non' && ct.commissionne !== false) return false;
+    if (search) {
+      const cl = allClients.find(c => c.id === ct.client_id);
+      const nom = cl ? (cl.segment === 'Entreprise' ? cl.nom : `${cl.prenom} ${cl.nom}`) : '';
+      const hay = `${nom} ${ct.compagnie||''} ${ct.produit||''} ${ct.numero_police||''}`.toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  }).sort((a,b) => new Date(b.date_debut||0) - new Date(a.date_debut||0));
+
+  const totalPrimes = filtered.reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0);
+  const sanAgent = filtered.filter(ct => !ct.apporteur_id).length;
+
+  document.getElementById('tc-count').textContent = `${filtered.length} contrat(s)`;
+  document.getElementById('tc-stats').innerHTML = `
+    ${statCard('Contrats', filtered.length, '#38bdf8')}
+    ${statCard('Primes/an', 'CHF ' + Math.round(totalPrimes).toLocaleString(), '#f59e0b')}
+    ${sanAgent > 0 ? statCard('⚠️ Sans agent', sanAgent, '#f87171') : ''}`;
+
+  const cols = '1fr 110px 110px 100px 90px 70px 36px';
+  const rows = filtered.map(ct => {
+    const cl = allClients.find(c => c.id === ct.client_id);
+    const nom = cl ? (cl.segment === 'Entreprise' ? cl.nom : `${cl.prenom} ${cl.nom}`) : '—';
+    const agent = allAgents.find(a => a.id === ct.apporteur_id);
+    return `<div class="table-row" style="grid-template-columns:${cols}">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--accent);cursor:pointer;text-decoration:underline dotted" onclick="showClient('${ct.client_id}')">${nom}${getClientMiniLogos(cl)}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${ct.produit||''} · ${ct.numero_police||'—'}</div>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted)">${ct.compagnie||'—'}</div>
+      <div style="font-size:12px;color:var(--text-muted)">${ct.date_debut||'—'}</div>
+      <div style="font-weight:800;color:#f59e0b;text-align:right">CHF ${Number(ct.prime_annuelle||0).toLocaleString()}</div>
+      <div>${badge(ct.statut, ct.statut==='actif'?'#4ade80':ct.statut==='résilié'?'#f87171':'#f59e0b')}</div>
+      <div style="font-size:11px;color:var(--text-muted)">${agent ? agent.prenom : '<span style="color:#f87171">⚠️ —</span>'}</div>
+      <div><button onclick="showEditContrat('${ct.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:4px 7px;font-size:12px;cursor:pointer">✏️</button></div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('tc-body').innerHTML = `
+    <div class="table-wrap">
+      <div class="table-header" style="grid-template-columns:${cols}">
+        <div>Client / Produit</div><div>Compagnie</div><div>Date signature</div><div>Prime/an</div><div>Statut</div><div>Agent</div><div></div>
+      </div>
+      ${rows || '<div class="table-empty">Aucun contrat ne correspond aux filtres.</div>'}
+    </div>`;
+}
+
+function viewContratsSansAgent() { return viewTousContrats(); }
+
+function viewPortefeuille(filtre) {  const sanAgent = allContrats.filter(ct => !ct.apporteur_id && ct.commissionne !== false && ct.statut !== 'résilié');
   const cols = '1fr 130px 110px 100px 90px 40px';
 
   const rows = sanAgent.map(ct => {
@@ -1979,7 +2078,9 @@ function viewPortefeuille(filtre) {
     <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
       <input class="form-input" id="pf-search" placeholder="🔍 Rechercher un nom, ville, email..." style="flex:1;min-width:200px" oninput="renderPortefeuilleTable('${filtre}')"/>
       <select class="form-select" id="pf-agent" style="max-width:200px" onchange="renderPortefeuilleTable('${filtre}')">
-        <option value="">Tous les agents</option>${agentOptions}
+        <option value="">Tous les agents</option>
+        <option value="__sans__">— Sans agent assigné</option>
+        ${agentOptions}
       </select>
       <select class="form-select" id="pf-statut" style="max-width:160px" onchange="renderPortefeuilleTable('${filtre}')">
         <option value="">Tous statuts</option>
@@ -2008,11 +2109,13 @@ function renderPortefeuilleTable(filtre) {
 
   const search = (document.getElementById('pf-search')?.value || '').toLowerCase().trim();
   const agentFilter = document.getElementById('pf-agent')?.value || '';
+  const sansAgent = agentFilter === '__sans__';
   const statutFilter = document.getElementById('pf-statut')?.value || '';
   const entiteFilter = document.getElementById('pf-entite')?.value || '';
 
   const filtered = base.filter(c => {
-    if (agentFilter && c.apporteur_id !== agentFilter) return false;
+    if (sansAgent && c.apporteur_id) return false;
+    if (agentFilter && agentFilter !== '__sans__' && c.apporteur_id !== agentFilter) return false;
     if (statutFilter && c.statut !== statutFilter) return false;
     if (entiteFilter === 'oz' && !c.source_oz) return false;
     if (entiteFilter === 'ex' && !c.source_cofidex) return false;
@@ -2098,7 +2201,8 @@ function renderClientsTable() {
   const segmentFilter = document.getElementById('cl-segment')?.value || '';
 
   const filtered = allClients.filter(c => {
-    if (agentFilter && c.apporteur_id !== agentFilter) return false;
+    if (sansAgent && c.apporteur_id) return false;
+    if (agentFilter && agentFilter !== '__sans__' && c.apporteur_id !== agentFilter) return false;
     if (statutFilter && c.statut !== statutFilter) return false;
     if (segmentFilter && (c.segment || 'Privé') !== segmentFilter) return false;
     if (search) {
@@ -2198,7 +2302,6 @@ async function showClient(id) {
           <div style="font-size:10.5px;color:var(--text-muted)">👤 Agent signataire — toujours responsable, touche systématiquement sa part</div>
         </div>
         <button onclick="toggleSourceOz('${c.id}', ${!c.source_oz})" title="${c.source_oz ? 'Client OZ Assure — cliquer pour retirer' : 'Marquer comme client OZ Assure'}" style="margin-left:auto;background:${c.source_oz ? 'rgba(74,144,226,0.15)' : 'var(--surface-alt)'};border:1px solid ${c.source_oz ? 'rgba(74,144,226,0.4)' : 'var(--border)'};border-radius:7px;padding:4px 8px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:10.5px;color:${c.source_oz ? '#4a90e2' : 'var(--text-muted)'};font-weight:700">${c.source_oz ? OZASSURE_LOGO_SVG.replace('class="oz-logo-svg"', 'style="height:18px;width:auto"') + ' Client OZ' : '+ Marquer OZ'}</button>
-        <button onclick="toggleSourceCofidex('${c.id}', ${!c.source_cofidex})" title="${c.source_cofidex ? 'Client Cofidex — cliquer pour retirer' : 'Marquer comme client Cofidex / EX Groupe'}" style="background:${c.source_cofidex ? 'rgba(245,158,11,0.15)' : 'var(--surface-alt)'};border:1px solid ${c.source_cofidex ? 'rgba(245,158,11,0.4)' : 'var(--border)'};border-radius:7px;padding:4px 8px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:10.5px;color:${c.source_cofidex ? '#f59e0b' : 'var(--text-muted)'};font-weight:700">${c.source_cofidex ? '🟦 Client EX Groupe' : '+ Marquer EX'}</button>
         <button onclick="toggleSourceCofidex('${c.id}', ${!c.source_cofidex})" title="${c.source_cofidex ? 'Client EX Groupe — cliquer pour retirer' : 'Marquer comme client Cofidex / EX Groupe'}" style="background:${c.source_cofidex ? 'rgba(0,207,255,0.12)' : 'var(--surface-alt)'};border:1px solid ${c.source_cofidex ? 'rgba(0,207,255,0.4)' : 'var(--border)'};border-radius:7px;padding:4px 8px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:10.5px;color:${c.source_cofidex ? '#00cfff' : 'var(--text-muted)'};font-weight:700">${c.source_cofidex ? COFIDEX_MINI_LOGO + ' Client EX' : '+ Marquer EX'}</button>
       </div>` : ''; })()}
       <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface-alt);border:1px solid var(--border);border-radius:10px;margin-bottom:${c.apporteur_externe ? '8px' : '0'}">
@@ -4088,8 +4191,14 @@ async function showEditContrat(contratId) {
 }
 
 async function deleteContrat(contratId, clientId) {
-  if (!confirm('Supprimer définitivement ce contrat ? Cette action est irréversible.')) return;
+  if (!confirm('Supprimer définitivement ce contrat ? Les commissions liées seront également supprimées. Cette action est irréversible.')) return;
   const token = await getValidAccessToken() || SUPABASE_KEY;
+  // Supprimer les commissions liées d'abord (contrainte FK)
+  await fetch(`${SUPABASE_URL}/rest/v1/commissions_attente?contrat_id=eq.${contratId}`, {
+    method: 'DELETE',
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
+  });
+  // Supprimer le contrat
   const r = await fetch(`${SUPABASE_URL}/rest/v1/contrats?id=eq.${contratId}`, {
     method: 'DELETE',
     headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
@@ -4097,6 +4206,7 @@ async function deleteContrat(contratId, clientId) {
   if (!r.ok) { showError('Erreur lors de la suppression du contrat.'); return; }
   logAction('delete_contrat', 'contrats', contratId, null);
   allContrats = await dbGet('contrats', 'select=*');
+  allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
   const modal = document.getElementById('modal-edit-contrat');
   if (modal) modal.remove();
   showClient(clientId);

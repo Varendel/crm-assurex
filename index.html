@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-06-27 10:30</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-06-27 11:20</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -495,8 +495,8 @@ let currentClientId = null;
 // ═══ MARQUAGE CLIENT OZ ASSURE ═══
 const OZ_MINI_LOGO = `<span title="Client OZ Assure" style="display:inline-flex;align-items:center;margin-left:4px;vertical-align:middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="height:14px;width:14px"><circle cx="50" cy="50" r="45" fill="#1a56db" opacity="0.9"/><text x="50" y="67" text-anchor="middle" font-size="44" font-weight="900" fill="white" font-family="Arial,sans-serif">OZ</text></svg></span>`;
 
-// ═══ MARQUAGE CLIENT COFIDEX / EX GROUPE ═══
-const COFIDEX_MINI_LOGO = `<span title="Client Cofidex / EX Groupe" style="display:inline-flex;align-items:center;margin-left:4px;vertical-align:middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="height:14px;width:14px"><circle cx="50" cy="50" r="45" fill="#f59e0b" opacity="0.9"/><text x="50" y="67" text-anchor="middle" font-size="34" font-weight="900" fill="white" font-family="Arial,sans-serif">EX</text></svg></span>`;
+// ═══ MARQUAGE CLIENT EX GROUPE (logo officiel) ═══
+const COFIDEX_MINI_LOGO = `<span title="Client EX Groupe" style="display:inline-flex;align-items:center;margin-left:4px;vertical-align:middle;border-radius:3px;overflow:hidden"><svg xmlns="http://www.w3.org/2000/svg" viewBox="670 488 180 108" style="height:16px;width:auto;vertical-align:middle"><rect x="-42.76" y="-54.33" width="2005.52" height="1188.65" fill="#0f2244"/><rect x="829.47" y="551.34" width="18.15" height="18.15" fill="#00cfff"/><rect x="686.18" y="538.2" width="48.56" height="10.09" fill="#fff"/><rect x="686.18" y="558.47" width="53.17" height="10.09" fill="#fff"/><rect x="686.18" y="518.73" width="53.17" height="10.01" fill="#fff"/><polygon points="829.47 496.06 827.87 506.11 827.61 507.83 825.24 522.76 818.89 517.34 801.9 535.92 787.85 535.92 794.91 543.55 817.93 568.41 803 568.41 787.47 551.6 758.21 583.94 743.55 583.94 780.04 543.54 757.11 518.73 771.94 518.73 787.72 535.76 810.6 510.28 804.33 504.93 829.47 496.06" fill="#fff"/></svg></span>`;
 
 function getClientMiniLogos(c) {
   let logos = '';
@@ -509,7 +509,7 @@ function getClientMiniLogos(c) {
 function statutCommissionLabel(statut) {
   if (statut === 'reçue') return 'Reçue';
   if (statut === 'versé_oz') return 'Versé OZ';
-  if (statut === 'versé_cofidex') return 'Versé Cofidex';
+  if (statut === 'versé_cofidex') return 'Versé EX Groupe';
   return 'En attente';
 }
 function statutCommissionColor(statut) {
@@ -520,16 +520,16 @@ function statutCommissionColor(statut) {
 }
 
 // ═══ MARQUAGE CLIENT EX GROUPE / COFIDEX ═══
-const EX_MINI_LOGO = `<span title="Client Cofidex / EX Groupe" style="display:inline-flex;align-items:center;margin-left:4px;vertical-align:middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="height:14px;width:14px"><rect width="100" height="100" rx="8" fill="#0a1628"/><text x="50" y="68" text-anchor="middle" font-size="36" font-weight="900" fill="#00cfff" font-family="Arial,sans-serif">EX</text></svg></span>`;
+// EX_MINI_LOGO → remplacé par COFIDEX_MINI_LOGO (logo officiel EX Groupe)
 
 const TAUX_COMMISSION = {
-  sante_facteur_mensuel: 16,   // santé : prime mensuelle x 16
+  sante_facteur_mensuel: 16,   // santé complémentaire : prime mensuelle x 16 (acquisition unique)
   vie_taux_capital: 4,         // vie 3a : 4% du capital de production (prime mensuelle x12 x nb années)
   lpp_fp: 1.20,                // LPP Swiss Life : facteur produit 1.20 (Business Invest/Premium/Select)
-  lpp_taux: 6.3,               // LPP Swiss Life : taux de commissionnement 6.3% (Annexe B convention SL1102)
+  lpp_taux: 6.3,               // LPP Swiss Life : taux 6.3% (Annexe B convention SL1102)
+  lamal_forfait: 70,           // LAMal : forfait unique CHF 70.- par contrat à la signature
   // COG annuelle LPP = prime_annuelle × 1.20 × 6.3% (versée trimestriellement)
-  // Minimum de prime annuelle pour déclencher une COG : CHF 2'000
-  // Plafond COG annuelle : CHF 120'000 ou 70% des primes de frais de gestion
+  // LAMal : CHF 70 une seule fois, à la signature, indépendant de la prime
 };
 
 // Catalogue des produits d'assurance par catégorie, avec modules complémentaires (à enrichir au fur et à mesure)
@@ -1176,7 +1176,6 @@ const SECTIONS = [
     { id: 'clients-prives', label: 'Clients privés' },
     { id: 'clients-entreprises', label: 'Entreprises' },
     { id: 'clients-oz', label: 'Clients OZ Assure', staff: true },
-    { id: 'clients-cofidex', label: 'Clients Cofidex / EX Groupe' },
     { id: 'volume-primes', label: 'Volume de primes', staff: true },
   ]},
   { id: 'compta', label: 'Comptabilité', icon: '◎', sub: [
@@ -1319,7 +1318,6 @@ async function renderView() {
     case 'clients-prives': main.innerHTML = viewPortefeuille('prive'); break;
     case 'clients-entreprises': main.innerHTML = viewPortefeuille('entreprise'); break;
     case 'clients-oz': main.innerHTML = viewPortefeuille('oz'); break;
-    case 'clients-cofidex': main.innerHTML = viewPortefeuille('cofidex'); break;
     case 'volume-primes': main.innerHTML = '<div class="loader">Calcul en cours...</div>'; main.innerHTML = await viewVolumePrimes(); break;
     case 'nouveau-client': main.innerHTML = viewNouveauClient(); break;
     case 'nouvelle-opportunite': main.innerHTML = viewNouvelleOpportunite(); break;
@@ -2157,7 +2155,7 @@ async function showClient(id) {
           <div style="font-size:10.5px;color:var(--text-muted)">👤 Agent signataire — toujours responsable, touche systématiquement sa part</div>
         </div>
         <button onclick="toggleSourceOz('${c.id}', ${!c.source_oz})" title="${c.source_oz ? 'Client OZ Assure — cliquer pour retirer' : 'Marquer comme client OZ Assure'}" style="margin-left:auto;background:${c.source_oz ? 'rgba(74,144,226,0.15)' : 'var(--surface-alt)'};border:1px solid ${c.source_oz ? 'rgba(74,144,226,0.4)' : 'var(--border)'};border-radius:7px;padding:4px 8px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:10.5px;color:${c.source_oz ? '#4a90e2' : 'var(--text-muted)'};font-weight:700">${c.source_oz ? OZASSURE_LOGO_SVG.replace('class="oz-logo-svg"', 'style="height:18px;width:auto"') + ' Client OZ' : '+ Marquer OZ'}</button>
-        <button onclick="toggleSourceCofidex('${c.id}', ${!c.source_cofidex})" title="${c.source_cofidex ? 'Client Cofidex — cliquer pour retirer' : 'Marquer comme client Cofidex / EX Groupe'}" style="background:${c.source_cofidex ? 'rgba(245,158,11,0.15)' : 'var(--surface-alt)'};border:1px solid ${c.source_cofidex ? 'rgba(245,158,11,0.4)' : 'var(--border)'};border-radius:7px;padding:4px 8px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:10.5px;color:${c.source_cofidex ? '#f59e0b' : 'var(--text-muted)'};font-weight:700">${c.source_cofidex ? '🟡 Client EX Groupe' : '+ Marquer EX'}</button>
+        <button onclick="toggleSourceCofidex('${c.id}', ${!c.source_cofidex})" title="${c.source_cofidex ? 'Client Cofidex — cliquer pour retirer' : 'Marquer comme client Cofidex / EX Groupe'}" style="background:${c.source_cofidex ? 'rgba(245,158,11,0.15)' : 'var(--surface-alt)'};border:1px solid ${c.source_cofidex ? 'rgba(245,158,11,0.4)' : 'var(--border)'};border-radius:7px;padding:4px 8px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:10.5px;color:${c.source_cofidex ? '#f59e0b' : 'var(--text-muted)'};font-weight:700">${c.source_cofidex ? '🟦 Client EX Groupe' : '+ Marquer EX'}</button>
         <button onclick="toggleSourceCofidex('${c.id}', ${!c.source_cofidex})" title="${c.source_cofidex ? 'Client EX Groupe — cliquer pour retirer' : 'Marquer comme client Cofidex / EX Groupe'}" style="background:${c.source_cofidex ? 'rgba(0,207,255,0.12)' : 'var(--surface-alt)'};border:1px solid ${c.source_cofidex ? 'rgba(0,207,255,0.4)' : 'var(--border)'};border-radius:7px;padding:4px 8px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:10.5px;color:${c.source_cofidex ? '#00cfff' : 'var(--text-muted)'};font-weight:700">${c.source_cofidex ? EX_MINI_LOGO + ' Client EX' : '+ Marquer EX'}</button>
       </div>` : ''; })()}
       <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface-alt);border:1px solid var(--border);border-radius:10px;margin-bottom:${c.apporteur_externe ? '8px' : '0'}">
@@ -4801,7 +4799,13 @@ function calculerCommissionEstimee() {
     };
   }
 
-  // ── Autres produits : saisie manuelle ───────────────────────────────────
+  // ── LAMal — forfait unique CHF 70.- à la signature ─────────────────────
+  if (produitId === 'lamal' || (produitId && produitId.toLowerCase().includes('lamal'))) {
+    return {
+      montant: TAUX_COMMISSION.lamal_forfait,
+      detail: `LAMal : forfait unique CHF ${TAUX_COMMISSION.lamal_forfait} à la signature`,
+    };
+  }
   const montant = parseFloat(document.getElementById('ct-manuel')?.value) || 0;
   return { montant, detail: montant > 0 ? 'Saisie manuelle' : 'Saisis le montant estimé ci-dessous' };
 }
@@ -4960,7 +4964,7 @@ function showModalEditCommission(commId) {
           <option value="en_attente" ${c.statut==='en_attente'?'selected':''}>En attente</option>
           <option value="reçue" ${c.statut==='reçue'?'selected':''}>Reçue (Assurex)</option>
           <option value="versé_oz" ${c.statut==='versé_oz'?'selected':''}>✓ Versé OZ Assure</option>
-          <option value="versé_cofidex" ${c.statut==='versé_cofidex'?'selected':''}>✓ Versé Cofidex / EX Groupe</option>
+          <option value="versé_cofidex" ${c.statut==='versé_cofidex'?'selected':''}>✓ Versé EX Groupe</option>
         </select></div>
       </div>
       <div style="display:flex;gap:10px;margin-top:20px">

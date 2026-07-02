@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-02 12:20</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-02 12:45</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -511,12 +511,14 @@ function statutCommissionLabel(statut) {
   if (statut === 'reçue') return 'Reçue';
   if (statut === 'versé_oz') return 'Versé OZ';
   if (statut === 'versé_cofidex') return 'Versé EX Groupe';
+  if (statut === 'annulé') return '❌ Annulé';
   return 'En attente';
 }
 function statutCommissionColor(statut) {
   if (statut === 'reçue') return '#4ade80';
   if (statut === 'versé_oz') return '#1a56db';
   if (statut === 'versé_cofidex') return '#f59e0b';
+  if (statut === 'annulé') return '#f87171';
   return '#f59e0b';
 }
 
@@ -1354,13 +1356,14 @@ async function renderView() {
 function viewDashboard() {
   const actifs = allClients.filter(c => c.statut === 'actif').length;
   const totalCA = allContrats.filter(ct => ct.statut === 'actif').reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
+  const totalCAFull = allContrats.filter(ct => !['résilié','annulé'].includes(ct.statut)).reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0);
   // Commissions actives depuis la date de bascule Assurex (01.06.2026)
   const commissionsActives = allCommissionsAttente.filter(ca => {
     const ct = allContrats.find(c => c.id === ca.contrat_id);
-    return ct && ct.date_debut >= DATE_BASCULE_ASSUREX && ca.statut === 'en_attente';
+    return ct && ct.date_debut >= DATE_BASCULE_ASSUREX && ca.statut === 'en_attente' && ca.statut !== 'annulé';
   });
   const totalCommActives = commissionsActives.reduce((s, ca) => s + Number(ca.montant_estime || 0), 0);
-  const nbContratsActifs = allContrats.filter(ct => ct.statut !== 'résilié' && ct.commissionne !== false).length;
+  const nbContratsActifs = allContrats.filter(ct => !['résilié','annulé'].includes(ct.statut) && ct.commissionne !== false).length;
   const urgents = allRappels.filter(r => r.urgence === 'haute' && r.statut === 'ouvert');
   const now = new Date().toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -1391,7 +1394,7 @@ function viewDashboard() {
 
   // ── Polices non commissionnées "à bouger" — regroupées par horizon d'échéance ──
   const today = new Date();
-  const nonGerees = allContrats.filter(ct => ct.commissionne === false && ct.statut !== 'résilié');
+  const nonGerees = allContrats.filter(ct => ct.commissionne === false && !['résilié','annulé'].includes(ct.statut));
   function joursRestants(ct) { return ct.date_echeance ? Math.floor((new Date(ct.date_echeance) - today) / 86400000) : null; }
   const horizons = [
     { label: 'En retard', test: j => j !== null && j < 0, color: '#f87171' },
@@ -2015,7 +2018,7 @@ function renderTousContrats() {
       <div style="font-size:12px;color:var(--text-muted)">${ct.compagnie||'—'}</div>
       <div style="font-size:12px;color:var(--text-muted)">${ct.date_debut||'—'}</div>
       <div style="font-weight:800;color:#f59e0b;text-align:right">CHF ${Number(ct.prime_annuelle||0).toLocaleString()}</div>
-      <div>${badge(ct.statut, ct.statut==='actif'?'#4ade80':ct.statut==='résilié'?'#f87171':'#f59e0b')}</div>
+      <div>${badge(ct.statut==='annulé'?'❌ Annulé':ct.statut, ct.statut==='actif'?'#4ade80':ct.statut==='résilié'?'#94a3b8':ct.statut==='annulé'?'#f87171':'#f59e0b')}</div>
       <div style="font-size:11px;color:var(--text-muted)">${(() => {
         if (agent) return agent.prenom + ' ' + agent.nom;
         const sig = allAgents.find(a => a.role === 'signataire');
@@ -2036,7 +2039,7 @@ function renderTousContrats() {
 
 function viewContratsSansAgent() { return viewTousContrats(); }
 
-function viewPortefeuille(filtre) {  const sanAgent = allContrats.filter(ct => !ct.apporteur_id && ct.commissionne !== false && ct.statut !== 'résilié');
+function viewPortefeuille(filtre) {  const sanAgent = allContrats.filter(ct => !ct.apporteur_id && ct.commissionne !== false && !['résilié','annulé'].includes(ct.statut));
   const cols = '1fr 130px 110px 100px 90px 40px';
 
   const rows = sanAgent.map(ct => {
@@ -4168,6 +4171,7 @@ async function showEditContrat(contratId) {
             <option value="renouveler" ${ct.statut==='renouveler'?'selected':''}>À renouveler</option>
             <option value="résilié" ${ct.statut==='résilié'?'selected':''}>Résilié</option>
             <option value="en_cours" ${ct.statut==='en_cours'?'selected':''}>En cours de signature</option>
+            <option value="annulé" ${ct.statut==='annulé'?'selected':''}>Annulé (réserve refusée / non abouti)</option>
           </select>
         </div>
         <div class="form-field"><label class="form-label">Commissionné ?</label>
@@ -4735,7 +4739,7 @@ function viewNouveauContrat() {
         <option value="">— Aucun / pas de partage —</option>
         ${allAgents.map(a => `<option value="${a.id}" ${contratClientId && allClients.find(c=>c.id===contratClientId)?.apporteur_id===a.id ? 'selected' : ''}>${a.prenom} ${a.nom}${a.role==='signataire'?' (moi-même)':''}</option>`).join('')}
       </select></div>
-      <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="ct-statut"><option value="actif">Actif</option><option value="en_cours">En cours de signature</option></select></div>
+      <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="ct-statut"><option value="actif">Actif</option><option value="en_cours">En cours de signature</option><option value="annulé">Annulé (réserve refusée / non abouti)</option></select></div>
       <div class="form-field"><label class="form-label">Commissionné ?</label><select class="form-select" id="ct-commissionne" onchange="document.getElementById('ct-rappel-note').style.display = this.value==='non' ? '' : 'none'"><option value="oui">Oui</option><option value="non">Non (pas de convention de collaboration)</option></select>
         <div id="ct-rappel-note" style="display:none;font-size:10.5px;color:var(--text-muted);margin-top:4px">ℹ️ Pas de commission créée. Un rappel sera généré 6 mois avant la date d'échéance pour proposer un transfert vers une compagnie partenaire.</div>
       </div>
@@ -5130,6 +5134,7 @@ function showModalEditCommission(commId) {
           <option value="reçue" ${c.statut==='reçue'?'selected':''}>Reçue (Assurex)</option>
           <option value="versé_oz" ${c.statut==='versé_oz'?'selected':''}>✓ Versé OZ Assure</option>
           <option value="versé_cofidex" ${c.statut==='versé_cofidex'?'selected':''}>✓ Versé EX Groupe</option>
+          <option value="annulé" ${c.statut==='annulé'?'selected':''}>❌ Annulé (réserve refusée / non abouti)</option>
         </select></div>
       </div>
       <div style="display:flex;gap:10px;margin-top:20px">
@@ -5220,12 +5225,13 @@ function renderToutesCommissions() {
     return true;
   }).sort((a,b) => new Date(b.date_creation||0) - new Date(a.date_creation||0));
 
-  const totalAttente = filtered.filter(c => c.statut === 'en_attente').reduce((s,c) => s + montantC(c), 0);
+  const totalAttente = filtered.filter(c => c.statut === 'en_attente' && c.statut !== 'annulé').reduce((s,c) => s + montantC(c), 0);
   const totalRecu = filtered.filter(c => c.statut === 'reçue').reduce((s,c) => s + montantC(c), 0);
   const totalOZ = filtered.filter(c => c.statut === 'versé_oz').reduce((s,c) => s + montantC(c), 0);
 
   document.getElementById('tc-stats').innerHTML = `
     ${statCard('En attente', 'CHF ' + totalAttente.toLocaleString(), '#f59e0b')}
+    ${statCard('Annulées', filtered.filter(c => c.statut === 'annulé').length, '#f87171', 'exclues des totaux')}
     ${statCard('Reçues (Assurex)', 'CHF ' + totalRecu.toLocaleString(), '#4ade80')}
     ${statCard('Versé OZ', 'CHF ' + totalOZ.toLocaleString(), '#1a56db')}
     ${statCard('Total dossiers', filtered.length, '#38bdf8')}`;

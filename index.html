@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-02 10:15</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-02 11:00</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -496,12 +496,12 @@ let currentClientId = null;
 const OZ_MINI_LOGO = `<span title="Client OZ Assure" style="display:inline-flex;align-items:center;margin-left:4px;vertical-align:middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="height:14px;width:14px"><circle cx="50" cy="50" r="45" fill="#1a56db" opacity="0.9"/><text x="50" y="67" text-anchor="middle" font-size="44" font-weight="900" fill="white" font-family="Arial,sans-serif">OZ</text></svg></span>`;
 
 // ═══ MARQUAGE CLIENT EX GROUPE (logo officiel) ═══
-const COFIDCOFIDEX_MINI_LOGO = `<span title="Client EX Groupe" style="display:inline-flex;align-items:center;margin-left:4px;vertical-align:middle;border-radius:3px;overflow:hidden"><svg xmlns="http://www.w3.org/2000/svg" viewBox="670 488 180 108" style="height:16px;width:auto;vertical-align:middle"><rect x="-42.76" y="-54.33" width="2005.52" height="1188.65" fill="#0f2244"/><rect x="829.47" y="551.34" width="18.15" height="18.15" fill="#00cfff"/><rect x="686.18" y="538.2" width="48.56" height="10.09" fill="#fff"/><rect x="686.18" y="558.47" width="53.17" height="10.09" fill="#fff"/><rect x="686.18" y="518.73" width="53.17" height="10.01" fill="#fff"/><polygon points="829.47 496.06 827.87 506.11 827.61 507.83 825.24 522.76 818.89 517.34 801.9 535.92 787.85 535.92 794.91 543.55 817.93 568.41 803 568.41 787.47 551.6 758.21 583.94 743.55 583.94 780.04 543.54 757.11 518.73 771.94 518.73 787.72 535.76 810.6 510.28 804.33 504.93 829.47 496.06" fill="#fff"/></svg></span>`;
+const COFIDEX_MINI_LOGO = `<span title="Client EX Groupe" style="display:inline-flex;align-items:center;margin-left:4px;vertical-align:middle;border-radius:3px;overflow:hidden"><svg xmlns="http://www.w3.org/2000/svg" viewBox="670 488 180 108" style="height:16px;width:auto;vertical-align:middle"><rect x="-42.76" y="-54.33" width="2005.52" height="1188.65" fill="#0f2244"/><rect x="829.47" y="551.34" width="18.15" height="18.15" fill="#00cfff"/><rect x="686.18" y="538.2" width="48.56" height="10.09" fill="#fff"/><rect x="686.18" y="558.47" width="53.17" height="10.09" fill="#fff"/><rect x="686.18" y="518.73" width="53.17" height="10.01" fill="#fff"/><polygon points="829.47 496.06 827.87 506.11 827.61 507.83 825.24 522.76 818.89 517.34 801.9 535.92 787.85 535.92 794.91 543.55 817.93 568.41 803 568.41 787.47 551.6 758.21 583.94 743.55 583.94 780.04 543.54 757.11 518.73 771.94 518.73 787.72 535.76 810.6 510.28 804.33 504.93 829.47 496.06" fill="#fff"/></svg></span>`;
 
 function getClientMiniLogos(c) {
   let logos = '';
   if (c && c.source_oz) logos += OZ_MINI_LOGO;
-  if (c && c.source_cofidex) logos += COFIDCOFIDEX_MINI_LOGO;
+  if (c && c.source_cofidex) logos += COFIDEX_MINI_LOGO;
   return logos;
 }
 
@@ -520,7 +520,7 @@ function statutCommissionColor(statut) {
 }
 
 // ═══ MARQUAGE CLIENT EX GROUPE / COFIDEX ═══
-// COFIDEX_MINI_LOGO → remplacé par COFIDCOFIDEX_MINI_LOGO (logo officiel EX Groupe)
+// Logo EX Groupe officiel (logo officiel EX Groupe)
 
 const TAUX_COMMISSION = {
   sante_facteur_mensuel: 16,   // santé complémentaire : prime mensuelle x 16 (acquisition unique)

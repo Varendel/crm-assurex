@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-06-27 11:20</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-02 10:15</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -496,12 +496,12 @@ let currentClientId = null;
 const OZ_MINI_LOGO = `<span title="Client OZ Assure" style="display:inline-flex;align-items:center;margin-left:4px;vertical-align:middle"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100" style="height:14px;width:14px"><circle cx="50" cy="50" r="45" fill="#1a56db" opacity="0.9"/><text x="50" y="67" text-anchor="middle" font-size="44" font-weight="900" fill="white" font-family="Arial,sans-serif">OZ</text></svg></span>`;
 
 // ═══ MARQUAGE CLIENT EX GROUPE (logo officiel) ═══
-const COFIDEX_MINI_LOGO = `<span title="Client EX Groupe" style="display:inline-flex;align-items:center;margin-left:4px;vertical-align:middle;border-radius:3px;overflow:hidden"><svg xmlns="http://www.w3.org/2000/svg" viewBox="670 488 180 108" style="height:16px;width:auto;vertical-align:middle"><rect x="-42.76" y="-54.33" width="2005.52" height="1188.65" fill="#0f2244"/><rect x="829.47" y="551.34" width="18.15" height="18.15" fill="#00cfff"/><rect x="686.18" y="538.2" width="48.56" height="10.09" fill="#fff"/><rect x="686.18" y="558.47" width="53.17" height="10.09" fill="#fff"/><rect x="686.18" y="518.73" width="53.17" height="10.01" fill="#fff"/><polygon points="829.47 496.06 827.87 506.11 827.61 507.83 825.24 522.76 818.89 517.34 801.9 535.92 787.85 535.92 794.91 543.55 817.93 568.41 803 568.41 787.47 551.6 758.21 583.94 743.55 583.94 780.04 543.54 757.11 518.73 771.94 518.73 787.72 535.76 810.6 510.28 804.33 504.93 829.47 496.06" fill="#fff"/></svg></span>`;
+const COFIDCOFIDEX_MINI_LOGO = `<span title="Client EX Groupe" style="display:inline-flex;align-items:center;margin-left:4px;vertical-align:middle;border-radius:3px;overflow:hidden"><svg xmlns="http://www.w3.org/2000/svg" viewBox="670 488 180 108" style="height:16px;width:auto;vertical-align:middle"><rect x="-42.76" y="-54.33" width="2005.52" height="1188.65" fill="#0f2244"/><rect x="829.47" y="551.34" width="18.15" height="18.15" fill="#00cfff"/><rect x="686.18" y="538.2" width="48.56" height="10.09" fill="#fff"/><rect x="686.18" y="558.47" width="53.17" height="10.09" fill="#fff"/><rect x="686.18" y="518.73" width="53.17" height="10.01" fill="#fff"/><polygon points="829.47 496.06 827.87 506.11 827.61 507.83 825.24 522.76 818.89 517.34 801.9 535.92 787.85 535.92 794.91 543.55 817.93 568.41 803 568.41 787.47 551.6 758.21 583.94 743.55 583.94 780.04 543.54 757.11 518.73 771.94 518.73 787.72 535.76 810.6 510.28 804.33 504.93 829.47 496.06" fill="#fff"/></svg></span>`;
 
 function getClientMiniLogos(c) {
   let logos = '';
   if (c && c.source_oz) logos += OZ_MINI_LOGO;
-  if (c && c.source_cofidex) logos += COFIDEX_MINI_LOGO;
+  if (c && c.source_cofidex) logos += COFIDCOFIDEX_MINI_LOGO;
   return logos;
 }
 
@@ -520,7 +520,7 @@ function statutCommissionColor(statut) {
 }
 
 // ═══ MARQUAGE CLIENT EX GROUPE / COFIDEX ═══
-// EX_MINI_LOGO → remplacé par COFIDEX_MINI_LOGO (logo officiel EX Groupe)
+// COFIDEX_MINI_LOGO → remplacé par COFIDCOFIDEX_MINI_LOGO (logo officiel EX Groupe)
 
 const TAUX_COMMISSION = {
   sante_facteur_mensuel: 16,   // santé complémentaire : prime mensuelle x 16 (acquisition unique)
@@ -1176,6 +1176,7 @@ const SECTIONS = [
     { id: 'clients-prives', label: 'Clients privés' },
     { id: 'clients-entreprises', label: 'Entreprises' },
     { id: 'clients-oz', label: 'Clients OZ Assure', staff: true },
+    { id: 'contrats-sans-agent', label: '⚠️ Contrats sans agent (21)' },
     { id: 'volume-primes', label: 'Volume de primes', staff: true },
   ]},
   { id: 'compta', label: 'Comptabilité', icon: '◎', sub: [
@@ -1318,6 +1319,7 @@ async function renderView() {
     case 'clients-prives': main.innerHTML = viewPortefeuille('prive'); break;
     case 'clients-entreprises': main.innerHTML = viewPortefeuille('entreprise'); break;
     case 'clients-oz': main.innerHTML = viewPortefeuille('oz'); break;
+    case 'contrats-sans-agent': main.innerHTML = viewContratsSansAgent(); break;
     case 'volume-primes': main.innerHTML = '<div class="loader">Calcul en cours...</div>'; main.innerHTML = await viewVolumePrimes(); break;
     case 'nouveau-client': main.innerHTML = viewNouveauClient(); break;
     case 'nouvelle-opportunite': main.innerHTML = viewNouvelleOpportunite(); break;
@@ -1922,6 +1924,47 @@ async function viewVolumePrimes() {
     </div>`;
 }
 
+function viewContratsSansAgent() {
+  const sanAgent = allContrats.filter(ct => !ct.apporteur_id && ct.commissionne !== false && ct.statut !== 'résilié');
+  const cols = '1fr 130px 110px 100px 90px 40px';
+
+  const rows = sanAgent.map(ct => {
+    const client = allClients.find(c => c.id === ct.client_id);
+    const nomClient = client ? (client.segment === 'Entreprise' ? client.nom : `${client.prenom} ${client.nom}`) : '—';
+    return `<div class="table-row" style="grid-template-columns:${cols}">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);cursor:pointer;text-decoration:underline dotted" onclick="showClient('${ct.client_id}')">${nomClient}${getClientMiniLogos(client)}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${ct.produit || ''}</div>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted)">${ct.compagnie || ''}</div>
+      <div style="font-size:12px;color:var(--text-muted)">${ct.date_debut || '—'}</div>
+      <div style="font-weight:800;color:#f59e0b">CHF ${Number(ct.prime_annuelle||0).toLocaleString()}</div>
+      <div>${badge(ct.statut, ct.statut==='actif'?'#4ade80':'#f59e0b')}</div>
+      <div><button onclick="showEditContrat('${ct.id}')" title="Assigner un agent" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer">✏️</button></div>
+    </div>`;
+  }).join('');
+
+  const totalPrimes = sanAgent.reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0);
+
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">⚠️ Contrats sans agent assigné</h2>
+    </div>
+    <div style="background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:10px;padding:12px 16px;margin-bottom:20px;font-size:12.5px;color:#f87171">
+      Ces ${sanAgent.length} contrats n'ont aucun agent assigné — ils sont invisibles dans la Production par agent et le split de commission ne peut pas être calculé. Clique sur ✏️ pour chaque contrat et assigne l'agent qui l'a apporté.
+    </div>
+    <div class="stat-grid" style="margin-bottom:20px">
+      ${statCard('Contrats concernés', sanAgent.length, '#f87171')}
+      ${statCard('Primes annuelles', 'CHF ' + totalPrimes.toLocaleString(), '#f59e0b')}
+    </div>
+    <div class="table-wrap">
+      <div class="table-header" style="grid-template-columns:${cols}">
+        <div>Client / Produit</div><div>Compagnie</div><div>Date signature</div><div>Prime/an</div><div>Statut</div><div></div>
+      </div>
+      ${rows || '<div class="table-empty">✅ Aucun contrat sans agent — tout est correctement assigné.</div>'}
+    </div>`;
+}
+
 function viewPortefeuille(filtre) {
   const titre = filtre === 'prive' ? 'Clients privés' : filtre === 'entreprise' ? 'Entreprises' : 'Portefeuille complet';
   const agentOptions = allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
@@ -1947,7 +1990,7 @@ function viewPortefeuille(filtre) {
       <select class="form-select" id="pf-entite" style="max-width:180px" onchange="renderPortefeuilleTable('${filtre}')">
         <option value="">Toutes entités</option>
         <option value="oz">${OZ_MINI_LOGO} Clients OZ Assure</option>
-        <option value="ex">${EX_MINI_LOGO} Clients EX Groupe</option>
+        <option value="ex">${COFIDEX_MINI_LOGO} Clients EX Groupe</option>
         <option value="assurex">Clients Assurex</option>
       </select>
     </div>
@@ -2156,7 +2199,7 @@ async function showClient(id) {
         </div>
         <button onclick="toggleSourceOz('${c.id}', ${!c.source_oz})" title="${c.source_oz ? 'Client OZ Assure — cliquer pour retirer' : 'Marquer comme client OZ Assure'}" style="margin-left:auto;background:${c.source_oz ? 'rgba(74,144,226,0.15)' : 'var(--surface-alt)'};border:1px solid ${c.source_oz ? 'rgba(74,144,226,0.4)' : 'var(--border)'};border-radius:7px;padding:4px 8px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:10.5px;color:${c.source_oz ? '#4a90e2' : 'var(--text-muted)'};font-weight:700">${c.source_oz ? OZASSURE_LOGO_SVG.replace('class="oz-logo-svg"', 'style="height:18px;width:auto"') + ' Client OZ' : '+ Marquer OZ'}</button>
         <button onclick="toggleSourceCofidex('${c.id}', ${!c.source_cofidex})" title="${c.source_cofidex ? 'Client Cofidex — cliquer pour retirer' : 'Marquer comme client Cofidex / EX Groupe'}" style="background:${c.source_cofidex ? 'rgba(245,158,11,0.15)' : 'var(--surface-alt)'};border:1px solid ${c.source_cofidex ? 'rgba(245,158,11,0.4)' : 'var(--border)'};border-radius:7px;padding:4px 8px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:10.5px;color:${c.source_cofidex ? '#f59e0b' : 'var(--text-muted)'};font-weight:700">${c.source_cofidex ? '🟦 Client EX Groupe' : '+ Marquer EX'}</button>
-        <button onclick="toggleSourceCofidex('${c.id}', ${!c.source_cofidex})" title="${c.source_cofidex ? 'Client EX Groupe — cliquer pour retirer' : 'Marquer comme client Cofidex / EX Groupe'}" style="background:${c.source_cofidex ? 'rgba(0,207,255,0.12)' : 'var(--surface-alt)'};border:1px solid ${c.source_cofidex ? 'rgba(0,207,255,0.4)' : 'var(--border)'};border-radius:7px;padding:4px 8px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:10.5px;color:${c.source_cofidex ? '#00cfff' : 'var(--text-muted)'};font-weight:700">${c.source_cofidex ? EX_MINI_LOGO + ' Client EX' : '+ Marquer EX'}</button>
+        <button onclick="toggleSourceCofidex('${c.id}', ${!c.source_cofidex})" title="${c.source_cofidex ? 'Client EX Groupe — cliquer pour retirer' : 'Marquer comme client Cofidex / EX Groupe'}" style="background:${c.source_cofidex ? 'rgba(0,207,255,0.12)' : 'var(--surface-alt)'};border:1px solid ${c.source_cofidex ? 'rgba(0,207,255,0.4)' : 'var(--border)'};border-radius:7px;padding:4px 8px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:10.5px;color:${c.source_cofidex ? '#00cfff' : 'var(--text-muted)'};font-weight:700">${c.source_cofidex ? COFIDEX_MINI_LOGO + ' Client EX' : '+ Marquer EX'}</button>
       </div>` : ''; })()}
       <div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:var(--surface-alt);border:1px solid var(--border);border-radius:10px;margin-bottom:${c.apporteur_externe ? '8px' : '0'}">
         ${agent ? avatar(agent, 36) : `<div style="width:36px;height:36px;border-radius:50%;background:rgba(148,163,184,0.15);display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0">🤷</div>`}

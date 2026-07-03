@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 13:00</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 13:15</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -3692,7 +3692,8 @@ function showModalValidationCommission(bordereauId) {
 
           <div class="form-field" style="grid-column:span 2">
             <label class="form-label">Montant final de la commission (CHF)</label>
-            <input class="form-input" id="val-montant" type="number" step="0.01" style="font-size:22px;font-weight:800;text-align:center" value="0.00" readonly/>
+            <input class="form-input" id="val-montant" type="number" step="0.01" style="font-size:22px;font-weight:800;text-align:center" value="0.00"/>
+            <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Pré-calculé depuis le montant de base et la déduction — modifie-le librement si le montant réel du bordereau diffère.</div>
           </div>
         </div>
 

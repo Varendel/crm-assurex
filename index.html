@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 12:15</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 13:00</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -1429,14 +1429,17 @@ function viewDashboard() {
   const totalCA = allContrats.filter(ct => ct.statut === 'actif').reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
   const totalCAFull = allContrats.filter(ct => !['résilié','annulé'].includes(ct.statut)).reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0);
   // Commissions actives depuis la date de bascule Assurex (01.06.2026)
+  // Règle : c'est la date à laquelle l'argent ENTRE (réception) qui compte, pas la date de signature du contrat.
   const commissionsActives = allCommissionsAttente.filter(ca => {
-    const ct = allContrats.find(c => c.id === ca.contrat_id);
-    return ct && ct.date_debut >= DATE_BASCULE_ASSUREX && ca.statut === 'en_attente';
+    if (ca.statut !== 'en_attente') return false;
+    const d = commissionDateReception(ca) || ca.date_creation;
+    return d && d >= DATE_BASCULE_ASSUREX;
   });
   const totalCommActives = commissionsActives.reduce((s, ca) => s + Number(ca.montant_estime || 0), 0);
   const commissionsRecues = allCommissionsAttente.filter(ca => {
-    const ct = allContrats.find(c => c.id === ca.contrat_id);
-    return ct && ct.date_debut >= DATE_BASCULE_ASSUREX && ['reçue','versé_oz','versé_cofidex'].includes(ca.statut);
+    if (!['reçue','versé_oz','versé_cofidex'].includes(ca.statut)) return false;
+    const d = commissionDateReception(ca);
+    return d && d >= DATE_BASCULE_ASSUREX;
   });
   const totalCommRecues = commissionsRecues.reduce((s, ca) => s + Number(ca.montant_final != null ? ca.montant_final : (ca.montant_estime||0)), 0);
   const nbContratsActifs = allContrats.filter(ct => !['résilié','annulé'].includes(ct.statut) && ct.commissionne !== false).length;
@@ -3576,11 +3579,39 @@ function showModalEditBordereau(bordereauId) {
       </div>
       ${b.pdf_url ? `<button type="button" onclick="ouvrirPieceJointe('${b.pdf_url}')" style="margin-top:10px;background:var(--surface-alt);border:1px solid var(--border);border-radius:7px;padding:6px 12px;font-size:11.5px;color:var(--text-muted);cursor:pointer">📎 Voir le PDF joint</button>` : ''}
       <div style="display:flex;gap:10px;margin-top:20px">
+        <button onclick="deleteBordereau('${bordereauId}')" style="background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>
         <button class="btn-secondary" onclick="document.getElementById('modal-edit-bordereau').remove()">Annuler</button>
         <button class="btn-save" onclick="saveEditBordereau('${bordereauId}')">✓ Enregistrer</button>
       </div>
     </div>`;
   document.body.appendChild(modal);
+}
+
+async function deleteBordereau(bordereauId) {
+  const b = allBordereaux.find(x => x.id === bordereauId);
+  const commissionsLiees = allCommissionsAttente.filter(c => c.bordereau_id === bordereauId);
+  const msg = commissionsLiees.length
+    ? `Supprimer le bordereau ${b?.numero || ''} (${b?.compagnie || ''}) ?\n\n${commissionsLiees.length} commission(s) rapprochée(s) seront déliées et repasseront en statut "en attente".\n\nCette action est irréversible.`
+    : `Supprimer définitivement le bordereau ${b?.numero || ''} (${b?.compagnie || ''}) ?\n\nCette action est irréversible.`;
+  if (!confirm(msg)) return;
+
+  // Délier les commissions liées (elles redeviennent en_attente, sans bordereau_id ni montant_final)
+  for (const c of commissionsLiees) {
+    await dbPatch('commissions_attente', c.id, { bordereau_id: null, montant_final: null, statut: 'en_attente' });
+  }
+
+  const token = await getValidAccessToken() || SUPABASE_KEY;
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/bordereaux?id=eq.${bordereauId}`, {
+    method: 'DELETE',
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
+  });
+  if (!r.ok) { showError('Erreur lors de la suppression du bordereau.'); return; }
+
+  logAction('delete_bordereau', 'bordereaux', bordereauId, b?.numero || null);
+  allBordereaux = await dbGet('bordereaux', 'select=*');
+  allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
+  document.getElementById('modal-edit-bordereau')?.remove();
+  navigate('bordereaux');
 }
 
 async function saveEditBordereau(bordereauId) {
@@ -3711,6 +3742,7 @@ async function saveValidationCommission(bordereauId) {
     montant_estime: montantEstime,
     montant_final: montantFinal,
     sens, deduction_pct: deduction, mouvement,
+    date_reception: (allBordereaux.find(bd => bd.id === bordereauId)?.date_reception) || new Date().toISOString().split('T')[0],
   });
   if (res && res.error) {
     showError('Erreur lors de la validation : ' + (res.detail?.message || res.detail || res.status));

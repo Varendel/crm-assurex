@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 11:20</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 12:15</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -489,6 +489,7 @@ let allOpportunites = [];
 let prefillOpportunite = null;
 let ozAnnualSummary = null;
 let allCommissionsAttente = [];
+let allFichesPaie = [];
 let currentClientId = null;
 
 // Paramètres de taux de commission — modifiables via Paramètres (gestion récurrente)
@@ -1153,6 +1154,7 @@ async function enterApp(user) {
   allRappels = await dbGet('rappels', 'select=*');
   allBordereaux = await dbGet('bordereaux', 'select=*');
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
+  allFichesPaie = await dbGet('fiches_paie', 'select=*');
   allContrats = await dbGet('contrats', 'select=*');
   allOpportunites = await dbGet('opportunites', 'select=*');
 
@@ -1219,9 +1221,10 @@ const SECTIONS = [
     { id: 'tous-contrats', label: 'Tous les contrats' },
   ]},
   { id: 'compta', label: 'Comptabilité', icon: '◎', sub: [
-    { id: 'bordereaux', label: 'Bordereaux' },
+    { id: 'bordereaux', label: 'Bordereaux (reçus des compagnies)' },
     { id: 'commissions', label: 'Commissions', staff: true },
     { id: 'commissions-attente', label: 'Toutes les commissions' },
+    { id: 'fiche-paie', label: 'Fiche de paie (agents)' },
     { id: 'rapport-finma', label: 'Rapport FINMA' },
     { id: 'production', label: 'Production (par période)', staff: true },
   ]},
@@ -1385,6 +1388,7 @@ async function renderView() {
     case 'campagnes': main.innerHTML = viewCampagnes(); break;
     case 'nouveau-agent': main.innerHTML = viewNouvelAgent(); break;
     case 'bordereaux': main.innerHTML = viewBordereaux(); break;
+    case 'fiche-paie': main.innerHTML = viewFichePaie(); break;
     case 'commissions': main.innerHTML = viewCommissions(); break;
     case 'fiche-commission': main.innerHTML = viewFicheCommission(); break;
     case 'agents': main.innerHTML = viewAgents(); break;
@@ -3205,14 +3209,210 @@ async function rouvrirRappel(id) {
 // BORDEREAUX
 let allBordereaux = [];
 
+// ═══════════════════════════════════════════════════════════════
+// FICHE DE PAIE — répartition des commissions reçues entre agents
+// Bordereaux = argent qui ENTRE dans Assurex (compagnies → société)
+// Fiche de paie = argent qui SORT vers les collaborateurs (société → agents)
+// Taux toujours celui défini dans Paramètres → Agents (jamais de saisie manuelle)
+// ═══════════════════════════════════════════════════════════════
+function viewFichePaie() {
+  const aujourd = new Date().toISOString().split('T')[0];
+  const debutMois = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
+  setTimeout(() => renderFichePaieApercu(), 0);
+  return `
+    <h2 style="margin:0 0 4px;font-size:18px;font-weight:800;color:var(--text)">Fiche de paie — répartition entre agents</h2>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Les commissions <strong>reçues</strong> (argent réellement entré dans Assurex via un bordereau) sont réparties selon le taux fixe de chaque agent défini dans Paramètres → Agents. Une fois générée, une fiche de paie marque les commissions comme payées — elles ne seront plus proposées une seconde fois.</div>
+
+    <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:flex-end">
+      <div><label style="font-size:10.5px;color:var(--text-muted);display:block;margin-bottom:3px">Du</label><input class="form-input" id="fp-debut" type="date" value="${debutMois}" onchange="renderFichePaieApercu()"/></div>
+      <div><label style="font-size:10.5px;color:var(--text-muted);display:block;margin-bottom:3px">Au</label><input class="form-input" id="fp-fin" type="date" value="${aujourd}" onchange="renderFichePaieApercu()"/></div>
+    </div>
+
+    <div id="fp-stats" class="stat-grid" style="margin-bottom:20px"></div>
+    <div id="fp-detail"></div>
+
+    <div style="margin-top:28px">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Historique des fiches de paie générées</div>
+      <div id="fp-historique"></div>
+    </div>`;
+}
+
+function commissionDateReception(ca) {
+  if (ca.date_reception) return ca.date_reception;
+  if (ca.bordereau_id) {
+    const b = allBordereaux.find(bd => bd.id === ca.bordereau_id);
+    if (b && b.date_reception) return b.date_reception;
+  }
+  return ca.date_creation ? String(ca.date_creation).split('T')[0] : null;
+}
+
+function renderFichePaieApercu() {
+  const debut = document.getElementById('fp-debut')?.value;
+  const fin = document.getElementById('fp-fin')?.value;
+
+  const eligibles = allCommissionsAttente.filter(ca => {
+    if (ca.statut !== 'reçue') return false;
+    if (ca.fiche_paie_id) return false; // déjà payée dans une fiche précédente
+    const d = commissionDateReception(ca);
+    if (!d) return false;
+    if (debut && d < debut) return false;
+    if (fin && d > fin) return false;
+    return true;
+  });
+
+  // Calcul par ligne avec le taux FIXE de l'agent (Paramètres → Agents)
+  const lignes = eligibles.map(ca => {
+    const ct = ca.contrat_id ? allContrats.find(c => c.id === ca.contrat_id) : null;
+    const cl = ct ? allClients.find(c => c.id === ct.client_id) : null;
+    const montant = ca.montant_final != null ? ca.montant_final : (ca.montant_estime || 0);
+    const s = splitMontantAgent(montant, ca.contrat_id);
+    return { ca, ct, cl, montant, ...s };
+  });
+
+  const totalGlobal = lignes.reduce((s,l) => s + l.montant, 0);
+  const parAgent = {};
+  lignes.forEach(l => {
+    const agentApporteur = l.agent;
+    if (agentApporteur) {
+      parAgent[agentApporteur.id] = parAgent[agentApporteur.id] || { agent: agentApporteur, total: 0, nb: 0 };
+      parAgent[agentApporteur.id].total += l.pA;
+      parAgent[agentApporteur.id].nb++;
+    }
+    const signataire = allAgents.find(a => a.role === 'signataire');
+    if (signataire) {
+      parAgent[signataire.id] = parAgent[signataire.id] || { agent: signataire, total: 0, nb: 0 };
+      parAgent[signataire.id].total += l.pJ;
+      parAgent[signataire.id].nb++;
+    }
+  });
+
+  document.getElementById('fp-stats').innerHTML = `
+    ${statCard('Commissions à répartir', lignes.length, '#38bdf8')}
+    ${statCard('Montant total', 'CHF ' + Math.round(totalGlobal).toLocaleString(), '#f59e0b')}
+    ${Object.values(parAgent).map(pa => statCard(pa.agent.prenom + ' ' + pa.agent.nom, 'CHF ' + Math.round(pa.total).toLocaleString(), agentColor(pa.agent))).join('')}
+  `;
+
+  const cols = '1fr 130px 110px 100px 100px 90px';
+  const rows = lignes.map(l => {
+    const nom = l.cl ? (l.cl.segment==='Entreprise'?l.cl.nom:`${l.cl.prenom} ${l.cl.nom}`) : (l.ca.client_nom || '—');
+    const sig = allAgents.find(a => a.role === 'signataire');
+    return `<div class="table-row" style="grid-template-columns:${cols}">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--text)">${nom}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${l.ca.produit||''} · ${l.ca.compagnie||''}</div>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted)">${fmtDate(commissionDateReception(l.ca))}</div>
+      <div style="font-weight:800;color:var(--text);text-align:right">CHF ${l.montant.toLocaleString()}</div>
+      <div style="text-align:right">${sig ? `<div style="font-size:11px;color:${agentColor(sig)}">${sig.prenom}: CHF ${l.pJ}</div>` : ''}</div>
+      <div style="text-align:right">${l.agent ? `<div style="font-size:11px;color:${agentColor(l.agent)}">${l.agent.prenom}: CHF ${l.pA}</div>` : `<div style="font-size:11px;color:var(--text-muted)">—</div>`}</div>
+      <div style="text-align:right;font-size:10px;color:var(--text-muted)">${l.agent ? (l.agent.taux||0)+'%' : '0%'}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('fp-detail').innerHTML = `
+    <div class="table-wrap">
+      <div class="table-header" style="grid-template-columns:${cols}"><div>Client / Contrat</div><div>Reçu le</div><div>Montant</div><div>Part signataire</div><div>Part apporteur</div><div>Taux</div></div>
+      ${rows || '<div class="table-empty">Aucune commission reçue non encore payée sur cette période.</div>'}
+    </div>
+    ${lignes.length > 0 ? `<div style="margin-top:16px;display:flex;justify-content:flex-end">
+      <button class="btn-save" onclick="genererFichePaie()">✓ Générer la fiche de paie et marquer comme payé</button>
+    </div>` : ''}`;
+
+  renderHistoriqueFichesPaie();
+}
+
+function renderHistoriqueFichesPaie() {
+  const el = document.getElementById('fp-historique');
+  if (!el) return;
+  const fiches = [...allFichesPaie].sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
+  el.innerHTML = fiches.length ? `
+    <div class="table-wrap">
+      <div class="table-header" style="grid-template-columns:140px 140px 120px 1fr"><div>Du</div><div>Au</div><div>Montant total</div><div>Générée le</div></div>
+      ${fiches.map(f => `<div class="table-row" style="grid-template-columns:140px 140px 120px 1fr">
+        <div style="font-size:12px;color:var(--text)">${fmtDate(f.date_debut)}</div>
+        <div style="font-size:12px;color:var(--text)">${fmtDate(f.date_fin)}</div>
+        <div style="font-weight:800;color:#f59e0b">CHF ${Math.round(f.total_montant||0).toLocaleString()}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${fmtDate(f.created_at)}</div>
+      </div>`).join('')}
+    </div>` : '<div class="table-empty">Aucune fiche de paie générée pour l\'instant.</div>';
+}
+
+async function genererFichePaie() {
+  const debut = document.getElementById('fp-debut')?.value;
+  const fin = document.getElementById('fp-fin')?.value;
+  if (!debut || !fin) { showError('Sélectionne une période valide.'); return; }
+
+  const eligibles = allCommissionsAttente.filter(ca => {
+    if (ca.statut !== 'reçue' || ca.fiche_paie_id) return false;
+    const d = commissionDateReception(ca);
+    return d && d >= debut && d <= fin;
+  });
+  if (!eligibles.length) { showError('Aucune commission à inclure sur cette période.'); return; }
+
+  if (!confirm(`Générer la fiche de paie du ${fmtDate(debut)} au ${fmtDate(fin)} pour ${eligibles.length} commission(s) ?\n\nCes commissions seront marquées comme payées et ne réapparaîtront plus dans une future fiche de paie.`)) return;
+
+  const totalMontant = eligibles.reduce((s,ca) => s + Number(ca.montant_final != null ? ca.montant_final : (ca.montant_estime||0)), 0);
+
+  const r = await dbPost('fiches_paie', { date_debut: debut, date_fin: fin, total_montant: Math.round(totalMontant) });
+  if (r && r.error) { showError('Erreur : ' + errMsg(r)); return; }
+  const ficheId = r && r[0] ? r[0].id : null;
+
+  for (const ca of eligibles) {
+    await dbPatch('commissions_attente', ca.id, { fiche_paie_id: ficheId });
+  }
+
+  logAction('generer_fiche_paie', 'fiches_paie', ficheId, `${fmtDate(debut)} → ${fmtDate(fin)} · CHF ${Math.round(totalMontant)}`);
+  allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
+  allFichesPaie = await dbGet('fiches_paie', 'select=*');
+
+  imprimerFichePaie(ficheId, eligibles, debut, fin, totalMontant);
+  navigate('fiche-paie');
+}
+
+function imprimerFichePaie(ficheId, lignesCommissions, debut, fin, totalMontant) {
+  const win = window.open('', '_blank');
+  const lignesHtml = lignesCommissions.map(ca => {
+    const ct = ca.contrat_id ? allContrats.find(c => c.id === ca.contrat_id) : null;
+    const cl = ct ? allClients.find(c => c.id === ct.client_id) : null;
+    const nom = cl ? (cl.segment==='Entreprise'?cl.nom:`${cl.prenom} ${cl.nom}`) : (ca.client_nom||'—');
+    const montant = ca.montant_final != null ? ca.montant_final : (ca.montant_estime||0);
+    const s = splitMontantAgent(montant, ca.contrat_id);
+    const sig = allAgents.find(a => a.role === 'signataire');
+    return `<tr>
+      <td>${nom}</td><td>${ca.produit||''}</td><td>${ca.compagnie||''}</td>
+      <td style="text-align:right">CHF ${montant.toLocaleString()}</td>
+      <td style="text-align:right">${sig ? sig.prenom+': CHF '+s.pJ : ''}</td>
+      <td style="text-align:right">${s.agent ? s.agent.prenom+': CHF '+s.pA : '—'}</td>
+    </tr>`;
+  }).join('');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Fiche de paie ${fmtDate(debut)} - ${fmtDate(fin)}</title>
+    <style>
+      body{font-family:Arial,sans-serif;padding:30px;color:#0f2244}
+      h1{font-size:18px} table{width:100%;border-collapse:collapse;margin-top:16px;font-size:12px}
+      th,td{padding:8px;border-bottom:1px solid #ddd;text-align:left}
+      th{background:#0f2244;color:#fff;text-transform:uppercase;font-size:10px}
+      .total{font-size:15px;font-weight:800;margin-top:16px;text-align:right}
+      @media print{ button{display:none} }
+    </style></head><body>
+    <h1>Fiche de paie — Assurex Sàrl</h1>
+    <p>Période : ${fmtDate(debut)} au ${fmtDate(fin)}</p>
+    <table><thead><tr><th>Client</th><th>Produit</th><th>Compagnie</th><th>Montant</th><th>Part signataire</th><th>Part apporteur</th></tr></thead>
+    <tbody>${lignesHtml}</tbody></table>
+    <div class="total">Total : CHF ${Math.round(totalMontant).toLocaleString()}</div>
+    <button onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#0f2244;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Imprimer / Enregistrer en PDF</button>
+    </body></html>`);
+  win.document.close();
+}
+
 function viewBordereaux() {
   setTimeout(() => renderBordereauxList(), 0);
   const compagnies = [...new Set(allBordereaux.map(b => b.compagnie).filter(Boolean))].sort();
   return `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Bordereaux de commissions</h2>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Bordereaux — décomptes reçus des compagnies</h2>
       <button class="btn-add" onclick="navigate('nouveau-bordereau')">+ Saisir bordereau</button>
     </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Argent qui entre dans Assurex (commissions de gestion + d'acquisition). Pour répartir ces montants entre les collaborateurs, utilise <span onclick="navigate('fiche-paie')" style="color:var(--accent);cursor:pointer;text-decoration:underline">Fiche de paie</span>.</div>
     <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
       <input class="form-input" id="bd-search" placeholder="🔍 N° bordereau, client, compagnie..." style="flex:1;min-width:180px" oninput="renderBordereauxList()"/>
       <select class="form-select" id="bd-compagnie" style="max-width:180px" onchange="renderBordereauxList()">

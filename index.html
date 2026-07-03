@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 09:00</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 11:20</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -1156,6 +1156,9 @@ async function enterApp(user) {
   allContrats = await dbGet('contrats', 'select=*');
   allOpportunites = await dbGet('opportunites', 'select=*');
 
+  // Bascule automatique : contrats actifs dont l'échéance est passée → "à renouveler"
+  await basculerContratsEchus();
+
   if (user.role === 'signataire') {
     try {
       const ozRows = await dbGet('commissions_oz', 'select=date_mouvement,debit,credit');
@@ -1394,6 +1397,29 @@ async function renderView() {
 }
 
 // DASHBOARD
+async function changerStatutClient(clientId, nouveauStatut) {
+  const r = await dbPatch('clients', clientId, { statut: nouveauStatut });
+  if (r && r.error) { showError('Erreur : ' + errMsg(r)); return; }
+  logAction('edit_statut_client', 'clients', clientId, nouveauStatut);
+  allClients = await dbGet('clients', 'select=*');
+  showClient(clientId);
+}
+
+async function basculerContratsEchus() {
+  const today = new Date().toISOString().split('T')[0];
+  const echus = allContrats.filter(ct =>
+    ct.statut === 'actif' &&
+    ct.date_echeance &&
+    ct.date_echeance < today
+  );
+  if (!echus.length) return;
+  for (const ct of echus) {
+    await dbPatch('contrats', ct.id, { statut: 'renouveler' });
+    ct.statut = 'renouveler';
+  }
+  console.log(`${echus.length} contrat(s) échu(s) basculé(s) en "à renouveler"`);
+}
+
 function viewDashboard() {
   const actifs = allClients.filter(c => c.statut === 'actif').length;
   const totalCA = allContrats.filter(ct => ct.statut === 'actif').reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
@@ -1401,9 +1427,14 @@ function viewDashboard() {
   // Commissions actives depuis la date de bascule Assurex (01.06.2026)
   const commissionsActives = allCommissionsAttente.filter(ca => {
     const ct = allContrats.find(c => c.id === ca.contrat_id);
-    return ct && ct.date_debut >= DATE_BASCULE_ASSUREX && ca.statut === 'en_attente' && ca.statut !== 'annulé';
+    return ct && ct.date_debut >= DATE_BASCULE_ASSUREX && ca.statut === 'en_attente';
   });
   const totalCommActives = commissionsActives.reduce((s, ca) => s + Number(ca.montant_estime || 0), 0);
+  const commissionsRecues = allCommissionsAttente.filter(ca => {
+    const ct = allContrats.find(c => c.id === ca.contrat_id);
+    return ct && ct.date_debut >= DATE_BASCULE_ASSUREX && ['reçue','versé_oz','versé_cofidex'].includes(ca.statut);
+  });
+  const totalCommRecues = commissionsRecues.reduce((s, ca) => s + Number(ca.montant_final != null ? ca.montant_final : (ca.montant_estime||0)), 0);
   const nbContratsActifs = allContrats.filter(ct => !['résilié','annulé'].includes(ct.statut) && ct.commissionne !== false).length;
   const urgents = allRappels.filter(r => r.urgence === 'haute' && r.statut === 'ouvert');
   const now = new Date().toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -1455,10 +1486,11 @@ function viewDashboard() {
     <div style="margin-bottom:4px;color:var(--text-muted);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase">${now}</div>
     <h1 style="margin:0 0 4px;font-size:24px;font-weight:900;color:var(--text)">Bonjour, ${currentUser.prenom} 👋</h1>
     <div style="color:var(--text-muted);font-size:13px;margin-bottom:24px">Assurex Sàrl · EX Groupe · Commissions actives depuis le 01.06.2026</div>
-    <div class="stat-grid">
+    <div class="stat-grid" style="grid-template-columns:repeat(5,1fr)">
       ${statCard('Clients', allClients.length, '#38bdf8', `${actifs} actifs`)}
       ${statCard('CA portefeuille /an', 'CHF ' + Math.round(totalCA).toLocaleString(), '#f59e0b', `${nbContratsActifs} contrats`)}
-      ${statCard('Commissions en attente', 'CHF ' + Math.round(totalCommActives).toLocaleString(), '#4ade80', `depuis 01.06.2026`)}
+      ${statCard('Commissions en attente', 'CHF ' + Math.round(totalCommActives).toLocaleString(), '#f59e0b', `depuis 01.06.2026`)}
+      ${statCard('Commissions reçues', 'CHF ' + Math.round(totalCommRecues).toLocaleString(), '#4ade80', `depuis 01.06.2026`)}
       ${statCard('Rappels urgents', urgents.length, urgents.length > 0 ? '#f87171' : '#64748b')}
     </div>
 
@@ -1666,7 +1698,7 @@ function renderProduction() {
     </div>` : '';
 
   const cols = '1fr 1fr 110px 100px 90px';
-  const rows = filtered.map(ct => `<div class="table-row" style="grid-template-columns:${cols};cursor:pointer" onclick="showClient('${ct.client_id}')">
+  const rows = filtered.map(ct => `<div class="table-row" style="grid-template-columns:${cols};cursor:pointer" onclick="showDetailContrat('${ct.id}')">
     <div style="font-size:13px;font-weight:700;color:var(--text)">${nomClient(ct)}</div>
     <div style="font-size:12px;color:var(--text-muted)">${ct.produit || ''} · ${ct.compagnie || ''}</div>
     <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ct.date_debut)}</div>
@@ -2442,7 +2474,14 @@ async function showClient(id) {
             <div style="color:var(--text-muted);font-size:12px">${c.adresse || ''} ${c.npa || ''} ${c.ville || ''}</div>
           </div>
         </div>
-        <div style="display:flex;gap:8px">${badge(c.segment || 'Privé', isEntreprise ? '#f59e0b' : '#38bdf8')} ${badge(c.statut || 'prospect', statutColor(c.statut))}</div>
+        <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          ${badge(c.segment || 'Privé', isEntreprise ? '#f59e0b' : '#38bdf8')} ${badge(c.statut || 'prospect', statutColor(c.statut))}
+          <div style="display:flex;gap:4px;margin-left:6px">
+            ${c.statut !== 'prospect' ? `<button onclick="changerStatutClient('${c.id}','prospect')" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:6px;padding:3px 9px;font-size:10.5px;cursor:pointer;font-weight:700">→ Prospect</button>` : ''}
+            ${c.statut !== 'actif' ? `<button onclick="changerStatutClient('${c.id}','actif')" style="background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);color:#4ade80;border-radius:6px;padding:3px 9px;font-size:10.5px;cursor:pointer;font-weight:700">✓ Client actif</button>` : ''}
+            ${c.statut !== 'inactif' ? `<button onclick="changerStatutClient('${c.id}','inactif')" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:6px;padding:3px 9px;font-size:10.5px;cursor:pointer;font-weight:700">Inactif</button>` : ''}
+          </div>
+        </div>
       </div>
       <div class="stat-grid" style="margin-bottom:16px">
         ${statCard('Contrats', contrats.length, '#38bdf8')}
@@ -2622,7 +2661,7 @@ async function showClient(id) {
         <button class="btn-add" onclick="contratClientId='${c.id}'; navigate('nouveau-contrat')">+ Nouveau contrat</button>
       </div>
       ${contrats.length > 0 ? `<div class="table-wrap"><div class="table-header" style="grid-template-columns:1fr 120px 100px 110px 100px 40px"><div>Produit</div><div>Compagnie</div><div>Échéance</div><div>Prime/an</div><div>Statut</div><div></div></div>
-      ${contrats.map(ct => `<div class="table-row" style="grid-template-columns:1fr 120px 100px 110px 100px 80px">
+      ${contrats.map(ct => `<div class="table-row" style="grid-template-columns:1fr 120px 100px 110px 100px 80px;cursor:pointer" onclick="showDetailContrat('${ct.id}')">
         <div>
           <div style="font-weight:700;font-size:13px;color:var(--text)">${ct.produit}</div>
           <div style="font-size:11px;color:var(--text-muted)">${ct.numero_police ? '№ ' + ct.numero_police : ''}${ct.date_debut ? ' · Dès le ' + fmtDate(ct.date_debut) : ''}${ct.date_echeance ? ' → ' + fmtDate(ct.date_echeance) : ''}</div>
@@ -2631,7 +2670,7 @@ async function showClient(id) {
         <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ct.date_echeance)}</div>
         <div style="font-weight:800;color:#f59e0b">CHF ${Number(ct.prime_annuelle || 0).toLocaleString()}</div>
         <div>${badge(ct.statut, ct.statut === 'actif' ? '#4ade80' : ct.statut === 'renouveler' ? '#f59e0b' : '#f87171')}${ct.commissionne === false ? ' ' + badge('Non commissionné', '#64748b') : ''}</div>
-        <div style="display:flex;gap:4px;align-items:center">
+        <div style="display:flex;gap:4px;align-items:center" onclick="event.stopPropagation()">
           ${ct.police_url
             ? `<button onclick="ouvrirPieceJointe('${ct.police_url}')" title="Voir la police PDF" style="background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);color:#4ade80;border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer;line-height:1">📄</button>`
             : `<label title="Joindre la police PDF" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer;line-height:1">📎<input type="file" accept="application/pdf" onchange="uploadPolicePdf('${ct.id}', this)" style="display:none"/></label>`
@@ -2663,13 +2702,15 @@ async function showClient(id) {
     <div id="tab-collaborateurs" class="hidden">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
         <div style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">Collaborateurs (${collaborateurs.length})</div>
-        <button class="btn-add" onclick="showFormCollaborateur('${c.id}')">+ Ajouter</button>
+        <button class="btn-add" onclick="showFormCollaborateur('${c.id}')" title="Ajouter un collaborateur" style="display:flex;align-items:center;gap:6px">👤+ Ajouter</button>
       </div>
       ${collaborateurs.length > 0 ? `
       <table style="width:100%;border-collapse:collapse;font-size:13px">
         <thead><tr style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px">
           <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Nom</th>
           <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Prénom</th>
+          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Naissance</th>
+          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Téléphone</th>
           <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Adresse privée</th>
           <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">N° AVS</th>
           <th style="padding:8px 12px;border-bottom:1px solid var(--border)"></th>
@@ -2678,6 +2719,8 @@ async function showClient(id) {
           <tr style="border-bottom:1px solid var(--border)">
             <td style="padding:10px 12px;font-weight:700;color:var(--text)">${col.nom || '—'}</td>
             <td style="padding:10px 12px;color:var(--text)">${col.prenom || '—'}</td>
+            <td style="padding:10px 12px;color:var(--text-muted)">${fmtDate(col.date_naissance)}</td>
+            <td style="padding:10px 12px;color:var(--text-muted)">${col.telephone || '—'}</td>
             <td style="padding:10px 12px;color:var(--text-muted)">${col.adresse || '—'}</td>
             <td style="padding:10px 12px;color:var(--text-muted);font-family:monospace">${col.avs || '—'}</td>
             <td style="padding:10px 12px;text-align:right">
@@ -3023,7 +3066,7 @@ function renderSuiviTables() {
   function table(list, emptyMsg) {
     if (!list.length) return `<div class="table-empty">${emptyMsg}</div>`;
     return `<div class="table-wrap"><div class="table-header" style="grid-template-columns:${cols}"><div>Produit</div><div>Client</div><div>Compagnie</div><div>Échéance</div><div>Prime/an</div><div>Statut</div></div>
-      ${list.map(ct => `<div class="table-row" style="grid-template-columns:${cols};cursor:pointer" onclick="showClient('${ct.client_id}')">
+      ${list.map(ct => `<div class="table-row" style="grid-template-columns:${cols};cursor:pointer" onclick="showDetailContrat('${ct.id}')">
         <div><div style="font-weight:700;font-size:13px;color:var(--text)">${ct.produit}</div><div style="font-size:11px;color:var(--text-muted)">${ct.numero_police || ''}</div></div>
         <div style="font-size:13px;color:var(--text)">${nomClient(ct)}</div>
         <div style="font-size:13px;color:var(--text)">${ct.compagnie}</div>
@@ -3163,11 +3206,66 @@ async function rouvrirRappel(id) {
 let allBordereaux = [];
 
 function viewBordereaux() {
-  const BORDS = allBordereaux;
+  setTimeout(() => renderBordereauxList(), 0);
+  const compagnies = [...new Set(allBordereaux.map(b => b.compagnie).filter(Boolean))].sort();
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Bordereaux de commissions</h2>
+      <button class="btn-add" onclick="navigate('nouveau-bordereau')">+ Saisir bordereau</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <input class="form-input" id="bd-search" placeholder="🔍 N° bordereau, client, compagnie..." style="flex:1;min-width:180px" oninput="renderBordereauxList()"/>
+      <select class="form-select" id="bd-compagnie" style="max-width:180px" onchange="renderBordereauxList()">
+        <option value="">Toutes compagnies</option>
+        ${compagnies.map(c => `<option value="${c}">${c}</option>`).join('')}
+      </select>
+      <select class="form-select" id="bd-statut" style="max-width:150px" onchange="renderBordereauxList()">
+        <option value="">Tous statuts</option>
+        <option value="attendu">Attendu</option>
+        <option value="reçu">Reçu</option>
+      </select>
+      <select class="form-select" id="bd-tri" style="max-width:170px" onchange="renderBordereauxList()">
+        <option value="recent">Plus récent d'abord</option>
+        <option value="ancien">Plus ancien d'abord</option>
+        <option value="montant">Montant décroissant</option>
+      </select>
+    </div>
+    <div id="bd-stats" class="stat-grid" style="margin-bottom:20px"></div>
+    <div id="bd-list"></div>`;
+}
+
+function renderBordereauxList() {
+  const search = (document.getElementById('bd-search')?.value || '').toLowerCase().trim();
+  const compagnieF = document.getElementById('bd-compagnie')?.value || '';
+  const statutF = document.getElementById('bd-statut')?.value || '';
+  const tri = document.getElementById('bd-tri')?.value || 'recent';
+
+  let BORDS = allBordereaux.filter(b => {
+    if (compagnieF && b.compagnie !== compagnieF) return false;
+    if (statutF && b.statut !== statutF) return false;
+    if (search) {
+      const commissionsB = allCommissionsAttente.filter(c => c.bordereau_id === b.id);
+      const nomsClients = commissionsB.map(c => (c.client_nom||'').toLowerCase()).join(' ');
+      const hay = `${b.numero||''} ${b.compagnie||''} ${b.mois||''} ${nomsClients}`.toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+
+  if (tri === 'recent') BORDS.sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
+  else if (tri === 'ancien') BORDS.sort((a,b) => new Date(a.created_at||0) - new Date(b.created_at||0));
+  else if (tri === 'montant') BORDS.sort((a,b) => (b.montant_brut||0) - (a.montant_brut||0));
 
   const totalRecu = BORDS.filter(b=>b.statut==='reçu').reduce((s,b)=>s+(b.montant_brut||0),0);
   const totalAttendu = BORDS.filter(b=>b.statut==='attendu').reduce((s,b)=>s+(b.montant_brut||0),0);
   const totalCaution = BORDS.reduce((s,b)=>s+Math.round((b.montant_brut||0)*((b.taux_caution||0)/100)),0);
+
+  document.getElementById('bd-stats').innerHTML = `
+    ${statCard('Bordereaux', BORDS.length, '#38bdf8')}
+    ${statCard('Reçus', 'CHF ' + totalRecu.toLocaleString(), '#4ade80')}
+    ${statCard('Attendus', 'CHF ' + totalAttendu.toLocaleString(), '#f59e0b')}
+    ${statCard('Caution totale retenue', 'CHF ' + totalCaution.toLocaleString(), '#a78bfa')}
+  `;
 
   const cards = BORDS.map(b => {
     const commissions = allCommissionsAttente.filter(c => c.bordereau_id === b.id);
@@ -3247,22 +3345,12 @@ function viewBordereaux() {
     </div>`;
   }).join('');
 
-  return `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Bordereaux de commissions</h2>
-      <button class="btn-add" onclick="navigate('nouveau-bordereau')">+ Saisir bordereau</button>
-    </div>
-    <div class="stat-grid" style="margin-bottom:20px">
-      ${statCard('Reçus', 'CHF ' + totalRecu.toLocaleString(), '#4ade80')}
-      ${statCard('Attendus', 'CHF ' + totalAttendu.toLocaleString(), '#f59e0b')}
-      ${statCard('Caution totale retenue', 'CHF ' + totalCaution.toLocaleString(), '#a78bfa')}
-    </div>
-    ${cards || '<div class="table-empty">Aucun bordereau saisi.</div>'}`;
+  document.getElementById('bd-list').innerHTML = cards || '<div class="table-empty">Aucun bordereau ne correspond aux filtres.</div>';
 }
 
 function toggleBordereau(id) {
   openBordereaux[id] = !openBordereaux[id];
-  navigate('bordereaux');
+  renderBordereauxList();
 }
 
 // ═══ ÉDITION D'UN BORDEREAU ═══
@@ -4342,12 +4430,15 @@ async function showEditContrat(contratId, returnTo) {
 
   // Déduire périodicité depuis prime_annuelle si on peut
   const perioOpts = [
-    { value:'1', label:'Annuelle' },
-    { value:'2', label:'Semestrielle' },
-    { value:'4', label:'Trimestrielle' },
-    { value:'12', label:'Mensuelle' },
+    { value:'1', label:'Annuelle (paiement en 1×)' },
+    { value:'2', label:'Semestrielle (2× par an)' },
+    { value:'4', label:'Trimestrielle (4× par an)' },
+    { value:'12', label:'Mensuelle (12× par an)' },
   ];
-  const primeAff = ct.prime_annuelle || 0;
+  // La prime est stockée en annuel. On affiche le montant PAR ÉCHÉANCE.
+  // Périodicité mémorisée sur le contrat (défaut annuel si absente)
+  const perioActuelle = ct.periodicite || 1;
+  const primeAff = perioActuelle > 1 ? Math.round((ct.prime_annuelle || 0) / perioActuelle) : (ct.prime_annuelle || 0);
 
   const modal = document.createElement('div');
   modal.id = 'modal-edit-contrat';
@@ -4360,12 +4451,13 @@ async function showEditContrat(contratId, returnTo) {
         <div class="form-field"><label class="form-label">Compagnie</label><input class="form-input" id="ect-compagnie" value="${ct.compagnie || ''}"/></div>
         <div class="form-field"><label class="form-label">N° de police</label><input class="form-input" id="ect-police" value="${ct.numero_police || ''}"/></div>
         <div class="form-field"><label class="form-label">Date d'échéance</label><input class="form-input" id="ect-echeance" type="date" value="${fmtDate(ct.date_echeance)}"/></div>
-        <div class="form-field"><label class="form-label">Prime (CHF)</label><input class="form-input" id="ect-prime" type="number" value="${primeAff}"/></div>
+        <div class="form-field"><label class="form-label">Prime par échéance (CHF)</label><input class="form-input" id="ect-prime" type="number" value="${primeAff}" oninput="updateApercuPrimeAnnuelle()"/></div>
         <div class="form-field"><label class="form-label">Périodicité</label>
-          <select class="form-select" id="ect-periodicite">
-            ${perioOpts.map(o => `<option value="${o.value}">${o.label}</option>`).join('')}
+          <select class="form-select" id="ect-periodicite" onchange="updateApercuPrimeAnnuelle()">
+            ${perioOpts.map(o => `<option value="${o.value}" ${String(o.value)===String(perioActuelle)?'selected':''}>${o.label}</option>`).join('')}
           </select>
         </div>
+        <div class="form-field" style="grid-column:span 2"><div id="ect-apercu-annuel" style="font-size:12px;color:var(--text-muted);padding:6px 12px;background:var(--surface-alt);border-radius:8px">Prime annuelle calculée : CHF ${(ct.prime_annuelle||0).toLocaleString()}</div></div>
         <div class="form-field"><label class="form-label">Agent / Apporteur</label><select class="form-select" id="ect-apporteur">
           <option value="">— Aucun / pas de partage —</option>
           ${allAgents.map(a => `<option value="${a.id}" ${ct.apporteur_id===a.id?'selected':''}>${a.prenom} ${a.nom}${a.role==='signataire'?' (moi-même)':''}</option>`).join('')}
@@ -4433,10 +4525,18 @@ async function deleteContrat(contratId, clientId, returnTo) {
   if (returnTo) { navigate(returnTo); } else { showClient(clientId); }
 }
 
+function updateApercuPrimeAnnuelle() {
+  const prime = parseFloat(document.getElementById('ect-prime')?.value) || 0;
+  const perio = parseInt(document.getElementById('ect-periodicite')?.value) || 1;
+  const annuelle = Math.round(prime * perio);
+  const el = document.getElementById('ect-apercu-annuel');
+  if (el) el.innerHTML = `Prime annuelle calculée : <strong style="color:#f59e0b">CHF ${annuelle.toLocaleString()}</strong> (${prime.toLocaleString()} × ${perio} échéance${perio>1?'s':''})`;
+}
+
 async function saveEditContrat(contratId, clientId, returnTo) {
-  const periodicite = parseInt(document.getElementById('ect-periodicite').value) || 12;
-  const primeInput = parseFloat(document.getElementById('ect-prime').value) || 0;
-  const primeAnnuelle = Math.round(primeInput * periodicite);
+  const periodicite = parseInt(document.getElementById('ect-periodicite').value) || 1;
+  const primeParEcheance = parseFloat(document.getElementById('ect-prime').value) || 0;
+  const primeAnnuelle = Math.round(primeParEcheance * periodicite);
   const commissionne = document.getElementById('ect-commissionne').value !== 'non';
   const body = {
     produit: document.getElementById('ect-produit').value.trim(),
@@ -4444,6 +4544,7 @@ async function saveEditContrat(contratId, clientId, returnTo) {
     numero_police: document.getElementById('ect-police').value.trim() || null,
     date_echeance: document.getElementById('ect-echeance').value || null,
     prime_annuelle: primeAnnuelle,
+    periodicite: periodicite,
     statut: document.getElementById('ect-statut').value,
     commissionne,
     apporteur_id: document.getElementById('ect-apporteur').value || null,
@@ -4488,6 +4589,8 @@ function showFormCollaborateur(clientId) {
       <div class="form-grid">
         <div class="form-field"><label class="form-label">Nom *</label><input class="form-input" id="col-nom" placeholder="Dupont"/></div>
         <div class="form-field"><label class="form-label">Prénom *</label><input class="form-input" id="col-prenom" placeholder="Jean"/></div>
+        <div class="form-field"><label class="form-label">Date de naissance</label><input class="form-input" id="col-naissance" type="date"/></div>
+        <div class="form-field"><label class="form-label">N° de téléphone</label><input class="form-input" id="col-tel" placeholder="079 123 45 67"/></div>
         <div class="form-field" style="grid-column:span 2"><label class="form-label">Adresse privée</label><input class="form-input" id="col-adresse" placeholder="Rue des Alpes 12, 1000 Lausanne"/></div>
         <div class="form-field" style="grid-column:span 2"><label class="form-label">N° AVS</label><input class="form-input" id="col-avs" placeholder="756.1234.5678.90" maxlength="16"/></div>
       </div>
@@ -4511,6 +4614,8 @@ async function saveCollaborateur(clientId) {
     client_id: clientId,
     nom,
     prenom,
+    date_naissance: document.getElementById('col-naissance').value || null,
+    telephone: document.getElementById('col-tel').value.trim() || null,
     adresse: document.getElementById('col-adresse').value.trim() || null,
     avs: document.getElementById('col-avs').value.trim() || null,
   };
@@ -4816,12 +4921,15 @@ async function importBordereauPdf(input) {
 }
 
 async function viewNouveauBordereau() {
-  const dernierBordereau = await dbGet('bordereaux', 'select=numero&order=created_at.desc&limit=1');
-  let prochainNumero = 'BRD-0001';
-  if (dernierBordereau && dernierBordereau[0] && dernierBordereau[0].numero) {
-    const m = dernierBordereau[0].numero.match(/(\d+)$/);
-    if (m) prochainNumero = 'BRD-' + String(parseInt(m[1], 10) + 1).padStart(4, '0');
-  }
+  const tousLesBordereaux = await dbGet('bordereaux', 'select=numero');
+  let maxNum = 0;
+  (tousLesBordereaux || []).forEach(b => {
+    if (b.numero) {
+      const m = b.numero.match(/(\d+)$/);
+      if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
+    }
+  });
+  const prochainNumero = 'BRD-' + String(maxNum + 1).padStart(4, '0');
   window._bordereauNumero = prochainNumero;
   window._bordereauPdfFile = null;
 
@@ -6359,6 +6467,12 @@ function viewAgents() {
       const color = agentColor(a);
       const nbClients = allClients.filter(c => c.apporteur_id === a.id).length;
       const ca = allClients.filter(c => c.apporteur_id === a.id).reduce((s,c)=>s+caClient(c.id),0);
+      // Commissions générées : somme des commissions des contrats apportés par cet agent
+      const contratsAgent = allContrats.filter(ct => ct.apporteur_id === a.id).map(ct => ct.id);
+      const commsAgent = allCommissionsAttente.filter(cm => contratsAgent.includes(cm.contrat_id) && cm.statut !== 'annulé');
+      const commGeneree = commsAgent.reduce((s,cm) => s + Number(cm.montant_final != null ? cm.montant_final : (cm.montant_estime||0)), 0);
+      // Part de l'agent selon son taux
+      const partAgent = Math.round(commGeneree * (a.taux||0) / 100);
       const isEditing = editingAgentId === a.id;
       return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:12px">
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
@@ -6393,12 +6507,26 @@ function viewAgents() {
           </div>
           <button class="btn-save" onclick="saveAgent('${a.id}')">💾 Enregistrer</button>
         </div>` : ''}
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px">
-          ${[['Rôle', a.role], ['Taux commission', a.taux + '%'], ['Clients', nbClients], ['CA géré', 'CHF ' + ca.toLocaleString()]].map(([l,v]) =>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
+          ${[['Rôle', a.role], ['Taux commission', a.taux + '%'], ['Clients', nbClients]].map(([l,v]) =>
             `<div style="background:var(--surface-alt);border-radius:9px;padding:10px 14px">
               <div style="color:var(--text-muted);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px">${l}</div>
               <div style="color:var(--text);font-size:13px;font-weight:700">${v}</div>
             </div>`).join('')}
+        </div>
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+          <div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);border-radius:9px;padding:10px 14px">
+            <div style="color:var(--text-muted);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px">CA géré</div>
+            <div style="color:#38bdf8;font-size:14px;font-weight:800">CHF ${ca.toLocaleString()}</div>
+          </div>
+          <div style="background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2);border-radius:9px;padding:10px 14px">
+            <div style="color:var(--text-muted);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px">Commissions générées</div>
+            <div style="color:#4ade80;font-size:14px;font-weight:800">CHF ${Math.round(commGeneree).toLocaleString()}</div>
+          </div>
+          <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:9px;padding:10px 14px">
+            <div style="color:var(--text-muted);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px">Part agent (${a.taux||0}%)</div>
+            <div style="color:#f59e0b;font-size:14px;font-weight:800">CHF ${partAgent.toLocaleString()}</div>
+          </div>
         </div>
       </div>`;
     }).join('')}

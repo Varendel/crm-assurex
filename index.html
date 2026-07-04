@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 18:45</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 19:15</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -1446,6 +1446,7 @@ async function renderView() {
     case 'contacts-compagnies': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewContactsCompagnies(); break;
     case 'oz-assure': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewOzAssure(); break;
     case 'oz-commissions-assurex': main.innerHTML = viewOzCommissionsAssurex(); break;
+    case 'contrats-orphelins-commission': main.innerHTML = viewContratsOrphelinsCommission(); break;
     case 'rapport-finma-oz': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewRapportFinmaOz(); break;
     default: main.innerHTML = viewDashboard(); mountCalendarWidget();
   }
@@ -1514,8 +1515,9 @@ async function basculerContratsEchus() {
 
 function viewDashboard() {
   const actifs = allClients.filter(c => c.statut === 'actif').length;
-  const totalCA = allContrats.filter(ct => ct.statut === 'actif').reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
-  const totalCAFull = allContrats.filter(ct => !['résilié','annulé'].includes(ct.statut)).reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0);
+  // CA portefeuille : tout contrat en vigueur (actif, à renouveler, en cours de signature) —
+  // même périmètre que nbContratsActifs ci-dessous, pour que le CHF affiché corresponde au nombre de contrats affiché.
+  const totalCA = allContrats.filter(ct => !['résilié','annulé'].includes(ct.statut)).reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
   // ── Commissions en attente (pipeline) : basé sur la date de SIGNATURE du contrat ──
   // C'est la bonne définition métier : seuls les contrats signés depuis la fusion
   // génèrent de nouvelles commissions pour Assurex. Le portefeuille pré-fusion
@@ -1599,6 +1601,41 @@ function viewDashboard() {
   const totalNonGere = nonGerees.reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0);
   const maxHorizon = Math.max(...horizonsData.map(h => h.montant), 1);
 
+  // ── Filet de sécurité : contrats commissionnables sans AUCUNE ligne de commission ──
+  // Détecte automatiquement les trous de données (ex: contrat inséré directement en SQL
+  // sans passer par le formulaire du CRM, qui aurait dû générer la commission).
+  const idsAvecCommission = new Set(allCommissionsAttente.map(ca => ca.contrat_id).filter(Boolean));
+  const contratsOrphelins = allContrats.filter(ct =>
+    ct.commissionne !== false &&
+    !['résilié', 'annulé'].includes(ct.statut) &&
+    Number(ct.prime_annuelle || 0) > 0 &&
+    !idsAvecCommission.has(ct.id)
+  );
+
+  // ── Graphique "Commissions — Gestion vs Acquisition" (cumul depuis la fusion) ──
+  // Basé sur les mêmes ensembles que les stat cards ci-dessus (reçues nettes des extournées),
+  // simplement ventilés par type de mouvement ("Commission de gestion" vs "Commission d'acquisition").
+  function montantComm(ca) { return Number(ca.montant_final != null ? ca.montant_final : (ca.montant_estime || 0)); }
+  function sommeParMouvement(arr, estGestion) {
+    return arr.filter(ca => (ca.mouvement || '').toLowerCase().includes('gestion') === estGestion)
+      .reduce((s, ca) => s + montantComm(ca), 0);
+  }
+  const totalGestionRecue = sommeParMouvement(commissionsRecues, true) - sommeParMouvement(commissionsExtournees, true);
+  const totalAcquisitionRecue = sommeParMouvement(commissionsRecues, false) - sommeParMouvement(commissionsExtournees, false);
+  const maxGA = Math.max(totalGestionRecue, totalAcquisitionRecue, 1);
+
+  // ── Graphique "Pipeline — Signé vs Prévu" ──
+  // Signé = primes des contrats démarrés cette année (production de l'année en cours).
+  // Prévu = pipeline ouvert (opportunités ni gagnées ni perdues), montant potentiel non pondéré.
+  const anneeCourante = String(new Date().getFullYear());
+  const chiffreSigne = allContrats
+    .filter(ct => ct.date_debut && ct.date_debut.startsWith(anneeCourante) && !['résilié','annulé'].includes(ct.statut))
+    .reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
+  const chiffrePrevu = allOpportunites
+    .filter(o => o.stade !== 'Gagné' && o.stade !== 'Perdu')
+    .reduce((s, o) => s + Number(o.montant_potentiel || 0), 0);
+  const maxPipeline = Math.max(chiffreSigne, chiffrePrevu, 1);
+
   return `
     <div style="display:flex;justify-content:space-between;align-items:flex-start">
       <div>
@@ -1615,6 +1652,15 @@ function viewDashboard() {
       ${statCard('Commissions reçues', 'CHF ' + Math.round(totalCommRecues).toLocaleString(), '#4ade80', `depuis 01.06.2026`)}
       ${statCard('Rappels urgents', urgents.length, urgents.length > 0 ? '#f87171' : '#64748b')}
     </div>
+
+    ${contratsOrphelins.length > 0 ? `
+    <div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.3);border-radius:14px;padding:18px 22px;margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:13px;font-weight:800;color:#f87171">⚠️ ${contratsOrphelins.length} contrat(s) sans aucune commission créée</div>
+        <button onclick="navigate('contrats-orphelins-commission')" style="background:rgba(248,113,113,0.15);border:1px solid rgba(248,113,113,0.4);color:#f87171;border-radius:7px;padding:6px 14px;font-size:11.5px;font-weight:700;cursor:pointer">Voir le détail →</button>
+      </div>
+      <div style="font-size:11.5px;color:var(--text-muted)">Ces contrats sont commissionnables et actifs, mais aucune ligne de commission n'existe pour eux — souvent le signe d'un contrat ajouté directement en base de données. Clique sur "Voir le détail" pour les corriger un par un.</div>
+    </div>` : ''}
 
     ${nonGerees.length > 0 ? `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
@@ -1646,29 +1692,29 @@ function viewDashboard() {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
         <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px">📊 Commissions — Gestion vs Acquisition</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px">Cumul 2026</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px">Depuis le 01.06.2026 (reçues, nettes des extournées)</div>
         <div style="display:flex;flex-direction:column;gap:10px">
-          ${[['Gestion (récurrentes)','#38bdf8',0],['Acquisition (nouvelles)','#4ade80',0]].map(([l,c,v])=>`
+          ${[['Gestion (récurrentes)','#38bdf8',totalGestionRecue],['Acquisition (nouvelles)','#4ade80',totalAcquisitionRecue]].map(([l,c,v])=>`
           <div>
             <div style="display:flex;justify-content:space-between;margin-bottom:4px">
               <span style="font-size:12px;color:var(--text-muted)">${l}</span>
-              <span style="font-size:12px;font-weight:800;color:${c}">CHF ${v.toLocaleString()}</span>
+              <span style="font-size:12px;font-weight:800;color:${c}">CHF ${Math.round(v).toLocaleString()}</span>
             </div>
-            <div class="progress-bar"><div class="progress-fill" style="width:0%;background:${c}"></div></div>
+            <div class="progress-bar"><div class="progress-fill" style="width:${Math.max(Math.round(v/maxGA*100),v>0?2:0)}%;background:${c}"></div></div>
           </div>`).join('')}
         </div>
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
         <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px">💼 Pipeline</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px">Signé vs Prévu</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px">Signé (${anneeCourante}) vs Prévu (pipeline ouvert)</div>
         <div style="display:flex;flex-direction:column;gap:10px">
-          ${[['Chiffre signé','#f59e0b',0],['Chiffre prévu (pipeline)','#a78bfa',0]].map(([l,c,v])=>`
+          ${[['Chiffre signé','#f59e0b',chiffreSigne],['Chiffre prévu (pipeline)','#a78bfa',chiffrePrevu]].map(([l,c,v])=>`
           <div>
             <div style="display:flex;justify-content:space-between;margin-bottom:4px">
               <span style="font-size:12px;color:var(--text-muted)">${l}</span>
-              <span style="font-size:12px;font-weight:800;color:${c}">CHF ${v.toLocaleString()}</span>
+              <span style="font-size:12px;font-weight:800;color:${c}">CHF ${Math.round(v).toLocaleString()}</span>
             </div>
-            <div class="progress-bar"><div class="progress-fill" style="width:0%;background:${c}"></div></div>
+            <div class="progress-bar"><div class="progress-fill" style="width:${Math.max(Math.round(v/maxPipeline*100),v>0?2:0)}%;background:${c}"></div></div>
           </div>`).join('')}
         </div>
       </div>
@@ -2229,6 +2275,81 @@ function showDetailContrat(contratId) {
     </div>`;
 
   document.body.appendChild(modal);
+}
+
+// ═══ Contrats sans aucune commission créée (filet de sécurité) ═══
+function viewContratsOrphelinsCommission() {
+  const idsAvecCommission = new Set(allCommissionsAttente.map(ca => ca.contrat_id).filter(Boolean));
+  const orphelins = allContrats.filter(ct =>
+    ct.commissionne !== false &&
+    !['résilié', 'annulé'].includes(ct.statut) &&
+    Number(ct.prime_annuelle || 0) > 0 &&
+    !idsAvecCommission.has(ct.id)
+  );
+
+  const cols = '1fr 130px 100px 100px 100px';
+  const rows = orphelins.map(ct => {
+    const cl = allClients.find(c => c.id === ct.client_id);
+    const nom = cl ? (cl.segment === 'Entreprise' ? cl.nom : `${cl.prenom} ${cl.nom}`) : '—';
+    return `<div class="table-row" style="grid-template-columns:${cols}">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:var(--accent);cursor:pointer;text-decoration:underline dotted" onclick="showClient('${ct.client_id}')">${nom}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${ct.produit||''}</div>
+      </div>
+      <div style="font-size:12px;color:var(--text-muted)">${ct.compagnie||''}</div>
+      <div style="font-weight:800;color:#f59e0b">CHF ${Number(ct.prime_annuelle||0).toLocaleString()}</div>
+      <div>${badge(ct.statut, ct.statut==='actif'?'#4ade80':'#f59e0b')}</div>
+      <div><button onclick="creerCommissionManquante('${ct.id}')" style="background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);color:#4ade80;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">+ Créer</button></div>
+    </div>`;
+  }).join('');
+
+  return `
+    <h2 style="margin:0 0 4px;font-size:18px;font-weight:800;color:var(--text)">Contrats sans commission créée</h2>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Ces contrats sont commissionnables mais n'ont aucune ligne de commission — clique sur "+ Créer" pour générer la commission avec la formule standard selon le produit (LPP, LAMal, complémentaire, ou estimation générique).</div>
+    <div class="table-wrap">
+      <div class="table-header" style="grid-template-columns:${cols}"><div>Client / Produit</div><div>Compagnie</div><div>Prime/an</div><div>Statut</div><div></div></div>
+      ${rows || '<div class="table-empty">✅ Aucun contrat orphelin — tout est en ordre.</div>'}
+    </div>`;
+}
+
+async function creerCommissionManquante(contratId) {
+  const ct = allContrats.find(c => c.id === contratId);
+  if (!ct) return;
+  const cl = allClients.find(c => c.id === ct.client_id);
+  const nomClient = cl ? (cl.segment === 'Entreprise' ? cl.nom : `${cl.prenom} ${cl.nom}`) : '';
+  const produit = (ct.produit || '').toLowerCase();
+  const prime = Number(ct.prime_annuelle || 0);
+
+  let montant = 0, detail = '';
+  if (produit.includes('lpp') || produit.includes('pilier')) {
+    montant = prime < 2000 ? 0 : Math.round(prime * 1.20 * 0.063);
+    detail = `COG Swiss Life SL1102 : prime ${prime} × 1.20 × 6.3% — créée depuis le filet de sécurité`;
+  } else if (produit.includes('lamal')) {
+    montant = 70;
+    detail = 'LAMal : forfait CHF 70 — créée depuis le filet de sécurité';
+  } else if (produit.includes('complémentaire') || produit.includes('complementaire')) {
+    montant = Math.round(prime / 12 * 16);
+    detail = 'Complémentaire santé : prime mensuelle × 16 — créée depuis le filet de sécurité';
+  } else {
+    montant = Math.round(prime * 0.10);
+    detail = 'Estimation 10% (à affiner selon compagnie) — créée depuis le filet de sécurité';
+  }
+
+  const r = await dbPost('commissions_attente', {
+    client_id: ct.client_id,
+    contrat_id: ct.id,
+    client_nom: nomClient,
+    compagnie: ct.compagnie,
+    produit: ct.produit,
+    montant_estime: montant,
+    detail_calcul: detail,
+    statut: 'en_attente',
+    date_creation: new Date().toISOString().split('T')[0],
+  });
+  if (r && r.error) { showError('Erreur : ' + errMsg(r)); return; }
+  logAction('creer_commission_manquante', 'commissions_attente', null, nomClient);
+  allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
+  navigate('contrats-orphelins-commission');
 }
 
 function viewTousContrats() {

@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 16:30</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 17:45</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -490,6 +490,7 @@ let prefillOpportunite = null;
 let ozAnnualSummary = null;
 let allCommissionsAttente = [];
 let allFichesPaie = [];
+let allCompagniesContacts = [];
 let currentClientId = null;
 
 // Paramètres de taux de commission — modifiables via Paramètres (gestion récurrente)
@@ -1157,6 +1158,7 @@ async function enterApp(user) {
   allBordereaux = await dbGet('bordereaux', 'select=*');
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
   allFichesPaie = await dbGet('fiches_paie', 'select=*');
+  allCompagniesContacts = await dbGet('compagnies_contacts', 'select=*&order=compagnie.asc');
   allContrats = await dbGet('contrats', 'select=*');
   allOpportunites = await dbGet('opportunites', 'select=*');
 
@@ -1490,7 +1492,7 @@ function viewDashboard() {
   const commissionsActives = allCommissionsAttente.filter(ca => {
     if (ca.statut !== 'en_attente') return false;
     const ct = allContrats.find(c => c.id === ca.contrat_id);
-    return ct && ct.date_debut && ct.date_debut >= DATE_BASCULE_ASSUREX;
+    return ct && ct.statut !== 'annulé' && ct.date_debut && ct.date_debut >= DATE_BASCULE_ASSUREX;
   });
   const totalCommActives = commissionsActives.reduce((s, ca) => s + Number(ca.montant_estime || 0), 0);
   // ── Commissions reçues : basé sur la vraie date de RÉCEPTION (bordereau) uniquement ──
@@ -3445,6 +3447,60 @@ async function genererFichePaie() {
   navigate('fiche-paie');
 }
 
+// ═══ EXPORT PDF D'UN BORDEREAU ═══
+function imprimerBordereau(bordereauId) {
+  const b = allBordereaux.find(x => x.id === bordereauId);
+  if (!b) return;
+  const commissions = allCommissionsAttente.filter(c => c.bordereau_id === bordereauId);
+  const contact = (allCompagniesContacts || []).find(c => c.compagnie.toLowerCase() === (b.compagnie||'').toLowerCase());
+  const tauxCaution = b.taux_caution || 0;
+  const montantCaution = Math.round((b.montant_brut||0) * (tauxCaution/100));
+  const montantNet = (b.montant_brut||0) - montantCaution;
+
+  let pJ = 0, pA = 0;
+  const lignesHtml = commissions.map(c => {
+    const montant = c.montant_final != null ? c.montant_final : (c.montant_estime || 0);
+    const s = splitMontantAgent(montant, c.contrat_id);
+    pJ += s.pJ; pA += s.pA;
+    const sig = allAgents.find(a => a.role === 'signataire');
+    return `<tr>
+      <td>${c.client_nom||''}</td><td>${c.produit||''}</td><td>${c.numero_police||''}</td>
+      <td style="text-align:right">CHF ${montant.toLocaleString()}</td>
+      <td>${statutCommissionLabel(c.statut)}</td>
+    </tr>`;
+  }).join('');
+
+  const win = window.open('', '_blank');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Bordereau ${b.numero||''} — ${b.compagnie}</title>
+    <style>
+      body{font-family:Arial,sans-serif;padding:30px;color:#0f2244}
+      h1{font-size:18px;margin-bottom:2px} .sub{color:#666;font-size:12px;margin-bottom:20px}
+      .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+      .box{border:1px solid #ddd;border-radius:8px;padding:10px 14px}
+      .box .l{font-size:9px;text-transform:uppercase;color:#888;margin-bottom:3px}
+      .box .v{font-size:16px;font-weight:800}
+      table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}
+      th,td{padding:8px;border-bottom:1px solid #ddd;text-align:left}
+      th{background:#0f2244;color:#fff;text-transform:uppercase;font-size:10px}
+      .total{font-size:15px;font-weight:800;margin-top:16px;text-align:right}
+      @media print{ button{display:none} }
+    </style></head><body>
+    <h1>Bordereau ${b.numero || ''} — ${b.compagnie}</h1>
+    <div class="sub">${b.mois}${contact ? ` · Contact : ${contact.libelle_contact||''} ${contact.email ? '('+contact.email+')' : ''}` : ''}</div>
+    <div class="grid">
+      <div class="box"><div class="l">Montant brut</div><div class="v">CHF ${(b.montant_brut||0).toLocaleString()}</div></div>
+      <div class="box"><div class="l">Caution (${tauxCaution}%)</div><div class="v">CHF ${montantCaution.toLocaleString()}</div></div>
+      <div class="box"><div class="l">Net après caution</div><div class="v">CHF ${montantNet.toLocaleString()}</div></div>
+      <div class="box"><div class="l">Statut</div><div class="v">${b.statut === 'reçu' ? 'Reçu' : 'Attendu'}${b.date_reception ? ' le '+fmtDate(b.date_reception) : ''}</div></div>
+    </div>
+    <table><thead><tr><th>Client</th><th>Produit</th><th>N° police</th><th>Montant</th><th>Statut</th></tr></thead>
+    <tbody>${lignesHtml || '<tr><td colspan="5">Aucune commission rapprochée</td></tr>'}</tbody></table>
+    <div class="total">Part Jonathan : CHF ${pJ.toLocaleString()} · Part apporteurs : CHF ${pA.toLocaleString()}</div>
+    <button onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#0f2244;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Imprimer / Enregistrer en PDF</button>
+    </body></html>`);
+  win.document.close();
+}
+
 function imprimerFichePaie(ficheId, lignesCommissions, debut, fin, totalMontant) {
   const win = window.open('', '_blank');
   const lignesHtml = lignesCommissions.map(ca => {
@@ -3611,6 +3667,7 @@ function renderBordereauxList() {
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
           <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Commissions rapprochées (${commissions.length})</div>
           <div style="display:flex;gap:8px">
+            <button onclick="event.stopPropagation(); imprimerBordereau('${b.id}')" style="background:var(--surface-alt);color:var(--text-muted);border:1px solid var(--border);border-radius:7px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer">📄 Export PDF</button>
             <button onclick="event.stopPropagation(); showModalEditBordereau('${b.id}')" style="background:var(--surface-alt);color:var(--text-muted);border:1px solid var(--border);border-radius:7px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer">✏️ Modifier le bordereau</button>
             <button onclick="event.stopPropagation(); showModalValidationCommission('${b.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer">+ Rapprocher une commission ${enAttentePourCompagnie.length > 0 ? `(${enAttentePourCompagnie.length} en attente)` : ''}</button>
           </div>
@@ -5295,10 +5352,14 @@ async function viewNouveauBordereau() {
     </div>
 
     ${sectionCard('Informations bordereau', '#4ade80', `<div class="form-grid">
-      <div class="form-field"><label class="form-label">Compagnie *</label><input class="form-input" id="b-compagnie" placeholder="Swiss Life, AXA..."/></div>
+      <div class="form-field"><label class="form-label">Compagnie *</label>
+        <input class="form-input" id="b-compagnie" placeholder="Commence à taper..." list="bordereau-compagnies-suggestions" oninput="suggererCautionCompagnie()" autocomplete="off"/>
+        <datalist id="bordereau-compagnies-suggestions">${(allCompagniesContacts||[]).map(c => `<option value="${c.compagnie}">`).join('')}</datalist>
+        <div id="b-compagnie-hint" style="font-size:10.5px;color:var(--text-muted);margin-top:4px"></div>
+      </div>
       <div class="form-field"><label class="form-label">Mois *</label><input class="form-input" id="b-mois" placeholder="Juin 2026"/></div>
       <div class="form-field"><label class="form-label">Montant brut (CHF) *</label><input class="form-input" id="b-montant" type="number" placeholder="1500"/></div>
-      <div class="form-field"><label class="form-label">Taux de caution (%)</label><input class="form-input" id="b-caution" type="number" step="0.1" placeholder="5 à 10" min="0" max="100"/></div>
+      <div class="form-field"><label class="form-label">Taux de caution (%)</label><input class="form-input" id="b-caution" type="number" step="0.1" placeholder="5 à 10" min="0" max="100" oninput="this.dataset.touched='1'"/></div>
       <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="b-statut"><option value="attendu">Attendu</option><option value="reçu">Reçu</option></select></div>
       <div class="form-field"><label class="form-label">Date de réception</label><input class="form-input" id="b-date" type="date"/></div>
     </div>`)}
@@ -5308,6 +5369,29 @@ async function viewNouveauBordereau() {
       <button class="btn-secondary" onclick="navigate('bordereaux')">Annuler</button>
       <button class="btn-save" onclick="saveBordereau()">✓ Enregistrer</button>
     </div>`;
+}
+
+function suggererCautionCompagnie() {
+  const nomSaisi = document.getElementById('b-compagnie').value.trim();
+  const hint = document.getElementById('b-compagnie-hint');
+  if (!nomSaisi) { hint.textContent = ''; return; }
+
+  const contact = (allCompagniesContacts||[]).find(c => c.compagnie.toLowerCase() === nomSaisi.toLowerCase());
+  const dernierBordereauCompagnie = [...allBordereaux]
+    .filter(b => (b.compagnie||'').toLowerCase() === nomSaisi.toLowerCase())
+    .sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0))[0];
+
+  let msgs = [];
+  if (contact) msgs.push(`✓ Compagnie partenaire enregistrée${contact.libelle_contact ? ' — ' + contact.libelle_contact : ''}${contact.email ? ' (' + contact.email + ')' : ''}`);
+  if (dernierBordereauCompagnie) {
+    const cautionField = document.getElementById('b-caution');
+    if (!cautionField.dataset.touched && dernierBordereauCompagnie.taux_caution) {
+      cautionField.value = dernierBordereauCompagnie.taux_caution;
+      msgs.push(`💡 Taux de caution repris du dernier bordereau ${dernierBordereauCompagnie.numero || ''} (${dernierBordereauCompagnie.taux_caution}%)`);
+    }
+  }
+  if (!contact && nomSaisi.length > 2) msgs.push(`⚠ Compagnie non enregistrée dans Paramètres → Contacts compagnies`);
+  hint.innerHTML = msgs.join('<br/>');
 }
 
 async function saveBordereau() {
@@ -5939,6 +6023,8 @@ async function deleteCommission(commId) {
 }
 
 async function saveEditCommission(commId) {
+  const original = allCommissionsAttente.find(x => x.id === commId);
+  const etaitDejaExtourne = original && original.statut === 'extourné';
   const montantFinalVal = document.getElementById('ec-montant-final').value;
   const body = {
     client_nom: document.getElementById('ec-client').value.trim(),
@@ -5955,6 +6041,28 @@ async function saveEditCommission(commId) {
   const r = await dbPatch('commissions_attente', commId, body);
   if (r && r.error) { showError('Erreur: ' + errMsg(r)); if (btn) { btn.textContent = '✓ Enregistrer'; btn.disabled = false; } return; }
   logAction('edit_commission', 'commissions_attente', commId, body.client_nom);
+
+  // ── Passage vers "Extourné" : générer automatiquement la commission NÉGATIVE ──
+  // correspondante, en attente de rapprochement (débit) sur un futur bordereau de
+  // la même compagnie — exactement comme une commission normale, mais en négatif.
+  if (body.statut === 'extourné' && !etaitDejaExtourne) {
+    const montantOriginal = Math.abs(body.montant_final != null ? body.montant_final : (body.montant_estime || 0));
+    if (montantOriginal > 0) {
+      await dbPost('commissions_attente', {
+        client_id: original ? original.client_id : null,
+        contrat_id: original ? original.contrat_id : null,
+        client_nom: body.client_nom,
+        compagnie: body.compagnie,
+        produit: body.produit,
+        montant_estime: -montantOriginal,
+        detail_calcul: `↩ Reprise automatique suite à l'extourne de la commission d'origine (CHF ${montantOriginal.toLocaleString()}). À rapprocher avec la ligne de débit correspondante sur le prochain bordereau ${body.compagnie}.`,
+        statut: 'en_attente',
+        date_creation: new Date().toISOString().split('T')[0],
+      });
+      showError(`✓ Commission extournée. Une commission de CHF -${montantOriginal.toLocaleString()} a été créée en attente pour ${body.compagnie} — rapproche-la avec "+ Rapprocher une commission" quand le bordereau de reprise arrive.`);
+    }
+  }
+
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
   document.getElementById('modal-edit-commission').remove();
   // Rerendre sans réinitialiser les filtres — les sélections restent actives
@@ -6002,10 +6110,12 @@ function renderToutesCommissions() {
   const filtered = allCommissionsAttente.filter(c => {
     // Cette page ne montre QUE les données Assurex — le passé OZ Assure a sa propre page dédiée
     if (c.statut === 'versé_oz') return false;
-    // Exclure les commissions liées à un contrat marqué "non commissionné"
+    // Exclure les commissions liées à un contrat marqué "non commissionné" ou "annulé"
+    // (un contrat annulé n'a jamais réellement pris effet — aucune commission n'a de sens ici,
+    // à la différence d'"extourné" qui représente un contrat policé puis repris)
     if (c.contrat_id) {
       const ct = allContrats.find(x => x.id === c.contrat_id);
-      if (ct && ct.commissionne === false) return false;
+      if (ct && (ct.commissionne === false || ct.statut === 'annulé')) return false;
     }
     if (statutFilter && c.statut !== statutFilter) return false;
     if (search) {
@@ -6839,6 +6949,7 @@ async function saveContactCompagnie(id) {
   if (!body.compagnie) { showError('Le nom de la compagnie est obligatoire.'); return; }
   if (id) await dbPatch('compagnies_contacts', id, body);
   else await dbPost('compagnies_contacts', body);
+  allCompagniesContacts = await dbGet('compagnies_contacts', 'select=*&order=compagnie.asc');
   document.getElementById('modal-contact-cie').remove();
   navigate('contacts-compagnies');
 }

@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 13:15</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 14:00</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -1428,16 +1428,23 @@ function viewDashboard() {
   const actifs = allClients.filter(c => c.statut === 'actif').length;
   const totalCA = allContrats.filter(ct => ct.statut === 'actif').reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
   const totalCAFull = allContrats.filter(ct => !['résilié','annulé'].includes(ct.statut)).reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0);
-  // Commissions actives depuis la date de bascule Assurex (01.06.2026)
-  // Règle : c'est la date à laquelle l'argent ENTRE (réception) qui compte, pas la date de signature du contrat.
+  // ── Commissions en attente (pipeline) : basé sur la date de SIGNATURE du contrat ──
+  // C'est la bonne définition métier : seuls les contrats signés depuis la fusion
+  // génèrent de nouvelles commissions pour Assurex. Le portefeuille pré-fusion
+  // (déjà géré par OZ Assure) ne compte pas, même si sa commission est encore "en attente".
   const commissionsActives = allCommissionsAttente.filter(ca => {
     if (ca.statut !== 'en_attente') return false;
-    const d = commissionDateReception(ca) || ca.date_creation;
-    return d && d >= DATE_BASCULE_ASSUREX;
+    const ct = allContrats.find(c => c.id === ca.contrat_id);
+    return ct && ct.date_debut && ct.date_debut >= DATE_BASCULE_ASSUREX;
   });
   const totalCommActives = commissionsActives.reduce((s, ca) => s + Number(ca.montant_estime || 0), 0);
+  // ── Commissions reçues : basé sur la vraie date de RÉCEPTION (bordereau) uniquement ──
+  // IMPORTANT : versé_oz / versé_cofidex marquent des paiements HISTORIQUES (pré-fusion,
+  // déjà réglés par OZ Assure avant le 01.06.2026) — ils ne comptent JAMAIS comme
+  // commissions post-fusion, même si techniquement rapprochés. Seul le statut "reçue"
+  // (rapprochement bordereau Assurex, flux post-fusion) compte ici.
   const commissionsRecues = allCommissionsAttente.filter(ca => {
-    if (!['reçue','versé_oz','versé_cofidex'].includes(ca.statut)) return false;
+    if (ca.statut !== 'reçue') return false;
     const d = commissionDateReception(ca);
     return d && d >= DATE_BASCULE_ASSUREX;
   });
@@ -3241,12 +3248,15 @@ function viewFichePaie() {
 }
 
 function commissionDateReception(ca) {
+  // Retourne UNIQUEMENT une vraie date de réception (jamais la date de création
+  // de l'enregistrement, qui ne reflète que le moment de saisie/import dans le CRM
+  // et n'a aucune valeur pour savoir quand l'argent est réellement entré).
   if (ca.date_reception) return ca.date_reception;
   if (ca.bordereau_id) {
     const b = allBordereaux.find(bd => bd.id === ca.bordereau_id);
     if (b && b.date_reception) return b.date_reception;
   }
-  return ca.date_creation ? String(ca.date_creation).split('T')[0] : null;
+  return null;
 }
 
 function renderFichePaieApercu() {
@@ -5829,7 +5839,8 @@ async function saveEditCommission(commId) {
   renderToutesCommissions();
 }
 
-function viewCommissionsAttente() {
+function viewCommissionsAttente(prefiltreStatut) {
+  window._tcPrefiltre = prefiltreStatut || null;
   setTimeout(() => renderToutesCommissions(), 0);
   return `
     <h2 style="margin:0 0 6px;font-size:18px;font-weight:800;color:var(--text)">Toutes les commissions</h2>
@@ -5839,9 +5850,13 @@ function viewCommissionsAttente() {
       <input class="form-input" id="tc-search" placeholder="🔍 Client, compagnie, produit, n° bordereau..." style="flex:1;min-width:200px" oninput="renderToutesCommissions()"/>
       <select class="form-select" id="tc-statut" style="max-width:180px" onchange="renderToutesCommissions()">
         <option value="">Tous statuts</option>
-        <option value="en_attente">En attente</option>
-        <option value="reçue">Reçue (Assurex)</option>
+        <option value="en_attente" ${prefiltreStatut==='en_attente'?'selected':''}>En attente</option>
+        <option value="reçue" ${prefiltreStatut==='reçue'?'selected':''}>Reçue (Assurex)</option>
         <option value="versé_oz">Versé OZ Assure</option>
+      </select>
+      <select class="form-select" id="tc-tri" style="max-width:190px" onchange="renderToutesCommissions()">
+        <option value="date">Plus récent d'abord</option>
+        <option value="montant_desc" selected>Montant décroissant</option>
       </select>
     </div>
 
@@ -5852,6 +5867,7 @@ function viewCommissionsAttente() {
 function renderToutesCommissions() {
   const search = (document.getElementById('tc-search')?.value || '').toLowerCase().trim();
   const statutFilter = document.getElementById('tc-statut')?.value || '';
+  const tri = document.getElementById('tc-tri')?.value || 'montant_desc';
 
   function numeroBordereauDe(c) {
     if (!c.bordereau_id) return '';
@@ -5872,7 +5888,10 @@ function renderToutesCommissions() {
       if (!haystack.includes(search)) return false;
     }
     return true;
-  }).sort((a,b) => new Date(b.date_creation||0) - new Date(a.date_creation||0));
+  }).sort((a,b) => {
+    if (tri === 'montant_desc') return montantC(b) - montantC(a);
+    return new Date(b.date_creation||0) - new Date(a.date_creation||0);
+  });
 
   const totalAttente = filtered.filter(c => c.statut === 'en_attente' && c.statut !== 'annulé').reduce((s,c) => s + montantC(c), 0);
   const totalRecu = filtered.filter(c => c.statut === 'reçue').reduce((s,c) => s + montantC(c), 0);

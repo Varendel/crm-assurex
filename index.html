@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 21:40</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 22:25</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -3752,7 +3752,9 @@ function renderBordereauxList() {
     }
 
     let pJ = 0, pA = 0;
-    commissions.forEach(c => { const s = splitAgent(c); pJ += s.pJ; pA += s.pA; });
+    const agentsDistincts = new Set();
+    commissions.forEach(c => { const s = splitAgent(c); pJ += s.pJ; pA += s.pA; if (s.agent) agentsDistincts.add(s.agent.id); });
+    const apporteurUnique = agentsDistincts.size === 1 ? allAgents.find(a => a.id === [...agentsDistincts][0]) : null;
     const isOpen = openBordereaux[b.id];
 
     return `<div class="bordereau-card">
@@ -3798,7 +3800,7 @@ function renderBordereauxList() {
             <div style="font-size:16px;font-weight:900;color:#38bdf8">CHF ${pJ.toLocaleString()}</div>
           </div>
           <div style="flex:1;background:var(--gold-dim);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:10px 14px">
-            <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Part apporteurs</div>
+            <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">${apporteurUnique ? 'Part ' + apporteurUnique.prenom : (agentsDistincts.size > 1 ? 'Part apporteurs (mixte)' : 'Part apporteurs')}</div>
             <div style="font-size:16px;font-weight:900;color:#f59e0b">CHF ${pA.toLocaleString()}</div>
           </div>
         </div>
@@ -3814,10 +3816,19 @@ function renderBordereauxList() {
 
         ${commissions.map((c, i) => {
           const s = splitAgent(c);
+          const sig = allAgents.find(a => a.role === 'signataire');
           return `<div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:${i < commissions.length-1 ? '1px solid var(--border)' : 'none'}">
             ${s.agent ? avatar(s.agent, 24) : ''}
             <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--text)">${c.client_nom}</div><div style="font-size:11px;color:var(--text-muted)">${c.produit}${c.numero_police ? ' · ' + c.numero_police : ''}</div></div>
-            <div style="text-align:right"><div style="font-size:12px;color:#38bdf8;font-weight:700">J: CHF ${s.pJ}</div>${s.pA > 0 ? `<div style="font-size:12px;color:#f59e0b;font-weight:700">A: CHF ${s.pA}</div>` : ''}</div>
+            <div style="text-align:right">
+              <div style="font-size:12px;color:#38bdf8;font-weight:700">${sig ? sig.prenom : 'Jonathan'}: CHF ${s.pJ}</div>
+              ${s.agent
+                ? `<div style="font-size:12px;color:#f59e0b;font-weight:700">${s.agent.prenom}: CHF ${s.pA}</div>`
+                : (c.contrat_id
+                    ? `<div onclick="event.stopPropagation(); showEditContrat('${c.contrat_id}', 'bordereaux')" style="font-size:11px;color:var(--accent);font-weight:700;cursor:pointer;text-decoration:underline dotted">🖊️ Cliquer pour renseigner l'apporteur</div>`
+                    : `<div style="font-size:10.5px;color:var(--text-dim)">Aucun contrat lié</div>`)
+              }
+            </div>
             <div style="font-weight:800;color:var(--text);font-size:13px;min-width:70px;text-align:right">CHF ${s.montant.toLocaleString()}</div>
           </div>`;
         }).join('')}
@@ -3885,7 +3896,7 @@ function showModalEditBordereau(bordereauId) {
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
       <h3 style="margin:0 0 18px;font-size:16px;font-weight:800;color:var(--text)">Modifier le bordereau ${b.numero || ''}</h3>
       <div class="form-grid">
-        <div class="form-field"><label class="form-label">Compagnie</label><input class="form-input" id="eb-compagnie" value="${b.compagnie || ''}"/></div>
+        <div class="form-field"><label class="form-label">Compagnie</label><input class="form-input" id="eb-compagnie" value="${b.compagnie || ''}" list="eb-compagnies-suggestions" autocomplete="off"/><datalist id="eb-compagnies-suggestions">${(allCompagniesContacts||[]).map(c => `<option value="${c.compagnie}">`).join('')}</datalist></div>
         <div class="form-field"><label class="form-label">Mois</label><input class="form-input" id="eb-mois" value="${b.mois || ''}"/></div>
         <div class="form-field"><label class="form-label">Montant brut (CHF)</label><input class="form-input" id="eb-montant" type="number" value="${b.montant_brut || 0}"/></div>
         <div class="form-field"><label class="form-label">Taux de caution (%)</label><input class="form-input" id="eb-caution" type="number" step="0.1" value="${b.taux_caution || 0}"/></div>
@@ -5001,7 +5012,8 @@ async function showEditContrat(contratId, returnTo) {
         <div class="form-field"><label class="form-label">Produit</label><input class="form-input" id="ect-produit" value="${ct.produit || ''}"/></div>
         <div class="form-field"><label class="form-label">Compagnie</label><input class="form-input" id="ect-compagnie" value="${ct.compagnie || ''}"/></div>
         <div class="form-field"><label class="form-label">N° de police</label><input class="form-input" id="ect-police" value="${ct.numero_police || ''}"/></div>
-        <div class="form-field"><label class="form-label">Date d'échéance</label><input class="form-input" id="ect-echeance" type="date" value="${fmtDate(ct.date_echeance)}"/></div>
+        <div class="form-field"><label class="form-label">Date de signature</label><input class="form-input" id="ect-date-debut" type="date" value="${ct.date_debut || ''}"/></div>
+        <div class="form-field"><label class="form-label">Date d'échéance</label><input class="form-input" id="ect-echeance" type="date" value="${ct.date_echeance || ''}"/></div>
         <div class="form-field"><label class="form-label">Prime par échéance (CHF)</label><input class="form-input" id="ect-prime" type="number" value="${primeAff}" oninput="updateApercuPrimeAnnuelle()"/></div>
         <div class="form-field"><label class="form-label">Périodicité</label>
           <select class="form-select" id="ect-periodicite" onchange="updateApercuPrimeAnnuelle()">
@@ -5095,6 +5107,7 @@ async function saveEditContrat(contratId, clientId, returnTo) {
     produit: document.getElementById('ect-produit').value.trim(),
     compagnie: document.getElementById('ect-compagnie').value.trim(),
     numero_police: document.getElementById('ect-police').value.trim() || null,
+    date_debut: document.getElementById('ect-date-debut').value || null,
     date_echeance: document.getElementById('ect-echeance').value || null,
     prime_annuelle: primeAnnuelle,
     periodicite: periodicite,
@@ -5326,7 +5339,7 @@ function showRappel(id) {
         <option value="moyenne" ${r.urgence === 'moyenne' ? 'selected' : ''}>Moyenne</option>
         <option value="haute" ${r.urgence === 'haute' ? 'selected' : ''}>Haute</option>
       </select></div>
-      <div class="form-field"><label class="form-label">Date échéance</label><input class="form-input" id="rd-date" type="date" value="${fmtDate(r.date_echeance)}"/></div>
+      <div class="form-field"><label class="form-label">Date échéance</label><input class="form-input" id="rd-date" type="date" value="${r.date_echeance || ''}"/></div>
       <div class="form-field"><label class="form-label">Agent</label><select class="form-select" id="rd-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
     </div>`)}
 

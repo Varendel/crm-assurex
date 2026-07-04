@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 22:25</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 23:00</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -3897,7 +3897,16 @@ function showModalEditBordereau(bordereauId) {
       <h3 style="margin:0 0 18px;font-size:16px;font-weight:800;color:var(--text)">Modifier le bordereau ${b.numero || ''}</h3>
       <div class="form-grid">
         <div class="form-field"><label class="form-label">Compagnie</label><input class="form-input" id="eb-compagnie" value="${b.compagnie || ''}" list="eb-compagnies-suggestions" autocomplete="off"/><datalist id="eb-compagnies-suggestions">${(allCompagniesContacts||[]).map(c => `<option value="${c.compagnie}">`).join('')}</datalist></div>
-        <div class="form-field"><label class="form-label">Mois</label><input class="form-input" id="eb-mois" value="${b.mois || ''}"/></div>
+        <div class="form-field"><label class="form-label">Mois</label>
+          <select class="form-select" id="eb-mois-select">
+            ${['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'].map(m => `<option value="${m}" ${(b.mois||'').startsWith(m)?'selected':''}>${m}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-field"><label class="form-label">Année</label>
+          <select class="form-select" id="eb-annee-select">
+            ${[2024,2025,2026,2027].map(y => `<option value="${y}" ${(b.mois||'').includes(String(y))?'selected':''}>${y}</option>`).join('')}
+          </select>
+        </div>
         <div class="form-field"><label class="form-label">Montant brut (CHF)</label><input class="form-input" id="eb-montant" type="number" value="${b.montant_brut || 0}"/></div>
         <div class="form-field"><label class="form-label">Taux de caution (%)</label><input class="form-input" id="eb-caution" type="number" step="0.1" value="${b.taux_caution || 0}"/></div>
         <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="eb-statut">
@@ -3946,7 +3955,7 @@ async function deleteBordereau(bordereauId) {
 async function saveEditBordereau(bordereauId) {
   const body = {
     compagnie: document.getElementById('eb-compagnie').value.trim(),
-    mois: document.getElementById('eb-mois').value.trim(),
+    mois: `${document.getElementById('eb-mois-select').value} ${document.getElementById('eb-annee-select').value}`,
     montant_brut: Number(document.getElementById('eb-montant').value) || 0,
     taux_caution: Number(document.getElementById('eb-caution').value) || 0,
     statut: document.getElementById('eb-statut').value,
@@ -4065,6 +4074,14 @@ async function saveValidationCommission(bordereauId) {
   const btn = document.querySelector('#modal-validation .btn-save');
   if (btn) { btn.textContent = 'Validation...'; btn.disabled = true; }
 
+  // La date de réception doit refléter le moment où Assurex encaisse réellement l'argent —
+  // pas la période couverte par le document (le bordereau peut concerner "Mai 2026" alors
+  // que l'argent n'entre chez Assurex qu'aujourd'hui). On ne reprend la date du bordereau
+  // QUE si elle est déjà cohérente avec la fusion (≥ 01.06.2026) ; sinon, date du jour.
+  const bordereauConcerne = allBordereaux.find(bd => bd.id === bordereauId);
+  const dateBordereauValide = bordereauConcerne?.date_reception && bordereauConcerne.date_reception >= DATE_BASCULE_ASSUREX;
+  const dateReceptionFinale = dateBordereauValide ? bordereauConcerne.date_reception : new Date().toISOString().split('T')[0];
+
   const res = await dbPatch('commissions_attente', commId, {
     statut: 'reçue',
     bordereau_id: bordereauId,
@@ -4072,7 +4089,7 @@ async function saveValidationCommission(bordereauId) {
     montant_estime: montantEstime,
     montant_final: montantFinal,
     sens, deduction_pct: deduction, mouvement,
-    date_reception: (allBordereaux.find(bd => bd.id === bordereauId)?.date_reception) || new Date().toISOString().split('T')[0],
+    date_reception: dateReceptionFinale,
   });
   if (res && res.error) {
     showError('Erreur lors de la validation : ' + (res.detail?.message || res.detail || res.status));
@@ -5540,7 +5557,19 @@ async function viewNouveauBordereau() {
         <datalist id="bordereau-compagnies-suggestions">${(allCompagniesContacts||[]).map(c => `<option value="${c.compagnie}">`).join('')}</datalist>
         <div id="b-compagnie-hint" style="font-size:10.5px;color:var(--text-muted);margin-top:4px"></div>
       </div>
-      <div class="form-field"><label class="form-label">Mois *</label><input class="form-input" id="b-mois" placeholder="Juin 2026"/></div>
+      <div class="form-field"><label class="form-label">Mois *</label>
+        <select class="form-select" id="b-mois-select">
+          <option value="Janvier">Janvier</option><option value="Février">Février</option><option value="Mars">Mars</option>
+          <option value="Avril">Avril</option><option value="Mai">Mai</option><option value="Juin">Juin</option>
+          <option value="Juillet" selected>Juillet</option><option value="Août">Août</option><option value="Septembre">Septembre</option>
+          <option value="Octobre">Octobre</option><option value="Novembre">Novembre</option><option value="Décembre">Décembre</option>
+        </select>
+      </div>
+      <div class="form-field"><label class="form-label">Année *</label>
+        <select class="form-select" id="b-annee-select">
+          ${[2024,2025,2026,2027].map(y => `<option value="${y}" ${y===2026?'selected':''}>${y}</option>`).join('')}
+        </select>
+      </div>
       <div class="form-field"><label class="form-label">Montant brut (CHF) *</label><input class="form-input" id="b-montant" type="number" placeholder="1500"/></div>
       <div class="form-field"><label class="form-label">Taux de caution (%)</label><input class="form-input" id="b-caution" type="number" step="0.1" placeholder="5 à 10" min="0" max="100" oninput="this.dataset.touched='1'"/></div>
       <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="b-statut"><option value="attendu">Attendu</option><option value="reçu">Reçu</option></select></div>
@@ -5579,10 +5608,10 @@ function suggererCautionCompagnie() {
 
 async function saveBordereau() {
   const compagnie = document.getElementById('b-compagnie').value.trim();
-  const mois = document.getElementById('b-mois').value.trim();
+  const mois = `${document.getElementById('b-mois-select').value} ${document.getElementById('b-annee-select').value}`;
   const montant = parseInt(document.getElementById('b-montant').value) || 0;
   const tauxCaution = parseFloat(document.getElementById('b-caution').value) || 0;
-  if (!compagnie || !mois) { alert('Compagnie et mois obligatoires.'); return; }
+  if (!compagnie) { alert('Compagnie obligatoire.'); return; }
   const body = {
     numero: window._bordereauNumero || null,
     compagnie, mois,

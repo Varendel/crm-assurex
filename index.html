@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 20:15</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 20:45</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -3848,12 +3848,20 @@ async function toggleBordereauVerse(bordereauId) {
     }
     logAction('bordereau_verse', 'bordereaux', bordereauId, `${b.numero || ''} — ${commissionsLiees.length} commission(s) marquée(s) reçue(s)`);
   } else {
-    // Retour en arrière : on ne remet le bordereau qu'en "attendu".
-    // Les commissions déjà réconciliées ne sont PAS annulées automatiquement
-    // (pour éviter de perdre un rapprochement fait par ailleurs) — utilise
-    // "Supprimer le bordereau" si tu veux vraiment tout délier.
+    // Retour en arrière : le bordereau redevient "attendu" ET toutes ses commissions
+    // rapprochées sont automatiquement déliées et remises "en attente" — correction
+    // complète et symétrique, pour ne jamais laisser de données à moitié cohérentes.
     await dbPatch('bordereaux', bordereauId, { statut: 'attendu' });
-    logAction('bordereau_attendu', 'bordereaux', bordereauId, b.numero || '');
+    for (const c of commissionsLiees) {
+      await dbPatch('commissions_attente', c.id, {
+        statut: 'en_attente',
+        bordereau_id: null,
+        montant_final: null,
+        date_reception: null,
+        detail_calcul: `Rapprochement annulé le ${fmtDate(new Date().toISOString())} suite au retour en arrière du bordereau ${b.numero || ''} — remis en attente pour correction.`,
+      });
+    }
+    logAction('bordereau_attendu', 'bordereaux', bordereauId, `${b.numero || ''} — ${commissionsLiees.length} commission(s) remise(s) en attente`);
   }
 
   allBordereaux = await dbGet('bordereaux', 'select=*');
@@ -6164,22 +6172,40 @@ async function deleteCommission(commId) {
 async function saveEditCommission(commId) {
   const original = allCommissionsAttente.find(x => x.id === commId);
   const etaitDejaExtourne = original && original.statut === 'extourné';
+  const nouveauStatut = document.getElementById('ec-statut').value;
   const montantFinalVal = document.getElementById('ec-montant-final').value;
+
+  // ── Correction / retour en arrière ────────────────────────────────────────
+  // Si on repasse une commission liée à un bordereau (reçue, versé, extournée...)
+  // vers "En attente", c'est qu'une erreur de rapprochement doit être corrigée.
+  // Le système défait alors AUTOMATIQUEMENT tout ce qui avait été fait lors du
+  // rapprochement, pour ne jamais laisser de données à moitié cohérentes.
+  const statutsLiesAUnBordereau = ['reçue', 'versé_oz', 'versé_cofidex', 'extourné'];
+  const estUnRetourEnArriere = original && statutsLiesAUnBordereau.includes(original.statut) && nouveauStatut === 'en_attente';
+
   const body = {
     client_nom: document.getElementById('ec-client').value.trim(),
     compagnie: document.getElementById('ec-compagnie').value.trim(),
     produit: document.getElementById('ec-produit').value.trim(),
     montant_estime: Number(document.getElementById('ec-montant-estime').value) || 0,
-    montant_final: montantFinalVal === '' ? null : Number(montantFinalVal),
+    montant_final: estUnRetourEnArriere ? null : (montantFinalVal === '' ? null : Number(montantFinalVal)),
+    bordereau_id: estUnRetourEnArriere ? null : (original ? original.bordereau_id : null),
+    date_reception: estUnRetourEnArriere ? null : (original ? original.date_reception : null),
     numero_police: document.getElementById('ec-police').value.trim() || null,
-    statut: document.getElementById('ec-statut').value,
-    detail_calcul: document.getElementById('ec-detail').value.trim() || null,
+    statut: nouveauStatut,
+    detail_calcul: estUnRetourEnArriere
+      ? `Rapprochement annulé le ${fmtDate(new Date().toISOString())} — remise en attente pour correction (était : ${statutCommissionLabel(original.statut)}, ${original.bordereau_id ? 'lié à un bordereau' : 'sans bordereau'})`
+      : (document.getElementById('ec-detail').value.trim() || null),
   };
   const btn = document.querySelector('#modal-edit-commission .btn-save');
   if (btn) { btn.textContent = 'Enregistrement...'; btn.disabled = true; }
   const r = await dbPatch('commissions_attente', commId, body);
   if (r && r.error) { showError('Erreur: ' + errMsg(r)); if (btn) { btn.textContent = '✓ Enregistrer'; btn.disabled = false; } return; }
-  logAction('edit_commission', 'commissions_attente', commId, body.client_nom);
+  logAction(estUnRetourEnArriere ? 'annuler_rapprochement_commission' : 'edit_commission', 'commissions_attente', commId, body.client_nom);
+
+  if (estUnRetourEnArriere) {
+    showError(`↺ Rapprochement annulé pour ${body.client_nom} — la commission est de nouveau "En attente", déliée du bordereau, prête à être re-rapprochée correctement.`);
+  }
 
   // ── Passage vers "Extourné" : générer automatiquement la commission NÉGATIVE ──
   // correspondante, en attente de rapprochement (débit) sur un futur bordereau de

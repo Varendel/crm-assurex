@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 15:00</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 15:45</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -1291,8 +1291,23 @@ function toggleSection(id) {
   renderSidebar();
 }
 
-async function navigate(view) {
+let navHistory = [];
+
+async function navigate(view, opts) {
+  // Empile la vue précédente pour permettre le retour arrière, sauf navigation silencieuse
+  if (!opts || !opts.silent) {
+    if (currentView && currentView !== view) navHistory.push(currentView);
+    if (navHistory.length > 30) navHistory.shift();
+  }
   currentView = view;
+  renderSidebar();
+  await renderView();
+}
+
+async function goBack() {
+  if (!navHistory.length) { navigate('dashboard'); return; }
+  const previous = navHistory.pop();
+  currentView = previous;
   renderSidebar();
   await renderView();
 }
@@ -1398,6 +1413,43 @@ async function renderView() {
     case 'rapport-finma-oz': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewRapportFinmaOz(); break;
     default: main.innerHTML = viewDashboard(); mountCalendarWidget();
   }
+
+  // ── Barre de navigation : flèche retour + lien vers la liste principale de la section ──
+  if (currentView !== 'dashboard') {
+    const bc = getBreadcrumbInfo(currentView);
+    const barHtml = `<div id="nav-back-bar" style="display:flex;align-items:center;gap:10px;margin-bottom:16px;padding-bottom:12px;border-bottom:1px solid var(--border)">
+      <button onclick="goBack()" title="Retour en arrière" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text);border-radius:8px;width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;flex-shrink:0">←</button>
+      ${bc ? `<div style="font-size:11.5px;color:var(--text-muted);display:flex;align-items:center;gap:6px">
+        <span onclick="navigate('${bc.homeId}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${bc.homeLabel}</span>
+        <span style="color:var(--text-dim)">›</span>
+        <strong style="color:var(--text)">${bc.itemLabel}</strong>
+      </div>` : ''}
+    </div>`;
+    main.insertAdjacentHTML('afterbegin', barHtml);
+  }
+}
+
+// Home de chaque section pour le lien rapide de la barre de retour
+const SECTION_HOME = {
+  portefeuille: 'portefeuille',
+  compta: 'commissions-attente',
+  suivi: 'suivi',
+  settings: 'agents',
+};
+
+function getBreadcrumbInfo(view) {
+  for (const sec of SECTIONS) {
+    if (sec.id === view && !sec.sub) continue;
+    if (sec.sub) {
+      const found = sec.sub.find(s => s.id === view);
+      if (found) {
+        const homeId = SECTION_HOME[sec.id] || sec.sub[0].id;
+        const homeItem = sec.sub.find(s => s.id === homeId);
+        return { homeId, homeLabel: homeItem ? homeItem.label : sec.label, itemLabel: found.label };
+      }
+    }
+  }
+  return null;
 }
 
 // DASHBOARD
@@ -5810,13 +5862,30 @@ function showModalEditCommission(commId) {
   const c = allCommissionsAttente.find(x => x.id === commId);
   if (!c) return;
   const b = c.bordereau_id ? allBordereaux.find(bd => bd.id === c.bordereau_id) : null;
+  const ct = c.contrat_id ? allContrats.find(x => x.id === c.contrat_id) : null;
+  const cl = ct ? allClients.find(x => x.id === ct.client_id) : (c.client_id ? allClients.find(x => x.id === c.client_id) : null);
   const modal = document.createElement('div');
   modal.id = 'modal-edit-commission';
   modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
   modal.innerHTML = `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:500px">
       <h3 style="margin:0 0 6px;font-size:16px;font-weight:800;color:var(--text)">Commission — ${c.client_nom || '—'}</h3>
-      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:18px">${b ? `Rapprochée du bordereau ${b.numero || ''}` : "Pas encore rapprochée d'un bordereau"}</div>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">${b ? `Rapprochée du bordereau ${b.numero || ''}` : "Pas encore rapprochée d'un bordereau"}</div>
+
+      ${ct ? `<div style="background:var(--surface-alt);border-radius:10px;padding:12px 14px;margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Contrat lié</div>
+          <button type="button" onclick="document.getElementById('modal-edit-commission').remove(); showDetailContrat('${ct.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:3px 10px;font-size:10.5px;cursor:pointer;font-weight:700">Voir le contrat →</button>
+        </div>
+        <div style="font-size:12.5px;color:var(--text)">${ct.produit} · ${ct.compagnie}</div>
+        <div style="font-size:11px;color:var(--text-muted)">Prime CHF ${Number(ct.prime_annuelle||0).toLocaleString()}/an${ct.date_debut ? ' · Signé le ' + fmtDate(ct.date_debut) : ''}${ct.numero_police ? ' · № ' + ct.numero_police : ''}</div>
+      </div>` : `<div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:11.5px;color:#f87171">⚠ Aucun contrat lié à cette commission — impossible de vérifier son origine automatiquement.</div>`}
+
+      <div class="form-field" style="margin-bottom:14px">
+        <label class="form-label">Détail du calcul (visible sur la liste)</label>
+        <textarea class="form-input" id="ec-detail" rows="2" placeholder="Ex : COG Swiss Life : prime 4992 × 1.20 × 6.3% = CHF 378/an">${(c.detail_calcul||'').split('[')[0].trim()}</textarea>
+      </div>
+
       <div class="form-grid">
         <div class="form-field"><label class="form-label">Client</label><input class="form-input" id="ec-client" value="${c.client_nom || ''}"/></div>
         <div class="form-field"><label class="form-label">Compagnie</label><input class="form-input" id="ec-compagnie" value="${c.compagnie || ''}"/></div>
@@ -5868,6 +5937,7 @@ async function saveEditCommission(commId) {
     montant_final: montantFinalVal === '' ? null : Number(montantFinalVal),
     numero_police: document.getElementById('ec-police').value.trim() || null,
     statut: document.getElementById('ec-statut').value,
+    detail_calcul: document.getElementById('ec-detail').value.trim() || null,
   };
   const btn = document.querySelector('#modal-edit-commission .btn-save');
   if (btn) { btn.textContent = 'Enregistrement...'; btn.disabled = true; }
@@ -5949,7 +6019,7 @@ function renderToutesCommissions() {
   const rows = filtered.map(c => {
     const numBord = numeroBordereauDe(c);
     return `<div class="table-row" style="grid-template-columns:${cols};cursor:pointer" onclick="showModalEditCommission('${c.id}')">
-      <div><div style="font-size:13px;font-weight:700;color:var(--text)">${c.client_id ? `<span onclick="event.stopPropagation(); showClient('${c.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${c.client_nom || '—'}</span>` : (c.client_nom || '—')}${getClientMiniLogos(allClients.find(x => x.id === c.client_id))}</div><div style="font-size:11px;color:var(--text-muted)">${c.produit || ''}</div></div>
+      <div><div style="font-size:13px;font-weight:700;color:var(--text)">${c.client_id ? `<span onclick="event.stopPropagation(); showClient('${c.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${c.client_nom || '—'}</span>` : (c.client_nom || '—')}${getClientMiniLogos(allClients.find(x => x.id === c.client_id))}</div><div style="font-size:11px;color:var(--text-muted)">${c.produit || ''}</div>${c.detail_calcul ? `<div style="font-size:10px;color:var(--text-dim);margin-top:2px;font-style:italic">${c.detail_calcul.split('[')[0].trim()}</div>` : `<div style="font-size:10px;color:#f59e0b;margin-top:2px">⚠ Détail du calcul manquant — clique pour préciser</div>`}</div>
       <div style="font-size:12px;color:var(--text-muted)">${c.compagnie || ''}</div>
       <div style="font-size:11px;color:var(--text-muted)">${numBord ? `<span style="font-family:monospace">${numBord}</span>` : '—'}</div>
       <div style="font-size:12px;color:var(--text-muted)">${c.date_creation || ''}</div>

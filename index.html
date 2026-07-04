@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 19:45</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 20:15</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -3740,7 +3740,7 @@ function renderBordereauxList() {
 
   const cards = BORDS.map(b => {
     const commissions = allCommissionsAttente.filter(c => c.bordereau_id === b.id);
-    const enAttentePourCompagnie = allCommissionsAttente.filter(c => c.compagnie === b.compagnie && c.statut === 'en_attente');
+    const enAttentePourCompagnie = allCommissionsAttente.filter(c => (c.compagnie||'').trim().toLowerCase() === (b.compagnie||'').trim().toLowerCase() && c.statut === 'en_attente');
     const tauxCaution = b.taux_caution || 0;
     const montantCaution = Math.round((b.montant_brut||0) * (tauxCaution/100));
     const montantNetApresCaution = (b.montant_brut||0) - montantCaution;
@@ -3947,7 +3947,7 @@ async function saveEditBordereau(bordereauId) {
 function showModalValidationCommission(bordereauId) {
   const b = allBordereaux.find(x => x.id === bordereauId);
   if (!b) return;
-  const enAttente = allCommissionsAttente.filter(c => c.compagnie === b.compagnie && c.statut === 'en_attente');
+  const enAttente = allCommissionsAttente.filter(c => (c.compagnie||'').trim().toLowerCase() === (b.compagnie||'').trim().toLowerCase() && c.statut === 'en_attente');
 
   const modal = document.createElement('div');
   modal.id = 'modal-validation';

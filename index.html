@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 17:45</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 18:15</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -1297,6 +1297,24 @@ function toggleSection(id) {
 
 let navHistory = [];
 
+// Recharge les tables financières critiques depuis Supabase — garantit que le
+// Dashboard reflète TOUJOURS l'état réel de la base, y compris après une
+// modification faite directement en SQL (hors de l'interface du CRM).
+async function refreshCoreData() {
+  const [contrats, commissions, bordereaux, clients, fiches] = await Promise.all([
+    dbGet('contrats', 'select=*'),
+    dbGet('commissions_attente', 'select=*'),
+    dbGet('bordereaux', 'select=*'),
+    dbGet('clients', 'select=*'),
+    dbGet('fiches_paie', 'select=*'),
+  ]);
+  allContrats = contrats || allContrats;
+  allCommissionsAttente = commissions || allCommissionsAttente;
+  allBordereaux = bordereaux || allBordereaux;
+  allClients = clients || allClients;
+  allFichesPaie = fiches || allFichesPaie;
+}
+
 async function navigate(view, opts) {
   // Empile la vue précédente pour permettre le retour arrière, sauf navigation silencieuse
   if (!opts || !opts.silent) {
@@ -1382,7 +1400,12 @@ function sectionCard(title, accentColor, content) {
 async function renderView() {
   const main = document.getElementById('main-content');
   switch (currentView) {
-    case 'dashboard': main.innerHTML = viewDashboard(); mountCalendarWidget(); break;
+    case 'dashboard':
+      main.innerHTML = '<div class="loader">Actualisation des données...</div>';
+      await refreshCoreData();
+      main.innerHTML = viewDashboard();
+      mountCalendarWidget();
+      break;
     case 'clients': main.innerHTML = viewPortefeuille('tous'); break;
     case 'portefeuille': main.innerHTML = viewPortefeuille('tous'); break;
     case 'clients-prives': main.innerHTML = viewPortefeuille('prive'); break;
@@ -1397,7 +1420,11 @@ async function renderView() {
     case 'nouveau-contrat': main.innerHTML = viewNouveauContrat(); initSegmentContrat(); break;
     case 'nouveau-contrat-direct': contratClientId = null; main.innerHTML = viewNouveauContrat(); initSegmentContrat(); break;
     case 'nouvelle-demande-offre': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewNouvelleDemandeOffre(); break;
-    case 'commissions-attente': main.innerHTML = viewCommissionsAttente(); break;
+    case 'commissions-attente':
+      main.innerHTML = '<div class="loader">Actualisation des données...</div>';
+      await refreshCoreData();
+      main.innerHTML = viewCommissionsAttente();
+      break;
     case 'rapport-finma': main.innerHTML = viewRapportFinma(); break;
     case 'production': main.innerHTML = viewProduction(); break;
     case 'opportunites': main.innerHTML = viewOpportunites(); break;
@@ -1406,7 +1433,11 @@ async function renderView() {
     case 'agenda': main.innerHTML = viewAgenda(); break;
     case 'campagnes': main.innerHTML = viewCampagnes(); break;
     case 'nouveau-agent': main.innerHTML = viewNouvelAgent(); break;
-    case 'bordereaux': main.innerHTML = viewBordereaux(); break;
+    case 'bordereaux':
+      main.innerHTML = '<div class="loader">Actualisation des données...</div>';
+      await refreshCoreData();
+      main.innerHTML = viewBordereaux();
+      break;
     case 'fiche-paie': main.innerHTML = viewFichePaie(); break;
     case 'commissions': main.innerHTML = viewCommissions(); break;
     case 'fiche-commission': main.innerHTML = viewFicheCommission(); break;
@@ -1562,8 +1593,13 @@ function viewDashboard() {
   const maxHorizon = Math.max(...horizonsData.map(h => h.montant), 1);
 
   return `
-    <div style="margin-bottom:4px;color:var(--text-muted);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase">${now}</div>
-    <h1 style="margin:0 0 4px;font-size:24px;font-weight:900;color:var(--text)">Bonjour, ${currentUser.prenom} 👋</h1>
+    <div style="display:flex;justify-content:space-between;align-items:flex-start">
+      <div>
+        <div style="margin-bottom:4px;color:var(--text-muted);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase">${now}</div>
+        <h1 style="margin:0 0 4px;font-size:24px;font-weight:900;color:var(--text)">Bonjour, ${currentUser.prenom} 👋</h1>
+      </div>
+      <button onclick="navigate('dashboard')" title="Recharger les données depuis Supabase" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:9px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">🔄 Actualiser</button>
+    </div>
     <div style="color:var(--text-muted);font-size:13px;margin-bottom:24px">Assurex Sàrl · EX Groupe · Commissions actives depuis le 01.06.2026</div>
     <div class="stat-grid" style="grid-template-columns:repeat(5,1fr)">
       ${statCard('Clients', allClients.length, '#38bdf8', `${actifs} actifs`)}

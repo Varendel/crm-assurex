@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 20:45</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 21:40</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -5089,6 +5089,8 @@ async function saveEditContrat(contratId, clientId, returnTo) {
   const primeParEcheance = parseFloat(document.getElementById('ect-prime').value) || 0;
   const primeAnnuelle = Math.round(primeParEcheance * periodicite);
   const commissionne = document.getElementById('ect-commissionne').value !== 'non';
+  const ancienContrat = allContrats.find(c => c.id === contratId);
+  const ancienStatut = ancienContrat ? ancienContrat.statut : null;
   const body = {
     produit: document.getElementById('ect-produit').value.trim(),
     compagnie: document.getElementById('ect-compagnie').value.trim(),
@@ -5106,6 +5108,27 @@ async function saveEditContrat(contratId, clientId, returnTo) {
   const r = await dbPatch('contrats', contratId, body);
   if (r && r.error) { showError('Erreur: ' + errMsg(r)); if (btn) { btn.textContent = '✓ Enregistrer'; btn.disabled = false; } return; }
   logAction('edit_contrat', 'contrats', contratId, `${body.produit} — ${body.compagnie}`);
+
+  // ── Contrat passé en "Annulé" : supprimer la commission en attente liée ──
+  // Un contrat annulé n'a jamais réellement pris effet (réserve refusée, non abouti),
+  // donc toute commission encore "en attente" pour lui n'a plus aucune raison d'exister.
+  // On ne touche JAMAIS aux commissions déjà "reçue" (argent réel déjà encaissé) —
+  // dans ce cas c'est le statut "Extourné" qu'il faut utiliser, pas l'annulation.
+  if (body.statut === 'annulé' && ancienStatut !== 'annulé') {
+    const commissionsEnAttenteLiees = allCommissionsAttente.filter(c => c.contrat_id === contratId && c.statut === 'en_attente');
+    for (const c of commissionsEnAttenteLiees) {
+      const token = await getValidAccessToken() || SUPABASE_KEY;
+      await fetch(`${SUPABASE_URL}/rest/v1/commissions_attente?id=eq.${c.id}`, {
+        method: 'DELETE',
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
+      });
+    }
+    if (commissionsEnAttenteLiees.length) {
+      logAction('suppr_commission_contrat_annule', 'commissions_attente', null, `${commissionsEnAttenteLiees.length} commission(s) en attente supprimée(s) — contrat ${body.produit} annulé`);
+      showError(`Contrat annulé — ${commissionsEnAttenteLiees.length} commission(s) en attente liée(s) ont été supprimée(s) automatiquement.`);
+    }
+    allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
+  }
 
   // Police passée en "Non commissionné" : créer le rappel de transfert 6 mois avant échéance (si pas déjà fait)
   if (!commissionne && body.date_echeance) {
@@ -6007,9 +6030,9 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
 
   const client = allClients.find(c => c.id === clientId);
 
-  // Police non commissionnée (hors collaboration) : pas de commission, mais rappel automatique 6 mois avant échéance
-  if (!commissionne) {
-    if (contratBody.date_echeance) {
+  // Contrat non commissionné OU créé directement en "Annulé" : pas de commission générée
+  if (!commissionne || contratBody.statut === 'annulé') {
+    if (!commissionne && contratBody.date_echeance) {
       const dEch = new Date(contratBody.date_echeance);
       dEch.setMonth(dEch.getMonth() - 6);
       const nomClient = client ? (client.segment === 'Entreprise' ? client.nom : `${client.prenom} ${client.nom}`) : '';
@@ -6139,8 +6162,7 @@ function showModalEditCommission(commId) {
           <option value="en_attente" ${c.statut==='en_attente'?'selected':''}>En attente</option>
           <option value="reçue" ${c.statut==='reçue'?'selected':''}>Reçue (Assurex)</option>
           <option value="extourné" ${c.statut==='extourné'?'selected':''}>↩ Extournée (contrat policé puis annulé après versement)</option>
-          ${c.statut === 'versé_oz' ? `<option value="versé_oz" selected>✓ Versé OZ Assure (historique)</option>` : ''}
-          ${c.statut === 'versé_cofidex' ? `<option value="versé_cofidex" selected>✓ Versé EX Groupe (historique)</option>` : ''}
+          ${c.statut === 'annulé' ? `<option value="annulé" selected>❌ Annulé (ancien statut — passe en Extournée si le contrat a été policé, sinon remets En attente)</option>` : ''}
         </select></div>
       </div>
       <div style="display:flex;gap:10px;margin-top:20px">

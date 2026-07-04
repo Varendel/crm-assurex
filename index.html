@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 15:45</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 16:30</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -512,14 +512,16 @@ function statutCommissionLabel(statut) {
   if (statut === 'reçue') return 'Reçue';
   if (statut === 'versé_oz') return 'Versé OZ';
   if (statut === 'versé_cofidex') return 'Versé EX Groupe';
-  if (statut === 'annulé') return '❌ Annulé';
+  if (statut === 'extourné') return '↩ Extournée';
+  if (statut === 'annulé') return '❌ Annulé (legacy)';
   return 'En attente';
 }
 function statutCommissionColor(statut) {
   if (statut === 'reçue') return '#4ade80';
   if (statut === 'versé_oz') return '#1a56db';
   if (statut === 'versé_cofidex') return '#f59e0b';
-  if (statut === 'annulé') return '#f87171';
+  if (statut === 'extourné') return '#f87171';
+  if (statut === 'annulé') return '#94a3b8';
   return '#f59e0b';
 }
 
@@ -1410,6 +1412,7 @@ async function renderView() {
     case 'audit-log': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewAuditLog(); break;
     case 'contacts-compagnies': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewContactsCompagnies(); break;
     case 'oz-assure': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewOzAssure(); break;
+    case 'oz-commissions-assurex': main.innerHTML = viewOzCommissionsAssurex(); break;
     case 'rapport-finma-oz': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewRapportFinmaOz(); break;
     default: main.innerHTML = viewDashboard(); mountCalendarWidget();
   }
@@ -1500,7 +1503,15 @@ function viewDashboard() {
     const d = commissionDateReception(ca);
     return d && d >= DATE_BASCULE_ASSUREX;
   });
-  const totalCommRecues = commissionsRecues.reduce((s, ca) => s + Number(ca.montant_final != null ? ca.montant_final : (ca.montant_estime||0)), 0);
+  const totalCommRecuesBrut = commissionsRecues.reduce((s, ca) => s + Number(ca.montant_final != null ? ca.montant_final : (ca.montant_estime||0)), 0);
+  // Extourné = commission déjà reçue puis reprise par la compagnie (contrat policé annulé après coup) — réduit le net réellement conservé
+  const commissionsExtournees = allCommissionsAttente.filter(ca => {
+    if (ca.statut !== 'extourné') return false;
+    const d = commissionDateReception(ca);
+    return d && d >= DATE_BASCULE_ASSUREX;
+  });
+  const totalExtourne = commissionsExtournees.reduce((s, ca) => s + Number(ca.montant_final != null ? ca.montant_final : (ca.montant_estime||0)), 0);
+  const totalCommRecues = totalCommRecuesBrut - totalExtourne;
   const nbContratsActifs = allContrats.filter(ct => !['résilié','annulé'].includes(ct.statut) && ct.commissionne !== false).length;
   const urgents = allRappels.filter(r => r.urgence === 'haute' && r.statut === 'ouvert');
   const now = new Date().toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -5896,9 +5907,9 @@ function showModalEditCommission(commId) {
         <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="ec-statut">
           <option value="en_attente" ${c.statut==='en_attente'?'selected':''}>En attente</option>
           <option value="reçue" ${c.statut==='reçue'?'selected':''}>Reçue (Assurex)</option>
-          <option value="versé_oz" ${c.statut==='versé_oz'?'selected':''}>✓ Versé OZ Assure</option>
           <option value="versé_cofidex" ${c.statut==='versé_cofidex'?'selected':''}>✓ Versé EX Groupe</option>
-          <option value="annulé" ${c.statut==='annulé'?'selected':''}>❌ Annulé (réserve refusée / non abouti)</option>
+          <option value="extourné" ${c.statut==='extourné'?'selected':''}>↩ Extournée (contrat policé puis annulé après versement)</option>
+          ${c.statut === 'versé_oz' ? `<option value="versé_oz" selected>✓ Versé OZ Assure (historique)</option>` : ''}
         </select></div>
       </div>
       <div style="display:flex;gap:10px;margin-top:20px">
@@ -5963,7 +5974,8 @@ function viewCommissionsAttente(prefiltreStatut) {
         <option value="">Tous statuts</option>
         <option value="en_attente" ${prefiltreStatut==='en_attente'?'selected':''}>En attente</option>
         <option value="reçue" ${prefiltreStatut==='reçue'?'selected':''}>Reçue (Assurex)</option>
-        <option value="versé_oz">Versé OZ Assure</option>
+        <option value="versé_cofidex">Versé EX Groupe</option>
+        <option value="extourné">Extournée</option>
       </select>
       <select class="form-select" id="tc-tri" style="max-width:190px" onchange="renderToutesCommissions()">
         <option value="date">Plus récent d'abord</option>
@@ -5988,6 +6000,8 @@ function renderToutesCommissions() {
   function montantC(c) { return c.montant_final != null ? c.montant_final : (c.montant_estime || 0); }
 
   const filtered = allCommissionsAttente.filter(c => {
+    // Cette page ne montre QUE les données Assurex — le passé OZ Assure a sa propre page dédiée
+    if (c.statut === 'versé_oz') return false;
     // Exclure les commissions liées à un contrat marqué "non commissionné"
     if (c.contrat_id) {
       const ct = allContrats.find(x => x.id === c.contrat_id);
@@ -6004,16 +6018,17 @@ function renderToutesCommissions() {
     return new Date(b.date_creation||0) - new Date(a.date_creation||0);
   });
 
-  const totalAttente = filtered.filter(c => c.statut === 'en_attente' && c.statut !== 'annulé').reduce((s,c) => s + montantC(c), 0);
-  const totalRecu = filtered.filter(c => c.statut === 'reçue').reduce((s,c) => s + montantC(c), 0);
-  const totalOZ = filtered.filter(c => c.statut === 'versé_oz').reduce((s,c) => s + montantC(c), 0);
+  const totalAttente = filtered.filter(c => c.statut === 'en_attente').reduce((s,c) => s + montantC(c), 0);
+  const totalRecuBrut = filtered.filter(c => c.statut === 'reçue').reduce((s,c) => s + montantC(c), 0);
+  const totalExtourne = filtered.filter(c => c.statut === 'extourné').reduce((s,c) => s + montantC(c), 0);
+  const totalRecuNet = totalRecuBrut - totalExtourne;
 
   document.getElementById('tc-stats').innerHTML = `
     ${statCard('En attente', 'CHF ' + totalAttente.toLocaleString(), '#f59e0b')}
-    ${statCard('Annulées', filtered.filter(c => c.statut === 'annulé').length, '#f87171', 'exclues des totaux')}
-    ${statCard('Reçues (Assurex)', 'CHF ' + totalRecu.toLocaleString(), '#4ade80')}
-    ${statCard('Versé OZ', 'CHF ' + totalOZ.toLocaleString(), '#1a56db')}
-    ${statCard('Total dossiers', filtered.length, '#38bdf8')}`;
+    ${statCard('Reçues (brut)', 'CHF ' + totalRecuBrut.toLocaleString(), '#4ade80')}
+    ${statCard('Extournées', '– CHF ' + totalExtourne.toLocaleString(), '#f87171', 'contrat policé puis annulé')}
+    ${statCard('Net Assurex encaissé', 'CHF ' + totalRecuNet.toLocaleString(), '#38bdf8')}
+    ${statCard('Total dossiers', filtered.length, '#a78bfa')}`;
 
   const cols = '1fr 120px 110px 110px 100px 90px';
   const rows = filtered.map(c => {
@@ -6401,6 +6416,33 @@ function exportFinmaOzTxt() {
   downloadBlob(t, `recensement_finma_oz_${d.annee}.txt`, 'text/plain;charset=utf-8');
 }
 
+// ═══ Commissions Assurex historiquement versées à OZ Assure — visible uniquement Jonathan ═══
+function viewOzCommissionsAssurex() {
+  if (!currentUser || currentUser.role !== 'signataire') {
+    return `<div class="table-empty">Accès réservé.</div>`;
+  }
+  const lignes = allCommissionsAttente.filter(c => c.statut === 'versé_oz');
+  const total = lignes.reduce((s,c) => s + Number(c.montant_final != null ? c.montant_final : (c.montant_estime||0)), 0);
+
+  return `
+    <button onclick="navigate('oz-assure')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour OZ Assure</button>
+    <h2 style="margin:0 0 4px;font-size:18px;font-weight:800;color:var(--text)">Commissions Assurex versées à OZ Assure</h2>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Historique privé : commissions gérées dans le CRM mais réglées directement sur le compte OZ Assure (portefeuille pré-fusion). Ces montants n'apparaissent plus dans "Toutes les commissions" ni dans les statistiques Assurex — cette page est visible uniquement par toi.</div>
+    <div class="stat-grid" style="margin-bottom:20px">
+      ${statCard('Dossiers', lignes.length, '#38bdf8')}
+      ${statCard('Total versé à OZ', 'CHF ' + Math.round(total).toLocaleString(), '#1a56db')}
+    </div>
+    <div class="table-wrap">
+      <div class="table-header" style="grid-template-columns:1fr 130px 110px 90px"><div>Client / Produit</div><div>Compagnie</div><div>Montant</div><div></div></div>
+      ${lignes.map(c => `<div class="table-row" style="grid-template-columns:1fr 130px 110px 90px">
+        <div><div style="font-size:13px;font-weight:700;color:var(--text)">${c.client_nom||'—'}</div><div style="font-size:11px;color:var(--text-muted)">${c.produit||''}</div></div>
+        <div style="font-size:12px;color:var(--text-muted)">${c.compagnie||''}</div>
+        <div style="font-weight:800;color:#1a56db">CHF ${Number(c.montant_final != null ? c.montant_final : (c.montant_estime||0)).toLocaleString()}</div>
+        <div><button onclick="showModalEditCommission('${c.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:4px 10px;font-size:11px;cursor:pointer">✏️</button></div>
+      </div>`).join('') || '<div class="table-empty">Aucune commission versée à OZ Assure enregistrée.</div>'}
+    </div>`;
+}
+
 async function viewOzAssure() {
   if (!currentUser || currentUser.role !== 'signataire') {
     return `<div class="table-empty">Accès réservé.</div>`;
@@ -6530,6 +6572,7 @@ async function viewOzAssure() {
   return `
     <div class="oz-screen-only">
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:-10px">
+      <button onclick="navigate('oz-commissions-assurex')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:9px;padding:9px 18px;font-weight:700;font-size:12.5px;cursor:pointer;color:var(--accent);display:flex;align-items:center;gap:6px">💼 Commissions Assurex versées à OZ</button>
       <button onclick="navigate('rapport-finma-oz')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:9px;padding:9px 18px;font-weight:700;font-size:12.5px;cursor:pointer;color:var(--accent);display:flex;align-items:center;gap:6px">📋 Recensement FINMA</button>
       <button onclick="window.print()" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:9px 18px;font-weight:700;font-size:12.5px;cursor:pointer;color:var(--text-muted);display:flex;align-items:center;gap:6px">🖨️ Imprimer / Export PDF</button>
     </div>

@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 14:00</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 15:00</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -3525,6 +3525,15 @@ function renderBordereauxList() {
             <div style="font-size:16px;font-weight:900;color:var(--text)">CHF ${montantNetApresCaution.toLocaleString()}</div>
           </div>
         </div>` : ''}
+
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.25);border-radius:9px;padding:12px 16px">
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px">Montant net total versé (rapproché)</div>
+            <div style="font-size:20px;font-weight:900;color:#4ade80">CHF ${(pJ+pA).toLocaleString()}</div>
+          </div>
+          <button onclick="event.stopPropagation(); toggleBordereauVerse('${b.id}')" style="background:${b.statut==='reçu' ? 'rgba(74,222,128,0.15)' : 'var(--accent-dim)'};border:1px solid ${b.statut==='reçu' ? 'rgba(74,222,128,0.4)' : 'var(--accent-border)'};color:${b.statut==='reçu' ? '#4ade80' : 'var(--accent)'};border-radius:8px;padding:9px 18px;font-weight:800;font-size:12.5px;cursor:pointer;white-space:nowrap">${b.statut==='reçu' ? '↺ Remettre en attendu' : '✓ Marquer comme versé'}</button>
+        </div>
+
         <div style="display:flex;gap:10px;margin-bottom:14px">
           <div style="flex:1;background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:10px 14px">
             <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Part Jonathan</div>
@@ -3559,6 +3568,38 @@ function renderBordereauxList() {
   }).join('');
 
   document.getElementById('bd-list').innerHTML = cards || '<div class="table-empty">Aucun bordereau ne correspond aux filtres.</div>';
+}
+
+async function toggleBordereauVerse(bordereauId) {
+  const b = allBordereaux.find(x => x.id === bordereauId);
+  if (!b) return;
+  const commissionsLiees = allCommissionsAttente.filter(c => c.bordereau_id === bordereauId && c.statut !== 'annulé');
+
+  if (b.statut !== 'reçu') {
+    // Bascule vers "versé" : le bordereau ET toutes ses commissions rapprochées
+    // passent en statut "reçu(e)" avec une vraie date de réception — c'est CE moment
+    // qui met à jour le Dashboard, la Fiche de paie et toutes les statistiques.
+    const dateRecep = b.date_reception || new Date().toISOString().split('T')[0];
+    await dbPatch('bordereaux', bordereauId, { statut: 'reçu', date_reception: dateRecep });
+    for (const c of commissionsLiees) {
+      const patch = {};
+      if (c.statut !== 'reçue') patch.statut = 'reçue';
+      if (!c.date_reception) patch.date_reception = dateRecep; // backfill même si déjà "reçue" (rapprochements historiques sans date)
+      if (Object.keys(patch).length) await dbPatch('commissions_attente', c.id, patch);
+    }
+    logAction('bordereau_verse', 'bordereaux', bordereauId, `${b.numero || ''} — ${commissionsLiees.length} commission(s) marquée(s) reçue(s)`);
+  } else {
+    // Retour en arrière : on ne remet le bordereau qu'en "attendu".
+    // Les commissions déjà réconciliées ne sont PAS annulées automatiquement
+    // (pour éviter de perdre un rapprochement fait par ailleurs) — utilise
+    // "Supprimer le bordereau" si tu veux vraiment tout délier.
+    await dbPatch('bordereaux', bordereauId, { statut: 'attendu' });
+    logAction('bordereau_attendu', 'bordereaux', bordereauId, b.numero || '');
+  }
+
+  allBordereaux = await dbGet('bordereaux', 'select=*');
+  allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
+  renderBordereauxList();
 }
 
 function toggleBordereau(id) {
@@ -6719,12 +6760,18 @@ function viewAgents() {
       const color = agentColor(a);
       const nbClients = allClients.filter(c => c.apporteur_id === a.id).length;
       const ca = allClients.filter(c => c.apporteur_id === a.id).reduce((s,c)=>s+caClient(c.id),0);
-      // Commissions générées : somme des commissions des contrats apportés par cet agent
-      const contratsAgent = allContrats.filter(ct => ct.apporteur_id === a.id).map(ct => ct.id);
-      const commsAgent = allCommissionsAttente.filter(cm => contratsAgent.includes(cm.contrat_id) && cm.statut !== 'annulé');
-      const commGeneree = commsAgent.reduce((s,cm) => s + Number(cm.montant_final != null ? cm.montant_final : (cm.montant_estime||0)), 0);
-      // Part de l'agent selon son taux
-      const partAgent = Math.round(commGeneree * (a.taux||0) / 100);
+      // Commissions GÉNÉRÉES = uniquement celles déjà incluses dans une fiche de paie
+      // (l'argent qui entre via un bordereau n'est "attribué" à un agent qu'au moment
+      // où une fiche de paie est effectivement créée — avant ça, c'est 0 par définition).
+      const commissionsPayees = allCommissionsAttente.filter(cm => cm.fiche_paie_id);
+      let commGeneree = 0;
+      commissionsPayees.forEach(cm => {
+        const montant = cm.montant_final != null ? cm.montant_final : (cm.montant_estime || 0);
+        const s = splitMontantAgent(montant, cm.contrat_id);
+        if (a.role === 'signataire') commGeneree += s.pJ;
+        else if (s.agent && s.agent.id === a.id) commGeneree += s.pA;
+      });
+      const partAgent = commGeneree; // déjà la part exacte de l'agent (pJ ou pA selon son rôle)
       const isEditing = editingAgentId === a.id;
       return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:12px">
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
@@ -6766,18 +6813,14 @@ function viewAgents() {
               <div style="color:var(--text);font-size:13px;font-weight:700">${v}</div>
             </div>`).join('')}
         </div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);border-radius:9px;padding:10px 14px">
             <div style="color:var(--text-muted);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px">CA géré</div>
             <div style="color:#38bdf8;font-size:14px;font-weight:800">CHF ${ca.toLocaleString()}</div>
           </div>
           <div style="background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2);border-radius:9px;padding:10px 14px">
-            <div style="color:var(--text-muted);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px">Commissions générées</div>
+            <div style="color:var(--text-muted);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px">Commissions générées (via fiche de paie)</div>
             <div style="color:#4ade80;font-size:14px;font-weight:800">CHF ${Math.round(commGeneree).toLocaleString()}</div>
-          </div>
-          <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:9px;padding:10px 14px">
-            <div style="color:var(--text-muted);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px">Part agent (${a.taux||0}%)</div>
-            <div style="color:#f59e0b;font-size:14px;font-weight:800">CHF ${partAgent.toLocaleString()}</div>
           </div>
         </div>
       </div>`;

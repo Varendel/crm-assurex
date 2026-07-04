@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 23:00</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 23:20</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -6199,6 +6199,7 @@ function showModalEditCommission(commId) {
         <div class="form-field" style="grid-column:span 2"><label class="form-label">Produit</label><input class="form-input" id="ec-produit" value="${c.produit || ''}"/></div>
         <div class="form-field"><label class="form-label">Montant estimé (CHF)</label><input class="form-input" id="ec-montant-estime" type="number" step="0.01" value="${c.montant_estime || 0}"/></div>
         <div class="form-field"><label class="form-label">Montant final (CHF)</label><input class="form-input" id="ec-montant-final" type="number" step="0.01" value="${c.montant_final != null ? c.montant_final : ''}" placeholder="Vide si pas encore reçue"/></div>
+        <div class="form-field"><label class="form-label">Date de réception</label><input class="form-input" id="ec-date-reception" type="date" value="${c.date_reception || ''}"/></div>
         <div class="form-field"><label class="form-label">N° de police</label><input class="form-input" id="ec-police" value="${c.numero_police || ''}"/></div>
         <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="ec-statut">
           <option value="en_attente" ${c.statut==='en_attente'?'selected':''}>En attente</option>
@@ -6254,7 +6255,7 @@ async function saveEditCommission(commId) {
     montant_estime: Number(document.getElementById('ec-montant-estime').value) || 0,
     montant_final: estUnRetourEnArriere ? null : (montantFinalVal === '' ? null : Number(montantFinalVal)),
     bordereau_id: estUnRetourEnArriere ? null : (original ? original.bordereau_id : null),
-    date_reception: estUnRetourEnArriere ? null : (original ? original.date_reception : null),
+    date_reception: estUnRetourEnArriere ? null : (document.getElementById('ec-date-reception').value || null),
     numero_police: document.getElementById('ec-police').value.trim() || null,
     statut: nouveauStatut,
     detail_calcul: estUnRetourEnArriere

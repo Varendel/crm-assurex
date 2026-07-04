@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 19:15</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 19:45</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -1515,9 +1515,8 @@ async function basculerContratsEchus() {
 
 function viewDashboard() {
   const actifs = allClients.filter(c => c.statut === 'actif').length;
-  // CA portefeuille : tout contrat en vigueur (actif, à renouveler, en cours de signature) —
-  // même périmètre que nbContratsActifs ci-dessous, pour que le CHF affiché corresponde au nombre de contrats affiché.
-  const totalCA = allContrats.filter(ct => !['résilié','annulé'].includes(ct.statut)).reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
+  const totalCA = allContrats.filter(ct => ct.statut === 'actif').reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
+  const totalCAFull = allContrats.filter(ct => !['résilié','annulé'].includes(ct.statut)).reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0);
   // ── Commissions en attente (pipeline) : basé sur la date de SIGNATURE du contrat ──
   // C'est la bonne définition métier : seuls les contrats signés depuis la fusion
   // génèrent de nouvelles commissions pour Assurex. Le portefeuille pré-fusion
@@ -1612,30 +1611,6 @@ function viewDashboard() {
     !idsAvecCommission.has(ct.id)
   );
 
-  // ── Graphique "Commissions — Gestion vs Acquisition" (cumul depuis la fusion) ──
-  // Basé sur les mêmes ensembles que les stat cards ci-dessus (reçues nettes des extournées),
-  // simplement ventilés par type de mouvement ("Commission de gestion" vs "Commission d'acquisition").
-  function montantComm(ca) { return Number(ca.montant_final != null ? ca.montant_final : (ca.montant_estime || 0)); }
-  function sommeParMouvement(arr, estGestion) {
-    return arr.filter(ca => (ca.mouvement || '').toLowerCase().includes('gestion') === estGestion)
-      .reduce((s, ca) => s + montantComm(ca), 0);
-  }
-  const totalGestionRecue = sommeParMouvement(commissionsRecues, true) - sommeParMouvement(commissionsExtournees, true);
-  const totalAcquisitionRecue = sommeParMouvement(commissionsRecues, false) - sommeParMouvement(commissionsExtournees, false);
-  const maxGA = Math.max(totalGestionRecue, totalAcquisitionRecue, 1);
-
-  // ── Graphique "Pipeline — Signé vs Prévu" ──
-  // Signé = primes des contrats démarrés cette année (production de l'année en cours).
-  // Prévu = pipeline ouvert (opportunités ni gagnées ni perdues), montant potentiel non pondéré.
-  const anneeCourante = String(new Date().getFullYear());
-  const chiffreSigne = allContrats
-    .filter(ct => ct.date_debut && ct.date_debut.startsWith(anneeCourante) && !['résilié','annulé'].includes(ct.statut))
-    .reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
-  const chiffrePrevu = allOpportunites
-    .filter(o => o.stade !== 'Gagné' && o.stade !== 'Perdu')
-    .reduce((s, o) => s + Number(o.montant_potentiel || 0), 0);
-  const maxPipeline = Math.max(chiffreSigne, chiffrePrevu, 1);
-
   return `
     <div style="display:flex;justify-content:space-between;align-items:flex-start">
       <div>
@@ -1692,29 +1667,29 @@ function viewDashboard() {
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
         <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px">📊 Commissions — Gestion vs Acquisition</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px">Depuis le 01.06.2026 (reçues, nettes des extournées)</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px">Cumul 2026</div>
         <div style="display:flex;flex-direction:column;gap:10px">
-          ${[['Gestion (récurrentes)','#38bdf8',totalGestionRecue],['Acquisition (nouvelles)','#4ade80',totalAcquisitionRecue]].map(([l,c,v])=>`
+          ${[['Gestion (récurrentes)','#38bdf8',0],['Acquisition (nouvelles)','#4ade80',0]].map(([l,c,v])=>`
           <div>
             <div style="display:flex;justify-content:space-between;margin-bottom:4px">
               <span style="font-size:12px;color:var(--text-muted)">${l}</span>
-              <span style="font-size:12px;font-weight:800;color:${c}">CHF ${Math.round(v).toLocaleString()}</span>
+              <span style="font-size:12px;font-weight:800;color:${c}">CHF ${v.toLocaleString()}</span>
             </div>
-            <div class="progress-bar"><div class="progress-fill" style="width:${Math.max(Math.round(v/maxGA*100),v>0?2:0)}%;background:${c}"></div></div>
+            <div class="progress-bar"><div class="progress-fill" style="width:0%;background:${c}"></div></div>
           </div>`).join('')}
         </div>
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
         <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px">💼 Pipeline</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px">Signé (${anneeCourante}) vs Prévu (pipeline ouvert)</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px">Signé vs Prévu</div>
         <div style="display:flex;flex-direction:column;gap:10px">
-          ${[['Chiffre signé','#f59e0b',chiffreSigne],['Chiffre prévu (pipeline)','#a78bfa',chiffrePrevu]].map(([l,c,v])=>`
+          ${[['Chiffre signé','#f59e0b',0],['Chiffre prévu (pipeline)','#a78bfa',0]].map(([l,c,v])=>`
           <div>
             <div style="display:flex;justify-content:space-between;margin-bottom:4px">
               <span style="font-size:12px;color:var(--text-muted)">${l}</span>
-              <span style="font-size:12px;font-weight:800;color:${c}">CHF ${Math.round(v).toLocaleString()}</span>
+              <span style="font-size:12px;font-weight:800;color:${c}">CHF ${v.toLocaleString()}</span>
             </div>
-            <div class="progress-bar"><div class="progress-fill" style="width:${Math.max(Math.round(v/maxPipeline*100),v>0?2:0)}%;background:${c}"></div></div>
+            <div class="progress-bar"><div class="progress-fill" style="width:0%;background:${c}"></div></div>
           </div>`).join('')}
         </div>
       </div>
@@ -6155,9 +6130,9 @@ function showModalEditCommission(commId) {
         <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="ec-statut">
           <option value="en_attente" ${c.statut==='en_attente'?'selected':''}>En attente</option>
           <option value="reçue" ${c.statut==='reçue'?'selected':''}>Reçue (Assurex)</option>
-          <option value="versé_cofidex" ${c.statut==='versé_cofidex'?'selected':''}>✓ Versé EX Groupe</option>
           <option value="extourné" ${c.statut==='extourné'?'selected':''}>↩ Extournée (contrat policé puis annulé après versement)</option>
           ${c.statut === 'versé_oz' ? `<option value="versé_oz" selected>✓ Versé OZ Assure (historique)</option>` : ''}
+          ${c.statut === 'versé_cofidex' ? `<option value="versé_cofidex" selected>✓ Versé EX Groupe (historique)</option>` : ''}
         </select></div>
       </div>
       <div style="display:flex;gap:10px;margin-top:20px">
@@ -6246,7 +6221,6 @@ function viewCommissionsAttente(prefiltreStatut) {
         <option value="">Tous statuts</option>
         <option value="en_attente" ${prefiltreStatut==='en_attente'?'selected':''}>En attente</option>
         <option value="reçue" ${prefiltreStatut==='reçue'?'selected':''}>Reçue (Assurex)</option>
-        <option value="versé_cofidex">Versé EX Groupe</option>
         <option value="extourné">Extournée</option>
       </select>
       <select class="form-select" id="tc-tri" style="max-width:190px" onchange="renderToutesCommissions()">

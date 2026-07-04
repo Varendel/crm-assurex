@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 18:15</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-03 18:45</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -1531,17 +1531,24 @@ function viewDashboard() {
   // déjà réglés par OZ Assure avant le 01.06.2026) — ils ne comptent JAMAIS comme
   // commissions post-fusion, même si techniquement rapprochés. Seul le statut "reçue"
   // (rapprochement bordereau Assurex, flux post-fusion) compte ici.
+  // ── Commissions reçues : compte toute commission "reçue" par défaut ──
+  // Elle n'est exclue QUE si on a la preuve explicite qu'elle date d'avant la fusion
+  // (date connue et < 01.06.2026). Si aucune date n'est renseignée nulle part,
+  // on l'inclut plutôt que de la faire disparaître silencieusement — une commission
+  // marquée "reçue" dans ce CRM (créé après la fusion) ne peut pas être antérieure.
   const commissionsRecues = allCommissionsAttente.filter(ca => {
     if (ca.statut !== 'reçue') return false;
     const d = commissionDateReception(ca);
-    return d && d >= DATE_BASCULE_ASSUREX;
+    if (!d) return true; // pas de date connue → on ne l'exclut plus par défaut
+    return d >= DATE_BASCULE_ASSUREX;
   });
   const totalCommRecuesBrut = commissionsRecues.reduce((s, ca) => s + Number(ca.montant_final != null ? ca.montant_final : (ca.montant_estime||0)), 0);
   // Extourné = commission déjà reçue puis reprise par la compagnie (contrat policé annulé après coup) — réduit le net réellement conservé
   const commissionsExtournees = allCommissionsAttente.filter(ca => {
     if (ca.statut !== 'extourné') return false;
     const d = commissionDateReception(ca);
-    return d && d >= DATE_BASCULE_ASSUREX;
+    if (!d) return true;
+    return d >= DATE_BASCULE_ASSUREX;
   });
   const totalExtourne = commissionsExtournees.reduce((s, ca) => s + Number(ca.montant_final != null ? ca.montant_final : (ca.montant_estime||0)), 0);
   const totalCommRecues = totalCommRecuesBrut - totalExtourne;

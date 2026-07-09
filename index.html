@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-09 16:00</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-09 17:30</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -552,6 +552,41 @@ const LPP_LEGAL = {
   taux_conversion_legal: 0.068,   // taux de conversion 6.8% (part obligatoire, inchangé en 2026)
 };
 
+// ═══ ESTIMATION RENTE AVS (échelle 44) — état 2026, inchangé depuis 2025 ═══
+// Approximation standard de branche : interpolation linéaire entre rente min et rente max
+// selon le RAMD (Revenu Annuel Moyen Déterminant), en prenant le salaire actuel comme proxy du RAMD.
+// ⚠️ Estimation indicative — ne remplace pas l'extrait de compte individuel AVS officiel.
+const AVS_LEGAL = {
+  ramd_min: 15120,
+  ramd_max: 90720,
+  rente_min: 15120,   // CHF/an (1'260/mois)
+  rente_max: 30240,   // CHF/an (2'520/mois)
+  duree_cotisation_complete: 44,
+  taux_veuvage: 0.80,   // rente de veuve/veuf = 80% de la rente entière du défunt (art. 24 LAVS)
+  taux_orphelin: 0.40,  // rente d'orphelin = 40% de la rente entière du défunt, par enfant (art. 25 LAVS)
+};
+
+// Estime la rente AVS annuelle (entière, à durée de cotisation donnée) à partir d'un RAMD approximé par le salaire actuel
+function estimerRenteAVS(salaireActuel, anneesCotisation) {
+  let renteComplete;
+  if (salaireActuel <= AVS_LEGAL.ramd_min) renteComplete = AVS_LEGAL.rente_min;
+  else if (salaireActuel >= AVS_LEGAL.ramd_max) renteComplete = AVS_LEGAL.rente_max;
+  else renteComplete = AVS_LEGAL.rente_min + (salaireActuel - AVS_LEGAL.ramd_min) / (AVS_LEGAL.ramd_max - AVS_LEGAL.ramd_min) * (AVS_LEGAL.rente_max - AVS_LEGAL.rente_min);
+  const coefficient = Math.min(anneesCotisation, AVS_LEGAL.duree_cotisation_complete) / AVS_LEGAL.duree_cotisation_complete;
+  return Math.round(renteComplete * coefficient);
+}
+
+// Table officielle de fraction de rente LPP selon le degré d'invalidité (changement de méthode au 01.01.2022)
+function fractionRenteInvaliditeLPP(degre) {
+  if (degre < 40) return 0;
+  if (degre <= 49) {
+    const table = { 40:0.25, 41:0.275, 42:0.30, 43:0.325, 44:0.35, 45:0.375, 46:0.40, 47:0.425, 48:0.45, 49:0.475 };
+    return table[degre] !== undefined ? table[degre] : 0;
+  }
+  if (degre < 70) return degre / 100; // taux linéaire de manière précise
+  return 1; // dès 70% = rente entière
+}
+
 // Taux de bonification de vieillesse par tranche d'âge (art. 16 LPP, minimum légal)
 function tauxBonificationLPP(age) {
   if (age < 25) return 0;
@@ -599,9 +634,9 @@ function viewCalculateurLPP() {
   const clientOptions = allClients.map(c => `<option value="${c.id}">${c.segment === 'Entreprise' ? c.nom : c.prenom + ' ' + c.nom}</option>`).join('');
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">🧮 Calculateur de lacune de prévoyance (LPP)</h2>
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">🧮 Bilan de prévoyance — Vie · Décès · Invalidité</h2>
     </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Compare l'avoir de vieillesse théorique (parcours complet depuis 25 ans, minimum légal) à l'avoir réel du client, et projette la rente LPP à la retraite. Basé sur les paramètres légaux 2026 (inchangés depuis 2025).</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Additionne les prestations AVS + LPP projetées sur les trois risques et fait apparaître les lacunes par rapport au besoin du client. Basé sur les paramètres légaux 2026 (inchangés depuis 2025).</div>
 
     ${sectionCard('Client (optionnel — pour préremplir)', '#38bdf8', `<div class="form-grid">
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Sélectionner un client</label><select class="form-select" id="clpp-client" onchange="prefillClientLPP()"><option value="">— Simulation libre (prospect) —</option>${clientOptions}</select></div>
@@ -612,6 +647,9 @@ function viewCalculateurLPP() {
       <div class="form-field"><label class="form-label">Date de naissance *</label><input class="form-input" id="clpp-naissance" type="date"/></div>
       <div class="form-field"><label class="form-label">Âge de référence retraite</label><input class="form-input" id="clpp-age-retraite" type="number" value="65"/></div>
       <div class="form-field"><label class="form-label">Mois avant échéance l'année de la retraite</label><input class="form-input" id="clpp-mois-derniere-annee" type="number" value="6" min="0" max="12"/></div>
+      <div class="form-field"><label class="form-label">État civil</label><select class="form-select" id="clpp-etat-civil"><option value="marie">Marié(e) / partenariat enregistré</option><option value="celibataire">Célibataire / concubinage</option></select></div>
+      <div class="form-field"><label class="form-label">Nombre d'enfants à charge</label><input class="form-input" id="clpp-nb-enfants" type="number" value="0" min="0"/></div>
+      <div class="form-field"><label class="form-label">Années de cotisation AVS à ce jour</label><input class="form-input" id="clpp-annees-cotisation" type="number" placeholder="auto"/></div>
     </div>`)}
 
     ${sectionCard('Salaire et avoir actuel', '#f59e0b', `<div class="form-grid">
@@ -626,13 +664,20 @@ function viewCalculateurLPP() {
       <div class="form-field"><label class="form-label">Rachat annuel prévu (CHF, optionnel)</label><input class="form-input" id="clpp-rachat-annuel" type="number" value="0"/></div>
     </div>`)}
 
-    ${sectionCard('Objectif retraite (optionnel — règle des 90%)', '#f87171', `<div class="form-grid">
-      <div class="form-field"><label class="form-label">Rente AVS estimée à la retraite (CHF/an)</label><input class="form-input" id="clpp-rente-avs" type="number" placeholder="28680"/></div>
-      <div style="grid-column:span 2;font-size:10.5px;color:var(--text-muted);padding:4px 2px">Les rentes du 1er et 2ème pilier combinées sont plafonnées à 90% du dernier salaire présumé perdu (coordination LPP).</div>
+    ${sectionCard('Risque Décès', '#f87171', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">Besoin décès (% du salaire actuel)</label><input class="form-input" id="clpp-besoin-deces-pct" type="number" value="80"/></div>
+      <div class="form-field"><label class="form-label">OU besoin décès — montant manuel (CHF/an)</label><input class="form-input" id="clpp-besoin-deces-manuel" type="number" placeholder="laisser vide = utiliser le %"/></div>
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Capital décès LPP additionnel prévu au plan (CHF, optionnel)</label><input class="form-input" id="clpp-capital-deces" type="number" value="0"/></div>
+    </div>`)}
+
+    ${sectionCard('Risque Invalidité', '#fb923c', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">Degré d'invalidité à simuler (%)</label><input class="form-input" id="clpp-degre-invalidite" type="number" value="100" min="0" max="100"/></div>
+      <div class="form-field"><label class="form-label">Besoin invalidité (% du salaire actuel)</label><input class="form-input" id="clpp-besoin-invalidite-pct" type="number" value="80"/></div>
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">OU besoin invalidité — montant manuel (CHF/an)</label><input class="form-input" id="clpp-besoin-invalidite-manuel" type="number" placeholder="laisser vide = utiliser le %"/></div>
     </div>`)}
 
     <div style="display:flex;gap:10px;margin:18px 0">
-      <button class="btn-save" onclick="calculerEtAfficherLPP()">🧮 Calculer</button>
+      <button class="btn-save" onclick="calculerEtAfficherLPP()">🧮 Calculer le bilan</button>
     </div>
 
     <div id="clpp-resultats"></div>
@@ -677,7 +722,13 @@ function calculerEtAfficherLPP() {
   const tauxInteret = (parseFloat(document.getElementById('clpp-taux-interet').value) || 1.25) / 100;
   const tauxConversion = (parseFloat(document.getElementById('clpp-taux-conversion').value) || 6.8) / 100;
   const rachatAnnuel = parseFloat(document.getElementById('clpp-rachat-annuel').value) || 0;
-  const renteAVS = parseFloat(document.getElementById('clpp-rente-avs').value) || 0;
+  const nbEnfants = parseInt(document.getElementById('clpp-nb-enfants').value) || 0;
+  const capitalDecesLPP = parseFloat(document.getElementById('clpp-capital-deces').value) || 0;
+  const degreInvalidite = Math.min(100, Math.max(0, parseInt(document.getElementById('clpp-degre-invalidite').value) || 0));
+  const besoinDecesPct = parseFloat(document.getElementById('clpp-besoin-deces-pct').value) || 80;
+  const besoinDecesManuel = parseFloat(document.getElementById('clpp-besoin-deces-manuel').value) || 0;
+  const besoinInvaliditePct = parseFloat(document.getElementById('clpp-besoin-invalidite-pct').value) || 80;
+  const besoinInvaliditeManuel = parseFloat(document.getElementById('clpp-besoin-invalidite-manuel').value) || 0;
 
   const salaireCoordonne = calculerSalaireCoordonneLPP(salaireAVS);
   const ageActuel = ageAujourdhui(naissance);
@@ -685,40 +736,67 @@ function calculerEtAfficherLPP() {
   if (ageActuel >= ageRetraite) { showError('L\'âge actuel dépasse déjà l\'âge de référence de la retraite.'); return; }
   if (ageActuel < 25) { showError('Le calculateur suppose une affiliation dès 25 ans (bonifications de vieillesse) — âge actuel trop bas pour le parcours théorique.'); return; }
 
-  // Parcours théorique : depuis 25 ans, capital = 0, sans rachat (référence légale minimale)
+  const anneesCotisationSaisies = parseInt(document.getElementById('clpp-annees-cotisation').value);
+  const anneesCotisationActuel = !isNaN(anneesCotisationSaisies) ? anneesCotisationSaisies : Math.max(0, ageActuel - 20);
+  const anneesCotisationRetraite = Math.min(44, Math.max(0, ageRetraite - 20));
+
+  // ═══ RISQUE VIE (retraite) ═══
   const theorique = simulerParcoursLPP({ salaireCoordonne, capitalDepart: 0, ageDepart: 25, ageRetraite, moisDerniereAnnee, tauxInteret, rachatAnnuel: 0 });
   const ligneTheoriqueActuelle = theorique.lignes.find(l => l.age === ageActuel - 1) || theorique.lignes[theorique.lignes.length - 1];
   const avoirTheoriqueActuel = ligneTheoriqueActuelle ? ligneTheoriqueActuelle.etatFin : 0;
-
-  // Parcours réel projeté : depuis aujourd'hui, capital = avoir réel actuel
   const reel = simulerParcoursLPP({ salaireCoordonne, capitalDepart: avoirActuel, ageDepart: ageActuel, ageRetraite, moisDerniereAnnee, tauxInteret, rachatAnnuel });
   const capitalProjete = reel.capitalFinal;
-  const renteAnnuelleProjetee = Math.round(capitalProjete * tauxConversion);
-  const renteMensuelleProjetee = Math.round(renteAnnuelleProjetee / 12);
+  const renteVieillesseLPP = Math.round(capitalProjete * tauxConversion);
+  const lacuneCapital = Math.round(avoirTheoriqueActuel - avoirActuel);
+  const renteVieillesseAVS = estimerRenteAVS(salaireAVS, anneesCotisationRetraite);
+  const objectif90 = Math.round(salaireAVS * 0.9);
+  const renteCombineeVie = renteVieillesseAVS + renteVieillesseLPP;
+  const lacuneRenteVie = objectif90 - renteCombineeVie;
 
-  const lacune = Math.round(avoirTheoriqueActuel - avoirActuel);
+  // ═══ RISQUE DÉCÈS ═══
+  // Rente d'invalidité entière LPP théorique (base de calcul des rentes de survivants, avant application du degré)
+  let bonificationsFutures = 0;
+  for (let age = ageActuel; age < ageRetraite; age++) bonificationsFutures += salaireCoordonne * tauxBonificationLPP(age);
+  const avoirPrevisionnelLPP = avoirActuel + bonificationsFutures;
+  const renteInvaliditeEntiereLPP = Math.round(avoirPrevisionnelLPP * tauxConversion);
 
-  let objectifHtml = '';
-  if (renteAVS > 0) {
-    const objectif90 = Math.round(salaireAVS * 0.9);
-    const renteCombinee = renteAVS + renteAnnuelleProjetee;
-    const lacuneRente = objectif90 - renteCombinee;
-    objectifHtml = `
-      ${sectionCard('Objectif retraite (règle des 90%)', '#f87171', `
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
-          <div><div style="font-size:11px;color:var(--text-muted)">Objectif (90% du salaire actuel)</div><div style="font-size:18px;font-weight:800;color:var(--text)">CHF ${objectif90.toLocaleString()}/an</div></div>
-          <div><div style="font-size:11px;color:var(--text-muted)">Rente AVS + LPP projetées</div><div style="font-size:18px;font-weight:800;color:var(--text)">CHF ${renteCombinee.toLocaleString()}/an</div></div>
-        </div>
-        <div style="margin-top:12px;padding:12px 14px;border-radius:9px;background:${lacuneRente > 0 ? 'var(--red-dim)' : 'rgba(74,222,128,0.12)'}">
-          ${lacuneRente > 0
-            ? `<strong style="color:#f87171">Lacune de rente estimée : CHF ${lacuneRente.toLocaleString()}/an</strong> (CHF ${Math.round(lacuneRente/12).toLocaleString()}/mois) — à combler via le 3ème pilier ou des rachats LPP supplémentaires.`
-            : `<strong style="color:#4ade80">Objectif atteint</strong> — les rentes projetées couvrent le seuil des 90% du dernier salaire.`}
-        </div>
-      `)}
-    `;
-  }
+  const renteAVSEntiereActuelle = estimerRenteAVS(salaireAVS, anneesCotisationActuel);
+  const renteVeuvageAVS = Math.round(renteAVSEntiereActuelle * AVS_LEGAL.taux_veuvage);
+  const renteOrphelinAVS = Math.round(renteAVSEntiereActuelle * AVS_LEGAL.taux_orphelin) * nbEnfants;
+  const renteConjointLPP = Math.round(renteInvaliditeEntiereLPP * 0.60);
+  const renteOrphelinLPP = Math.round(renteInvaliditeEntiereLPP * 0.20) * nbEnfants;
+  const totalRenteDeces = renteVeuvageAVS + renteOrphelinAVS + renteConjointLPP + renteOrphelinLPP;
+  const besoinDeces = besoinDecesManuel > 0 ? besoinDecesManuel : Math.round(salaireAVS * besoinDecesPct / 100);
+  const lacuneDeces = besoinDeces - totalRenteDeces;
 
-  const tableRows = (lignes, label) => lignes.map(l => `
+  // ═══ RISQUE INVALIDITÉ ═══
+  const fractionLPP = fractionRenteInvaliditeLPP(degreInvalidite);
+  const renteInvaliditeLPP = Math.round(renteInvaliditeEntiereLPP * fractionLPP);
+  const renteEnfantInvaliditeLPP = Math.round(renteInvaliditeLPP * 0.20) * nbEnfants;
+  const renteInvaliditeAVS = degreInvalidite >= 70 ? renteAVSEntiereActuelle
+    : degreInvalidite >= 50 ? Math.round(renteAVSEntiereActuelle * degreInvalidite / 100)
+    : degreInvalidite >= 40 ? Math.round(renteAVSEntiereActuelle * fractionRenteInvaliditeLPP(degreInvalidite))
+    : 0;
+  const renteEnfantInvaliditeAVS = degreInvalidite >= 40 ? Math.round(renteInvaliditeAVS * AVS_LEGAL.taux_orphelin) * nbEnfants : 0;
+  const totalRenteInvalidite = renteInvaliditeAVS + renteEnfantInvaliditeAVS + renteInvaliditeLPP + renteEnfantInvaliditeLPP;
+  const besoinInvalidite = besoinInvaliditeManuel > 0 ? besoinInvaliditeManuel : Math.round(salaireAVS * besoinInvaliditePct / 100);
+  const lacuneInvalidite = besoinInvalidite - totalRenteInvalidite;
+
+  const blocRisque = (titre, couleur, lignes, besoin, total, lacune, note) => sectionCard(titre, couleur, `
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:12px">
+      ${lignes.map(l => `<tr><td style="padding:4px 0;color:var(--text-muted)">${l.label}</td><td style="padding:4px 0;text-align:right;font-weight:700;color:var(--text)">CHF ${Math.round(l.montant).toLocaleString()}/an</td></tr>`).join('')}
+      <tr style="border-top:1px solid var(--border)"><td style="padding:6px 0;font-weight:800">Total prestations projetées</td><td style="padding:6px 0;text-align:right;font-weight:800;color:${couleur}">CHF ${Math.round(total).toLocaleString()}/an</td></tr>
+    </table>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:10px">
+      <div><div style="font-size:11px;color:var(--text-muted)">Besoin estimé</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${besoin.toLocaleString()}/an</div></div>
+      <div><div style="font-size:11px;color:var(--text-muted)">Lacune</div><div style="font-size:16px;font-weight:800;color:${lacune > 0 ? '#f87171' : '#4ade80'}">CHF ${Math.round(lacune).toLocaleString()}/an</div></div>
+    </div>
+    ${lacune > 0
+      ? `<div style="padding:10px 14px;border-radius:9px;background:var(--red-dim);font-size:12px;color:#f87171"><strong>Lacune identifiée : CHF ${Math.round(lacune).toLocaleString()}/an</strong> (CHF ${Math.round(lacune/12).toLocaleString()}/mois)${note ? ' — ' + note : ''}</div>`
+      : `<div style="padding:10px 14px;border-radius:9px;background:rgba(74,222,128,0.12);font-size:12px;color:#4ade80"><strong>Besoin couvert</strong> par les prestations projetées.</div>`}
+  `);
+
+  const tableRows = (lignes) => lignes.map(l => `
     <tr style="border-top:1px solid var(--border)">
       <td style="padding:5px 8px">${l.age}</td>
       <td style="padding:5px 8px;text-align:right">CHF ${Math.round(l.etatDebut).toLocaleString()}</td>
@@ -728,22 +806,45 @@ function calculerEtAfficherLPP() {
     </tr>`).join('');
 
   zone.innerHTML = `
-    ${sectionCard('Résultats', '#38bdf8', `
+    ${sectionCard('Risque VIE (retraite)', '#38bdf8', `
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
-        <div><div style="font-size:11px;color:var(--text-muted)">Avoir théorique à ${ageActuel} ans (minimum légal depuis 25 ans)</div><div style="font-size:18px;font-weight:800;color:var(--text)">CHF ${Math.round(avoirTheoriqueActuel).toLocaleString()}</div></div>
-        <div><div style="font-size:11px;color:var(--text-muted)">Avoir réel actuel (certificat)</div><div style="font-size:18px;font-weight:800;color:var(--text)">CHF ${avoirActuel.toLocaleString()}</div></div>
-        <div><div style="font-size:11px;color:var(--text-muted)">Lacune de prévoyance actuelle</div><div style="font-size:18px;font-weight:800;color:${lacune > 0 ? '#f87171' : '#4ade80'}">CHF ${lacune.toLocaleString()}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted)">Avoir théorique à ${ageActuel} ans</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${Math.round(avoirTheoriqueActuel).toLocaleString()}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted)">Avoir réel actuel</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${avoirActuel.toLocaleString()}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted)">Lacune de capital</div><div style="font-size:16px;font-weight:800;color:${lacuneCapital > 0 ? '#f87171' : '#4ade80'}">CHF ${lacuneCapital.toLocaleString()}</div></div>
       </div>
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px">${lacune > 0 ? `Potentiel de rachat estimé : CHF ${lacune.toLocaleString()} (déductible du revenu imposable, sous réserve du potentiel réel indiqué sur le certificat de prévoyance).` : `Le client est au-dessus du minimum légal théorique — probablement grâce à un plan de prévoyance surobligatoire (caisse enveloppante).`}</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding-top:14px;border-top:1px solid var(--border)">
-        <div><div style="font-size:11px;color:var(--text-muted)">Capital LPP projeté à la retraite (${ageRetraite} ans)</div><div style="font-size:20px;font-weight:900;color:#f59e0b">CHF ${Math.round(capitalProjete).toLocaleString()}</div></div>
-        <div><div style="font-size:11px;color:var(--text-muted)">Rente LPP annuelle projetée</div><div style="font-size:20px;font-weight:900;color:#f59e0b">CHF ${renteAnnuelleProjetee.toLocaleString()}/an <span style="font-size:12px;color:var(--text-muted);font-weight:400">(CHF ${renteMensuelleProjetee.toLocaleString()}/mois)</span></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:12px 0;border-top:1px solid var(--border);border-bottom:1px solid var(--border);margin-bottom:12px">
+        <div><div style="font-size:11px;color:var(--text-muted)">Capital LPP projeté à ${ageRetraite} ans</div><div style="font-size:18px;font-weight:900;color:#f59e0b">CHF ${Math.round(capitalProjete).toLocaleString()}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted)">Rente LPP annuelle projetée</div><div style="font-size:18px;font-weight:900;color:#f59e0b">CHF ${renteVieillesseLPP.toLocaleString()}/an</div></div>
       </div>
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:12px">
+        <tr><td style="padding:4px 0;color:var(--text-muted)">Rente AVS vieillesse estimée (échelle 44, approximation)</td><td style="padding:4px 0;text-align:right;font-weight:700">CHF ${renteVieillesseAVS.toLocaleString()}/an</td></tr>
+        <tr><td style="padding:4px 0;color:var(--text-muted)">Rente LPP vieillesse projetée</td><td style="padding:4px 0;text-align:right;font-weight:700">CHF ${renteVieillesseLPP.toLocaleString()}/an</td></tr>
+        <tr style="border-top:1px solid var(--border)"><td style="padding:6px 0;font-weight:800">Total rentes projetées</td><td style="padding:6px 0;text-align:right;font-weight:800;color:#38bdf8">CHF ${renteCombineeVie.toLocaleString()}/an</td></tr>
+      </table>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:10px">
+        <div><div style="font-size:11px;color:var(--text-muted)">Objectif (90% du salaire actuel)</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${objectif90.toLocaleString()}/an</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted)">Lacune de rente</div><div style="font-size:16px;font-weight:800;color:${lacuneRenteVie > 0 ? '#f87171' : '#4ade80'}">CHF ${Math.round(lacuneRenteVie).toLocaleString()}/an</div></div>
+      </div>
+      ${lacuneRenteVie > 0
+        ? `<div style="padding:10px 14px;border-radius:9px;background:var(--red-dim);font-size:12px;color:#f87171"><strong>Lacune de rente : CHF ${Math.round(lacuneRenteVie).toLocaleString()}/an</strong> — à combler via 3ème pilier ou rachats LPP.</div>`
+        : `<div style="padding:10px 14px;border-radius:9px;background:rgba(74,222,128,0.12);font-size:12px;color:#4ade80"><strong>Objectif de rente atteint.</strong></div>`}
     `)}
 
-    ${objectifHtml}
+    ${blocRisque('Risque DÉCÈS', '#f87171', [
+      { label: `Rente de veuve/veuf AVS (80% base, estimation)`, montant: renteVeuvageAVS },
+      { label: `Rente(s) d'orphelin AVS (40% × ${nbEnfants} enfant(s))`, montant: renteOrphelinAVS },
+      { label: `Rente de conjoint LPP (60% de la rente d'invalidité entière)`, montant: renteConjointLPP },
+      { label: `Rente(s) d'orphelin LPP (20% × ${nbEnfants} enfant(s))`, montant: renteOrphelinLPP },
+    ], besoinDeces, totalRenteDeces, lacuneDeces, capitalDecesLPP > 0 ? `un capital décès additionnel de CHF ${capitalDecesLPP.toLocaleString()} est prévu au plan (non inclus dans la rente ci-dessus)` : '')}
 
-    ${sectionCard('Détail du parcours réel projeté (année par année)', '#a78bfa', `
+    ${blocRisque(`Risque INVALIDITÉ (degré simulé : ${degreInvalidite}%)`, '#fb923c', [
+      { label: `Rente d'invalidité AVS`, montant: renteInvaliditeAVS },
+      { label: `Rente(s) pour enfant d'invalide AVS`, montant: renteEnfantInvaliditeAVS },
+      { label: `Rente d'invalidité LPP (fraction ${Math.round(fractionLPP*100)}%)`, montant: renteInvaliditeLPP },
+      { label: `Rente(s) pour enfant d'invalide LPP`, montant: renteEnfantInvaliditeLPP },
+    ], besoinInvalidite, totalRenteInvalidite, lacuneInvalidite)}
+
+    ${sectionCard('Détail du parcours LPP réel projeté (année par année, jusqu\'à la retraite)', '#a78bfa', `
       <div style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:10px">
         <table style="width:100%;border-collapse:collapse;font-size:12px">
           <thead style="position:sticky;top:0;background:var(--surface)"><tr style="color:var(--text-muted);font-size:10px;text-transform:uppercase">
@@ -756,12 +857,20 @@ function calculerEtAfficherLPP() {
       </div>
     `)}
 
-    <div style="display:flex;gap:10px;margin-top:16px">
+    <div style="font-size:10.5px;color:var(--text-muted);margin:10px 0">⚠️ Les rentes AVS sont estimées par interpolation linéaire (RAMD ≈ salaire actuel) — approximation de branche, ne remplace pas l'extrait de compte individuel AVS officiel du client. Les taux LPP de conjoint/orphelin/invalidité correspondent au minimum légal LPP ; un plan surobligatoire peut prévoir mieux.</div>
+
+    <div style="display:flex;gap:10px;margin-top:10px">
       <button class="btn-secondary" onclick="imprimerResultatLPP()">🖨️ Imprimer / PDF</button>
     </div>
   `;
 
-  window._lppDernierResultat = { naissance, salaireAVS, salaireCoordonne, avoirActuel, ageActuel, ageRetraite, avoirTheoriqueActuel, lacune, capitalProjete, renteAnnuelleProjetee, renteMensuelleProjetee, tauxInteret, tauxConversion, lignesReel: reel.lignes };
+  window._lppDernierResultat = {
+    naissance, salaireAVS, salaireCoordonne, avoirActuel, ageActuel, ageRetraite,
+    avoirTheoriqueActuel, lacuneCapital, capitalProjete, renteVieillesseLPP, renteVieillesseAVS, objectif90, renteCombineeVie, lacuneRenteVie,
+    renteVeuvageAVS, renteOrphelinAVS, renteConjointLPP, renteOrphelinLPP, totalRenteDeces, besoinDeces, lacuneDeces, capitalDecesLPP,
+    degreInvalidite, renteInvaliditeAVS, renteEnfantInvaliditeAVS, renteInvaliditeLPP, renteEnfantInvaliditeLPP, totalRenteInvalidite, besoinInvalidite, lacuneInvalidite,
+    lignesReel: reel.lignes,
+  };
 }
 
 function imprimerResultatLPP() {
@@ -771,22 +880,46 @@ function imprimerResultatLPP() {
   const win = window.open('', '_blank');
   const rows = r.lignesReel.map(l => `
     <tr><td>${l.age}</td><td style="text-align:right">CHF ${Math.round(l.etatDebut).toLocaleString()}</td><td style="text-align:right">CHF ${Math.round(l.interet).toLocaleString()}</td><td style="text-align:right">CHF ${Math.round(l.bonification).toLocaleString()}</td><td style="text-align:right;font-weight:700">CHF ${Math.round(l.etatFin).toLocaleString()}</td></tr>`).join('');
-  win.document.write(`<html><head><title>Calcul de lacune LPP — ${nom}</title><style>
+  win.document.write(`<html><head><title>Bilan de prévoyance — ${nom}</title><style>
     body{font-family:Arial,sans-serif;padding:30px;color:#0f2244}
     h1{font-size:18px;border-bottom:2px solid #0f2244;padding-bottom:8px}
-    table{width:100%;border-collapse:collapse;margin-top:14px;font-size:12px}
+    h2{font-size:14px;color:#0f2244;margin-top:26px;border-bottom:1px solid #ddd;padding-bottom:4px}
+    table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}
     th,td{padding:6px 8px;border-bottom:1px solid #ddd}
     th{background:#f2f5fa;text-align:left}
     .stat{display:inline-block;margin-right:30px;margin-bottom:14px}
     .stat b{display:block;font-size:16px}
+    .lacune{color:#c0392b;font-weight:700}
   </style></head><body>
-    <h1>Calcul de lacune de prévoyance LPP — ${nom}</h1>
-    <div class="stat">Avoir théorique actuel<b>CHF ${Math.round(r.avoirTheoriqueActuel).toLocaleString()}</b></div>
-    <div class="stat">Avoir réel actuel<b>CHF ${r.avoirActuel.toLocaleString()}</b></div>
-    <div class="stat">Lacune de prévoyance<b>CHF ${r.lacune.toLocaleString()}</b></div>
+    <h1>Bilan de prévoyance — ${nom}</h1>
+
+    <h2>Vie (retraite)</h2>
     <div class="stat">Capital projeté à la retraite<b>CHF ${Math.round(r.capitalProjete).toLocaleString()}</b></div>
-    <div class="stat">Rente LPP annuelle projetée<b>CHF ${r.renteAnnuelleProjetee.toLocaleString()}</b></div>
+    <div class="stat">Rente LPP projetée<b>CHF ${r.renteVieillesseLPP.toLocaleString()}/an</b></div>
+    <div class="stat">Rente AVS estimée<b>CHF ${r.renteVieillesseAVS.toLocaleString()}/an</b></div>
+    <div class="stat">Lacune de rente (objectif 90%)<b class="${r.lacuneRenteVie>0?'lacune':''}">CHF ${Math.round(r.lacuneRenteVie).toLocaleString()}/an</b></div>
+
+    <h2>Décès</h2>
+    <div class="stat">Rente veuve/veuf AVS<b>CHF ${r.renteVeuvageAVS.toLocaleString()}/an</b></div>
+    <div class="stat">Rente(s) orphelin AVS<b>CHF ${r.renteOrphelinAVS.toLocaleString()}/an</b></div>
+    <div class="stat">Rente conjoint LPP<b>CHF ${r.renteConjointLPP.toLocaleString()}/an</b></div>
+    <div class="stat">Rente(s) orphelin LPP<b>CHF ${r.renteOrphelinLPP.toLocaleString()}/an</b></div>
+    <div class="stat">Besoin estimé<b>CHF ${r.besoinDeces.toLocaleString()}/an</b></div>
+    <div class="stat">Lacune<b class="${r.lacuneDeces>0?'lacune':''}">CHF ${Math.round(r.lacuneDeces).toLocaleString()}/an</b></div>
+    ${r.capitalDecesLPP > 0 ? `<div class="stat">Capital décès LPP additionnel<b>CHF ${r.capitalDecesLPP.toLocaleString()}</b></div>` : ''}
+
+    <h2>Invalidité (degré simulé : ${r.degreInvalidite}%)</h2>
+    <div class="stat">Rente invalidité AVS<b>CHF ${r.renteInvaliditeAVS.toLocaleString()}/an</b></div>
+    <div class="stat">Rente(s) enfant AVS<b>CHF ${r.renteEnfantInvaliditeAVS.toLocaleString()}/an</b></div>
+    <div class="stat">Rente invalidité LPP<b>CHF ${r.renteInvaliditeLPP.toLocaleString()}/an</b></div>
+    <div class="stat">Rente(s) enfant LPP<b>CHF ${r.renteEnfantInvaliditeLPP.toLocaleString()}/an</b></div>
+    <div class="stat">Besoin estimé<b>CHF ${r.besoinInvalidite.toLocaleString()}/an</b></div>
+    <div class="stat">Lacune<b class="${r.lacuneInvalidite>0?'lacune':''}">CHF ${Math.round(r.lacuneInvalidite).toLocaleString()}/an</b></div>
+
+    <h2>Détail du parcours LPP (année par année)</h2>
     <table><thead><tr><th>Âge</th><th>État 01.01</th><th>Intérêts</th><th>Bonification</th><th>État 31.12</th></tr></thead><tbody>${rows}</tbody></table>
+
+    <p style="font-size:10px;color:#888;margin-top:20px">Rentes AVS estimées par interpolation linéaire (approximation) — ne remplace pas l'extrait de compte individuel AVS officiel.</p>
     <button onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#0f2244;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Imprimer / Enregistrer en PDF</button>
   </body></html>`);
   win.document.close();
@@ -1595,7 +1728,7 @@ const SECTIONS = [
     { id: 'suivi', label: 'Suivi des affaires' },
     { id: 'nouveau-contrat-direct', label: 'Nouveau contrat' },
     { id: 'nouvelle-demande-offre', label: 'Demande d\'offre' },
-    { id: 'calc-lpp', label: '🧮 Calculateur LPP' },
+    { id: 'calc-lpp', label: '🧮 Bilan de prévoyance' },
     { id: 'rappels', label: 'Tâches & Rappels' },
     { id: 'agenda', label: 'Agenda' },
     { id: 'campagnes', label: 'Campagnes' },

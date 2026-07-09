@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-09 17:30</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-09 18:15</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -676,12 +676,64 @@ function viewCalculateurLPP() {
       <div class="form-field" style="grid-column:span 2"><label class="form-label">OU besoin invalidité — montant manuel (CHF/an)</label><input class="form-input" id="clpp-besoin-invalidite-manuel" type="number" placeholder="laisser vide = utiliser le %"/></div>
     </div>`)}
 
+    ${sectionCard('Plan LPP surobligatoire (caisse enveloppante)', '#a78bfa', `
+      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:10px">
+        <input type="checkbox" id="clpp-surobligatoire" onchange="toggleSurobligatoire()" style="width:16px;height:16px;cursor:pointer"/>
+        <span style="font-size:12.5px;color:var(--text)">Ce plan prévoit de meilleures prestations que le minimum légal LPP</span>
+      </label>
+      <div id="clpp-surobligatoire-zone" style="display:none">
+        <div style="font-size:10.5px;color:var(--text-muted);margin-bottom:10px">Par défaut, les calculs utilisent le minimum légal LPP (60% conjoint, 20% orphelin/enfant par enfant). Ajuste ici selon le règlement du plan si le client bénéficie d'une caisse enveloppante.</div>
+        <div class="form-grid">
+          <div class="form-field"><label class="form-label">Rente de conjoint LPP (% de la rente d'invalidité entière)</label><input class="form-input" id="clpp-pct-conjoint" type="number" value="60"/></div>
+          <div class="form-field"><label class="form-label">Rente d'orphelin LPP décès (% par enfant)</label><input class="form-input" id="clpp-pct-orphelin" type="number" value="20"/></div>
+          <div class="form-field"><label class="form-label">Rente enfant d'invalide LPP (% par enfant)</label><input class="form-input" id="clpp-pct-enfant-invalidite" type="number" value="20"/></div>
+        </div>
+      </div>
+    `)}
+
     <div style="display:flex;gap:10px;margin:18px 0">
       <button class="btn-save" onclick="calculerEtAfficherLPP()">🧮 Calculer le bilan</button>
     </div>
 
     <div id="clpp-resultats"></div>
   `;
+}
+
+// Génère un diagramme bâton SVG (barres + ligne de référence "besoin"), sans dépendance externe.
+// couleurs = { texte, muted, bordure } pour s'adapter au thème CRM (sombre) ou à l'impression (clair).
+function svgBarChartAvecCible(items, cible, cibleLabel, couleurs) {
+  const c = couleurs || { texte: '#e2e8f0', muted: '#64748b', bordure: '#2a3550' };
+  const width = 620, height = 260, padding = 46;
+  const maxVal = Math.max(...items.map(i => i.value), cible || 0, 1) * 1.18;
+  const zoneH = height - padding - 30;
+  const n = items.length;
+  const barGap = 16;
+  const barWidth = Math.max(28, (width - padding * 2 - barGap * (n - 1)) / n);
+  let bars = '';
+  items.forEach((it, i) => {
+    const barHeight = Math.max(2, (it.value / maxVal) * zoneH);
+    const x = padding + i * (barWidth + barGap);
+    const y = height - padding - barHeight;
+    bars += `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barWidth.toFixed(1)}" height="${barHeight.toFixed(1)}" fill="${it.color}" rx="4"/>`;
+    bars += `<text x="${(x + barWidth / 2).toFixed(1)}" y="${(y - 6).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="700" fill="${c.texte}">${Math.round(it.value).toLocaleString()}</text>`;
+    const mots = it.label.split(' ');
+    const mi = Math.ceil(mots.length / 2);
+    const ligne1 = mots.slice(0, mi).join(' ');
+    const ligne2 = mots.slice(mi).join(' ');
+    bars += `<text x="${(x + barWidth / 2).toFixed(1)}" y="${height - padding + 14}" text-anchor="middle" font-size="9" fill="${c.muted}">${ligne1}</text>`;
+    if (ligne2) bars += `<text x="${(x + barWidth / 2).toFixed(1)}" y="${height - padding + 25}" text-anchor="middle" font-size="9" fill="${c.muted}">${ligne2}</text>`;
+  });
+  let ligneCible = '';
+  if (cible > 0) {
+    const yCible = height - padding - (cible / maxVal) * zoneH;
+    ligneCible = `<line x1="${padding - 6}" y1="${yCible.toFixed(1)}" x2="${width - padding + 6}" y2="${yCible.toFixed(1)}" stroke="#f87171" stroke-width="1.5" stroke-dasharray="5,4"/>
+      <text x="${width - padding + 6}" y="${(yCible - 5).toFixed(1)}" font-size="9.5" fill="#f87171" text-anchor="end" font-weight="700">${cibleLabel || 'Besoin'} : CHF ${Math.round(cible).toLocaleString()}</text>`;
+  }
+  return `<svg viewBox="0 0 ${width} ${height}" style="width:100%;height:auto;max-height:280px;display:block">
+    <line x1="${padding}" y1="${height - padding}" x2="${width - padding}" y2="${height - padding}" stroke="${c.bordure}" stroke-width="1"/>
+    ${bars}
+    ${ligneCible}
+  </svg>`;
 }
 
 // Préremplit le nom et la date de naissance depuis un client existant
@@ -699,6 +751,12 @@ function updateApercuSalaireCoordonne() {
   const salaireAVS = parseFloat(document.getElementById('clpp-salaire-avs').value) || 0;
   const coordonne = calculerSalaireCoordonneLPP(salaireAVS);
   document.getElementById('clpp-salaire-coordonne').value = coordonne;
+}
+
+// Affiche/masque les champs de personnalisation du plan surobligatoire
+function toggleSurobligatoire() {
+  const zone = document.getElementById('clpp-surobligatoire-zone');
+  zone.style.display = document.getElementById('clpp-surobligatoire').checked ? 'block' : 'none';
 }
 
 function ageAujourdhui(dateNaissance) {
@@ -729,6 +787,10 @@ function calculerEtAfficherLPP() {
   const besoinDecesManuel = parseFloat(document.getElementById('clpp-besoin-deces-manuel').value) || 0;
   const besoinInvaliditePct = parseFloat(document.getElementById('clpp-besoin-invalidite-pct').value) || 80;
   const besoinInvaliditeManuel = parseFloat(document.getElementById('clpp-besoin-invalidite-manuel').value) || 0;
+  const estSurobligatoire = document.getElementById('clpp-surobligatoire').checked;
+  const pctConjoint = (estSurobligatoire ? (parseFloat(document.getElementById('clpp-pct-conjoint').value) || 60) : 60) / 100;
+  const pctOrphelin = (estSurobligatoire ? (parseFloat(document.getElementById('clpp-pct-orphelin').value) || 20) : 20) / 100;
+  const pctEnfantInvalidite = (estSurobligatoire ? (parseFloat(document.getElementById('clpp-pct-enfant-invalidite').value) || 20) : 20) / 100;
 
   const salaireCoordonne = calculerSalaireCoordonneLPP(salaireAVS);
   const ageActuel = ageAujourdhui(naissance);
@@ -763,8 +825,8 @@ function calculerEtAfficherLPP() {
   const renteAVSEntiereActuelle = estimerRenteAVS(salaireAVS, anneesCotisationActuel);
   const renteVeuvageAVS = Math.round(renteAVSEntiereActuelle * AVS_LEGAL.taux_veuvage);
   const renteOrphelinAVS = Math.round(renteAVSEntiereActuelle * AVS_LEGAL.taux_orphelin) * nbEnfants;
-  const renteConjointLPP = Math.round(renteInvaliditeEntiereLPP * 0.60);
-  const renteOrphelinLPP = Math.round(renteInvaliditeEntiereLPP * 0.20) * nbEnfants;
+  const renteConjointLPP = Math.round(renteInvaliditeEntiereLPP * pctConjoint);
+  const renteOrphelinLPP = Math.round(renteInvaliditeEntiereLPP * pctOrphelin) * nbEnfants;
   const totalRenteDeces = renteVeuvageAVS + renteOrphelinAVS + renteConjointLPP + renteOrphelinLPP;
   const besoinDeces = besoinDecesManuel > 0 ? besoinDecesManuel : Math.round(salaireAVS * besoinDecesPct / 100);
   const lacuneDeces = besoinDeces - totalRenteDeces;
@@ -772,7 +834,7 @@ function calculerEtAfficherLPP() {
   // ═══ RISQUE INVALIDITÉ ═══
   const fractionLPP = fractionRenteInvaliditeLPP(degreInvalidite);
   const renteInvaliditeLPP = Math.round(renteInvaliditeEntiereLPP * fractionLPP);
-  const renteEnfantInvaliditeLPP = Math.round(renteInvaliditeLPP * 0.20) * nbEnfants;
+  const renteEnfantInvaliditeLPP = Math.round(renteInvaliditeLPP * pctEnfantInvalidite) * nbEnfants;
   const renteInvaliditeAVS = degreInvalidite >= 70 ? renteAVSEntiereActuelle
     : degreInvalidite >= 50 ? Math.round(renteAVSEntiereActuelle * degreInvalidite / 100)
     : degreInvalidite >= 40 ? Math.round(renteAVSEntiereActuelle * fractionRenteInvaliditeLPP(degreInvalidite))
@@ -833,8 +895,8 @@ function calculerEtAfficherLPP() {
     ${blocRisque('Risque DÉCÈS', '#f87171', [
       { label: `Rente de veuve/veuf AVS (80% base, estimation)`, montant: renteVeuvageAVS },
       { label: `Rente(s) d'orphelin AVS (40% × ${nbEnfants} enfant(s))`, montant: renteOrphelinAVS },
-      { label: `Rente de conjoint LPP (60% de la rente d'invalidité entière)`, montant: renteConjointLPP },
-      { label: `Rente(s) d'orphelin LPP (20% × ${nbEnfants} enfant(s))`, montant: renteOrphelinLPP },
+      { label: `Rente de conjoint LPP (${Math.round(pctConjoint*100)}% de la rente d'invalidité entière)`, montant: renteConjointLPP },
+      { label: `Rente(s) d'orphelin LPP (${Math.round(pctOrphelin*100)}% × ${nbEnfants} enfant(s))`, montant: renteOrphelinLPP },
     ], besoinDeces, totalRenteDeces, lacuneDeces, capitalDecesLPP > 0 ? `un capital décès additionnel de CHF ${capitalDecesLPP.toLocaleString()} est prévu au plan (non inclus dans la rente ci-dessus)` : '')}
 
     ${blocRisque(`Risque INVALIDITÉ (degré simulé : ${degreInvalidite}%)`, '#fb923c', [
@@ -843,6 +905,33 @@ function calculerEtAfficherLPP() {
       { label: `Rente d'invalidité LPP (fraction ${Math.round(fractionLPP*100)}%)`, montant: renteInvaliditeLPP },
       { label: `Rente(s) pour enfant d'invalide LPP`, montant: renteEnfantInvaliditeLPP },
     ], besoinInvalidite, totalRenteInvalidite, lacuneInvalidite)}
+
+    ${sectionCard('📊 Comparatif visuel — toutes les rentes par situation', '#38bdf8', `
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px">VIE (retraite)</div>
+      <div style="margin-bottom:20px">${svgBarChartAvecCible([
+        { label: 'Rente AVS', value: renteVieillesseAVS, color: '#38bdf8' },
+        { label: 'Rente LPP', value: renteVieillesseLPP, color: '#f59e0b' },
+        { label: 'Total', value: renteCombineeVie, color: '#4ade80' },
+      ], objectif90, 'Objectif 90%')}</div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;padding-top:14px;border-top:1px solid var(--border)">DÉCÈS</div>
+      <div style="margin-bottom:20px">${svgBarChartAvecCible([
+        { label: 'Veuve/veuf AVS', value: renteVeuvageAVS, color: '#38bdf8' },
+        { label: 'Orphelin AVS', value: renteOrphelinAVS, color: '#60a5fa' },
+        { label: 'Conjoint LPP', value: renteConjointLPP, color: '#f59e0b' },
+        { label: 'Orphelin LPP', value: renteOrphelinLPP, color: '#fbbf24' },
+        { label: 'Total', value: totalRenteDeces, color: '#4ade80' },
+      ], besoinDeces, 'Besoin')}</div>
+
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);margin-bottom:6px;padding-top:14px;border-top:1px solid var(--border)">INVALIDITÉ</div>
+      <div>${svgBarChartAvecCible([
+        { label: 'Invalidité AVS', value: renteInvaliditeAVS, color: '#38bdf8' },
+        { label: 'Enfant AVS', value: renteEnfantInvaliditeAVS, color: '#60a5fa' },
+        { label: 'Invalidité LPP', value: renteInvaliditeLPP, color: '#f59e0b' },
+        { label: 'Enfant LPP', value: renteEnfantInvaliditeLPP, color: '#fbbf24' },
+        { label: 'Total', value: totalRenteInvalidite, color: '#4ade80' },
+      ], besoinInvalidite, 'Besoin')}</div>
+    `)}
 
     ${sectionCard('Détail du parcours LPP réel projeté (année par année, jusqu\'à la retraite)', '#a78bfa', `
       <div style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:10px">
@@ -915,6 +1004,32 @@ function imprimerResultatLPP() {
     <div class="stat">Rente(s) enfant LPP<b>CHF ${r.renteEnfantInvaliditeLPP.toLocaleString()}/an</b></div>
     <div class="stat">Besoin estimé<b>CHF ${r.besoinInvalidite.toLocaleString()}/an</b></div>
     <div class="stat">Lacune<b class="${r.lacuneInvalidite>0?'lacune':''}">CHF ${Math.round(r.lacuneInvalidite).toLocaleString()}/an</b></div>
+
+    <h2>Comparatif visuel</h2>
+    <div style="font-size:11px;font-weight:700;color:#555;margin-bottom:4px">Vie (retraite)</div>
+    ${svgBarChartAvecCible([
+      { label: 'Rente AVS', value: r.renteVieillesseAVS, color: '#2563eb' },
+      { label: 'Rente LPP', value: r.renteVieillesseLPP, color: '#d97706' },
+      { label: 'Total', value: r.renteCombineeVie, color: '#16a34a' },
+    ], r.objectif90, 'Objectif 90%', { texte: '#0f2244', muted: '#666', bordure: '#ccc' })}
+
+    <div style="font-size:11px;font-weight:700;color:#555;margin:14px 0 4px">Décès</div>
+    ${svgBarChartAvecCible([
+      { label: 'Veuve/veuf AVS', value: r.renteVeuvageAVS, color: '#2563eb' },
+      { label: 'Orphelin AVS', value: r.renteOrphelinAVS, color: '#60a5fa' },
+      { label: 'Conjoint LPP', value: r.renteConjointLPP, color: '#d97706' },
+      { label: 'Orphelin LPP', value: r.renteOrphelinLPP, color: '#fbbf24' },
+      { label: 'Total', value: r.totalRenteDeces, color: '#16a34a' },
+    ], r.besoinDeces, 'Besoin', { texte: '#0f2244', muted: '#666', bordure: '#ccc' })}
+
+    <div style="font-size:11px;font-weight:700;color:#555;margin:14px 0 4px">Invalidité</div>
+    ${svgBarChartAvecCible([
+      { label: 'Invalidité AVS', value: r.renteInvaliditeAVS, color: '#2563eb' },
+      { label: 'Enfant AVS', value: r.renteEnfantInvaliditeAVS, color: '#60a5fa' },
+      { label: 'Invalidité LPP', value: r.renteInvaliditeLPP, color: '#d97706' },
+      { label: 'Enfant LPP', value: r.renteEnfantInvaliditeLPP, color: '#fbbf24' },
+      { label: 'Total', value: r.totalRenteInvalidite, color: '#16a34a' },
+    ], r.besoinInvalidite, 'Besoin', { texte: '#0f2244', muted: '#666', bordure: '#ccc' })}
 
     <h2>Détail du parcours LPP (année par année)</h2>
     <table><thead><tr><th>Âge</th><th>État 01.01</th><th>Intérêts</th><th>Bonification</th><th>État 31.12</th></tr></thead><tbody>${rows}</tbody></table>

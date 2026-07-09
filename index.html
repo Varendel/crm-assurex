@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-09 18:15</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-09 20:15</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -642,14 +642,26 @@ function viewCalculateurLPP() {
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Sélectionner un client</label><select class="form-select" id="clpp-client" onchange="prefillClientLPP()"><option value="">— Simulation libre (prospect) —</option>${clientOptions}</select></div>
     </div>`)}
 
+    ${sectionCard('Coordonnées (pour l\'en-tête du document imprimé)', '#38bdf8', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">Adresse</label><input class="form-input" id="clpp-adresse" placeholder="Rue des Alpes 12"/></div>
+      <div class="form-field"><label class="form-label">NPA / Ville</label><input class="form-input" id="clpp-npa-ville" placeholder="1000 Lausanne"/></div>
+      <div class="form-field"><label class="form-label">Téléphone</label><input class="form-input" id="clpp-telephone" placeholder="079 123 45 67"/></div>
+      <div class="form-field"><label class="form-label">Email</label><input class="form-input" id="clpp-email" placeholder="jean.dupont@email.ch"/></div>
+    </div>`)}
+
     ${sectionCard('Situation personnelle', '#a78bfa', `<div class="form-grid">
       <div class="form-field"><label class="form-label">Nom (prospect ou client)</label><input class="form-input" id="clpp-nom" placeholder="Jean Dupont"/></div>
       <div class="form-field"><label class="form-label">Date de naissance *</label><input class="form-input" id="clpp-naissance" type="date"/></div>
       <div class="form-field"><label class="form-label">Âge de référence retraite</label><input class="form-input" id="clpp-age-retraite" type="number" value="65"/></div>
       <div class="form-field"><label class="form-label">Mois avant échéance l'année de la retraite</label><input class="form-input" id="clpp-mois-derniere-annee" type="number" value="6" min="0" max="12"/></div>
       <div class="form-field"><label class="form-label">État civil</label><select class="form-select" id="clpp-etat-civil"><option value="marie">Marié(e) / partenariat enregistré</option><option value="celibataire">Célibataire / concubinage</option></select></div>
-      <div class="form-field"><label class="form-label">Nombre d'enfants à charge</label><input class="form-input" id="clpp-nb-enfants" type="number" value="0" min="0"/></div>
       <div class="form-field"><label class="form-label">Années de cotisation AVS à ce jour</label><input class="form-input" id="clpp-annees-cotisation" type="number" placeholder="auto"/></div>
+    </div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+      <label class="form-label" style="margin-bottom:8px;display:block">Enfants à charge</label>
+      <div id="clpp-enfants-list" style="margin-bottom:10px"></div>
+      <button type="button" class="btn-secondary" onclick="ajouterEnfantLPP()">+ Ajouter un enfant</button>
+      <div style="font-size:10.5px;color:var(--text-muted);margin-top:6px">La rente pour enfant est versée jusqu'à 18 ans, ou jusqu'à 25 ans si l'enfant poursuit des études — coche la case correspondante pour chaque enfant concerné.</div>
     </div>`)}
 
     ${sectionCard('Salaire et avoir actuel', '#f59e0b', `<div class="form-grid">
@@ -739,11 +751,17 @@ function svgBarChartAvecCible(items, cible, cibleLabel, couleurs) {
 // Préremplit le nom et la date de naissance depuis un client existant
 function prefillClientLPP() {
   const clientId = document.getElementById('clpp-client').value;
+  window._clppClientSelectionne = null;
   if (!clientId) return;
   const c = allClients.find(x => x.id === clientId);
   if (!c) return;
+  window._clppClientSelectionne = c;
   document.getElementById('clpp-nom').value = c.segment === 'Entreprise' ? c.nom : `${c.prenom} ${c.nom}`;
   if (c.date_naissance) document.getElementById('clpp-naissance').value = c.date_naissance;
+  document.getElementById('clpp-adresse').value = c.adresse || '';
+  document.getElementById('clpp-npa-ville').value = [c.npa, c.ville].filter(Boolean).join(' ');
+  document.getElementById('clpp-telephone').value = c.mobile || c.telephone || '';
+  document.getElementById('clpp-email').value = c.email || '';
 }
 
 // Met à jour l'aperçu du salaire coordonné en direct pendant la saisie
@@ -751,6 +769,49 @@ function updateApercuSalaireCoordonne() {
   const salaireAVS = parseFloat(document.getElementById('clpp-salaire-avs').value) || 0;
   const coordonne = calculerSalaireCoordonneLPP(salaireAVS);
   document.getElementById('clpp-salaire-coordonne').value = coordonne;
+}
+
+// ═══ ENFANTS À CHARGE (calculateur LPP) — gestion dynamique en mémoire ═══
+let enfantsLPPTemp = [];
+
+function ajouterEnfantLPP() {
+  enfantsLPPTemp.push({ naissance: '', etudes: false });
+  renderEnfantsLPP();
+}
+
+function retirerEnfantLPP(idx) {
+  enfantsLPPTemp.splice(idx, 1);
+  renderEnfantsLPP();
+}
+
+function updateEnfantLPP(idx, field, value) {
+  if (!enfantsLPPTemp[idx]) return;
+  enfantsLPPTemp[idx][field] = value;
+}
+
+function renderEnfantsLPP() {
+  const zone = document.getElementById('clpp-enfants-list');
+  if (!zone) return;
+  zone.innerHTML = enfantsLPPTemp.map((e, i) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:6px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:11px;color:var(--text-muted);width:60px">Enfant ${i + 1}</span>
+      <input class="form-input" type="date" value="${e.naissance}" onchange="updateEnfantLPP(${i}, 'naissance', this.value)" style="flex:1"/>
+      <label style="display:flex;align-items:center;gap:5px;font-size:11px;color:var(--text);white-space:nowrap;cursor:pointer">
+        <input type="checkbox" ${e.etudes ? 'checked' : ''} onchange="updateEnfantLPP(${i}, 'etudes', this.checked)" style="width:14px;height:14px;cursor:pointer"/> études (→25 ans)
+      </label>
+      <button type="button" onclick="retirerEnfantLPP(${i})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px">✕</button>
+    </div>`).join('');
+}
+
+// Calcule pour un enfant : est-il actuellement éligible à une rente, et en quelle année cesse-t-elle ?
+function statutEnfantLPP(naissance, etudes) {
+  if (!naissance) return null;
+  const dateNaissance = new Date(naissance + 'T00:00:00');
+  const age = ageAujourdhui(naissance);
+  const limiteAns = etudes ? 25 : 18;
+  const eligible = age < limiteAns;
+  const anneeCessation = dateNaissance.getFullYear() + limiteAns;
+  return { age, eligible, anneeCessation, limiteAns };
 }
 
 // Affiche/masque les champs de personnalisation du plan surobligatoire
@@ -780,7 +841,8 @@ function calculerEtAfficherLPP() {
   const tauxInteret = (parseFloat(document.getElementById('clpp-taux-interet').value) || 1.25) / 100;
   const tauxConversion = (parseFloat(document.getElementById('clpp-taux-conversion').value) || 6.8) / 100;
   const rachatAnnuel = parseFloat(document.getElementById('clpp-rachat-annuel').value) || 0;
-  const nbEnfants = parseInt(document.getElementById('clpp-nb-enfants').value) || 0;
+  const statutsEnfants = enfantsLPPTemp.map(e => statutEnfantLPP(e.naissance, e.etudes)).filter(s => s);
+  const nbEnfants = statutsEnfants.filter(s => s.eligible).length;
   const capitalDecesLPP = parseFloat(document.getElementById('clpp-capital-deces').value) || 0;
   const degreInvalidite = Math.min(100, Math.max(0, parseInt(document.getElementById('clpp-degre-invalidite').value) || 0));
   const besoinDecesPct = parseFloat(document.getElementById('clpp-besoin-deces-pct').value) || 80;
@@ -892,6 +954,20 @@ function calculerEtAfficherLPP() {
         : `<div style="padding:10px 14px;border-radius:9px;background:rgba(74,222,128,0.12);font-size:12px;color:#4ade80"><strong>Objectif de rente atteint.</strong></div>`}
     `)}
 
+    ${statutsEnfants.length ? sectionCard('Enfants à charge — durée de versement des rentes', '#fbbf24', `
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <thead><tr style="color:var(--text-muted);font-size:10px;text-transform:uppercase"><th style="padding:4px 8px;text-align:left">Enfant</th><th style="padding:4px 8px;text-align:left">Âge actuel</th><th style="padding:4px 8px;text-align:left">Régime</th><th style="padding:4px 8px;text-align:left">Rente versée jusqu'en</th><th style="padding:4px 8px;text-align:left">Statut</th></tr></thead>
+        <tbody>${statutsEnfants.map((s, i) => `
+          <tr style="border-top:1px solid var(--border)">
+            <td style="padding:5px 8px">Enfant ${i + 1}</td>
+            <td style="padding:5px 8px">${s.age} ans</td>
+            <td style="padding:5px 8px;color:var(--text-muted)">${s.limiteAns === 25 ? "Poursuit des études (jusqu'à 25 ans)" : "Standard (jusqu'à 18 ans)"}</td>
+            <td style="padding:5px 8px;font-weight:700">${s.anneeCessation}</td>
+            <td style="padding:5px 8px">${s.eligible ? '<span style="color:#4ade80">✓ Éligible</span>' : '<span style="color:var(--text-muted)">Hors limite d\u2019âge</span>'}</td>
+          </tr>`).join('')}</tbody>
+      </table>
+    `) : ''}
+
     ${blocRisque('Risque DÉCÈS', '#f87171', [
       { label: `Rente de veuve/veuf AVS (80% base, estimation)`, montant: renteVeuvageAVS },
       { label: `Rente(s) d'orphelin AVS (40% × ${nbEnfants} enfant(s))`, montant: renteOrphelinAVS },
@@ -958,7 +1034,11 @@ function calculerEtAfficherLPP() {
     avoirTheoriqueActuel, lacuneCapital, capitalProjete, renteVieillesseLPP, renteVieillesseAVS, objectif90, renteCombineeVie, lacuneRenteVie,
     renteVeuvageAVS, renteOrphelinAVS, renteConjointLPP, renteOrphelinLPP, totalRenteDeces, besoinDeces, lacuneDeces, capitalDecesLPP,
     degreInvalidite, renteInvaliditeAVS, renteEnfantInvaliditeAVS, renteInvaliditeLPP, renteEnfantInvaliditeLPP, totalRenteInvalidite, besoinInvalidite, lacuneInvalidite,
-    lignesReel: reel.lignes,
+    lignesReel: reel.lignes, statutsEnfants,
+    adresse: document.getElementById('clpp-adresse').value,
+    npaVille: document.getElementById('clpp-npa-ville').value,
+    telephone: document.getElementById('clpp-telephone').value,
+    email: document.getElementById('clpp-email').value,
   };
 }
 
@@ -971,7 +1051,13 @@ function imprimerResultatLPP() {
     <tr><td>${l.age}</td><td style="text-align:right">CHF ${Math.round(l.etatDebut).toLocaleString()}</td><td style="text-align:right">CHF ${Math.round(l.interet).toLocaleString()}</td><td style="text-align:right">CHF ${Math.round(l.bonification).toLocaleString()}</td><td style="text-align:right;font-weight:700">CHF ${Math.round(l.etatFin).toLocaleString()}</td></tr>`).join('');
   win.document.write(`<html><head><title>Bilan de prévoyance — ${nom}</title><style>
     body{font-family:Arial,sans-serif;padding:30px;color:#0f2244}
-    h1{font-size:18px;border-bottom:2px solid #0f2244;padding-bottom:8px}
+    .entete{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #0f2244;padding-bottom:14px;margin-bottom:20px}
+    .logo-assurex{font-size:22px;font-weight:900;color:#0f2244;letter-spacing:0.5px}
+    .logo-assurex span{color:#c9a24b}
+    .coord-assurex{font-size:10.5px;color:#666;margin-top:4px;line-height:1.5}
+    .coord-client{text-align:right;font-size:11.5px;color:#0f2244;line-height:1.6}
+    .coord-client b{font-size:13px}
+    h1{font-size:16px;color:#0f2244;margin:0 0 4px}
     h2{font-size:14px;color:#0f2244;margin-top:26px;border-bottom:1px solid #ddd;padding-bottom:4px}
     table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}
     th,td{padding:6px 8px;border-bottom:1px solid #ddd}
@@ -980,7 +1066,24 @@ function imprimerResultatLPP() {
     .stat b{display:block;font-size:16px}
     .lacune{color:#c0392b;font-weight:700}
   </style></head><body>
-    <h1>Bilan de prévoyance — ${nom}</h1>
+    <div class="entete">
+      <div style="display:flex;align-items:center;gap:14px">
+        <div style="width:70px;height:auto;flex-shrink:0">${ASSUREX_LOGO_SVG}</div>
+        <div>
+          <div class="logo-assurex">ASSUREX<span>·</span>SÀRL</div>
+          <div class="coord-assurex">c/o COFIDEX SA · Rue du Centre 142 · 1025 St-Sulpice<br/>Courtier en assurances FINMA F01492173</div>
+        </div>
+      </div>
+      <div class="coord-client">
+        <b>${nom}</b><br/>
+        ${r.adresse ? r.adresse + '<br/>' : ''}
+        ${r.npaVille ? r.npaVille + '<br/>' : ''}
+        ${r.telephone ? '📞 ' + r.telephone + '<br/>' : ''}
+        ${r.email ? '✉️ ' + r.email : ''}
+      </div>
+    </div>
+    <h1>Bilan de prévoyance — Vie · Décès · Invalidité</h1>
+    <div style="font-size:11px;color:#666;margin-bottom:14px">Document établi le ${new Date().toLocaleDateString('fr-CH')} — à titre indicatif, sur la base des données transmises par le client.</div>
 
     <h2>Vie (retraite)</h2>
     <div class="stat">Capital projeté à la retraite<b>CHF ${Math.round(r.capitalProjete).toLocaleString()}</b></div>
@@ -989,6 +1092,11 @@ function imprimerResultatLPP() {
     <div class="stat">Lacune de rente (objectif 90%)<b class="${r.lacuneRenteVie>0?'lacune':''}">CHF ${Math.round(r.lacuneRenteVie).toLocaleString()}/an</b></div>
 
     <h2>Décès</h2>
+    ${r.statutsEnfants && r.statutsEnfants.length ? `
+    <table style="margin-bottom:14px">
+      <thead><tr><th>Enfant</th><th>Âge actuel</th><th>Régime</th><th>Rente versée jusqu'en</th></tr></thead>
+      <tbody>${r.statutsEnfants.map((s,i) => `<tr><td>Enfant ${i+1}</td><td>${s.age} ans</td><td>${s.limiteAns === 25 ? 'Études (25 ans)' : 'Standard (18 ans)'}</td><td><b>${s.anneeCessation}</b></td></tr>`).join('')}</tbody>
+    </table>` : ''}
     <div class="stat">Rente veuve/veuf AVS<b>CHF ${r.renteVeuvageAVS.toLocaleString()}/an</b></div>
     <div class="stat">Rente(s) orphelin AVS<b>CHF ${r.renteOrphelinAVS.toLocaleString()}/an</b></div>
     <div class="stat">Rente conjoint LPP<b>CHF ${r.renteConjointLPP.toLocaleString()}/an</b></div>
@@ -1135,6 +1243,8 @@ let calendarEvents = [];
 
 // ═══ RÔLES (non sensible — les mots de passe sont gérés par Supabase Auth) ═══
 // ═══ LOGO OZ ASSURE (navigation) ═══
+const ASSUREX_LOGO_SVG = `<svg class="assurex-logo-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1300 900" style="display:block"><defs><style>.assurex-c1{fill:#fff}.assurex-c2{fill:#113679}.assurex-c3{fill:#00cfff}</style></defs><rect class="assurex-c2" x="-19.09" y="-9.92" width="1338.18" height="919.85" rx="16.94" ry="16.94"/><g><rect class="assurex-c3" x="833.34" y="457.74" width="12.39" height="12.39"/><g><path class="assurex-c1" d="M713.01,448.18v-4.39c0-4.99-3.69-8.3-9.01-8.3h-29.56v6.84h27.99c1.74,0,3.04,1.09,3.04,2.82v2.12c0,1.74-1.09,2.87-3.04,2.87h-27.99v19.37h7.65v-12.53h14.92l7.92,12.53h8.62l-7.76-12.64c4.56-.65,7.21-3.96,7.21-8.68"/><path class="assurex-c1" d="M519.1,444.47v2.41c0,1.19.96,2.15,2.15,2.15h19.35c4.39,0,7.95,3.56,7.95,7.95v4.55c0,4.39-3.56,7.95-7.95,7.95h-28.34v-6.89h27.3c1.19,0,2.15-.96,2.15-2.15v-2.41c0-1.19-.96-2.15-2.15-2.15h-19.35c-4.39,0-7.95-3.56-7.95-7.95v-4.5c0-4.39,3.56-7.95,7.95-7.95h28.34v6.84h-27.3c-1.19,0-2.15.96-2.15,2.15Z"/><path class="assurex-c1" d="M572.42,444.47v2.41c0,1.19.96,2.15,2.15,2.15h19.35c4.39,0,7.95,3.56,7.95,7.95v4.55c0,4.39-3.56,7.95-7.95,7.95h-28.34v-6.89h27.3c1.19,0,2.15-.96,2.15-2.15v-2.41c0-1.19-.96-2.15-2.15-2.15h-19.35c-4.39,0-7.95-3.56-7.95-7.95v-4.5c0-4.39,3.56-7.95,7.95-7.95h28.34v6.84h-27.3c-1.19,0-2.15.96-2.15,2.15Z"/><polygon class="assurex-c1" points="476.36 445.03 462.9 469.5 454.28 469.5 472.99 435.48 479.66 435.48 498.43 469.5 489.86 469.5 476.36 445.03"/><path class="assurex-c1" d="M657.41,435.49v22.44c0,6.39-5.18,11.58-11.58,11.58h-15.37c-6.39,0-11.58-5.18-11.58-11.58v-22.44h7.71v22.24c0,2.25,1.82,4.06,4.06,4.06h14.97c2.25,0,4.06-1.82,4.06-4.06v-22.24h7.71Z"/><rect class="assurex-c1" x="730.03" y="448.77" width="33.14" height="6.89"/><rect class="assurex-c1" x="730.03" y="462.61" width="36.29" height="6.89"/><rect class="assurex-c1" x="730.03" y="435.48" width="36.29" height="6.84"/><polygon class="assurex-c1" points="829.79 420 828.7 426.86 828.52 428.04 826.9 438.23 822.57 434.54 810.97 447.22 801.38 447.22 806.2 452.43 821.91 469.4 811.72 469.4 801.12 457.92 781.15 480 771.14 480 796.05 452.42 780.4 435.48 790.52 435.48 801.29 447.1 816.91 429.72 812.63 426.06 829.79 420"/></g></g></svg>`;
+
 const OZASSURE_LOGO_SVG = `<svg class="oz-logo-svg" xmlns="http://www.w3.org/2000/svg" version="1.1" viewBox="0 0 1920 434">
   <defs>
     <style>

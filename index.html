@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-04 10:30</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-09 14:30</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -481,6 +481,7 @@ let openSections = { vente: true, portefeuille: true, clients: true, compta: tru
 let allAgents = [];
 let allClients = [];
 let allRappels = [];
+let allCollaborateurs = [];
 let msalInstance = null;
 let openBordereaux = {};
 let contratClientId = null;
@@ -900,7 +901,7 @@ async function tryRestoreOutlookSession() {
     if (!accounts || accounts.length === 0) return false;
     const result = await msalInstance.acquireTokenSilent({
       account: accounts[0],
-      scopes: ['openid', 'profile', 'email', 'User.Read', 'Calendars.ReadWrite'],
+      scopes: ['openid', 'profile', 'email', 'User.Read', 'Calendars.ReadWrite', 'Mail.Send'],
     });
     msalAccessToken = result.accessToken;
     return true;
@@ -913,7 +914,7 @@ async function loginMicrosoft() {
   try {
     if (!msalInstance) { await initMSAL(); }
     if (!msalInstance) { showError('Erreur initialisation Microsoft.'); return; }
-    const result = await msalInstance.loginPopup({ scopes: ['openid', 'profile', 'email', 'User.Read', 'Calendars.ReadWrite'] });
+    const result = await msalInstance.loginPopup({ scopes: ['openid', 'profile', 'email', 'User.Read', 'Calendars.ReadWrite', 'Mail.Send'] });
     msalAccessToken = result.accessToken;
     calendarEvents = await fetchCalendarEvents();
     showError('✓ Outlook connecté — synchronisation activée.');
@@ -968,6 +969,134 @@ async function deleteOutlookEvent(eventId) {
       headers: { Authorization: `Bearer ${msalAccessToken}` },
     });
   } catch(e) { console.error('Graph delete event exception', e); }
+}
+
+// ═══ MICROSOFT GRAPH — EMAIL D'ASSIGNATION (tâches & rappels) ═══
+// Envoie un email immédiat à l'agent assigné, via la session Microsoft déjà connectée.
+// Silencieux en cas d'échec (pas de session Outlook active, etc.) — la tâche reste créée dans tous les cas.
+async function sendTaskAssignmentEmail(rappel, agent) {
+  if (!msalAccessToken || !agent || !agent.email) return false;
+  try {
+    const client = rappel.client_id ? allClients.find(c => c.id === rappel.client_id) : null;
+    const clientLine = client ? `Client : ${client.segment === 'Entreprise' ? client.nom : client.prenom + ' ' + client.nom}\n` : '';
+    const collab = rappel.collaborateur_id ? allCollaborateurs.find(c => c.id === rappel.collaborateur_id) : null;
+    const collabLine = collab ? `Collaborateur : ${collab.prenom} ${collab.nom}\n` : '';
+    const natureLabel = rappel.nature === 'tache' ? 'Nouvelle tâche assignée' : 'Nouveau rappel assigné';
+    const echeanceLine = rappel.date_echeance ? `Échéance : ${fmtDate(rappel.date_echeance)}\n` : '';
+    const contenu = `${natureLabel} dans REX CRM\n\n${rappel.titre}\n\n${clientLine}${collabLine}${echeanceLine}Urgence : ${rappel.urgence || ''}\n\n${rappel.notes || ''}\n\n— Ouvrir dans REX CRM : https://varendel.github.io/crm-assurex`;
+    const body = {
+      message: {
+        subject: `${rappel.nature === 'tache' ? '📋' : '🔔'} ${rappel.titre}`,
+        body: { contentType: 'text', content: contenu },
+        toRecipients: [{ emailAddress: { address: agent.email } }],
+      },
+      saveToSentItems: true,
+    };
+    const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    return r.ok;
+  } catch(e) { console.error('Graph sendMail exception', e); return false; }
+}
+
+// ═══ RAPPEL INTELLIGENT (lié automatiquement à une tâche) ═══
+// Calcule un délai d'anticipation selon l'urgence de la tâche
+function offsetJoursSelonUrgence(urgence) {
+  if (urgence === 'haute') return 3;
+  if (urgence === 'moyenne') return 7;
+  return 14; // basse
+}
+
+// Retourne la date (YYYY-MM-DD) du rappel intelligent, ou null si non pertinent
+// (échéance trop proche pour qu'un rappel préalable ait un sens — la tâche sert déjà d'alerte)
+function calculerDateRappelIntelligent(dateEcheance, urgence) {
+  if (!dateEcheance) return null;
+  const offset = offsetJoursSelonUrgence(urgence);
+  const echeance = new Date(dateEcheance + 'T00:00:00');
+  const rappelDate = new Date(echeance);
+  rappelDate.setDate(rappelDate.getDate() - offset);
+  const today = new Date(); today.setHours(0,0,0,0);
+  if (rappelDate <= today) return null;
+  return rappelDate.toISOString().slice(0,10);
+}
+
+// Crée effectivement le rappel enfant en base, lié à la tâche parente
+async function creerRappelIntelligentPourTache(tache) {
+  const dateRappel = calculerDateRappelIntelligent(tache.date_echeance, tache.urgence);
+  if (!dateRappel) return null;
+  const body = {
+    titre: `🔔 Rappel : ${tache.titre}`,
+    nature: 'rappel',
+    tache_parent_id: tache.id,
+    client_id: tache.client_id || null,
+    collaborateur_id: tache.collaborateur_id || null,
+    contrat_id: tache.contrat_id || null,
+    type: tache.type || 'Suivi',
+    urgence: tache.urgence || 'basse',
+    date_echeance: dateRappel,
+    apporteur_id: tache.apporteur_id || null,
+    notes: `Rappel automatique généré avant l'échéance de la tâche "${tache.titre}".`,
+    statut: 'ouvert',
+  };
+  const created = await dbPost('rappels', body);
+  if (created && created.error) return null;
+  const enfant = created && created[0];
+  if (enfant && enfant.date_echeance) {
+    try {
+      const eventId = await createOutlookEventFromRappel(enfant);
+      if (eventId) await dbPatch('rappels', enfant.id, { outlook_event_id: eventId });
+    } catch(e) { /* sync Outlook échouée, le rappel reste créé */ }
+  }
+  return enfant || null;
+}
+
+// Met à jour l'aperçu affiché dans le formulaire de création selon urgence + échéance choisies
+function updateRappelIntelligentPreview() {
+  const zone = document.getElementById('r-auto-rappel-zone');
+  if (!zone) return;
+  const nature = document.getElementById('r-nature').value;
+  const dateEcheance = document.getElementById('r-date').value;
+  const urgence = document.getElementById('r-urgence').value;
+  if (nature !== 'tache' || !dateEcheance) { zone.style.display = 'none'; return; }
+  const dateRappel = calculerDateRappelIntelligent(dateEcheance, urgence);
+  zone.style.display = '';
+  const checkbox = document.getElementById('r-auto-rappel-check');
+  const preview = document.getElementById('r-auto-rappel-preview');
+  if (!dateRappel) {
+    checkbox.checked = false; checkbox.disabled = true;
+    preview.textContent = "Échéance trop proche pour un rappel préalable — la tâche sert déjà d'alerte.";
+  } else {
+    checkbox.disabled = false;
+    if (checkbox.dataset.userTouched !== 'true') checkbox.checked = true;
+    preview.textContent = `Un rappel sera automatiquement créé le ${fmtDate(dateRappel)} (${offsetJoursSelonUrgence(urgence)} jours avant l'échéance).`;
+  }
+}
+async function getEtapesRappel(rappelId) {
+  return await dbGet('tache_etapes', `rappel_id=eq.${rappelId}&select=*&order=ordre.asc`);
+}
+
+async function toggleEtapeRappel(etapeId, fait) {
+  await dbPatch('tache_etapes', etapeId, { fait });
+  showRappel(currentRappelId);
+}
+
+async function ajouterEtapeRappel(rappelId) {
+  const input = document.getElementById('nouvelle-etape-input');
+  const libelle = input && input.value.trim();
+  if (!libelle) return;
+  const etapesActuelles = await getEtapesRappel(rappelId);
+  await dbPost('tache_etapes', { rappel_id: rappelId, libelle, ordre: etapesActuelles.length });
+  showRappel(currentRappelId);
+}
+
+async function supprimerEtapeRappel(etapeId) {
+  await fetch(`${SUPABASE_URL}/rest/v1/tache_etapes?id=eq.${etapeId}`, {
+    method: 'DELETE',
+    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${await getValidAccessToken() || SUPABASE_KEY}` },
+  });
+  showRappel(currentRappelId);
 }
 
 async function refreshAgenda() {
@@ -1156,6 +1285,7 @@ async function enterApp(user) {
   allAgents = await dbGet('agents', 'select=*');
   allClients = await dbGet('clients', 'select=*');
   allRappels = await dbGet('rappels', 'select=*');
+  allCollaborateurs = await dbGet('collaborateurs', 'select=*').catch(() => []);
   allBordereaux = await dbGet('bordereaux', 'select=*');
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
   allFichesPaie = await dbGet('fiches_paie', 'select=*');
@@ -1214,7 +1344,7 @@ const SECTIONS = [
     { id: 'suivi', label: 'Suivi des affaires' },
     { id: 'nouveau-contrat-direct', label: 'Nouveau contrat' },
     { id: 'nouvelle-demande-offre', label: 'Demande d\'offre' },
-    { id: 'rappels', label: 'Rappels' },
+    { id: 'rappels', label: 'Tâches & Rappels' },
     { id: 'agenda', label: 'Agenda' },
     { id: 'campagnes', label: 'Campagnes' },
   ]},
@@ -1269,8 +1399,14 @@ function renderSidebar() {
     if (openSections[sec.id]) {
       sec.sub.forEach(s => {
         const active = s.id === currentView;
+        let badgeHtml = '';
+        if (s.id === 'rappels') {
+          const monAgent = currentUser ? allAgents.find(a => a.email === currentUser.email) : null;
+          const mesTaches = (allRappels || []).filter(r => r.statut === 'ouvert' && monAgent && r.apporteur_id === monAgent.id);
+          if (mesTaches.length) badgeHtml = `<span style="background:#f87171;color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:800;margin-left:auto">${mesTaches.length}</span>`;
+        }
         nav += `<button class="nav-item ${active ? 'active' : ''}" onclick="navigate('${s.id}')" style="${s.staff ? `color:#fb923c;font-weight:700;${active ? 'background:rgba(251,146,60,0.12);' : ''}` : ''}">
-          ${active ? `<span class="nav-dot" style="${s.staff ? 'background:#fb923c' : ''}"></span>` : ''}${s.label}
+          ${active ? `<span class="nav-dot" style="${s.staff ? 'background:#fb923c' : ''}"></span>` : ''}${s.label}${badgeHtml}
         </button>`;
       });
     }
@@ -3367,7 +3503,7 @@ function viewRappels() {
       ${g.items.map(r => `<div class="rappel-item" style="cursor:pointer" onclick="showRappel('${r.id}')">
         <div class="urgence-dot" style="background:${uc(r.urgence||'basse')}"></div>
         <div style="flex:1">
-          <div style="font-size:13px;font-weight:700;color:var(--text)">${r.titre}</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">${r.nature === 'tache' ? '📋' : (r.tache_parent_id ? '🔗🔔' : '🔔')} ${r.titre}</div>
           <div style="font-size:11px;color:var(--text-muted)">${nomClientRappel(r) ? `👤 <span onclick="event.stopPropagation(); showClient('${r.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${nomClientRappel(r)}</span> · ` : ''}${r.date_echeance ? fmtDate(r.date_echeance) : 'Sans échéance'}${dateRelative(r.date_echeance)}${r.piece_jointe_nom ? ' · 📎 ' + r.piece_jointe_nom : ''}</div>
           ${r.notes ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:3px;font-style:italic">${r.notes.split('[')[0].substring(0,120)}${r.notes.length>120?'...':''}</div>` : ''}
         </div>
@@ -3399,8 +3535,8 @@ function viewRappels() {
 
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Rappels</h2>
-      <button class="btn-add" onclick="navigate('nouveau-rappel')">+ Nouveau rappel</button>
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Tâches & Rappels</h2>
+      <button class="btn-add" onclick="navigate('nouveau-rappel')">+ Nouvelle tâche / rappel</button>
     </div>
     <div class="stat-grid" style="margin-bottom:20px">
       ${statCard('Ouverts', ouverts.length, '#f87171')}
@@ -4889,15 +5025,43 @@ function viewNouveauRappel() {
   const clientOptions = allClients.map(c => `<option value="${c.id}">${c.prenom} ${c.nom}</option>`).join('');
   return `
     <button onclick="navigate('rappels')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
-    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouveau rappel</h2>
-    ${sectionCard('Détails', '#38bdf8', `<div class="form-grid">
-      <div class="form-field" style="grid-column:span 2"><label class="form-label">Titre *</label><input class="form-input" id="r-titre" placeholder="Ex: Renouvellement RC à traiter"/></div>
-      <div class="form-field"><label class="form-label">Client</label><select class="form-select" id="r-client"><option value="">— Sélectionner —</option>${clientOptions}</select></div>
-      <div class="form-field"><label class="form-label">Type</label><select class="form-select" id="r-type"><option>Suivi</option><option>Contrat</option><option>Opportunité</option><option>Admin</option></select></div>
-      <div class="form-field"><label class="form-label">Urgence</label><select class="form-select" id="r-urgence"><option value="basse">Basse</option><option value="moyenne">Moyenne</option><option value="haute">Haute</option></select></div>
-      <div class="form-field"><label class="form-label">Date échéance</label><input class="form-input" id="r-date" type="date"/></div>
-      <div class="form-field"><label class="form-label">Agent</label><select class="form-select" id="r-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
+    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouvelle tâche / rappel</h2>
+    ${sectionCard('Nature', '#4ade80', `<div class="form-grid">
+      <div class="form-field" style="grid-column:span 2">
+        <label class="form-label">Type d'élément *</label>
+        <select class="form-select" id="r-nature" onchange="toggleNatureFields()">
+          <option value="rappel">🔔 Rappel simple</option>
+          <option value="tache">📋 Tâche (structurée, avec étapes)</option>
+        </select>
+      </div>
     </div>`)}
+    ${sectionCard('Détails', '#38bdf8', `<div class="form-grid">
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Titre *</label><input class="form-input" id="r-titre" placeholder="Ex: Affilier collaborateur à la LPP"/></div>
+      <div class="form-field"><label class="form-label">Client</label><select class="form-select" id="r-client" onchange="onClientChangeRappel()"><option value="">— Sélectionner —</option>${clientOptions}</select></div>
+      <div class="form-field" id="r-collab-field" style="display:none"><label class="form-label">Collaborateur</label><select class="form-select" id="r-collaborateur"><option value="">— Sélectionner —</option></select></div>
+      <div class="form-field"><label class="form-label">Contrat lié</label><select class="form-select" id="r-contrat"><option value="">— Aucun —</option></select></div>
+      <div class="form-field"><label class="form-label">Type</label><select class="form-select" id="r-type"><option>Suivi</option><option>Contrat</option><option>Opportunité</option><option>Admin</option></select></div>
+      <div class="form-field"><label class="form-label">Urgence</label><select class="form-select" id="r-urgence" onchange="updateRappelIntelligentPreview()"><option value="basse">Basse</option><option value="moyenne">Moyenne</option><option value="haute">Haute</option></select></div>
+      <div class="form-field"><label class="form-label">Date échéance</label><input class="form-input" id="r-date" type="date" onchange="updateRappelIntelligentPreview()"/></div>
+      <div class="form-field"><label class="form-label">Assigné à</label><select class="form-select" id="r-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
+    </div>`)}
+    <div id="r-checklist-section" style="display:none">
+      ${sectionCard('Étapes de la tâche', '#f59e0b', `
+        <div id="r-etapes-list" style="margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px">
+          <input class="form-input" id="r-nouvelle-etape" placeholder="Ex: Envoyer le formulaire d'affiliation" style="flex:1"/>
+          <button type="button" class="btn-secondary" onclick="ajouterEtapeLocale()">+ Ajouter</button>
+        </div>
+      `)}
+    </div>
+    <div id="r-auto-rappel-zone" style="display:none;margin-bottom:16px">
+      ${sectionCard('Rappel intelligent', '#38bdf8', `
+        <label style="display:flex;align-items:flex-start;gap:10px;cursor:pointer">
+          <input type="checkbox" id="r-auto-rappel-check" checked onchange="this.dataset.userTouched='true'" style="margin-top:2px;width:16px;height:16px;cursor:pointer"/>
+          <span id="r-auto-rappel-preview" style="font-size:12.5px;color:var(--text-muted);line-height:1.5"></span>
+        </label>
+      `)}
+    </div>
     ${sectionCard('Notes', '#a78bfa', `
       <textarea id="r-notes" placeholder="Ajouter des informations, un contexte..." style="width:100%;background:var(--surface-alt);border:1px solid var(--border);border-radius:9px;padding:12px 14px;color:var(--text);font-size:13px;outline:none;resize:vertical;min-height:90px;font-family:inherit;box-sizing:border-box"></textarea>
     `)}
@@ -4912,12 +5076,69 @@ function viewNouveauRappel() {
     </div>`;
 }
 
+// Bascule l'affichage de la section checklist selon la nature choisie
+function toggleNatureFields() {
+  const nature = document.getElementById('r-nature').value;
+  document.getElementById('r-checklist-section').style.display = nature === 'tache' ? 'block' : 'none';
+  updateRappelIntelligentPreview();
+}
+
+// Filtre dynamiquement le sélecteur Collaborateur + Contrat selon le client choisi
+function onClientChangeRappel() {
+  const clientId = document.getElementById('r-client').value;
+  const collabField = document.getElementById('r-collab-field');
+  const collabSelect = document.getElementById('r-collaborateur');
+  const contratSelect = document.getElementById('r-contrat');
+  if (!clientId) {
+    collabField.style.display = 'none';
+    contratSelect.innerHTML = '<option value="">— Aucun —</option>';
+    return;
+  }
+  const client = allClients.find(c => c.id === clientId);
+  const collabsDuClient = allCollaborateurs.filter(c => c.client_id === clientId);
+  if (client && client.segment === 'Entreprise' && collabsDuClient.length) {
+    collabField.style.display = '';
+    collabSelect.innerHTML = '<option value="">— Sélectionner —</option>' + collabsDuClient.map(c => `<option value="${c.id}">${c.prenom} ${c.nom}</option>`).join('');
+  } else {
+    collabField.style.display = 'none';
+  }
+  const contratsDuClient = allContrats.filter(c => c.client_id === clientId);
+  contratSelect.innerHTML = '<option value="">— Aucun —</option>' + contratsDuClient.map(c => `<option value="${c.id}">${c.produit || 'Contrat'} — ${c.numero_police || ''}</option>`).join('');
+}
+
+// Gestion locale des étapes avant la première sauvegarde (stockées en mémoire, insérées après création de la tâche)
+let etapesLocalesTemp = [];
+function ajouterEtapeLocale() {
+  const input = document.getElementById('r-nouvelle-etape');
+  const libelle = input.value.trim();
+  if (!libelle) return;
+  etapesLocalesTemp.push(libelle);
+  input.value = '';
+  renderEtapesLocales();
+}
+function retirerEtapeLocale(idx) {
+  etapesLocalesTemp.splice(idx, 1);
+  renderEtapesLocales();
+}
+function renderEtapesLocales() {
+  const zone = document.getElementById('r-etapes-list');
+  if (!zone) return;
+  zone.innerHTML = etapesLocalesTemp.map((e, i) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:6px 0">
+      <span style="flex:1;font-size:13px;color:var(--text)">${i+1}. ${e}</span>
+      <button type="button" onclick="retirerEtapeLocale(${i})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px">✕</button>
+    </div>`).join('');
+}
+
 async function saveRappel() {
   const titre = document.getElementById('r-titre').value.trim();
   if (!titre) { alert('Titre obligatoire.'); return; }
   const body = {
     titre,
+    nature: document.getElementById('r-nature').value,
     client_id: document.getElementById('r-client').value || null,
+    collaborateur_id: document.getElementById('r-collaborateur') ? (document.getElementById('r-collaborateur').value || null) : null,
+    contrat_id: document.getElementById('r-contrat').value || null,
     type: document.getElementById('r-type').value,
     urgence: document.getElementById('r-urgence').value,
     date_echeance: document.getElementById('r-date').value || null,
@@ -4929,6 +5150,15 @@ async function saveRappel() {
   btn.textContent = 'Enregistrement...'; btn.disabled = true;
   const created = await dbPost('rappels', body);
   if (created && created.error) { showError('Erreur lors de la création: ' + (created.detail || created.status)); btn.textContent = '✓ Enregistrer'; btn.disabled = false; return; }
+
+  // Si nature = tâche, on insère les étapes de checklist saisies localement
+  if (body.nature === 'tache' && etapesLocalesTemp.length && created && created[0] && created[0].id) {
+    const newId = created[0].id;
+    for (let i = 0; i < etapesLocalesTemp.length; i++) {
+      await dbPost('tache_etapes', { rappel_id: newId, libelle: etapesLocalesTemp[i], ordre: i });
+    }
+    etapesLocalesTemp = [];
+  }
 
   // Si un fichier a été sélectionné, on l'upload une fois le rappel créé (on a alors son ID)
   const fileInput = document.getElementById('r-file-input');
@@ -4956,6 +5186,20 @@ async function saveRappel() {
       const eventId = await createOutlookEventFromRappel(created[0]);
       if (eventId) await dbPatch('rappels', created[0].id, { outlook_event_id: eventId });
     } catch (e) { /* sync Outlook échouée, le rappel reste créé dans le CRM */ }
+  }
+
+  // Rappel intelligent : si nature = tâche, échéance définie, et case cochée
+  if (body.nature === 'tache' && created && created[0]) {
+    const checkbox = document.getElementById('r-auto-rappel-check');
+    if (checkbox && checkbox.checked && !checkbox.disabled) {
+      try { await creerRappelIntelligentPourTache(created[0]); } catch(e) { /* rappel intelligent échoué, la tâche reste créée */ }
+    }
+  }
+
+  // Email immédiat à l'agent assigné (silencieux si pas de session Outlook active)
+  if (created && created[0] && body.apporteur_id) {
+    const agent = allAgents.find(a => a.id === body.apporteur_id);
+    if (agent) { try { await sendTaskAssignmentEmail(created[0], agent); } catch(e) {} }
   }
 
   allRappels = await dbGet('rappels', 'select=*');
@@ -5682,17 +5926,26 @@ function showRappel(id) {
   const clientNom = client ? (client.segment === 'Entreprise' ? client.nom : `${client.prenom} ${client.nom}`) : '';
   const agentOptions = allAgents.map(a => `<option value="${a.id}" ${a.id === r.apporteur_id ? 'selected' : ''}>${a.prenom} ${a.nom}</option>`).join('');
   const clientOptions = allClients.map(c => `<option value="${c.id}" ${c.id === r.client_id ? 'selected' : ''}>${c.segment === 'Entreprise' ? c.nom : c.prenom + ' ' + c.nom}</option>`).join('');
+  const collabsDuClient = r.client_id ? allCollaborateurs.filter(c => c.client_id === r.client_id) : [];
+  const collabOptions = collabsDuClient.map(c => `<option value="${c.id}" ${c.id === r.collaborateur_id ? 'selected' : ''}>${c.prenom} ${c.nom}</option>`).join('');
+  const contratsDuClient = r.client_id ? allContrats.filter(c => c.client_id === r.client_id) : [];
+  const contratOptions = contratsDuClient.map(c => `<option value="${c.id}" ${c.id === r.contrat_id ? 'selected' : ''}>${c.produit || 'Contrat'} — ${c.numero_police || ''}</option>`).join('');
+  const isTache = r.nature === 'tache';
+  const rappelIntelligentLie = isTache ? (allRappels || []).find(x => x.tache_parent_id === r.id) : null;
+  const tacheParente = r.tache_parent_id ? (allRappels || []).find(x => x.id === r.tache_parent_id) : null;
 
   document.getElementById('main-content').innerHTML = `
     <button onclick="navigate('rappels')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour aux rappels</button>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">${r.titre}</h2>
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">${isTache ? '📋' : '🔔'} ${r.titre}</h2>
       ${badge(r.statut === 'ouvert' ? 'Ouvert' : 'Traité', r.statut === 'ouvert' ? '#f59e0b' : '#4ade80')}
     </div>
 
     ${sectionCard('Détails', '#38bdf8', `<div class="form-grid">
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Titre *</label><input class="form-input" id="rd-titre" value="${r.titre || ''}"/></div>
       <div class="form-field"><label class="form-label">Client</label><select class="form-select" id="rd-client"><option value="">— Sélectionner —</option>${clientOptions}</select></div>
+      ${collabsDuClient.length ? `<div class="form-field"><label class="form-label">Collaborateur</label><select class="form-select" id="rd-collaborateur"><option value="">— Sélectionner —</option>${collabOptions}</select></div>` : ''}
+      <div class="form-field"><label class="form-label">Contrat lié</label><select class="form-select" id="rd-contrat"><option value="">— Aucun —</option>${contratOptions}</select></div>
       <div class="form-field"><label class="form-label">Type</label><select class="form-select" id="rd-type">${['Suivi','Contrat','Opportunité','Admin'].map(t => `<option ${t === r.type ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
       <div class="form-field"><label class="form-label">Urgence</label><select class="form-select" id="rd-urgence">
         <option value="basse" ${r.urgence === 'basse' ? 'selected' : ''}>Basse</option>
@@ -5700,8 +5953,13 @@ function showRappel(id) {
         <option value="haute" ${r.urgence === 'haute' ? 'selected' : ''}>Haute</option>
       </select></div>
       <div class="form-field"><label class="form-label">Date échéance</label><input class="form-input" id="rd-date" type="date" value="${r.date_echeance || ''}"/></div>
-      <div class="form-field"><label class="form-label">Agent</label><select class="form-select" id="rd-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
+      <div class="form-field"><label class="form-label">Assigné à</label><select class="form-select" id="rd-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
     </div>`)}
+
+    ${tacheParente ? `<div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:12.5px;color:var(--accent);cursor:pointer" onclick="showRappel('${tacheParente.id}')">🔗 Rappel automatique lié à la tâche : <strong>${tacheParente.titre}</strong></div>` : ''}
+    ${rappelIntelligentLie ? `<div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:12.5px;color:var(--accent);cursor:pointer" onclick="showRappel('${rappelIntelligentLie.id}')">🔔 Rappel intelligent programmé le ${fmtDate(rappelIntelligentLie.date_echeance)} — <strong>${rappelIntelligentLie.statut === 'ouvert' ? 'ouvert' : 'traité'}</strong></div>` : ''}
+
+    ${isTache ? `<div id="rd-checklist-zone">${renderChecklistLoading()}</div>` : ''}
 
     ${sectionCard('Notes', '#a78bfa', `
       <textarea id="rd-notes" placeholder="Ajouter des informations, un contexte, un suivi..." style="width:100%;background:var(--surface-alt);border:1px solid var(--border);border-radius:9px;padding:12px 14px;color:var(--text);font-size:13px;outline:none;resize:vertical;min-height:120px;font-family:inherit;box-sizing:border-box">${r.notes || ''}</textarea>
@@ -5727,14 +5985,44 @@ function showRappel(id) {
       <button class="btn-secondary" onclick="navigate('rappels')">Annuler</button>
       <button class="btn-save" onclick="saveRappelEdit()">💾 Enregistrer les modifications</button>
     </div>`;
+
+  if (isTache) loadAndRenderChecklist(id);
+}
+
+function renderChecklistLoading() {
+  return `<div style="font-size:12px;color:var(--text-muted);padding:10px 0">Chargement des étapes...</div>`;
+}
+
+async function loadAndRenderChecklist(rappelId) {
+  const etapes = await getEtapesRappel(rappelId);
+  const zone = document.getElementById('rd-checklist-zone');
+  if (!zone) return;
+  const faites = etapes.filter(e => e.fait).length;
+  zone.innerHTML = sectionCard(`Étapes de la tâche (${faites}/${etapes.length})`, '#f59e0b', `
+    <div>
+      ${etapes.map(e => `
+        <div style="display:flex;align-items:center;gap:10px;padding:6px 0;${e.fait ? 'opacity:.6' : ''}">
+          <input type="checkbox" ${e.fait ? 'checked' : ''} onchange="toggleEtapeRappel('${e.id}', this.checked)" style="width:16px;height:16px;cursor:pointer"/>
+          <span style="flex:1;font-size:13px;color:var(--text);${e.fait ? 'text-decoration:line-through' : ''}">${e.libelle}</span>
+          <button onclick="supprimerEtapeRappel('${e.id}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px">✕</button>
+        </div>`).join('') || '<div style="font-size:12px;color:var(--text-muted)">Aucune étape.</div>'}
+    </div>
+    <div style="display:flex;gap:8px;margin-top:10px">
+      <input class="form-input" id="nouvelle-etape-input" placeholder="Ajouter une étape..." style="flex:1"/>
+      <button type="button" class="btn-secondary" onclick="ajouterEtapeRappel('${rappelId}')">+ Ajouter</button>
+    </div>
+  `);
 }
 
 async function saveRappelEdit() {
   const titre = document.getElementById('rd-titre').value.trim();
   if (!titre) { showError('Le titre est obligatoire.'); return; }
+  const collabEl = document.getElementById('rd-collaborateur');
   const body = {
     titre,
     client_id: document.getElementById('rd-client').value || null,
+    collaborateur_id: collabEl ? (collabEl.value || null) : null,
+    contrat_id: document.getElementById('rd-contrat').value || null,
     type: document.getElementById('rd-type').value,
     urgence: document.getElementById('rd-urgence').value,
     date_echeance: document.getElementById('rd-date').value || null,
@@ -6304,7 +6592,7 @@ function toggleCombinablePrime(produitId) {
     const div = document.createElement('div');
     div.id = `ct-combinable-prime-${produitId}`;
     div.style.cssText = 'margin-top:6px';
-    div.innerHTML = `<label class="form-label">Prime mensuelle pour "${produit.label}" (CHF)</label><input class="form-input ct-combinable-prime-input" data-produit-id="${produitId}" type="number" placeholder="50"/>`;
+    div.innerHTML = `<label class="form-label">Prime annuelle pour "${produit.label}" (CHF)</label><input class="form-input ct-combinable-prime-input" data-produit-id="${produitId}" type="number" placeholder="540"/><div style="font-size:10.5px;color:var(--text-muted);margin-top:3px">Casco/ménage sont facturés annuellement — indique le montant annuel, pas mensuel.</div>`;
     primesZone.appendChild(div);
   } else if (!checkbox.checked && existant) {
     existant.remove();
@@ -6313,10 +6601,17 @@ function toggleCombinablePrime(produitId) {
 
 function getCompagniesConnues() {
   const base = ['Swiss Life', 'AXA', 'Helsana', 'Sanitas', 'Allianz', 'Zurich', 'Generali', 'Baloise', 'CSS', 'Groupe Mutuel', 'Visana', 'SWICA'];
+  // Source prioritaire : Paramètres → Contacts compagnies (Supabase, synchronisé pour toute l'équipe)
+  const depuisParametres = (allCompagniesContacts || []).map(c => c.compagnie).filter(Boolean);
   let memorisees = [];
   try { memorisees = JSON.parse(localStorage.getItem('compagnies_memorisees') || '[]'); } catch (e) {}
-  const toutes = [...new Set([...base, ...memorisees])];
-  return toutes.sort();
+  // Dédoublonnage insensible à la casse/espaces (cf. piège récurrent déjà rencontré sur "la Mobilière")
+  const vues = new Map();
+  [...depuisParametres, ...base, ...memorisees].forEach(nom => {
+    const cle = nom.trim().toLowerCase();
+    if (!vues.has(cle)) vues.set(cle, nom.trim());
+  });
+  return [...vues.values()].sort();
 }
 
 function memoriserCompagnie(nom) {
@@ -6393,7 +6688,7 @@ function getProduitLabel(categorie, produitId) {
   return produit ? produit.label : produitId;
 }
 
-async function creerContratEtCommission(clientId, compagnie, produitLabel, primeMensuelle, modules, montantCommission, detailCommission, plaques) {
+async function creerContratEtCommission(clientId, compagnie, produitLabel, primeMensuelle, modules, montantCommission, detailCommission, plaques, dejaAnnuelle) {
   const commissionne = document.getElementById('ct-commissionne').value !== 'non';
   const contratBody = {
     client_id: clientId,
@@ -6403,7 +6698,7 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
     modules: modules && modules.length > 0 ? modules.join(', ') : null,
     plaques: plaques && plaques.length > 0 ? plaques.join(', ') : null,
     numero_police: document.getElementById('ct-police').value.trim() || null,
-    prime_annuelle: Math.round(primeMensuelle * (parseInt(document.getElementById('ct-periodicite')?.value) || 12)),
+    prime_annuelle: dejaAnnuelle ? Math.round(primeMensuelle) : Math.round(primeMensuelle * (parseInt(document.getElementById('ct-periodicite')?.value) || 12)),
     date_debut: document.getElementById('ct-date').value || null,
     date_echeance: document.getElementById('ct-echeance').value || null,
     statut: document.getElementById('ct-statut').value,
@@ -6457,14 +6752,14 @@ async function saveContrat() {
   const compagnie = document.getElementById('ct-compagnie').value.trim();
   const produitSelectionne = getProduitSelectionne();
   const primeMensuelle = parseFloat(document.getElementById('ct-prime-mensuelle').value) || 0;
-  if (!compagnie || !primeMensuelle) { showError('Compagnie et prime mensuelle sont obligatoires.'); return; }
+  if (!compagnie || !primeMensuelle) { showError('Compagnie et prime sont obligatoires.'); return; }
   if (!produitSelectionne) { showError('Sélectionne un produit valide dans la liste proposée.'); return; }
 
   // Vérifier que les produits combinés cochés ont bien une prime renseignée
   const combinablesCoches = Array.from(document.querySelectorAll('.ct-combinable-checkbox:checked')).map(cb => cb.value);
   for (const id of combinablesCoches) {
     const input = document.querySelector(`.ct-combinable-prime-input[data-produit-id="${id}"]`);
-    if (!input || !parseFloat(input.value)) { showError('Renseigne la prime mensuelle pour chaque produit combiné coché.'); return; }
+    if (!input || !parseFloat(input.value)) { showError('Renseigne la prime annuelle pour chaque produit combiné coché.'); return; }
   }
 
   const produitLabel = produitSelectionne.label;
@@ -6484,9 +6779,9 @@ async function saveContrat() {
   for (const id of combinablesCoches) {
     const produitCombinable = getProduitParId(id);
     const input = document.querySelector(`.ct-combinable-prime-input[data-produit-id="${id}"]`);
-    const primeCombinable = parseFloat(input.value) || 0;
-    const montantCombinable = parseFloat((primeCombinable * 12 * 0.1).toFixed(0)); // estimation par défaut, ajustable manuellement ensuite
-    await creerContratEtCommission(clientId, compagnie, produitCombinable.label, primeCombinable, [], montantCombinable, 'Produit combiné — commission estimée à ajuster');
+    const primeCombinableAnnuelle = parseFloat(input.value) || 0;
+    const montantCombinable = Math.round(primeCombinableAnnuelle * 0.1); // estimation par défaut (10% fictif) — ajustable manuellement ensuite
+    await creerContratEtCommission(clientId, compagnie, produitCombinable.label, primeCombinableAnnuelle, [], montantCombinable, 'Produit combiné — commission estimée à ajuster', null, true);
   }
 
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');

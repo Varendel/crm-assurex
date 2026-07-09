@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-09 14:30</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-09 16:00</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -540,6 +540,257 @@ const TAUX_COMMISSION = {
   // COG annuelle LPP = prime_annuelle × 1.20 × 6.3% (versée trimestriellement)
   // LAMal : CHF 70 une seule fois, à la signature, indépendant de la prime
 };
+
+// ═══ CONSTANTES LÉGALES LPP (état au 01.01.2026 — inchangées depuis 2025, réforme rejetée) ═══
+const LPP_LEGAL = {
+  seuil_entree: 22680,
+  deduction_coordination: 26460,
+  salaire_max: 90720,
+  coordonne_min: 3780,
+  coordonne_max: 64260,
+  taux_interet_minimal: 0.0125,   // taux d'intérêt minimal LPP maintenu à 1.25% en 2026
+  taux_conversion_legal: 0.068,   // taux de conversion 6.8% (part obligatoire, inchangé en 2026)
+};
+
+// Taux de bonification de vieillesse par tranche d'âge (art. 16 LPP, minimum légal)
+function tauxBonificationLPP(age) {
+  if (age < 25) return 0;
+  if (age <= 34) return 0.07;
+  if (age <= 44) return 0.10;
+  if (age <= 54) return 0.15;
+  return 0.18;
+}
+
+// Calcule le salaire coordonné LPP selon les règles légales (plafonnement + déduction + garde-fous min/max)
+function calculerSalaireCoordonneLPP(salaireAVS) {
+  if (!salaireAVS || salaireAVS < LPP_LEGAL.seuil_entree) return 0;
+  const salairePlafonne = Math.min(salaireAVS, LPP_LEGAL.salaire_max);
+  let coordonne = salairePlafonne - LPP_LEGAL.deduction_coordination;
+  if (coordonne < LPP_LEGAL.coordonne_min) coordonne = LPP_LEGAL.coordonne_min;
+  if (coordonne > LPP_LEGAL.coordonne_max) coordonne = LPP_LEGAL.coordonne_max;
+  return Math.round(coordonne);
+}
+
+// Simule un parcours d'épargne LPP année par année, avec capitalisation des intérêts
+// (réplique la logique du tableau d'évolution LPP : bonifications par tranche d'âge + intérêts composés,
+// avec prorata sur l'année de la retraite selon le nombre de mois avant l'échéance)
+function simulerParcoursLPP({ salaireCoordonne, capitalDepart, ageDepart, ageRetraite, moisDerniereAnnee, tauxInteret, rachatAnnuel }) {
+  const lignes = [];
+  let capital = capitalDepart || 0;
+  for (let age = ageDepart; age < ageRetraite; age++) {
+    const interet = capital * tauxInteret;
+    const bonification = salaireCoordonne * tauxBonificationLPP(age);
+    const rachat = rachatAnnuel || 0;
+    const etatDebut = capital;
+    capital = capital + interet + bonification + rachat;
+    lignes.push({ age, etatDebut, interet, bonification, rachat, etatFin: capital });
+  }
+  // Année de la retraite : bonification et intérêt proratés sur le nombre de mois avant l'échéance
+  const etatDebutFinal = capital;
+  const interetFinal = (capital * tauxInteret / 12) * moisDerniereAnnee;
+  const bonificationFinale = (salaireCoordonne * tauxBonificationLPP(ageRetraite) / 12) * moisDerniereAnnee;
+  const capitalFinal = capital + interetFinal + bonificationFinale;
+  lignes.push({ age: ageRetraite, etatDebut: etatDebutFinal, interet: interetFinal, bonification: bonificationFinale, rachat: 0, etatFin: capitalFinal });
+  return { lignes, capitalFinal };
+}
+
+// ═══ VUE : CALCULATEUR DE LACUNE DE PRÉVOYANCE LPP ═══
+function viewCalculateurLPP() {
+  const clientOptions = allClients.map(c => `<option value="${c.id}">${c.segment === 'Entreprise' ? c.nom : c.prenom + ' ' + c.nom}</option>`).join('');
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">🧮 Calculateur de lacune de prévoyance (LPP)</h2>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Compare l'avoir de vieillesse théorique (parcours complet depuis 25 ans, minimum légal) à l'avoir réel du client, et projette la rente LPP à la retraite. Basé sur les paramètres légaux 2026 (inchangés depuis 2025).</div>
+
+    ${sectionCard('Client (optionnel — pour préremplir)', '#38bdf8', `<div class="form-grid">
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Sélectionner un client</label><select class="form-select" id="clpp-client" onchange="prefillClientLPP()"><option value="">— Simulation libre (prospect) —</option>${clientOptions}</select></div>
+    </div>`)}
+
+    ${sectionCard('Situation personnelle', '#a78bfa', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">Nom (prospect ou client)</label><input class="form-input" id="clpp-nom" placeholder="Jean Dupont"/></div>
+      <div class="form-field"><label class="form-label">Date de naissance *</label><input class="form-input" id="clpp-naissance" type="date"/></div>
+      <div class="form-field"><label class="form-label">Âge de référence retraite</label><input class="form-input" id="clpp-age-retraite" type="number" value="65"/></div>
+      <div class="form-field"><label class="form-label">Mois avant échéance l'année de la retraite</label><input class="form-input" id="clpp-mois-derniere-annee" type="number" value="6" min="0" max="12"/></div>
+    </div>`)}
+
+    ${sectionCard('Salaire et avoir actuel', '#f59e0b', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">Salaire AVS annuel actuel (CHF) *</label><input class="form-input" id="clpp-salaire-avs" type="number" placeholder="90000" oninput="updateApercuSalaireCoordonne()"/></div>
+      <div class="form-field"><label class="form-label">Salaire coordonné LPP (calculé)</label><input class="form-input" id="clpp-salaire-coordonne" type="number" readonly style="background:var(--surface-alt);color:var(--text-muted)"/></div>
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Avoir de vieillesse LPP actuel (CHF) — depuis le certificat de prévoyance *</label><input class="form-input" id="clpp-avoir-actuel" type="number" placeholder="85000"/></div>
+    </div>`)}
+
+    ${sectionCard('Hypothèses de calcul', '#4ade80', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">Taux d'intérêt hypothèse (%)</label><input class="form-input" id="clpp-taux-interet" type="number" step="0.01" value="1.25"/></div>
+      <div class="form-field"><label class="form-label">Taux de conversion hypothèse (%)</label><input class="form-input" id="clpp-taux-conversion" type="number" step="0.1" value="6.8"/></div>
+      <div class="form-field"><label class="form-label">Rachat annuel prévu (CHF, optionnel)</label><input class="form-input" id="clpp-rachat-annuel" type="number" value="0"/></div>
+    </div>`)}
+
+    ${sectionCard('Objectif retraite (optionnel — règle des 90%)', '#f87171', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">Rente AVS estimée à la retraite (CHF/an)</label><input class="form-input" id="clpp-rente-avs" type="number" placeholder="28680"/></div>
+      <div style="grid-column:span 2;font-size:10.5px;color:var(--text-muted);padding:4px 2px">Les rentes du 1er et 2ème pilier combinées sont plafonnées à 90% du dernier salaire présumé perdu (coordination LPP).</div>
+    </div>`)}
+
+    <div style="display:flex;gap:10px;margin:18px 0">
+      <button class="btn-save" onclick="calculerEtAfficherLPP()">🧮 Calculer</button>
+    </div>
+
+    <div id="clpp-resultats"></div>
+  `;
+}
+
+// Préremplit le nom et la date de naissance depuis un client existant
+function prefillClientLPP() {
+  const clientId = document.getElementById('clpp-client').value;
+  if (!clientId) return;
+  const c = allClients.find(x => x.id === clientId);
+  if (!c) return;
+  document.getElementById('clpp-nom').value = c.segment === 'Entreprise' ? c.nom : `${c.prenom} ${c.nom}`;
+  if (c.date_naissance) document.getElementById('clpp-naissance').value = c.date_naissance;
+}
+
+// Met à jour l'aperçu du salaire coordonné en direct pendant la saisie
+function updateApercuSalaireCoordonne() {
+  const salaireAVS = parseFloat(document.getElementById('clpp-salaire-avs').value) || 0;
+  const coordonne = calculerSalaireCoordonneLPP(salaireAVS);
+  document.getElementById('clpp-salaire-coordonne').value = coordonne;
+}
+
+function ageAujourdhui(dateNaissance) {
+  const naissance = new Date(dateNaissance + 'T00:00:00');
+  const aujourdhui = new Date();
+  let age = aujourdhui.getFullYear() - naissance.getFullYear();
+  const m = aujourdhui.getMonth() - naissance.getMonth();
+  if (m < 0 || (m === 0 && aujourdhui.getDate() < naissance.getDate())) age--;
+  return age;
+}
+
+function calculerEtAfficherLPP() {
+  const zone = document.getElementById('clpp-resultats');
+  const naissance = document.getElementById('clpp-naissance').value;
+  const salaireAVS = parseFloat(document.getElementById('clpp-salaire-avs').value) || 0;
+  const avoirActuel = parseFloat(document.getElementById('clpp-avoir-actuel').value) || 0;
+  if (!naissance || !salaireAVS) { showError('Date de naissance et salaire AVS sont obligatoires.'); return; }
+
+  const ageRetraite = parseInt(document.getElementById('clpp-age-retraite').value) || 65;
+  const moisDerniereAnnee = parseInt(document.getElementById('clpp-mois-derniere-annee').value) || 0;
+  const tauxInteret = (parseFloat(document.getElementById('clpp-taux-interet').value) || 1.25) / 100;
+  const tauxConversion = (parseFloat(document.getElementById('clpp-taux-conversion').value) || 6.8) / 100;
+  const rachatAnnuel = parseFloat(document.getElementById('clpp-rachat-annuel').value) || 0;
+  const renteAVS = parseFloat(document.getElementById('clpp-rente-avs').value) || 0;
+
+  const salaireCoordonne = calculerSalaireCoordonneLPP(salaireAVS);
+  const ageActuel = ageAujourdhui(naissance);
+
+  if (ageActuel >= ageRetraite) { showError('L\'âge actuel dépasse déjà l\'âge de référence de la retraite.'); return; }
+  if (ageActuel < 25) { showError('Le calculateur suppose une affiliation dès 25 ans (bonifications de vieillesse) — âge actuel trop bas pour le parcours théorique.'); return; }
+
+  // Parcours théorique : depuis 25 ans, capital = 0, sans rachat (référence légale minimale)
+  const theorique = simulerParcoursLPP({ salaireCoordonne, capitalDepart: 0, ageDepart: 25, ageRetraite, moisDerniereAnnee, tauxInteret, rachatAnnuel: 0 });
+  const ligneTheoriqueActuelle = theorique.lignes.find(l => l.age === ageActuel - 1) || theorique.lignes[theorique.lignes.length - 1];
+  const avoirTheoriqueActuel = ligneTheoriqueActuelle ? ligneTheoriqueActuelle.etatFin : 0;
+
+  // Parcours réel projeté : depuis aujourd'hui, capital = avoir réel actuel
+  const reel = simulerParcoursLPP({ salaireCoordonne, capitalDepart: avoirActuel, ageDepart: ageActuel, ageRetraite, moisDerniereAnnee, tauxInteret, rachatAnnuel });
+  const capitalProjete = reel.capitalFinal;
+  const renteAnnuelleProjetee = Math.round(capitalProjete * tauxConversion);
+  const renteMensuelleProjetee = Math.round(renteAnnuelleProjetee / 12);
+
+  const lacune = Math.round(avoirTheoriqueActuel - avoirActuel);
+
+  let objectifHtml = '';
+  if (renteAVS > 0) {
+    const objectif90 = Math.round(salaireAVS * 0.9);
+    const renteCombinee = renteAVS + renteAnnuelleProjetee;
+    const lacuneRente = objectif90 - renteCombinee;
+    objectifHtml = `
+      ${sectionCard('Objectif retraite (règle des 90%)', '#f87171', `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+          <div><div style="font-size:11px;color:var(--text-muted)">Objectif (90% du salaire actuel)</div><div style="font-size:18px;font-weight:800;color:var(--text)">CHF ${objectif90.toLocaleString()}/an</div></div>
+          <div><div style="font-size:11px;color:var(--text-muted)">Rente AVS + LPP projetées</div><div style="font-size:18px;font-weight:800;color:var(--text)">CHF ${renteCombinee.toLocaleString()}/an</div></div>
+        </div>
+        <div style="margin-top:12px;padding:12px 14px;border-radius:9px;background:${lacuneRente > 0 ? 'var(--red-dim)' : 'rgba(74,222,128,0.12)'}">
+          ${lacuneRente > 0
+            ? `<strong style="color:#f87171">Lacune de rente estimée : CHF ${lacuneRente.toLocaleString()}/an</strong> (CHF ${Math.round(lacuneRente/12).toLocaleString()}/mois) — à combler via le 3ème pilier ou des rachats LPP supplémentaires.`
+            : `<strong style="color:#4ade80">Objectif atteint</strong> — les rentes projetées couvrent le seuil des 90% du dernier salaire.`}
+        </div>
+      `)}
+    `;
+  }
+
+  const tableRows = (lignes, label) => lignes.map(l => `
+    <tr style="border-top:1px solid var(--border)">
+      <td style="padding:5px 8px">${l.age}</td>
+      <td style="padding:5px 8px;text-align:right">CHF ${Math.round(l.etatDebut).toLocaleString()}</td>
+      <td style="padding:5px 8px;text-align:right;color:var(--text-muted)">CHF ${Math.round(l.interet).toLocaleString()}</td>
+      <td style="padding:5px 8px;text-align:right;color:#4ade80">CHF ${Math.round(l.bonification).toLocaleString()}</td>
+      <td style="padding:5px 8px;text-align:right;font-weight:700">CHF ${Math.round(l.etatFin).toLocaleString()}</td>
+    </tr>`).join('');
+
+  zone.innerHTML = `
+    ${sectionCard('Résultats', '#38bdf8', `
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;margin-bottom:14px">
+        <div><div style="font-size:11px;color:var(--text-muted)">Avoir théorique à ${ageActuel} ans (minimum légal depuis 25 ans)</div><div style="font-size:18px;font-weight:800;color:var(--text)">CHF ${Math.round(avoirTheoriqueActuel).toLocaleString()}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted)">Avoir réel actuel (certificat)</div><div style="font-size:18px;font-weight:800;color:var(--text)">CHF ${avoirActuel.toLocaleString()}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted)">Lacune de prévoyance actuelle</div><div style="font-size:18px;font-weight:800;color:${lacune > 0 ? '#f87171' : '#4ade80'}">CHF ${lacune.toLocaleString()}</div></div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px">${lacune > 0 ? `Potentiel de rachat estimé : CHF ${lacune.toLocaleString()} (déductible du revenu imposable, sous réserve du potentiel réel indiqué sur le certificat de prévoyance).` : `Le client est au-dessus du minimum légal théorique — probablement grâce à un plan de prévoyance surobligatoire (caisse enveloppante).`}</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;padding-top:14px;border-top:1px solid var(--border)">
+        <div><div style="font-size:11px;color:var(--text-muted)">Capital LPP projeté à la retraite (${ageRetraite} ans)</div><div style="font-size:20px;font-weight:900;color:#f59e0b">CHF ${Math.round(capitalProjete).toLocaleString()}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted)">Rente LPP annuelle projetée</div><div style="font-size:20px;font-weight:900;color:#f59e0b">CHF ${renteAnnuelleProjetee.toLocaleString()}/an <span style="font-size:12px;color:var(--text-muted);font-weight:400">(CHF ${renteMensuelleProjetee.toLocaleString()}/mois)</span></div></div>
+      </div>
+    `)}
+
+    ${objectifHtml}
+
+    ${sectionCard('Détail du parcours réel projeté (année par année)', '#a78bfa', `
+      <div style="max-height:320px;overflow-y:auto;border:1px solid var(--border);border-radius:10px">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead style="position:sticky;top:0;background:var(--surface)"><tr style="color:var(--text-muted);font-size:10px;text-transform:uppercase">
+            <th style="padding:6px 8px;text-align:left">Âge</th><th style="padding:6px 8px;text-align:right">État 01.01</th>
+            <th style="padding:6px 8px;text-align:right">Intérêts</th><th style="padding:6px 8px;text-align:right">Bonification</th>
+            <th style="padding:6px 8px;text-align:right">État 31.12</th>
+          </tr></thead>
+          <tbody>${tableRows(reel.lignes)}</tbody>
+        </table>
+      </div>
+    `)}
+
+    <div style="display:flex;gap:10px;margin-top:16px">
+      <button class="btn-secondary" onclick="imprimerResultatLPP()">🖨️ Imprimer / PDF</button>
+    </div>
+  `;
+
+  window._lppDernierResultat = { naissance, salaireAVS, salaireCoordonne, avoirActuel, ageActuel, ageRetraite, avoirTheoriqueActuel, lacune, capitalProjete, renteAnnuelleProjetee, renteMensuelleProjetee, tauxInteret, tauxConversion, lignesReel: reel.lignes };
+}
+
+function imprimerResultatLPP() {
+  const r = window._lppDernierResultat;
+  if (!r) return;
+  const nom = document.getElementById('clpp-nom').value || 'Client';
+  const win = window.open('', '_blank');
+  const rows = r.lignesReel.map(l => `
+    <tr><td>${l.age}</td><td style="text-align:right">CHF ${Math.round(l.etatDebut).toLocaleString()}</td><td style="text-align:right">CHF ${Math.round(l.interet).toLocaleString()}</td><td style="text-align:right">CHF ${Math.round(l.bonification).toLocaleString()}</td><td style="text-align:right;font-weight:700">CHF ${Math.round(l.etatFin).toLocaleString()}</td></tr>`).join('');
+  win.document.write(`<html><head><title>Calcul de lacune LPP — ${nom}</title><style>
+    body{font-family:Arial,sans-serif;padding:30px;color:#0f2244}
+    h1{font-size:18px;border-bottom:2px solid #0f2244;padding-bottom:8px}
+    table{width:100%;border-collapse:collapse;margin-top:14px;font-size:12px}
+    th,td{padding:6px 8px;border-bottom:1px solid #ddd}
+    th{background:#f2f5fa;text-align:left}
+    .stat{display:inline-block;margin-right:30px;margin-bottom:14px}
+    .stat b{display:block;font-size:16px}
+  </style></head><body>
+    <h1>Calcul de lacune de prévoyance LPP — ${nom}</h1>
+    <div class="stat">Avoir théorique actuel<b>CHF ${Math.round(r.avoirTheoriqueActuel).toLocaleString()}</b></div>
+    <div class="stat">Avoir réel actuel<b>CHF ${r.avoirActuel.toLocaleString()}</b></div>
+    <div class="stat">Lacune de prévoyance<b>CHF ${r.lacune.toLocaleString()}</b></div>
+    <div class="stat">Capital projeté à la retraite<b>CHF ${Math.round(r.capitalProjete).toLocaleString()}</b></div>
+    <div class="stat">Rente LPP annuelle projetée<b>CHF ${r.renteAnnuelleProjetee.toLocaleString()}</b></div>
+    <table><thead><tr><th>Âge</th><th>État 01.01</th><th>Intérêts</th><th>Bonification</th><th>État 31.12</th></tr></thead><tbody>${rows}</tbody></table>
+    <button onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#0f2244;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Imprimer / Enregistrer en PDF</button>
+  </body></html>`);
+  win.document.close();
+}
 
 // Catalogue des produits d'assurance par catégorie, avec modules complémentaires (à enrichir au fur et à mesure)
 const CATALOGUE_PRODUITS = {
@@ -1344,6 +1595,7 @@ const SECTIONS = [
     { id: 'suivi', label: 'Suivi des affaires' },
     { id: 'nouveau-contrat-direct', label: 'Nouveau contrat' },
     { id: 'nouvelle-demande-offre', label: 'Demande d\'offre' },
+    { id: 'calc-lpp', label: '🧮 Calculateur LPP' },
     { id: 'rappels', label: 'Tâches & Rappels' },
     { id: 'agenda', label: 'Agenda' },
     { id: 'campagnes', label: 'Campagnes' },
@@ -1570,6 +1822,7 @@ async function renderView() {
     case 'opportunites': main.innerHTML = viewOpportunites(); break;
     case 'suivi': main.innerHTML = viewSuivi(); break;
     case 'rappels': main.innerHTML = viewRappels(); break;
+    case 'calc-lpp': main.innerHTML = viewCalculateurLPP(); break;
     case 'agenda': main.innerHTML = viewAgenda(); break;
     case 'campagnes': main.innerHTML = viewCampagnes(); break;
     case 'nouveau-agent': main.innerHTML = viewNouvelAgent(); break;

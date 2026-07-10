@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 00:45</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 01:45</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -636,7 +636,17 @@ function calculerPrixMaximalFinancable({ fondsPropresDisponibles, fondsPropresLP
     const c = calculerCapaciteFinanciere({ prix: mid, fondsPropresDisponibles, fondsPropresLPP, revenuBrut, tauxInteret, chargesEntretien, dureeAmortissement, residenceSecondaire, tauxEndettementMax });
     if (c.tauxEffort <= tauxEndettementMax && c.fpSuffisants && c.fpDursSuffisants) lo = mid; else hi = mid;
   }
-  return lo;
+  const prixMax = lo;
+
+  // Identifie quelle règle bloque effectivement le prix maximal, pour l'expliquer clairement
+  const capFPTotale = fondsPropresDisponibles > 0 ? fondsPropresDisponibles / pctFPMin : 0;
+  const fondsPropresDurs = fondsPropresDisponibles - (fondsPropresLPP || 0);
+  const capFPDurs = residenceSecondaire ? Infinity : (fondsPropresDurs > 0 ? fondsPropresDurs / IMMO_LEGAL.fp_min_durs : 0);
+  let contrainteLimitante = 'tauxEffort';
+  if (Math.abs(prixMax - capFPDurs) < Math.max(1, prixMax * 0.005) && capFPDurs <= capFPTotale) contrainteLimitante = 'fondsPropresDurs';
+  else if (Math.abs(prixMax - capFPTotale) < Math.max(1, prixMax * 0.005)) contrainteLimitante = 'fondsPropresTotaux';
+
+  return { prixMax, contrainteLimitante, capFPTotale, capFPDurs };
 }
 
 // Taux de bonification de vieillesse par tranche d'âge (art. 16 LPP, minimum légal)
@@ -850,7 +860,13 @@ function prefillClientImmo() {
 // Réutilisé à la fois pour le calcul initial et pour chaque ajustement des curseurs en direct.
 function renderResultatsImmo(p) {
   const r = calculerCapaciteFinanciere(p);
-  const prixMax = calculerPrixMaximalFinancable({ fondsPropresDisponibles: p.fondsPropresDisponibles, fondsPropresLPP: p.fondsPropresLPP, revenuBrut: p.revenuBrut, tauxInteret: p.tauxInteret, chargesEntretien: p.chargesEntretien, dureeAmortissement: p.dureeAmortissement, tauxEndettementMax: p.tauxEndettementMax, residenceSecondaire: p.residenceSecondaire });
+  const resultatPrixMax = calculerPrixMaximalFinancable({ fondsPropresDisponibles: p.fondsPropresDisponibles, fondsPropresLPP: p.fondsPropresLPP, revenuBrut: p.revenuBrut, tauxInteret: p.tauxInteret, chargesEntretien: p.chargesEntretien, dureeAmortissement: p.dureeAmortissement, tauxEndettementMax: p.tauxEndettementMax, residenceSecondaire: p.residenceSecondaire });
+  const prixMax = resultatPrixMax.prixMax;
+  const explicationContrainte = {
+    fondsPropresDurs: `Plafonné par les fonds propres "durs" (hors LPP) : seulement CHF ${Math.round(p.fondsPropresDisponibles - (p.fondsPropresLPP||0)).toLocaleString()} disponibles hors 2ème pilier, alors que 10% du prix doit provenir de cette source.`,
+    fondsPropresTotaux: `Plafonné par les fonds propres totaux (règle des ${p.residenceSecondaire ? '33.3' : '20'}%).`,
+    tauxEffort: `Plafonné par le taux d'effort (revenu par rapport à la charge annuelle).`,
+  }[resultatPrixMax.contrainteLimitante];
   const ok = r.fpSuffisants && r.fpDursSuffisants && r.tauxEffort <= p.tauxEndettementMax;
 
   const ligneVerif = (label, okLigne, detail) => `
@@ -859,7 +875,7 @@ function renderResultatsImmo(p) {
       <div style="flex:1"><div style="font-size:12.5px;font-weight:700;color:var(--text)">${label}</div><div style="font-size:11px;color:var(--text-muted)">${detail}</div></div>
     </div>`;
 
-  window._immoDernierResultat = { ...p, ...r, prixMax };
+  window._immoDernierResultat = { ...p, ...r, prixMax, contrainteLimitante: resultatPrixMax.contrainteLimitante };
 
   return `
     ${sectionCard(ok ? '✅ Projet finançable' : '❌ Projet non finançable en l\u2019état', ok ? '#4ade80' : '#f87171', `
@@ -871,6 +887,7 @@ function renderResultatsImmo(p) {
     ${sectionCard('Structure de financement', '#38bdf8', `
       <table style="width:100%;border-collapse:collapse;font-size:12.5px">
         <tr><td style="padding:5px 0;color:var(--text-muted)">Prix d'achat</td><td style="padding:5px 0;text-align:right;font-weight:700">CHF ${Math.round(p.prix).toLocaleString()}</td></tr>
+        <tr><td style="padding:5px 0;color:var(--text-muted)">Revenu brut annuel du ménage</td><td style="padding:5px 0;text-align:right;font-weight:700">CHF ${Math.round(p.revenuBrut).toLocaleString()}</td></tr>
         <tr><td style="padding:5px 0;color:var(--text-muted)">Fonds propres</td><td style="padding:5px 0;text-align:right;font-weight:700">CHF ${Math.round(p.fondsPropresDisponibles).toLocaleString()}</td></tr>
         <tr><td style="padding:5px 0;color:var(--text-muted)">Hypothèque totale</td><td style="padding:5px 0;text-align:right;font-weight:700">CHF ${Math.round(r.hypotheque).toLocaleString()}</td></tr>
         <tr><td style="padding:5px 0 5px 16px;color:var(--text-muted)">— dont 1er rang (max 65%)</td><td style="padding:5px 0;text-align:right">CHF ${Math.round(r.premierRang).toLocaleString()}</td></tr>
@@ -897,7 +914,7 @@ function renderResultatsImmo(p) {
         <div>
           <div style="font-size:11px;color:var(--text-muted)">Prix maximal finançable</div>
           <div style="font-size:22px;font-weight:900;color:#4ade80">CHF ${Math.round(prixMax).toLocaleString()}</div>
-          <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Compte tenu des fonds propres et du revenu saisis.</div>
+          <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">${explicationContrainte}</div>
         </div>
         <div>
           <div style="font-size:11px;color:var(--text-muted)">Revenu brut minimum nécessaire (pour ce prix et ces fonds propres)</div>
@@ -905,7 +922,7 @@ function renderResultatsImmo(p) {
           <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Revenu actuel saisi : CHF ${Math.round(p.revenuBrut).toLocaleString()} — ${p.revenuBrut >= r.revenuMinimumNecessaire ? 'suffisant' : 'manque CHF ' + Math.round(r.revenuMinimumNecessaire - p.revenuBrut).toLocaleString() + '/an'}</div>
         </div>
       </div>
-      <div style="font-size:10.5px;color:var(--text-muted);margin-top:10px">Les deux respectent simultanément la règle des fonds propres (20%) et celle du taux d'effort (${Math.round(p.tauxEndettementMax*100)}%).</div>
+      <div style="font-size:10.5px;color:var(--text-muted);margin-top:10px">⚠️ Ces deux chiffres répondent à des questions différentes : le <strong>revenu minimum</strong> est calculé pour le prix saisi ci-dessus (CHF ${Math.round(p.prix).toLocaleString()}), sans tenir compte de la règle des fonds propres. Le <strong>prix maximal</strong> tient compte de toutes les règles (fonds propres compris) à revenu et fonds propres inchangés. Ils ne se répondent donc pas forcément l'un à l'autre.</div>
     `)}
   `;
 }
@@ -1019,6 +1036,7 @@ function imprimerResultatImmo() {
     <h2>Structure de financement</h2>
     <table>
       <tr><td>Prix d'achat</td><td>CHF ${r.prix.toLocaleString()}</td></tr>
+      <tr><td>Revenu brut annuel du ménage</td><td>CHF ${Math.round(r.revenuBrut).toLocaleString()}</td></tr>
       <tr><td>Fonds propres</td><td>CHF ${r.fondsPropresDisponibles.toLocaleString()}</td></tr>
       <tr><td>Hypothèque totale</td><td>CHF ${Math.round(r.hypotheque).toLocaleString()}</td></tr>
       <tr><td>1er rang</td><td>CHF ${Math.round(r.premierRang).toLocaleString()}</td></tr>
@@ -1039,6 +1057,14 @@ function imprimerResultatImmo() {
       <tr><td>Revenu brut minimum nécessaire</td><td>CHF ${Math.round(r.revenuMinimumNecessaire).toLocaleString()}</td></tr>
       <tr><td>Revenu actuel saisi</td><td>CHF ${Math.round(r.revenuBrut).toLocaleString()} — ${r.revenuBrut >= r.revenuMinimumNecessaire ? 'suffisant' : 'manque CHF ' + Math.round(r.revenuMinimumNecessaire - r.revenuBrut).toLocaleString() + '/an'}</td></tr>
     </table>
+    <p style="font-size:10.5px;color:#666;margin-top:6px">${
+      r.contrainteLimitante === 'fondsPropresDurs'
+        ? `Prix maximal plafonné par les fonds propres "durs" (hors LPP) : seulement CHF ${Math.round(r.fondsPropresDisponibles - (r.fondsPropresLPP||0)).toLocaleString()} disponibles hors 2ème pilier, alors que 10% du prix doit provenir de cette source.`
+        : r.contrainteLimitante === 'fondsPropresTotaux'
+        ? `Prix maximal plafonné par les fonds propres totaux (règle des ${r.residenceSecondaire ? '33.3' : '20'}%).`
+        : `Prix maximal plafonné par le taux d'effort (revenu par rapport à la charge annuelle).`
+    }</p>
+    <p style="font-size:10.5px;color:#666;margin-top:6px">⚠️ Ces deux chiffres répondent à des questions différentes : le revenu minimum est calculé pour le prix saisi (CHF ${Math.round(r.prix).toLocaleString()}), sans tenir compte de la règle des fonds propres. Le prix maximal tient compte de toutes les règles (fonds propres compris) à revenu et fonds propres inchangés.</p>
 
     <p style="font-size:10px;color:#888;margin-top:20px">Simulation indicative selon les règles standards de branche — ne remplace pas une étude de faisabilité bancaire formelle.</p>
     <button onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#0f2244;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Imprimer / Enregistrer en PDF</button>

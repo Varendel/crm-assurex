@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 00:15</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 00:45</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -601,7 +601,7 @@ const IMMO_LEGAL = {
 };
 
 // Calcule la capacité financière pour un prix d'achat donné
-function calculerCapaciteFinanciere({ prix, fondsPropresDisponibles, fondsPropresLPP, revenuBrut, tauxInteret, chargesEntretien, dureeAmortissement, residenceSecondaire }) {
+function calculerCapaciteFinanciere({ prix, fondsPropresDisponibles, fondsPropresLPP, revenuBrut, tauxInteret, chargesEntretien, dureeAmortissement, residenceSecondaire, tauxEndettementMax }) {
   const pctFPMin = residenceSecondaire ? IMMO_LEGAL.fp_min_secondaire : IMMO_LEGAL.fp_min_principale;
   const fpMinRequis = prix * pctFPMin;
   const fpDursRequis = residenceSecondaire ? fpMinRequis : prix * IMMO_LEGAL.fp_min_durs;
@@ -616,13 +616,14 @@ function calculerCapaciteFinanciere({ prix, fondsPropresDisponibles, fondsPropre
   const chargesAnnuelles = prix * chargesEntretien;
   const chargeTotaleAnnuelle = interetsAnnuels + amortissementAnnuel + chargesAnnuelles;
   const tauxEffort = revenuBrut > 0 ? chargeTotaleAnnuelle / revenuBrut : Infinity;
+  const revenuMinimumNecessaire = tauxEndettementMax > 0 ? chargeTotaleAnnuelle / tauxEndettementMax : chargeTotaleAnnuelle / 0.33;
 
   return {
     fpMinRequis, fpDursRequis, fondsPropresDurs,
     fpSuffisants: fondsPropresDisponibles >= fpMinRequis - 0.01,
     fpDursSuffisants: fondsPropresDurs >= fpDursRequis - 0.01,
     hypotheque, premierRang, deuxiemeRang,
-    interetsAnnuels, amortissementAnnuel, chargesAnnuelles, chargeTotaleAnnuelle, tauxEffort,
+    interetsAnnuels, amortissementAnnuel, chargesAnnuelles, chargeTotaleAnnuelle, tauxEffort, revenuMinimumNecessaire,
   };
 }
 
@@ -632,7 +633,7 @@ function calculerPrixMaximalFinancable({ fondsPropresDisponibles, fondsPropresLP
   let lo = 0, hi = fondsPropresDisponibles > 0 ? fondsPropresDisponibles / pctFPMin : 0;
   for (let i = 0; i < 60; i++) {
     const mid = (lo + hi) / 2;
-    const c = calculerCapaciteFinanciere({ prix: mid, fondsPropresDisponibles, fondsPropresLPP, revenuBrut, tauxInteret, chargesEntretien, dureeAmortissement, residenceSecondaire });
+    const c = calculerCapaciteFinanciere({ prix: mid, fondsPropresDisponibles, fondsPropresLPP, revenuBrut, tauxInteret, chargesEntretien, dureeAmortissement, residenceSecondaire, tauxEndettementMax });
     if (c.tauxEffort <= tauxEndettementMax && c.fpSuffisants && c.fpDursSuffisants) lo = mid; else hi = mid;
   }
   return lo;
@@ -891,9 +892,20 @@ function renderResultatsImmo(p) {
       ], p.revenuBrut * p.tauxEndettementMax, `Max. ${Math.round(p.tauxEndettementMax*100)}% du revenu`)}
     `)}
 
-    ${sectionCard('Prix maximal finançable', '#4ade80', `
-      <div style="font-size:22px;font-weight:900;color:#4ade80">CHF ${Math.round(prixMax).toLocaleString()}</div>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Compte tenu des fonds propres et du revenu saisis, en respectant simultanément la règle des fonds propres (20%) et celle du taux d'effort (${Math.round(p.tauxEndettementMax*100)}%).</div>
+    ${sectionCard('Prix maximal finançable / Revenu minimum nécessaire', '#4ade80', `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div>
+          <div style="font-size:11px;color:var(--text-muted)">Prix maximal finançable</div>
+          <div style="font-size:22px;font-weight:900;color:#4ade80">CHF ${Math.round(prixMax).toLocaleString()}</div>
+          <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Compte tenu des fonds propres et du revenu saisis.</div>
+        </div>
+        <div>
+          <div style="font-size:11px;color:var(--text-muted)">Revenu brut minimum nécessaire (pour ce prix et ces fonds propres)</div>
+          <div style="font-size:22px;font-weight:900;color:${p.revenuBrut >= r.revenuMinimumNecessaire ? '#4ade80' : '#f87171'}">CHF ${Math.round(r.revenuMinimumNecessaire).toLocaleString()}</div>
+          <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Revenu actuel saisi : CHF ${Math.round(p.revenuBrut).toLocaleString()} — ${p.revenuBrut >= r.revenuMinimumNecessaire ? 'suffisant' : 'manque CHF ' + Math.round(r.revenuMinimumNecessaire - p.revenuBrut).toLocaleString() + '/an'}</div>
+        </div>
+      </div>
+      <div style="font-size:10.5px;color:var(--text-muted);margin-top:10px">Les deux respectent simultanément la règle des fonds propres (20%) et celle du taux d'effort (${Math.round(p.tauxEndettementMax*100)}%).</div>
     `)}
   `;
 }
@@ -1021,8 +1033,12 @@ function imprimerResultatImmo() {
       <tr><td><b>Total</b></td><td><b>CHF ${Math.round(r.chargeTotaleAnnuelle).toLocaleString()}/an</b></td></tr>
     </table>
 
-    <h2>Prix maximal finançable</h2>
-    <div style="font-size:20px;font-weight:900">CHF ${Math.round(r.prixMax).toLocaleString()}</div>
+    <h2>Prix maximal finançable / Revenu minimum nécessaire</h2>
+    <table>
+      <tr><td>Prix maximal finançable</td><td>CHF ${Math.round(r.prixMax).toLocaleString()}</td></tr>
+      <tr><td>Revenu brut minimum nécessaire</td><td>CHF ${Math.round(r.revenuMinimumNecessaire).toLocaleString()}</td></tr>
+      <tr><td>Revenu actuel saisi</td><td>CHF ${Math.round(r.revenuBrut).toLocaleString()} — ${r.revenuBrut >= r.revenuMinimumNecessaire ? 'suffisant' : 'manque CHF ' + Math.round(r.revenuMinimumNecessaire - r.revenuBrut).toLocaleString() + '/an'}</td></tr>
+    </table>
 
     <p style="font-size:10px;color:#888;margin-top:20px">Simulation indicative selon les règles standards de branche — ne remplace pas une étude de faisabilité bancaire formelle.</p>
     <button onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#0f2244;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Imprimer / Enregistrer en PDF</button>

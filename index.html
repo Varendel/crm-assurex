@@ -340,7 +340,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-09 23:30</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 00:15</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -841,6 +841,73 @@ function prefillClientImmo() {
   const c = allClients.find(x => x.id === clientId);
   if (!c) return;
   document.getElementById('fi-nom').value = c.segment === 'Entreprise' ? c.nom : `${c.prenom} ${c.nom}`;
+  if (c.revenu) document.getElementById('fi-revenu').value = c.revenu;
+  if (c.date_naissance) document.getElementById('fi-age-actuel').value = ageAujourdhui(c.date_naissance);
+}
+
+// Génère le HTML des résultats (vérifications + structure + charge + prix max) à partir de paramètres donnés.
+// Réutilisé à la fois pour le calcul initial et pour chaque ajustement des curseurs en direct.
+function renderResultatsImmo(p) {
+  const r = calculerCapaciteFinanciere(p);
+  const prixMax = calculerPrixMaximalFinancable({ fondsPropresDisponibles: p.fondsPropresDisponibles, fondsPropresLPP: p.fondsPropresLPP, revenuBrut: p.revenuBrut, tauxInteret: p.tauxInteret, chargesEntretien: p.chargesEntretien, dureeAmortissement: p.dureeAmortissement, tauxEndettementMax: p.tauxEndettementMax, residenceSecondaire: p.residenceSecondaire });
+  const ok = r.fpSuffisants && r.fpDursSuffisants && r.tauxEffort <= p.tauxEndettementMax;
+
+  const ligneVerif = (label, okLigne, detail) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:7px 0">
+      <span style="font-size:15px">${okLigne ? '✅' : '❌'}</span>
+      <div style="flex:1"><div style="font-size:12.5px;font-weight:700;color:var(--text)">${label}</div><div style="font-size:11px;color:var(--text-muted)">${detail}</div></div>
+    </div>`;
+
+  window._immoDernierResultat = { ...p, ...r, prixMax };
+
+  return `
+    ${sectionCard(ok ? '✅ Projet finançable' : '❌ Projet non finançable en l\u2019état', ok ? '#4ade80' : '#f87171', `
+      ${ligneVerif('Fonds propres suffisants (min. 20%)', r.fpSuffisants, `${Math.round(p.fondsPropresDisponibles).toLocaleString()} CHF disponibles / ${Math.round(r.fpMinRequis).toLocaleString()} CHF requis`)}
+      ${ligneVerif('Fonds propres "durs" suffisants (min. 10% hors LPP)', r.fpDursSuffisants, `${Math.round(r.fondsPropresDurs).toLocaleString()} CHF hors LPP / ${Math.round(r.fpDursRequis).toLocaleString()} CHF requis`)}
+      ${ligneVerif('Taux d\u2019effort dans la limite', r.tauxEffort <= p.tauxEndettementMax, `${(r.tauxEffort*100).toFixed(1)}% du revenu brut / ${Math.round(p.tauxEndettementMax*100)}% maximum toléré`)}
+    `)}
+
+    ${sectionCard('Structure de financement', '#38bdf8', `
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <tr><td style="padding:5px 0;color:var(--text-muted)">Prix d'achat</td><td style="padding:5px 0;text-align:right;font-weight:700">CHF ${Math.round(p.prix).toLocaleString()}</td></tr>
+        <tr><td style="padding:5px 0;color:var(--text-muted)">Fonds propres</td><td style="padding:5px 0;text-align:right;font-weight:700">CHF ${Math.round(p.fondsPropresDisponibles).toLocaleString()}</td></tr>
+        <tr><td style="padding:5px 0;color:var(--text-muted)">Hypothèque totale</td><td style="padding:5px 0;text-align:right;font-weight:700">CHF ${Math.round(r.hypotheque).toLocaleString()}</td></tr>
+        <tr><td style="padding:5px 0 5px 16px;color:var(--text-muted)">— dont 1er rang (max 65%)</td><td style="padding:5px 0;text-align:right">CHF ${Math.round(r.premierRang).toLocaleString()}</td></tr>
+        <tr><td style="padding:5px 0 5px 16px;color:var(--text-muted)">— dont 2ème rang (à amortir sur ${p.dureeAmortissement} ans)</td><td style="padding:5px 0;text-align:right">CHF ${Math.round(r.deuxiemeRang).toLocaleString()}</td></tr>
+      </table>
+    `)}
+
+    ${sectionCard('Charge annuelle (capacité financière)', '#f59e0b', `
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:12px">
+        <tr><td style="padding:5px 0;color:var(--text-muted)">Intérêts théoriques (${(p.tauxInteret*100).toFixed(1)}%)</td><td style="padding:5px 0;text-align:right;font-weight:700">CHF ${Math.round(r.interetsAnnuels).toLocaleString()}/an</td></tr>
+        <tr><td style="padding:5px 0;color:var(--text-muted)">Amortissement 2ème rang</td><td style="padding:5px 0;text-align:right;font-weight:700">CHF ${Math.round(r.amortissementAnnuel).toLocaleString()}/an</td></tr>
+        <tr><td style="padding:5px 0;color:var(--text-muted)">Charges d'entretien (${(p.chargesEntretien*100).toFixed(1)}%)</td><td style="padding:5px 0;text-align:right;font-weight:700">CHF ${Math.round(r.chargesAnnuelles).toLocaleString()}/an</td></tr>
+        <tr style="border-top:1px solid var(--border)"><td style="padding:6px 0;font-weight:800">Charge totale annuelle</td><td style="padding:6px 0;text-align:right;font-weight:800;color:#f59e0b">CHF ${Math.round(r.chargeTotaleAnnuelle).toLocaleString()}/an</td></tr>
+      </table>
+      ${svgStackedBarChart([
+        { label: 'Intérêts', value: r.interetsAnnuels, color: '#38bdf8' },
+        { label: 'Amortissement', value: r.amortissementAnnuel, color: '#f59e0b' },
+        { label: 'Charges d\u2019entretien', value: r.chargesAnnuelles, color: '#fbbf24' },
+      ], p.revenuBrut * p.tauxEndettementMax, `Max. ${Math.round(p.tauxEndettementMax*100)}% du revenu`)}
+    `)}
+
+    ${sectionCard('Prix maximal finançable', '#4ade80', `
+      <div style="font-size:22px;font-weight:900;color:#4ade80">CHF ${Math.round(prixMax).toLocaleString()}</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Compte tenu des fonds propres et du revenu saisis, en respectant simultanément la règle des fonds propres (20%) et celle du taux d'effort (${Math.round(p.tauxEndettementMax*100)}%).</div>
+    `)}
+  `;
+}
+
+// Curseur générique avec libellé de valeur en direct
+function curseurImmo(id, label, min, max, step, valeur, unite) {
+  return `
+    <div style="margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;font-size:12px;margin-bottom:4px">
+        <span style="color:var(--text-muted);font-weight:700">${label}</span>
+        <span id="${id}-valeur" style="color:var(--text);font-weight:800">${valeur}${unite}</span>
+      </div>
+      <input type="range" id="${id}" min="${min}" max="${max}" step="${step}" value="${valeur}" oninput="recalculerImmoEnDirect()" style="width:100%"/>
+    </div>`;
 }
 
 function calculerEtAfficherImmo() {
@@ -851,61 +918,29 @@ function calculerEtAfficherImmo() {
   const revenuBrut = parseFloat(document.getElementById('fi-revenu').value) || 0;
   if (!prix || !revenuBrut) { showError('Le prix du bien et le revenu brut sont obligatoires.'); return; }
 
-  const tauxInteret = (parseFloat(document.getElementById('fi-taux-interet').value) || 5) / 100;
-  const chargesEntretien = (parseFloat(document.getElementById('fi-charges').value) || 1) / 100;
-  const tauxEndettementMax = (parseFloat(document.getElementById('fi-taux-max').value) || 33) / 100;
+  const tauxInteret = parseFloat(document.getElementById('fi-taux-interet').value) || 5;
+  const chargesEntretien = parseFloat(document.getElementById('fi-charges').value) || 1;
+  const tauxEndettementMax = parseFloat(document.getElementById('fi-taux-max').value) || 33;
   const residenceSecondaire = document.getElementById('fi-type-residence').value === 'secondaire';
   const ageActuel = parseInt(document.getElementById('fi-age-actuel').value) || null;
   const ageRetraite = parseInt(document.getElementById('fi-age-retraite').value) || 65;
   const dureeAmortissement = ageActuel ? Math.max(1, Math.min(IMMO_LEGAL.duree_amortissement_defaut, ageRetraite - ageActuel)) : IMMO_LEGAL.duree_amortissement_defaut;
 
-  const params = { prix, fondsPropresDisponibles, fondsPropresLPP, revenuBrut, tauxInteret, chargesEntretien, dureeAmortissement, residenceSecondaire };
-  const r = calculerCapaciteFinanciere(params);
-  const prixMax = calculerPrixMaximalFinancable({ fondsPropresDisponibles, fondsPropresLPP, revenuBrut, tauxInteret, chargesEntretien, dureeAmortissement, tauxEndettementMax, residenceSecondaire });
+  // Paramètres fixes (non ajustables par les curseurs) — conservés pour la simulation en direct
+  window._immoParamsFixes = { revenuBrut, fondsPropresLPP, dureeAmortissement, residenceSecondaire };
 
-  const ok = r.fpSuffisants && r.fpDursSuffisants && r.tauxEffort <= tauxEndettementMax;
-
-  const ligneVerif = (label, ok, detail) => `
-    <div style="display:flex;align-items:center;gap:10px;padding:7px 0">
-      <span style="font-size:15px">${ok ? '✅' : '❌'}</span>
-      <div style="flex:1"><div style="font-size:12.5px;font-weight:700;color:var(--text)">${label}</div><div style="font-size:11px;color:var(--text-muted)">${detail}</div></div>
-    </div>`;
+  const paramsInitiaux = { prix, fondsPropresDisponibles, fondsPropresLPP, revenuBrut, tauxInteret: tauxInteret / 100, chargesEntretien: chargesEntretien / 100, tauxEndettementMax: tauxEndettementMax / 100, dureeAmortissement, residenceSecondaire };
 
   zone.innerHTML = `
-    ${sectionCard(ok ? '✅ Projet finançable' : '❌ Projet non finançable en l\'état', ok ? '#4ade80' : '#f87171', `
-      ${ligneVerif('Fonds propres suffisants (min. 20%)', r.fpSuffisants, `${fondsPropresDisponibles.toLocaleString()} CHF disponibles / ${Math.round(r.fpMinRequis).toLocaleString()} CHF requis`)}
-      ${ligneVerif('Fonds propres "durs" suffisants (min. 10% hors LPP)', r.fpDursSuffisants, `${Math.round(r.fondsPropresDurs).toLocaleString()} CHF hors LPP / ${Math.round(r.fpDursRequis).toLocaleString()} CHF requis`)}
-      ${ligneVerif('Taux d\'effort dans la limite', r.tauxEffort <= tauxEndettementMax, `${(r.tauxEffort*100).toFixed(1)}% du revenu brut / ${Math.round(tauxEndettementMax*100)}% maximum toléré`)}
+    ${sectionCard('🎚️ Simulation en direct — ajuste les paramètres pour voir ce qui débloque le financement', '#a78bfa', `
+      ${curseurImmo('fi-slider-prix', 'Prix d\u2019achat', Math.round(prix * 0.5 / 5000) * 5000, Math.round(prix * 1.5 / 5000) * 5000, 5000, prix, ' CHF')}
+      ${curseurImmo('fi-slider-fp', 'Fonds propres disponibles', 0, Math.round(prix * 0.8 / 5000) * 5000, 5000, fondsPropresDisponibles, ' CHF')}
+      ${curseurImmo('fi-slider-taux', 'Taux d\u2019intérêt théorique', 1, 8, 0.1, tauxInteret, '%')}
+      ${curseurImmo('fi-slider-charges', 'Charges d\u2019entretien', 0.5, 2, 0.1, chargesEntretien, '%')}
+      ${curseurImmo('fi-slider-effort', 'Taux d\u2019effort maximum toléré', 20, 40, 0.5, tauxEndettementMax, '%')}
     `)}
 
-    ${sectionCard('Structure de financement', '#38bdf8', `
-      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
-        <tr><td style="padding:5px 0;color:var(--text-muted)">Prix d'achat</td><td style="padding:5px 0;text-align:right;font-weight:700">CHF ${prix.toLocaleString()}</td></tr>
-        <tr><td style="padding:5px 0;color:var(--text-muted)">Fonds propres</td><td style="padding:5px 0;text-align:right;font-weight:700">CHF ${fondsPropresDisponibles.toLocaleString()}</td></tr>
-        <tr><td style="padding:5px 0;color:var(--text-muted)">Hypothèque totale</td><td style="padding:5px 0;text-align:right;font-weight:700">CHF ${Math.round(r.hypotheque).toLocaleString()}</td></tr>
-        <tr><td style="padding:5px 0 5px 16px;color:var(--text-muted)">— dont 1er rang (max 65%)</td><td style="padding:5px 0;text-align:right">CHF ${Math.round(r.premierRang).toLocaleString()}</td></tr>
-        <tr><td style="padding:5px 0 5px 16px;color:var(--text-muted)">— dont 2ème rang (à amortir sur ${dureeAmortissement} ans)</td><td style="padding:5px 0;text-align:right">CHF ${Math.round(r.deuxiemeRang).toLocaleString()}</td></tr>
-      </table>
-    `)}
-
-    ${sectionCard('Charge annuelle (capacité financière)', '#f59e0b', `
-      <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:12px">
-        <tr><td style="padding:5px 0;color:var(--text-muted)">Intérêts théoriques (${(tauxInteret*100).toFixed(1)}%)</td><td style="padding:5px 0;text-align:right;font-weight:700">CHF ${Math.round(r.interetsAnnuels).toLocaleString()}/an</td></tr>
-        <tr><td style="padding:5px 0;color:var(--text-muted)">Amortissement 2ème rang</td><td style="padding:5px 0;text-align:right;font-weight:700">CHF ${Math.round(r.amortissementAnnuel).toLocaleString()}/an</td></tr>
-        <tr><td style="padding:5px 0;color:var(--text-muted)">Charges d'entretien (${(chargesEntretien*100).toFixed(1)}%)</td><td style="padding:5px 0;text-align:right;font-weight:700">CHF ${Math.round(r.chargesAnnuelles).toLocaleString()}/an</td></tr>
-        <tr style="border-top:1px solid var(--border)"><td style="padding:6px 0;font-weight:800">Charge totale annuelle</td><td style="padding:6px 0;text-align:right;font-weight:800;color:#f59e0b">CHF ${Math.round(r.chargeTotaleAnnuelle).toLocaleString()}/an</td></tr>
-      </table>
-      ${svgStackedBarChart([
-        { label: 'Intérêts', value: r.interetsAnnuels, color: '#38bdf8' },
-        { label: 'Amortissement', value: r.amortissementAnnuel, color: '#f59e0b' },
-        { label: 'Charges d\'entretien', value: r.chargesAnnuelles, color: '#fbbf24' },
-      ], revenuBrut * tauxEndettementMax, `Max. ${Math.round(tauxEndettementMax*100)}% du revenu`)}
-    `)}
-
-    ${sectionCard('Prix maximal finançable', '#4ade80', `
-      <div style="font-size:22px;font-weight:900;color:#4ade80">CHF ${Math.round(prixMax).toLocaleString()}</div>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Compte tenu des fonds propres disponibles et du revenu du ménage, en respectant simultanément la règle des fonds propres (20%) et celle du taux d'effort (${Math.round(tauxEndettementMax*100)}%).</div>
-    `)}
+    <div id="fi-resultats-dynamiques">${renderResultatsImmo(paramsInitiaux)}</div>
 
     <div style="font-size:10.5px;color:var(--text-muted);margin:10px 0">⚠️ Simulation indicative selon les règles standards de branche — chaque établissement prêteur peut appliquer des critères légèrement différents (taux théorique, taux d'effort maximum). Ne remplace pas une étude de faisabilité bancaire formelle.</div>
 
@@ -913,8 +948,30 @@ function calculerEtAfficherImmo() {
       <button class="btn-secondary" onclick="imprimerResultatImmo()">🖨️ Imprimer / PDF</button>
     </div>
   `;
+}
 
-  window._immoDernierResultat = { prix, fondsPropresDisponibles, fondsPropresLPP, revenuBrut, tauxInteret, chargesEntretien, tauxEndettementMax, dureeAmortissement, residenceSecondaire, ...r, prixMax };
+// Relit les curseurs et recalcule instantanément, sans redemander les paramètres fixes du formulaire
+function recalculerImmoEnDirect() {
+  const fixes = window._immoParamsFixes;
+  if (!fixes) return;
+  const prix = parseFloat(document.getElementById('fi-slider-prix').value);
+  const fondsPropresDisponibles = parseFloat(document.getElementById('fi-slider-fp').value);
+  const tauxInteret = parseFloat(document.getElementById('fi-slider-taux').value);
+  const chargesEntretien = parseFloat(document.getElementById('fi-slider-charges').value);
+  const tauxEndettementMax = parseFloat(document.getElementById('fi-slider-effort').value);
+
+  document.getElementById('fi-slider-prix-valeur').textContent = `CHF ${Math.round(prix).toLocaleString()}`;
+  document.getElementById('fi-slider-fp-valeur').textContent = `CHF ${Math.round(fondsPropresDisponibles).toLocaleString()}`;
+  document.getElementById('fi-slider-taux-valeur').textContent = `${tauxInteret.toFixed(1)}%`;
+  document.getElementById('fi-slider-charges-valeur').textContent = `${chargesEntretien.toFixed(1)}%`;
+  document.getElementById('fi-slider-effort-valeur').textContent = `${tauxEndettementMax.toFixed(1)}%`;
+
+  const params = {
+    prix, fondsPropresDisponibles, fondsPropresLPP: fixes.fondsPropresLPP, revenuBrut: fixes.revenuBrut,
+    tauxInteret: tauxInteret / 100, chargesEntretien: chargesEntretien / 100, tauxEndettementMax: tauxEndettementMax / 100,
+    dureeAmortissement: fixes.dureeAmortissement, residenceSecondaire: fixes.residenceSecondaire,
+  };
+  document.getElementById('fi-resultats-dynamiques').innerHTML = renderResultatsImmo(params);
 }
 
 function imprimerResultatImmo() {

@@ -9,6 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Assurex CRM"/>
 <meta name="theme-color" content="#0f172a"/>
 <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #111827; color: #e2e8f0; min-height: 100vh; font-weight: 700; }
@@ -340,7 +341,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 03:00</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 05:15</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -2518,6 +2519,7 @@ const SECTIONS = [
   ]},
   { id: 'compta', label: 'Comptabilité', icon: '◎', sub: [
     { id: 'bordereaux', label: 'Bordereaux (reçus des compagnies)' },
+    { id: 'import-decompte', label: '📊 Import décompte (Excel IG B2B)' },
     { id: 'commissions', label: 'Commissions', staff: true },
     { id: 'commissions-attente', label: 'Toutes les commissions' },
     { id: 'fiche-paie', label: 'Fiche de paie (agents)' },
@@ -2740,6 +2742,7 @@ async function renderView() {
       main.innerHTML = viewBordereaux();
       break;
     case 'fiche-paie': main.innerHTML = viewFichePaie(); break;
+    case 'import-decompte': main.innerHTML = viewImportDecompte(); break;
     case 'commissions': main.innerHTML = viewCommissions(); break;
     case 'fiche-commission': main.innerHTML = viewFicheCommission(); break;
     case 'agents': main.innerHTML = viewAgents(); break;
@@ -2854,6 +2857,8 @@ function viewDashboard() {
   });
   const totalExtourne = commissionsExtournees.reduce((s, ca) => s + Number(ca.montant_final != null ? ca.montant_final : (ca.montant_estime||0)), 0);
   const totalCommRecues = totalCommRecuesBrut - totalExtourne;
+  const totalGestionRecue = commissionsRecues.filter(ca => ca.nature === 'gestion').reduce((s, ca) => s + Number(ca.montant_final != null ? ca.montant_final : (ca.montant_estime||0)), 0);
+  const totalAcquisitionRecue = totalCommRecuesBrut - totalGestionRecue;
   const nbContratsActifs = allContrats.filter(ct => !['résilié','annulé'].includes(ct.statut) && ct.commissionne !== false).length;
   const urgents = allRappels.filter(r => r.urgence === 'haute' && r.statut === 'ouvert');
   const now = new Date().toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
@@ -2925,7 +2930,7 @@ function viewDashboard() {
       ${statCard('Clients', allClients.length, '#38bdf8', `${actifs} actifs`)}
       ${statCard('CA portefeuille /an', 'CHF ' + Math.round(totalCA).toLocaleString(), '#f59e0b', `${nbContratsActifs} contrats`)}
       ${statCard('Commissions en attente', 'CHF ' + Math.round(totalCommActives).toLocaleString(), '#f59e0b', `depuis 01.06.2026`)}
-      ${statCard('Commissions reçues', 'CHF ' + Math.round(totalCommRecues).toLocaleString(), '#4ade80', `depuis 01.06.2026`)}
+      ${statCard('Commissions reçues', 'CHF ' + Math.round(totalCommRecues).toLocaleString(), '#4ade80', `Acquisition CHF ${Math.round(totalAcquisitionRecue).toLocaleString()} · Gestion CHF ${Math.round(totalGestionRecue).toLocaleString()}`)}
       ${statCard('Rappels urgents', urgents.length, urgents.length > 0 ? '#f87171' : '#64748b')}
     </div>
 
@@ -3619,6 +3624,7 @@ async function creerCommissionManquante(contratId) {
     produit: ct.produit,
     montant_estime: montant,
     detail_calcul: detail,
+    nature: 'acquisition',
     statut: 'en_attente',
     date_creation: new Date().toISOString().split('T')[0],
   });
@@ -4543,12 +4549,13 @@ function viewSuivi() {
       const enCours = allContrats.filter(ct => ct.statut === 'en_cours' && ct.prime_annuelle > 0);
       const commissionsEstimees = allCommissionsAttente.filter(ca => ca.statut === 'en_attente' && ca.montant_estime > 0 && (() => { const ct = allContrats.find(x => x.id === ca.contrat_id); return ct && ct.date_debut >= DATE_BASCULE_ASSUREX; })());
       const totalComm = commissionsEstimees.reduce((s,ca) => s + Number(ca.montant_estime||0), 0);
+      const totalCommGestion = commissionsEstimees.filter(ca => ca.nature === 'gestion').reduce((s,ca) => s + Number(ca.montant_estime||0), 0);
       const totalEnCours = enCours.reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0);
       if (!commissionsEstimees.length && !enCours.length) return '';
       return `<div style="background:linear-gradient(135deg,rgba(74,222,128,0.06) 0%,rgba(56,189,248,0.04) 100%);border:1px solid rgba(74,222,128,0.2);border-radius:14px;padding:20px;margin-bottom:24px">
         <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:14px">💰 Pilotage commissions (depuis le 01.06.2026)</div>
         <div class="stat-grid">
-          ${statCard('Commissions en attente', 'CHF ' + Math.round(totalComm).toLocaleString(), '#4ade80', commissionsEstimees.length + ' dossiers')}
+          ${statCard('Commissions en attente', 'CHF ' + Math.round(totalComm).toLocaleString(), '#4ade80', `dont CHF ${Math.round(totalCommGestion).toLocaleString()} gestion — ${commissionsEstimees.length} dossiers`)}
           ${statCard('Contrats "en cours"', enCours.length, '#38bdf8', 'CHF ' + Math.round(totalEnCours).toLocaleString() + ' de primes')}
         </div>
         ${enCours.length ? `<div style="margin-top:14px;font-size:11px;color:var(--text-muted)">
@@ -5029,6 +5036,162 @@ function imprimerFichePaie(ficheId, lignesCommissions, debut, fin, totalMontant)
     <button onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#0f2244;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Imprimer / Enregistrer en PDF</button>
     </body></html>`);
   win.document.close();
+}
+
+// ═══ IMPORT DÉCOMPTE COMPAGNIE (Excel norme IG B2B — ex: Vaudoise "Décompte de prime") ═══
+function viewImportDecompte() {
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">📊 Import décompte compagnie (Excel, norme IG B2B)</h2>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Lit directement le fichier Excel "Décompte de prime" envoyé par une compagnie (format standardisé IG B2B — testé avec La Vaudoise). Réconcilie les contrats existants et propose la création des commissions correspondantes.</div>
+
+    ${sectionCard('Fichier', '#38bdf8', `
+      <input type="file" id="imp-file-input" accept=".xlsx,.xls" style="display:none" onchange="analyserDecompteExcel()"/>
+      <button class="btn-secondary" onclick="document.getElementById('imp-file-input').click()">📎 Choisir le fichier Excel</button>
+      <span id="imp-file-nom" style="margin-left:10px;font-size:12px;color:var(--text-muted)"></span>
+      <div style="margin-top:14px"><label class="form-label">Nature des commissions de ce lot</label>
+        <select class="form-select" id="imp-nature-commission" style="max-width:320px">
+          <option value="gestion">Gestion (décompte périodique de portefeuille)</option>
+          <option value="acquisition">Acquisition (nouvelles affaires)</option>
+        </select>
+        <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Un décompte de prime périodique est généralement de la gestion — change si ce lot contient des affaires nouvelles.</div>
+      </div>
+    `)}
+
+    <div id="imp-resultats"></div>
+  `;
+}
+
+let _decompteLignes = [];
+
+async function analyserDecompteExcel() {
+  const input = document.getElementById('imp-file-input');
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('imp-file-nom').textContent = file.name;
+
+  const buffer = await file.arrayBuffer();
+  const wb = XLSX.read(buffer, { type: 'array', cellDates: false });
+
+  const feuillePrimes = wb.SheetNames.find(n => n.toLowerCase().includes('prime')) || wb.SheetNames[0];
+  const ws = wb.Sheets[feuillePrimes];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
+
+  // Métadonnées d'en-tête (nom assureur, destinataire) — informatif
+  let nomAssureur = '';
+  rows.forEach(r => { if (r[0] === "Nom de l'assureur:") nomAssureur = r[1] || ''; });
+
+  // Trouve la ligne d'en-tête du tableau (celle qui contient "N° de contrat")
+  const idxHeader = rows.findIndex(r => r[0] === 'N° de contrat');
+  if (idxHeader === -1) { showError('Format non reconnu — impossible de trouver la ligne d\u2019en-tête du tableau ("N° de contrat").'); return; }
+  const headers = rows[idxHeader];
+  const col = (nomColonne) => headers.indexOf(nomColonne);
+  const iContrat = col('N° de contrat'), iNom = col("Preneur d'assurance/Nom"), iPrenom = col('Prénom'),
+        iNpa = col('Nopost'), iLocalite = col('Localité'), iGenre = col('Genre'), iD = col('D'),
+        iBrancheIG = col('Branche IG'), iBrancheInterne = col('Branche Interne'), iPrimeCommis = col('Prime commis.'),
+        iPrFactTotal = col('Pr. Fact. Total'), iMonnaie = col('Monnaie');
+
+  const lignesBrutes = rows.slice(idxHeader + 1).filter(r => r && r[iContrat]);
+  // Règle donnée par la légende du fichier lui-même : exclure les lignes marquées "D" (détail) pour ne pas compter en double
+  const lignesUtiles = lignesBrutes.filter(r => (r[iD] || '').toString().trim().toUpperCase() !== 'D');
+
+  const normPolice = (s) => (s || '').toString().trim().toLowerCase().replace(/\s+/g, '');
+
+  _decompteLignes = lignesUtiles.map((r, i) => {
+    const numeroContrat = (r[iContrat] || '').toString().trim();
+    const contratTrouve = allContrats.find(c => c.numero_police && normPolice(c.numero_police) === normPolice(numeroContrat));
+    const clientTrouve = contratTrouve ? allClients.find(c => c.id === contratTrouve.client_id) : null;
+    const primeCommis = parseFloat(r[iPrimeCommis]) || 0;
+    return {
+      idx: i,
+      numeroContrat,
+      nomVaudoise: `${r[iNom] || ''} ${r[iPrenom] || ''}`.trim(),
+      npa: r[iNpa], localite: r[iLocalite],
+      brancheIG: r[iBrancheIG], brancheInterne: r[iBrancheInterne] || '',
+      primeCommis,
+      primeFactTotal: parseFloat(r[iPrFactTotal]) || primeCommis,
+      contratId: contratTrouve ? contratTrouve.id : null,
+      clientId: clientTrouve ? clientTrouve.id : null,
+      clientNomCRM: clientTrouve ? (estEntreprise(clientTrouve) ? clientTrouve.nom : `${clientTrouve.prenom} ${clientTrouve.nom}`) : null,
+      primeCRM: contratTrouve ? contratTrouve.prime_annuelle : null,
+      taux: 0,
+      selectionne: !!contratTrouve,
+    };
+  });
+
+  renderImportDecompte(nomAssureur);
+}
+
+function renderImportDecompte(nomAssureur) {
+  const zone = document.getElementById('imp-resultats');
+  const nbTrouves = _decompteLignes.filter(l => l.contratId).length;
+  const nbNouveaux = _decompteLignes.length - nbTrouves;
+
+  zone.innerHTML = `
+    ${sectionCard(`Résultat de l'analyse — ${nomAssureur || 'Compagnie'}`, '#4ade80', `
+      <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px">${_decompteLignes.length} ligne(s) trouvée(s) (lignes de détail déjà exclues) — ${nbTrouves} contrat(s) reconnu(s) dans le CRM, ${nbNouveaux} non trouvé(s).</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12px">
+        <thead><tr style="color:var(--text-muted);font-size:10px;text-transform:uppercase">
+          <th style="padding:6px 8px"></th>
+          <th style="padding:6px 8px;text-align:left">N° contrat</th>
+          <th style="padding:6px 8px;text-align:left">Client (compagnie)</th>
+          <th style="padding:6px 8px;text-align:left">Client CRM</th>
+          <th style="padding:6px 8px;text-align:left">Branche</th>
+          <th style="padding:6px 8px;text-align:right">Prime commis.</th>
+          <th style="padding:6px 8px;text-align:right">Prime CRM</th>
+          <th style="padding:6px 8px;text-align:right">Taux %</th>
+          <th style="padding:6px 8px;text-align:right">Commission</th>
+        </tr></thead>
+        <tbody>${_decompteLignes.map(l => `
+          <tr style="border-top:1px solid var(--border)">
+            <td style="padding:5px 8px"><input type="checkbox" id="imp-check-${l.idx}" ${l.selectionne ? 'checked' : ''} onchange="_decompteLignes[${l.idx}].selectionne = this.checked"/></td>
+            <td style="padding:5px 8px;font-family:monospace">${l.numeroContrat}</td>
+            <td style="padding:5px 8px">${l.nomVaudoise}<div style="font-size:10px;color:var(--text-muted)">${l.npa || ''} ${l.localite || ''}</div></td>
+            <td style="padding:5px 8px">${l.clientNomCRM ? l.clientNomCRM : '<span style="color:#f87171">Non trouvé</span>'}</td>
+            <td style="padding:5px 8px;color:var(--text-muted)">${l.brancheInterne} <span style="opacity:.6">(${l.brancheIG || ''})</span></td>
+            <td style="padding:5px 8px;text-align:right;font-weight:700">CHF ${l.primeCommis.toLocaleString()}</td>
+            <td style="padding:5px 8px;text-align:right;color:${l.primeCRM !== null && Math.abs(l.primeCRM - l.primeFactTotal) > 1 ? '#f87171' : 'var(--text-muted)'}">${l.primeCRM !== null ? 'CHF ' + l.primeCRM.toLocaleString() : '—'}</td>
+            <td style="padding:5px 8px;text-align:right"><input type="number" step="0.5" value="${l.taux}" style="width:55px;background:var(--surface-alt);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 5px;text-align:right" onchange="_decompteLignes[${l.idx}].taux = parseFloat(this.value)||0; document.getElementById('imp-comm-${l.idx}').textContent = 'CHF ' + Math.round(_decompteLignes[${l.idx}].primeCommis * (parseFloat(this.value)||0) / 100).toLocaleString();"/></td>
+            <td id="imp-comm-${l.idx}" style="padding:5px 8px;text-align:right;font-weight:700;color:#4ade80">CHF 0</td>
+          </tr>`).join('')}</tbody>
+      </table>
+      <div style="font-size:10.5px;color:var(--text-muted);margin-top:10px">⚠️ Ce fichier donne la <strong>prime</strong> de référence, pas directement le montant de commission — indique le taux appliqué par branche pour que le calcul se fasse. Les contrats non trouvés dans le CRM ne peuvent pas recevoir de commission (aucun contrat_id à lier) ; seule la réconciliation reste possible pour eux via une création manuelle de contrat.</div>
+      <div style="display:flex;gap:10px;margin-top:14px">
+        <button class="btn-save" onclick="importerCommissionsDecompte('${(nomAssureur||'').replace(/'/g,"\\'")}')">✓ Créer les commissions sélectionnées</button>
+      </div>
+    `)}
+  `;
+}
+
+async function importerCommissionsDecompte(nomAssureur) {
+  const aTraiter = _decompteLignes.filter(l => l.selectionne && l.contratId);
+  if (!aTraiter.length) { showError('Aucune ligne sélectionnée avec un contrat reconnu.'); return; }
+  const nature = document.getElementById('imp-nature-commission')?.value || 'gestion';
+  let nbCrees = 0, nbReconciliees = 0;
+  for (const l of aTraiter) {
+    const montant = Math.round(l.primeCommis * (l.taux || 0) / 100);
+    if (montant > 0) {
+      await dbPost('commissions_attente', {
+        client_id: l.clientId,
+        contrat_id: l.contratId,
+        client_nom: l.clientNomCRM,
+        compagnie: nomAssureur || null,
+        produit: l.brancheInterne || null,
+        montant_estime: montant,
+        detail_calcul: `Décompte compagnie importé (Excel IG B2B) — prime commis. CHF ${l.primeCommis.toLocaleString()} × ${l.taux}% — contrat ${l.numeroContrat}`,
+        statut: 'en_attente',
+        nature,
+        date_creation: new Date().toISOString().split('T')[0],
+      });
+      nbCrees++;
+    }
+    // Réconciliation : signale un écart de prime sans écraser silencieusement — on laisse Jonathan valider manuellement sur la fiche contrat
+    if (l.primeCRM !== null && Math.abs(l.primeCRM - l.primeFactTotal) > 1) nbReconciliees++;
+  }
+  allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
+  showError(`✓ ${nbCrees} commission(s) créée(s). ${nbReconciliees ? nbReconciliees + ' écart(s) de prime détecté(s) — à vérifier sur les fiches contrat concernées.' : ''}`);
+  navigate('import-decompte');
 }
 
 function viewBordereaux() {
@@ -7513,17 +7676,41 @@ async function importPolicePdfAI(input) {
     if (data.compagnie) document.getElementById('ct-compagnie').value = data.compagnie;
     if (data.produit) {
       document.getElementById('ct-produit').value = data.produit;
+      // Tente de faire correspondre le texte extrait par l'IA à une entrée exacte du catalogue
+      // (le texte libre de l'IA ne colle pas toujours mot pour mot au libellé attendu),
+      // et corrige catégorie + libellé pour que le calcul de commission s'active correctement.
+      const texteAI = data.produit.trim().toLowerCase();
+      const motsAI = texteAI.split(/[\s\/'’,-]+/).filter(m => m.length > 3);
+      let categorieTrouvee = null, produitTrouve = null;
+      for (const cat in CATALOGUE_PRODUITS) {
+        for (const p of CATALOGUE_PRODUITS[cat]) {
+          const labelLower = p.label.toLowerCase();
+          const motsLabel = labelLower.split(/[\s\/'’,-]+/).filter(m => m.length > 3);
+          if (labelLower === texteAI || labelLower.includes(texteAI) || texteAI.includes(labelLower) || motsAI.some(m => motsLabel.includes(m))) {
+            categorieTrouvee = cat; produitTrouve = p; break;
+          }
+        }
+        if (produitTrouve) break;
+      }
+      if (produitTrouve) {
+        document.getElementById('ct-categorie').value = categorieTrouvee;
+        if (produitTrouve.segment && produitTrouve.segment !== 'tous') document.getElementById('ct-segment').value = produitTrouve.segment;
+        updateProduitOptions(); // recharge la liste ET vide le champ (comportement normal de cette fonction)
+        document.getElementById('ct-produit').value = produitTrouve.label; // on refixe le libellé canonique après coup
+      }
       updateModulesOptions();
     }
     if (data.numero_police) document.getElementById('ct-police').value = data.numero_police;
     if (data.date_debut) document.getElementById('ct-date').value = data.date_debut;
     if (data.date_echeance) document.getElementById('ct-echeance').value = data.date_echeance;
     if (data.prime_mensuelle) {
+      // Prime réellement mensuelle (ex: santé complémentaire) — la périodicité annualise correctement
       document.getElementById('ct-prime-mensuelle').value = data.prime_mensuelle;
       document.getElementById('ct-periodicite').value = '12';
     } else if (data.prime_annuelle) {
-      document.getElementById('ct-prime-mensuelle').value = Math.round(data.prime_annuelle / 12);
-      document.getElementById('ct-periodicite').value = '12';
+      // Prime déjà annuelle (ex: RC, véhicule) — on l'utilise telle quelle, sans la diviser puis la remultiplier
+      document.getElementById('ct-prime-mensuelle').value = data.prime_annuelle;
+      document.getElementById('ct-periodicite').value = '1';
     }
 
     // Trouver le client si nom détecté
@@ -7616,9 +7803,10 @@ function viewNouveauContrat() {
       <div class="form-field"><label class="form-label">Commissionné ?</label><select class="form-select" id="ct-commissionne" onchange="document.getElementById('ct-rappel-note').style.display = this.value==='non' ? '' : 'none'"><option value="oui">Oui</option><option value="non">Non (pas de convention de collaboration)</option></select>
         <div id="ct-rappel-note" style="display:none;font-size:10.5px;color:var(--text-muted);margin-top:4px">ℹ️ Pas de commission créée. Un rappel sera généré 6 mois avant la date d'échéance pour proposer un transfert vers une compagnie partenaire.</div>
       </div>
+      <div class="form-field"><label class="form-label">Nature de la commission</label><select class="form-select" id="ct-nature-commission" onchange="updateCommissionPreview()"><option value="acquisition">Acquisition (nouvelle affaire)</option><option value="gestion">Gestion (portefeuille existant)</option></select></div>
     </div>`)}
     <div id="commission-preview" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:14px 18px;margin-top:14px">
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Commission d'acquisition estimée</div>
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px" id="commission-preview-label">Commission d'acquisition estimée</div>
       <div id="commission-preview-value" style="font-size:20px;font-weight:900;color:var(--accent)">CHF 0</div>
       <div id="commission-preview-detail" style="font-size:11px;color:var(--text-muted);margin-top:2px"></div>
     </div>
@@ -7717,6 +7905,18 @@ function getProduitSelectionne() {
   for (const cat in CATALOGUE_PRODUITS) {
     trouve = CATALOGUE_PRODUITS[cat].find(p => p.label.toLowerCase() === texteTape);
     if (trouve) return trouve;
+  }
+  // Fallback 2 : correspondance partielle (utile après un import IA dont le texte libre ne colle pas
+  // mot pour mot au libellé du catalogue, ex: "Responsabilité civile d'entreprise" vs "RC entreprise / exploitation")
+  const motsTexte = texteTape.split(/[\s\/'’,-]+/).filter(m => m.length > 3);
+  for (const cat in CATALOGUE_PRODUITS) {
+    for (const p of CATALOGUE_PRODUITS[cat]) {
+      const labelLower = p.label.toLowerCase();
+      if (labelLower.includes(texteTape) || texteTape.includes(labelLower)) return p;
+      // correspondance par mots-clés significatifs communs (au moins 1 mot de plus de 3 lettres partagé)
+      const motsLabel = labelLower.split(/[\s\/'’,-]+/).filter(m => m.length > 3);
+      if (motsTexte.some(m => motsLabel.includes(m))) return p;
+    }
   }
   return null;
 }
@@ -7873,12 +8073,14 @@ function calculerCommissionEstimee() {
 function updateCommissionPreview() {
   const produit = getProduitSelectionne();
   const produitId = produit ? produit.id : null;
-  if (!produitId) return;
   document.getElementById('ct-duree-field').style.display = produitId === 'vie_3a' ? 'block' : 'none';
   document.getElementById('ct-manuel-field').style.display = (produitId !== 'sante_complementaire' && produitId !== 'vie_3a') ? 'block' : 'none';
   const { montant, detail } = calculerCommissionEstimee();
   document.getElementById('commission-preview-value').textContent = 'CHF ' + montant.toLocaleString();
   document.getElementById('commission-preview-detail').textContent = detail;
+  const natureEl = document.getElementById('ct-nature-commission');
+  const labelEl = document.getElementById('commission-preview-label');
+  if (natureEl && labelEl) labelEl.textContent = natureEl.value === 'gestion' ? 'Commission de gestion estimée' : 'Commission d\u2019acquisition estimée';
 }
 
 function getProduitLabel(categorie, produitId) {
@@ -7936,6 +8138,7 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
     montant_estime: montantCommission,
     detail_calcul: detailCommission,
     statut: 'en_attente',
+    nature: document.getElementById('ct-nature-commission')?.value || 'acquisition',
     date_creation: new Date().toISOString().split('T')[0],
     contrat_id: rContrat && rContrat[0] ? rContrat[0].id : null,
   };
@@ -8038,6 +8241,10 @@ function showModalEditCommission(commId) {
         <div class="form-field"><label class="form-label">Montant final (CHF)</label><input class="form-input" id="ec-montant-final" type="number" step="0.01" value="${c.montant_final != null ? c.montant_final : ''}" placeholder="Vide si pas encore reçue"/></div>
         <div class="form-field"><label class="form-label">Date de réception</label><input class="form-input" id="ec-date-reception" type="date" value="${c.date_reception || ''}"/></div>
         <div class="form-field"><label class="form-label">N° de police</label><input class="form-input" id="ec-police" value="${c.numero_police || ''}"/></div>
+        <div class="form-field"><label class="form-label">Nature</label><select class="form-select" id="ec-nature">
+          <option value="acquisition" ${(c.nature||'acquisition')==='acquisition'?'selected':''}>Acquisition</option>
+          <option value="gestion" ${c.nature==='gestion'?'selected':''}>Gestion</option>
+        </select></div>
         <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="ec-statut">
           <option value="en_attente" ${c.statut==='en_attente'?'selected':''}>En attente</option>
           <option value="reçue" ${c.statut==='reçue'?'selected':''}>Reçue (Assurex)</option>
@@ -8094,6 +8301,7 @@ async function saveEditCommission(commId) {
     bordereau_id: estUnRetourEnArriere ? null : (original ? original.bordereau_id : null),
     date_reception: estUnRetourEnArriere ? null : (document.getElementById('ec-date-reception').value || null),
     numero_police: document.getElementById('ec-police').value.trim() || null,
+    nature: document.getElementById('ec-nature')?.value || 'acquisition',
     statut: nouveauStatut,
     detail_calcul: estUnRetourEnArriere
       ? `Rapprochement annulé le ${fmtDate(new Date().toISOString())} — remise en attente pour correction (était : ${statutCommissionLabel(original.statut)}, ${original.bordereau_id ? 'lié à un bordereau' : 'sans bordereau'})`
@@ -8151,6 +8359,11 @@ function viewCommissionsAttente(prefiltreStatut) {
         <option value="reçue" ${prefiltreStatut==='reçue'?'selected':''}>Reçue (Assurex)</option>
         <option value="extourné">Extournée</option>
       </select>
+      <select class="form-select" id="tc-nature" style="max-width:170px" onchange="renderToutesCommissions()">
+        <option value="">Acquisition + Gestion</option>
+        <option value="acquisition">Acquisition uniquement</option>
+        <option value="gestion">Gestion uniquement</option>
+      </select>
       <select class="form-select" id="tc-tri" style="max-width:190px" onchange="renderToutesCommissions()">
         <option value="date">Plus récent d'abord</option>
         <option value="montant_desc" selected>Montant décroissant</option>
@@ -8164,6 +8377,7 @@ function viewCommissionsAttente(prefiltreStatut) {
 function renderToutesCommissions() {
   const search = (document.getElementById('tc-search')?.value || '').toLowerCase().trim();
   const statutFilter = document.getElementById('tc-statut')?.value || '';
+  const natureFilter = document.getElementById('tc-nature')?.value || '';
   const tri = document.getElementById('tc-tri')?.value || 'montant_desc';
 
   function numeroBordereauDe(c) {
@@ -8184,6 +8398,7 @@ function renderToutesCommissions() {
       if (ct && (ct.commissionne === false || ct.statut === 'annulé')) return false;
     }
     if (statutFilter && c.statut !== statutFilter) return false;
+    if (natureFilter && (c.nature || 'acquisition') !== natureFilter) return false;
     if (search) {
       const haystack = `${c.client_nom||''} ${c.compagnie||''} ${c.produit||''} ${numeroBordereauDe(c)}`.toLowerCase();
       if (!haystack.includes(search)) return false;
@@ -8198,12 +8413,16 @@ function renderToutesCommissions() {
   const totalRecuBrut = filtered.filter(c => c.statut === 'reçue').reduce((s,c) => s + montantC(c), 0);
   const totalExtourne = filtered.filter(c => c.statut === 'extourné').reduce((s,c) => s + montantC(c), 0);
   const totalRecuNet = totalRecuBrut - totalExtourne;
+  const totalAcquisition = filtered.filter(c => (c.nature||'acquisition') === 'acquisition' && c.statut !== 'extourné').reduce((s,c) => s + montantC(c), 0);
+  const totalGestion = filtered.filter(c => c.nature === 'gestion' && c.statut !== 'extourné').reduce((s,c) => s + montantC(c), 0);
 
   document.getElementById('tc-stats').innerHTML = `
     ${statCard('En attente', 'CHF ' + totalAttente.toLocaleString(), '#f59e0b')}
     ${statCard('Reçues (brut)', 'CHF ' + totalRecuBrut.toLocaleString(), '#4ade80')}
     ${statCard('Extournées', '– CHF ' + totalExtourne.toLocaleString(), '#f87171', 'contrat policé puis annulé')}
     ${statCard('Net Assurex encaissé', 'CHF ' + totalRecuNet.toLocaleString(), '#38bdf8')}
+    ${statCard('Dont Acquisition', 'CHF ' + totalAcquisition.toLocaleString(), '#a78bfa')}
+    ${statCard('Dont Gestion', 'CHF ' + totalGestion.toLocaleString(), '#60a5fa')}
     ${statCard('Total dossiers', filtered.length, '#a78bfa')}`;
 
   const cols = '1fr 120px 110px 110px 100px 90px';
@@ -8215,7 +8434,7 @@ function renderToutesCommissions() {
       <div style="font-size:11px;color:var(--text-muted)">${numBord ? `<span style="font-family:monospace">${numBord}</span>` : '—'}</div>
       <div style="font-size:12px;color:var(--text-muted)">${c.date_creation || ''}</div>
       <div style="font-weight:800;color:#f59e0b;text-align:right">CHF ${montantC(c).toLocaleString()}</div>
-      <div>${badge(statutCommissionLabel(c.statut), statutCommissionColor(c.statut))}</div>
+      <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start">${badge(statutCommissionLabel(c.statut), statutCommissionColor(c.statut))}${badge(c.nature === 'gestion' ? 'Gestion' : 'Acquisition', c.nature === 'gestion' ? '#60a5fa' : '#a78bfa')}</div>
     </div>`;
   }).join('');
 

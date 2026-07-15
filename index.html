@@ -341,7 +341,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 05:15</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 06:15</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -7645,6 +7645,38 @@ async function saveBordereau() {
 
 // ═══ NOUVEAU CONTRAT + COMMISSION EN ATTENTE ═══
 // ═══ IMPORT POLICE PDF PAR IA ═══
+// Recherche floue d'un produit du catalogue à partir d'un texte libre (titre d'opportunité, extraction IA...).
+// Retourne {categorie, produit} ou null. Tolère les formulations proches (mots-clés partagés)
+// sans exiger une correspondance mot pour mot au libellé exact.
+function trouverProduitCatalogue(texteLibre) {
+  if (!texteLibre) return null;
+  const texte = texteLibre.trim().toLowerCase();
+  if (!texte) return null;
+  const mots = texte.split(/[\s\/'’,-]+/).filter(m => m.length > 3);
+  for (const cat in CATALOGUE_PRODUITS) {
+    for (const p of CATALOGUE_PRODUITS[cat]) {
+      const labelLower = p.label.toLowerCase();
+      const motsLabel = labelLower.split(/[\s\/'’,-]+/).filter(m => m.length > 3);
+      if (labelLower === texte || labelLower.includes(texte) || texte.includes(labelLower) || mots.some(m => motsLabel.includes(m))) {
+        return { categorie: cat, produit: p };
+      }
+    }
+  }
+  return null;
+}
+
+// Applique le résultat de trouverProduitCatalogue() aux champs du formulaire Nouveau contrat
+function appliquerProduitTrouve(resultat) {
+  if (!resultat) return false;
+  document.getElementById('ct-categorie').value = resultat.categorie;
+  if (resultat.produit.segment && resultat.produit.segment !== 'tous') document.getElementById('ct-segment').value = resultat.produit.segment;
+  updateProduitOptions(); // recharge la liste du menu déroulant pour la nouvelle catégorie/segment
+  document.getElementById('ct-produit').value = resultat.produit.label;
+  updateModulesOptions();
+  updateCommissionPreview();
+  return true;
+}
+
 async function importPolicePdfAI(input) {
   const file = input.files[0];
   if (!file) return;
@@ -7676,29 +7708,7 @@ async function importPolicePdfAI(input) {
     if (data.compagnie) document.getElementById('ct-compagnie').value = data.compagnie;
     if (data.produit) {
       document.getElementById('ct-produit').value = data.produit;
-      // Tente de faire correspondre le texte extrait par l'IA à une entrée exacte du catalogue
-      // (le texte libre de l'IA ne colle pas toujours mot pour mot au libellé attendu),
-      // et corrige catégorie + libellé pour que le calcul de commission s'active correctement.
-      const texteAI = data.produit.trim().toLowerCase();
-      const motsAI = texteAI.split(/[\s\/'’,-]+/).filter(m => m.length > 3);
-      let categorieTrouvee = null, produitTrouve = null;
-      for (const cat in CATALOGUE_PRODUITS) {
-        for (const p of CATALOGUE_PRODUITS[cat]) {
-          const labelLower = p.label.toLowerCase();
-          const motsLabel = labelLower.split(/[\s\/'’,-]+/).filter(m => m.length > 3);
-          if (labelLower === texteAI || labelLower.includes(texteAI) || texteAI.includes(labelLower) || motsAI.some(m => motsLabel.includes(m))) {
-            categorieTrouvee = cat; produitTrouve = p; break;
-          }
-        }
-        if (produitTrouve) break;
-      }
-      if (produitTrouve) {
-        document.getElementById('ct-categorie').value = categorieTrouvee;
-        if (produitTrouve.segment && produitTrouve.segment !== 'tous') document.getElementById('ct-segment').value = produitTrouve.segment;
-        updateProduitOptions(); // recharge la liste ET vide le champ (comportement normal de cette fonction)
-        document.getElementById('ct-produit').value = produitTrouve.label; // on refixe le libellé canonique après coup
-      }
-      updateModulesOptions();
+      appliquerProduitTrouve(trouverProduitCatalogue(data.produit));
     }
     if (data.numero_police) document.getElementById('ct-police').value = data.numero_police;
     if (data.date_debut) document.getElementById('ct-date').value = data.date_debut;
@@ -7775,7 +7785,7 @@ function viewNouveauContrat() {
       </select></div>
       <div class="form-field"><label class="form-label">Compagnie *</label><input class="form-input" id="ct-compagnie" value="${opp && opp.compagnie ? opp.compagnie : ''}" placeholder="Swiss Life, AXA, Helsana..." list="compagnies-suggestions" autocomplete="off"/><datalist id="compagnies-suggestions">${getCompagniesConnues().map(c => `<option value="${c}">`).join('')}</datalist></div>
       <div class="form-field"><label class="form-label">Catégorie *</label><select class="form-select" id="ct-categorie" onchange="updateProduitOptions()"></select></div>
-      <div class="form-field"><label class="form-label">Produit * <span style="color:var(--text-muted);font-weight:400">(tape pour rechercher)</span></label><input class="form-input" id="ct-produit" value="${opp && opp.titre ? opp.titre : ''}" list="produits-suggestions" autocomplete="off" placeholder="Ex: RC privée, Casco..." onchange="updateModulesOptions(); updateCommissionPreview()" oninput="updateModulesOptions(); updateCommissionPreview()"/><datalist id="produits-suggestions"></datalist></div>
+      <div class="form-field"><label class="form-label">Produit *</label><select class="form-select" id="ct-produit" onchange="updateModulesOptions(); updateCommissionPreview()"><option value="">— Sélectionner —</option></select></div>
       <div class="form-field" style="grid-column:span 2" id="ct-modules-field"><label class="form-label">Modules complémentaires</label><div id="ct-modules-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div></div>
       <div class="form-field" style="grid-column:span 2" id="ct-combinables-field"><label class="form-label">Produits souvent combinés</label><div id="ct-combinables-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div></div>
       <div class="form-field" style="grid-column:span 2;display:none" id="ct-plaques-field">
@@ -7824,6 +7834,11 @@ function initSegmentContrat() {
     if (client) segmentSelect.value = estEntreprise(client) ? 'entreprise' : 'prive';
   }
   updateCategorieOptions();
+  // Si on arrive depuis une opportunité gagnée, tente de présélectionner automatiquement
+  // catégorie + produit à partir de son titre (ex: "RC entreprise — Acme SA" → RC entreprise / exploitation)
+  if (prefillOpportunite && prefillOpportunite.titre) {
+    appliquerProduitTrouve(trouverProduitCatalogue(prefillOpportunite.titre));
+  }
 }
 
 function syncSegmentFromClient() {
@@ -7859,17 +7874,15 @@ function updateCategorieOptions() {
 function updateProduitOptions() {
   const segmentSelect = document.getElementById('ct-segment');
   const catSelect = document.getElementById('ct-categorie');
-  const produitInput = document.getElementById('ct-produit');
-  const datalist = document.getElementById('produits-suggestions');
-  if (!segmentSelect || !catSelect || !produitInput || !datalist) return;
+  const produitSelect = document.getElementById('ct-produit');
+  if (!segmentSelect || !catSelect || !produitSelect) return;
   const segment = segmentSelect.value;
   const categorie = catSelect.value;
   const tousProduits = CATALOGUE_PRODUITS[categorie] || [];
   const produits = tousProduits.filter(p => p.segment === segment || p.segment === 'tous');
-  datalist.innerHTML = produits.map(p => `<option value="${p.label}">`).join('');
-  produitInput.value = '';
+  produitSelect.innerHTML = '<option value="">— Sélectionner —</option>' + produits.map(p => `<option value="${p.label}">${p.label}</option>`).join('');
   // Pré-remplir la compagnie si le produit a une compagnie fixe
-  produitInput.oninput = function() {
+  produitSelect.onchange = function() {
     const val = this.value.trim().toLowerCase();
     const prodTrouve = produits.find(p => p.label.toLowerCase() === val);
     if (prodTrouve && prodTrouve.compagnie_fixe) {

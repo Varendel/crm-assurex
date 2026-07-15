@@ -341,7 +341,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 06:15</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 07:00</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -3947,6 +3947,33 @@ function renderClientsTable() {
 }
 
 // FICHE CLIENT
+// Vue d'ensemble rapide des couvertures clés pour un client entreprise — CCT, LAA, LPP, PGM.
+// Volontairement sommaire (juste "couvert / non couvert"), sans entrer dans le détail des contrats.
+function renderVueEnsembleCouvertures(client, contrats) {
+  const contratActifPour = (labelExact) => contrats.some(ct =>
+    ct.produit && ct.produit.trim().toLowerCase() === labelExact.toLowerCase() &&
+    ct.statut !== 'résilié' && ct.statut !== 'annulé'
+  );
+  const laa = contratActifPour('LAA (assurance-accidents obligatoire)');
+  const lpp = contratActifPour('LPP collective (2e pilier entreprise)');
+  const pgm = contratActifPour('Perte de gain maladie collective');
+  const cct = !!client.cct;
+
+  const puce = (label, ok, neutre) => `
+    <div style="display:flex;align-items:center;gap:8px;padding:8px 14px;background:var(--surface-alt);border-radius:9px;border:1px solid ${neutre ? 'var(--border)' : (ok ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)')}">
+      <span style="font-size:15px">${neutre ? (ok ? '✓' : '—') : (ok ? '✅' : '❌')}</span>
+      <span style="font-size:12.5px;font-weight:700;color:var(--text)">${label}</span>
+    </div>`;
+
+  return `
+    <div style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px">
+      ${puce('CCT', cct, true)}
+      ${puce('LAA', laa)}
+      ${puce('LPP', lpp)}
+      ${puce('PGM', pgm)}
+    </div>`;
+}
+
 async function showClient(id) {
   currentClientId = id;
   currentView = 'fiche-client';
@@ -4015,6 +4042,7 @@ async function showClient(id) {
         ${statCard('Rappels ouverts', rappels.filter(r => r.statut === 'ouvert').length, rappels.filter(r => r.statut === 'ouvert').length > 0 ? '#f87171' : '#64748b')}
         ${statCard('CA annuel', caClient(c.id) ? 'CHF ' + caClient(c.id).toLocaleString() : '—', '#f59e0b')}
       </div>
+      ${isEntreprise ? renderVueEnsembleCouvertures(c, contrats) : ''}
       ${(() => { const signataire = allAgents.find(a => a.role === 'signataire'); return signataire ? `<div style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--surface-alt);border-radius:10px;margin-bottom:8px">
         ${avatar(signataire, 32)}
         <div>
@@ -4104,6 +4132,7 @@ async function showClient(id) {
           <div class="form-field"><label class="form-label">Email</label><input id="ec-email" class="form-input" value="${c.email || ''}"></div>
           <div class="form-field"><label class="form-label">Téléphone fixe</label><input id="ec-tel" class="form-input" value="${c.tel || ''}"></div>
           <div class="form-field"><label class="form-label">Mobile</label><input id="ec-mobile" class="form-input" value="${c.mobile || ''}"></div>
+          ${isEntreprise ? `<div class="form-field"><label class="form-label">Soumis à une CCT ?</label><select id="ec-cct" class="form-select"><option value="non" ${!c.cct ? 'selected' : ''}>Non</option><option value="oui" ${c.cct ? 'selected' : ''}>Oui</option></select></div>` : ''}
         </div>`)}
         ${sectionCard('Coordonnées bancaires', '#a78bfa', `<div class="form-grid">
           <div class="form-field"><label class="form-label">Banque</label><input id="ec-banque" class="form-input" value="${c.banque || ''}"></div>
@@ -4379,6 +4408,7 @@ async function saveClientEdit(id, isEntreprise) {
     taux_activite: Number(document.getElementById('ec-taux-activite').value) || null,
     revenu: Number(document.getElementById('ec-revenu').value) || null,
     avs: document.getElementById('ec-avs').value.trim(),
+    cct: document.getElementById('ec-cct') ? document.getElementById('ec-cct').value === 'oui' : undefined,
   } : {
     prenom: document.getElementById('ec-prenom').value.trim(),
     nom: document.getElementById('ec-nom').value.trim(),
@@ -6085,6 +6115,7 @@ async function saveEntreprise() {
     taux_activite: parseInt(document.getElementById('e-collaborateurs').value) || 0,
     statut: document.getElementById('e-statut').value,
     segment: 'Entreprise',
+    cct: document.getElementById('e-cct').value === 'oui',
     apporteur_id: document.getElementById('e-agent').value || null,
     apporteur_externe: document.getElementById('e-apporteur-ext').value.trim() || null,
     notes: document.getElementById('e-notes').value || null,

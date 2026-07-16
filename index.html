@@ -341,7 +341,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 10:00</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 10:30</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -1017,6 +1017,7 @@ function imprimerResultatImmo() {
     table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}
     th,td{padding:6px 8px;border-bottom:1px solid #ddd}
     th{background:#f2f5fa;text-align:left}
+    @media print{ button{display:none !important} }
   </style></head><body>
     <div class="entete">
       <div style="background:#113679;border-radius:8px;padding:14px 18px;display:flex;align-items:center">
@@ -1557,6 +1558,7 @@ function imprimerResultatLPP() {
     table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}
     th,td{padding:6px 8px;border-bottom:1px solid #ddd}
     th{background:#f2f5fa;text-align:left}
+    @media print{ button{display:none !important} }
     .stat{display:inline-block;margin-right:30px;margin-bottom:14px}
     .stat b{display:block;font-size:16px}
     .lacune{color:#c0392b;font-weight:700}
@@ -4530,6 +4532,22 @@ function genererMandatCourtage(clientId) {
     .art45-table th{background:#113679;color:#fff;padding:8px 10px;font-size:11px;text-align:left}
     .art45-table td{font-size:10.5px;padding:8px 10px}
     .print-btn{margin-top:25px;padding:10px 20px;background:#113679;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px}
+    @media print {
+      .print-btn { display: none !important; }
+      body { padding: 15px 25px; font-size: 11px; }
+      h1 { font-size: 17px; margin: 6px 0 2px; }
+      .sous-titre { margin-bottom: 12px; }
+      h2 { margin: 10px 0 5px; font-size: 12px; }
+      table { margin-bottom: 2px; }
+      td { padding: 5px 8px; font-size: 10.5px; }
+      ol li { margin-bottom: 5px; font-size: 10.5px; }
+      p { margin: 5px 0; }
+      .signatures { margin-top: 22px; }
+      .ligne-signature { margin-top: 30px; }
+      .footer { margin-top: 14px; padding-top: 6px; }
+      .page-break { page-break-before: always; }
+      @page { margin: 12mm; }
+    }
   </style></head><body>
 
     <div class="entete">

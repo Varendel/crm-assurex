@@ -341,7 +341,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 08:15</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 10:00</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -2828,7 +2828,6 @@ async function basculerContratsEchus() {
 
 function viewDashboard() {
   const actifs = allClients.filter(c => c.statut === 'actif').length;
-  const totalCA = allContrats.filter(ct => ct.statut === 'actif').reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
   const totalCAFull = allContrats.filter(ct => !['résilié','annulé'].includes(ct.statut)).reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0);
   // ── Commissions en attente (pipeline) : basé sur la date de SIGNATURE du contrat ──
   // C'est la bonne définition métier : seuls les contrats signés depuis la fusion
@@ -2937,7 +2936,7 @@ function viewDashboard() {
     <div style="color:var(--text-muted);font-size:13px;margin-bottom:24px">Assurex Sàrl · EX Groupe · Commissions actives depuis le 01.06.2026</div>
     <div class="stat-grid" style="grid-template-columns:repeat(5,1fr)">
       ${statCard('Clients', allClients.length, '#38bdf8', `${actifs} actifs`)}
-      ${statCard('CA portefeuille /an', 'CHF ' + Math.round(totalCA).toLocaleString(), '#f59e0b', `${nbContratsActifs} contrats`)}
+      ${statCard('CA portefeuille /an', 'CHF ' + Math.round(totalCAFull).toLocaleString(), '#f59e0b', `${nbContratsActifs} contrats`)}
       ${statCard('Commissions en attente', 'CHF ' + Math.round(totalCommActives).toLocaleString(), '#f59e0b', `depuis 01.06.2026`)}
       ${statCard('Commissions reçues', 'CHF ' + Math.round(totalCommRecues).toLocaleString(), '#4ade80', `Acquisition CHF ${Math.round(totalAcquisitionRecue).toLocaleString()} · Gestion CHF ${Math.round(totalGestionRecue).toLocaleString()}`)}
       ${statCard('Rappels urgents', urgents.length, urgents.length > 0 ? '#f87171' : '#64748b')}
@@ -3267,13 +3266,71 @@ function classifierContrat(ct, clientsMap) {
 }
 
 async function viewVolumePrimes() {
-  // Charger tous les contrats actifs
+  // Charger tous les contrats en portefeuille (tout sauf résilié/annulé — cohérent avec le "CA portefeuille" du dashboard,
+  // pour ne pas faire disparaître silencieusement les contrats "en cours" ou "à renouveler" du volume affiché)
   const [contrats, clients] = await Promise.all([
-    dbGet('contrats', 'statut=eq.actif&select=*'),
+    dbGet('contrats', `statut=neq.${encodeURIComponent('résilié')}&statut=neq.${encodeURIComponent('annulé')}&select=*`),
     dbGet('clients', 'select=id,segment,prenom,nom'),
   ]);
   const clientsMap = {};
   (clients || []).forEach(c => clientsMap[c.id] = c);
+  window._volumePrimesContratsBruts = contrats || [];
+  window._volumePrimesClientsMap = clientsMap;
+
+  return `
+    ${sectionCard('Filtrer par branche', '#64748b', `
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Décoche une branche pour l'exclure du volume de primes affiché ci-dessous.</div>
+      <div style="display:flex;gap:14px 20px;flex-wrap:wrap">
+        ${Object.keys(CATALOGUE_PRODUITS).filter(cat => cat !== 'Autre' && cat !== 'Santé').map(cat => `
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12.5px;color:var(--text)">
+            <input type="checkbox" class="vp-branche-checkbox" data-branche="${cat}" checked onchange="filtrerVolumePrimes()" style="width:15px;height:15px;cursor:pointer"/> ${cat}
+          </label>`).join('')}
+        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12.5px;color:var(--text)">
+          <input type="checkbox" class="vp-branche-checkbox" data-branche="Santé:LAMal" checked onchange="filtrerVolumePrimes()" style="width:15px;height:15px;cursor:pointer"/> LAMal
+        </label>
+        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12.5px;color:var(--text)">
+          <input type="checkbox" class="vp-branche-checkbox" data-branche="Santé:Complementaire" checked onchange="filtrerVolumePrimes()" style="width:15px;height:15px;cursor:pointer"/> Complémentaire santé (toutes compagnies)
+        </label>
+      </div>
+    `)}
+    <div id="volume-primes-corps">${renderVolumePrimesCorps(contrats || [], clientsMap)}</div>
+  `;
+}
+
+// Recalcule et réaffiche le contenu de Volume de primes selon les branches cochées,
+// sans redemander les données au serveur (déjà en mémoire depuis le chargement initial).
+// La catégorie "Santé" est volontairement scindée en deux sous-branches (LAMal / Complémentaire —
+// toutes compagnies confondues : CSS, Helsana, Groupe Mutuel, SWICA, etc.) car ce sont deux réalités
+// commerciales très différentes qu'on veut pouvoir isoler séparément l'une de l'autre.
+function filtrerVolumePrimes() {
+  const branchesActives = new Set(
+    Array.from(document.querySelectorAll('.vp-branche-checkbox:checked')).map(cb => cb.dataset.branche)
+  );
+  const brut = window._volumePrimesContratsBruts || [];
+
+  // Table de correspondance libellé produit -> branche (dérivée du catalogue, pas codée en dur)
+  const brancheParLabel = {};
+  for (const cat in CATALOGUE_PRODUITS) {
+    CATALOGUE_PRODUITS[cat].forEach(p => {
+      const branche = cat === 'Santé' ? (p.id === 'lamal' ? 'Santé:LAMal' : 'Santé:Complementaire') : cat;
+      brancheParLabel[p.label.trim().toLowerCase()] = branche;
+    });
+  }
+
+  const filtres = brut.filter(ct => {
+    const produit = (ct.produit || '').trim().toLowerCase();
+    const branche = brancheParLabel[produit];
+    // Un contrat dont le produit ne correspond à aucune entrée connue du catalogue reste toujours affiché
+    // (mieux vaut le montrer que le faire disparaître silencieusement d'un filtre qui ne le reconnaît pas)
+    if (branche && !branchesActives.has(branche)) return false;
+    return true;
+  });
+  document.getElementById('volume-primes-corps').innerHTML = renderVolumePrimesCorps(filtres, window._volumePrimesClientsMap || {});
+}
+
+// Calcule et génère tout l'affichage de Volume de primes à partir d'une liste de contrats donnée
+// (fonction pure, appelée à la fois au chargement initial et à chaque changement de filtre par branche).
+function renderVolumePrimesCorps(contrats, clientsMap) {
 
   // Totaux globaux
   let totalVie = 0, totalNonVie = 0, totalPrive = 0, totalEntreprise = 0;
@@ -3465,6 +3522,7 @@ async function viewVolumePrimes() {
       </table>
     </div>`;
 }
+
 
 // ═══ TOUS LES CONTRATS — vue filtrée ═══
 // ═══ RÉSUMÉ CONTRAT — modale slide-in depuis Tous les contrats ═══
@@ -4042,6 +4100,7 @@ async function showClient(id) {
     <div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:16px">
       <div style="display:flex;gap:10px">
         <button onclick="toggleEditClient()" style="background:${editingClient ? 'var(--red-dim)' : 'var(--surface)'};border:1px solid ${editingClient ? 'rgba(248,113,113,0.3)' : 'var(--border)'};border-radius:8px;padding:7px 16px;color:${editingClient ? 'var(--red)' : 'var(--text-muted)'};font-size:12px;font-weight:700;cursor:pointer">${editingClient ? '✕ Annuler' : '✏️ Modifier'}</button>
+        <button onclick="genererMandatCourtage('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📄 Mandat de courtage</button>
         <button onclick="window.print()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🖨️ Imprimer la fiche</button>
       </div>
     </div>
@@ -4159,7 +4218,8 @@ async function showClient(id) {
           <div class="form-field"><label class="form-label">Email</label><input id="ec-email" class="form-input" value="${c.email || ''}"></div>
           <div class="form-field"><label class="form-label">Téléphone fixe</label><input id="ec-tel" class="form-input" value="${c.tel || ''}"></div>
           <div class="form-field"><label class="form-label">Mobile</label><input id="ec-mobile" class="form-input" value="${c.mobile || ''}"></div>
-          ${isEntreprise ? `<div class="form-field"><label class="form-label">Soumis à une CCT ?</label><select id="ec-cct" class="form-select"><option value="non" ${!c.cct ? 'selected' : ''}>Non</option><option value="oui" ${c.cct ? 'selected' : ''}>Oui</option></select></div>` : ''}
+          ${isEntreprise ? `<div class="form-field"><label class="form-label">Soumis à une CCT ?</label><select id="ec-cct" class="form-select"><option value="non" ${!c.cct ? 'selected' : ''}>Non</option><option value="oui" ${c.cct ? 'selected' : ''}>Oui</option></select></div>
+          <div class="form-field"><label class="form-label">N° IDE (CHE)</label><input id="ec-ide" class="form-input" value="${c.ide || ''}" placeholder="CHE-123.456.789"></div>` : ''}
         </div>`)}
         ${sectionCard('Coordonnées bancaires', '#a78bfa', `<div class="form-grid">
           <div class="form-field"><label class="form-label">Banque</label><input id="ec-banque" class="form-input" value="${c.banque || ''}"></div>
@@ -4428,6 +4488,135 @@ async function changerAgentClient(clientId, agentId) {
   showClient(clientId);
 }
 
+// ═══ MANDAT DE COURTAGE — génération pré-remplie au nom du client ═══
+function genererMandatCourtage(clientId) {
+  const c = allClients.find(x => x.id === clientId);
+  if (!c) { showError('Client introuvable.'); return; }
+  const isEnt = estEntreprise(c);
+
+  // Découpage adresse : "adresse" seul + "ville" contient déjà "NPA Localité" (convention existante du CRM)
+  const npaLocalite = c.ville || '';
+
+  const champs = {
+    nom: isEnt ? '' : (c.nom || ''),
+    prenom: isEnt ? '' : (c.prenom || ''),
+    societe: isEnt ? (c.nom || '') : '',
+    naissanceOuIde: isEnt ? (c.ide || '') : (c.date_naissance ? fmtDate(c.date_naissance) : ''),
+    adresse: c.adresse || '',
+    npaLocalite,
+    tel: c.tel || c.mobile || c.telephone || '',
+    email: c.email || '',
+    contactEntreprise: isEnt ? (c.prenom || '') : '',
+  };
+
+  const win = window.open('', '_blank');
+  win.document.write(`<html><head><title>Mandat de courtage — ${isEnt ? champs.societe : champs.prenom + ' ' + champs.nom}</title><style>
+    body{font-family:Arial,sans-serif;padding:35px;color:#1a1a1a;font-size:12.5px;line-height:1.5}
+    .entete{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #113679;padding-bottom:14px;margin-bottom:20px}
+    h1{font-size:19px;color:#113679;text-align:center;margin:10px 0 2px}
+    .sous-titre{text-align:center;font-style:italic;color:#444;margin-bottom:18px;font-size:12px}
+    h2{font-size:13px;color:#113679;margin:18px 0 8px;font-weight:800}
+    table{width:100%;border-collapse:collapse;margin-bottom:4px}
+    td{border:1px solid #ccc;padding:7px 10px;font-size:11.5px;vertical-align:middle}
+    td.label{background:#f2f5fa;font-weight:700;width:22%;color:#113679}
+    td.valeur{width:28%}
+    ol{padding-left:20px}
+    ol li{margin-bottom:9px;font-size:11.5px}
+    .signatures{display:flex;justify-content:space-between;margin-top:40px}
+    .signatures div{width:45%}
+    .ligne-signature{border-top:1px solid #333;margin-top:50px;padding-top:5px;font-style:italic;font-size:11px;color:#555}
+    .footer{text-align:center;font-size:9.5px;color:#888;margin-top:30px;border-top:1px solid #ddd;padding-top:10px}
+    .page-break{page-break-before:always}
+    .art45-table th{background:#113679;color:#fff;padding:8px 10px;font-size:11px;text-align:left}
+    .art45-table td{font-size:10.5px;padding:8px 10px}
+    .print-btn{margin-top:25px;padding:10px 20px;background:#113679;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px}
+  </style></head><body>
+
+    <div class="entete">
+      <div style="background:#113679;border-radius:8px;padding:10px 16px;display:inline-block">
+        <img src="${ASSUREX_LOGO_WORDMARK_PNG}" alt="Assurex" style="height:28px;width:auto;display:block"/>
+      </div>
+    </div>
+
+    <h1>MANDAT DE COURTAGE</h1>
+    <div class="sous-titre">Représentation et gestion du portefeuille d'assurances</div>
+
+    <p><strong>Entre les soussigné(e)s :</strong></p>
+    <h2>LE MANDANT</h2>
+    <table>
+      <tr><td class="label">Nom</td><td class="valeur">${champs.nom}</td><td class="label">Prénom</td><td class="valeur">${champs.prenom}</td></tr>
+      <tr><td class="label">Société / raison sociale</td><td class="valeur">${champs.societe}${isEnt && champs.contactEntreprise ? `<div style="font-size:9.5px;color:#666;margin-top:2px">Contact : ${champs.contactEntreprise}</div>` : ''}</td><td class="label">Date de naissance / IDE</td><td class="valeur">${champs.naissanceOuIde}</td></tr>
+      <tr><td class="label">Adresse</td><td class="valeur">${champs.adresse}</td><td class="label">NPA / Localité</td><td class="valeur">${champs.npaLocalite}</td></tr>
+      <tr><td class="label">Téléphone</td><td class="valeur">${champs.tel}</td><td class="label">E-mail</td><td class="valeur">${champs.email}</td></tr>
+    </table>
+    <p style="font-size:11px">ci-après « le mandant », d'une part,</p>
+
+    <h2>LE MANDATAIRE</h2>
+    <table>
+      <tr><td class="label">Nom</td><td class="valeur">Ozkan</td><td class="label">Prénom</td><td class="valeur">Jonathan</td></tr>
+      <tr><td class="label">Raison sociale</td><td class="valeur">Assurex Sàrl</td><td class="label">Autorisation FINMA</td><td class="valeur">F01492173</td></tr>
+      <tr><td class="label">Adresse</td><td class="valeur">Rue du Centre 142</td><td class="label">NPA / Localité</td><td class="valeur">1025 St-Sulpice</td></tr>
+      <tr><td class="label">Téléphone</td><td class="valeur">079 101 99 26</td><td class="label">E-mail</td><td class="valeur">jo@cofidex.ch</td></tr>
+    </table>
+    <p style="font-size:11px">et le conseiller à la clientèle d'ASSUREX Sàrl, ci-après « le mandataire », d'autre part,</p>
+
+    <p><strong>Il est convenu ce qui suit :</strong></p>
+    <ol>
+      <li>Le mandant confie au mandataire sa représentation auprès des compagnies d'assurances, ainsi que la gestion de son portefeuille d'assurances. Il pourra obtenir en son nom tout document, copie ou information au sujet du portefeuille d'assurances du mandant.</li>
+      <li>A la demande du mandant, le mandataire pourra donner toutes instructions aux compagnies d'assurance pour la conclusion, la modification ou l'annulation de ses contrats.</li>
+      <li>Le mandant demeure preneur d'assurance, débiteur des primes et bénéficiaire des prestations (indemnités de sinistre etc.). Le mandataire n'assume de responsabilité que par rapport aux documents et informations qui lui ont été transmis.</li>
+      <li>Le mandataire s'engage à respecter la stricte confidentialité en ce qui concerne ses relations d'affaires, les règles d'usage traitant du secret professionnel et de la protection des données sont applicables, y compris à la fin du mandat.</li>
+      <li>Sur information au mandant, le mandataire est autorisé à confier certaines tâches à des tiers (confrères agréés FINMA, fiduciaires, avocats etc.). Le mandataire restera toutefois conseiller unique du mandant.</li>
+      <li>Le mandataire précise que son indemnisation provient directement des compagnies d'assurance, et par conséquent, ses prestations ne feront l'objet d'aucune facturation d'honoraires, sauf condition particulière préalablement validée entre les parties.</li>
+      <li>Par sa signature, le mandant confirme expressément avoir eu connaissance des informations relatives au mandataire, conformément à l'art. 45 de la LSA (copie au verso du présent document, remis au mandant), avoir pris connaissance et être en parfait accord avec les conditions générales liées au présent mandat de courtage.</li>
+      <li>Le présent mandat annule et remplace tout autre mandat convenu antérieurement entre le mandant et tout autre mandataire. Il pourra être révoqué en tout temps par chacune des parties.</li>
+      <li>Entrée en vigueur du mandat : à la date de signature.</li>
+    </ol>
+
+    <p>Fait en deux exemplaires, à _________________________, le _________________________.</p>
+
+    <div class="signatures">
+      <div><strong>Signature du mandant</strong><div class="ligne-signature">Le mandant</div></div>
+      <div><strong>Signature du mandataire (ASSUREX Sàrl)</strong><div class="ligne-signature">Le mandataire</div></div>
+    </div>
+
+    <div class="footer">ASSUREX Sàrl – Rue du Centre 142, 1025 St-Sulpice – Autorisation FINMA F01492173</div>
+
+    <div class="page-break"></div>
+
+    <h2 style="margin-top:0">INFORMATIONS RELATIVES AU MANDATAIRE – ART. 45 LSA</h2>
+    <p style="font-size:11px">Votre conseiller ou son employeur agit comme courtier non lié, et travaille sur mandat de ses clients selon prestations convenues dans le mandat de courtage. Une rémunération forfaitaire est octroyée pour l'acquisition de contrats d'assurance, et se monte à septante francs maximum pour l'assurance de base, et seize primes pour la complémentaire. Il collabore avec les assureurs indiqués qui lui versent des courtages prévalant sur le marché. Le courtier est lui-même responsable en cas de faute, de négligence, d'information erronée qu'il peut commettre dans le cadre de son activité d'intermédiaire. Votre conseiller est autorisé à négocier les produits d'assurance des assureurs pour les branches et les assureurs porteurs des risques suivants :</p>
+
+    <table class="art45-table">
+      <tr><th>Type d'assurance</th><th>Assureur(s) porteur(s) du risque</th></tr>
+      <tr><td>Assurance maladie et accident – LAMal</td><td>CSS Assurances, 6002 Lucerne · Groupe Mutuel, 1920 Martigny · Helsana, 1003 Lausanne · Swica, 1006 Lausanne</td></tr>
+      <tr><td>Assurances complémentaires – LCA</td><td>CSS Assurances, 6002 Lucerne · Groupe Mutuel, 1920 Martigny · Helsana, 1003 Lausanne · Swica, 1006 Lausanne</td></tr>
+      <tr><td>Assurances de prévoyance</td><td>GMV SA, 1920 Martigny · AXA Winterthur, 1003 Lausanne · Allianz, 1023 Crissier · La Mobilière Riviera · Vaudoise Riviera · Swiss Life, Lausanne</td></tr>
+      <tr><td>Assurances choses – Véhicules à moteur</td><td>Groupe Mutuel, 1920 Martigny · AXA Winterthur, 1003 Lausanne · Allianz, 1023 Crissier · La Mobilière Riviera · Vaudoise Riviera</td></tr>
+      <tr><td>Assurances choses – Inventaire du ménage</td><td>Groupe Mutuel, 1920 Martigny · AXA Winterthur, 1003 Lausanne · Allianz, 1023 Crissier · La Mobilière Riviera · Vaudoise Riviera</td></tr>
+      <tr><td>Protection juridique – Privée / Entreprise</td><td>Groupe Mutuel, 1920 Martigny · AXA Winterthur, 1003 Lausanne · Allianz, 1023 Crissier · La Mobilière Riviera · Orion, Bâle</td></tr>
+      <tr><td>Assurances d'entreprises – LAA / LAAC / LPP / IJM / RC Prof / PEE</td><td>Groupe Mutuel, 1920 Martigny · AXA Winterthur, 1003 Lausanne · Allianz, 1023 Crissier · La Mobilière Riviera · Vaudoise Riviera</td></tr>
+    </table>
+
+    <h2>UTILISATION DES DONNÉES À DES FINS PROFESSIONNELLES</h2>
+    <p style="font-size:10.5px;text-align:justify">L'intermédiaire saisit et utilise vos données personnelles et administratives pour définir vos besoins actuels et futurs en matière d'assurance, afin d'établir une offre et/ou pour les transmettre avec vos données médicales aux assureurs concernés en vue de traiter votre/vos proposition(s) d'assurance(s) et le contrat qui s'en suit. Il/Elle peut conserver une copie des documents contractuels dans son dossier et recevoir de l'assureur des données clients, notamment en ce qui concerne l'acceptation de la proposition, l'exécution du contrat d'assurance, l'encaissement ou la résiliation. Les assureurs utiliseront vos données dans le respect de la Loi sur la protection des données, pour évaluer le risque à assurer, pour le traitement des sinistres, ainsi que pour le suivi administratif, statistique et financier de(s) l'assurance(s) contractée(s), de même que pour le suivi administratif et financier entre l'intermédiaire et l'assureur porteur du risque. Vos données personnelles et administratives peuvent être utilisées par l'intermédiaire et/ou par les assureurs porteurs du risque et/ou par d'autres partenaires des assureurs dans le contexte d'actions de marketing, notamment la transmission par poste, e-mail, téléphone ou SMS d'informations et de publicités concernant leurs offres et produits. Les données personnelles sont généralement conservées sous la forme électronique et/ou papier. Elles sont conservées aussi longtemps que la loi, la gestion du contrat d'assurance, des sinistres, des droits de recours, du recouvrement, de la rémunération de l'intermédiaire et/ou d'éventuels litiges entre l'assureur, l'assuré, l'intermédiaire ou de tiers l'exigent.</p>
+
+    <h2>AUTORISATION DE PRISE DE CONTACT</h2>
+    <p style="font-size:11px">Adresse recommandée avec autorisation : _________________________ – par : _________________________</p>
+    <p style="font-size:10.5px;font-style:italic">Le mandant confirme avoir pris connaissance des informations ci-dessus (art. 45 LSA, utilisation des données, autorisation de prise de contact).</p>
+
+    <div class="signatures">
+      <div><strong>Signature du mandant</strong><div class="ligne-signature">Le mandant</div></div>
+      <div><strong>Signature du mandataire (ASSUREX Sàrl)</strong><div class="ligne-signature">Le mandataire</div></div>
+    </div>
+
+    <div class="footer">ASSUREX Sàrl – Rue du Centre 142, 1025 St-Sulpice – Autorisation FINMA F01492173</div>
+
+    <button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
+  </body></html>`);
+  win.document.close();
+}
+
 async function saveClientEdit(id, isEntreprise) {
   const body = isEntreprise ? {
     nom: document.getElementById('ec-nom').value.trim(),
@@ -4437,6 +4626,7 @@ async function saveClientEdit(id, isEntreprise) {
     revenu: Number(document.getElementById('ec-revenu').value) || null,
     avs: document.getElementById('ec-avs').value.trim(),
     cct: document.getElementById('ec-cct') ? document.getElementById('ec-cct').value === 'oui' : undefined,
+    ide: document.getElementById('ec-ide') ? document.getElementById('ec-ide').value.trim() : undefined,
   } : {
     prenom: document.getElementById('ec-prenom').value.trim(),
     nom: document.getElementById('ec-nom').value.trim(),
@@ -6131,7 +6321,7 @@ async function saveEntreprise() {
   if (missing.length > 0) { alert('Champs obligatoires manquants : ' + missing.join(', ')); return; }
   const contact = (document.getElementById('e-contact-prenom').value + ' ' + document.getElementById('e-contact-nom').value).trim();
   const body = {
-    prenom: document.getElementById('e-contact-prenom').value || '',
+    prenom: contact || document.getElementById('e-contact-prenom').value || '',
     nom,
     email: document.getElementById('e-email').value || null,
     tel: document.getElementById('e-tel').value || null,
@@ -6145,6 +6335,7 @@ async function saveEntreprise() {
     statut: document.getElementById('e-statut').value,
     segment: 'Entreprise',
     cct: document.getElementById('e-cct').value === 'oui',
+    ide: document.getElementById('e-ide').value.trim() || null,
     apporteur_id: document.getElementById('e-agent').value || null,
     apporteur_externe: document.getElementById('e-apporteur-ext').value.trim() || null,
     notes: document.getElementById('e-notes').value || null,
@@ -7816,8 +8007,8 @@ async function importPolicePdfAI(input) {
 function viewNouveauContrat() {
   const clientOptions = allClients.map(c => `<option value="${c.id}" data-segment="${estEntreprise(c) ? 'entreprise' : 'prive'}">${estEntreprise(c) ? c.nom : c.prenom + ' ' + c.nom}</option>`).join('');
   const opp = prefillOpportunite;
+  window._policePdfFileFromImport = null; // évite qu'un PDF d'un import précédent (annulé ou d'un autre contrat) ne s'attache par erreur
   return `
-    <button onclick="navigate(contratClientId ? 'clients' : 'suivi')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
     <h2 style="margin:0 0 16px;font-size:18px;font-weight:800;color:var(--text)">Nouveau contrat</h2>
 
     <!-- ── Zone import IA ─────────────────────────────────────── -->
@@ -8255,6 +8446,37 @@ async function saveContrat() {
   const plaquesValeurs = Array.from(document.querySelectorAll('.ct-plaque-input')).map(inp => inp.value.trim()).filter(Boolean);
   const resultPrincipal = await creerContratEtCommission(clientId, compagnie, produitLabel, primeMensuelle, modulesChoisis, commissionEstimee, detail, plaquesValeurs);
   if (resultPrincipal.error) { showError('Erreur lors de la création du contrat: ' + resultPrincipal.detail); btn.textContent = '✓ Enregistrer le contrat'; btn.disabled = false; return; }
+
+  // Si le contrat provient d'un import de police PDF par l'IA, on archive ce même PDF sur le contrat
+  // — permet d'ouvrir le document d'origine en un clic pour vérifier la saisie (même mécanisme que
+  // l'attache manuelle depuis la fiche contrat : champs police_url / police_nom).
+  if (window._policePdfFileFromImport && resultPrincipal.contrat && resultPrincipal.contrat.id) {
+    const file = window._policePdfFileFromImport;
+    const newContratId = resultPrincipal.contrat.id;
+    try {
+      const nomFichier = `${compagnie}_${produitLabel}_${resultPrincipal.contrat.numero_police || newContratId}`
+        .replace(/[^a-zA-Z0-9_-]/g, '_').substring(0, 60);
+      const path = `polices/${newContratId}/${nomFichier}.pdf`;
+      const uploadToken = await getValidAccessToken() || SUPABASE_KEY;
+      let uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${path}`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${uploadToken}`, 'Content-Type': 'application/pdf' },
+        body: file,
+      });
+      if (!uploadRes.ok) {
+        uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${path}`, {
+          method: 'PUT',
+          headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${uploadToken}`, 'Content-Type': 'application/pdf' },
+          body: file,
+        });
+      }
+      if (uploadRes.ok) {
+        await dbPatch('contrats', newContratId, { police_url: path, police_nom: file.name });
+        logAction('upload_police', 'contrats', newContratId, file.name);
+      }
+    } catch (e) { /* upload échoué, le contrat reste créé sans police jointe */ }
+    window._policePdfFileFromImport = null;
+  }
 
   memoriserCompagnie(compagnie);
 

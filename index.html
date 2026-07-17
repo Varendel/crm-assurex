@@ -341,7 +341,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 12:00</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 14:00</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -541,6 +541,15 @@ const TAUX_COMMISSION = {
   lamal_forfait: 70,           // LAMal : forfait unique CHF 70.- par contrat à la signature
   // COG annuelle LPP = prime_annuelle × 1.20 × 6.3% (versée trimestriellement)
   // LAMal : CHF 70 une seule fois, à la signature, indépendant de la prime
+  // Convention de collaboration HOTELA (entrée en vigueur 01.05.2026) — taux sur prime effectivement payée
+  hotela: {
+    ij_maladie: 7.00,               // Indemnités journalières en cas de maladie
+    accidents: 5.00,                // Assurance-accidents (LAA)
+    accidents_complementaire: 15.00,// Assurance-accidents complémentaire
+    lpp: 1.50,                      // Prévoyance professionnelle
+    lpp_plafond: 20000,             // Plafond annuel CHF 20'000.- par preneur soumis à la CCNT hôtellerie-restauration
+    package: 10.00,                 // Package HOTELA (nouvelles affaires uniquement, toutes couvertures placées par le courtier)
+  },
 };
 
 // ═══ CONSTANTES LÉGALES LPP (état au 01.01.2026 — inchangées depuis 2025, réforme rejetée) ═══
@@ -2686,7 +2695,7 @@ function agentById(id) { return allAgents.find(a => a.id === id); }
 function caClient(clientId) {
   // Même définition que le "CA portefeuille" du Dashboard : tout contrat non résilié et non annulé
   // (inclut donc "actif", "en_cours", "à renouveler"...) — pour que les deux chiffres se répondent toujours.
-  return allContrats.filter(ct => ct.client_id === clientId && !['résilié','annulé'].includes(ct.statut))
+  return allContrats.filter(ct => ct.client_id === clientId && !['résilié','annulé','mandat_resilie'].includes(ct.statut))
     .reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
 }
 
@@ -2850,7 +2859,7 @@ async function basculerContratsEchus() {
 
 function viewDashboard() {
   const actifs = allClients.filter(c => c.statut === 'actif').length;
-  const totalCAFull = allContrats.filter(ct => !['résilié','annulé'].includes(ct.statut)).reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0);
+  const totalCAFull = allContrats.filter(ct => !['résilié','annulé','mandat_resilie'].includes(ct.statut)).reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0);
   // ── Commissions en attente (pipeline) : basé sur la date de SIGNATURE du contrat ──
   // C'est la bonne définition métier : seuls les contrats signés depuis la fusion
   // génèrent de nouvelles commissions pour Assurex. Le portefeuille pré-fusion
@@ -2889,7 +2898,7 @@ function viewDashboard() {
   const totalCommRecues = totalCommRecuesBrut - totalExtourne;
   const totalGestionRecue = commissionsRecues.filter(ca => ca.nature === 'gestion').reduce((s, ca) => s + Number(ca.montant_final != null ? ca.montant_final : (ca.montant_estime||0)), 0);
   const totalAcquisitionRecue = totalCommRecuesBrut - totalGestionRecue;
-  const nbContratsActifs = allContrats.filter(ct => !['résilié','annulé'].includes(ct.statut) && ct.commissionne !== false).length;
+  const nbContratsActifs = allContrats.filter(ct => !['résilié','annulé','mandat_resilie'].includes(ct.statut) && ct.commissionne !== false).length;
   const urgents = allRappels.filter(r => r.urgence === 'haute' && r.statut === 'ouvert');
   const now = new Date().toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
@@ -2920,7 +2929,7 @@ function viewDashboard() {
 
   // ── Polices non commissionnées "à bouger" — regroupées par horizon d'échéance ──
   const today = new Date();
-  const nonGerees = allContrats.filter(ct => ct.commissionne === false && !['résilié','annulé'].includes(ct.statut));
+  const nonGerees = allContrats.filter(ct => ct.commissionne === false && !['résilié','annulé','mandat_resilie'].includes(ct.statut));
   function joursRestants(ct) { return ct.date_echeance ? Math.floor((new Date(ct.date_echeance) - today) / 86400000) : null; }
   const horizons = [
     { label: 'En retard', test: j => j !== null && j < 0, color: '#f87171' },
@@ -2942,7 +2951,7 @@ function viewDashboard() {
   const idsAvecCommission = new Set(allCommissionsAttente.map(ca => ca.contrat_id).filter(Boolean));
   const contratsOrphelins = allContrats.filter(ct =>
     ct.commissionne !== false &&
-    !['résilié', 'annulé'].includes(ct.statut) &&
+    !['résilié', 'annulé', 'mandat_resilie'].includes(ct.statut) &&
     Number(ct.prime_annuelle || 0) > 0 &&
     !idsAvecCommission.has(ct.id)
   );
@@ -3291,7 +3300,7 @@ async function viewVolumePrimes() {
   // Charger tous les contrats en portefeuille (tout sauf résilié/annulé — cohérent avec le "CA portefeuille" du dashboard,
   // pour ne pas faire disparaître silencieusement les contrats "en cours" ou "à renouveler" du volume affiché)
   const [contrats, clients] = await Promise.all([
-    dbGet('contrats', `statut=neq.${encodeURIComponent('résilié')}&statut=neq.${encodeURIComponent('annulé')}&select=*`),
+    dbGet('contrats', `statut=neq.${encodeURIComponent('résilié')}&statut=neq.${encodeURIComponent('annulé')}&statut=neq.mandat_resilie&select=*`),
     dbGet('clients', 'select=id,segment,prenom,nom'),
   ]);
   const clientsMap = {};
@@ -3581,7 +3590,7 @@ function showDetailContrat(contratId) {
           <div style="text-align:right">
             <div style="font-size:20px;font-weight:900;color:#f59e0b">CHF ${Number(ct.prime_annuelle||0).toLocaleString()}</div>
             <div style="font-size:10px;color:rgba(255,255,255,0.5)">/an · CHF ${primenMois}/mois</div>
-            <div style="margin-top:6px">${badge(ct.statut==='annulé'?'❌ Annulé':ct.statut, ct.statut==='actif'?'#4ade80':ct.statut==='résilié'?'#94a3b8':ct.statut==='annulé'?'#f87171':'#f59e0b')}</div>
+            <div style="margin-top:6px">${badge(ct.statut==='annulé'?'❌ Annulé':ct.statut==='mandat_resilie'?'🚫 Mandat résilié':ct.statut, ct.statut==='actif'?'#4ade80':ct.statut==='mandat_resilie'?'#f87171':ct.statut==='résilié'?'#94a3b8':ct.statut==='annulé'?'#f87171':'#f59e0b')}</div>
           </div>
         </div>
       </div>
@@ -3652,7 +3661,7 @@ function viewContratsOrphelinsCommission() {
   const idsAvecCommission = new Set(allCommissionsAttente.map(ca => ca.contrat_id).filter(Boolean));
   const orphelins = allContrats.filter(ct =>
     ct.commissionne !== false &&
-    !['résilié', 'annulé'].includes(ct.statut) &&
+    !['résilié', 'annulé', 'mandat_resilie'].includes(ct.statut) &&
     Number(ct.prime_annuelle || 0) > 0 &&
     !idsAvecCommission.has(ct.id)
   );
@@ -3805,7 +3814,7 @@ function renderTousContrats() {
       <div style="font-size:12px;color:var(--text-muted)">${ct.compagnie||'—'}</div>
       <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ct.date_debut)}</div>
       <div style="font-weight:800;color:#f59e0b;text-align:right">CHF ${Number(ct.prime_annuelle||0).toLocaleString()}</div>
-      <div>${badge(ct.statut==='annulé'?'❌ Annulé':ct.statut, ct.statut==='actif'?'#4ade80':ct.statut==='résilié'?'#94a3b8':ct.statut==='annulé'?'#f87171':'#f59e0b')}</div>
+      <div>${badge(ct.statut==='annulé'?'❌ Annulé':ct.statut==='mandat_resilie'?'🚫 Mandat résilié':ct.statut, ct.statut==='actif'?'#4ade80':ct.statut==='mandat_resilie'?'#f87171':ct.statut==='résilié'?'#94a3b8':ct.statut==='annulé'?'#f87171':'#f59e0b')}</div>
       <div style="font-size:11px;color:var(--text-muted)">${(() => {
         if (agent) return agent.prenom + ' ' + agent.nom;
         const sig = allAgents.find(a => a.role === 'signataire');
@@ -3826,7 +3835,7 @@ function renderTousContrats() {
 
 function viewContratsSansAgent() { return viewTousContrats(); }
 
-function viewPortefeuille(filtre) {  const sanAgent = allContrats.filter(ct => !ct.apporteur_id && ct.commissionne !== false && !['résilié','annulé'].includes(ct.statut));
+function viewPortefeuille(filtre) {  const sanAgent = allContrats.filter(ct => !ct.apporteur_id && ct.commissionne !== false && !['résilié','annulé','mandat_resilie'].includes(ct.statut));
   const cols = '1fr 130px 110px 100px 90px 40px';
 
   const rows = sanAgent.map(ct => {
@@ -4045,7 +4054,7 @@ function renderClientsTable() {
 function renderVueEnsembleCouvertures(client, contrats, isEntreprise) {
   const segment = isEntreprise ? 'entreprise' : 'prive';
   const categories = getCategoriesPourSegment(segment).filter(cat => cat !== 'Autre');
-  const contratsActifs = contrats.filter(ct => ct.statut !== 'résilié' && ct.statut !== 'annulé');
+  const contratsActifs = contrats.filter(ct => !['résilié','annulé','mandat_resilie'].includes(ct.statut));
 
   const contratPourCategorie = (cat) => {
     const labelsCategorie = (CATALOGUE_PRODUITS[cat] || []).map(p => p.label.toLowerCase());
@@ -4235,6 +4244,13 @@ async function showClient(id) {
         ${sectionCard('Contact', '#f59e0b', `<div class="form-grid">
           <div class="form-field"><label class="form-label">Adresse</label><input id="ec-adresse" class="form-input" value="${c.adresse || ''}"></div>
           <div class="form-field"><label class="form-label">c/o (optionnel)</label><input id="ec-co" class="form-input" value="${c.co || ''}" placeholder="c/o Nom Prénom"></div>
+          <div class="form-field"><label class="form-label">Mandat de courtage actif</label><select id="ec-mandat" class="form-select">
+            <option value="oui" ${(!c.mandat || c.mandat==='oui')?'selected':''}>Oui</option>
+            <option value="non" ${c.mandat==='non'?'selected':''}>Non</option>
+            <option value="résilié" ${c.mandat==='résilié'?'selected':''}>Résilié</option>
+          </select>
+          ${c.mandat === 'résilié' ? `<div style="font-size:10.5px;color:#f87171;margin-top:4px">⚠️ Mandat résilié : tous les contrats de ce client sont exclus du volume de primes et du CA portefeuille.</div>` : ''}
+          </div>
           <div class="form-field"><label class="form-label">NPA</label><input id="ec-npa" class="form-input" value="${c.npa || ''}"></div>
           <div class="form-field"><label class="form-label">Ville</label><input id="ec-ville" class="form-input" value="${c.ville || ''}"></div>
           <div class="form-field"><label class="form-label">Canton</label><input id="ec-canton" class="form-input" value="${c.canton || ''}"></div>
@@ -4691,6 +4707,7 @@ async function saveClientEdit(id, isEntreprise) {
     banque: document.getElementById('ec-banque').value.trim(),
     iban: document.getElementById('ec-iban').value.trim(),
     apporteur_externe: document.getElementById('ec-apporteur-ext') ? (document.getElementById('ec-apporteur-ext').value.trim() || null) : undefined,
+    mandat: document.getElementById('ec-mandat') ? document.getElementById('ec-mandat').value : undefined,
   });
 
   if (!isEntreprise) {
@@ -4719,6 +4736,16 @@ async function saveClientEdit(id, isEntreprise) {
     const liees = allCommissionsAttente.filter(c => c.client_id === id);
     await Promise.all(liees.map(c => dbPatch('commissions_attente', c.id, { client_nom: nomComplet })));
     allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
+  }
+
+  // Cascade : si le mandat de courtage vient d'être résilié, tous les contrats encore actifs
+  // (hors résilié/annulé, déjà des états terminaux qu'on ne veut pas écraser) basculent en
+  // "mandat_resilie" — le client garde ses polices chez l'assureur, mais elles sortent du
+  // volume de primes et du CA portefeuille puisque le mandat de représentation n'existe plus.
+  if (body.mandat === 'résilié') {
+    const contratsDuClient = allContrats.filter(ct => ct.client_id === id && !['résilié','annulé','mandat_resilie'].includes(ct.statut));
+    await Promise.all(contratsDuClient.map(ct => dbPatch('contrats', ct.id, { statut: 'mandat_resilie' })));
+    allContrats = await dbGet('contrats', 'select=*');
   }
 
   editingClient = false;
@@ -6971,6 +6998,7 @@ async function showEditContrat(contratId, returnTo) {
             <option value="résilié" ${ct.statut==='résilié'?'selected':''}>Résilié</option>
             <option value="en_cours" ${ct.statut==='en_cours'?'selected':''}>En cours de signature</option>
             <option value="annulé" ${ct.statut==='annulé'?'selected':''}>Annulé (réserve refusée / non abouti)</option>
+            <option value="mandat_resilie" ${ct.statut==='mandat_resilie'?'selected':''}>🚫 Mandat résilié (défini automatiquement depuis la fiche client)</option>
           </select>
         </div>
         <div class="form-field"><label class="form-label">Commissionné ?</label>
@@ -8078,7 +8106,7 @@ function viewNouveauContrat() {
         <option value="prive">Privé</option>
         <option value="entreprise">Entreprise</option>
       </select></div>
-      <div class="form-field"><label class="form-label">Compagnie *</label><input class="form-input" id="ct-compagnie" value="${opp && opp.compagnie ? opp.compagnie : ''}" placeholder="Swiss Life, AXA, Helsana..." list="compagnies-suggestions" autocomplete="off"/><datalist id="compagnies-suggestions">${getCompagniesConnues().map(c => `<option value="${c}">`).join('')}</datalist></div>
+      <div class="form-field"><label class="form-label">Compagnie *</label><input class="form-input" id="ct-compagnie" value="${opp && opp.compagnie ? opp.compagnie : ''}" placeholder="Swiss Life, AXA, Helsana..." list="compagnies-suggestions" autocomplete="off" oninput="updateCommissionPreview()"/><datalist id="compagnies-suggestions">${getCompagniesConnues().map(c => `<option value="${c}">`).join('')}</datalist></div>
       <div class="form-field"><label class="form-label">Catégorie *</label><select class="form-select" id="ct-categorie" onchange="updateProduitOptions()"></select></div>
       <div class="form-field"><label class="form-label">Produit *</label><select class="form-select" id="ct-produit" onchange="updateModulesOptions(); updateCommissionPreview()"><option value="">— Sélectionner —</option></select></div>
       <div class="form-field" style="grid-column:span 2" id="ct-modules-field"><label class="form-label">Modules complémentaires</label><div id="ct-modules-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div></div>
@@ -8090,6 +8118,11 @@ function viewNouveauContrat() {
       </div>
       <div class="form-field"><label class="form-label">N° de police</label><input class="form-input" id="ct-police" placeholder="Optionnel"/></div>
       <div class="form-field"><label class="form-label">Prime (CHF) *</label><input class="form-input" id="ct-prime-mensuelle" type="number" placeholder="150" oninput="updateCommissionPreview()"/></div>
+      <div class="form-field" id="ct-prime-risque-frais-field" style="display:none">
+        <label class="form-label">Dont prime risque + frais (CHF/an) — base de calcul COG</label>
+        <input class="form-input" id="ct-prime-risque-frais" type="number" placeholder="Hors part épargne" oninput="updateCommissionPreview()"/>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:3px">Swiss Life rémunère uniquement sur risque + frais, pas sur la part épargne de la prime totale ci-dessus.</div>
+      </div>
       <div class="form-field"><label class="form-label">Périodicité</label><select class="form-select" id="ct-periodicite" onchange="updateCommissionPreview()">
         <option value="12">Mensuelle</option>
         <option value="4">Trimestrielle</option>
@@ -8347,6 +8380,34 @@ function calculerCommissionEstimee() {
     return { montant: montantManuel, detail: 'Saisie manuelle (remplace le calcul automatique)' };
   }
 
+  // ── HOTELA — Convention de collaboration (dès 01.05.2026) ──────────────
+  // Le taux dépend de la compagnie choisie, pas seulement du produit — vérifié en premier
+  // pour ces 4 produits, avant toute formule générique (ex: LPP Swiss Life ci-dessous).
+  const compagnieChoisie = (document.getElementById('ct-compagnie')?.value || '').trim().toLowerCase();
+  if (compagnieChoisie.includes('hotela')) {
+    if (produitId === 'perte_gain_maladie_collective') {
+      const montant = Math.round(primeAnnuelle * TAUX_COMMISSION.hotela.ij_maladie / 100);
+      return { montant, detail: `HOTELA — Indemnités journalières maladie : ${TAUX_COMMISSION.hotela.ij_maladie}% × CHF ${primeAnnuelle} = CHF ${montant}` };
+    }
+    if (produitId === 'laa') {
+      const montant = Math.round(primeAnnuelle * TAUX_COMMISSION.hotela.accidents / 100);
+      return { montant, detail: `HOTELA — Assurance-accidents : ${TAUX_COMMISSION.hotela.accidents}% × CHF ${primeAnnuelle} = CHF ${montant}` };
+    }
+    if (produitId === 'perte_gain_accident_collective') {
+      const montant = Math.round(primeAnnuelle * TAUX_COMMISSION.hotela.accidents_complementaire / 100);
+      return { montant, detail: `HOTELA — Assurance-accidents complémentaire : ${TAUX_COMMISSION.hotela.accidents_complementaire}% × CHF ${primeAnnuelle} = CHF ${montant}` };
+    }
+    if (produitId === 'lpp_entreprise') {
+      const montantBrut = Math.round(primeAnnuelle * TAUX_COMMISSION.hotela.lpp / 100);
+      const plafond = TAUX_COMMISSION.hotela.lpp_plafond;
+      const montant = Math.min(montantBrut, plafond);
+      return {
+        montant,
+        detail: `HOTELA — Prévoyance professionnelle : ${TAUX_COMMISSION.hotela.lpp}% × CHF ${primeAnnuelle} = CHF ${montantBrut}${montantBrut > plafond ? ` — plafonné à CHF ${plafond.toLocaleString()}/an (preneur soumis CCNT hôtellerie-restauration)` : ''}`,
+      };
+    }
+  }
+
   // ── Santé / complémentaire ──────────────────────────────────────────────
   if (produitId === 'sante_complementaire') {
     const montant = Math.round(primeMensuelle * TAUX_COMMISSION.sante_facteur_mensuel);
@@ -8362,17 +8423,21 @@ function calculerCommissionEstimee() {
   }
 
   // ── LPP (prévoyance professionnelle 2e pilier) ─────────────────────────
-  // Formule COG Swiss Life : prime annuelle × FP 1.20 × taux 6.3%
+  // Formule COG Swiss Life : (prime risque + frais, HORS part épargne) × FP 1.20 × taux 6.3%
   // Source : Annexe B convention SL1102, valable dès 01.01.2024
+  // Swiss Life ne rémunère que sur risque + frais — jamais sur la part épargne de la prime totale.
   if (produitId === 'lpp_entreprise') {
-    if (primeAnnuelle < 2000) {
-      return { montant: 0, detail: `Prime annuelle CHF ${primeAnnuelle} < CHF 2\'000 minimum — aucune COG Swiss Life` };
+    const primeRisqueFrais = parseFloat(document.getElementById('ct-prime-risque-frais')?.value) || 0;
+    const baseCalcul = primeRisqueFrais > 0 ? primeRisqueFrais : primeAnnuelle;
+    if (baseCalcul < 2000) {
+      return { montant: 0, detail: `Base de calcul CHF ${baseCalcul} < CHF 2\u2019000 minimum — aucune COG Swiss Life` };
     }
-    const cogAnnuelle = Math.round(primeAnnuelle * TAUX_COMMISSION.lpp_fp * (TAUX_COMMISSION.lpp_taux / 100));
+    const cogAnnuelle = Math.round(baseCalcul * TAUX_COMMISSION.lpp_fp * (TAUX_COMMISSION.lpp_taux / 100));
     const cogTrimestrielle = Math.round(cogAnnuelle / 4);
+    const avertissement = primeRisqueFrais > 0 ? '' : ' ⚠️ Prime risque+frais non renseignée ci-dessus — calcul sur la prime TOTALE, probablement surestimé (inclut la part épargne).';
     return {
       montant: cogAnnuelle,
-      detail: `COG Swiss Life : CHF ${primeAnnuelle} × ${TAUX_COMMISSION.lpp_fp} (FP) × ${TAUX_COMMISSION.lpp_taux}% = CHF ${cogAnnuelle}/an (CHF ${cogTrimestrielle}/trimestre, versée en mars/juin/sept/déc)`,
+      detail: `COG Swiss Life : CHF ${baseCalcul} (risque+frais) × ${TAUX_COMMISSION.lpp_fp} (FP) × ${TAUX_COMMISSION.lpp_taux}% = CHF ${cogAnnuelle}/an (CHF ${cogTrimestrielle}/trimestre, versée en mars/juin/sept/déc)${avertissement}`,
     };
   }
 
@@ -8391,6 +8456,9 @@ function updateCommissionPreview() {
   const produitId = produit ? produit.id : null;
   document.getElementById('ct-duree-field').style.display = produitId === 'vie_3a' ? 'block' : 'none';
   document.getElementById('ct-manuel-field').style.display = 'block';
+  const compagnieChoisie = (document.getElementById('ct-compagnie')?.value || '').trim().toLowerCase();
+  const champRisqueFrais = document.getElementById('ct-prime-risque-frais-field');
+  if (champRisqueFrais) champRisqueFrais.style.display = (produitId === 'lpp_entreprise' && compagnieChoisie.includes('swiss life')) ? 'block' : 'none';
   const { montant, detail } = calculerCommissionEstimee();
   document.getElementById('commission-preview-value').textContent = 'CHF ' + montant.toLocaleString();
   document.getElementById('commission-preview-detail').textContent = detail;

@@ -341,7 +341,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 10:30</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 11:30</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -4214,6 +4214,7 @@ async function showClient(id) {
         </div>`)}
         ${sectionCard('Contact', '#f59e0b', `<div class="form-grid">
           <div class="form-field"><label class="form-label">Adresse</label><input id="ec-adresse" class="form-input" value="${c.adresse || ''}"></div>
+          <div class="form-field"><label class="form-label">c/o (optionnel)</label><input id="ec-co" class="form-input" value="${c.co || ''}" placeholder="c/o Nom Prénom"></div>
           <div class="form-field"><label class="form-label">NPA</label><input id="ec-npa" class="form-input" value="${c.npa || ''}"></div>
           <div class="form-field"><label class="form-label">Ville</label><input id="ec-ville" class="form-input" value="${c.ville || ''}"></div>
           <div class="form-field"><label class="form-label">Canton</label><input id="ec-canton" class="form-input" value="${c.canton || ''}"></div>
@@ -4505,6 +4506,7 @@ function genererMandatCourtage(clientId) {
     societe: isEnt ? (c.nom || '') : '',
     naissanceOuIde: isEnt ? (c.ide || '') : (c.date_naissance ? fmtDate(c.date_naissance) : ''),
     adresse: c.adresse || '',
+    co: c.co || '',
     npaLocalite,
     tel: c.tel || c.mobile || c.telephone || '',
     email: c.email || '',
@@ -4562,7 +4564,7 @@ function genererMandatCourtage(clientId) {
     <p><strong>Entre les soussigné(e)s :</strong></p>
     <h2>LE MANDANT</h2>
     <table>
-      <tr><td class="label">Nom</td><td class="valeur">${champs.nom}</td><td class="label">Prénom</td><td class="valeur">${champs.prenom}</td></tr>
+      <tr><td class="label">Nom</td><td class="valeur">${champs.nom}${champs.co ? `<div style="font-size:9.5px;color:#666;margin-top:2px">${champs.co}</div>` : ''}</td><td class="label">Prénom</td><td class="valeur">${champs.prenom}</td></tr>
       <tr><td class="label">Société / raison sociale</td><td class="valeur">${champs.societe}${isEnt && champs.contactEntreprise ? `<div style="font-size:9.5px;color:#666;margin-top:2px">Contact : ${champs.contactEntreprise}</div>` : ''}</td><td class="label">Date de naissance / IDE</td><td class="valeur">${champs.naissanceOuIde}</td></tr>
       <tr><td class="label">Adresse</td><td class="valeur">${champs.adresse}</td><td class="label">NPA / Localité</td><td class="valeur">${champs.npaLocalite}</td></tr>
       <tr><td class="label">Téléphone</td><td class="valeur">${champs.tel}</td><td class="label">E-mail</td><td class="valeur">${champs.email}</td></tr>
@@ -4659,6 +4661,7 @@ async function saveClientEdit(id, isEntreprise) {
   // Champs communs (Contact, Bancaire, et Pro pour les particuliers)
   Object.assign(body, {
     adresse: document.getElementById('ec-adresse').value.trim(),
+    co: document.getElementById('ec-co') ? document.getElementById('ec-co').value.trim() : undefined,
     npa: document.getElementById('ec-npa').value.trim(),
     ville: document.getElementById('ec-ville').value.trim(),
     canton: document.getElementById('ec-canton').value.trim(),
@@ -6111,7 +6114,6 @@ function showFormClient(type) {
 function formPrive() {
   const agentOptions = allAgents.map(a => `<option value="${a.id}" ${currentUser && a.email === currentUser.email ? 'selected' : ''}>${a.prenom} ${a.nom}</option>`).join('');
   return `
-    <button onclick="navigate('nouveau-client')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
     <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouveau client — Privé</h2>
     ${sectionCard('Identité', '#38bdf8', `<div class="form-grid">
       <div class="form-field"><label class="form-label">Prénom *</label><input class="form-input" id="f-prenom" placeholder="Jean"/></div>
@@ -6128,6 +6130,7 @@ function formPrive() {
       <div class="form-field"><label class="form-label">Mobile</label><input class="form-input" id="f-mobile" placeholder="+41 79 XXX XX XX"/></div>
       <div class="form-field"><label class="form-label">Téléphone fixe</label><input class="form-input" id="f-tel" placeholder="+41 21 XXX XX XX"/></div>
       <div class="form-field"><label class="form-label">Adresse *</label><input class="form-input" id="f-adresse" placeholder="Rue de la Paix 1"/></div>
+      <div class="form-field"><label class="form-label">c/o (optionnel)</label><input class="form-input" id="f-co" placeholder="c/o Nom Prénom"/></div>
       <div class="form-field"><label class="form-label">NPA *</label><input class="form-input" id="f-npa" placeholder="1000"/></div>
       <div class="form-field"><label class="form-label">Ville</label><input class="form-input" id="f-ville" placeholder="Lausanne"/></div>
       <div class="form-field"><label class="form-label">Canton</label><input class="form-input" id="f-canton" placeholder="VD"/></div>
@@ -6180,6 +6183,7 @@ async function saveClient() {
     mobile: document.getElementById('f-mobile').value || null,
     tel: document.getElementById('f-tel').value || null,
     adresse: document.getElementById('f-adresse').value || null,
+    co: document.getElementById('f-co').value.trim() || null,
     npa: document.getElementById('f-npa').value || null,
     ville: document.getElementById('f-ville').value || null,
     canton: document.getElementById('f-canton').value || null,
@@ -6200,9 +6204,7 @@ async function saveClient() {
   const result = await dbPost('clients', body);
   if (result && !result.error) {
     allClients = await dbGet('clients', 'select=*');
-    currentView = 'clients';
-    renderSidebar();
-    document.getElementById('main-content').innerHTML = viewClients();
+    await showClient(result[0].id);
   } else {
     btn.textContent = 'Erreur — réessayer';
     btn.disabled = false;
@@ -6214,7 +6216,6 @@ async function saveClient() {
 function formEntreprise() {
   const agentOptions = allAgents.map(a => `<option value="${a.id}" ${currentUser && a.email === currentUser.email ? 'selected' : ''}>${a.prenom} ${a.nom}</option>`).join('');
   return `
-    <button onclick="navigate('nouveau-client')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
     <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouveau client — Entreprise</h2>
     <div style="display:flex;gap:10px;margin-bottom:20px">
       <button onclick="printForm()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🖨️ Imprimer</button>
@@ -6234,6 +6235,7 @@ function formEntreprise() {
     </div>`)}
     ${sectionCard('Contact & Adresse', '#38bdf8', `<div class="form-grid">
       <div class="form-field"><label class="form-label">Adresse *</label><input class="form-input" id="e-adresse" placeholder="Rue du Commerce 1"/></div>
+      <div class="form-field"><label class="form-label">c/o (optionnel)</label><input class="form-input" id="e-co" placeholder="c/o Nom Prénom"/></div>
       <div class="form-field"><label class="form-label">NPA / Ville *</label><input class="form-input" id="e-ville" placeholder="1000 Lausanne"/></div>
       <div class="form-field"><label class="form-label">Téléphone</label><input class="form-input" id="e-tel" placeholder="+41 21 XXX XX XX"/></div>
       <div class="form-field"><label class="form-label">Email *</label><input class="form-input" id="e-email" type="email" placeholder="contact@entreprise.ch"/></div>
@@ -6344,6 +6346,7 @@ async function saveEntreprise() {
     email: document.getElementById('e-email').value || null,
     tel: document.getElementById('e-tel').value || null,
     adresse: document.getElementById('e-adresse').value || null,
+    co: document.getElementById('e-co').value.trim() || null,
     ville: document.getElementById('e-ville').value || null,
     avs: document.getElementById('e-avs').value || null,
     profession: document.getElementById('e-secteur').value || null,
@@ -6363,9 +6366,7 @@ async function saveEntreprise() {
   const result = await dbPost('clients', body);
   if (result && !result.error) {
     allClients = await dbGet('clients', 'select=*');
-    currentView = 'clients';
-    renderSidebar();
-    document.getElementById('main-content').innerHTML = viewClients();
+    await showClient(result[0].id);
   } else {
     btn.textContent = 'Erreur — réessayer';
     btn.disabled = false;
@@ -6645,7 +6646,12 @@ async function saveOpportunite() {
   };
   const btn = document.querySelector('.btn-save');
   btn.textContent = 'Enregistrement...'; btn.disabled = true;
-  await dbPost('opportunites', body);
+  const r = await dbPost('opportunites', body);
+  if (r && r.error) {
+    showError('Erreur lors de la création de l\u2019opportunité : ' + errMsg(r));
+    btn.textContent = '✓ Enregistrer'; btn.disabled = false;
+    return;
+  }
   allOpportunites = await dbGet('opportunites', 'select=*');
   navigate('opportunites');
 }

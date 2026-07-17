@@ -341,7 +341,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 11:30</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 12:00</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -1217,6 +1217,17 @@ function toggleSurobligatoire() {
 
 // Vérifie si un client est de segment "Entreprise" de façon robuste (insensible à la casse/espaces —
 // évite les incohérences si le segment a été saisi/importé différemment quelque part).
+// Ouvre une fiche client en navigation normale (SPA), mais laisse le navigateur gérer
+// nativement Ctrl/Cmd+clic, clic molette ou Maj+clic (ouverture dans un nouvel onglet/fenêtre)
+// — grâce au vrai href="?client=ID" posé sur le lien, chaque onglet ouvre sa propre session CRM
+// sur la bonne fiche dès le chargement (voir la vérification du paramètre d'URL au démarrage).
+function irVersClient(event, id) {
+  if (event.ctrlKey || event.metaKey || event.shiftKey || event.button === 1) return true;
+  event.preventDefault();
+  showClient(id);
+  return false;
+}
+
 function estEntreprise(c) {
   return !!(c && c.segment && c.segment.trim().toLowerCase() === 'entreprise');
 }
@@ -2471,7 +2482,14 @@ async function enterApp(user) {
   }
 
   renderSidebar();
-  navigate('dashboard');
+  // Ouverture directe d'une fiche client si l'onglet a été ouvert via Ctrl/Cmd+clic (deep-link ?client=ID)
+  const paramsUrl = new URLSearchParams(window.location.search);
+  const clientDeepLink = paramsUrl.get('client');
+  if (clientDeepLink && allClients.some(c => c.id === clientDeepLink)) {
+    await showClient(clientDeepLink);
+  } else {
+    navigate('dashboard');
+  }
 }
 
 async function logout() {
@@ -2666,7 +2684,9 @@ function avatar(agent, size = 28) {
 function agentById(id) { return allAgents.find(a => a.id === id); }
 
 function caClient(clientId) {
-  return allContrats.filter(ct => ct.client_id === clientId && ct.statut === 'actif')
+  // Même définition que le "CA portefeuille" du Dashboard : tout contrat non résilié et non annulé
+  // (inclut donc "actif", "en_cours", "à renouveler"...) — pour que les deux chiffres se répondent toujours.
+  return allContrats.filter(ct => ct.client_id === clientId && !['résilié','annulé'].includes(ct.statut))
     .reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
 }
 
@@ -3643,7 +3663,7 @@ function viewContratsOrphelinsCommission() {
     const nom = cl ? (estEntreprise(cl) ? cl.nom : `${cl.prenom} ${cl.nom}`) : '—';
     return `<div class="table-row" style="grid-template-columns:${cols}">
       <div>
-        <div style="font-size:13px;font-weight:700;color:var(--accent);cursor:pointer;text-decoration:underline dotted" onclick="showClient('${ct.client_id}')">${nom}</div>
+        <a href="?client=${ct.client_id}" style="font-size:13px;font-weight:700;color:var(--accent);cursor:pointer;text-decoration:underline dotted" onclick="return irVersClient(event, '${ct.client_id}')">${nom}</a>
         <div style="font-size:11px;color:var(--text-muted)">${ct.produit||''}</div>
       </div>
       <div style="font-size:12px;color:var(--text-muted)">${ct.compagnie||''}</div>
@@ -3814,7 +3834,7 @@ function viewPortefeuille(filtre) {  const sanAgent = allContrats.filter(ct => !
     const nomClient = client ? (estEntreprise(client) ? client.nom : `${client.prenom} ${client.nom}`) : '—';
     return `<div class="table-row" style="grid-template-columns:${cols}">
       <div>
-        <div style="font-size:13px;font-weight:700;color:var(--text);cursor:pointer;text-decoration:underline dotted" onclick="showClient('${ct.client_id}')">${nomClient}${getClientMiniLogos(client)}</div>
+        <a href="?client=${ct.client_id}" style="font-size:13px;font-weight:700;color:var(--text);cursor:pointer;text-decoration:underline dotted" onclick="return irVersClient(event, '${ct.client_id}')">${nomClient}${getClientMiniLogos(client)}</a>
         <div style="font-size:11px;color:var(--text-muted)">${ct.produit || ''}</div>
       </div>
       <div style="font-size:12px;color:var(--text-muted)">${ct.compagnie || ''}</div>
@@ -3922,7 +3942,7 @@ function renderPortefeuilleTable(filtre) {
   const rows = filtered.map(c => {
     const agent = agentById(c.apporteur_id);
     const ca = caClient(c.id);
-    return `<div class="table-row" style="grid-template-columns:${cols}" onclick="showClient('${c.id}')">
+    return `<a href="?client=${c.id}" class="table-row" style="grid-template-columns:${cols};text-decoration:none;color:inherit" onclick="return irVersClient(event, '${c.id}')">
       <div>
         <div style="font-weight:700;font-size:13px;color:var(--text)">${c.prenom} ${c.nom}${getClientMiniLogos(c)}</div>
         <div style="font-size:11px;color:var(--text-muted)">${c.ville || ''} · ${c.profession || ''}</div>
@@ -3932,7 +3952,7 @@ function renderPortefeuilleTable(filtre) {
       <div>${badge(c.segment || 'Privé', estEntreprise(c) ? '#f59e0b' : '#38bdf8')}</div>
       <div style="font-size:12px;font-weight:700;color:#f59e0b">${ca ? 'CHF ' + ca.toLocaleString() : '—'}</div>
       <div>${agent ? avatar(agent, 26) : ''}</div>
-    </div>`;
+    </a>`;
   }).join('') || '<div class="table-empty">Aucun client ne correspond à ces filtres.</div>';
 
   document.getElementById('pf-table-container').innerHTML = `
@@ -3997,13 +4017,13 @@ function renderClientsTable() {
   const cols = '1fr 160px 85px 90px 55px';
   let rows = filtered.map(c => {
     const agent = agentById(c.apporteur_id);
-    return `<div class="table-row" style="grid-template-columns:${cols}" onclick="showClient('${c.id}')">
+    return `<a href="?client=${c.id}" class="table-row" style="grid-template-columns:${cols};text-decoration:none;color:inherit" onclick="return irVersClient(event, '${c.id}')">
       <div><div style="font-weight:700;font-size:13px;color:var(--text)">${c.prenom} ${c.nom}</div><div style="font-size:11px;color:var(--text-muted)">${c.ville || ''} · ${c.profession || ''}</div></div>
       <div><div style="font-size:11px;color:var(--text)">${c.email || ''}</div><div style="font-size:11px;color:var(--text-muted)">${c.mobile || ''}</div></div>
       <div>${badge(c.statut || '—', statutColor(c.statut))}</div>
       <div style="font-size:12px;color:var(--text-muted)">${c.segment || '—'}</div>
       <div>${agent ? avatar(agent, 26) : ''}</div>
-    </div>`;
+    </a>`;
   }).join('') || '<div class="table-empty">Aucun client ne correspond à ces filtres.</div>';
 
   document.getElementById('cl-table-container').innerHTML = `
@@ -4833,7 +4853,7 @@ function viewSuivi() {
             const cl = allClients.find(c => c.id === ct.client_id);
             const nom = cl ? (estEntreprise(cl)?cl.nom:`${cl.prenom} ${cl.nom}`) : '—';
             return `<div style="padding:6px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between">
-              <span onclick="showClient('${ct.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${nom}</span>
+              <a href="?client=${ct.client_id}" onclick="return irVersClient(event, '${ct.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${nom}</a>
               <span>${ct.produit||''} · ${ct.compagnie||''}</span>
               <span style="font-weight:700;color:#f59e0b">CHF ${Number(ct.prime_annuelle||0).toLocaleString()}/an</span>
             </div>`;
@@ -7538,13 +7558,13 @@ function renderRechercheVehicules() {
       <div class="table-header" style="grid-template-columns:${cols}"><div>Marque</div><div>Modèle</div><div>Cylindrée</div><div>Plaque</div><div>Client</div></div>
       ${vehicules.map(v => {
         const cl = allClients.find(c => c.id === v.client_id);
-        return `<div class="table-row" style="grid-template-columns:${cols};cursor:pointer" onclick="showClient('${v.client_id}')">
+        return `<a href="?client=${v.client_id}" class="table-row" style="grid-template-columns:${cols};cursor:pointer;text-decoration:none;color:inherit" onclick="return irVersClient(event, '${v.client_id}')">
           <div style="font-weight:700;color:var(--text)">${v.marque||'—'}</div>
           <div style="color:var(--text-muted)">${v.modele||'—'}</div>
           <div style="color:var(--text-muted)">${v.cylindree||'—'}</div>
           <div style="font-family:monospace;font-weight:700;color:var(--text)">${v.numero_plaque||'—'}</div>
           <div style="color:var(--accent);text-decoration:underline dotted">${cl ? cl.nom : '—'}</div>
-        </div>`;
+        </a>`;
       }).join('') || '<div class="table-empty">Aucun véhicule ne correspond.</div>'}
     </div>`;
 }

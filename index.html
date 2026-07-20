@@ -341,7 +341,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 14:00</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 15:00</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -3835,46 +3835,6 @@ function renderTousContrats() {
 
 function viewContratsSansAgent() { return viewTousContrats(); }
 
-function viewPortefeuille(filtre) {  const sanAgent = allContrats.filter(ct => !ct.apporteur_id && ct.commissionne !== false && !['résilié','annulé','mandat_resilie'].includes(ct.statut));
-  const cols = '1fr 130px 110px 100px 90px 40px';
-
-  const rows = sanAgent.map(ct => {
-    const client = allClients.find(c => c.id === ct.client_id);
-    const nomClient = client ? (estEntreprise(client) ? client.nom : `${client.prenom} ${client.nom}`) : '—';
-    return `<div class="table-row" style="grid-template-columns:${cols}">
-      <div>
-        <a href="?client=${ct.client_id}" style="font-size:13px;font-weight:700;color:var(--text);cursor:pointer;text-decoration:underline dotted" onclick="return irVersClient(event, '${ct.client_id}')">${nomClient}${getClientMiniLogos(client)}</a>
-        <div style="font-size:11px;color:var(--text-muted)">${ct.produit || ''}</div>
-      </div>
-      <div style="font-size:12px;color:var(--text-muted)">${ct.compagnie || ''}</div>
-      <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ct.date_debut)}</div>
-      <div style="font-weight:800;color:#f59e0b">CHF ${Number(ct.prime_annuelle||0).toLocaleString()}</div>
-      <div>${badge(ct.statut, ct.statut==='actif'?'#4ade80':'#f59e0b')}</div>
-      <div><button onclick="showEditContrat('${ct.id}')" title="Assigner un agent" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer">✏️</button></div>
-    </div>`;
-  }).join('');
-
-  const totalPrimes = sanAgent.reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0);
-
-  return `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">⚠️ Contrats sans agent assigné</h2>
-    </div>
-    <div style="background:rgba(248,113,113,0.1);border:1px solid rgba(248,113,113,0.3);border-radius:10px;padding:12px 16px;margin-bottom:20px;font-size:12.5px;color:#f87171">
-      Ces ${sanAgent.length} contrats n'ont aucun agent assigné — ils sont invisibles dans la Production par agent et le split de commission ne peut pas être calculé. Clique sur ✏️ pour chaque contrat et assigne l'agent qui l'a apporté.
-    </div>
-    <div class="stat-grid" style="margin-bottom:20px">
-      ${statCard('Contrats concernés', sanAgent.length, '#f87171')}
-      ${statCard('Primes annuelles', 'CHF ' + totalPrimes.toLocaleString(), '#f59e0b')}
-    </div>
-    <div class="table-wrap">
-      <div class="table-header" style="grid-template-columns:${cols}">
-        <div>Client / Produit</div><div>Compagnie</div><div>Date signature</div><div>Prime/an</div><div>Statut</div><div></div>
-      </div>
-      ${rows || '<div class="table-empty">✅ Aucun contrat sans agent — tout est correctement assigné.</div>'}
-    </div>`;
-}
-
 function viewPortefeuille(filtre) {
   const titre = filtre === 'prive' ? 'Clients privés' : filtre === 'entreprise' ? 'Entreprises' : 'Portefeuille complet';
   const agentOptions = allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
@@ -3939,6 +3899,9 @@ function renderPortefeuilleTable(filtre) {
   const totalCA = filtered.reduce((s,c) => s + caClient(c.id), 0);
   const actifs = filtered.filter(c => c.statut === 'actif').length;
   const prospects = filtered.filter(c => c.statut === 'prospect').length;
+
+  // Plus récent en premier — les clients sans date de création (anciens, avant migration) passent en dernier
+  filtered.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
   document.getElementById('pf-titre').textContent = `${filtre === 'prive' ? 'Clients privés' : filtre === 'entreprise' ? 'Entreprises' : 'Portefeuille complet'} (${filtered.length})`;
   document.getElementById('pf-stats').innerHTML = `
@@ -6251,7 +6214,8 @@ async function saveClient() {
   const result = await dbPost('clients', body);
   if (result && !result.error) {
     allClients = await dbGet('clients', 'select=*');
-    await showClient(result[0].id);
+    const nouveauId = (result[0] && result[0].id) || allClients.slice().sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0))[0]?.id;
+    if (nouveauId) { await showClient(nouveauId); } else { showError('Client créé mais introuvable — vérifie la liste.'); navigate('clients'); }
   } else {
     btn.textContent = 'Erreur — réessayer';
     btn.disabled = false;
@@ -6413,7 +6377,8 @@ async function saveEntreprise() {
   const result = await dbPost('clients', body);
   if (result && !result.error) {
     allClients = await dbGet('clients', 'select=*');
-    await showClient(result[0].id);
+    const nouveauId = (result[0] && result[0].id) || allClients.slice().sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0))[0]?.id;
+    if (nouveauId) { await showClient(nouveauId); } else { showError('Client créé mais introuvable — vérifie la liste.'); navigate('clients'); }
   } else {
     btn.textContent = 'Erreur — réessayer';
     btn.disabled = false;
@@ -7971,21 +7936,34 @@ async function saveBordereau() {
 // Recherche floue d'un produit du catalogue à partir d'un texte libre (titre d'opportunité, extraction IA...).
 // Retourne {categorie, produit} ou null. Tolère les formulations proches (mots-clés partagés)
 // sans exiger une correspondance mot pour mot au libellé exact.
-function trouverProduitCatalogue(texteLibre) {
+function trouverProduitCatalogue(texteLibre, segmentPrefere) {
   if (!texteLibre) return null;
   const texte = texteLibre.trim().toLowerCase();
   if (!texte) return null;
   const mots = texte.split(/[\s\/'’,-]+/).filter(m => m.length > 3);
-  for (const cat in CATALOGUE_PRODUITS) {
-    for (const p of CATALOGUE_PRODUITS[cat]) {
-      const labelLower = p.label.toLowerCase();
-      const motsLabel = labelLower.split(/[\s\/'’,-]+/).filter(m => m.length > 3);
-      if (labelLower === texte || labelLower.includes(texte) || texte.includes(labelLower) || mots.some(m => motsLabel.includes(m))) {
-        return { categorie: cat, produit: p };
+
+  function chercher(exigerSegment) {
+    for (const cat in CATALOGUE_PRODUITS) {
+      for (const p of CATALOGUE_PRODUITS[cat]) {
+        // Ignore les produits d'un autre segment quand on connaît déjà le segment du client
+        // (évite par ex. qu'un mot générique comme "prévoyance" ne matche un produit privé
+        // pour un client entreprise, ou l'inverse) — sauf en 2e passe si rien n'est trouvé.
+        if (exigerSegment && segmentPrefere && p.segment !== 'tous' && p.segment !== segmentPrefere) continue;
+        const labelLower = p.label.toLowerCase();
+        const motsLabel = labelLower.split(/[\s\/'’,-]+/).filter(m => m.length > 3);
+        if (labelLower === texte || labelLower.includes(texte) || texte.includes(labelLower) || mots.some(m => motsLabel.includes(m))) {
+          return { categorie: cat, produit: p };
+        }
       }
     }
+    return null;
   }
-  return null;
+
+  // Si le segment est connu, on ne cherche QUE dans ce segment (+ "tous") — mieux vaut ne rien
+  // proposer que de proposer avec assurance le produit d'un autre segment. Si le segment est
+  // inconnu, on cherche partout (comportement d'origine, moins précis mais jamais pire qu'avant).
+  if (segmentPrefere) return chercher(true);
+  return chercher(false);
 }
 
 // Applique le résultat de trouverProduitCatalogue() aux champs du formulaire Nouveau contrat
@@ -8029,9 +8007,37 @@ async function importPolicePdfAI(input) {
 
     // Pré-remplir le formulaire avec les données extraites
     if (data.compagnie) document.getElementById('ct-compagnie').value = data.compagnie;
+
+    // Trouver le client si nom détecté — AVANT la recherche de produit, pour que le segment
+    // (privé/entreprise) du client déjà connu du CRM guide correctement cette recherche.
+    let clientDejaTrouve = false;
+    if (data.client_nom) {
+      const nom = data.client_nom.toLowerCase();
+      const clientTrouve = allClients.find(c => {
+        const n = (c.prenom + ' ' + c.nom).toLowerCase();
+        const n2 = c.nom.toLowerCase();
+        return n.includes(nom) || nom.includes(n2) || n2.includes(nom);
+      });
+      if (clientTrouve && !contratClientId) {
+        const sel = document.getElementById('ct-client');
+        if (sel) { sel.value = clientTrouve.id; syncSegmentFromClient(); clientDejaTrouve = true; }
+      }
+    }
+    // Pas de client existant trouvé (nouveau client pas encore créé) : on devine le segment
+    // depuis des indices textuels (raison sociale Sàrl/SA/..., ou mention "entreprise(s)" dans le produit)
+    // plutôt que de laisser "Privé" par défaut sans aucune vérification.
+    if (!clientDejaTrouve && !contratClientId) {
+      const texteIndice = `${data.client_nom || ''} ${data.produit || ''}`;
+      if (/\b(sàrl|sarl|sa|ag|gmbh|sagl|snc)\b/i.test(data.client_nom || '') || /entreprises?\b/i.test(texteIndice)) {
+        const segSel = document.getElementById('ct-segment');
+        if (segSel) { segSel.value = 'entreprise'; updateCategorieOptions(); }
+      }
+    }
+
     if (data.produit) {
       document.getElementById('ct-produit').value = data.produit;
-      appliquerProduitTrouve(trouverProduitCatalogue(data.produit));
+      const segmentConnu = document.getElementById('ct-segment')?.value;
+      appliquerProduitTrouve(trouverProduitCatalogue(data.produit, segmentConnu));
     }
     if (data.numero_police) document.getElementById('ct-police').value = data.numero_police;
     if (data.date_debut) document.getElementById('ct-date').value = data.date_debut;
@@ -8044,20 +8050,6 @@ async function importPolicePdfAI(input) {
       // Prime déjà annuelle (ex: RC, véhicule) — on l'utilise telle quelle, sans la diviser puis la remultiplier
       document.getElementById('ct-prime-mensuelle').value = data.prime_annuelle;
       document.getElementById('ct-periodicite').value = '1';
-    }
-
-    // Trouver le client si nom détecté
-    if (data.client_nom) {
-      const nom = data.client_nom.toLowerCase();
-      const clientTrouve = allClients.find(c => {
-        const n = (c.prenom + ' ' + c.nom).toLowerCase();
-        const n2 = c.nom.toLowerCase();
-        return n.includes(nom) || nom.includes(n2) || n2.includes(nom);
-      });
-      if (clientTrouve && !contratClientId) {
-        const sel = document.getElementById('ct-client');
-        if (sel) { sel.value = clientTrouve.id; syncSegmentFromClient(); }
-      }
     }
 
     updateCommissionPreview();

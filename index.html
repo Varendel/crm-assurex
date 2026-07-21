@@ -341,7 +341,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-21 07:30</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-21 09:00</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -496,6 +496,7 @@ let allFichesPaie = [];
 let allCompagniesContacts = [];
 let allVehicules = [];
 let currentClientId = null;
+let currentCampagneId = null;
 
 // Paramètres de taux de commission — modifiables via Paramètres (gestion récurrente)
 // Acquisition: santé = primemensuelle x ce facteur ; vie = primemensuelle x12 x facteur(par année du contrat)
@@ -2638,6 +2639,25 @@ function toggleSection(id) {
 }
 
 let navHistory = [];
+let vueDetailActive = null; // { type: 'client'|'rappel'|'campagne', id } — quelle fiche détail est affichée, si applicable
+
+// Capture l'état actuellement affiché, sous une forme qui permet de le restaurer fidèlement
+// (une fiche détail précise, pas juste "on était sur la page Rappels" en général).
+function capturerEtatActuel() {
+  return vueDetailActive || { type: 'view', view: currentView };
+}
+
+// Restaure un état précédemment capturé — redirige vers la bonne fiche détail si applicable,
+// ou vers la vue normale sinon.
+async function restaurerEtat(etat) {
+  if (!etat) { await navigate('dashboard'); return; }
+  if (etat.type === 'client') { await showClient(etat.id); return; }
+  if (etat.type === 'rappel') { showRappel(etat.id); return; }
+  if (etat.type === 'campagne') { showCampagne(etat.id); return; }
+  currentView = etat.view;
+  renderSidebar();
+  await renderView();
+}
 
 // Recharge les tables financières critiques depuis Supabase — garantit que le
 // Dashboard reflète TOUJOURS l'état réel de la base, y compris après une
@@ -2658,11 +2678,18 @@ async function refreshCoreData() {
 }
 
 async function navigate(view, opts) {
-  // Empile la vue précédente pour permettre le retour arrière, sauf navigation silencieuse
+  // Empile l'état précédent (vue normale OU fiche détail précise) pour permettre le retour arrière,
+  // sauf navigation silencieuse ou si on reste sur le même état (évite un doublon inutile).
   if (!opts || !opts.silent) {
-    if (currentView && currentView !== view) navHistory.push(currentView);
-    if (navHistory.length > 30) navHistory.shift();
+    const etatPrecedent = capturerEtatActuel();
+    const dernier = navHistory[navHistory.length - 1];
+    const doublon = dernier && JSON.stringify(dernier) === JSON.stringify(etatPrecedent);
+    if (!doublon && (etatPrecedent.type !== 'view' || (currentView && currentView !== view))) {
+      navHistory.push(etatPrecedent);
+      if (navHistory.length > 30) navHistory.shift();
+    }
   }
+  vueDetailActive = null; // une navigation normale quitte toute fiche détail affichée
   currentView = view;
   renderSidebar();
   await renderView();
@@ -2670,10 +2697,8 @@ async function navigate(view, opts) {
 
 async function goBack() {
   if (!navHistory.length) { navigate('dashboard'); return; }
-  const previous = navHistory.pop();
-  currentView = previous;
-  renderSidebar();
-  await renderView();
+  const etat = navHistory.pop();
+  await restaurerEtat(etat);
 }
 
 // ═══ HELPERS ═══
@@ -3071,11 +3096,15 @@ function viewDashboard() {
 // ═══ CLASSIFICATION VIE / NON-VIE ═══
 // Produits VIE = prévoyance, vie, 3a, LPP, perte de gain, santé collective, LAA, IJM
 const PRODUITS_VIE_KEYWORDS = [
-  'vie','3a','lpp','libre passage','prévoyance','perte de gain','perte gain',
-  'laa','ijm','santé collective','maladie collective','accident collective',
-  'sursalaire','complémentaire santé','sante_complementaire','prevoyance',
-  'libre_passage','vie_3a','lpp_entreprise','laa','perte_gain','sante_collective',
-  'prevoyance_enfant'
+  // Prévoyance professionnelle (2e pilier) et prévoyance privée (3a/3b)
+  'vie','3a','3b','lpp','libre passage','libre_passage','vie_3a','lpp_entreprise',
+  'prevoyance_enfant',
+  // Risque pur et rente d'incapacité de gain LIÉS à une police vie/prévoyance (3a/3b/LPP) —
+  // à distinguer de la "perte de gain maladie" collective (IJM), qui reste Non-Vie (branche dommages)
+  'risque pur','incapacité de gain','incapacite de gain','rente incapacité','rente incapacite',
+  'rente invalidité','rente invalidite','rente viagère','rente viagere',
+  // NB : LAA, perte de gain maladie/accident (collective), IJM, santé/maladie collective et sursalaire
+  // sont du domaine NON-VIE (branche dommages) — volontairement absents de cette liste.
 ];
 
 // ═══ TAXONOMIE FINMA — Classification des contrats par branche d'assurance ═══
@@ -4068,6 +4097,10 @@ function renderVueEnsembleCouvertures(client, contrats, isEntreprise) {
 }
 
 async function showClient(id) {
+  // Empile où on était avant d'ouvrir cette fiche, pour que la flèche retour y ramène précisément
+  const etatPrecedent = capturerEtatActuel();
+  if (!(etatPrecedent.type === 'client' && etatPrecedent.id === id)) navHistory.push(etatPrecedent);
+  vueDetailActive = { type: 'client', id };
   currentClientId = id;
   currentView = 'fiche-client';
   renderSidebar();
@@ -7580,6 +7613,9 @@ let currentRappelId = null;
 let editingClient = false;
 
 function showRappel(id) {
+  const etatPrecedent = capturerEtatActuel();
+  if (!(etatPrecedent.type === 'rappel' && etatPrecedent.id === id)) navHistory.push(etatPrecedent);
+  vueDetailActive = { type: 'rappel', id };
   currentRappelId = id;
   currentView = 'rappels';
   renderSidebar();
@@ -8391,27 +8427,56 @@ function calculerSoldeVehicule(champModifie) {
   }
 }
 
+// Normalise les variantes connues d'un même assureur vers un nom canonique unique
+// (ex: "Vaudoise Assurances" / "La Vaudoise" / "Vaudoise" -> "La Vaudoise") — le dédoublonnage
+// insensible à la casse ne suffit pas puisque ce sont de vraies formulations différentes.
+const ALIAS_COMPAGNIES = {
+  'la vaudoise': 'La Vaudoise', 'vaudoise assurances': 'La Vaudoise', 'vaudoise': 'La Vaudoise',
+  'la mobilière': 'La Mobilière', 'la mobiliere': 'La Mobilière', 'mobilière': 'La Mobilière', 'mobiliere': 'La Mobilière', 'mobilière suisse société d\u2019assurances': 'La Mobilière',
+  'hotela assurances sa': 'HOTELA', 'hotela': 'HOTELA', 'institutions sociales hotela': 'HOTELA',
+  'suva': 'SUVA', 'schweizerische unfallversicherungsanstalt': 'SUVA',
+  'css assurances': 'CSS', 'css': 'CSS',
+  'groupe mutuel': 'Groupe Mutuel', 'gmv sa': 'Groupe Mutuel',
+  'swiss life': 'Swiss Life', 'swiss life sa': 'Swiss Life',
+  'axa winterthur': 'AXA', 'axa assurances': 'AXA', 'axa': 'AXA',
+  'zurich assurances': 'Zurich', 'zurich': 'Zurich',
+  'generali assurances': 'Generali', 'generali': 'Generali',
+  'baloise assurances': 'Baloise', 'bâloise': 'Baloise', 'baloise': 'Baloise',
+  'helsana assurances': 'Helsana', 'helsana': 'Helsana',
+  'sanitas assurances': 'Sanitas', 'sanitas': 'Sanitas',
+  'allianz suisse': 'Allianz', 'allianz': 'Allianz',
+  'visana assurances': 'Visana', 'visana': 'Visana',
+  'swica assurances': 'SWICA', 'swica': 'SWICA',
+};
+function normaliserCompagnie(nom) {
+  if (!nom) return nom;
+  const cle = nom.trim().toLowerCase();
+  return ALIAS_COMPAGNIES[cle] || nom.trim();
+}
+
 function getCompagniesConnues() {
   const base = ['Swiss Life', 'AXA', 'Helsana', 'Sanitas', 'Allianz', 'Zurich', 'Generali', 'Baloise', 'CSS', 'Groupe Mutuel', 'Visana', 'SWICA'];
   // Source prioritaire : Paramètres → Contacts compagnies (Supabase, synchronisé pour toute l'équipe)
   const depuisParametres = (allCompagniesContacts || []).map(c => c.compagnie).filter(Boolean);
   let memorisees = [];
   try { memorisees = JSON.parse(localStorage.getItem('compagnies_memorisees') || '[]'); } catch (e) {}
-  // Dédoublonnage insensible à la casse/espaces (cf. piège récurrent déjà rencontré sur "la Mobilière")
+  // Dédoublonnage : d'abord normaliser les vraies variantes de nom (alias), puis insensible à la casse/espaces
   const vues = new Map();
   [...depuisParametres, ...base, ...memorisees].forEach(nom => {
-    const cle = nom.trim().toLowerCase();
-    if (!vues.has(cle)) vues.set(cle, nom.trim());
+    const nomNormalise = normaliserCompagnie(nom);
+    const cle = nomNormalise.trim().toLowerCase();
+    if (!vues.has(cle)) vues.set(cle, nomNormalise);
   });
   return [...vues.values()].sort();
 }
 
 function memoriserCompagnie(nom) {
   if (!nom) return;
+  const nomNormalise = normaliserCompagnie(nom);
   let memorisees = [];
   try { memorisees = JSON.parse(localStorage.getItem('compagnies_memorisees') || '[]'); } catch (e) {}
-  if (!memorisees.some(c => c.toLowerCase() === nom.toLowerCase())) {
-    memorisees.push(nom);
+  if (!memorisees.some(c => c.toLowerCase() === nomNormalise.toLowerCase())) {
+    memorisees.push(nomNormalise);
     localStorage.setItem('compagnies_memorisees', JSON.stringify(memorisees));
   }
 }
@@ -9041,6 +9106,10 @@ function viewCampagnes() {
 function showCampagne(themeId) {
   const t = CAMPAGNES_THEMES.find(x => x.id === themeId);
   if (!t) return;
+  const etatPrecedent = capturerEtatActuel();
+  if (!(etatPrecedent.type === 'campagne' && etatPrecedent.id === themeId)) navHistory.push(etatPrecedent);
+  vueDetailActive = { type: 'campagne', id: themeId };
+  currentCampagneId = themeId;
   currentView = 'campagne-detail';
   const main = document.getElementById('main-content');
   const cibles = allClients.filter(c => (c.segment || 'Privé') === t.segment && t.filtre(c));

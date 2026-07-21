@@ -341,7 +341,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-10 15:00</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-21 07:30</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -504,11 +504,23 @@ const OZ_MINI_LOGO = `<span title="Client OZ Assure" style="display:inline-flex;
 
 // ═══ MARQUAGE CLIENT EX GROUPE (logo officiel) ═══
 const COFIDEX_MINI_LOGO = `<span title="Client EX Groupe" style="display:inline-flex;align-items:center;margin-left:4px;vertical-align:middle;border-radius:3px;overflow:hidden"><svg xmlns="http://www.w3.org/2000/svg" viewBox="670 488 180 108" style="height:16px;width:auto;vertical-align:middle"><rect x="-42.76" y="-54.33" width="2005.52" height="1188.65" fill="#0f2244"/><rect x="829.47" y="551.34" width="18.15" height="18.15" fill="#00cfff"/><rect x="686.18" y="538.2" width="48.56" height="10.09" fill="#fff"/><rect x="686.18" y="558.47" width="53.17" height="10.09" fill="#fff"/><rect x="686.18" y="518.73" width="53.17" height="10.01" fill="#fff"/><polygon points="829.47 496.06 827.87 506.11 827.61 507.83 825.24 522.76 818.89 517.34 801.9 535.92 787.85 535.92 794.91 543.55 817.93 568.41 803 568.41 787.47 551.6 758.21 583.94 743.55 583.94 780.04 543.54 757.11 518.73 771.94 518.73 787.72 535.76 810.6 510.28 804.33 504.93 829.47 496.06" fill="#fff"/></svg></span>`;
+const SUVA_MINI_LOGO = `<span title="Domaine SUVA (monopole accident LAA)" style="display:inline-flex;align-items:center;margin-left:4px;vertical-align:middle;background:#fff;border-radius:3px;padding:2px 4px"><img src="data:image/png;base64,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" style="height:11px;width:auto;display:block"/></span>`;
 
 function getClientMiniLogos(c) {
   let logos = '';
   if (c && c.source_oz) logos += OZ_MINI_LOGO;
   if (c && c.source_cofidex) logos += COFIDEX_MINI_LOGO;
+  // Domaine SUVA (monopole légal de l'assurance-accidents pour certaines branches, art. 66 LAA) :
+  // détecté automatiquement dès qu'un contrat LAA actif chez SUVA existe pour ce client,
+  // plutôt que de dépendre d'une case à cocher manuelle.
+  if (c && typeof allContrats !== 'undefined') {
+    const contratSuva = allContrats.some(ct =>
+      ct.client_id === c.id &&
+      (ct.compagnie || '').trim().toLowerCase().includes('suva') &&
+      !['résilié', 'annulé', 'mandat_resilie'].includes(ct.statut)
+    );
+    if (contratSuva) logos += SUVA_MINI_LOGO;
+  }
   return logos;
 }
 
@@ -1793,6 +1805,7 @@ const CATALOGUE_PRODUITS = {
   ],
   'Assurances de personnes (entreprise)': [
     { id: 'laa', label: 'LAA (assurance-accidents obligatoire)', segment: 'entreprise', modules: ['Accidents professionnels (AP)', 'Accidents non professionnels (ANP)', 'Sursalaire LAA complémentaire'] },
+    { id: 'laac', label: 'LAAC — LAA complémentaire (sursalaire au-delà du plafond LAA)', segment: 'entreprise', modules: [] },
     { id: 'perte_gain_maladie_collective', label: 'Perte de gain maladie collective', segment: 'entreprise', modules: ['Délai d\'attente réduit', 'Couverture 720 jours étendue'] },
     { id: 'perte_gain_accident_collective', label: 'Perte de gain accident collective (complémentaire LAA)', segment: 'entreprise', modules: [] },
     { id: 'sante_collective_entreprise', label: 'Assurance maladie collective entreprise', segment: 'entreprise', modules: [] },
@@ -8285,7 +8298,16 @@ function updateModulesOptions() {
         <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text);cursor:pointer">
           <input type="checkbox" class="ct-combinable-checkbox" value="${p.id}" onchange="toggleCombinablePrime('${p.id}')" style="width:15px;height:15px;cursor:pointer"/>+ ${p.label}
         </label>` : '';
-      }).join('') + '<div id="ct-combinables-primes" style="width:100%;margin-top:8px"></div>';
+      }).join('') + '<div id="ct-combinables-primes" style="width:100%;margin-top:8px"></div>' +
+        `<div id="ct-calculette-vehicule" style="display:none;width:100%;margin-top:10px;padding:12px 14px;background:var(--surface-alt);border:1px solid var(--border);border-radius:9px">
+          <div style="font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px">🧮 Calculette RC + Casco — remplis 2 montants, le 3e se calcule</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+            <div><label class="form-label" style="font-size:10.5px">Prime totale (CHF)</label><input class="form-input" id="ct-calc-total" type="number" placeholder="1929.60" oninput="calculerSoldeVehicule('total')"/></div>
+            <div><label class="form-label" style="font-size:10.5px">RC (CHF)</label><input class="form-input" id="ct-calc-rc" type="number" placeholder="327.60" oninput="calculerSoldeVehicule('rc')"/></div>
+            <div><label class="form-label" style="font-size:10.5px">Casco (CHF)</label><input class="form-input" id="ct-calc-casco" type="number" placeholder="1602.00" oninput="calculerSoldeVehicule('casco')"/></div>
+          </div>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:6px">Prime totale = montant final de la police (timbre fédéral et taxes déjà inclus). Remplis-en deux, le troisième se déduit automatiquement et se reporte dans les champs ci-dessus.</div>
+        </div>`;
     }
   }
 
@@ -8328,6 +8350,44 @@ function toggleCombinablePrime(produitId) {
     primesZone.appendChild(div);
   } else if (!checkbox.checked && existant) {
     existant.remove();
+  }
+  // La calculette RC+Casco n'a de sens que si au moins une case Casco/combinable est cochée
+  const calculette = document.getElementById('ct-calculette-vehicule');
+  if (calculette) {
+    const auMoinsUneCochee = document.querySelectorAll('.ct-combinable-checkbox:checked').length > 0;
+    calculette.style.display = auMoinsUneCochee ? 'block' : 'none';
+  }
+}
+
+// Calculette RC + Casco : remplis 2 des 3 montants (Total / RC / Casco), le 3e se déduit par soustraction
+// et se reporte automatiquement dans les vrais champs du formulaire (Prime RC + prime du 1er combinable coché).
+function calculerSoldeVehicule(champModifie) {
+  const totalEl = document.getElementById('ct-calc-total');
+  const rcEl = document.getElementById('ct-calc-rc');
+  const cascoEl = document.getElementById('ct-calc-casco');
+  if (!totalEl || !rcEl || !cascoEl) return;
+  const total = parseFloat(totalEl.value);
+  const rc = parseFloat(rcEl.value);
+  const casco = parseFloat(cascoEl.value);
+
+  if (champModifie !== 'casco' && !isNaN(total) && !isNaN(rc)) {
+    cascoEl.value = Math.round((total - rc) * 100) / 100;
+  } else if (champModifie !== 'rc' && !isNaN(total) && !isNaN(casco)) {
+    rcEl.value = Math.round((total - casco) * 100) / 100;
+  } else if (champModifie !== 'total' && !isNaN(rc) && !isNaN(casco)) {
+    totalEl.value = Math.round((rc + casco) * 100) / 100;
+  }
+
+  // Reporte les valeurs dans les vrais champs du formulaire (source de vérité pour l'enregistrement)
+  const rcFinal = parseFloat(rcEl.value);
+  const cascoFinal = parseFloat(cascoEl.value);
+  if (!isNaN(rcFinal)) {
+    const primeRC = document.getElementById('ct-prime-mensuelle');
+    if (primeRC) { primeRC.value = rcFinal; updateCommissionPreview(); }
+  }
+  if (!isNaN(cascoFinal)) {
+    const premierCombinable = document.querySelector('.ct-combinable-prime-input');
+    if (premierCombinable) premierCombinable.value = cascoFinal;
   }
 }
 
@@ -8385,7 +8445,7 @@ function calculerCommissionEstimee() {
       const montant = Math.round(primeAnnuelle * TAUX_COMMISSION.hotela.accidents / 100);
       return { montant, detail: `HOTELA — Assurance-accidents : ${TAUX_COMMISSION.hotela.accidents}% × CHF ${primeAnnuelle} = CHF ${montant}` };
     }
-    if (produitId === 'perte_gain_accident_collective') {
+    if (produitId === 'perte_gain_accident_collective' || produitId === 'laac') {
       const montant = Math.round(primeAnnuelle * TAUX_COMMISSION.hotela.accidents_complementaire / 100);
       return { montant, detail: `HOTELA — Assurance-accidents complémentaire : ${TAUX_COMMISSION.hotela.accidents_complementaire}% × CHF ${primeAnnuelle} = CHF ${montant}` };
     }

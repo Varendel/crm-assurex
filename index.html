@@ -342,7 +342,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-21 10:15</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-21 10:30</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -4663,6 +4663,9 @@ async function envoyerVersAutreAppareil(clientId) {
         <input class="form-input" readonly value="${lienSignature}" style="font-size:10.5px" onclick="this.select()"/>
         <button class="btn-secondary" onclick="navigator.clipboard.writeText('${lienSignature}')">📋 Copier</button>
       </div>
+      ${c && c.email ? `
+      <button class="btn-secondary" id="btn-envoi-email-signature" onclick="envoyerLienSignatureParEmail('${clientId}', '${lienSignature}', '${c.email}')" style="width:100%;margin-bottom:10px">✉️ Envoyer par e-mail à ${c.email}</button>
+      ` : `<div style="font-size:10.5px;color:var(--text-muted);margin-bottom:10px">Pas d'e-mail enregistré pour ce client — ajoute-en un sur sa fiche pour activer l'envoi automatique.</div>`}
       <div id="statut-attente-signature" style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;justify-content:center;gap:8px">
         <span class="loader-spin" style="display:inline-block;width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite"></span>
         En attente de la signature du client...
@@ -4686,6 +4689,41 @@ async function envoyerVersAutreAppareil(clientId) {
       genererMandatCourtage(clientId, demande.signature_data);
     }
   }, 3000);
+}
+
+// Envoie le lien de signature par e-mail via Microsoft Graph (même mécanisme que les
+// notifications de rappels/tâches assignées) — nécessite d'être connecté à Outlook dans le CRM.
+async function envoyerLienSignatureParEmail(clientId, lienSignature, emailDestinataire) {
+  const btn = document.getElementById('btn-envoi-email-signature');
+  if (!msalAccessToken) {
+    showError('Connecte-toi à Outlook (Microsoft) dans le CRM pour pouvoir envoyer cet e-mail.');
+    return;
+  }
+  if (btn) { btn.textContent = 'Envoi en cours...'; btn.disabled = true; }
+  const c = allClients.find(x => x.id === clientId);
+  const nomClient = c ? (estEntreprise(c) ? c.nom : c.prenom) : '';
+  const contenu = `Bonjour ${nomClient || ''},\n\nMerci de signer votre mandat de courtage en suivant ce lien depuis votre téléphone ou votre ordinateur :\n\n${lienSignature}\n\nLa signature ne prend qu'une minute.\n\nMeilleures salutations,\nAssurex Sàrl`;
+  const body = {
+    message: {
+      subject: 'Signature de votre mandat de courtage — Assurex Sàrl',
+      body: { contentType: 'text', content: contenu },
+      toRecipients: [{ emailAddress: { address: emailDestinataire } }],
+    },
+    saveToSentItems: true,
+  };
+  try {
+    const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (btn) {
+      btn.textContent = r.ok ? '✓ E-mail envoyé' : 'Échec de l\u2019envoi — réessayer';
+      btn.disabled = false;
+    }
+  } catch (e) {
+    if (btn) { btn.textContent = 'Échec de l\u2019envoi — réessayer'; btn.disabled = false; }
+  }
 }
 
 // ═══ PAGE AUTONOME DE SIGNATURE (téléphone du client — sans compte, sans connexion Microsoft) ═══

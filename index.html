@@ -143,6 +143,7 @@
   .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
   .table-header { display: grid; padding: 9px 16px; border-bottom: 1px solid var(--border); font-size: 10px; color: var(--text-muted); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
   .table-row { display: grid; padding: 11px 16px; border-bottom: 1px solid var(--border); align-items: center; transition: background 0.1s; cursor: pointer; }
+  @keyframes spin { to { transform: rotate(360deg); } }
   .table-row:last-child { border-bottom: none; }
   .table-row:hover { background: var(--surface-hover); }
   .table-empty { padding: 24px 16px; color: var(--text-muted); font-size: 13px; text-align: center; }
@@ -341,7 +342,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-21 09:00</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-21 10:15</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -4140,7 +4141,7 @@ async function showClient(id) {
     <div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:16px">
       <div style="display:flex;gap:10px">
         <button onclick="toggleEditClient()" style="background:${editingClient ? 'var(--red-dim)' : 'var(--surface)'};border:1px solid ${editingClient ? 'rgba(248,113,113,0.3)' : 'var(--border)'};border-radius:8px;padding:7px 16px;color:${editingClient ? 'var(--red)' : 'var(--text-muted)'};font-size:12px;font-weight:700;cursor:pointer">${editingClient ? '✕ Annuler' : '✏️ Modifier'}</button>
-        <button onclick="genererMandatCourtage('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📄 Mandat de courtage</button>
+        <button onclick="ouvrirSignatureMandat('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📄 Mandat de courtage</button>
         <button onclick="window.print()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🖨️ Imprimer la fiche</button>
       </div>
     </div>
@@ -4537,7 +4538,210 @@ async function changerAgentClient(clientId, agentId) {
 }
 
 // ═══ MANDAT DE COURTAGE — génération pré-remplie au nom du client ═══
-function genererMandatCourtage(clientId) {
+// ═══ SIGNATURE TACTILE — capture avant génération du mandat de courtage ═══
+// Signature électronique SIMPLE (dessin sur écran tactile ou souris), pas une signature
+// électronique qualifiée au sens de la loi suisse (SCSE/ZertES) — suffisant pour un mandat
+// de courtage (aucune exigence légale de forme stricte), mais moins probant qu'une signature
+// manuscrite ou une solution qualifiée type Skribble/DocuSign.
+function ouvrirSignatureMandat(clientId) {
+  const modal = document.createElement('div');
+  modal.id = 'modal-signature-mandat';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:520px;width:100%">
+      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">✍️ Signature du mandant</div>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">Fais signer le client directement ici (au doigt sur un téléphone/tablette, ou à la souris), ou envoie un lien de signature sur son propre téléphone.</div>
+      <div style="display:flex;gap:8px;margin-bottom:14px">
+        <button id="onglet-signature-ici" class="btn-secondary" onclick="basculerModeSignature('ici', '${clientId}')" style="flex:1">✍️ Signer ici</button>
+        <button id="onglet-signature-distance" class="btn-secondary" onclick="basculerModeSignature('distance', '${clientId}')" style="flex:1">📱 Envoyer sur son téléphone</button>
+      </div>
+      <div id="zone-mode-signature"></div>
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button class="btn-secondary" onclick="document.getElementById('modal-signature-mandat').remove()">Sans signature</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+  basculerModeSignature('ici', clientId);
+}
+
+// Bascule entre "signer directement sur cet appareil" et "envoyer un lien au téléphone du client"
+function basculerModeSignature(mode, clientId) {
+  document.getElementById('onglet-signature-ici').style.background = mode === 'ici' ? 'var(--accent-dim)' : 'var(--surface-alt)';
+  document.getElementById('onglet-signature-distance').style.background = mode === 'distance' ? 'var(--accent-dim)' : 'var(--surface-alt)';
+  clearInterval(window._pollingSignatureInterval);
+  const zone = document.getElementById('zone-mode-signature');
+  if (mode === 'ici') {
+    zone.innerHTML = `
+      <canvas id="canvas-signature" width="460" height="200" style="width:100%;height:200px;background:#fff;border-radius:9px;touch-action:none;cursor:crosshair;display:block"></canvas>
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button class="btn-secondary" onclick="effacerSignature()">🗑️ Effacer</button>
+        <button class="btn-save" onclick="validerSignatureEtGenerer('${clientId}')" style="margin-left:auto">✓ Valider et générer le mandat</button>
+      </div>`;
+    initCanvasSignature();
+  } else {
+    zone.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12.5px">Génération du lien...</div>`;
+    envoyerVersAutreAppareil(clientId);
+  }
+}
+
+// Attache le mécanisme de dessin à un canvas de signature (id="canvas-signature") —
+// utilisé à la fois pour la signature directe sur PC et pour la page autonome sur téléphone.
+// Pointer events unifie souris/doigt/stylet en un seul mécanisme.
+function initCanvasSignature() {
+  const canvas = document.getElementById('canvas-signature');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  ctx.strokeStyle = '#0f2244';
+  ctx.lineWidth = 2.2;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  let enTrainDeDessiner = false;
+
+  function positionRelative(e) {
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
+    const scaleY = canvas.height / rect.height;
+    return { x: (e.clientX - rect.left) * scaleX, y: (e.clientY - rect.top) * scaleY };
+  }
+  canvas.addEventListener('pointerdown', (e) => {
+    enTrainDeDessiner = true;
+    const p = positionRelative(e);
+    ctx.beginPath();
+    ctx.moveTo(p.x, p.y);
+  });
+  canvas.addEventListener('pointermove', (e) => {
+    if (!enTrainDeDessiner) return;
+    const p = positionRelative(e);
+    ctx.lineTo(p.x, p.y);
+    ctx.stroke();
+  });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => canvas.addEventListener(ev, () => { enTrainDeDessiner = false; }));
+}
+
+function effacerSignature() {
+  const canvas = document.getElementById('canvas-signature');
+  if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+}
+
+function validerSignatureEtGenerer(clientId) {
+  const canvas = document.getElementById('canvas-signature');
+  // Détecte si quelque chose a réellement été dessiné (pas juste un canvas blanc)
+  let signatureDataUrl = null;
+  if (canvas) {
+    const ctx = canvas.getContext('2d');
+    const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+    const aDessine = pixels.some((v, i) => i % 4 === 3 && v > 0); // un pixel avec de l'opacité = un trait
+    if (aDessine) signatureDataUrl = canvas.toDataURL('image/png');
+  }
+  document.getElementById('modal-signature-mandat').remove();
+  genererMandatCourtage(clientId, signatureDataUrl);
+}
+
+// Génère un lien de signature à distance (QR code + lien copiable) et attend que le client
+// signe sur son propre téléphone — sondage régulier de la base jusqu'à réception de la signature.
+async function envoyerVersAutreAppareil(clientId) {
+  const c = allClients.find(x => x.id === clientId);
+  const nomClient = c ? (estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`) : '';
+  const token = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
+
+  const r = await dbPost('signature_requests', { token, client_id: clientId, client_nom: nomClient });
+  if (r && r.error) {
+    document.getElementById('zone-mode-signature').innerHTML = `<div style="color:#f87171;font-size:12.5px">Impossible de créer le lien de signature : ${errMsg(r)}</div>`;
+    return;
+  }
+
+  const urlBase = window.location.origin + window.location.pathname;
+  const lienSignature = `${urlBase}?signer=${token}`;
+  const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(lienSignature)}`;
+
+  const zone = document.getElementById('zone-mode-signature');
+  zone.innerHTML = `
+    <div style="text-align:center">
+      <img src="${qrUrl}" alt="QR code de signature" style="width:180px;height:180px;background:#fff;padding:8px;border-radius:9px;margin-bottom:12px"/>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:8px">Le client scanne ce code avec son téléphone, ou tu lui envoies le lien ci-dessous.</div>
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        <input class="form-input" readonly value="${lienSignature}" style="font-size:10.5px" onclick="this.select()"/>
+        <button class="btn-secondary" onclick="navigator.clipboard.writeText('${lienSignature}')">📋 Copier</button>
+      </div>
+      <div id="statut-attente-signature" style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;justify-content:center;gap:8px">
+        <span class="loader-spin" style="display:inline-block;width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite"></span>
+        En attente de la signature du client...
+      </div>
+    </div>`;
+
+  // Sondage de la base toutes les 3 secondes — s'arrête après 10 minutes si personne ne signe
+  const debut = Date.now();
+  window._pollingSignatureInterval = setInterval(async () => {
+    if (Date.now() - debut > 10 * 60 * 1000) {
+      clearInterval(window._pollingSignatureInterval);
+      const statutEl = document.getElementById('statut-attente-signature');
+      if (statutEl) statutEl.innerHTML = '⏱️ Délai dépassé — régénère un nouveau lien si besoin.';
+      return;
+    }
+    const resultats = await dbGet('signature_requests', `token=eq.${token}&select=signature_data,statut`);
+    const demande = resultats && resultats[0];
+    if (demande && demande.signature_data) {
+      clearInterval(window._pollingSignatureInterval);
+      document.getElementById('modal-signature-mandat')?.remove();
+      genererMandatCourtage(clientId, demande.signature_data);
+    }
+  }, 3000);
+}
+
+// ═══ PAGE AUTONOME DE SIGNATURE (téléphone du client — sans compte, sans connexion Microsoft) ═══
+async function afficherPageSignatureAutonome(token) {
+  document.body.innerHTML = `<div id="page-signature-autonome" style="min-height:100vh;background:#0f2244;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Arial,sans-serif">
+    <div style="background:#fff;border-radius:16px;padding:24px;max-width:420px;width:100%;text-align:center">
+      <div id="contenu-signature-autonome"><p style="color:#666">Chargement...</p></div>
+    </div>
+  </div>`;
+
+  const resultats = await dbGet('signature_requests', `token=eq.${token}&select=*`);
+  const demande = resultats && resultats[0];
+  const zone = document.getElementById('contenu-signature-autonome');
+  if (!demande) {
+    zone.innerHTML = `<p style="color:#c0392b">Ce lien de signature n'est plus valide.</p>`;
+    return;
+  }
+  if (demande.statut === 'signe' || demande.signature_data) {
+    zone.innerHTML = `<div style="font-size:40px;margin-bottom:10px">✅</div><p style="color:#333;font-weight:700">Signature déjà transmise, merci !</p><p style="color:#888;font-size:12.5px">Vous pouvez fermer cette page.</p>`;
+    return;
+  }
+
+  zone.innerHTML = `
+    <div style="font-size:15px;font-weight:800;color:#0f2244;margin-bottom:4px">Signature du mandat de courtage</div>
+    <div style="font-size:12.5px;color:#666;margin-bottom:16px">${demande.client_nom || ''}</div>
+    <div style="font-size:11px;color:#888;margin-bottom:10px">Signez ci-dessous avec votre doigt</div>
+    <canvas id="canvas-signature" width="340" height="180" style="width:100%;height:180px;background:#f8f8f8;border:1px solid #ddd;border-radius:9px;touch-action:none;display:block"></canvas>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button onclick="effacerSignature()" style="flex:1;padding:10px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-weight:700;cursor:pointer">Effacer</button>
+      <button onclick="envoyerSignatureAutonome('${token}')" style="flex:2;padding:10px;border-radius:8px;border:none;background:#0f2244;color:#fff;font-weight:700;cursor:pointer">✓ Envoyer ma signature</button>
+    </div>
+    <div style="font-size:9.5px;color:#aaa;margin-top:12px">Signature électronique simple — ASSUREX Sàrl</div>
+  `;
+  initCanvasSignature();
+}
+
+async function envoyerSignatureAutonome(token) {
+  const canvas = document.getElementById('canvas-signature');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  const aDessine = pixels.some((v, i) => i % 4 === 3 && v > 0);
+  if (!aDessine) { alert('Merci de signer avant d\u2019envoyer.'); return; }
+  const signatureDataUrl = canvas.toDataURL('image/png');
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/signature_requests?token=eq.${encodeURIComponent(token)}`, {
+      method: 'PATCH',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({ signature_data: signatureDataUrl, statut: 'signe' }),
+    });
+  } catch (e) { /* affichage de confirmation optimiste malgré tout — la page est fermée juste après par le client */ }
+  const zone = document.getElementById('contenu-signature-autonome');
+  zone.innerHTML = `<div style="font-size:40px;margin-bottom:10px">✅</div><p style="color:#333;font-weight:700">Merci, votre signature a été transmise !</p><p style="color:#888;font-size:12.5px">Vous pouvez fermer cette page.</p>`;
+}
+
+function genererMandatCourtage(clientId, signatureDataUrl) {
   const c = allClients.find(x => x.id === clientId);
   if (!c) { showError('Client introuvable.'); return; }
   const isEnt = estEntreprise(c);
@@ -4641,7 +4845,7 @@ function genererMandatCourtage(clientId) {
     <p>Fait en deux exemplaires, à _________________________, le _________________________.</p>
 
     <div class="signatures">
-      <div><strong>Signature du mandant</strong><div class="ligne-signature">Le mandant</div></div>
+      <div><strong>Signature du mandant</strong>${signatureDataUrl ? `<div style="margin-top:8px"><img src="${signatureDataUrl}" style="max-height:60px;max-width:220px;display:block"/></div><div class="ligne-signature" style="margin-top:6px">Le mandant</div>` : `<div class="ligne-signature">Le mandant</div>`}</div>
       <div><strong>Signature du mandataire (ASSUREX Sàrl)</strong><div class="ligne-signature">Le mandataire</div></div>
     </div>
 
@@ -4671,7 +4875,7 @@ function genererMandatCourtage(clientId) {
     <p style="font-size:10.5px;font-style:italic">Le mandant confirme avoir pris connaissance des informations ci-dessus (art. 45 LSA, utilisation des données, autorisation de prise de contact).</p>
 
     <div class="signatures">
-      <div><strong>Signature du mandant</strong><div class="ligne-signature">Le mandant</div></div>
+      <div><strong>Signature du mandant</strong>${signatureDataUrl ? `<div style="margin-top:8px"><img src="${signatureDataUrl}" style="max-height:60px;max-width:220px;display:block"/></div><div class="ligne-signature" style="margin-top:6px">Le mandant</div>` : `<div class="ligne-signature">Le mandant</div>`}</div>
       <div><strong>Signature du mandataire (ASSUREX Sàrl)</strong><div class="ligne-signature">Le mandataire</div></div>
     </div>
 
@@ -9953,8 +10157,17 @@ async function createAgent() {
 }
 
 // ═══ INIT ═══
-initMSAL();
-tryRestoreSession();
+// ═══ INIT ═══
+// Un lien de signature (?signer=TOKEN) contourne tout le CRM et Microsoft — le client
+// qui ouvre ce lien sur son téléphone n'a pas de compte, il ne doit voir qu'un écran de signature.
+const _paramsInitiaux = new URLSearchParams(window.location.search);
+const _tokenSignature = _paramsInitiaux.get('signer');
+if (_tokenSignature) {
+  afficherPageSignatureAutonome(_tokenSignature);
+} else {
+  initMSAL();
+  tryRestoreSession();
+}
 </script>
 </body>
 </html>

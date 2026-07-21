@@ -342,7 +342,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-21 10:30</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-21 11:00</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -4550,10 +4550,11 @@ function ouvrirSignatureMandat(clientId) {
   modal.innerHTML = `
     <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:520px;width:100%">
       <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">✍️ Signature du mandant</div>
-      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">Fais signer le client directement ici (au doigt sur un téléphone/tablette, ou à la souris), ou envoie un lien de signature sur son propre téléphone.</div>
-      <div style="display:flex;gap:8px;margin-bottom:14px">
-        <button id="onglet-signature-ici" class="btn-secondary" onclick="basculerModeSignature('ici', '${clientId}')" style="flex:1">✍️ Signer ici</button>
-        <button id="onglet-signature-distance" class="btn-secondary" onclick="basculerModeSignature('distance', '${clientId}')" style="flex:1">📱 Envoyer sur son téléphone</button>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">Choisis comment le client va signer :</div>
+      <div style="display:flex;gap:6px;margin-bottom:14px">
+        <button id="onglet-signature-ici" class="btn-secondary" onclick="basculerModeSignature('ici', '${clientId}')" style="flex:1;font-size:11.5px">✍️ Ici, sur cet écran</button>
+        <button id="onglet-signature-qr" class="btn-secondary" onclick="basculerModeSignature('qr', '${clientId}')" style="flex:1;font-size:11.5px">📱 QR code / lien</button>
+        <button id="onglet-signature-email" class="btn-secondary" onclick="basculerModeSignature('email', '${clientId}')" style="flex:1;font-size:11.5px">✉️ Par e-mail</button>
       </div>
       <div id="zone-mode-signature"></div>
       <div style="display:flex;gap:10px;margin-top:12px">
@@ -4564,10 +4565,12 @@ function ouvrirSignatureMandat(clientId) {
   basculerModeSignature('ici', clientId);
 }
 
-// Bascule entre "signer directement sur cet appareil" et "envoyer un lien au téléphone du client"
+// Bascule entre les 3 modes de signature : ici sur cet écran, via QR code/lien à distance,
+// ou envoi direct par e-mail au client. Ce sont 3 options indépendantes, pas des sous-options.
 function basculerModeSignature(mode, clientId) {
-  document.getElementById('onglet-signature-ici').style.background = mode === 'ici' ? 'var(--accent-dim)' : 'var(--surface-alt)';
-  document.getElementById('onglet-signature-distance').style.background = mode === 'distance' ? 'var(--accent-dim)' : 'var(--surface-alt)';
+  ['ici', 'qr', 'email'].forEach(m => {
+    document.getElementById(`onglet-signature-${m}`).style.background = mode === m ? 'var(--accent-dim)' : 'var(--surface-alt)';
+  });
   clearInterval(window._pollingSignatureInterval);
   const zone = document.getElementById('zone-mode-signature');
   if (mode === 'ici') {
@@ -4580,7 +4583,7 @@ function basculerModeSignature(mode, clientId) {
     initCanvasSignature();
   } else {
     zone.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12.5px">Génération du lien...</div>`;
-    envoyerVersAutreAppareil(clientId);
+    envoyerVersAutreAppareil(clientId, mode);
   }
 }
 
@@ -4639,7 +4642,7 @@ function validerSignatureEtGenerer(clientId) {
 
 // Génère un lien de signature à distance (QR code + lien copiable) et attend que le client
 // signe sur son propre téléphone — sondage régulier de la base jusqu'à réception de la signature.
-async function envoyerVersAutreAppareil(clientId) {
+async function envoyerVersAutreAppareil(clientId, mode) {
   const c = allClients.find(x => x.id === clientId);
   const nomClient = c ? (estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`) : '';
   const token = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
@@ -4655,22 +4658,33 @@ async function envoyerVersAutreAppareil(clientId) {
   const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(lienSignature)}`;
 
   const zone = document.getElementById('zone-mode-signature');
-  zone.innerHTML = `
-    <div style="text-align:center">
-      <img src="${qrUrl}" alt="QR code de signature" style="width:180px;height:180px;background:#fff;padding:8px;border-radius:9px;margin-bottom:12px"/>
-      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:8px">Le client scanne ce code avec son téléphone, ou tu lui envoies le lien ci-dessous.</div>
-      <div style="display:flex;gap:6px;margin-bottom:10px">
-        <input class="form-input" readonly value="${lienSignature}" style="font-size:10.5px" onclick="this.select()"/>
-        <button class="btn-secondary" onclick="navigator.clipboard.writeText('${lienSignature}')">📋 Copier</button>
-      </div>
-      ${c && c.email ? `
-      <button class="btn-secondary" id="btn-envoi-email-signature" onclick="envoyerLienSignatureParEmail('${clientId}', '${lienSignature}', '${c.email}')" style="width:100%;margin-bottom:10px">✉️ Envoyer par e-mail à ${c.email}</button>
-      ` : `<div style="font-size:10.5px;color:var(--text-muted);margin-bottom:10px">Pas d'e-mail enregistré pour ce client — ajoute-en un sur sa fiche pour activer l'envoi automatique.</div>`}
-      <div id="statut-attente-signature" style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;justify-content:center;gap:8px">
+  const contenuAttente = `
+      <div id="statut-attente-signature" style="font-size:12px;color:var(--text-muted);display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px">
         <span class="loader-spin" style="display:inline-block;width:12px;height:12px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite"></span>
         En attente de la signature du client...
-      </div>
-    </div>`;
+      </div>`;
+
+  if (mode === 'qr') {
+    zone.innerHTML = `
+      <div style="text-align:center">
+        <img src="${qrUrl}" alt="QR code de signature" style="width:180px;height:180px;background:#fff;padding:8px;border-radius:9px;margin-bottom:12px"/>
+        <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:8px">Le client scanne ce code avec son téléphone, ou tu lui envoies le lien ci-dessous.</div>
+        <div style="display:flex;gap:6px">
+          <input class="form-input" readonly value="${lienSignature}" style="font-size:10.5px" onclick="this.select()"/>
+          <button class="btn-secondary" onclick="navigator.clipboard.writeText('${lienSignature}')">📋 Copier</button>
+        </div>
+        ${contenuAttente}
+      </div>`;
+  } else if (mode === 'email') {
+    zone.innerHTML = `
+      <div style="text-align:center">
+        ${c && c.email ? `
+        <div style="font-size:12.5px;color:var(--text);margin-bottom:12px">Envoyer le lien de signature à <strong>${c.email}</strong></div>
+        <button class="btn-save" id="btn-envoi-email-signature" onclick="envoyerLienSignatureParEmail('${clientId}', '${lienSignature}', '${c.email}')" style="width:100%">✉️ Envoyer l'e-mail maintenant</button>
+        ` : `<div style="font-size:12px;color:#f87171">Pas d'e-mail enregistré pour ce client — ajoute-en un sur sa fiche pour utiliser cette option.</div>`}
+        ${contenuAttente}
+      </div>`;
+  }
 
   // Sondage de la base toutes les 3 secondes — s'arrête après 10 minutes si personne ne signe
   const debut = Date.now();

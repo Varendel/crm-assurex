@@ -342,7 +342,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-21 11:00</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-22 suva-fix</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -513,15 +513,17 @@ function getClientMiniLogos(c) {
   if (c && c.source_oz) logos += OZ_MINI_LOGO;
   if (c && c.source_cofidex) logos += COFIDEX_MINI_LOGO;
   // Domaine SUVA (monopole légal de l'assurance-accidents pour certaines branches, art. 66 LAA) :
-  // détecté automatiquement dès qu'un contrat LAA actif chez SUVA existe pour ce client,
-  // plutôt que de dépendre d'une case à cocher manuelle.
-  if (c && typeof allContrats !== 'undefined') {
-    const contratSuva = allContrats.some(ct =>
+  // déclaré manuellement à la création/édition du client (champ "Domaine SUVA ?"), OU détecté
+  // automatiquement dès qu'un contrat LAA actif chez SUVA existe pour ce client — les deux
+  // signaux se combinent, pour couvrir aussi bien un nouveau client sans contrat encore créé
+  // qu'un client existant dont le contrat suffit à le déterminer sans case à cocher.
+  if (c) {
+    const contratSuva = typeof allContrats !== 'undefined' && allContrats.some(ct =>
       ct.client_id === c.id &&
       (ct.compagnie || '').trim().toLowerCase().includes('suva') &&
       !['résilié', 'annulé', 'mandat_resilie'].includes(ct.statut)
     );
-    if (contratSuva) logos += SUVA_MINI_LOGO;
+    if (c.domaine_suva || contratSuva) logos += SUVA_MINI_LOGO;
   }
   return logos;
 }
@@ -2076,6 +2078,26 @@ async function dbPatch(table, id, body) {
   }
 }
 
+async function dbDelete(table, id) {
+  try {
+    const token = await getValidAccessToken() || SUPABASE_KEY;
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+      method: 'DELETE',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
+    });
+    if (!r.ok) {
+      let detail = null;
+      try { detail = await r.json(); } catch(e) {}
+      console.error(`dbDelete(${table}) HTTP ${r.status}`, detail);
+      return { error: true, status: r.status, detail };
+    }
+    return { error: false };
+  } catch(e) {
+    console.error(`dbDelete(${table}) exception`, e);
+    return { error: true, detail: e.message };
+  }
+}
+
 // ═══ MSAL ═══
 async function initMSAL() {
   try {
@@ -2273,7 +2295,8 @@ async function getEtapesRappel(rappelId) {
 }
 
 async function toggleEtapeRappel(etapeId, fait) {
-  await dbPatch('tache_etapes', etapeId, { fait });
+  const r = await dbPatch('tache_etapes', etapeId, { fait });
+  if (r && r.error) { showError('Erreur lors de la mise à jour de l\u2019étape : ' + errMsg(r)); return; }
   showRappel(currentRappelId);
 }
 
@@ -2282,7 +2305,8 @@ async function ajouterEtapeRappel(rappelId) {
   const libelle = input && input.value.trim();
   if (!libelle) return;
   const etapesActuelles = await getEtapesRappel(rappelId);
-  await dbPost('tache_etapes', { rappel_id: rappelId, libelle, ordre: etapesActuelles.length });
+  const r = await dbPost('tache_etapes', { rappel_id: rappelId, libelle, ordre: etapesActuelles.length });
+  if (r && r.error) { showError('Erreur lors de l\u2019ajout de l\u2019étape : ' + errMsg(r)); return; }
   showRappel(currentRappelId);
 }
 
@@ -2889,11 +2913,13 @@ async function basculerContratsEchus() {
     ct.date_echeance < today
   );
   if (!echus.length) return;
+  let echecs = 0;
   for (const ct of echus) {
-    await dbPatch('contrats', ct.id, { statut: 'renouveler' });
+    const r = await dbPatch('contrats', ct.id, { statut: 'renouveler' });
+    if (r && r.error) { echecs++; continue; } // ne pas mettre à jour l'état local si l'écriture a échoué
     ct.statut = 'renouveler';
   }
-  console.log(`${echus.length} contrat(s) échu(s) basculé(s) en "à renouveler"`);
+  console.log(`${echus.length - echecs} contrat(s) échu(s) basculé(s) en "à renouveler"${echecs ? ` — ${echecs} échec(s)` : ''}`);
 }
 
 function viewDashboard() {
@@ -4268,7 +4294,8 @@ async function showClient(id) {
           <div class="form-field"><label class="form-label">Téléphone fixe</label><input id="ec-tel" class="form-input" value="${c.tel || ''}"></div>
           <div class="form-field"><label class="form-label">Mobile</label><input id="ec-mobile" class="form-input" value="${c.mobile || ''}"></div>
           ${isEntreprise ? `<div class="form-field"><label class="form-label">Soumis à une CCT ?</label><select id="ec-cct" class="form-select"><option value="non" ${!c.cct ? 'selected' : ''}>Non</option><option value="oui" ${c.cct ? 'selected' : ''}>Oui</option></select></div>
-          <div class="form-field"><label class="form-label">N° IDE (CHE)</label><input id="ec-ide" class="form-input" value="${c.ide || ''}" placeholder="CHE-123.456.789"></div>` : ''}
+          <div class="form-field"><label class="form-label">N° IDE (CHE)</label><input id="ec-ide" class="form-input" value="${c.ide || ''}" placeholder="CHE-123.456.789"></div>
+          <div class="form-field"><label class="form-label">Domaine SUVA (monopole accident) ?</label><select id="ec-suva" class="form-select"><option value="non" ${!c.domaine_suva ? 'selected' : ''}>Non</option><option value="oui" ${c.domaine_suva ? 'selected' : ''}>Oui</option></select></div>` : ''}
         </div>`)}
         ${sectionCard('Coordonnées bancaires', '#a78bfa', `<div class="form-grid">
           <div class="form-field"><label class="form-label">Banque</label><input id="ec-banque" class="form-input" value="${c.banque || ''}"></div>
@@ -4466,9 +4493,93 @@ async function showClient(id) {
         <textarea id="client-note-input" placeholder="Ajouter une note..." style="width:100%;background:var(--surface-alt);border:1px solid var(--border);border-radius:9px;padding:10px 14px;color:var(--text);font-size:13px;outline:none;resize:vertical;min-height:80px;font-family:inherit;box-sizing:border-box"></textarea>
         <button class="btn-save" style="margin-top:8px" onclick="saveClientNote('${c.id}')">Enregistrer</button>
       `)}
+    </div>
+
+    <div style="text-align:center;margin-top:30px;padding-top:16px;border-top:1px solid var(--border)">
+      <button onclick="confirmerSuppressionClient('${c.id}', '${displayName.replace(/'/g, "\\'")}')" style="background:none;border:none;color:var(--text-dim);font-size:11px;cursor:pointer;text-decoration:underline dotted">🗑️ Supprimer cette fiche client</button>
     </div>`;
   bindAdresseAutocomplete({ adresseId: 'ec-adresse', npaId: 'ec-npa', villeId: 'ec-ville', cantonId: 'ec-canton' });
   insertBackBar({ homeId: 'clients', homeLabel: 'Clients', itemLabel: displayName });
+}
+
+// Suppression d'un client — demande une double confirmation explicite (irréversible),
+// et signale clairement s'il a des contrats/commissions liés avant de permettre l'action.
+function confirmerSuppressionClient(clientId, nomClient) {
+  const contratsLies = allContrats.filter(ct => ct.client_id === clientId);
+  const commissionsLiees = allCommissionsAttente.filter(c => c.client_id === clientId);
+  const modal = document.createElement('div');
+  modal.id = 'modal-suppression-client';
+  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
+  modal.innerHTML = `
+    <div style="background:var(--surface);border-radius:14px;padding:24px;max-width:440px;width:100%">
+      <div style="font-size:16px;font-weight:800;color:#f87171;margin-bottom:10px">⚠️ Supprimer ${nomClient} ?</div>
+      <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px">Cette action est <strong>définitive et irréversible</strong>. Elle supprimera aussi :</div>
+      <ul style="font-size:12.5px;color:var(--text);margin:0 0 16px;padding-left:20px">
+        <li>${contratsLies.length} contrat(s)</li>
+        <li>${commissionsLiees.length} commission(s) liée(s)</li>
+        <li>Rappels, factures, collaborateurs et notes liés à ce client</li>
+      </ul>
+      <div style="display:flex;gap:10px">
+        <button class="btn-secondary" onclick="document.getElementById('modal-suppression-client').remove()" style="flex:1">Annuler</button>
+        <button onclick="executerSuppressionClient('${clientId}', this)" style="flex:1;background:#f87171;color:#0a0e1a;border:none;border-radius:8px;padding:10px;font-weight:800;cursor:pointer">🗑️ Confirmer la suppression</button>
+      </div>
+    </div>`;
+  document.body.appendChild(modal);
+}
+
+async function executerSuppressionClient(clientId, btn) {
+  btn.textContent = 'Suppression...'; btn.disabled = true;
+
+  // Ordre important : supprimer d'abord ce qui dépend des contrats, puis les contrats,
+  // puis le reste des données liées au client, et enfin le client lui-même —
+  // pour éviter tout blocage de contrainte de clé étrangère et ne rien laisser en orphelin.
+  // Si UNE SEULE suppression liée échoue, on s'arrête avant de toucher au client :
+  // mieux vaut un client avec des données déjà partiellement nettoyées et un message clair,
+  // qu'un blocage confus sur la contrainte de clé étrangère à la toute dernière étape.
+  async function supprimerLot(table, items, libelle) {
+    for (const item of items) {
+      const r = await dbDelete(table, item.id);
+      if (r && r.error) {
+        showError(`Suppression interrompue : impossible de supprimer ${libelle} — ${errMsg(r)}`);
+        btn.textContent = '🗑️ Confirmer la suppression'; btn.disabled = false;
+        return false;
+      }
+    }
+    return true;
+  }
+
+  const commissionsLiees = allCommissionsAttente.filter(c => c.client_id === clientId);
+  if (!(await supprimerLot('commissions_attente', commissionsLiees, 'une commission liée'))) return;
+
+  const contratsLies = allContrats.filter(ct => ct.client_id === clientId);
+  if (!(await supprimerLot('contrats', contratsLies, 'un contrat lié'))) return;
+
+  const [rappelsLies, facturesLiees, collaborateursLies, postitsLies] = await Promise.all([
+    dbGet('rappels', `client_id=eq.${clientId}&select=id`),
+    dbGet('factures', `client_id=eq.${clientId}&select=id`),
+    dbGet('collaborateurs', `client_id=eq.${clientId}&select=id`),
+    dbGet('postits', `client_id=eq.${clientId}&select=id`),
+  ]);
+  if (!(await supprimerLot('rappels', rappelsLies, 'un rappel lié'))) return;
+  if (!(await supprimerLot('factures', facturesLiees, 'une facture liée'))) return;
+  if (!(await supprimerLot('collaborateurs', collaborateursLies, 'un collaborateur lié'))) return;
+  if (!(await supprimerLot('postits', postitsLies, 'un post-it lié'))) return;
+
+  const resultatSuppression = await dbDelete('clients', clientId);
+  if (resultatSuppression && resultatSuppression.error) {
+    showError('Erreur lors de la suppression : ' + errMsg(resultatSuppression));
+    btn.textContent = '🗑️ Confirmer la suppression'; btn.disabled = false;
+    return;
+  }
+  logAction('delete_client', 'clients', clientId, null);
+  document.getElementById('modal-suppression-client')?.remove();
+  [allClients, allContrats, allCommissionsAttente, allRappels] = await Promise.all([
+    dbGet('clients', 'select=*'),
+    dbGet('contrats', 'select=*'),
+    dbGet('commissions_attente', 'select=*'),
+    dbGet('rappels', 'select=*'),
+  ]);
+  navigate('clients');
 }
 
 async function saveClientNote(clientId) {
@@ -4530,7 +4641,8 @@ async function toggleSourceCofidex(clientId, valeur) {
 }
 
 async function changerAgentClient(clientId, agentId) {
-  await dbPatch('clients', clientId, { apporteur_id: agentId || null });
+  const r = await dbPatch('clients', clientId, { apporteur_id: agentId || null });
+  if (r && r.error) { showError('Erreur lors du changement d\u2019agent : ' + errMsg(r)); return; }
   const agent = allAgents.find(a => a.id === agentId);
   logAction('edit_client', 'clients', clientId, `Agent réassigné → ${agent ? agent.prenom + ' ' + agent.nom : 'aucun'}`);
   allClients = await dbGet('clients', 'select=*');
@@ -4947,6 +5059,7 @@ async function saveClientEdit(id, isEntreprise) {
     revenu: Number(document.getElementById('ec-revenu').value) || null,
     avs: document.getElementById('ec-avs').value.trim(),
     cct: document.getElementById('ec-cct') ? document.getElementById('ec-cct').value === 'oui' : undefined,
+    domaine_suva: document.getElementById('ec-suva') ? document.getElementById('ec-suva').value === 'oui' : undefined,
     ide: document.getElementById('ec-ide') ? document.getElementById('ec-ide').value.trim() : undefined,
   } : {
     prenom: document.getElementById('ec-prenom').value.trim(),
@@ -5102,7 +5215,8 @@ async function changerStadeOpportunite(id, nouveauStade) {
   if (!nouveauStade) return;
   const opp = allOpportunites.find(o => o.id === id);
   if (!opp) return;
-  await dbPatch('opportunites', id, { stade: nouveauStade });
+  const r = await dbPatch('opportunites', id, { stade: nouveauStade });
+  if (r && r.error) { showError('Erreur lors du changement de stade : ' + errMsg(r)); return; }
   opp.stade = nouveauStade;
 
   if (nouveauStade === 'Gagné') {
@@ -5278,7 +5392,7 @@ function viewRappels() {
         <div class="urgence-dot" style="background:${uc(r.urgence||'basse')}"></div>
         <div style="flex:1">
           <div style="font-size:13px;font-weight:700;color:var(--text)">${r.nature === 'tache' ? '📋' : (r.tache_parent_id ? '🔗🔔' : '🔔')} ${r.titre}</div>
-          <div style="font-size:11px;color:var(--text-muted)">${nomClientRappel(r) ? `👤 <span onclick="event.stopPropagation(); showClient('${r.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${nomClientRappel(r)}</span> · ` : ''}${r.date_echeance ? fmtDate(r.date_echeance) : 'Sans échéance'}${dateRelative(r.date_echeance)}${r.piece_jointe_nom ? ' · 📎 ' + r.piece_jointe_nom : ''}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${nomClientRappel(r) ? `👤 <span onclick="event.stopPropagation(); showClient('${r.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${nomClientRappel(r)}</span> · ` : ''}${r.date_echeance ? fmtDate(r.date_echeance) : 'Sans échéance'}${dateRelative(r.date_echeance)}${r.date_planifiee ? ` · 📅 planifié le ${fmtDate(r.date_planifiee)}` : ''}${r.piece_jointe_nom ? ' · 📎 ' + r.piece_jointe_nom : ''}</div>
           ${r.notes ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:3px;font-style:italic">${r.notes.split('[')[0].substring(0,120)}${r.notes.length>120?'...':''}</div>` : ''}
         </div>
         ${badge(r.type || 'Suivi', '#64748b')}
@@ -5337,20 +5451,23 @@ function viewRappels() {
 
 async function traiterRappel(id) {
   const r = allRappels.find(x => x.id === id);
+  let resultat;
   if (r && r.outlook_event_id) {
     try { await deleteOutlookEvent(r.outlook_event_id); } catch(e) {}
-    await dbPatch('rappels', id, { statut: 'traité', outlook_event_id: null });
-    r.outlook_event_id = null;
+    resultat = await dbPatch('rappels', id, { statut: 'traité', outlook_event_id: null });
+    if (!(resultat && resultat.error)) r.outlook_event_id = null;
   } else {
-    await dbPatch('rappels', id, { statut: 'traité' });
+    resultat = await dbPatch('rappels', id, { statut: 'traité' });
   }
+  if (resultat && resultat.error) { showError('Erreur lors du traitement du rappel : ' + errMsg(resultat)); return; }
   if (r) r.statut = 'traité';
   navigate('rappels');
 }
 
 async function rouvrirRappel(id) {
   const r = allRappels.find(x => x.id === id);
-  await dbPatch('rappels', id, { statut: 'ouvert' });
+  const resultat = await dbPatch('rappels', id, { statut: 'ouvert' });
+  if (resultat && resultat.error) { showError('Erreur lors de la réouverture du rappel : ' + errMsg(resultat)); return; }
   if (r) r.statut = 'ouvert';
   if (r && r.date_echeance) {
     try {
@@ -5518,8 +5635,13 @@ async function genererFichePaie() {
   if (r && r.error) { showError('Erreur : ' + errMsg(r)); return; }
   const ficheId = r && r[0] ? r[0].id : null;
 
+  let echecsLiaison = 0;
   for (const ca of eligibles) {
-    await dbPatch('commissions_attente', ca.id, { fiche_paie_id: ficheId });
+    const r2 = await dbPatch('commissions_attente', ca.id, { fiche_paie_id: ficheId });
+    if (r2 && r2.error) echecsLiaison++;
+  }
+  if (echecsLiaison > 0) {
+    showError(`⚠️ ${echecsLiaison} commission(s) sur ${eligibles.length} n'ont pas pu être liée(s) à cette fiche de paie — elles risquent de réapparaître dans une prochaine fiche alors qu'elles sont déjà comptées ici. Vérifie manuellement.`);
   }
 
   logAction('generer_fiche_paie', 'fiches_paie', ficheId, `${fmtDate(debut)} → ${fmtDate(fin)} · CHF ${Math.round(totalMontant)}`);
@@ -5749,11 +5871,11 @@ async function importerCommissionsDecompte(nomAssureur) {
   const aTraiter = _decompteLignes.filter(l => l.selectionne && l.contratId);
   if (!aTraiter.length) { showError('Aucune ligne sélectionnée avec un contrat reconnu.'); return; }
   const nature = document.getElementById('imp-nature-commission')?.value || 'gestion';
-  let nbCrees = 0, nbReconciliees = 0;
+  let nbCrees = 0, nbEchecs = 0, nbReconciliees = 0;
   for (const l of aTraiter) {
     const montant = Math.round(l.primeCommis * (l.taux || 0) / 100);
     if (montant > 0) {
-      await dbPost('commissions_attente', {
+      const r = await dbPost('commissions_attente', {
         client_id: l.clientId,
         contrat_id: l.contratId,
         client_nom: l.clientNomCRM,
@@ -5765,13 +5887,14 @@ async function importerCommissionsDecompte(nomAssureur) {
         nature,
         date_creation: new Date().toISOString().split('T')[0],
       });
+      if (r && r.error) { nbEchecs++; continue; }
       nbCrees++;
     }
     // Réconciliation : signale un écart de prime sans écraser silencieusement — on laisse Jonathan valider manuellement sur la fiche contrat
     if (l.primeCRM !== null && Math.abs(l.primeCRM - l.primeFactTotal) > 1) nbReconciliees++;
   }
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
-  showError(`✓ ${nbCrees} commission(s) créée(s). ${nbReconciliees ? nbReconciliees + ' écart(s) de prime détecté(s) — à vérifier sur les fiches contrat concernées.' : ''}`);
+  showError(`✓ ${nbCrees} commission(s) créée(s).${nbEchecs ? ' ⚠️ ' + nbEchecs + ' échec(s) d\u2019écriture — vérifie manuellement.' : ''} ${nbReconciliees ? nbReconciliees + ' écart(s) de prime détecté(s) — à vérifier sur les fiches contrat concernées.' : ''}`);
   navigate('import-decompte');
 }
 
@@ -5950,27 +6073,47 @@ async function toggleBordereauVerse(bordereauId) {
     // passent en statut "reçu(e)" avec une vraie date de réception — c'est CE moment
     // qui met à jour le Dashboard, la Fiche de paie et toutes les statistiques.
     const dateRecep = b.date_reception || new Date().toISOString().split('T')[0];
-    await dbPatch('bordereaux', bordereauId, { statut: 'reçu', date_reception: dateRecep });
+    const resultatBordereau = await dbPatch('bordereaux', bordereauId, { statut: 'reçu', date_reception: dateRecep });
+    if (resultatBordereau && resultatBordereau.error) {
+      showError('Erreur lors de la mise à jour du bordereau : ' + errMsg(resultatBordereau) + ' — aucune commission n\u2019a été touchée.');
+      return;
+    }
+    let echecsCommissions = 0;
     for (const c of commissionsLiees) {
       const patch = {};
       if (c.statut !== 'reçue') patch.statut = 'reçue';
       if (!c.date_reception) patch.date_reception = dateRecep; // backfill même si déjà "reçue" (rapprochements historiques sans date)
-      if (Object.keys(patch).length) await dbPatch('commissions_attente', c.id, patch);
+      if (Object.keys(patch).length) {
+        const r = await dbPatch('commissions_attente', c.id, patch);
+        if (r && r.error) echecsCommissions++;
+      }
+    }
+    if (echecsCommissions > 0) {
+      showError(`⚠️ Le bordereau est marqué reçu, mais ${echecsCommissions} commission(s) sur ${commissionsLiees.length} n'ont pas pu être mises à jour — vérifie-les manuellement.`);
     }
     logAction('bordereau_verse', 'bordereaux', bordereauId, `${b.numero || ''} — ${commissionsLiees.length} commission(s) marquée(s) reçue(s)`);
   } else {
     // Retour en arrière : le bordereau redevient "attendu" ET toutes ses commissions
     // rapprochées sont automatiquement déliées et remises "en attente" — correction
     // complète et symétrique, pour ne jamais laisser de données à moitié cohérentes.
-    await dbPatch('bordereaux', bordereauId, { statut: 'attendu' });
+    const resultatBordereau = await dbPatch('bordereaux', bordereauId, { statut: 'attendu' });
+    if (resultatBordereau && resultatBordereau.error) {
+      showError('Erreur lors de la mise à jour du bordereau : ' + errMsg(resultatBordereau) + ' — aucune commission n\u2019a été touchée.');
+      return;
+    }
+    let echecsCommissions = 0;
     for (const c of commissionsLiees) {
-      await dbPatch('commissions_attente', c.id, {
+      const r = await dbPatch('commissions_attente', c.id, {
         statut: 'en_attente',
         bordereau_id: null,
         montant_final: null,
         date_reception: null,
         detail_calcul: `Rapprochement annulé le ${fmtDate(new Date().toISOString())} suite au retour en arrière du bordereau ${b.numero || ''} — remis en attente pour correction.`,
       });
+      if (r && r.error) echecsCommissions++;
+    }
+    if (echecsCommissions > 0) {
+      showError(`⚠️ Le bordereau est remis "attendu", mais ${echecsCommissions} commission(s) sur ${commissionsLiees.length} n'ont pas pu être déliées — vérifie-les manuellement.`);
     }
     logAction('bordereau_attendu', 'bordereaux', bordereauId, `${b.numero || ''} — ${commissionsLiees.length} commission(s) remise(s) en attente`);
   }
@@ -6034,8 +6177,14 @@ async function deleteBordereau(bordereauId) {
   if (!confirm(msg)) return;
 
   // Délier les commissions liées (elles redeviennent en_attente, sans bordereau_id ni montant_final)
+  let echecsDeliage = 0;
   for (const c of commissionsLiees) {
-    await dbPatch('commissions_attente', c.id, { bordereau_id: null, montant_final: null, statut: 'en_attente' });
+    const r0 = await dbPatch('commissions_attente', c.id, { bordereau_id: null, montant_final: null, statut: 'en_attente' });
+    if (r0 && r0.error) echecsDeliage++;
+  }
+  if (echecsDeliage > 0) {
+    showError(`⚠️ ${echecsDeliage} commission(s) sur ${commissionsLiees.length} n'ont pas pu être déliée(s) — vérifie-les manuellement avant de continuer.`);
+    return;
   }
 
   const token = await getValidAccessToken() || SUPABASE_KEY;
@@ -6200,7 +6349,10 @@ async function saveValidationCommission(bordereauId) {
   const comm = allCommissionsAttente.find(c => c.id === commId);
   if (comm && comm.contrat_id && etat !== 'aucun') {
     const nouveauStatut = etat === 'vigueur' ? 'actif' : 'résilié';
-    await dbPatch('contrats', comm.contrat_id, { statut: nouveauStatut, numero_police: numeroPolice || undefined });
+    const rContrat = await dbPatch('contrats', comm.contrat_id, { statut: nouveauStatut, numero_police: numeroPolice || undefined });
+    if (rContrat && rContrat.error) {
+      showError('Commission validée, mais le statut du contrat n\u2019a pas pu être mis à jour : ' + errMsg(rContrat) + ' — corrige-le manuellement sur la fiche contrat.');
+    }
     allContrats = await dbGet('contrats', 'select=*');
   }
 
@@ -6601,6 +6753,7 @@ function formEntreprise() {
     ${sectionCard('LPP', '#4ade80', `<div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">Sal. min coord. LPP 3780 - max. 64260 CHF - seuil entree 22680 - plafond sans ded. coord. 90720 CHF</div>
     <div class="form-grid">
       <div class="form-field"><label class="form-label">Soumis CCT ?</label><select class="form-select" id="e-cct"><option value="non">Non</option><option value="oui">Oui</option></select></div>
+      <div class="form-field"><label class="form-label">Domaine SUVA (monopole accident) ?</label><select class="form-select" id="e-suva"><option value="non">Non</option><option value="oui">Oui</option></select></div>
       <div class="form-field"><label class="form-label">Taux LPP souhaité</label><select class="form-select" id="e-taux-lpp"><option>Min. légal 7/10/15/18</option><option>Spécifique</option></select></div>
       <div class="form-field"><label class="form-label">Capital invalidité souhaité (CHF)</label><input class="form-input" id="e-cap-invalidite" type="number" placeholder="0"/></div>
       <div class="form-field"><label class="form-label">Capital décès souhaité (CHF)</label><input class="form-input" id="e-cap-deces" type="number" placeholder="0"/></div>
@@ -6669,6 +6822,7 @@ async function saveEntreprise() {
     statut: document.getElementById('e-statut').value,
     segment: 'Entreprise',
     cct: document.getElementById('e-cct').value === 'oui',
+    domaine_suva: document.getElementById('e-suva').value === 'oui',
     ide: document.getElementById('e-ide').value.trim() || null,
     apporteur_id: document.getElementById('e-agent').value || null,
     apporteur_externe: document.getElementById('e-apporteur-ext').value.trim() || null,
@@ -6993,7 +7147,8 @@ function viewNouveauRappel() {
       <div class="form-field"><label class="form-label">Contrat lié</label><select class="form-select" id="r-contrat"><option value="">— Aucun —</option></select></div>
       <div class="form-field"><label class="form-label">Type</label><select class="form-select" id="r-type"><option>Suivi</option><option>Contrat</option><option>Opportunité</option><option>Admin</option></select></div>
       <div class="form-field"><label class="form-label">Urgence</label><select class="form-select" id="r-urgence" onchange="updateRappelIntelligentPreview()"><option value="basse">Basse</option><option value="moyenne">Moyenne</option><option value="haute">Haute</option></select></div>
-      <div class="form-field"><label class="form-label">Date échéance</label><input class="form-input" id="r-date" type="date" onchange="updateRappelIntelligentPreview()"/></div>
+      <div class="form-field"><label class="form-label">Date planifiée (quand tu comptes t'en occuper)</label><input class="form-input" id="r-date-planifiee" type="date"/></div>
+      <div class="form-field"><label class="form-label">Date échéance (limite)</label><input class="form-input" id="r-date" type="date" onchange="updateRappelIntelligentPreview()"/></div>
       <div class="form-field"><label class="form-label">Assigné à</label><select class="form-select" id="r-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
     </div>`)}
     <div id="r-checklist-section" style="display:none">
@@ -7093,6 +7248,7 @@ async function saveRappel() {
     type: document.getElementById('r-type').value,
     urgence: document.getElementById('r-urgence').value,
     date_echeance: document.getElementById('r-date').value || null,
+    date_planifiee: document.getElementById('r-date-planifiee') ? (document.getElementById('r-date-planifiee').value || null) : null,
     apporteur_id: document.getElementById('r-agent').value || null,
     notes: document.getElementById('r-notes').value || null,
     statut: 'ouvert',
@@ -7105,9 +7261,12 @@ async function saveRappel() {
   // Si nature = tâche, on insère les étapes de checklist saisies localement
   if (body.nature === 'tache' && etapesLocalesTemp.length && created && created[0] && created[0].id) {
     const newId = created[0].id;
+    let echecsEtapes = 0;
     for (let i = 0; i < etapesLocalesTemp.length; i++) {
-      await dbPost('tache_etapes', { rappel_id: newId, libelle: etapesLocalesTemp[i], ordre: i });
+      const rEtape = await dbPost('tache_etapes', { rappel_id: newId, libelle: etapesLocalesTemp[i], ordre: i });
+      if (rEtape && rEtape.error) echecsEtapes++;
     }
+    if (echecsEtapes > 0) showError(`⚠️ La tâche est créée, mais ${echecsEtapes} étape(s) de checklist n'ont pas pu être ajoutée(s) — tu peux les ressaisir sur la fiche.`);
     etapesLocalesTemp = [];
   }
 
@@ -7385,13 +7544,14 @@ async function saveEditContrat(contratId, clientId, returnTo) {
       const nomClient = client ? (estEntreprise(client) ? client.nom : `${client.prenom} ${client.nom}`) : '';
       const dEch = new Date(body.date_echeance);
       dEch.setMonth(dEch.getMonth() - 6);
-      await dbPost('rappels', {
+      const r = await dbPost('rappels', {
         titre: `Reprendre "${body.produit}" de ${nomClient} (actuellement ${body.compagnie}, non partenaire)`,
         client_id: clientId, type: 'Contrat', urgence: 'moyenne',
         date_echeance: dEch.toISOString().split('T')[0],
         notes: `Police actuellement chez ${body.compagnie} (compagnie non partenaire) — échéance le ${body.date_echeance}. Objectif : proposer un transfert vers une compagnie partenaire pour générer une commission.`,
         statut: 'ouvert',
       });
+      if (r && r.error) showError('⚠️ Contrat enregistré, mais le rappel de transfert automatique n\u2019a pas pu être créé : ' + errMsg(r));
       allRappels = await dbGet('rappels', 'select=*');
     }
   }
@@ -7461,7 +7621,8 @@ async function addPostit(clientId) {
 }
 
 async function savePostitContenu(postitId, contenu) {
-  await dbPatch('postits', postitId, { contenu });
+  const r = await dbPatch('postits', postitId, { contenu });
+  if (r && r.error) showError('Erreur lors de l\u2019enregistrement du post-it : ' + errMsg(r));
 }
 
 async function deletePostit(postitId, clientId) {
@@ -7527,7 +7688,8 @@ async function saveFacture(clientId) {
 async function toggleFactureStatut(factureId, statutActuel, clientId) {
   const prochain = statutActuel === 'envoyee' ? 'payee' : statutActuel === 'payee' ? 'annulee' : 'envoyee';
   if (!confirm(`Marquer cette facture comme "${prochain === 'payee' ? 'Payée' : prochain === 'annulee' ? 'Annulée' : 'Envoyée'}" ?`)) return;
-  await dbPatch('factures', factureId, { statut: prochain });
+  const r = await dbPatch('factures', factureId, { statut: prochain });
+  if (r && r.error) { showError('Erreur lors de la mise à jour de la facture : ' + errMsg(r)); return; }
   showClient(clientId);
 }
 
@@ -7745,9 +7907,10 @@ async function confirmerImportFlotte(clientId) {
 
   const btn = document.querySelector('#modal-verif-flotte .btn-save');
   if (btn) { btn.textContent = 'Import en cours...'; btn.disabled = true; }
+  let echecsImport = 0;
 
   for (const v of aImporter) {
-    await dbPost('vehicules', {
+    const rVeh = await dbPost('vehicules', {
       client_id: clientId,
       contrat_id: contratId,
       marque: v.marque || null,
@@ -7757,23 +7920,30 @@ async function confirmerImportFlotte(clientId) {
       prime_brute: Number(v.prime_brute) || 0,
       prime_nette: Number(v.prime_nette) || 0,
     });
+    if (rVeh && rVeh.error) echecsImport++;
   }
 
-  logAction('import_flotte_pdf', 'vehicules', null, `${aImporter.length} véhicule(s) importé(s)`);
+  logAction('import_flotte_pdf', 'vehicules', null, `${aImporter.length - echecsImport} véhicule(s) importé(s)${echecsImport ? ` (${echecsImport} échec(s))` : ''}`);
   allVehicules = await dbGet('vehicules', 'select=*');
-  if (contratId) await recalculerPrimeFlotte(contratId);
+  let echecRecalcul = false;
+  if (contratId) echecRecalcul = !(await recalculerPrimeFlotte(contratId));
 
   document.getElementById('modal-verif-flotte').remove();
-  showError(`✓ ${aImporter.length} véhicule(s) importé(s) avec succès${contratId ? ' et prime du contrat flotte recalculée' : ''}.`);
+  if (echecsImport > 0) {
+    showError(`⚠️ ${aImporter.length - echecsImport} véhicule(s) importé(s), mais ${echecsImport} ont échoué — vérifie et réessaie pour ceux-là.`);
+  } else {
+    showError(`✓ ${aImporter.length} véhicule(s) importé(s) avec succès${contratId ? (echecRecalcul ? ' — ⚠️ la prime du contrat flotte n\u2019a pas pu être recalculée, vérifie-la manuellement' : ' et prime du contrat flotte recalculée') : ''}.`);
+  }
   showClient(clientId);
 }
 
 async function recalculerPrimeFlotte(contratId) {
-  if (!contratId) return;
+  if (!contratId) return true;
   const vehiculesDuContrat = allVehicules.filter(v => v.contrat_id === contratId);
   const totalBrut = vehiculesDuContrat.reduce((s, v) => s + Number(v.prime_brute || 0), 0);
-  await dbPatch('contrats', contratId, { prime_annuelle: Math.round(totalBrut) });
+  const r = await dbPatch('contrats', contratId, { prime_annuelle: Math.round(totalBrut) });
   allContrats = await dbGet('contrats', 'select=*');
+  return !(r && r.error);
 }
 
 async function saveVehicule(clientId, vehiculeId) {
@@ -7800,8 +7970,12 @@ async function saveVehicule(clientId, vehiculeId) {
   allVehicules = await dbGet('vehicules', 'select=*');
 
   // Recalcul automatique de la prime du/des contrat(s) flotte concerné(s)
-  await recalculerPrimeFlotte(nouveauContratId);
-  if (ancienContratId && ancienContratId !== nouveauContratId) await recalculerPrimeFlotte(ancienContratId);
+  const okNouveau = await recalculerPrimeFlotte(nouveauContratId);
+  let okAncien = true;
+  if (ancienContratId && ancienContratId !== nouveauContratId) okAncien = await recalculerPrimeFlotte(ancienContratId);
+  if (!okNouveau || !okAncien) {
+    showError('⚠️ Véhicule enregistré, mais la prime du contrat flotte n\u2019a pas pu être recalculée automatiquement — vérifie-la manuellement.');
+  }
 
   document.getElementById('modal-vehicule').remove();
   showClient(clientId);
@@ -7906,7 +8080,8 @@ function showRappel(id) {
         <option value="moyenne" ${r.urgence === 'moyenne' ? 'selected' : ''}>Moyenne</option>
         <option value="haute" ${r.urgence === 'haute' ? 'selected' : ''}>Haute</option>
       </select></div>
-      <div class="form-field"><label class="form-label">Date échéance</label><input class="form-input" id="rd-date" type="date" value="${r.date_echeance || ''}"/></div>
+      <div class="form-field"><label class="form-label">Date planifiée (quand tu comptes t'en occuper)</label><input class="form-input" id="rd-date-planifiee" type="date" value="${r.date_planifiee || ''}"/></div>
+      <div class="form-field"><label class="form-label">Date échéance (limite)</label><input class="form-input" id="rd-date" type="date" value="${r.date_echeance || ''}"/></div>
       <div class="form-field"><label class="form-label">Assigné à</label><select class="form-select" id="rd-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
     </div>`)}
 
@@ -7981,6 +8156,7 @@ async function saveRappelEdit() {
     type: document.getElementById('rd-type').value,
     urgence: document.getElementById('rd-urgence').value,
     date_echeance: document.getElementById('rd-date').value || null,
+    date_planifiee: document.getElementById('rd-date-planifiee') ? (document.getElementById('rd-date-planifiee').value || null) : null,
     apporteur_id: document.getElementById('rd-agent').value || null,
     notes: document.getElementById('rd-notes').value || null,
   };
@@ -8013,7 +8189,8 @@ async function uploadPieceJointe() {
       statusEl.textContent = "Erreur lors de l'envoi: " + errText;
       return;
     }
-    await dbPatch('rappels', currentRappelId, { piece_jointe_path: path, piece_jointe_nom: file.name, piece_jointe_url: null });
+    const rAttache = await dbPatch('rappels', currentRappelId, { piece_jointe_path: path, piece_jointe_nom: file.name, piece_jointe_url: null });
+    if (rAttache && rAttache.error) { statusEl.textContent = 'Fichier envoyé, mais impossible de le lier au rappel : ' + errMsg(rAttache); return; }
     allRappels = await dbGet('rappels', 'select=*');
     showRappel(currentRappelId);
   } catch (e) {
@@ -8022,7 +8199,8 @@ async function uploadPieceJointe() {
 }
 
 async function supprimerPieceJointe() {
-  await dbPatch('rappels', currentRappelId, { piece_jointe_url: null, piece_jointe_path: null, piece_jointe_nom: null });
+  const r = await dbPatch('rappels', currentRappelId, { piece_jointe_url: null, piece_jointe_path: null, piece_jointe_nom: null });
+  if (r && r.error) { showError('Erreur lors de la suppression de la pièce jointe : ' + errMsg(r)); return; }
   allRappels = await dbGet('rappels', 'select=*');
   showRappel(currentRappelId);
 }
@@ -8874,7 +9052,7 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
       const dEch = new Date(contratBody.date_echeance);
       dEch.setMonth(dEch.getMonth() - 6);
       const nomClient = client ? (estEntreprise(client) ? client.nom : `${client.prenom} ${client.nom}`) : '';
-      await dbPost('rappels', {
+      const rRappel = await dbPost('rappels', {
         titre: `Reprendre "${produitLabel}" de ${nomClient} (actuellement ${compagnie}, non partenaire)`,
         client_id: clientId,
         type: 'Contrat',
@@ -8883,6 +9061,7 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
         notes: `Police actuellement chez ${compagnie} (compagnie non partenaire) — échéance le ${contratBody.date_echeance}. Objectif : proposer un transfert vers une compagnie partenaire pour générer une commission.`,
         statut: 'ouvert',
       });
+      if (rRappel && rRappel.error) console.error('Échec de création du rappel de transfert automatique :', errMsg(rRappel));
       allRappels = await dbGet('rappels', 'select=*');
     }
     return { error: false, contrat: rContrat && rContrat[0] ? rContrat[0] : null };
@@ -8979,7 +9158,8 @@ async function saveContrat() {
 
   // Si ce contrat provient d'une opportunité passée en "Gagné", on la lie au contrat créé
   if (prefillOpportunite && prefillOpportunite.id && resultPrincipal.contrat && resultPrincipal.contrat.id) {
-    await dbPatch('opportunites', prefillOpportunite.id, { contrat_id: resultPrincipal.contrat.id });
+    const rOpp = await dbPatch('opportunites', prefillOpportunite.id, { contrat_id: resultPrincipal.contrat.id });
+    if (rOpp && rOpp.error) showError('⚠️ Contrat créé, mais le lien avec l\u2019opportunité n\u2019a pas pu être enregistré : ' + errMsg(rOpp));
     allOpportunites = await dbGet('opportunites', 'select=*');
     prefillOpportunite = null;
   }
@@ -9111,7 +9291,7 @@ async function saveEditCommission(commId) {
   if (body.statut === 'extourné' && !etaitDejaExtourne) {
     const montantOriginal = Math.abs(body.montant_final != null ? body.montant_final : (body.montant_estime || 0));
     if (montantOriginal > 0) {
-      await dbPost('commissions_attente', {
+      const rExtourne = await dbPost('commissions_attente', {
         client_id: original ? original.client_id : null,
         contrat_id: original ? original.contrat_id : null,
         client_nom: body.client_nom,
@@ -9122,7 +9302,11 @@ async function saveEditCommission(commId) {
         statut: 'en_attente',
         date_creation: new Date().toISOString().split('T')[0],
       });
-      showError(`✓ Commission extournée. Une commission de CHF -${montantOriginal.toLocaleString()} a été créée en attente pour ${body.compagnie} — rapproche-la avec "+ Rapprocher une commission" quand le bordereau de reprise arrive.`);
+      if (rExtourne && rExtourne.error) {
+        showError('⚠️ Contrat extourné, mais la commission négative de reprise n\u2019a pas pu être créée : ' + errMsg(rExtourne) + ' — crée-la manuellement.');
+      } else {
+        showError(`✓ Commission extournée. Une commission de CHF -${montantOriginal.toLocaleString()} a été créée en attente pour ${body.compagnie} — rapproche-la avec "+ Rapprocher une commission" quand le bordereau de reprise arrive.`);
+      }
     }
   }
 
@@ -10023,8 +10207,8 @@ async function saveContactCompagnie(id) {
     email: document.getElementById('cc-email').value.trim() || null,
   };
   if (!body.compagnie) { showError('Le nom de la compagnie est obligatoire.'); return; }
-  if (id) await dbPatch('compagnies_contacts', id, body);
-  else await dbPost('compagnies_contacts', body);
+  const r = id ? await dbPatch('compagnies_contacts', id, body) : await dbPost('compagnies_contacts', body);
+  if (r && r.error) { showError('Erreur lors de l\u2019enregistrement du contact : ' + errMsg(r)); return; }
   allCompagniesContacts = await dbGet('compagnies_contacts', 'select=*&order=compagnie.asc');
   document.getElementById('modal-contact-cie').remove();
   navigate('contacts-compagnies');

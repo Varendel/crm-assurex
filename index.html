@@ -342,7 +342,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-22 suva-fix</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-22 audit-2-nettoyage</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -3902,8 +3902,6 @@ function renderTousContrats() {
     </div>`;
 }
 
-function viewContratsSansAgent() { return viewTousContrats(); }
-
 function viewPortefeuille(filtre) {
   const titre = filtre === 'prive' ? 'Clients privés' : filtre === 'entreprise' ? 'Entreprises' : 'Portefeuille complet';
   const agentOptions = allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
@@ -4006,35 +4004,6 @@ function renderPortefeuilleTable(filtre) {
 }
 
 // CLIENTS
-function viewClients() {
-  const agentOptions = allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
-  setTimeout(() => renderClientsTable(), 0);
-
-  return `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)" id="cl-titre">Clients (${allClients.length})</h2>
-      <button class="btn-add" onclick="navigate('nouveau-client')">+ Nouveau client</button>
-    </div>
-    <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
-      <input class="form-input" id="cl-search" placeholder="🔍 Rechercher un nom, ville, email..." style="flex:1;min-width:200px" oninput="renderClientsTable()"/>
-      <select class="form-select" id="cl-agent" style="max-width:200px" onchange="renderClientsTable()">
-        <option value="">Tous les agents</option>${agentOptions}
-      </select>
-      <select class="form-select" id="cl-statut" style="max-width:160px" onchange="renderClientsTable()">
-        <option value="">Tous statuts</option>
-        <option value="actif">Actif</option>
-        <option value="prospect">Prospect</option>
-        <option value="inactif">Inactif</option>
-      </select>
-      <select class="form-select" id="cl-segment" style="max-width:160px" onchange="renderClientsTable()">
-        <option value="">Privé + Entreprise</option>
-        <option value="Privé">Privé</option>
-        <option value="Entreprise">Entreprise</option>
-      </select>
-    </div>
-    <div id="cl-table-container"></div>`;
-}
-
 function renderClientsTable() {
   const search = (document.getElementById('cl-search')?.value || '').toLowerCase().trim();
   const agentFilter = document.getElementById('cl-agent')?.value || '';
@@ -4616,14 +4585,6 @@ function toggleEditClient() {
 }
 
 // ═══ MARQUAGE CLIENT OZ ASSURE ═══
-async function toggleSourceCofidex(clientId, valeur) {
-  const r = await dbPatch('clients', clientId, { source_cofidex: valeur });
-  if (r && r.error) { showError('Erreur : ' + errMsg(r)); return; }
-  logAction('toggle_source_cofidex', 'clients', clientId, valeur ? 'Client marqué EX Groupe' : 'Marquage EX retiré');
-  allClients = await dbGet('clients', 'select=*');
-  showClient(clientId);
-}
-
 async function toggleSourceOz(clientId, valeur) {
   const r = await dbPatch('clients', clientId, { source_oz: valeur });
   if (r && r.error) { showError('Erreur : ' + errMsg(r)); return; }
@@ -9016,12 +8977,6 @@ function updateCommissionPreview() {
   const natureEl = document.getElementById('ct-nature-commission');
   const labelEl = document.getElementById('commission-preview-label');
   if (natureEl && labelEl) labelEl.textContent = natureEl.value === 'gestion' ? 'Commission de gestion estimée' : 'Commission d\u2019acquisition estimée';
-}
-
-function getProduitLabel(categorie, produitId) {
-  const produits = CATALOGUE_PRODUITS[categorie] || [];
-  const produit = produits.find(p => p.id === produitId);
-  return produit ? produit.label : produitId;
 }
 
 async function creerContratEtCommission(clientId, compagnie, produitLabel, primeMensuelle, modules, montantCommission, detailCommission, plaques, dejaAnnuelle) {

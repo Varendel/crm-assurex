@@ -380,7 +380,7 @@ function showCampagne(themeId) {
     const mailtoCorps = encodeURIComponent(t.corps.replace(/{prenom}/g, c.prenom || ''));
     const mailtoHref = `mailto:${c.email || ''}?subject=${mailtoSujet}&body=${mailtoCorps}`;
     return `<tr>
-      <td style="padding:10px 14px;font-size:13px;font-weight:700;color:var(--text)">${c.prenom} ${c.nom}</td>
+      <td style="padding:10px 14px;font-size:13px;font-weight:700;color:var(--text)">${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`}</td>
       <td style="padding:10px 14px;font-size:12px;color:var(--text-muted)">${c.email || '—'}</td>
       <td style="padding:10px 14px;font-size:12px;color:var(--text-muted)">${c.mobile || c.tel || '—'}</td>
       <td style="padding:10px 14px;text-align:right">

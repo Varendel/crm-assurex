@@ -1,6 +1,8 @@
 function viewNouveauRappel() {
   const agentOptions = allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
-  const clientOptions = allClients.map(c => `<option value="${c.id}">${c.prenom} ${c.nom}</option>`).join('');
+  const clientOptions = allClients.map(c => `<option value="${c.id}" ${prefill && prefill.clientId === c.id ? 'selected' : ''}>${c.prenom} ${c.nom}</option>`).join('');
+  const prefill = window._prefillRappelDepuisPostit || null;
+  window._prefillRappelDepuisPostit = null; // évite qu'un rechargement ultérieur du formulaire ne le réutilise par erreur
   return `
     <button onclick="navigate('rappels')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
     <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouvelle tâche / rappel</h2>
@@ -14,7 +16,7 @@ function viewNouveauRappel() {
       </div>
     </div>`)}
     ${sectionCard('Détails', '#38bdf8', `<div class="form-grid">
-      <div class="form-field" style="grid-column:span 2"><label class="form-label">Titre *</label><input class="form-input" id="r-titre" placeholder="Ex: Affilier collaborateur à la LPP"/></div>
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Titre *</label><input class="form-input" id="r-titre" value="${prefill ? (prefill.titre || '').replace(/"/g, '&quot;') : ''}" placeholder="Ex: Affilier collaborateur à la LPP"/></div>
       <div class="form-field"><label class="form-label">Client</label><select class="form-select" id="r-client" onchange="onClientChangeRappel()"><option value="">— Sélectionner —</option>${clientOptions}</select></div>
       <div class="form-field" id="r-collab-field" style="display:none"><label class="form-label">Collaborateur</label><select class="form-select" id="r-collaborateur"><option value="">— Sélectionner —</option></select></div>
       <div class="form-field"><label class="form-label">Contrat lié</label><select class="form-select" id="r-contrat"><option value="">— Aucun —</option></select></div>
@@ -183,6 +185,14 @@ async function saveRappel() {
   if (created && created[0] && body.apporteur_id) {
     const agent = allAgents.find(a => a.id === body.apporteur_id);
     if (agent) { try { await sendTaskAssignmentEmail(created[0], agent); } catch(e) {} }
+  }
+
+  // Si ce rappel provient de la conversion d'un post-it, on supprime ce dernier —
+  // il ne doit pas continuer à exister en double une fois transformé en vraie tâche suivie.
+  if (postitEnConversion) {
+    const rSuppr = await dbDelete('postits', postitEnConversion.id);
+    if (rSuppr && rSuppr.error) showError('⚠️ Tâche créée, mais le post-it d\u2019origine n\u2019a pas pu être supprimé — tu peux le retirer manuellement.');
+    postitEnConversion = null;
   }
 
   allRappels = await dbGet('rappels', 'select=*');
@@ -491,12 +501,20 @@ async function savePostitContenu(postitId, contenu) {
 }
 
 async function deletePostit(postitId, clientId) {
-  const token = await getValidAccessToken() || SUPABASE_KEY;
-  await fetch(`${SUPABASE_URL}/rest/v1/postits?id=eq.${postitId}`, {
-    method: 'DELETE',
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
-  });
+  const r = await dbDelete('postits', postitId);
+  if (r && r.error) { showError('Erreur lors de la suppression du post-it : ' + errMsg(r)); return; }
   showClient(clientId);
+}
+
+// Convertit un post-it en une vraie tâche/rappel avec échéance — le post-it n'a alors plus lieu
+// d'exister seul sans suivi ; il est supprimé automatiquement une fois le rappel enregistré.
+let postitEnConversion = null; // { id, clientId } — mémorisé le temps de remplir le formulaire
+function convertirPostitEnRappel(postitId, clientId, boutonCliquer) {
+  const note = boutonCliquer.closest('.postit-note');
+  const contenu = note ? note.querySelector('.postit-text')?.value : '';
+  postitEnConversion = { id: postitId, clientId };
+  window._prefillRappelDepuisPostit = { titre: (contenu || '').slice(0, 120), clientId };
+  navigate('nouveau-rappel');
 }
 
 // ═══ FACTURES ═══

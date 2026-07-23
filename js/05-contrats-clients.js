@@ -107,6 +107,7 @@ async function showClient(id) {
         <div class="postit-note" style="background:${p.couleur || '#fde047'};transform:rotate(${p.rotation || 0}deg)">
           <button onclick="deletePostit('${p.id}','${c.id}')" class="postit-close">×</button>
           <textarea class="postit-text" onblur="savePostitContenu('${p.id}', this.value)" placeholder="Écris ici...">${p.contenu || ''}</textarea>
+          <button onclick="convertirPostitEnRappel('${p.id}','${c.id}', this)" style="position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,0.12);border:none;border-radius:6px;padding:3px 7px;font-size:10px;font-weight:700;color:#1a1a1a;cursor:pointer">→ Tâche</button>
         </div>`).join('')}
       <button onclick="addPostit('${c.id}')" class="postit-add" title="Ajouter un post-it">📌 +</button>
     </div>

@@ -990,4 +990,21 @@ async function dbDelete(table, id) {
   }
 }
 
+// Appelle une fonction PostgreSQL exposée via /rest/v1/rpc/ — utilisé pour les accès qui
+// doivent rester impossibles à énumérer (ex: statut d'une signature, accessible uniquement
+// via son jeton exact, jamais par simple lecture de table).
+async function dbRpc(fonction, params) {
+  try {
+    const token = await getValidAccessToken() || SUPABASE_KEY;
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fonction}`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(params || {}),
+    });
+    if (!r.ok) { console.error(`dbRpc(${fonction}) HTTP ${r.status}`); return null; }
+    const data = await r.json();
+    return Array.isArray(data) ? data : (data ? [data] : []);
+  } catch(e) { console.error(`dbRpc(${fonction}) exception`, e); return null; }
+}
+
 // ═══ MSAL ═══

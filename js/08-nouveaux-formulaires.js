@@ -1,6 +1,6 @@
 function viewNouveauRappel() {
   const agentOptions = allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
-  const clientOptions = allClients.map(c => `<option value="${c.id}" ${prefill && prefill.clientId === c.id ? 'selected' : ''}>${c.prenom} ${c.nom}</option>`).join('');
+  const clientOptions = allClients.map(c => `<option value="${c.id}" ${prefill && prefill.clientId === c.id ? 'selected' : ''}>${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`}</option>`).join('');
   const prefill = window._prefillRappelDepuisPostit || null;
   window._prefillRappelDepuisPostit = null; // évite qu'un rechargement ultérieur du formulaire ne le réutilise par erreur
   return `

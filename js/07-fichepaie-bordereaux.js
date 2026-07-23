@@ -1167,7 +1167,7 @@ async function saveDemandeOffre() {
 
 function viewNouvelleOpportunite() {
   const agentOptions = allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
-  const clientOptions = allClients.map(c => `<option value="${c.id}">${c.prenom} ${c.nom}</option>`).join('');
+  const clientOptions = allClients.map(c => `<option value="${c.id}">${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`}</option>`).join('');
   return `
     <button onclick="navigate('opportunites')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
     <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouvelle opportunité</h2>

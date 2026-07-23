@@ -342,7 +342,7 @@
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-22 audit-2-nettoyage</div>
+      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-22 audit-3-mutualisation</div>
     </div>
   </div>
   <!-- MAIN -->
@@ -1045,9 +1045,7 @@ function imprimerResultatImmo() {
     @media print{ button{display:none !important} }
   </style></head><body>
     <div class="entete">
-      <div style="background:#113679;border-radius:8px;padding:14px 18px;display:flex;align-items:center">
-        <img src="${ASSUREX_LOGO_WORDMARK_PNG}" alt="Assurex" style="height:34px;width:auto;display:block"/>
-      </div>
+      ${genererBadgeLogoAssurex()}
       <div style="font-size:10.5px;color:#666">c/o COFIDEX SA · Rue du Centre 142 · 1025 St-Sulpice<br/>Courtier en assurances FINMA F01492173</div>
     </div>
     <h1>Analyse de financement immobilier — ${nom}</h1>
@@ -1601,9 +1599,7 @@ function imprimerResultatLPP() {
   </style></head><body>
     <div class="entete">
       <div style="display:flex;align-items:center;gap:14px">
-        <div style="background:#113679;border-radius:8px;padding:14px 18px;display:flex;align-items:center">
-          <img src="${ASSUREX_LOGO_WORDMARK_PNG}" alt="Assurex" style="height:34px;width:auto;display:block"/>
-        </div>
+        ${genererBadgeLogoAssurex()}
         <div class="coord-assurex">c/o COFIDEX SA · Rue du Centre 142 · 1025 St-Sulpice<br/>Courtier en assurances FINMA F01492173</div>
       </div>
       <div class="coord-client">
@@ -1718,19 +1714,15 @@ function voirBilanSauvegarde(bilanId) {
   const bilans = window._bilansPrevoyanceActuel || [];
   const b = bilans.find(x => x.id === bilanId);
   if (!b) return;
-  const modal = document.createElement('div');
-  modal.id = 'modal-bilan-lpp';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
-  modal.innerHTML = `
+  const modal = creerModale('modal-bilan-lpp', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:900px;max-height:90vh;overflow-y:auto">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
         <h3 style="margin:0;font-size:16px;font-weight:800;color:var(--text)">Bilan de prévoyance — ${fmtDate(b.created_at)}</h3>
         <button onclick="document.getElementById('modal-bilan-lpp').remove()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px">✕</button>
       </div>
       ${b.html_snapshot}
-    </div>`;
+    </div>`);
   modal.onclick = e => { if (e.target === modal) modal.remove(); };
-  document.body.appendChild(modal);
 }
 
 // Catalogue des produits d'assurance par catégorie, avec modules complémentaires (à enrichir au fur et à mesure)
@@ -2742,6 +2734,34 @@ function errMsg(r) {
   return r.detail || r.status || 'Erreur inconnue';
 }
 
+// Crée une fenêtre modale standard (fond sombre + boîte centrée) et l'ajoute au document.
+// Mutualise ce qui était recopié à la main dans 13 endroits différents — un seul point à
+// modifier si un jour le style général des modales doit changer (couleur du fond, etc.).
+// Retourne l'élément modal, pour que l'appelant puisse encore lui attacher un comportement
+// particulier (ex: fermeture au clic sur le fond) après l'avoir créé.
+function creerModale(id, contenuHtml, options = {}) {
+  document.getElementById(id)?.remove(); // évite un doublon si redéclenché rapidement
+  const opacite = options.opacite !== undefined ? options.opacite : 0.7;
+  const padding = options.padding || '20px';
+  const overflowY = options.overflowY !== false; // true par défaut
+  const modal = document.createElement('div');
+  modal.id = id;
+  modal.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,${opacite});z-index:9999;display:flex;align-items:center;justify-content:center;padding:${padding};${overflowY ? 'overflow-y:auto' : ''}`;
+  modal.innerHTML = contenuHtml;
+  document.body.appendChild(modal);
+  return modal;
+}
+
+// Le petit encadré bleu marine contenant le logo Assurex, répété dans les documents imprimés
+// (bilan de prévoyance, financement immobilier, mandat de courtage). Seule cette partie est
+// réellement identique d'un document à l'autre — les coordonnées et infos client qui l'entourent
+// diffèrent légitimement selon le document, donc elles ne sont volontairement pas mutualisées ici.
+function genererBadgeLogoAssurex(hauteurLogo = 34, padding = '14px 18px', display = 'flex') {
+  return `<div style="background:#113679;border-radius:8px;padding:${padding};display:${display};align-items:center">
+    <img src="${ASSUREX_LOGO_WORDMARK_PNG}" alt="Assurex" style="height:${hauteurLogo}px;width:auto;display:block"/>
+  </div>`;
+}
+
 function badge(label, color) {
   return `<span class="badge" style="background:${color}15;color:${color};border:1px solid ${color}30">${label}</span>`;
 }
@@ -3638,14 +3658,9 @@ function showDetailContrat(contratId) {
   // Supprimer une éventuelle modale précédente
   document.getElementById('modal-detail-contrat')?.remove();
 
-  const modal = document.createElement('div');
-  modal.id = 'modal-detail-contrat';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.55);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
-  modal.onclick = e => { if (e.target === modal) modal.remove(); };
-
   const primenMois = ct.prime_annuelle ? Math.round(ct.prime_annuelle / 12) : 0;
 
-  modal.innerHTML = `
+  const contenuHtml = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:0;width:100%;max-width:460px;overflow:hidden">
 
       <!-- Header coloré -->
@@ -3722,7 +3737,8 @@ function showDetailContrat(contratId) {
       </div>
     </div>`;
 
-  document.body.appendChild(modal);
+  const modal = creerModale('modal-detail-contrat', contenuHtml, { opacite: 0.55, padding: '16px', overflowY: false });
+  modal.onclick = e => { if (e.target === modal) modal.remove(); };
 }
 
 // ═══ Contrats sans aucune commission créée (filet de sécurité) ═══
@@ -4476,10 +4492,7 @@ async function showClient(id) {
 function confirmerSuppressionClient(clientId, nomClient) {
   const contratsLies = allContrats.filter(ct => ct.client_id === clientId);
   const commissionsLiees = allCommissionsAttente.filter(c => c.client_id === clientId);
-  const modal = document.createElement('div');
-  modal.id = 'modal-suppression-client';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
-  modal.innerHTML = `
+  creerModale('modal-suppression-client', `
     <div style="background:var(--surface);border-radius:14px;padding:24px;max-width:440px;width:100%">
       <div style="font-size:16px;font-weight:800;color:#f87171;margin-bottom:10px">⚠️ Supprimer ${nomClient} ?</div>
       <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px">Cette action est <strong>définitive et irréversible</strong>. Elle supprimera aussi :</div>
@@ -4492,8 +4505,7 @@ function confirmerSuppressionClient(clientId, nomClient) {
         <button class="btn-secondary" onclick="document.getElementById('modal-suppression-client').remove()" style="flex:1">Annuler</button>
         <button onclick="executerSuppressionClient('${clientId}', this)" style="flex:1;background:#f87171;color:#0a0e1a;border:none;border-radius:8px;padding:10px;font-weight:800;cursor:pointer">🗑️ Confirmer la suppression</button>
       </div>
-    </div>`;
-  document.body.appendChild(modal);
+    </div>`, { opacite: 0.8, padding: '16px', overflowY: false });
 }
 
 async function executerSuppressionClient(clientId, btn) {
@@ -4617,10 +4629,7 @@ async function changerAgentClient(clientId, agentId) {
 // de courtage (aucune exigence légale de forme stricte), mais moins probant qu'une signature
 // manuscrite ou une solution qualifiée type Skribble/DocuSign.
 function ouvrirSignatureMandat(clientId) {
-  const modal = document.createElement('div');
-  modal.id = 'modal-signature-mandat';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.8);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px';
-  modal.innerHTML = `
+  creerModale('modal-signature-mandat', `
     <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:520px;width:100%">
       <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">✍️ Signature du mandant</div>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">Choisis comment le client va signer :</div>
@@ -4633,8 +4642,7 @@ function ouvrirSignatureMandat(clientId) {
       <div style="display:flex;gap:10px;margin-top:12px">
         <button class="btn-secondary" onclick="document.getElementById('modal-signature-mandat').remove()">Sans signature</button>
       </div>
-    </div>`;
-  document.body.appendChild(modal);
+    </div>`, { opacite: 0.8, padding: '16px', overflowY: false });
   basculerModeSignature('ici', clientId);
 }
 
@@ -4927,9 +4935,7 @@ function genererMandatCourtage(clientId, signatureDataUrl) {
   </style></head><body>
 
     <div class="entete">
-      <div style="background:#113679;border-radius:8px;padding:10px 16px;display:inline-block">
-        <img src="${ASSUREX_LOGO_WORDMARK_PNG}" alt="Assurex" style="height:28px;width:auto;display:block"/>
-      </div>
+      ${genererBadgeLogoAssurex(28, '10px 16px', 'inline-block')}
     </div>
 
     <h1>MANDAT DE COURTAGE</h1>
@@ -6093,10 +6099,7 @@ function toggleBordereau(id) {
 function showModalEditBordereau(bordereauId) {
   const b = allBordereaux.find(x => x.id === bordereauId);
   if (!b) return;
-  const modal = document.createElement('div');
-  modal.id = 'modal-edit-bordereau';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
-  modal.innerHTML = `
+  creerModale('modal-edit-bordereau', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
       <h3 style="margin:0 0 18px;font-size:16px;font-weight:800;color:var(--text)">Modifier le bordereau ${b.numero || ''}</h3>
       <div class="form-grid">
@@ -6125,8 +6128,7 @@ function showModalEditBordereau(bordereauId) {
         <button class="btn-secondary" onclick="document.getElementById('modal-edit-bordereau').remove()">Annuler</button>
         <button class="btn-save" onclick="saveEditBordereau('${bordereauId}')">✓ Enregistrer</button>
       </div>
-    </div>`;
-  document.body.appendChild(modal);
+    </div>`);
 }
 
 async function deleteBordereau(bordereauId) {
@@ -6187,10 +6189,7 @@ function showModalValidationCommission(bordereauId) {
   if (!b) return;
   const enAttente = allCommissionsAttente.filter(c => (c.compagnie||'').trim().toLowerCase() === (b.compagnie||'').trim().toLowerCase() && c.statut === 'en_attente');
 
-  const modal = document.createElement('div');
-  modal.id = 'modal-validation';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
-  modal.innerHTML = `
+  creerModale('modal-validation', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:0;width:100%;max-width:560px;overflow:hidden">
       <div style="background:#1f2937;padding:18px 24px;display:flex;justify-content:space-between;align-items:center">
         <div style="font-size:16px;font-weight:800;color:#fff">Validation</div>
@@ -6250,8 +6249,7 @@ function showModalValidationCommission(bordereauId) {
           <button class="btn-save" onclick="saveValidationCommission('${bordereauId}')">✓ Valider</button>
         </div>
       </div>
-    </div>`;
-  document.body.appendChild(modal);
+    </div>`);
 }
 
 function prefillMontantEstime() {
@@ -7355,10 +7353,7 @@ async function showEditContrat(contratId, returnTo) {
   const perioActuelle = ct.periodicite || 1;
   const primeAff = perioActuelle > 1 ? Math.round((ct.prime_annuelle || 0) / perioActuelle) : (ct.prime_annuelle || 0);
 
-  const modal = document.createElement('div');
-  modal.id = 'modal-edit-contrat';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
-  modal.innerHTML = `
+  creerModale('modal-edit-contrat', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:520px">
       <h3 style="margin:0 0 20px;font-size:16px;font-weight:800;color:var(--text)">Modifier le contrat</h3>
       <div class="form-grid">
@@ -7416,8 +7411,7 @@ async function showEditContrat(contratId, returnTo) {
         <button class="btn-secondary" onclick="document.getElementById('modal-edit-contrat').remove()">Annuler</button>
         <button class="btn-save" onclick="saveEditContrat('${ct.id}','${ct.client_id}', window._editContratReturnTo)">✓ Enregistrer</button>
       </div>
-    </div>`;
-  document.body.appendChild(modal);
+    </div>`);
 }
 
 async function deleteContrat(contratId, clientId, returnTo) {
@@ -7522,10 +7516,7 @@ async function saveEditContrat(contratId, clientId, returnTo) {
   if (returnTo) { navigate(returnTo); } else { showClient(clientId); }
 }
 function showFormCollaborateur(clientId) {
-  const modal = document.createElement('div');
-  modal.id = 'modal-collaborateur';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-  modal.innerHTML = `
+  creerModale('modal-collaborateur', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
       <h3 style="margin:0 0 20px;font-size:16px;font-weight:800;color:var(--text)">Nouveau collaborateur</h3>
       <div class="form-grid">
@@ -7540,8 +7531,7 @@ function showFormCollaborateur(clientId) {
         <button class="btn-secondary" onclick="document.getElementById('modal-collaborateur').remove()">Annuler</button>
         <button class="btn-save" onclick="saveCollaborateur('${clientId}')">✓ Enregistrer</button>
       </div>
-    </div>`;
-  document.body.appendChild(modal);
+    </div>`, { overflowY: false });
   setTimeout(() => initAdresseAutocomplete('col-adresse', ({ rue, npa, ville, canton }) => {
     const el = document.getElementById('col-adresse');
     if (el) el.value = [rue, npa, ville].filter(Boolean).join(', ');
@@ -7604,10 +7594,7 @@ async function showFormFacture(clientId) {
     if (m) prochainNumero = 'FAC-' + String(parseInt(m[1], 10) + 1).padStart(4, '0');
   }
 
-  const modal = document.createElement('div');
-  modal.id = 'modal-facture';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-  modal.innerHTML = `
+  creerModale('modal-facture', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
       <h3 style="margin:0 0 20px;font-size:16px;font-weight:800;color:var(--text)">Nouvelle facture</h3>
       <div class="form-grid">
@@ -7621,8 +7608,7 @@ async function showFormFacture(clientId) {
         <button class="btn-secondary" onclick="document.getElementById('modal-facture').remove()">Annuler</button>
         <button class="btn-save" onclick="saveFacture('${clientId}')">✓ Créer la facture</button>
       </div>
-    </div>`;
-  document.body.appendChild(modal);
+    </div>`, { overflowY: false });
 }
 
 async function saveFacture(clientId) {
@@ -7724,10 +7710,7 @@ function showFormVehicule(clientId, vehiculeId) {
   const v = vehiculeId ? allVehicules.find(x => x.id === vehiculeId) : null;
   const contratsFlotte = allContrats.filter(ct => ct.client_id === clientId && (ct.produit||'').toLowerCase().includes('véhicule'));
   const contratActuel = v?.contrat_id ? contratsFlotte.find(ct => ct.id === v.contrat_id) : null;
-  const modal = document.createElement('div');
-  modal.id = 'modal-vehicule';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
-  modal.innerHTML = `
+  creerModale('modal-vehicule', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
       <h3 style="margin:0 0 18px;font-size:16px;font-weight:800;color:var(--text)">${v ? 'Modifier le véhicule' : '🚗 Nouveau véhicule'}</h3>
       <div class="form-grid">
@@ -7754,8 +7737,7 @@ function showFormVehicule(clientId, vehiculeId) {
         <button class="btn-secondary" onclick="document.getElementById('modal-vehicule').remove()">Annuler</button>
         <button class="btn-save" onclick="saveVehicule('${clientId}'${v ? `,'${v.id}'` : ''})">✓ Enregistrer</button>
       </div>
-    </div>`;
-  document.body.appendChild(modal);
+    </div>`);
 }
 
 function afficherCouverturesFlotte(clientId) {
@@ -7811,10 +7793,7 @@ async function importFlottePdf(clientId, input) {
 function showModalVerifFlotte(clientId, vehicules) {
   const contratsFlotte = allContrats.filter(ct => ct.client_id === clientId && (ct.produit||'').toLowerCase().includes('véhicule'));
   window._flotteAImporter = vehicules;
-  const modal = document.createElement('div');
-  modal.id = 'modal-verif-flotte';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
-  modal.innerHTML = `
+  creerModale('modal-verif-flotte', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:26px;width:100%;max-width:720px;max-height:85vh;overflow-y:auto">
       <h3 style="margin:0 0 6px;font-size:16px;font-weight:800;color:var(--text)">🤖 Vérification avant import — ${vehicules.length} véhicule(s)</h3>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">Décoche les lignes incorrectes ou en double avant de confirmer. Rien n'est encore enregistré.</div>
@@ -7853,8 +7832,7 @@ function showModalVerifFlotte(clientId, vehicules) {
         <button class="btn-secondary" onclick="document.getElementById('modal-verif-flotte').remove()">Annuler</button>
         <button class="btn-save" onclick="confirmerImportFlotte('${clientId}')">✓ Confirmer l'import des véhicules cochés</button>
       </div>
-    </div>`;
-  document.body.appendChild(modal);
+    </div>`);
 }
 
 async function confirmerImportFlotte(clientId) {
@@ -9134,10 +9112,7 @@ function showModalEditCommission(commId) {
   const b = c.bordereau_id ? allBordereaux.find(bd => bd.id === c.bordereau_id) : null;
   const ct = c.contrat_id ? allContrats.find(x => x.id === c.contrat_id) : null;
   const cl = ct ? allClients.find(x => x.id === ct.client_id) : (c.client_id ? allClients.find(x => x.id === c.client_id) : null);
-  const modal = document.createElement('div');
-  modal.id = 'modal-edit-commission';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px;overflow-y:auto';
-  modal.innerHTML = `
+  creerModale('modal-edit-commission', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:500px">
       <h3 style="margin:0 0 6px;font-size:16px;font-weight:800;color:var(--text)">Commission — ${c.client_nom || '—'}</h3>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">${b ? `Rapprochée du bordereau ${b.numero || ''}` : "Pas encore rapprochée d'un bordereau"}</div>
@@ -9180,8 +9155,7 @@ function showModalEditCommission(commId) {
         <button class="btn-secondary" onclick="document.getElementById('modal-edit-commission').remove()">Annuler</button>
         <button class="btn-save" onclick="saveEditCommission('${commId}')">✓ Enregistrer</button>
       </div>
-    </div>`;
-  document.body.appendChild(modal);
+    </div>`);
 }
 
 async function deleteCommission(commId) {
@@ -10136,10 +10110,7 @@ async function viewContactsCompagnies() {
 
 function showFormContactCompagnie(id) {
   const existant = id ? (window._contactsCompagnies || []).find(c => c.id === id) : null;
-  const modal = document.createElement('div');
-  modal.id = 'modal-contact-cie';
-  modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:9999;display:flex;align-items:center;justify-content:center;padding:20px';
-  modal.innerHTML = `
+  creerModale('modal-contact-cie', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:440px">
       <h3 style="margin:0 0 20px;font-size:16px;font-weight:800;color:var(--text)">${existant ? 'Modifier' : 'Ajouter'} une compagnie</h3>
       <div class="form-grid">
@@ -10151,8 +10122,7 @@ function showFormContactCompagnie(id) {
         <button class="btn-secondary" onclick="document.getElementById('modal-contact-cie').remove()">Annuler</button>
         <button class="btn-save" onclick="saveContactCompagnie(${existant ? `'${existant.id}'` : 'null'})">✓ Enregistrer</button>
       </div>
-    </div>`;
-  document.body.appendChild(modal);
+    </div>`, { overflowY: false });
 }
 
 async function saveContactCompagnie(id) {

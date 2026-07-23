@@ -1055,8 +1055,8 @@ function renderPortefeuilleTable(filtre) {
     const ca = caClient(c.id);
     return `<a href="?client=${c.id}" class="table-row" style="grid-template-columns:${cols};text-decoration:none;color:inherit" onclick="return irVersClient(event, '${c.id}')">
       <div>
-        <div style="font-weight:700;font-size:13px;color:var(--text)">${c.prenom} ${c.nom}${getClientMiniLogos(c)}</div>
-        <div style="font-size:11px;color:var(--text-muted)">${c.ville || ''} · ${c.profession || ''}</div>
+        <div style="font-weight:700;font-size:13px;color:var(--text)">${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`}${getClientMiniLogos(c)}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${c.npa || ''} ${c.ville || ''} · ${c.profession || ''}</div>
       </div>
       <div><div style="font-size:11px;color:var(--text)">${c.email || ''}</div><div style="font-size:11px;color:var(--text-muted)">${c.mobile || ''}</div></div>
       <div>${badge(c.statut || '—', statutColor(c.statut))}</div>
@@ -1100,7 +1100,7 @@ function renderClientsTable() {
   let rows = filtered.map(c => {
     const agent = agentById(c.apporteur_id);
     return `<a href="?client=${c.id}" class="table-row" style="grid-template-columns:${cols};text-decoration:none;color:inherit" onclick="return irVersClient(event, '${c.id}')">
-      <div><div style="font-weight:700;font-size:13px;color:var(--text)">${c.prenom} ${c.nom}</div><div style="font-size:11px;color:var(--text-muted)">${c.ville || ''} · ${c.profession || ''}</div></div>
+      <div><div style="font-weight:700;font-size:13px;color:var(--text)">${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`}</div><div style="font-size:11px;color:var(--text-muted)">${c.npa || ''} ${c.ville || ''} · ${c.profession || ''}</div></div>
       <div><div style="font-size:11px;color:var(--text)">${c.email || ''}</div><div style="font-size:11px;color:var(--text-muted)">${c.mobile || ''}</div></div>
       <div>${badge(c.statut || '—', statutColor(c.statut))}</div>
       <div style="font-size:12px;color:var(--text-muted)">${c.segment || '—'}</div>

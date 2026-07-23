@@ -667,7 +667,7 @@ async function envoyerVersAutreAppareil(clientId, mode) {
       if (statutEl) statutEl.innerHTML = '⏱️ Délai dépassé — régénère un nouveau lien si besoin.';
       return;
     }
-    const resultats = await dbGet('signature_requests', `token=eq.${token}&select=signature_data,statut`);
+    const resultats = await dbRpc('get_signature_request', { p_token: token });
     const demande = resultats && resultats[0];
     if (demande && demande.signature_data) {
       clearInterval(window._pollingSignatureInterval);
@@ -720,7 +720,7 @@ async function afficherPageSignatureAutonome(token) {
     </div>
   </div>`;
 
-  const resultats = await dbGet('signature_requests', `token=eq.${token}&select=*`);
+  const resultats = await dbRpc('get_signature_request', { p_token: token });
   const demande = resultats && resultats[0];
   const zone = document.getElementById('contenu-signature-autonome');
   if (!demande) {

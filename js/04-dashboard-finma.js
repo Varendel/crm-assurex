@@ -1029,7 +1029,7 @@ function renderPortefeuilleTable(filtre) {
     if (entiteFilter === 'oz' && !c.source_oz) return false;
     if (entiteFilter === 'assurex' && !c.source_cofidex && c.source_oz) return false;
     if (search) {
-      const haystack = `${c.prenom||''} ${c.nom||''} ${c.ville||''} ${c.email||''} ${c.profession||''}`.toLowerCase();
+      const haystack = `${estEntreprise(c) ? '' : (c.prenom||'')} ${c.nom||''} ${c.ville||''} ${c.email||''} ${c.profession||''}`.toLowerCase();
       if (!haystack.includes(search)) return false;
     }
     return true;
@@ -1088,7 +1088,7 @@ function renderClientsTable() {
     if (statutFilter && c.statut !== statutFilter) return false;
     if (segmentFilter && (c.segment || 'Privé') !== segmentFilter) return false;
     if (search) {
-      const haystack = `${c.prenom||''} ${c.nom||''} ${c.ville||''} ${c.email||''} ${c.profession||''}`.toLowerCase();
+      const haystack = `${estEntreprise(c) ? '' : (c.prenom||'')} ${c.nom||''} ${c.ville||''} ${c.email||''} ${c.profession||''}`.toLowerCase();
       if (!haystack.includes(search)) return false;
     }
     return true;

@@ -828,6 +828,7 @@ function genererMandatCourtage(clientId, signatureDataUrl) {
     <div class="entete">
       ${genererBadgeLogoAssurex(28, '10px 16px', 'inline-block')}
     </div>
+    <div style="text-align:center;font-size:7px;color:#ccc;margin:2px 0 0">En partenariat avec OZ Assure</div>
 
     <h1>MANDAT DE COURTAGE</h1>
     <div class="sous-titre">Représentation et gestion du portefeuille d'assurances</div>

@@ -297,6 +297,10 @@ async function showEditContrat(contratId, returnTo) {
           <option value="">— Aucun / pas de partage —</option>
           ${allAgents.map(a => `<option value="${a.id}" ${ct.apporteur_id===a.id?'selected':''}>${a.prenom} ${a.nom}${a.role==='signataire'?' (moi-même)':''}</option>`).join('')}
         </select></div>
+        <div class="form-field"><label class="form-label">Co-apporteur (si client apporté à 2 — répartition 1/3 chacun + 1/3 signataire)</label><select class="form-select" id="ect-co-apporteur">
+          <option value="">— Aucun —</option>
+          ${allAgents.filter(a => a.role !== 'signataire').map(a => `<option value="${a.id}" ${ct.co_apporteur_id===a.id?'selected':''}>${a.prenom} ${a.nom}</option>`).join('')}
+        </select></div>
         <div class="form-field"><label class="form-label">Statut</label>
           <select class="form-select" id="ect-statut">
             <option value="actif" ${ct.statut==='actif'?'selected':''}>Actif</option>
@@ -386,6 +390,7 @@ async function saveEditContrat(contratId, clientId, returnTo) {
     statut: document.getElementById('ect-statut').value,
     commissionne,
     apporteur_id: document.getElementById('ect-apporteur').value || null,
+    co_apporteur_id: document.getElementById('ect-co-apporteur') ? (document.getElementById('ect-co-apporteur').value || null) : null,
     modules: document.getElementById('ect-modules').value.trim() || null,
   };
   const btn = document.querySelector('#modal-edit-contrat .btn-save');

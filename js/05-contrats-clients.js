@@ -43,6 +43,7 @@ async function showClient(id) {
       <div style="display:flex;gap:10px">
         <button onclick="toggleEditClient()" style="background:${editingClient ? 'var(--red-dim)' : 'var(--surface)'};border:1px solid ${editingClient ? 'rgba(248,113,113,0.3)' : 'var(--border)'};border-radius:8px;padding:7px 16px;color:${editingClient ? 'var(--red)' : 'var(--text-muted)'};font-size:12px;font-weight:700;cursor:pointer">${editingClient ? '✕ Annuler' : '✏️ Modifier'}</button>
         <button onclick="ouvrirSignatureMandat('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📄 Mandat de courtage</button>
+        ${estEntreprise(c) ? `<button onclick="genererFicheDemandeOffre('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📋 Fiche demande d'offre</button>` : ''}
         <button onclick="window.print()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🖨️ Imprimer la fiche</button>
       </div>
     </div>
@@ -903,6 +904,152 @@ function genererMandatCourtage(clientId, signatureDataUrl) {
     </div>
 
     <div class="footer">ASSUREX Sàrl – Rue du Centre 142, 1025 St-Sulpice – Autorisation FINMA F01492173</div>
+
+    <button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
+  </body></html>`);
+  win.document.close();
+}
+
+// ═══ FICHE DE TRAVAIL — DEMANDE D'OFFRE ENTREPRISE ═══
+// Génère une fiche imprimable de recueil de besoins, préremplie avec ce qui est déjà
+// connu du client (identité, contact, secteur, CCT...) — le reste (masses salariales,
+// couvertures souhaitées, budgets) reste à remplir à la main pendant l'entretien.
+function genererFicheDemandeOffre(clientId) {
+  const c = allClients.find(x => x.id === clientId);
+  if (!c) return;
+  const nomContact = c.prenom || '';
+  const nbCollaborateurs = allCollaborateurs ? allCollaborateurs.filter(co => co.client_id === clientId).length : '';
+  const adresseComplete = [c.adresse, c.npa, c.ville].filter(Boolean).join(', ');
+
+  const champVide = (largeur = '100%') => `<div style="border-bottom:1px solid #999;min-height:16px;width:${largeur};display:inline-block"></div>`;
+  const case_ = (label) => `<span style="display:inline-block;margin-right:14px;white-space:nowrap"><span style="display:inline-block;width:11px;height:11px;border:1px solid #333;margin-right:4px;vertical-align:middle"></span>${label}</span>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(`<html><head><title>Fiche demande d'offre — ${c.nom}</title><meta charset="utf-8">
+  <style>
+    @media print { .print-btn { display:none } @page { margin: 14mm } }
+    body { font-family: Arial, sans-serif; font-size: 11.5px; color: #1a1a1a; max-width: 850px; margin: 20px auto; line-height: 1.45 }
+    h1 { font-size: 17px; margin: 0 0 4px }
+    h2 { font-size: 12.5px; background: #113679; color: #fff; padding: 5px 10px; margin: 16px 0 8px; border-radius: 4px }
+    .sous-titre { color: #555; font-size: 10.5px; margin-bottom: 14px }
+    .ligne { display: flex; gap: 18px; margin-bottom: 8px; align-items: baseline; flex-wrap: wrap }
+    .champ { flex: 1; min-width: 150px }
+    .champ label { display: block; font-size: 9.5px; color: #555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 1px }
+    .rappel-legal { background: #f3f4f6; border-left: 3px solid #113679; padding: 6px 10px; font-size: 9.5px; color: #444; margin: 6px 0 10px }
+    .print-btn { position: fixed; top: 16px; right: 16px; background: #113679; color: #fff; border: none; border-radius: 8px; padding: 10px 18px; font-weight: 700; cursor: pointer; font-size: 13px }
+    table.plaques { width: 100%; border-collapse: collapse; font-size: 10.5px; margin-top: 6px }
+    table.plaques th, table.plaques td { border: 1px solid #ccc; padding: 5px 8px; text-align: left }
+    .footer { margin-top: 22px; font-size: 9px; color: #888; border-top: 1px solid #ddd; padding-top: 8px }
+  </style></head><body>
+
+    <div class="entete">
+      ${genererBadgeLogoAssurex(28, '10px 16px', 'inline-block')}
+    </div>
+
+    <h1>Fiche de demande d'offre — Entreprise</h1>
+    <div class="sous-titre">Document de travail — à compléter pendant l'entretien avec le client</div>
+
+    <h2>1. Identité de l'entreprise</h2>
+    <div class="ligne">
+      <div class="champ"><label>Raison sociale</label>${c.nom || champVide()}</div>
+      <div class="champ"><label>Forme juridique / IDE</label>${c.ide || champVide()}</div>
+      <div class="champ"><label>Date d'inscription au RC</label>${champVide()}</div>
+    </div>
+    <div class="ligne">
+      <div class="champ" style="flex:2"><label>Adresse</label>${adresseComplete || champVide()}</div>
+      <div class="champ"><label>Lieu du risque (si différent)</label>${champVide()}</div>
+    </div>
+    <div class="ligne">
+      <div class="champ"><label>Contact (prénom nom)</label>${nomContact || champVide()}</div>
+      <div class="champ"><label>Téléphone</label>${c.tel || c.mobile || champVide()}</div>
+      <div class="champ"><label>E-mail</label>${c.email || champVide()}</div>
+    </div>
+    <div class="ligne">
+      <div class="champ"><label>Activité principale / secteur</label>${c.profession || champVide()}</div>
+      <div class="champ"><label>Nombre de collaborateurs</label>${nbCollaborateurs || champVide('60px')}</div>
+    </div>
+    <div class="ligne">
+      <div class="champ">${case_('Soumis SUVA ? Oui')} ${case_('Non')}</div>
+      <div class="champ">${case_('Statut indépendant')}</div>
+      <div class="champ">${case_(`Soumis CCT ? ${c.cct ? '(déjà indiqué: Oui)' : 'Oui'}`)} ${case_('Non')}</div>
+    </div>
+
+    <h2>2. Données salariales (base de calcul LAA / LPP / perte de gain)</h2>
+    <div class="rappel-legal">Rappels légaux 2026 : masse salariale max. soumise AVS CHF 90'720/an dès 8h hebdo (soumis ANP) · seuil d'entrée LPP CHF 22'680 · salaire coordonné LPP min. CHF 3'780 – max. CHF 64'260 · plafond LPP sans déduction de coordination CHF 90'720.</div>
+    <div class="ligne">
+      <div class="champ"><label>Chiffre d'affaires</label>${champVide()}</div>
+      <div class="champ"><label>Masse salariale chef d'entreprise</label>${champVide()}</div>
+    </div>
+    <div class="ligne">
+      <div class="champ"><label>Masse salariale AP — Hommes</label>${champVide()}</div>
+      <div class="champ"><label>Masse salariale AP — Femmes</label>${champVide()}</div>
+    </div>
+    <div class="ligne">
+      <div class="champ"><label>Masse salariale ANP — Hommes</label>${champVide()}</div>
+      <div class="champ"><label>Masse salariale ANP — Femmes</label>${champVide()}</div>
+    </div>
+    <div class="ligne">
+      <div class="champ"><label>Salaires excédentaires AVS — Hommes</label>${champVide()}</div>
+      <div class="champ"><label>Salaires excédentaires AVS — Femmes</label>${champVide()}</div>
+    </div>
+
+    <h2>3. Assurances de personnes (collectives)</h2>
+    <div class="ligne">
+      ${case_('LAA')} ${case_('LAAC (complémentaire)')} ${case_('LAAF min. CHF 66\'690 (indépendant)')}
+    </div>
+    <div class="ligne">
+      <div class="champ"><label>Perte de gain maladie — délai d'attente</label>${case_('14j')} ${case_('30j')} ${case_('60j')}</div>
+      <div class="champ"><label>Couverture salaire souhaitée</label>${case_('80%')} ${case_('90%')} ${case_('100%')}</div>
+    </div>
+    <div class="ligne">${case_('Semi-privée souhaitée')}</div>
+    <div class="rappel-legal">LPP — préciser le souhait du client (plans-cadres), puis remplir la fiche Excel dédiée par collaborateur.</div>
+
+    <h2>4. Prévoyance privée (vie du dirigeant / collaborateurs clés)</h2>
+    <div class="ligne">
+      ${case_('3a')} ${case_('3a indépendant')} ${case_('3b')} ${case_('Risque pur')} ${case_('Versement unique')}
+    </div>
+    <div class="ligne">
+      <div class="champ"><label>Budget épargne souhaité (CHF)</label>${champVide()}</div>
+      <div class="champ"><label>Capital invalidité souhaité (CHF)</label>${champVide()}</div>
+      <div class="champ"><label>Capital décès souhaité (CHF)</label>${champVide()}</div>
+    </div>
+    <div class="ligne"><div class="champ"><label>Améliorations souhaitées</label>${case_('Rentes')} ${case_('Épargne')} ${case_('Tranches de cotisations')} ${case_('Rendement')}</div></div>
+
+    <h2>5. Responsabilité civile &amp; choses</h2>
+    <div class="ligne"><div class="champ"><label>Risque particulier lié au domaine d'activité</label>${champVide()}</div></div>
+    <div class="ligne"><div class="champ"><label>Lieux d'exploitation (tous les sites à risque)</label>${champVide()}</div></div>
+    <div class="ligne">
+      ${case_('RC / commerce')} ${case_('Préjudices de fortune (CV + diplômes requis)')} ${case_('Cyber')}
+    </div>
+    <div class="ligne">
+      ${case_('Marchandises à assurer')} ${case_('Transports')} ${case_('Transports spéciaux')} ${case_('Machines à assurer')} ${case_('Vol')} ${case_('All Risk')}
+    </div>
+    <div class="ligne">
+      ${case_('Protection juridique')} ${case_('Construction & maître d\u2019ouvrage')} ${case_('Technique')} ${case_('Perte d\u2019exploitation')}
+    </div>
+    <div class="ligne"><div class="champ"><label>Inventaire — somme d'assurance souhaitée (CHF)</label>${champVide()}</div></div>
+
+    <h2>6. Véhicules</h2>
+    <table class="plaques">
+      <tr><th style="width:30%">N° de plaque</th><th>Marque / modèle</th></tr>
+      <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+      <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+      <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+    </table>
+
+    <h2>7. Synthèse et priorités du client</h2>
+    <div class="ligne"><div class="champ"><label>Objectifs principaux exprimés par le client (dans ses mots)</label>${champVide()}<br/>${champVide()}</div></div>
+    <div class="ligne">
+      <div class="champ"><label>Compagnie(s) actuelle(s) à résilier</label>${champVide()}</div>
+      <div class="champ"><label>Échéance(s) connue(s)</label>${champVide()}</div>
+    </div>
+    <div class="ligne">
+      <div class="champ"><label>Budget global envisagé (CHF/an)</label>${champVide()}</div>
+      <div class="champ"><label>Délai souhaité pour la mise en place</label>${champVide()}</div>
+    </div>
+    <div class="ligne"><div class="champ"><label>Prochaine étape / date de suivi</label>${champVide()}</div></div>
+
+    <div class="footer">ASSUREX Sàrl – Rue du Centre 142, 1025 St-Sulpice – Autorisation FINMA F01492173 — Document de travail interne, non contractuel</div>
 
     <button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
   </body></html>`);

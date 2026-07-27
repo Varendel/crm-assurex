@@ -442,6 +442,10 @@ function viewNouveauContrat() {
         <option value="">— Aucun / pas de partage —</option>
         ${allAgents.map(a => `<option value="${a.id}" ${contratClientId && allClients.find(c=>c.id===contratClientId)?.apporteur_id===a.id ? 'selected' : ''}>${a.prenom} ${a.nom}${a.role==='signataire'?' (moi-même)':''}</option>`).join('')}
       </select></div>
+      <div class="form-field"><label class="form-label">Co-apporteur (si client apporté à 2 — répartition 1/3 chacun + 1/3 signataire)</label><select class="form-select" id="ct-co-apporteur">
+        <option value="">— Aucun —</option>
+        ${allAgents.filter(a => a.role !== 'signataire').map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('')}
+      </select></div>
       <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="ct-statut"><option value="actif">Actif</option><option value="en_cours">En cours de signature</option><option value="annulé">Annulé (réserve refusée / non abouti)</option></select></div>
       <div class="form-field"><label class="form-label">Commissionné ?</label><select class="form-select" id="ct-commissionne" onchange="document.getElementById('ct-rappel-note').style.display = this.value==='non' ? '' : 'none'"><option value="oui">Oui</option><option value="non">Non (pas de convention de collaboration)</option></select>
         <div id="ct-rappel-note" style="display:none;font-size:10.5px;color:var(--text-muted);margin-top:4px">ℹ️ Pas de commission créée. Un rappel sera généré 6 mois avant la date d'échéance pour proposer un transfert vers une compagnie partenaire.</div>
@@ -853,6 +857,7 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
   const contratBody = {
     client_id: clientId,
     apporteur_id: document.getElementById('ct-apporteur').value || null,
+    co_apporteur_id: document.getElementById('ct-co-apporteur') ? (document.getElementById('ct-co-apporteur').value || null) : null,
     compagnie,
     produit: produitLabel,
     modules: modules && modules.length > 0 ? modules.join(', ') : null,

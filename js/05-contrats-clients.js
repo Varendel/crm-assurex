@@ -8,7 +8,7 @@ async function showClient(id) {
   renderSidebar();
   const main = document.getElementById('main-content');
   main.innerHTML = '<div class="loader">Chargement...</div>';
-  const [clients, contrats, rappels, collaborateurs, factures, postits, bilansPrevoyance] = await Promise.all([
+  const [clients, contrats, rappels, collaborateurs, factures, postits, bilansPrevoyance, mandatsSignes] = await Promise.all([
     dbGet('clients', `id=eq.${id}&select=*`),
     dbGet('contrats', `client_id=eq.${id}&select=*`),
     dbGet('rappels', `client_id=eq.${id}&select=*`),
@@ -16,6 +16,7 @@ async function showClient(id) {
     dbGet('factures', `client_id=eq.${id}&select=*&order=date_emission.desc`),
     dbGet('postits', `client_id=eq.${id}&select=*&order=created_at.asc`),
     getBilansPrevoyanceClient(id),
+    getMandatsSignesClient(id),
   ]);
   const c = clients[0];
   if (!c) { main.innerHTML = '<div class="loader">Client introuvable.</div>'; return; }
@@ -216,6 +217,19 @@ async function showClient(id) {
         ${infoBlock("Taux d'activité", c.taux_activite ? c.taux_activite + '%' : '—')}
       </div>`) : ''}
       `}
+      ${sectionCard('📄 Mandats de courtage enregistrés', '#38bdf8', mandatsSignes.length ? `
+        <div style="display:flex;flex-direction:column;gap:8px">
+          ${mandatsSignes.map(m => `
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--surface-alt);border-radius:9px;border:1px solid var(--border)">
+              <div style="flex:1">
+                <div style="font-size:12.5px;font-weight:700;color:var(--text)">${fmtDate(m.created_at)} ${m.signe ? '<span style="color:#4ade80">✓ Signé</span>' : '<span style="color:var(--text-muted)">Non signé</span>'}</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${m.cree_par ? 'Généré par ' + m.cree_par : ''}</div>
+              </div>
+              <button onclick="voirMandatSauvegarde('${m.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 14px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap">👁️ Voir / Télécharger</button>
+              <button onclick="supprimerMandatSauvegarde('${m.id}','${c.id}')" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:16px;padding:0 4px" title="Supprimer">✕</button>
+            </div>`).join('')}
+        </div>
+      ` : `<div style="font-size:12px;color:var(--text-muted)">Aucun mandat encore enregistré — clique sur "📄 Mandat de courtage" en haut de la fiche pour en générer un ; il sera automatiquement sauvegardé ici, accessible par toute l'équipe.</div>`)}
     </div>
 
     <div id="tab-prevoyance" class="hidden">
@@ -788,7 +802,7 @@ function genererMandatCourtage(clientId, signatureDataUrl) {
   };
 
   const win = window.open('', '_blank');
-  win.document.write(`<html><head><title>Mandat de courtage — ${isEnt ? champs.societe : champs.prenom + ' ' + champs.nom}</title><style>
+  const contenuMandatHtml = `<html><head><title>Mandat de courtage — ${isEnt ? champs.societe : champs.prenom + ' ' + champs.nom}</title><style>
     body{font-family:Arial,sans-serif;padding:35px;color:#1a1a1a;font-size:12.5px;line-height:1.5}
     .entete{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #113679;padding-bottom:14px;margin-bottom:20px}
     h1{font-size:19px;color:#113679;text-align:center;margin:10px 0 2px}
@@ -906,14 +920,49 @@ function genererMandatCourtage(clientId, signatureDataUrl) {
     <div class="footer">ASSUREX Sàrl – Rue du Centre 142, 1025 St-Sulpice – Autorisation FINMA F01492173</div>
 
     <button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
-  </body></html>`);
+  </body></html>`;
+  win.document.write(contenuMandatHtml);
   win.document.close();
+
+  // Enregistrement automatique sur la fiche client — toujours disponible ensuite, même si
+  // c'est un(e) collègue qui a généré/fait signer ce mandat à ma place.
+  dbPost('mandats_signes', {
+    client_id: clientId,
+    signe: !!signatureDataUrl,
+    cree_par: (typeof supaSession !== 'undefined' && supaSession && supaSession.email) || null,
+    html_snapshot: contenuMandatHtml,
+  }).then(r => {
+    if (r && r.error) console.error('Échec de l\u2019enregistrement du mandat sur la fiche :', errMsg(r));
+  });
 }
 
 // ═══ FICHE DE TRAVAIL — DEMANDE D'OFFRE ENTREPRISE ═══
 // Génère une fiche imprimable de recueil de besoins, préremplie avec ce qui est déjà
 // connu du client (identité, contact, secteur, CCT...) — le reste (masses salariales,
 // couvertures souhaitées, budgets) reste à remplir à la main pendant l'entretien.
+// Récupère les mandats enregistrés pour un client donné
+async function getMandatsSignesClient(clientId) {
+  return await dbGet('mandats_signes', `client_id=eq.${clientId}&select=*&order=created_at.desc`).catch(() => []);
+}
+
+// Réouvre un mandat sauvegardé dans une nouvelle fenêtre — imprimable/téléchargeable en PDF
+// depuis là, exactement comme au moment de sa génération d'origine (signature comprise).
+async function voirMandatSauvegarde(mandatId) {
+  const mandats = await dbGet('mandats_signes', `id=eq.${mandatId}&select=html_snapshot`);
+  const m = mandats && mandats[0];
+  if (!m) { showError('Mandat introuvable.'); return; }
+  const win = window.open('', '_blank');
+  win.document.write(m.html_snapshot);
+  win.document.close();
+}
+
+async function supprimerMandatSauvegarde(mandatId, clientId) {
+  if (!confirm('Supprimer ce mandat enregistré ? Cette action est irréversible.')) return;
+  const r = await dbDelete('mandats_signes', mandatId);
+  if (r && r.error) { showError('Erreur lors de la suppression : ' + errMsg(r)); return; }
+  showClient(clientId);
+}
+
 function genererFicheDemandeOffre(clientId) {
   const c = allClients.find(x => x.id === clientId);
   if (!c) return;

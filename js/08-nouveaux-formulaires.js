@@ -258,6 +258,42 @@ async function ouvrirPieceJointe(path) {
   } catch(e) { showError("Erreur lors de l'ouverture du document."); }
 }
 
+// Upload d'un mandat signé à la main (papier scanné ou photographié) — vient compléter
+// les mandats générés et signés numériquement dans le CRM, dans la même liste sur la fiche.
+async function uploadMandatSigne(clientId, input) {
+  const file = input.files[0];
+  if (!file) return;
+  const typesAcceptes = ['application/pdf', 'image/jpeg', 'image/png', 'image/heic', 'image/webp'];
+  if (!typesAcceptes.includes(file.type)) { showError('Formats acceptés : PDF, JPEG, PNG, HEIC, WEBP.'); return; }
+  if (file.size > 15 * 1024 * 1024) { showError('Fichier trop lourd — maximum 15 Mo.'); return; }
+
+  const extension = file.name.split('.').pop() || 'pdf';
+  const path = `mandats/${clientId}/${Date.now()}.${extension}`;
+
+  showError('⏳ Envoi en cours...');
+  try {
+    const token = await getValidAccessToken() || SUPABASE_KEY;
+    const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${path}`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, 'Content-Type': file.type },
+      body: file,
+    });
+    if (!uploadRes.ok) { showError("Erreur lors de l'envoi du fichier."); return; }
+
+    const r = await dbPost('mandats_signes', {
+      client_id: clientId,
+      signe: true,
+      cree_par: (typeof supaSession !== 'undefined' && supaSession && supaSession.email) || null,
+      fichier_url: path,
+      fichier_nom: file.name,
+    });
+    if (r && r.error) { showError("Fichier envoyé, mais impossible de l'ajouter à la liste : " + errMsg(r)); return; }
+    showClient(clientId);
+  } catch(e) {
+    showError("Erreur lors de l'envoi du mandat signé.");
+  }
+}
+
 // ═══ ÉDITION CONTRAT ═══
 async function showEditContrat(contratId, returnTo) {
   window._editContratReturnTo = returnTo || null;

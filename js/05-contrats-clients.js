@@ -217,19 +217,27 @@ async function showClient(id) {
         ${infoBlock("Taux d'activité", c.taux_activite ? c.taux_activite + '%' : '—')}
       </div>`) : ''}
       `}
-      ${sectionCard('📄 Mandats de courtage enregistrés', '#38bdf8', mandatsSignes.length ? `
+      ${sectionCard('📄 Mandats de courtage enregistrés', '#38bdf8', `
+        <div style="margin-bottom:12px">
+          <label style="background:var(--surface-alt);border:1px solid var(--border);border-radius:8px;padding:7px 14px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer;display:inline-block">
+            📤 Uploader un mandat signé à la main (PDF ou photo)
+            <input type="file" accept="application/pdf,image/*" style="display:none" onchange="uploadMandatSigne('${c.id}', this)"/>
+          </label>
+        </div>
+        ${mandatsSignes.length ? `
         <div style="display:flex;flex-direction:column;gap:8px">
           ${mandatsSignes.map(m => `
             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--surface-alt);border-radius:9px;border:1px solid var(--border)">
               <div style="flex:1">
                 <div style="font-size:12.5px;font-weight:700;color:var(--text)">${fmtDate(m.created_at)} ${m.signe ? '<span style="color:#4ade80">✓ Signé</span>' : '<span style="color:var(--text-muted)">Non signé</span>'}</div>
-                <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${m.cree_par ? 'Généré par ' + m.cree_par : ''}</div>
+                <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${m.fichier_url ? '📎 ' + (m.fichier_nom || 'Fichier uploadé') : (m.cree_par ? 'Généré par ' + m.cree_par : 'Généré dans le CRM')}</div>
               </div>
               <button onclick="voirMandatSauvegarde('${m.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 14px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap">👁️ Voir / Télécharger</button>
               <button onclick="supprimerMandatSauvegarde('${m.id}','${c.id}')" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:16px;padding:0 4px" title="Supprimer">✕</button>
             </div>`).join('')}
         </div>
-      ` : `<div style="font-size:12px;color:var(--text-muted)">Aucun mandat encore enregistré — clique sur "📄 Mandat de courtage" en haut de la fiche pour en générer un ; il sera automatiquement sauvegardé ici, accessible par toute l'équipe.</div>`)}
+        ` : `<div style="font-size:12px;color:var(--text-muted)">Aucun mandat encore enregistré — génère-en un avec le bouton "📄 Mandat de courtage" en haut de la fiche, ou uploade un mandat déjà signé à la main.</div>`}
+      `)}
     </div>
 
     <div id="tab-prevoyance" class="hidden">
@@ -948,9 +956,10 @@ async function getMandatsSignesClient(clientId) {
 // Réouvre un mandat sauvegardé dans une nouvelle fenêtre — imprimable/téléchargeable en PDF
 // depuis là, exactement comme au moment de sa génération d'origine (signature comprise).
 async function voirMandatSauvegarde(mandatId) {
-  const mandats = await dbGet('mandats_signes', `id=eq.${mandatId}&select=html_snapshot`);
+  const mandats = await dbGet('mandats_signes', `id=eq.${mandatId}&select=*`);
   const m = mandats && mandats[0];
   if (!m) { showError('Mandat introuvable.'); return; }
+  if (m.fichier_url) { ouvrirPieceJointe(m.fichier_url); return; }
   const win = window.open('', '_blank');
   win.document.write(m.html_snapshot);
   win.document.close();

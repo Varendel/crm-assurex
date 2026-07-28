@@ -702,6 +702,7 @@ const ALIAS_COMPAGNIES = {
   'la vaudoise': 'La Vaudoise', 'vaudoise assurances': 'La Vaudoise', 'vaudoise': 'La Vaudoise',
   'la mobilière': 'La Mobilière', 'la mobiliere': 'La Mobilière', 'mobilière': 'La Mobilière', 'mobiliere': 'La Mobilière', 'mobilière suisse société d\u2019assurances': 'La Mobilière',
   'hotela assurances sa': 'HOTELA', 'hotela': 'HOTELA', 'institutions sociales hotela': 'HOTELA',
+  'gastrosocial': 'Gastrosocial', 'caisse gastrosocial': 'Gastrosocial',
   'suva': 'SUVA', 'schweizerische unfallversicherungsanstalt': 'SUVA',
   'css assurances': 'CSS', 'css': 'CSS',
   'groupe mutuel': 'Groupe Mutuel', 'gmv sa': 'Groupe Mutuel',
@@ -791,6 +792,12 @@ function calculerCommissionEstimee() {
         detail: `HOTELA — Prévoyance professionnelle : ${TAUX_COMMISSION.hotela.lpp}% × CHF ${primeAnnuelle} = CHF ${montantBrut}${montantBrut > plafond ? ` — plafonné à CHF ${plafond.toLocaleString()}/an (preneur soumis CCNT hôtellerie-restauration)` : ''}`,
       };
     }
+  }
+
+  // ── GASTROSOCIAL — LPP restauration/hôtellerie, taux fixe sur la prime totale ──
+  if (compagnieChoisie.includes('gastrosocial') && produitId === 'lpp_entreprise') {
+    const montant = Math.round(primeAnnuelle * TAUX_COMMISSION.gastrosocial.lpp / 100);
+    return { montant, detail: `Gastrosocial — Prévoyance professionnelle : ${TAUX_COMMISSION.gastrosocial.lpp}% × CHF ${primeAnnuelle} (prime totale) = CHF ${montant}` };
   }
 
   // ── Santé / complémentaire ──────────────────────────────────────────────

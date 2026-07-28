@@ -214,6 +214,10 @@ const TAUX_COMMISSION = {
     lpp_plafond: 20000,             // Plafond annuel CHF 20'000.- par preneur soumis à la CCNT hôtellerie-restauration
     package: 10.00,                 // Package HOTELA (nouvelles affaires uniquement, toutes couvertures placées par le courtier)
   },
+  // Gastrosocial — caisse LPP restauration/hôtellerie : taux unique sur la prime totale
+  gastrosocial: {
+    lpp: 1.60,
+  },
 };
 
 // ═══ CONSTANTES LÉGALES LPP (état au 01.01.2026 — inchangées depuis 2025, réforme rejetée) ═══

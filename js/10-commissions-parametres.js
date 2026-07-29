@@ -35,11 +35,16 @@ function showModalEditCommission(commId) {
           <option value="acquisition" ${(c.nature||'acquisition')==='acquisition'?'selected':''}>Acquisition</option>
           <option value="gestion" ${c.nature==='gestion'?'selected':''}>Gestion</option>
         </select></div>
-        <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="ec-statut">
+        <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="ec-statut" onchange="document.getElementById('ec-refacturee-field').style.display = this.value === 'versé_oz' ? 'block' : 'none'">
           <option value="en_attente" ${c.statut==='en_attente'?'selected':''}>En attente</option>
           <option value="reçue" ${c.statut==='reçue'?'selected':''}>Reçue (Assurex)</option>
+          <option value="versé_oz" ${c.statut==='versé_oz'?'selected':''}>Versée sur OZ (convention pas encore fusionnée — à refacturer)</option>
           <option value="extourné" ${c.statut==='extourné'?'selected':''}>↩ Extournée (contrat policé puis annulé après versement)</option>
           ${c.statut === 'annulé' ? `<option value="annulé" selected>❌ Annulé (ancien statut — passe en Extournée si le contrat a été policé, sinon remets En attente)</option>` : ''}
+        </select></div>
+        <div class="form-field" id="ec-refacturee-field" style="display:${c.statut === 'versé_oz' ? 'block' : 'none'}"><label class="form-label">Refacturée à Assurex ?</label><select class="form-select" id="ec-refacturee">
+          <option value="non" ${!c.refacture_le?'selected':''}>Non — encore à transférer en interne</option>
+          <option value="oui" ${c.refacture_le?'selected':''}>Oui — déjà transférée</option>
         </select></div>
       </div>
       <div style="display:flex;gap:10px;margin-top:20px">
@@ -92,6 +97,9 @@ async function saveEditCommission(commId) {
     numero_police: document.getElementById('ec-police').value.trim() || null,
     nature: document.getElementById('ec-nature')?.value || 'acquisition',
     statut: nouveauStatut,
+    refacture_le: (nouveauStatut === 'versé_oz' && document.getElementById('ec-refacturee')?.value === 'oui')
+      ? (original?.refacture_le || new Date().toISOString().split('T')[0])
+      : null,
     detail_calcul: estUnRetourEnArriere
       ? `Rapprochement annulé le ${fmtDate(new Date().toISOString())} — remise en attente pour correction (était : ${statutCommissionLabel(original.statut)}, ${original.bordereau_id ? 'lié à un bordereau' : 'sans bordereau'})`
       : (document.getElementById('ec-detail').value.trim() || null),
@@ -614,21 +622,25 @@ function viewOzCommissionsAssurex() {
   }
   const lignes = allCommissionsAttente.filter(c => c.statut === 'versé_oz');
   const total = lignes.reduce((s,c) => s + Number(c.montant_final != null ? c.montant_final : (c.montant_estime||0)), 0);
+  const aRefacturer = lignes.filter(c => !c.refacture_le);
+  const totalARefacturer = aRefacturer.reduce((s,c) => s + Number(c.montant_final != null ? c.montant_final : (c.montant_estime||0)), 0);
 
   return `
     <button onclick="navigate('oz-assure')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour OZ Assure</button>
     <h2 style="margin:0 0 4px;font-size:18px;font-weight:800;color:var(--text)">Commissions Assurex versées à OZ Assure</h2>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Historique privé : commissions gérées dans le CRM mais réglées directement sur le compte OZ Assure (portefeuille pré-fusion). Ces montants n'apparaissent plus dans "Toutes les commissions" ni dans les statistiques Assurex — cette page est visible uniquement par toi.</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Historique privé : commissions gérées dans le CRM mais réglées directement sur le compte OZ Assure (portefeuille pré-fusion, ou conventions d'assureurs pas encore basculées vers Assurex). Ces montants n'apparaissent plus dans "Toutes les commissions" ni dans les statistiques Assurex — cette page est visible uniquement par toi.</div>
     <div class="stat-grid" style="margin-bottom:20px">
       ${statCard('Dossiers', lignes.length, '#38bdf8')}
       ${statCard('Total versé à OZ', 'CHF ' + Math.round(total).toLocaleString(), '#1a56db')}
+      ${statCard('Encore à refacturer', 'CHF ' + Math.round(totalARefacturer).toLocaleString(), aRefacturer.length ? '#f59e0b' : '#4ade80')}
     </div>
     <div class="table-wrap">
-      <div class="table-header" style="grid-template-columns:1fr 130px 110px 90px"><div>Client / Produit</div><div>Compagnie</div><div>Montant</div><div></div></div>
-      ${lignes.map(c => `<div class="table-row" style="grid-template-columns:1fr 130px 110px 90px">
+      <div class="table-header" style="grid-template-columns:1fr 130px 110px 130px 90px"><div>Client / Produit</div><div>Compagnie</div><div>Montant</div><div>Refacturation</div><div></div></div>
+      ${lignes.map(c => `<div class="table-row" style="grid-template-columns:1fr 130px 110px 130px 90px">
         <div><div style="font-size:13px;font-weight:700;color:var(--text)">${c.client_nom||'—'}</div><div style="font-size:11px;color:var(--text-muted)">${c.produit||''}</div></div>
         <div style="font-size:12px;color:var(--text-muted)">${c.compagnie||''}</div>
         <div style="font-weight:800;color:#1a56db">CHF ${Number(c.montant_final != null ? c.montant_final : (c.montant_estime||0)).toLocaleString()}</div>
+        <div>${c.refacture_le ? `<span style="color:#4ade80;font-size:11.5px;font-weight:700">✓ Faite le ${fmtDate(c.refacture_le)}</span>` : `<span style="color:#f59e0b;font-size:11.5px;font-weight:700">⏳ À refacturer</span>`}</div>
         <div><button onclick="showModalEditCommission('${c.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:4px 10px;font-size:11px;cursor:pointer">✏️</button></div>
       </div>`).join('') || '<div class="table-empty">Aucune commission versée à OZ Assure enregistrée.</div>'}
     </div>`;

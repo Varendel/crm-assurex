@@ -227,7 +227,7 @@ function renderToutesCommissions() {
       <div style="font-size:11px;color:var(--text-muted)">${numBord ? `<span style="font-family:monospace">${numBord}</span>` : '—'}</div>
       <div style="font-size:12px;color:var(--text-muted)">${c.date_creation || ''}</div>
       <div style="font-weight:800;color:#f59e0b;text-align:right">CHF ${montantC(c).toLocaleString()}</div>
-      <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start">${badge(statutCommissionLabel(c.statut), statutCommissionColor(c.statut))}${badge(c.nature === 'gestion' ? 'Gestion' : 'Acquisition', c.nature === 'gestion' ? '#60a5fa' : '#a78bfa')}</div>
+      <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start">${badge(statutCommissionLabel(c.statut), statutCommissionColor(c.statut))}${badgeNatureCommission(c.nature)}</div>
     </div>`;
   }).join('');
 

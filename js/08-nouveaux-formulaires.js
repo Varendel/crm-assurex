@@ -1,8 +1,8 @@
 function viewNouveauRappel() {
   const agentOptions = allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
-  const clientOptions = allClients.map(c => `<option value="${c.id}" ${prefill && prefill.clientId === c.id ? 'selected' : ''}>${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`}</option>`).join('');
   const prefill = window._prefillRappelDepuisPostit || null;
   window._prefillRappelDepuisPostit = null; // évite qu'un rechargement ultérieur du formulaire ne le réutilise par erreur
+  const clientOptions = allClients.map(c => `<option value="${c.id}" ${prefill && prefill.clientId === c.id ? 'selected' : ''}>${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`}</option>`).join('');
   return `
     <button onclick="navigate('rappels')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
     <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouvelle tâche / rappel</h2>

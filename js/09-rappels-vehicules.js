@@ -716,6 +716,10 @@ const ALIAS_COMPAGNIES = {
   'allianz suisse': 'Allianz', 'allianz': 'Allianz',
   'visana assurances': 'Visana', 'visana': 'Visana',
   'swica assurances': 'SWICA', 'swica': 'SWICA',
+  'swisscaution': 'SwissCaution', 'swiss caution': 'SwissCaution',
+  'firstcaution': 'FirstCaution', 'first caution': 'FirstCaution',
+  'gocaution': 'goCaution', 'go caution': 'goCaution',
+  'smartcaution': 'SmartCaution', 'smart caution': 'SmartCaution',
 };
 function normaliserCompagnie(nom) {
   if (!nom) return nom;
@@ -724,7 +728,7 @@ function normaliserCompagnie(nom) {
 }
 
 function getCompagniesConnues() {
-  const base = ['Swiss Life', 'AXA', 'Helsana', 'Sanitas', 'Allianz', 'Zurich', 'Generali', 'Baloise', 'CSS', 'Groupe Mutuel', 'Visana', 'SWICA'];
+  const base = ['Swiss Life', 'AXA', 'Helsana', 'Sanitas', 'Allianz', 'Zurich', 'Generali', 'Baloise', 'CSS', 'Groupe Mutuel', 'Visana', 'SWICA', 'SwissCaution', 'FirstCaution', 'goCaution', 'SmartCaution'];
   // Source prioritaire : Paramètres → Contacts compagnies (Supabase, synchronisé pour toute l'équipe)
   const depuisParametres = (allCompagniesContacts || []).map(c => c.compagnie).filter(Boolean);
   let memorisees = [];

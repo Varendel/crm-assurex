@@ -279,7 +279,7 @@ async function showClient(id) {
                 </div>
                 <div style="text-align:right">
                   <div style="font-weight:800;color:#f59e0b;font-size:13px">CHF ${Number(ct.prime_annuelle||0).toLocaleString()}/an</div>
-                  <div style="font-size:10px;color:var(--text-muted)">CHF ${Math.round(Number(ct.prime_annuelle||0)/12)}/mois</div>
+                  <div style="font-size:10px;color:var(--text-muted)">CHF ${Math.round(Number(ct.prime_annuelle||0)/12*100)/100}/mois</div>
                   ${badge(ct.statut, ct.statut==='actif'?'#4ade80':'#f59e0b')}
                 </div>
               </div>`).join('')}

@@ -337,7 +337,7 @@ function showModalValidationCommission(bordereauId) {
             <label class="form-label">Commission en attente *</label>
             <select class="form-select" id="val-commission" onchange="prefillMontantEstime()">
               <option value="">— Sélectionner —</option>
-              ${enAttente.map(c => `<option value="${c.id}" data-montant="${c.montant_estime||0}" data-client="${c.client_nom}">${c.client_nom} — ${c.produit} (CHF ${(c.montant_estime||0).toLocaleString()})</option>`).join('')}
+              ${enAttente.map(c => `<option value="${c.id}" data-montant="${c.montant_estime||0}" data-client="${c.client_nom}">${c.nature === 'gestion' ? '🔄' : '🆕'} ${c.client_nom} — ${c.produit} (CHF ${(c.montant_estime||0).toLocaleString()})</option>`).join('')}
             </select>
             ${enAttente.length === 0 ? `<div style="font-size:11px;color:#f59e0b;margin-top:6px">Aucune commission en attente pour ${b.compagnie}.</div>` : ''}
           </div>

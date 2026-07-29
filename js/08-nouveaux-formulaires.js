@@ -311,7 +311,7 @@ async function showEditContrat(contratId, returnTo) {
   // La prime est stockée en annuel. On affiche le montant PAR ÉCHÉANCE.
   // Périodicité mémorisée sur le contrat (défaut annuel si absente)
   const perioActuelle = ct.periodicite || 1;
-  const primeAff = perioActuelle > 1 ? Math.round((ct.prime_annuelle || 0) / perioActuelle) : (ct.prime_annuelle || 0);
+  const primeAff = perioActuelle > 1 ? Math.round((ct.prime_annuelle || 0) / perioActuelle * 100) / 100 : (ct.prime_annuelle || 0);
 
   creerModale('modal-edit-contrat', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:520px">
@@ -403,15 +403,15 @@ async function deleteContrat(contratId, clientId, returnTo) {
 function updateApercuPrimeAnnuelle() {
   const prime = parseFloat(document.getElementById('ect-prime')?.value) || 0;
   const perio = parseInt(document.getElementById('ect-periodicite')?.value) || 1;
-  const annuelle = Math.round(prime * perio);
+  const annuelle = Math.round(prime * perio * 100) / 100;
   const el = document.getElementById('ect-apercu-annuel');
-  if (el) el.innerHTML = `Prime annuelle calculée : <strong style="color:#f59e0b">CHF ${annuelle.toLocaleString()}</strong> (${prime.toLocaleString()} × ${perio} échéance${perio>1?'s':''})`;
+  if (el) el.innerHTML = `Prime annuelle calculée : <strong style="color:#f59e0b">CHF ${annuelle.toLocaleString('fr-CH',{minimumFractionDigits:2,maximumFractionDigits:2})}</strong> (${prime.toLocaleString()} × ${perio} échéance${perio>1?'s':''})`;
 }
 
 async function saveEditContrat(contratId, clientId, returnTo) {
   const periodicite = parseInt(document.getElementById('ect-periodicite').value) || 1;
   const primeParEcheance = parseFloat(document.getElementById('ect-prime').value) || 0;
-  const primeAnnuelle = Math.round(primeParEcheance * periodicite);
+  const primeAnnuelle = Math.round(primeParEcheance * periodicite * 100) / 100;
   const commissionne = document.getElementById('ect-commissionne').value !== 'non';
   const ancienContrat = allContrats.find(c => c.id === contratId);
   const ancienStatut = ancienContrat ? ancienContrat.statut : null;
@@ -853,7 +853,7 @@ async function recalculerPrimeFlotte(contratId) {
   if (!contratId) return true;
   const vehiculesDuContrat = allVehicules.filter(v => v.contrat_id === contratId);
   const totalBrut = vehiculesDuContrat.reduce((s, v) => s + Number(v.prime_brute || 0), 0);
-  const r = await dbPatch('contrats', contratId, { prime_annuelle: Math.round(totalBrut) });
+  const r = await dbPatch('contrats', contratId, { prime_annuelle: Math.round(totalBrut * 100) / 100 });
   allContrats = await dbGet('contrats', 'select=*');
   return !(r && r.error);
 }

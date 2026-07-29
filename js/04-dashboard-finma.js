@@ -714,7 +714,7 @@ function showDetailContrat(contratId) {
   // Supprimer une éventuelle modale précédente
   document.getElementById('modal-detail-contrat')?.remove();
 
-  const primenMois = ct.prime_annuelle ? Math.round(ct.prime_annuelle / 12) : 0;
+  const primenMois = ct.prime_annuelle ? Math.round(ct.prime_annuelle / 12 * 100) / 100 : 0;
 
   const contenuHtml = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:0;width:100%;max-width:460px;overflow:hidden">

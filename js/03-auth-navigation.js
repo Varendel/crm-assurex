@@ -673,6 +673,16 @@ function badge(label, color) {
   return `<span class="badge" style="background:${color}15;color:${color};border:1px solid ${color}30">${label}</span>`;
 }
 
+// Badge visuel distinct pour la nature d'une commission — icône + couleur, reconnaissable
+// d'un coup d'œil sans avoir à lire le texte, à apposer partout où une commission s'affiche.
+function badgeNatureCommission(nature) {
+  const estGestion = nature === 'gestion';
+  const couleur = estGestion ? '#60a5fa' : '#a78bfa';
+  const icone = estGestion ? '🔄' : '🆕';
+  const label = estGestion ? 'Gestion' : 'Acquisition';
+  return `<span title="Commission de ${label.toLowerCase()}" style="display:inline-flex;align-items:center;gap:4px;background:${couleur}18;color:${couleur};border:1px solid ${couleur}40;border-radius:7px;padding:2px 8px 2px 6px;font-size:10.5px;font-weight:800;white-space:nowrap"><span style="font-size:12px;line-height:1">${icone}</span>${label}</span>`;
+}
+
 function avatar(agent, size = 28) {
   if (!agent) return '';
   const color = agentColor(agent);

@@ -641,6 +641,10 @@ const CATALOGUE_PRODUITS = {
   'Ménage / habitation': [
     { id: 'menage', label: 'Inventaire du ménage', segment: 'prive', modules: ['Vol hors domicile', 'Bris de glace vitrages mobilier', 'Bris de glace bâtiment', 'Tremblement de terre', 'Objets de valeur', 'Animaux de compagnie', 'Cyberprotection'] },
   ],
+  'Caution de loyer': [
+    { id: 'caution_bail_prive', label: 'Caution de loyer — bail privé', segment: 'prive', modules: [] },
+    { id: 'caution_bail_commercial', label: 'Caution de loyer — bail commercial', segment: 'entreprise', modules: [] },
+  ],
   'Bâtiment': [
     { id: 'batiment_prive', label: 'Bâtiment privé (propriétaire)', segment: 'prive', modules: ['Bris de glace bâtiment (fenêtres, portes)', 'Équipements encastrés', 'Jardin / constructions extérieures', 'Tremblement de terre'] },
     { id: 'batiment_entreprise', label: 'Bâtiment commercial / locaux professionnels', segment: 'entreprise', modules: ['Bris de glace bâtiment', 'Pertes d\'exploitation suite sinistre', 'Tremblement de terre', 'Vol et vandalisme'] },

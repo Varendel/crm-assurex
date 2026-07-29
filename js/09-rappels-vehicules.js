@@ -755,7 +755,7 @@ function calculerCommissionEstimee() {
   const produitId = produit ? produit.id : null;
   const primeMensuelle = parseFloat(document.getElementById('ct-prime-mensuelle').value) || 0;
   const periodicite = parseInt(document.getElementById('ct-periodicite')?.value) || 12;
-  const primeAnnuelle = Math.round(primeMensuelle * periodicite);
+  const primeAnnuelle = Math.round(primeMensuelle * periodicite * 100) / 100;
 
   // Le montant saisi manuellement a TOUJOURS priorité s'il est renseigné (> 0),
   // quel que soit le produit — corrige d'anciens champs "manuel" qui étaient visibles
@@ -870,7 +870,7 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
     modules: modules && modules.length > 0 ? modules.join(', ') : null,
     plaques: plaques && plaques.length > 0 ? plaques.join(', ') : null,
     numero_police: document.getElementById('ct-police').value.trim() || null,
-    prime_annuelle: dejaAnnuelle ? Math.round(primeMensuelle) : Math.round(primeMensuelle * (parseInt(document.getElementById('ct-periodicite')?.value) || 12)),
+    prime_annuelle: dejaAnnuelle ? Math.round(primeMensuelle * 100) / 100 : Math.round(primeMensuelle * (parseInt(document.getElementById('ct-periodicite')?.value) || 12) * 100) / 100,
     date_debut: document.getElementById('ct-date').value || null,
     date_echeance: document.getElementById('ct-echeance').value || null,
     statut: document.getElementById('ct-statut').value,

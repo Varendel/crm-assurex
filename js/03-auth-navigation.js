@@ -210,10 +210,8 @@ async function ajouterEtapeRappel(rappelId) {
 }
 
 async function supprimerEtapeRappel(etapeId) {
-  await fetch(`${SUPABASE_URL}/rest/v1/tache_etapes?id=eq.${etapeId}`, {
-    method: 'DELETE',
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${await getValidAccessToken() || SUPABASE_KEY}` },
-  });
+  const r = await dbDelete('tache_etapes', etapeId);
+  if (r && r.error) { showError('Erreur lors de la suppression de l\u2019étape : ' + errMsg(r)); return; }
   showRappel(currentRappelId);
 }
 

@@ -380,18 +380,21 @@ async function showEditContrat(contratId, returnTo) {
 
 async function deleteContrat(contratId, clientId, returnTo) {
   if (!confirm('Supprimer définitivement ce contrat ? Les commissions liées seront également supprimées. Cette action est irréversible.')) return;
-  const token = await getValidAccessToken() || SUPABASE_KEY;
-  // Supprimer les commissions liées d'abord (contrainte FK)
-  await fetch(`${SUPABASE_URL}/rest/v1/commissions_attente?contrat_id=eq.${contratId}`, {
-    method: 'DELETE',
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
-  });
+
+  // Supprimer les commissions liées d'abord (contrainte FK) — si l'une échoue, on s'arrête
+  // avant de toucher au contrat, pour ne jamais laisser une commission orpheline en base.
+  const commissionsLiees = allCommissionsAttente.filter(c => c.contrat_id === contratId);
+  for (const c of commissionsLiees) {
+    const rSuppr = await dbDelete('commissions_attente', c.id);
+    if (rSuppr && rSuppr.error) {
+      showError(`Suppression interrompue : impossible de supprimer une commission liée — ${errMsg(rSuppr)}`);
+      return;
+    }
+  }
+
   // Supprimer le contrat
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/contrats?id=eq.${contratId}`, {
-    method: 'DELETE',
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
-  });
-  if (!r.ok) { showError('Erreur lors de la suppression du contrat.'); return; }
+  const r = await dbDelete('contrats', contratId);
+  if (r && r.error) { showError('Erreur lors de la suppression du contrat : ' + errMsg(r)); return; }
   logAction('delete_contrat', 'contrats', contratId, null);
   allContrats = await dbGet('contrats', 'select=*');
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
@@ -442,16 +445,15 @@ async function saveEditContrat(contratId, clientId, returnTo) {
   // dans ce cas c'est le statut "Extourné" qu'il faut utiliser, pas l'annulation.
   if (body.statut === 'annulé' && ancienStatut !== 'annulé') {
     const commissionsEnAttenteLiees = allCommissionsAttente.filter(c => c.contrat_id === contratId && c.statut === 'en_attente');
+    let echecsSuppression = 0;
     for (const c of commissionsEnAttenteLiees) {
-      const token = await getValidAccessToken() || SUPABASE_KEY;
-      await fetch(`${SUPABASE_URL}/rest/v1/commissions_attente?id=eq.${c.id}`, {
-        method: 'DELETE',
-        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
-      });
+      const rSuppr = await dbDelete('commissions_attente', c.id);
+      if (rSuppr && rSuppr.error) echecsSuppression++;
     }
+    const nbReussies = commissionsEnAttenteLiees.length - echecsSuppression;
     if (commissionsEnAttenteLiees.length) {
-      logAction('suppr_commission_contrat_annule', 'commissions_attente', null, `${commissionsEnAttenteLiees.length} commission(s) en attente supprimée(s) — contrat ${body.produit} annulé`);
-      showError(`Contrat annulé — ${commissionsEnAttenteLiees.length} commission(s) en attente liée(s) ont été supprimée(s) automatiquement.`);
+      logAction('suppr_commission_contrat_annule', 'commissions_attente', null, `${nbReussies} commission(s) en attente supprimée(s) — contrat ${body.produit} annulé`);
+      showError(`Contrat annulé — ${nbReussies} commission(s) en attente liée(s) supprimée(s) automatiquement.${echecsSuppression ? ` ⚠️ ${echecsSuppression} n'ont pas pu être supprimée(s) — vérifie manuellement.` : ''}`);
     }
     allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
   }
@@ -615,11 +617,8 @@ async function toggleFactureStatut(factureId, statutActuel, clientId) {
 
 async function deleteCollaborateur(colId, clientId) {
   if (!confirm('Supprimer ce collaborateur ?')) return;
-  const token = await getValidAccessToken() || SUPABASE_KEY;
-  await fetch(`${SUPABASE_URL}/rest/v1/collaborateurs?id=eq.${colId}`, {
-    method: 'DELETE',
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
-  });
+  const r = await dbDelete('collaborateurs', colId);
+  if (r && r.error) { showError('Erreur lors de la suppression : ' + errMsg(r)); return; }
   logAction('delete_collaborateur_avs', 'collaborateurs', colId, null);
   showClient(clientId);
 }
@@ -897,11 +896,8 @@ async function deleteVehicule(vehiculeId, clientId) {
   if (!confirm('Supprimer ce véhicule de la flotte ?')) return;
   const vehicule = allVehicules.find(v => v.id === vehiculeId);
   const contratConcerne = vehicule ? vehicule.contrat_id : null;
-  const token = await getValidAccessToken() || SUPABASE_KEY;
-  await fetch(`${SUPABASE_URL}/rest/v1/vehicules?id=eq.${vehiculeId}`, {
-    method: 'DELETE',
-    headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` },
-  });
+  const r = await dbDelete('vehicules', vehiculeId);
+  if (r && r.error) { showError('Erreur lors de la suppression : ' + errMsg(r)); return; }
   logAction('delete_vehicule', 'vehicules', vehiculeId, null);
   allVehicules = await dbGet('vehicules', 'select=*');
   await recalculerPrimeFlotte(contratConcerne);

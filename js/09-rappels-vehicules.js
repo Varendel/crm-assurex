@@ -650,7 +650,13 @@ function toggleCombinablePrime(produitId) {
     const div = document.createElement('div');
     div.id = `ct-combinable-prime-${produitId}`;
     div.style.cssText = 'margin-top:6px';
-    div.innerHTML = `<label class="form-label">Prime annuelle pour "${produit.label}" (CHF)</label><input class="form-input ct-combinable-prime-input" data-produit-id="${produitId}" type="number" placeholder="540"/><div style="font-size:10.5px;color:var(--text-muted);margin-top:3px">Casco/ménage sont facturés annuellement — indique le montant annuel, pas mensuel.</div>`;
+    if (produitId === 'lca_complementaire') {
+      // La LCA varie énormément de nom selon la compagnie (COMPLETA, Premium, Global smart...)
+      // et ces noms changent régulièrement — saisie libre plutôt qu'une liste qui se périme vite.
+      div.innerHTML = `<label class="form-label">Nom du produit complémentaire (ex: COMPLETA, Premium, Global smart...)</label><input class="form-input ct-combinable-nom-input" data-produit-id="${produitId}" placeholder="Nom exact du produit chez la compagnie"/><label class="form-label" style="margin-top:8px">Prime annuelle LCA (CHF)</label><input class="form-input ct-combinable-prime-input" data-produit-id="${produitId}" type="number" placeholder="540"/><div style="font-size:10.5px;color:var(--text-muted);margin-top:3px">Indique le montant annuel (prime mensuelle × 12).</div>`;
+    } else {
+      div.innerHTML = `<label class="form-label">Prime annuelle pour "${produit.label}" (CHF)</label><input class="form-input ct-combinable-prime-input" data-produit-id="${produitId}" type="number" placeholder="540"/><div style="font-size:10.5px;color:var(--text-muted);margin-top:3px">Casco/ménage sont facturés annuellement — indique le montant annuel, pas mensuel.</div>`;
+    }
     primesZone.appendChild(div);
   } else if (!checkbox.checked && existant) {
     existant.remove();
@@ -805,7 +811,7 @@ function calculerCommissionEstimee() {
   }
 
   // ── Santé / complémentaire ──────────────────────────────────────────────
-  if (produitId === 'sante_complementaire') {
+  if (produitId === 'lca_complementaire') {
     const montant = Math.round(primeMensuelle * TAUX_COMMISSION.sante_facteur_mensuel);
     return { montant, detail: `CHF ${primeMensuelle}/mois × ${TAUX_COMMISSION.sante_facteur_mensuel} (taux santé) = CHF ${montant}` };
   }
@@ -989,8 +995,14 @@ async function saveContrat() {
     const produitCombinable = getProduitParId(id);
     const input = document.querySelector(`.ct-combinable-prime-input[data-produit-id="${id}"]`);
     const primeCombinableAnnuelle = parseFloat(input.value) || 0;
+    // Pour la LCA, le nom réel du produit (COMPLETA, Premium, Global smart...) est saisi
+    // librement plutôt que d'utiliser le libellé générique "LCA — Complémentaire santé".
+    const nomInput = document.querySelector(`.ct-combinable-nom-input[data-produit-id="${id}"]`);
+    const labelCombinable = (nomInput && nomInput.value.trim())
+      ? `LCA — ${nomInput.value.trim()}`
+      : produitCombinable.label;
     const montantCombinable = Math.round(primeCombinableAnnuelle * 0.1); // estimation par défaut (10% fictif) — ajustable manuellement ensuite
-    await creerContratEtCommission(clientId, compagnie, produitCombinable.label, primeCombinableAnnuelle, [], montantCombinable, 'Produit combiné — commission estimée à ajuster', null, true);
+    await creerContratEtCommission(clientId, compagnie, labelCombinable, primeCombinableAnnuelle, [], montantCombinable, 'Produit combiné — commission estimée à ajuster', null, true);
   }
 
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');

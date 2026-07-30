@@ -677,31 +677,11 @@ const CATALOGUE_PRODUITS = {
     { id: 'lpp_individuelle', label: 'LPP rachat / versement volontaire', segment: 'tous', modules: [] },
   ],
   'Santé': [
-    { id: 'lamal', label: 'LAMal (assurance de base)', segment: 'prive', compagnie_fixe: null, modules: [] },
-    // ── CSS ──────────────────────────────────────────────────────────────
-    { id: 'css_myflex_ambulatoire', label: 'CSS myFlex — Ambulatoire', segment: 'prive', compagnie_fixe: 'CSS', modules: ['Médecin de famille (telmed)', 'Pharmacie directe', 'Libre choix du médecin'] },
-    { id: 'css_myflex_hospitalisation', label: 'CSS myFlex — Hospitalisation', segment: 'prive', compagnie_fixe: 'CSS', modules: ['Division commune', 'Semi-privée', 'Privée', 'Toute la Suisse', 'Monde entier'] },
-    { id: 'css_myflex_medecines', label: 'CSS myFlex — Médecines naturelles', segment: 'prive', compagnie_fixe: 'CSS', modules: [] },
-    { id: 'css_myflex_dental', label: 'CSS myFlex — Dental', segment: 'prive', compagnie_fixe: 'CSS', modules: [] },
-    // ── Helsana ──────────────────────────────────────────────────────────
-    { id: 'helsana_top', label: 'Helsana TOP (ambulatoire)', segment: 'prive', compagnie_fixe: 'Helsana', modules: [] },
-    { id: 'helsana_completa', label: 'Helsana COMPLETA (ambulatoire + hospit.)', segment: 'prive', compagnie_fixe: 'Helsana', modules: ['Division commune', 'Semi-privée', 'Privée'] },
-    { id: 'helsana_sana', label: 'Helsana SANA (médecines alternatives)', segment: 'prive', compagnie_fixe: 'Helsana', modules: [] },
-    { id: 'helsana_dental', label: 'Helsana DENTAL', segment: 'prive', compagnie_fixe: 'Helsana', modules: [] },
-    { id: 'helsana_plus', label: 'Helsana PLUS (prévention & fitness)', segment: 'prive', compagnie_fixe: 'Helsana', modules: [] },
-    // ── Groupe Mutuel ─────────────────────────────────────────────────────
-    { id: 'gm_optisana', label: 'GM Optisana A (ambulatoire)', segment: 'prive', compagnie_fixe: 'Groupe Mutuel', modules: [] },
-    { id: 'gm_hopital', label: 'GM Complément Hôpital', segment: 'prive', compagnie_fixe: 'Groupe Mutuel', modules: ['Division commune', 'Semi-privée', 'Privée'] },
-    { id: 'gm_globalcare', label: 'GM Global Care', segment: 'prive', compagnie_fixe: 'Groupe Mutuel', modules: [] },
-    { id: 'gm_denta', label: 'GM Denta Plus', segment: 'prive', compagnie_fixe: 'Groupe Mutuel', modules: [] },
-    { id: 'gm_medoucine', label: 'GM Médecines douces', segment: 'prive', compagnie_fixe: 'Groupe Mutuel', modules: [] },
-    // ── SWICA ─────────────────────────────────────────────────────────────
-    { id: 'swica_completa', label: 'SWICA COMPLETA (ambulatoire)', segment: 'prive', compagnie_fixe: 'SWICA', modules: [] },
-    { id: 'swica_hospita', label: 'SWICA HOSPITA (hospitalisation)', segment: 'prive', compagnie_fixe: 'SWICA', modules: ['Division commune', 'Semi-privée', 'Privée', 'Monde entier'] },
-    { id: 'swica_denta', label: 'SWICA DENTA', segment: 'prive', compagnie_fixe: 'SWICA', modules: [] },
-    { id: 'swica_praeventa', label: 'SWICA PRAEVENTA (prévention)', segment: 'prive', compagnie_fixe: 'SWICA', modules: [] },
-    // ── Complémentaire générique (autres compagnies) ───────────────────────
-    { id: 'sante_complementaire', label: 'Complémentaire santé — autre compagnie', segment: 'prive', modules: [] },
+    { id: 'lamal', label: 'LAMal (assurance de base)', segment: 'prive', modules: [], combinables: ['lca_complementaire'] },
+    // Combinable générique — le nom exact du produit (COMPLETA, Premium, Global smart...) se saisit
+    // en texte libre au moment de cocher, plutôt qu'une liste figée qui se périme vite (les assureurs
+    // renomment/restructurent leurs produits complémentaires régulièrement).
+    { id: 'lca_complementaire', label: 'LCA — Complémentaire santé', segment: 'prive', modules: [] },
   ],
   'Assurances de personnes (entreprise)': [
     { id: 'laa', label: 'LAA (assurance-accidents obligatoire)', segment: 'entreprise', modules: ['Accidents professionnels (AP)', 'Accidents non professionnels (ANP)', 'Sursalaire LAA complémentaire'] },

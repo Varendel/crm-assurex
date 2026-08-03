@@ -677,11 +677,25 @@ const CATALOGUE_PRODUITS = {
     { id: 'lpp_individuelle', label: 'LPP rachat / versement volontaire', segment: 'tous', modules: [] },
   ],
   'Santé': [
-    { id: 'lamal', label: 'LAMal (assurance de base)', segment: 'prive', modules: [], combinables: ['lca_complementaire'] },
-    // Combinable générique — le nom exact du produit (COMPLETA, Premium, Global smart...) se saisit
-    // en texte libre au moment de cocher, plutôt qu'une liste figée qui se périme vite (les assureurs
-    // renomment/restructurent leurs produits complémentaires régulièrement).
-    { id: 'lca_complementaire', label: 'LCA — Complémentaire santé', segment: 'prive', modules: [] },
+    { id: 'lamal', label: 'LAMal (assurance de base)', segment: 'prive', modules: [], combinables: [
+      'helsana_top', 'helsana_sana', 'helsana_completa', 'helsana_completa_plus', 'helsana_primeo',
+      'gm_premium', 'gm_global_smart', 'gm_global_mi_privee', 'gm_global_privee', 'gm_global_flex',
+      'lca_autre_compagnie',
+    ] },
+    // ── Helsana (vérifié à jour) ──
+    { id: 'helsana_top', label: 'Helsana TOP (ambulatoire)', segment: 'prive', modules: [] },
+    { id: 'helsana_sana', label: 'Helsana SANA (ambulatoire)', segment: 'prive', modules: [] },
+    { id: 'helsana_completa', label: 'Helsana COMPLETA (ambulatoire)', segment: 'prive', modules: [] },
+    { id: 'helsana_completa_plus', label: 'Helsana COMPLETA PLUS (ambulatoire)', segment: 'prive', modules: [] },
+    { id: 'helsana_primeo', label: 'Helsana PRIMEO (ambulatoire, jeunes adultes)', segment: 'prive', modules: [] },
+    // ── Groupe Mutuel (vérifié à jour) ──
+    { id: 'gm_premium', label: 'GM Premium (ambulatoire)', segment: 'prive', modules: [] },
+    { id: 'gm_global_smart', label: 'GM Global smart (ambulatoire + hospit.)', segment: 'prive', modules: [] },
+    { id: 'gm_global_mi_privee', label: 'GM Global mi-privée', segment: 'prive', modules: [] },
+    { id: 'gm_global_privee', label: 'GM Global privée', segment: 'prive', modules: [] },
+    { id: 'gm_global_flex', label: 'GM Global flex', segment: 'prive', modules: [] },
+    // ── Autre compagnie (nom précisé dans les notes du contrat) ──
+    { id: 'lca_autre_compagnie', label: 'LCA — autre compagnie (préciser en note)', segment: 'prive', modules: [] },
   ],
   'Assurances de personnes (entreprise)': [
     { id: 'laa', label: 'LAA (assurance-accidents obligatoire)', segment: 'entreprise', modules: ['Accidents professionnels (AP)', 'Accidents non professionnels (ANP)', 'Sursalaire LAA complémentaire'] },

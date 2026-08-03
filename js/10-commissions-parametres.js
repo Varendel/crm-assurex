@@ -148,12 +148,17 @@ async function saveEditCommission(commId) {
 function viewCommissionsAttente(prefiltreStatut) {
   window._tcPrefiltre = prefiltreStatut || null;
   setTimeout(() => renderToutesCommissions(), 0);
+  const compagniesPresentes = [...new Set(allCommissionsAttente.map(c => c.compagnie).filter(Boolean))].sort();
   return `
     <h2 style="margin:0 0 6px;font-size:18px;font-weight:800;color:var(--text)">Toutes les commissions</h2>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Estimées à la signature, puis liées à un bordereau une fois reçues. Pour faire passer une commission "en attente" en "reçue", utilise "+ Rapprocher une commission" sur le bordereau concerné — ça garantit le montant net exact et le numéro de police.</div>
 
     <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
       <input class="form-input" id="tc-search" placeholder="🔍 Client, compagnie, produit, n° bordereau..." style="flex:1;min-width:200px" oninput="renderToutesCommissions()"/>
+      <select class="form-select" id="tc-compagnie" style="max-width:200px" onchange="renderToutesCommissions()">
+        <option value="">Toutes compagnies</option>
+        ${compagniesPresentes.map(comp => `<option value="${comp}">${comp}</option>`).join('')}
+      </select>
       <select class="form-select" id="tc-statut" style="max-width:180px" onchange="renderToutesCommissions()">
         <option value="">Tous statuts</option>
         <option value="en_attente" ${prefiltreStatut==='en_attente'?'selected':''}>En attente</option>
@@ -177,6 +182,7 @@ function viewCommissionsAttente(prefiltreStatut) {
 
 function renderToutesCommissions() {
   const search = (document.getElementById('tc-search')?.value || '').toLowerCase().trim();
+  const compagnieFilter = document.getElementById('tc-compagnie')?.value || '';
   const statutFilter = document.getElementById('tc-statut')?.value || '';
   const natureFilter = document.getElementById('tc-nature')?.value || '';
   const tri = document.getElementById('tc-tri')?.value || 'montant_desc';
@@ -198,6 +204,7 @@ function renderToutesCommissions() {
       const ct = allContrats.find(x => x.id === c.contrat_id);
       if (ct && (ct.commissionne === false || ct.statut === 'annulé')) return false;
     }
+    if (compagnieFilter && (c.compagnie || '') !== compagnieFilter) return false;
     if (statutFilter && c.statut !== statutFilter) return false;
     if (natureFilter && (c.nature || 'acquisition') !== natureFilter) return false;
     if (search) {

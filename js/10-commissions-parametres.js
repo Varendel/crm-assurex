@@ -164,6 +164,8 @@ function viewCommissionsAttente(prefiltreStatut) {
         <option value="en_attente" ${prefiltreStatut==='en_attente'?'selected':''}>En attente</option>
         <option value="reçue" ${prefiltreStatut==='reçue'?'selected':''}>Reçue (Assurex)</option>
         <option value="extourné">Extournée</option>
+        <option value="versé_oz" ${prefiltreStatut==='versé_oz'?'selected':''}>Versé OZ (tout)</option>
+        <option value="versé_oz_a_refacturer" ${prefiltreStatut==='versé_oz_a_refacturer'?'selected':''}>Versé OZ — à refacturer</option>
       </select>
       <select class="form-select" id="tc-nature" style="max-width:170px" onchange="renderToutesCommissions()">
         <option value="">Acquisition + Gestion</option>
@@ -195,8 +197,11 @@ function renderToutesCommissions() {
   function montantC(c) { return c.montant_final != null ? c.montant_final : (c.montant_estime || 0); }
 
   const filtered = allCommissionsAttente.filter(c => {
-    // Cette page ne montre QUE les données Assurex — le passé OZ Assure a sa propre page dédiée
-    if (c.statut === 'versé_oz') return false;
+    // Par défaut, cette page ne montre QUE les données Assurex — le passé OZ Assure reste
+    // masqué tant que personne ne le demande explicitement via le filtre "Versé OZ" ci-dessus.
+    // Si un filtre versé_oz est sélectionné, on laisse passer ces lignes (visibles pour tous,
+    // David et Alejandro inclus — décision explicite de Jonathan du 03.08.2026).
+    if (c.statut === 'versé_oz' && statutFilter !== 'versé_oz' && statutFilter !== 'versé_oz_a_refacturer') return false;
     // Exclure les commissions liées à un contrat marqué "non commissionné" ou "annulé"
     // (un contrat annulé n'a jamais réellement pris effet — aucune commission n'a de sens ici,
     // à la différence d'"extourné" qui représente un contrat policé puis repris)
@@ -205,7 +210,9 @@ function renderToutesCommissions() {
       if (ct && (ct.commissionne === false || ct.statut === 'annulé')) return false;
     }
     if (compagnieFilter && normaliserCompagnie(c.compagnie) !== compagnieFilter) return false;
-    if (statutFilter && c.statut !== statutFilter) return false;
+    if (statutFilter === 'versé_oz_a_refacturer') {
+      if (!(c.statut === 'versé_oz' && !c.refacture_le)) return false;
+    } else if (statutFilter && c.statut !== statutFilter) return false;
     if (natureFilter && (c.nature || 'acquisition') !== natureFilter) return false;
     if (search) {
       const haystack = `${c.client_nom||''} ${c.compagnie||''} ${c.produit||''} ${numeroBordereauDe(c)}`.toLowerCase();

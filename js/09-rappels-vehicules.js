@@ -148,7 +148,7 @@ async function viewNouveauBordereau() {
     ${sectionCard('Informations bordereau', '#4ade80', `<div class="form-grid">
       <div class="form-field"><label class="form-label">Compagnie *</label>
         <input class="form-input" id="b-compagnie" placeholder="Commence à taper..." list="bordereau-compagnies-suggestions" oninput="suggererCautionCompagnie()" autocomplete="off"/>
-        <datalist id="bordereau-compagnies-suggestions">${(allCompagniesContacts||[]).map(c => `<option value="${c.compagnie}">`).join('')}</datalist>
+        <datalist id="bordereau-compagnies-suggestions">${[...new Set((allCompagniesContacts||[]).map(c => normaliserCompagnie(c.compagnie)).filter(Boolean))].sort().map(nom => `<option value="${nom}">`).join('')}</datalist>
         <div id="b-compagnie-hint" style="font-size:10.5px;color:var(--text-muted);margin-top:4px"></div>
       </div>
       <div class="form-field"><label class="form-label">Mois *</label>

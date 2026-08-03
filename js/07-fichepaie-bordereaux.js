@@ -236,7 +236,7 @@ function showModalEditBordereau(bordereauId) {
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
       <h3 style="margin:0 0 18px;font-size:16px;font-weight:800;color:var(--text)">Modifier le bordereau ${b.numero || ''}</h3>
       <div class="form-grid">
-        <div class="form-field"><label class="form-label">Compagnie</label><input class="form-input" id="eb-compagnie" value="${b.compagnie || ''}" list="eb-compagnies-suggestions" autocomplete="off"/><datalist id="eb-compagnies-suggestions">${(allCompagniesContacts||[]).map(c => `<option value="${c.compagnie}">`).join('')}</datalist></div>
+        <div class="form-field"><label class="form-label">Compagnie</label><input class="form-input" id="eb-compagnie" value="${b.compagnie || ''}" list="eb-compagnies-suggestions" autocomplete="off"/><datalist id="eb-compagnies-suggestions">${[...new Set((allCompagniesContacts||[]).map(c => normaliserCompagnie(c.compagnie)).filter(Boolean))].sort().map(nom => `<option value="${nom}">`).join('')}</datalist></div>
         <div class="form-field"><label class="form-label">Mois</label>
           <select class="form-select" id="eb-mois-select">
             ${['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'].map(m => `<option value="${m}" ${(b.mois||'').startsWith(m)?'selected':''}>${m}</option>`).join('')}

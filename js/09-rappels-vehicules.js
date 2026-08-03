@@ -436,7 +436,8 @@ function viewNouveauContrat() {
       </select></div>
       <div class="form-field" id="ct-duree-field" style="display:none"><label class="form-label">Durée du contrat (années)</label><input class="form-input" id="ct-duree" type="number" placeholder="10" value="1" oninput="updateCommissionPreview()"/></div>
       <div class="form-field" id="ct-manuel-field"><label class="form-label">Montant manuel (CHF) — remplace le calcul automatique si rempli</label><input class="form-input" id="ct-manuel" type="number" placeholder="0 = laisser le calcul automatique" oninput="updateCommissionPreview()"/></div>
-      <div class="form-field"><label class="form-label">Date de signature</label><input class="form-input" id="ct-date" type="date"/></div>
+      <div class="form-field"><label class="form-label">Date d'entrée en vigueur</label><input class="form-input" id="ct-date" type="date"/></div>
+      <div class="form-field"><label class="form-label">Date de signature</label><input class="form-input" id="ct-date-signature" type="date"/></div>
       <div class="form-field"><label class="form-label">Date d'échéance</label><input class="form-input" id="ct-echeance" type="date"/></div>
       <div class="form-field"><label class="form-label">Agent / Apporteur</label><select class="form-select" id="ct-apporteur">
         <option value="">— Aucun / pas de partage —</option>
@@ -969,6 +970,7 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
     numero_police: document.getElementById('ct-police').value.trim() || null,
     prime_annuelle: dejaAnnuelle ? Math.round(primeMensuelle * 100) / 100 : Math.round(primeMensuelle * (parseInt(document.getElementById('ct-periodicite')?.value) || 12) * 100) / 100,
     date_debut: document.getElementById('ct-date').value || null,
+    date_signature: document.getElementById('ct-date-signature').value || null,
     date_echeance: document.getElementById('ct-echeance').value || null,
     statut: document.getElementById('ct-statut').value,
     commissionne,

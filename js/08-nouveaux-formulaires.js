@@ -320,7 +320,8 @@ async function showEditContrat(contratId, returnTo) {
         <div class="form-field"><label class="form-label">Produit</label><input class="form-input" id="ect-produit" value="${ct.produit || ''}"/></div>
         <div class="form-field"><label class="form-label">Compagnie</label><input class="form-input" id="ect-compagnie" value="${ct.compagnie || ''}"/></div>
         <div class="form-field"><label class="form-label">N° de police</label><input class="form-input" id="ect-police" value="${ct.numero_police || ''}"/></div>
-        <div class="form-field"><label class="form-label">Date de signature</label><input class="form-input" id="ect-date-debut" type="date" value="${ct.date_debut || ''}"/></div>
+        <div class="form-field"><label class="form-label">Date d'entrée en vigueur</label><input class="form-input" id="ect-date-debut" type="date" value="${ct.date_debut || ''}"/></div>
+        <div class="form-field"><label class="form-label">Date de signature</label><input class="form-input" id="ect-date-signature" type="date" value="${ct.date_signature || ''}"/></div>
         <div class="form-field"><label class="form-label">Date d'échéance</label><input class="form-input" id="ect-echeance" type="date" value="${ct.date_echeance || ''}"/></div>
         <div class="form-field"><label class="form-label">Prime par échéance (CHF)</label><input class="form-input" id="ect-prime" type="number" value="${primeAff}" oninput="updateApercuPrimeAnnuelle()"/></div>
         <div class="form-field"><label class="form-label">Périodicité</label>
@@ -423,6 +424,7 @@ async function saveEditContrat(contratId, clientId, returnTo) {
     compagnie: document.getElementById('ect-compagnie').value.trim(),
     numero_police: document.getElementById('ect-police').value.trim() || null,
     date_debut: document.getElementById('ect-date-debut').value || null,
+    date_signature: document.getElementById('ect-date-signature').value || null,
     date_echeance: document.getElementById('ect-echeance').value || null,
     prime_annuelle: primeAnnuelle,
     periodicite: periodicite,

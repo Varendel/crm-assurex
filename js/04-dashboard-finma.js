@@ -804,7 +804,7 @@ function viewContratsOrphelinsCommission() {
   const compagniesPresentes = [...new Set(
     allContrats
       .filter(ct => ct.commissionne !== false && !['résilié','annulé','mandat_resilie'].includes(ct.statut) && Number(ct.prime_annuelle||0) > 0 && !idsAvecCommissionTmp.has(ct.id))
-      .map(ct => ct.compagnie).filter(Boolean)
+      .map(ct => normaliserCompagnie(ct.compagnie)).filter(Boolean)
   )].sort();
 
   return `
@@ -827,7 +827,7 @@ function renderContratsOrphelins() {
     !['résilié', 'annulé', 'mandat_resilie'].includes(ct.statut) &&
     Number(ct.prime_annuelle || 0) > 0 &&
     !idsAvecCommission.has(ct.id) &&
-    (!compagnieFilter || (ct.compagnie || '') === compagnieFilter)
+    (!compagnieFilter || normaliserCompagnie(ct.compagnie) === compagnieFilter)
   );
 
   const cols = '1fr 130px 100px 100px 100px';

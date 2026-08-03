@@ -1,3 +1,61 @@
+// ═══ VERSEMENTS PARTIELS (commissions payées en plusieurs fois — ex. AGV TONI SA) ═══
+// Certaines conventions (paiement direct du client hors décompte assureur) versent une
+// commission de gestion en 3-4 fois au fil des échéances. commission_tranches garde un
+// historique auditable de chaque versement, sans jamais modifier montant_estime/montant_final.
+function versementsDe(commId) {
+  return allCommissionTranches.filter(t => t.commission_id === commId);
+}
+function totalVersementsCommission(commId) {
+  return versementsDe(commId).reduce((s, t) => s + Number(t.montant || 0), 0);
+}
+
+function blocVersementsPartiels(c) {
+  const tranches = versementsDe(c.id).slice().sort((a, b) => (a.date_reception || '').localeCompare(b.date_reception || ''));
+  const cible = c.montant_final != null ? Number(c.montant_final) : Number(c.montant_estime || 0);
+  const recu = totalVersementsCommission(c.id);
+  const reste = Math.max(0, Math.round((cible - recu) * 100) / 100);
+  const solde = tranches.length > 0 && reste <= 0;
+  return `
+    <div style="background:var(--surface-alt);border-radius:10px;padding:12px 14px;margin-bottom:14px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Versements partiels ${tranches.length > 0 ? `(${tranches.length})` : ''}</div>
+        ${tranches.length > 0 ? `<div style="font-size:11.5px;font-weight:700;color:${solde ? '#4ade80' : '#f59e0b'}">Reçu CHF ${recu.toLocaleString()} / ${cible.toLocaleString()} — ${solde ? 'soldé ✓' : `reste CHF ${reste.toLocaleString()}`}</div>` : ''}
+      </div>
+      ${tranches.length > 0 ? tranches.map(t => `
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:11.5px;color:var(--text)">
+          <span>${fmtDate(t.date_reception)} — CHF ${Number(t.montant).toLocaleString()}${t.note ? ` · ${t.note}` : ''}</span>
+          <button type="button" onclick="supprimerVersementCommission('${t.id}', '${c.id}')" style="background:none;border:none;color:#f87171;cursor:pointer;font-size:12px">✕</button>
+        </div>`).join('') : `<div style="font-size:11px;color:var(--text-dim);margin-bottom:8px">Aucun versement enregistré — utile si cette commission est payée en plusieurs fois (ex. convention hors décompte assureur).</div>`}
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <input class="form-input" id="vp-montant" type="number" step="0.01" placeholder="Montant CHF" style="max-width:130px"/>
+        <input class="form-input" id="vp-date" type="date" value="${new Date().toISOString().split('T')[0]}" style="max-width:150px"/>
+        <input class="form-input" id="vp-note" placeholder="Note (optionnel)" style="flex:1"/>
+        <button type="button" onclick="ajouterVersementCommission('${c.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:0 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">+ Ajouter</button>
+      </div>
+    </div>`;
+}
+
+async function ajouterVersementCommission(commId) {
+  const montant = parseFloat(document.getElementById('vp-montant')?.value);
+  const date_reception = document.getElementById('vp-date')?.value || new Date().toISOString().split('T')[0];
+  const note = document.getElementById('vp-note')?.value.trim() || null;
+  if (!montant || montant <= 0) { showError('Indique un montant valide pour le versement.'); return; }
+  const r = await dbPost('commission_tranches', { commission_id: commId, montant, date_reception, note });
+  if (r && r.error) { showError('Erreur lors de l\'enregistrement du versement.'); return; }
+  logAction('add_versement_commission', 'commission_tranches', commId, `CHF ${montant} le ${date_reception}`);
+  allCommissionTranches = await dbGet('commission_tranches', 'select=*');
+  showModalEditCommission(commId);
+  renderToutesCommissions();
+}
+
+async function supprimerVersementCommission(trancheId, commId) {
+  if (!confirm('Supprimer ce versement ?')) return;
+  await dbDelete('commission_tranches', trancheId);
+  allCommissionTranches = await dbGet('commission_tranches', 'select=*');
+  showModalEditCommission(commId);
+  renderToutesCommissions();
+}
+
 function showModalEditCommission(commId) {
   const c = allCommissionsAttente.find(x => x.id === commId);
   if (!c) return;
@@ -47,6 +105,8 @@ function showModalEditCommission(commId) {
           <option value="oui" ${c.refacture_le?'selected':''}>Oui — déjà transférée</option>
         </select></div>
       </div>
+      ${blocVersementsPartiels(c)}
+
       <div style="display:flex;gap:10px;margin-top:20px">
         <button onclick="deleteCommission('${commId}')" style="background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>
         <button class="btn-secondary" onclick="document.getElementById('modal-edit-commission').remove()">Annuler</button>
@@ -147,6 +207,7 @@ async function saveEditCommission(commId) {
 
 function viewCommissionsAttente(prefiltreStatut) {
   window._tcPrefiltre = prefiltreStatut || null;
+  dbGet('commission_tranches', 'select=*').then(t => { allCommissionTranches = t; renderToutesCommissions(); });
   setTimeout(() => renderToutesCommissions(), 0);
   const compagniesPresentes = [...new Set(allCommissionsAttente.map(c => normaliserCompagnie(c.compagnie)).filter(Boolean))].sort();
   return `
@@ -244,7 +305,7 @@ function renderToutesCommissions() {
   const rows = filtered.map(c => {
     const numBord = numeroBordereauDe(c);
     return `<div class="table-row" style="grid-template-columns:${cols};cursor:pointer" onclick="showModalEditCommission('${c.id}')">
-      <div><div style="font-size:13px;font-weight:700;color:var(--text)">${c.client_id ? `<span onclick="event.stopPropagation(); showClient('${c.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${c.client_nom || '—'}</span>` : (c.client_nom || '—')}${getClientMiniLogos(allClients.find(x => x.id === c.client_id))}</div><div style="font-size:11px;color:var(--text-muted)">${c.produit || ''}</div>${c.detail_calcul ? `<div style="font-size:10px;color:var(--text-dim);margin-top:2px;font-style:italic">${c.detail_calcul.split('[')[0].trim()}</div>` : `<div style="font-size:10px;color:#f59e0b;margin-top:2px">⚠ Détail du calcul manquant — clique pour préciser</div>`}</div>
+      <div><div style="font-size:13px;font-weight:700;color:var(--text)">${c.client_id ? `<span onclick="event.stopPropagation(); showClient('${c.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${c.client_nom || '—'}</span>` : (c.client_nom || '—')}${getClientMiniLogos(allClients.find(x => x.id === c.client_id))}</div><div style="font-size:11px;color:var(--text-muted)">${c.produit || ''}</div>${c.detail_calcul ? `<div style="font-size:10px;color:var(--text-dim);margin-top:2px;font-style:italic">${c.detail_calcul.split('[')[0].trim()}</div>` : `<div style="font-size:10px;color:#f59e0b;margin-top:2px">⚠ Détail du calcul manquant — clique pour préciser</div>`}${totalVersementsCommission(c.id) > 0 ? `<div style="font-size:10px;color:#4ade80;margin-top:2px">💰 Reçu CHF ${totalVersementsCommission(c.id).toLocaleString()} / ${montantC(c).toLocaleString()} (versements partiels)</div>` : ''}</div>
       <div style="font-size:12px;color:var(--text-muted)">${c.compagnie || ''}</div>
       <div style="font-size:11px;color:var(--text-muted)">${numBord ? `<span style="font-family:monospace">${numBord}</span>` : '—'}</div>
       <div style="font-size:12px;color:var(--text-muted)">${c.date_creation || ''}</div>

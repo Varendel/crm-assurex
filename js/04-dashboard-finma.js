@@ -799,12 +799,35 @@ function showDetailContrat(contratId) {
 
 // ═══ Contrats sans aucune commission créée (filet de sécurité) ═══
 function viewContratsOrphelinsCommission() {
+  setTimeout(() => renderContratsOrphelins(), 0);
+  const idsAvecCommissionTmp = new Set(allCommissionsAttente.map(ca => ca.contrat_id).filter(Boolean));
+  const compagniesPresentes = [...new Set(
+    allContrats
+      .filter(ct => ct.commissionne !== false && !['résilié','annulé','mandat_resilie'].includes(ct.statut) && Number(ct.prime_annuelle||0) > 0 && !idsAvecCommissionTmp.has(ct.id))
+      .map(ct => ct.compagnie).filter(Boolean)
+  )].sort();
+
+  return `
+    <h2 style="margin:0 0 4px;font-size:18px;font-weight:800;color:var(--text)">Contrats sans commission créée</h2>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Ces contrats sont commissionnables mais n'ont aucune ligne de commission — utile pour préparer un rapport de contrôle par compagnie. Clique sur "+ Créer" pour générer la commission avec la formule standard selon le produit (LPP, LAMal, complémentaire, ou estimation générique).</div>
+    <div style="margin-bottom:18px">
+      <select class="form-select" id="orph-compagnie" style="max-width:260px" onchange="renderContratsOrphelins()">
+        <option value="">Toutes compagnies (${compagniesPresentes.length})</option>
+        ${compagniesPresentes.map(comp => `<option value="${comp}">${comp}</option>`).join('')}
+      </select>
+    </div>
+    <div id="orph-table"></div>`;
+}
+
+function renderContratsOrphelins() {
+  const compagnieFilter = document.getElementById('orph-compagnie')?.value || '';
   const idsAvecCommission = new Set(allCommissionsAttente.map(ca => ca.contrat_id).filter(Boolean));
   const orphelins = allContrats.filter(ct =>
     ct.commissionne !== false &&
     !['résilié', 'annulé', 'mandat_resilie'].includes(ct.statut) &&
     Number(ct.prime_annuelle || 0) > 0 &&
-    !idsAvecCommission.has(ct.id)
+    !idsAvecCommission.has(ct.id) &&
+    (!compagnieFilter || (ct.compagnie || '') === compagnieFilter)
   );
 
   const cols = '1fr 130px 100px 100px 100px';
@@ -823,9 +846,7 @@ function viewContratsOrphelinsCommission() {
     </div>`;
   }).join('');
 
-  return `
-    <h2 style="margin:0 0 4px;font-size:18px;font-weight:800;color:var(--text)">Contrats sans commission créée</h2>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Ces contrats sont commissionnables mais n'ont aucune ligne de commission — clique sur "+ Créer" pour générer la commission avec la formule standard selon le produit (LPP, LAMal, complémentaire, ou estimation générique).</div>
+  document.getElementById('orph-table').innerHTML = `
     <div class="table-wrap">
       <div class="table-header" style="grid-template-columns:${cols}"><div>Client / Produit</div><div>Compagnie</div><div>Prime/an</div><div>Statut</div><div></div></div>
       ${rows || '<div class="table-empty">✅ Aucun contrat orphelin — tout est en ordre.</div>'}

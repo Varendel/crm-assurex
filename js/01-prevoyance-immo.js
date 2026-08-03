@@ -218,6 +218,30 @@ const TAUX_COMMISSION = {
   gastrosocial: {
     lpp: 1.60,
   },
+  // Vaudoise Générale — Tabelle de commissions A1 non-vie, édition 01.11.2024
+  // (Convention de collaboration de courtage signée le 09.09.2025 — entrée en vigueur 01.09.2025)
+  // Non-vie : uniquement des Commissions d'Encaissement (art. 2.2.1 du Règlement),
+  // en % de la Prime nette encaissée (hors taxes). Taux appliqué à la prime annuelle en l'absence
+  // d'un suivi d'encaissement par échéance — le montant obtenu reste une ESTIMATION annuelle.
+  vaudoise: {
+    accident_individuel_collectif: 15.00,  // Accident individuelle et collective (sans LAA)
+    laa: 4.00,                             // Accident collective obligatoire selon LAA
+    maladie_collective: 7.50,              // Maladie collective
+    rc_generale: 15.00,                    // RC générale (entreprises, professionnelles), immeubles, privée
+    rc_agricole_dirigeant: 12.50,          // Agricole, RC dirigeant
+    caution: 5.00,                         // Caution, garantie de construction
+    rc_construction: 15.00,                // Travaux de construction, RC maître de l'ouvrage, RC consortiums
+    vehicule_rc: 4.00,                     // Véhicules à moteur — Responsabilité civile
+    vehicule_casco_complete: 12.00,        // Casco complète
+    vehicule_casco_partielle: 15.00,       // Casco partielle, occupants (taux Vaudoise volontairement > Casco complète)
+    batiment: 15.00,                       // Produit Building / Septimo / Home in One — tous risques
+    choses: 15.00,                         // Incendie, vol, dégât des eaux, bris de glaces, objets de valeur / machines / perte d'exploitation / Tech in One / Cyber
+    five_in_one: 15.00,                    // Produit entreprise "Five in one" : RC - inventaire - bureautique - transports - protection juridique
+    assistance: 15.00,                     // Assistance tous risques
+    // NB: Tabelle B1 (Risques "Vie" — PlanoProtect/RythmoProtect/RythmoInvest/SerenityPlan) non intégrée ici :
+    // taux/coefficients dépendent du produit Vie précis, absent du catalogue générique "vie_3a" du CRM.
+    // À traiter au cas par cas tant qu'un mapping produit-Vie Vaudoise n'existe pas.
+  },
 };
 
 // ═══ CONSTANTES LÉGALES LPP (état au 01.01.2026 — inchangées depuis 2025, réforme rejetée) ═══

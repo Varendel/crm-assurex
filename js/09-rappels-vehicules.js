@@ -811,6 +811,47 @@ function calculerCommissionEstimee() {
     return { montant, detail: `Gastrosocial — Prévoyance professionnelle : ${TAUX_COMMISSION.gastrosocial.lpp}% × CHF ${primeAnnuelle} (prime totale) = CHF ${montant}` };
   }
 
+  // ── VAUDOISE — Tabelle de commissions A1 non-vie (édition 01.11.2024) ──
+  // Convention de collaboration de courtage signée le 09.09.2025 (entrée en vigueur 01.09.2025).
+  // Commission d'Encaissement uniquement pour les Risques Non-Vie (art. 2.2.1 du Règlement) :
+  // Crédit = Prime nette × Taux. Estimation basée sur la prime annuelle (pas de suivi par échéance).
+  if (compagnieChoisie.includes('vaudoise')) {
+    const V = TAUX_COMMISSION.vaudoise;
+    const tauxVaudoiseParProduit = {
+      laa: V.laa,
+      perte_gain_accident_collective: V.accident_individuel_collectif,
+      perte_gain_maladie_collective: V.maladie_collective,
+      sante_collective_entreprise: V.maladie_collective,
+      rc_entreprise: V.rc_generale,
+      rc_pro: V.rc_generale,
+      rc_privee: V.rc_generale,
+      rc_inventaire: V.rc_generale,
+      rc_batiment: V.rc_generale,
+      rc_commerce: V.rc_generale,
+      rc_do: V.rc_agricole_dirigeant,
+      caution_bail_prive: V.caution,
+      caution_bail_commercial: V.caution,
+      rc_vehicule: V.vehicule_rc,
+      vehicule_rc: V.vehicule_rc,
+      casco_complete: V.vehicule_casco_complete,
+      casco_partielle: V.vehicule_casco_partielle,
+      batiment_prive: V.batiment,
+      batiment_entreprise: V.batiment,
+      choses_entreprise: V.choses,
+      pertes_exploitation: V.choses,
+      cyber_entreprise: V.choses,
+      pj_pro: V.five_in_one,
+    };
+    const tauxVaudoise = tauxVaudoiseParProduit[produitId];
+    if (tauxVaudoise !== undefined) {
+      const montantArrondi = Math.round(primeAnnuelle * tauxVaudoise) / 100; // arrondi au centime
+      return {
+        montant: montantArrondi,
+        detail: `Vaudoise — Commission d'Encaissement (Tabelle A1, éd. 01.11.2024) : ${tauxVaudoise}% × CHF ${primeAnnuelle} = CHF ${montantArrondi} — estimation annuelle, versement réel étalé selon échéances d'encaissement`,
+      };
+    }
+  }
+
   // ── Santé / complémentaire ──────────────────────────────────────────────
   if (['helsana_top','helsana_sana','helsana_completa','helsana_completa_plus','helsana_primeo','gm_premium','gm_global_smart','gm_global_mi_privee','gm_global_privee','gm_global_flex','lca_autre_compagnie'].includes(produitId)) {
     const montant = Math.round(primeMensuelle * TAUX_COMMISSION.sante_facteur_mensuel);

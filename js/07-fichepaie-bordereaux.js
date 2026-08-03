@@ -662,7 +662,7 @@ function showFormClient(type) {
     setTimeout(() => bindAdresseAutocomplete({ adresseId:'f-adresse', npaId:'f-npa', villeId:'f-ville', cantonId:'f-canton' }), 0);
   } else {
     main.innerHTML = formEntreprise();
-    setTimeout(() => bindAdresseAutocomplete({ adresseId:'e-adresse', npaId:null, villeId:'e-ville', cantonId:null }), 0);
+    setTimeout(() => bindAdresseAutocomplete({ adresseId:'e-adresse', npaId:'e-npa', villeId:'e-ville', cantonId:null }), 0);
   }
   insertBackBar({ homeId: 'clients', homeLabel: 'Clients', itemLabel: type === 'prive' ? 'Nouveau client privé' : 'Nouveau client entreprise' });
 }
@@ -793,7 +793,8 @@ function formEntreprise() {
     ${sectionCard('Contact & Adresse', '#38bdf8', `<div class="form-grid">
       <div class="form-field"><label class="form-label">Adresse *</label><input class="form-input" id="e-adresse" placeholder="Rue du Commerce 1"/></div>
       <div class="form-field"><label class="form-label">c/o (optionnel)</label><input class="form-input" id="e-co" placeholder="c/o Nom Prénom"/></div>
-      <div class="form-field"><label class="form-label">NPA / Ville *</label><input class="form-input" id="e-ville" placeholder="1000 Lausanne"/></div>
+      <div class="form-field"><label class="form-label">NPA *</label><input class="form-input" id="e-npa" placeholder="1000"/></div>
+      <div class="form-field"><label class="form-label">Ville *</label><input class="form-input" id="e-ville" placeholder="Lausanne"/></div>
       <div class="form-field"><label class="form-label">Téléphone</label><input class="form-input" id="e-tel" placeholder="+41 21 XXX XX XX"/></div>
       <div class="form-field"><label class="form-label">Email *</label><input class="form-input" id="e-email" type="email" placeholder="contact@entreprise.ch"/></div>
       <div class="form-field"><label class="form-label">Lieu du risque</label><input class="form-input" id="e-risque" placeholder="Si différent de l'adresse"/></div>
@@ -890,12 +891,14 @@ async function saveEntreprise() {
   const nom = document.getElementById('e-nom').value.trim();
   const email = document.getElementById('e-email').value.trim();
   const adresse = document.getElementById('e-adresse').value.trim();
+  const npa = document.getElementById('e-npa').value.trim();
   const ville = document.getElementById('e-ville').value.trim();
   const missing = [];
   if (!nom) missing.push('Raison sociale');
   if (!email) missing.push('Email');
   if (!adresse) missing.push('Adresse');
-  if (!ville) missing.push('NPA / Ville');
+  if (!npa) missing.push('NPA');
+  if (!ville) missing.push('Ville');
   if (missing.length > 0) { alert('Champs obligatoires manquants : ' + missing.join(', ')); return; }
   const contact = (document.getElementById('e-contact-prenom').value + ' ' + document.getElementById('e-contact-nom').value).trim();
   const body = {
@@ -905,6 +908,7 @@ async function saveEntreprise() {
     tel: document.getElementById('e-tel').value || null,
     adresse: document.getElementById('e-adresse').value || null,
     co: document.getElementById('e-co').value.trim() || null,
+    npa: document.getElementById('e-npa').value || null,
     ville: document.getElementById('e-ville').value || null,
     avs: document.getElementById('e-avs').value || null,
     profession: document.getElementById('e-secteur').value || null,

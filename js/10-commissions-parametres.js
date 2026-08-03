@@ -148,7 +148,7 @@ async function saveEditCommission(commId) {
 function viewCommissionsAttente(prefiltreStatut) {
   window._tcPrefiltre = prefiltreStatut || null;
   setTimeout(() => renderToutesCommissions(), 0);
-  const compagniesPresentes = [...new Set(allCommissionsAttente.map(c => c.compagnie).filter(Boolean))].sort();
+  const compagniesPresentes = [...new Set(allCommissionsAttente.map(c => normaliserCompagnie(c.compagnie)).filter(Boolean))].sort();
   return `
     <h2 style="margin:0 0 6px;font-size:18px;font-weight:800;color:var(--text)">Toutes les commissions</h2>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Estimées à la signature, puis liées à un bordereau une fois reçues. Pour faire passer une commission "en attente" en "reçue", utilise "+ Rapprocher une commission" sur le bordereau concerné — ça garantit le montant net exact et le numéro de police.</div>
@@ -204,7 +204,7 @@ function renderToutesCommissions() {
       const ct = allContrats.find(x => x.id === c.contrat_id);
       if (ct && (ct.commissionne === false || ct.statut === 'annulé')) return false;
     }
-    if (compagnieFilter && (c.compagnie || '') !== compagnieFilter) return false;
+    if (compagnieFilter && normaliserCompagnie(c.compagnie) !== compagnieFilter) return false;
     if (statutFilter && c.statut !== statutFilter) return false;
     if (natureFilter && (c.nature || 'acquisition') !== natureFilter) return false;
     if (search) {

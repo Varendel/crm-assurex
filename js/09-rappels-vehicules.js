@@ -650,10 +650,10 @@ function toggleCombinablePrime(produitId) {
     const div = document.createElement('div');
     div.id = `ct-combinable-prime-${produitId}`;
     div.style.cssText = 'margin-top:6px';
-    if (produitId === 'lca_complementaire') {
-      // La LCA varie énormément de nom selon la compagnie (COMPLETA, Premium, Global smart...)
-      // et ces noms changent régulièrement — saisie libre plutôt qu'une liste qui se périme vite.
-      div.innerHTML = `<label class="form-label">Nom du produit complémentaire (ex: COMPLETA, Premium, Global smart...)</label><input class="form-input ct-combinable-nom-input" data-produit-id="${produitId}" placeholder="Nom exact du produit chez la compagnie"/><label class="form-label" style="margin-top:8px">Prime annuelle LCA (CHF)</label><input class="form-input ct-combinable-prime-input" data-produit-id="${produitId}" type="number" placeholder="540"/><div style="font-size:10.5px;color:var(--text-muted);margin-top:3px">Indique le montant annuel (prime mensuelle × 12).</div>`;
+    if (produitId === 'lca_autre_compagnie') {
+      // Seul "autre compagnie" garde une saisie libre — les produits Helsana/GM ci-dessus sont
+      // des combinables nommés et fixes, exactement comme Casco partielle/complète.
+      div.innerHTML = `<label class="form-label">Nom du produit complémentaire (ex: SWICA COMPLETA, CSS myFlex...)</label><input class="form-input ct-combinable-nom-input" data-produit-id="${produitId}" placeholder="Nom exact du produit chez la compagnie"/><label class="form-label" style="margin-top:8px">Prime annuelle LCA (CHF)</label><input class="form-input ct-combinable-prime-input" data-produit-id="${produitId}" type="number" placeholder="540"/><div style="font-size:10.5px;color:var(--text-muted);margin-top:3px">Indique le montant annuel (prime mensuelle × 12).</div>`;
     } else {
       div.innerHTML = `<label class="form-label">Prime annuelle pour "${produit.label}" (CHF)</label><input class="form-input ct-combinable-prime-input" data-produit-id="${produitId}" type="number" placeholder="540"/><div style="font-size:10.5px;color:var(--text-muted);margin-top:3px">Casco/ménage sont facturés annuellement — indique le montant annuel, pas mensuel.</div>`;
     }
@@ -812,7 +812,7 @@ function calculerCommissionEstimee() {
   }
 
   // ── Santé / complémentaire ──────────────────────────────────────────────
-  if (produitId === 'lca_complementaire') {
+  if (['helsana_top','helsana_sana','helsana_completa','helsana_completa_plus','helsana_primeo','gm_premium','gm_global_smart','gm_global_mi_privee','gm_global_privee','gm_global_flex','lca_autre_compagnie'].includes(produitId)) {
     const montant = Math.round(primeMensuelle * TAUX_COMMISSION.sante_facteur_mensuel);
     return { montant, detail: `CHF ${primeMensuelle}/mois × ${TAUX_COMMISSION.sante_facteur_mensuel} (taux santé) = CHF ${montant}` };
   }

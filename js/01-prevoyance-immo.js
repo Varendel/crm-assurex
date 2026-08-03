@@ -242,6 +242,26 @@ const TAUX_COMMISSION = {
     // taux/coefficients dépendent du produit Vie précis, absent du catalogue générique "vie_3a" du CRM.
     // À traiter au cas par cas tant qu'un mapping produit-Vie Vaudoise n'existe pas.
   },
+  // AXA — Agence partenaire DES GOUTTES & Cie SA (Genève), Contrat pour intermédiaire non lié,
+  // entrée en vigueur 01.04.2025, signé 10.03.2025 — Annexe Non-vie, Tableau de courtage (§B4.4).
+  // Commissions de courtage annuelles sur prime nette. AUCUNE commission sur police échue ou en
+  // renouvellement tacite (§B3) — contrairement à Vaudoise, pas d'AR/portefeuille séparé ici.
+  axa: {
+    choses: 15.00,                  // Incendie, vol, DE, BG, PE incendie et DE
+    rc_hors_vehicules: 15.00,       // RC (sans RC véhicules), RC bateaux, RC avions
+    techniques: 15.00,              // Machines, casco-machines, DATA, ATA, Montage, PE Machines
+    transport: 15.00,               // Police d'abonnement, à forfait, au CA
+    personnes_accidents: 15.00,     // Accidents individuelles et collectives (sans LAA/LAAF)
+    maladie_collective: 6.50,       // Maladie collective
+    laa_laaf: 3.00,                 // Accidents collectives obligatoires et facultative (LAA/LAAF)
+    vehicules: 7.00,                // Véhicules automobiles — RC, Casco, Accidents, Flottes (taux unique)
+    autres: 10.00,                  // Cautionnement, garantie constr., Intertours, OV, épidémie, bateaux,
+                                     // RCMO, protection juridique, perte sur débiteurs, complémentaires, ménage/bâtiment
+    // Flotte Auto et Aviation/crédits : "taux déterminé de cas en cas" — non chiffrables, à saisir manuellement.
+    // NB: un 2e contrat AXA existe (Agence principale Mario Piscopo, Pully, éd. 01.11.2024) avec des taux
+    // forfaitaires différents (18.70% acquisition / 3.20% portefeuille, hors tableau de courtage) — à
+    // clarifier avec Jonathan s'il est toujours actif en parallèle de celui-ci avant de l'intégrer.
+  },
 };
 
 // ═══ CONSTANTES LÉGALES LPP (état au 01.01.2026 — inchangées depuis 2025, réforme rejetée) ═══

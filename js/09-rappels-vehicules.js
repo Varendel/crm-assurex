@@ -853,6 +853,51 @@ function calculerCommissionEstimee() {
   }
 
   // ── Santé / complémentaire ──────────────────────────────────────────────
+
+  // ── AXA — Agence partenaire DES GOUTTES & Cie SA (Genève) ───────────────
+  // Contrat pour intermédiaire non lié, entrée en vigueur 01.04.2025 — Annexe Non-vie,
+  // Tableau de courtage §B4.4. Commission de courtage annuelle sur prime nette.
+  // Aucune commission sur police échue ou en renouvellement tacite (§B3) — estimation
+  // valable uniquement pour une affaire nouvelle.
+  if (compagnieChoisie.includes('axa')) {
+    const A = TAUX_COMMISSION.axa;
+    const tauxAxaParProduit = {
+      choses_entreprise: A.choses,
+      pertes_exploitation: A.choses,
+      cyber_entreprise: A.choses,
+      rc_entreprise: A.rc_hors_vehicules,
+      rc_pro: A.rc_hors_vehicules,
+      rc_privee: A.rc_hors_vehicules,
+      rc_inventaire: A.rc_hors_vehicules,
+      rc_batiment: A.rc_hors_vehicules,
+      rc_commerce: A.rc_hors_vehicules,
+      rc_do: A.rc_hors_vehicules,
+      perte_gain_accident_collective: A.personnes_accidents,
+      perte_gain_maladie_collective: A.maladie_collective,
+      sante_collective_entreprise: A.maladie_collective,
+      laa: A.laa_laaf,
+      rc_vehicule: A.vehicules,
+      vehicule_rc: A.vehicules,
+      casco_complete: A.vehicules,
+      casco_partielle: A.vehicules,
+      flotte_entreprise: A.vehicules,
+      caution_bail_prive: A.autres,
+      caution_bail_commercial: A.autres,
+      batiment_prive: A.autres,
+      batiment_entreprise: A.autres,
+      pj_pro: A.autres,
+    };
+    const tauxAxa = tauxAxaParProduit[produitId];
+    if (tauxAxa !== undefined) {
+      const montantArrondi = Math.round(primeAnnuelle * tauxAxa) / 100; // arrondi au centime
+      return {
+        montant: montantArrondi,
+        detail: `AXA (Des Gouttes & Cie) — Commission de courtage (Tableau §B4.4) : ${tauxAxa}% × CHF ${primeAnnuelle} = CHF ${montantArrondi} — affaire nouvelle uniquement, aucune commission sur renouvellement tacite`,
+      };
+    }
+  }
+
+  // ── Santé / complémentaire ──────────────────────────────────────────────
   if (['helsana_top','helsana_sana','helsana_completa','helsana_completa_plus','helsana_primeo','gm_premium','gm_global_smart','gm_global_mi_privee','gm_global_privee','gm_global_flex','lca_autre_compagnie'].includes(produitId)) {
     const montant = Math.round(primeMensuelle * TAUX_COMMISSION.sante_facteur_mensuel);
     return { montant, detail: `CHF ${primeMensuelle}/mois × ${TAUX_COMMISSION.sante_facteur_mensuel} (taux santé) = CHF ${montant}` };

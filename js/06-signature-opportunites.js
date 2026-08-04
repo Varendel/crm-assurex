@@ -634,6 +634,8 @@ function viewImportDecompte() {
 }
 
 let _decompteLignes = [];
+let _decompteNomAssureur = '';
+let _decompteCommissionTotaleAnnoncee = null;
 
 // Compare deux textes en ignorant accents, casse et ordre des mots (utile pour rapprocher un nom
 // "Preneur d'assurance / Prénom" du fichier compagnie avec "prenom nom" tel que saisi dans le CRM,
@@ -663,6 +665,86 @@ function trouverColonne(headers, alias) {
 function estStatutResilieOuAnnule(statut) {
   const s = (statut || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   return ['resilie', 'annule', 'mandat_resilie'].includes(s);
+}
+
+// Recherche le contrat CRM correspondant à une ligne de décompte (par n° de police, avec départage
+// par ressemblance de branche si plusieurs contrats partagent la même police), et à défaut un client
+// probable par le nom — factorisé pour être réutilisé à l'analyse initiale ET après création manuelle
+// d'un contrat manquant depuis l'écran d'import (sans redemander le fichier).
+function matcherContratEtClient(numeroContrat, brancheInterne, nomFichier) {
+  const npReq = normPoliceNumero(numeroContrat);
+  const candidats = allContrats.filter(c => c.numero_police && normPoliceNumero(c.numero_police) === npReq);
+
+  let contratTrouve = null;
+  if (candidats.length === 1) contratTrouve = candidats[0];
+  else if (candidats.length > 1) {
+    const motsB = (brancheInterne || '').toLowerCase().split(/[^a-zàâäéèêëïîôöùûüç0-9]+/).filter(w => w.length >= 4);
+    let meilleur = candidats[0], meilleurScore = -1;
+    candidats.forEach(c => {
+      const p = (c.produit || '').toLowerCase();
+      let score = motsB.reduce((s, m) => s + (p.includes(m) ? 1 : 0), 0);
+      if (!estStatutResilieOuAnnule(c.statut)) score += 0.5;
+      if (score > meilleurScore) { meilleurScore = score; meilleur = c; }
+    });
+    contratTrouve = meilleur;
+  }
+  const clientTrouve = contratTrouve ? allClients.find(c => c.id === contratTrouve.client_id) : null;
+
+  let clientSuggere = null;
+  if (!clientTrouve && nomFichier) {
+    const mf = motsTriesSansAccents(nomFichier);
+    clientSuggere = allClients.find(c => {
+      const nomComplet = estEntreprise(c) ? c.nom : `${c.prenom || ''} ${c.nom || ''}`;
+      return nomComplet.trim() && motsTriesSansAccents(nomComplet) === mf;
+    }) || null;
+  }
+
+  return { contratTrouve, clientTrouve, clientSuggere };
+}
+
+// Ré-applique le rapprochement (police -> contrat CRM) sur toutes les lignes déjà analysées, sans
+// redemander le fichier — utilisé après la création d'un contrat manquant depuis l'écran d'import,
+// pour que la ligne (et toute autre ligne partageant la même police) se rattache immédiatement.
+function reassocierLignesImport() {
+  _decompteLignes.forEach(l => {
+    const { contratTrouve, clientTrouve, clientSuggere } = matcherContratEtClient(l.numeroContrat, l.brancheInterne, l.nomVaudoise);
+    const candidats = allContrats.filter(c => c.numero_police && normPoliceNumero(c.numero_police) === normPoliceNumero(l.numeroContrat));
+    l.contratId = contratTrouve ? contratTrouve.id : null;
+    l.clientId = contratTrouve ? (clientTrouve ? clientTrouve.id : null) : (clientSuggere ? clientSuggere.id : null);
+    l.clientNomCRM = clientTrouve ? (estEntreprise(clientTrouve) ? clientTrouve.nom : `${clientTrouve.prenom} ${clientTrouve.nom}`) : null;
+    l.clientSuggereNom = (!clientTrouve && clientSuggere) ? (estEntreprise(clientSuggere) ? clientSuggere.nom : `${clientSuggere.prenom} ${clientSuggere.nom}`) : null;
+    l.ambigu = candidats.length > 1;
+    if (contratTrouve) l.selectionne = true;
+  });
+  renderImportDecompte(_decompteNomAssureur, _decompteCommissionTotaleAnnoncee);
+}
+
+// Crée directement le contrat manquant à partir des données déjà présentes dans la ligne de décompte
+// (compagnie, branche, n° de police, base de commission comme estimation de prime de départ) — pour
+// le cas fréquent où la police n'a jamais été reçue/saisie mais que la compagnie facture déjà dessus.
+async function creerContratDepuisImport(idx) {
+  const l = _decompteLignes[idx];
+  if (!l || !l.clientId) return;
+  const btn = document.getElementById(`imp-creer-${idx}`);
+  if (btn) { btn.disabled = true; btn.textContent = 'Création...'; }
+  const body = {
+    client_id: l.clientId,
+    compagnie: normaliserCompagnie(_decompteNomAssureur || ''),
+    produit: l.brancheInterne || 'Contrat (à préciser)',
+    numero_police: l.numeroContrat,
+    prime_annuelle: Math.round((l.commissionProduction || 0) * 100) / 100,
+    statut: 'actif',
+  };
+  const r = await dbPost('contrats', body);
+  if (r && r.error) {
+    showError('Erreur lors de la création du contrat : ' + errMsg(r));
+    if (btn) { btn.disabled = false; btn.textContent = '📝 Créer le contrat'; }
+    return;
+  }
+  logAction('create_contrat', 'contrats', r && r[0] ? r[0].id : null, `${body.produit} — ${body.compagnie} (créé depuis import décompte, police jamais reçue)`);
+  allContrats = await dbGet('contrats', 'select=*');
+  showError(`✓ Contrat créé (${body.produit} — ${body.compagnie}, police ${body.numero_police}). Prime annuelle estimée à CHF ${body.prime_annuelle.toLocaleString()} depuis la base de commission du décompte — vérifie/corrige-la sur la fiche contrat, c'est une estimation de départ.`);
+  reassocierLignesImport();
 }
 
 async function analyserDecompteExcel() {
@@ -735,41 +817,10 @@ async function analyserDecompteExcel() {
 
   _decompteLignes = lignesUtiles.map((r, i) => {
     const numeroContrat = (r[iContrat] || '').toString().trim();
-    const npReq = normPoliceNumero(numeroContrat);
     const brancheInterne = iBranche !== -1 ? (r[iBranche] || '') : '';
-    const candidats = allContrats.filter(c => c.numero_police && normPoliceNumero(c.numero_police) === npReq);
-
-    // Plusieurs contrats CRM peuvent partager le même n° de police (ex. RC + Casco saisis en 2 lignes,
-    // ou un ancien contrat résilié jamais nettoyé) — on choisit celui dont le produit ressemble le plus
-    // à la branche du décompte, avec un petit bonus pour un contrat encore actif à score égal.
-    let contratTrouve = null;
-    if (candidats.length === 1) contratTrouve = candidats[0];
-    else if (candidats.length > 1) {
-      const motsB = brancheInterne.toLowerCase().split(/[^a-zàâäéèêëïîôöùûüç0-9]+/).filter(w => w.length >= 4);
-      let meilleur = candidats[0], meilleurScore = -1;
-      candidats.forEach(c => {
-        const p = (c.produit || '').toLowerCase();
-        let score = motsB.reduce((s, m) => s + (p.includes(m) ? 1 : 0), 0);
-        if (!estStatutResilieOuAnnule(c.statut)) score += 0.5;
-        if (score > meilleurScore) { meilleurScore = score; meilleur = c; }
-      });
-      contratTrouve = meilleur;
-    }
-    const clientTrouve = contratTrouve ? allClients.find(c => c.id === contratTrouve.client_id) : null;
-
     const nomFichier = `${(r[iNom] || '').toString().trim()}${r[iPrenom] ? ' ' + r[iPrenom].toString().trim() : ''}`.trim();
-
-    // Aucun contrat trouvé par n° de police : on tente quand même de repérer un client probable par
-    // son nom (comparaison insensible à l'ordre des mots et aux accents) plutôt que de laisser une
-    // ligne "Non trouvé" muette alors que le fichier donne bel et bien un nom.
-    let clientSuggere = null;
-    if (!clientTrouve && nomFichier) {
-      const mf = motsTriesSansAccents(nomFichier);
-      clientSuggere = allClients.find(c => {
-        const nomComplet = estEntreprise(c) ? c.nom : `${c.prenom || ''} ${c.nom || ''}`;
-        return nomComplet.trim() && motsTriesSansAccents(nomComplet) === mf;
-      }) || null;
-    }
+    const { contratTrouve, clientTrouve, clientSuggere } = matcherContratEtClient(numeroContrat, brancheInterne, nomFichier);
+    const candidats = allContrats.filter(c => c.numero_police && normPoliceNumero(c.numero_police) === normPoliceNumero(numeroContrat));
 
     const commissionProduction = iCommissionProd !== -1 ? (parseFloat(r[iCommissionProd]) || 0) : 0;
     const tauxFichier = iTaux !== -1 ? (parseFloat(r[iTaux]) || 0) : 0;
@@ -802,6 +853,8 @@ async function analyserDecompteExcel() {
     };
   });
 
+  _decompteNomAssureur = nomAssureur;
+  _decompteCommissionTotaleAnnoncee = commissionTotaleAnnoncee;
   renderImportDecompte(nomAssureur, commissionTotaleAnnoncee);
 }
 
@@ -846,7 +899,7 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
             <td style="padding:5px 8px;white-space:nowrap">${l.nomVaudoise}</td>
             <td style="padding:5px 8px;white-space:nowrap;color:var(--text-muted)">${l.npa || '—'}</td>
             <td style="padding:5px 8px;white-space:nowrap;color:var(--text-muted)">${l.localite || '—'}</td>
-            <td style="padding:5px 8px;white-space:nowrap">${l.clientNomCRM ? l.clientNomCRM : (l.clientSuggereNom ? `<span style="color:#f59e0b">≈ ${l.clientSuggereNom}</span>` : '<span style="color:#f87171">Non trouvé</span>')}${!l.clientNomCRM && l.clientSuggereNom ? `<div style="font-size:9.5px;color:var(--text-muted);white-space:normal;max-width:170px">nom trouvé, pas de contrat avec cette police — crée-le/corrige-la</div>` : ''}</td>
+            <td style="padding:5px 8px;white-space:nowrap">${l.clientNomCRM ? l.clientNomCRM : (l.clientSuggereNom ? `<span style="color:#f59e0b">≈ ${l.clientSuggereNom}</span>` : '<span style="color:#f87171">Non trouvé</span>')}${!l.clientNomCRM && l.clientSuggereNom ? `<div style="font-size:9.5px;color:var(--text-muted);white-space:normal;max-width:170px;margin-bottom:4px">nom trouvé, pas de contrat avec cette police — police probablement jamais reçue</div><button type="button" id="imp-creer-${l.idx}" onclick="creerContratDepuisImport(${l.idx})" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:3px 8px;font-size:10.5px;cursor:pointer;font-weight:700;white-space:nowrap">📝 Créer le contrat</button>` : ''}</td>
             <td style="padding:5px 8px;color:var(--text-muted);white-space:nowrap">${l.brancheInterne}</td>
             <td style="padding:5px 8px;text-align:right;white-space:nowrap;color:var(--text-muted)">CHF ${l.commissionProduction.toLocaleString()}</td>
             <td style="padding:5px 8px;text-align:right;white-space:nowrap">${l.taux}%</td>

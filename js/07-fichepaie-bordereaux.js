@@ -299,7 +299,7 @@ async function deleteBordereau(bordereauId) {
 
 async function saveEditBordereau(bordereauId) {
   const body = {
-    compagnie: document.getElementById('eb-compagnie').value.trim(),
+    compagnie: normaliserCompagnie(document.getElementById('eb-compagnie').value.trim()),
     mois: `${document.getElementById('eb-mois-select').value} ${document.getElementById('eb-annee-select').value}`,
     montant_brut: Number(document.getElementById('eb-montant').value) || 0,
     taux_caution: Number(document.getElementById('eb-caution').value) || 0,

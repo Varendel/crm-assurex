@@ -421,7 +421,7 @@ async function saveEditContrat(contratId, clientId, returnTo) {
   const ancienStatut = ancienContrat ? ancienContrat.statut : null;
   const body = {
     produit: document.getElementById('ect-produit').value.trim(),
-    compagnie: document.getElementById('ect-compagnie').value.trim(),
+    compagnie: normaliserCompagnie(document.getElementById('ect-compagnie').value.trim()),
     numero_police: document.getElementById('ect-police').value.trim() || null,
     date_debut: document.getElementById('ect-date-debut').value || null,
     date_signature: document.getElementById('ect-date-signature').value || null,

@@ -148,7 +148,7 @@ async function saveEditCommission(commId) {
 
   const body = {
     client_nom: document.getElementById('ec-client').value.trim(),
-    compagnie: document.getElementById('ec-compagnie').value.trim(),
+    compagnie: normaliserCompagnie(document.getElementById('ec-compagnie').value.trim()),
     produit: document.getElementById('ec-produit').value.trim(),
     montant_estime: Number(document.getElementById('ec-montant-estime').value) || 0,
     montant_final: estUnRetourEnArriere ? null : (montantFinalVal === '' ? null : Number(montantFinalVal)),

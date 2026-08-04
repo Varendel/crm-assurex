@@ -201,7 +201,7 @@ function suggererCautionCompagnie() {
 }
 
 async function saveBordereau() {
-  const compagnie = document.getElementById('b-compagnie').value.trim();
+  const compagnie = normaliserCompagnie(document.getElementById('b-compagnie').value.trim());
   const mois = `${document.getElementById('b-mois-select').value} ${document.getElementById('b-annee-select').value}`;
   const montant = parseInt(document.getElementById('b-montant').value) || 0;
   const tauxCaution = parseFloat(document.getElementById('b-caution').value) || 0;
@@ -743,7 +743,7 @@ const ALIAS_COMPAGNIES = {
   'swiss life': 'Swiss Life', 'swiss life sa': 'Swiss Life', 'swisslife': 'Swiss Life', 'swisslife sa': 'Swiss Life',
   'axa winterthur': 'AXA', 'axa assurances': 'AXA', 'axa': 'AXA',
   'zurich assurances': 'Zurich', 'zurich': 'Zurich',
-  'generali assurances': 'Generali', 'generali': 'Generali',
+  'generali assurances': 'Generali', 'generali': 'Generali', 'generali assurances générales sa': 'Generali',
   'baloise assurances': 'Baloise', 'bâloise': 'Baloise', 'baloise': 'Baloise', 'bâloise assurances sa': 'Baloise', 'baloise assurances sa': 'Baloise',
   'helsana assurances': 'Helsana', 'helsana': 'Helsana',
   'sanitas assurances': 'Sanitas', 'sanitas': 'Sanitas',
@@ -1051,7 +1051,7 @@ async function saveContrat() {
   const clientId = clientSelectEl ? clientSelectEl.value : contratClientId;
   if (!clientId) { showError('Sélectionne un client.'); return; }
 
-  const compagnie = document.getElementById('ct-compagnie').value.trim();
+  const compagnie = normaliserCompagnie(document.getElementById('ct-compagnie').value.trim());
   const produitSelectionne = getProduitSelectionne();
   const primeMensuelle = parseFloat(document.getElementById('ct-prime-mensuelle').value) || 0;
   if (!compagnie || !primeMensuelle) { showError('Compagnie et prime sont obligatoires.'); return; }

@@ -1114,6 +1114,16 @@ async function supprimerMandatSauvegarde(mandatId, clientId) {
   showClient(clientId);
 }
 
+// Sauvegarde les données saisies dans la fenêtre imprimable "Fiche demande d'offre" (appelée
+// depuis cette fenêtre via window.opener) — les valeurs réapparaissent, modifiables, la prochaine
+// fois que la fiche est rouverte pour ce client.
+async function sauvegarderFicheOffre(clientId, data) {
+  const r = await dbPatch('clients', clientId, { fiche_offre_data: data });
+  if (r && r.error) { console.error('Échec sauvegarde fiche demande d\'offre :', errMsg(r)); return; }
+  allClients = await dbGet('clients', 'select=*');
+  logAction('edit_fiche_offre', 'clients', clientId, 'Mise à jour de la fiche demande d\'offre');
+}
+
 function genererFicheDemandeOffre(clientId) {
   const c = allClients.find(x => x.id === clientId);
   if (!c) return;
@@ -1121,136 +1131,157 @@ function genererFicheDemandeOffre(clientId) {
   const nbCollaborateurs = allCollaborateurs ? allCollaborateurs.filter(co => co.client_id === clientId).length : '';
   const adresseComplete = [c.adresse, c.npa, c.ville].filter(Boolean).join(', ');
 
-  const champVide = (largeur = '100%') => `<div style="border-bottom:1px solid #999;min-height:16px;width:${largeur};display:inline-block"></div>`;
-  const case_ = (label) => `<span style="display:inline-block;margin-right:14px;white-space:nowrap"><span style="display:inline-block;width:11px;height:11px;border:1px solid #333;margin-right:4px;vertical-align:middle"></span>${label}</span>`;
+  // Les réponses saisies à l'écran (au clavier, dans la fenêtre imprimable) sont conservées sur le
+  // client (clients.fiche_offre_data) — rouvrir la fiche plus tard réaffiche et permet de modifier
+  // ce qui a déjà été saisi, au lieu de repartir d'une fiche vierge à chaque fois.
+  const donnees = c.fiche_offre_data || {};
+  const v = (key) => (donnees[key] != null ? String(donnees[key]).replace(/"/g, '&quot;') : '');
+  const champEditable = (key, largeur = '100%') => `<input type="text" data-champ="${key}" value="${v(key)}" style="border:none;border-bottom:1px solid #999;min-height:18px;width:${largeur};font:inherit;background:transparent;padding:0 0 1px"/>`;
+  const zoneEditable = (key, lignes = 2) => `<textarea data-champ="${key}" rows="${lignes}" style="border:1px solid #ccc;border-radius:3px;width:100%;font:inherit;background:transparent;padding:4px;resize:vertical">${donnees[key] || ''}</textarea>`;
+  const caseEditable = (key, label) => `<span style="display:inline-block;margin-right:14px;white-space:nowrap"><label style="cursor:pointer"><input type="checkbox" data-champ="${key}" ${donnees[key] ? 'checked' : ''} style="width:11px;height:11px;margin-right:4px;vertical-align:middle;cursor:pointer"/>${label}</label></span>`;
 
   const win = window.open('', '_blank');
   win.document.write(`<html><head><title>Fiche demande d'offre — ${c.nom}</title><meta charset="utf-8">
   <style>
-    @media print { .print-btn { display:none } @page { margin: 14mm } }
+    @media print { .print-btn, .save-btn, .save-note { display:none } @page { margin: 14mm } input, textarea { border-color: #999 !important } }
     body { font-family: Arial, sans-serif; font-size: 11.5px; color: #1a1a1a; max-width: 850px; margin: 20px auto; line-height: 1.45 }
-    h1 { font-size: 17px; margin: 0 0 4px }
-    h2 { font-size: 12.5px; background: #113679; color: #fff; padding: 5px 10px; margin: 16px 0 8px; border-radius: 4px }
+    input, textarea { color: #1a1a1a }
+    .raison-sociale { font-size: 25px; font-weight: 900; color: #113679; letter-spacing: 0.3px; margin: 10px 0 2px; text-transform: uppercase }
     .sous-titre { color: #555; font-size: 10.5px; margin-bottom: 14px }
+    h2 { font-size: 12.5px; background: #113679; color: #fff; padding: 5px 10px; margin: 16px 0 8px; border-radius: 4px }
     .ligne { display: flex; gap: 18px; margin-bottom: 8px; align-items: baseline; flex-wrap: wrap }
     .champ { flex: 1; min-width: 150px }
     .champ label { display: block; font-size: 9.5px; color: #555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 1px }
     .rappel-legal { background: #f3f4f6; border-left: 3px solid #113679; padding: 6px 10px; font-size: 9.5px; color: #444; margin: 6px 0 10px }
     .print-btn { position: fixed; top: 16px; right: 16px; background: #113679; color: #fff; border: none; border-radius: 8px; padding: 10px 18px; font-weight: 700; cursor: pointer; font-size: 13px }
+    .save-btn { position: fixed; top: 16px; right: 168px; background: #16a34a; color: #fff; border: none; border-radius: 8px; padding: 10px 18px; font-weight: 700; cursor: pointer; font-size: 13px }
+    .save-note { position: fixed; top: 62px; right: 16px; background: #16a34a; color: #fff; border-radius: 6px; padding: 6px 12px; font-size: 11px; font-weight: 700; display: none }
     table.plaques { width: 100%; border-collapse: collapse; font-size: 10.5px; margin-top: 6px }
     table.plaques th, table.plaques td { border: 1px solid #ccc; padding: 5px 8px; text-align: left }
+    table.plaques input { border: none; width: 100%; font: inherit; background: transparent }
     .footer { margin-top: 22px; font-size: 9px; color: #888; border-top: 1px solid #ddd; padding-top: 8px }
   </style></head><body>
 
     <div class="entete">
       ${genererBadgeLogoAssurex(28, '10px 16px', 'inline-block')}
     </div>
-
-    <h1>Fiche de demande d'offre — Entreprise</h1>
-    <div class="sous-titre">Document de travail — à compléter pendant l'entretien avec le client</div>
+    <div class="raison-sociale">${c.nom || '—'}</div>
+    <div class="sous-titre">Fiche de demande d'offre — Entreprise — document de travail, à compléter pendant l'entretien avec le client</div>
 
     <h2>1. Identité de l'entreprise</h2>
     <div class="ligne">
-      <div class="champ"><label>Raison sociale</label>${c.nom || champVide()}</div>
-      <div class="champ"><label>Forme juridique / IDE</label>${c.ide || champVide()}</div>
-      <div class="champ"><label>Date d'inscription au RC</label>${champVide()}</div>
+      <div class="champ"><label>Raison sociale</label>${c.nom || '—'}</div>
+      <div class="champ"><label>Forme juridique / IDE</label>${c.ide || '—'}</div>
+      <div class="champ"><label>Date d'inscription au RC</label>${champEditable('date_rc')}</div>
     </div>
     <div class="ligne">
-      <div class="champ" style="flex:2"><label>Adresse</label>${adresseComplete || champVide()}</div>
-      <div class="champ"><label>Lieu du risque (si différent)</label>${champVide()}</div>
+      <div class="champ" style="flex:2"><label>Adresse</label>${adresseComplete || '—'}</div>
+      <div class="champ"><label>Lieu du risque (si différent)</label>${champEditable('lieu_risque')}</div>
     </div>
     <div class="ligne">
-      <div class="champ"><label>Contact (prénom nom)</label>${nomContact || champVide()}</div>
-      <div class="champ"><label>Téléphone</label>${c.tel || c.mobile || champVide()}</div>
-      <div class="champ"><label>E-mail</label>${c.email || champVide()}</div>
+      <div class="champ"><label>Contact (prénom nom)</label>${nomContact || '—'}</div>
+      <div class="champ"><label>Téléphone</label>${c.tel || c.mobile || '—'}</div>
+      <div class="champ"><label>E-mail</label>${c.email || '—'}</div>
     </div>
     <div class="ligne">
-      <div class="champ"><label>Activité principale / secteur</label>${c.profession || champVide()}</div>
-      <div class="champ"><label>Nombre de collaborateurs</label>${nbCollaborateurs || champVide('60px')}</div>
+      <div class="champ"><label>Activité principale / secteur</label>${c.profession || '—'}</div>
+      <div class="champ"><label>Nombre de collaborateurs</label>${nbCollaborateurs || '—'}</div>
     </div>
     <div class="ligne">
-      <div class="champ">${case_('Soumis SUVA ? Oui')} ${case_('Non')}</div>
-      <div class="champ">${case_('Statut indépendant')}</div>
-      <div class="champ">${case_(`Soumis CCT ? ${c.cct ? '(déjà indiqué: Oui)' : 'Oui'}`)} ${case_('Non')}</div>
+      <div class="champ">${caseEditable('suva_oui', 'Soumis SUVA ? Oui')} ${caseEditable('suva_non', 'Non')}</div>
+      <div class="champ">${caseEditable('independant', 'Statut indépendant')}</div>
+      <div class="champ">${caseEditable('cct_oui', `Soumis CCT ? ${c.cct ? '(déjà indiqué: Oui)' : 'Oui'}`)} ${caseEditable('cct_non', 'Non')}</div>
     </div>
 
     <h2>2. Données salariales (base de calcul LAA / LPP / perte de gain)</h2>
     <div class="rappel-legal">Rappels légaux 2026 : masse salariale max. soumise AVS CHF 90'720/an dès 8h hebdo (soumis ANP) · seuil d'entrée LPP CHF 22'680 · salaire coordonné LPP min. CHF 3'780 – max. CHF 64'260 · plafond LPP sans déduction de coordination CHF 90'720.</div>
     <div class="ligne">
-      <div class="champ"><label>Chiffre d'affaires</label>${champVide()}</div>
-      <div class="champ"><label>Masse salariale chef d'entreprise</label>${champVide()}</div>
+      <div class="champ"><label>Chiffre d'affaires</label>${champEditable('ca')}</div>
+      <div class="champ"><label>Masse salariale chef d'entreprise</label>${champEditable('masse_salariale_dirigeant')}</div>
     </div>
     <div class="ligne">
-      <div class="champ"><label>Masse salariale AP — Hommes</label>${champVide()}</div>
-      <div class="champ"><label>Masse salariale AP — Femmes</label>${champVide()}</div>
+      <div class="champ"><label>Masse salariale AP — Hommes</label>${champEditable('masse_ap_hommes')}</div>
+      <div class="champ"><label>Masse salariale AP — Femmes</label>${champEditable('masse_ap_femmes')}</div>
     </div>
     <div class="ligne">
-      <div class="champ"><label>Masse salariale ANP — Hommes</label>${champVide()}</div>
-      <div class="champ"><label>Masse salariale ANP — Femmes</label>${champVide()}</div>
+      <div class="champ"><label>Masse salariale ANP — Hommes</label>${champEditable('masse_anp_hommes')}</div>
+      <div class="champ"><label>Masse salariale ANP — Femmes</label>${champEditable('masse_anp_femmes')}</div>
     </div>
     <div class="ligne">
-      <div class="champ"><label>Salaires excédentaires AVS — Hommes</label>${champVide()}</div>
-      <div class="champ"><label>Salaires excédentaires AVS — Femmes</label>${champVide()}</div>
+      <div class="champ"><label>Salaires excédentaires AVS — Hommes</label>${champEditable('salaires_exc_hommes')}</div>
+      <div class="champ"><label>Salaires excédentaires AVS — Femmes</label>${champEditable('salaires_exc_femmes')}</div>
     </div>
 
     <h2>3. Assurances de personnes (collectives)</h2>
     <div class="ligne">
-      ${case_('LAA')} ${case_('LAAC (complémentaire)')} ${case_('LAAF min. CHF 66\'690 (indépendant)')}
+      ${caseEditable('laa', 'LAA')} ${caseEditable('laac', 'LAAC (complémentaire)')} ${caseEditable('laaf', 'LAAF min. CHF 66\'690 (indépendant)')}
     </div>
     <div class="ligne">
-      <div class="champ"><label>Perte de gain maladie — délai d'attente</label>${case_('14j')} ${case_('30j')} ${case_('60j')}</div>
-      <div class="champ"><label>Couverture salaire souhaitée</label>${case_('80%')} ${case_('90%')} ${case_('100%')}</div>
+      <div class="champ"><label>Perte de gain maladie — délai d'attente</label>${caseEditable('delai_14', '14j')} ${caseEditable('delai_30', '30j')} ${caseEditable('delai_60', '60j')}</div>
+      <div class="champ"><label>Couverture salaire souhaitée</label>${caseEditable('couv_80', '80%')} ${caseEditable('couv_90', '90%')} ${caseEditable('couv_100', '100%')}</div>
     </div>
-    <div class="ligne">${case_('Semi-privée souhaitée')}</div>
+    <div class="ligne">${caseEditable('semi_privee', 'Semi-privée souhaitée')}</div>
     <div class="rappel-legal">LPP — préciser le souhait du client (plans-cadres), puis remplir la fiche Excel dédiée par collaborateur.</div>
 
     <h2>4. Prévoyance privée (vie du dirigeant / collaborateurs clés)</h2>
     <div class="ligne">
-      ${case_('3a')} ${case_('3a indépendant')} ${case_('3b')} ${case_('Risque pur')} ${case_('Versement unique')}
+      ${caseEditable('p3a', '3a')} ${caseEditable('p3a_indep', '3a indépendant')} ${caseEditable('p3b', '3b')} ${caseEditable('risque_pur', 'Risque pur')} ${caseEditable('versement_unique', 'Versement unique')}
     </div>
     <div class="ligne">
-      <div class="champ"><label>Budget épargne souhaité (CHF)</label>${champVide()}</div>
-      <div class="champ"><label>Capital invalidité souhaité (CHF)</label>${champVide()}</div>
-      <div class="champ"><label>Capital décès souhaité (CHF)</label>${champVide()}</div>
+      <div class="champ"><label>Budget épargne souhaité (CHF)</label>${champEditable('budget_epargne')}</div>
+      <div class="champ"><label>Capital invalidité souhaité (CHF)</label>${champEditable('capital_invalidite')}</div>
+      <div class="champ"><label>Capital décès souhaité (CHF)</label>${champEditable('capital_deces')}</div>
     </div>
-    <div class="ligne"><div class="champ"><label>Améliorations souhaitées</label>${case_('Rentes')} ${case_('Épargne')} ${case_('Tranches de cotisations')} ${case_('Rendement')}</div></div>
+    <div class="ligne"><div class="champ"><label>Améliorations souhaitées</label>${caseEditable('amelio_rentes', 'Rentes')} ${caseEditable('amelio_epargne', 'Épargne')} ${caseEditable('amelio_tranches', 'Tranches de cotisations')} ${caseEditable('amelio_rendement', 'Rendement')}</div></div>
 
     <h2>5. Responsabilité civile &amp; choses</h2>
-    <div class="ligne"><div class="champ"><label>Risque particulier lié au domaine d'activité</label>${champVide()}</div></div>
-    <div class="ligne"><div class="champ"><label>Lieux d'exploitation (tous les sites à risque)</label>${champVide()}</div></div>
+    <div class="ligne"><div class="champ"><label>Risque particulier lié au domaine d'activité</label>${champEditable('risque_particulier')}</div></div>
+    <div class="ligne"><div class="champ"><label>Lieux d'exploitation (tous les sites à risque)</label>${champEditable('lieux_exploitation')}</div></div>
     <div class="ligne">
-      ${case_('RC / commerce')} ${case_('Préjudices de fortune (CV + diplômes requis)')} ${case_('Cyber')}
+      ${caseEditable('rc_commerce', 'RC / commerce')} ${caseEditable('prejudices_fortune', 'Préjudices de fortune (CV + diplômes requis)')} ${caseEditable('cyber', 'Cyber')}
     </div>
     <div class="ligne">
-      ${case_('Marchandises à assurer')} ${case_('Transports')} ${case_('Transports spéciaux')} ${case_('Machines à assurer')} ${case_('Vol')} ${case_('All Risk')}
+      ${caseEditable('marchandises', 'Marchandises à assurer')} ${caseEditable('transports', 'Transports')} ${caseEditable('transports_speciaux', 'Transports spéciaux')} ${caseEditable('machines', 'Machines à assurer')} ${caseEditable('vol', 'Vol')} ${caseEditable('all_risk', 'All Risk')}
     </div>
     <div class="ligne">
-      ${case_('Protection juridique')} ${case_('Construction & maître d\u2019ouvrage')} ${case_('Technique')} ${case_('Perte d\u2019exploitation')}
+      ${caseEditable('protection_juridique', 'Protection juridique')} ${caseEditable('construction', 'Construction & maître d\u2019ouvrage')} ${caseEditable('technique', 'Technique')} ${caseEditable('perte_exploitation', 'Perte d\u2019exploitation')}
     </div>
-    <div class="ligne"><div class="champ"><label>Inventaire — somme d'assurance souhaitée (CHF)</label>${champVide()}</div></div>
+    <div class="ligne"><div class="champ"><label>Inventaire — somme d'assurance souhaitée (CHF)</label>${champEditable('inventaire_somme')}</div></div>
 
     <h2>6. Véhicules</h2>
     <table class="plaques">
       <tr><th style="width:30%">N° de plaque</th><th>Marque / modèle</th></tr>
-      <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
-      <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
-      <tr><td>&nbsp;</td><td>&nbsp;</td></tr>
+      <tr><td>${champEditable('veh1_plaque')}</td><td>${champEditable('veh1_marque')}</td></tr>
+      <tr><td>${champEditable('veh2_plaque')}</td><td>${champEditable('veh2_marque')}</td></tr>
+      <tr><td>${champEditable('veh3_plaque')}</td><td>${champEditable('veh3_marque')}</td></tr>
     </table>
 
     <h2>7. Synthèse et priorités du client</h2>
-    <div class="ligne"><div class="champ"><label>Objectifs principaux exprimés par le client (dans ses mots)</label>${champVide()}<br/>${champVide()}</div></div>
+    <div class="ligne"><div class="champ"><label>Objectifs principaux exprimés par le client (dans ses mots)</label>${zoneEditable('objectifs', 3)}</div></div>
     <div class="ligne">
-      <div class="champ"><label>Compagnie(s) actuelle(s) à résilier</label>${champVide()}</div>
-      <div class="champ"><label>Échéance(s) connue(s)</label>${champVide()}</div>
+      <div class="champ"><label>Compagnie(s) actuelle(s) à résilier</label>${champEditable('compagnies_resilier')}</div>
+      <div class="champ"><label>Échéance(s) connue(s)</label>${champEditable('echeances_connues')}</div>
     </div>
     <div class="ligne">
-      <div class="champ"><label>Budget global envisagé (CHF/an)</label>${champVide()}</div>
-      <div class="champ"><label>Délai souhaité pour la mise en place</label>${champVide()}</div>
+      <div class="champ"><label>Budget global envisagé (CHF/an)</label>${champEditable('budget_global')}</div>
+      <div class="champ"><label>Délai souhaité pour la mise en place</label>${champEditable('delai_souhaite')}</div>
     </div>
-    <div class="ligne"><div class="champ"><label>Prochaine étape / date de suivi</label>${champVide()}</div></div>
+    <div class="ligne"><div class="champ"><label>Prochaine étape / date de suivi</label>${champEditable('prochaine_etape')}</div></div>
 
     <div class="footer">ASSUREX Sàrl – Rue du Centre 142, 1025 St-Sulpice – Autorisation FINMA F01492173 — Document de travail interne, non contractuel</div>
 
+    <button class="save-btn" onclick="
+      const d = {};
+      document.querySelectorAll('[data-champ]').forEach(el => {
+        if (el.type === 'checkbox') { d[el.dataset.champ] = el.checked; }
+        else { d[el.dataset.champ] = el.value; }
+      });
+      window.opener.sauvegarderFicheOffre('${clientId}', d);
+      const note = document.querySelector('.save-note');
+      note.style.display = 'block';
+      setTimeout(() => note.style.display = 'none', 2500);
+    ">💾 Enregistrer les infos</button>
+    <div class="save-note">✓ Enregistré — réouvrir la fiche depuis la fiche client pour continuer à la modifier</div>
     <button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
   </body></html>`);
   win.document.close();

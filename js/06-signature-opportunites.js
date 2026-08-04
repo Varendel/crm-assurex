@@ -614,7 +614,7 @@ function viewImportDecompte() {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
       <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">📊 Import décompte compagnie (Excel, norme IG B2B)</h2>
     </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Lit directement le fichier Excel "Décompte de prime" envoyé par une compagnie (format standardisé IG B2B — testé avec La Vaudoise). Réconcilie les contrats existants et propose la création des commissions correspondantes.</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Lit directement le fichier Excel "Décompte de commission" envoyé par une compagnie (norme IG B2B — testé avec les décomptes La Vaudoise). Réconcilie automatiquement les contrats par n° de police, propose un client probable par le nom quand le contrat n'est pas trouvé, et reprend directement le taux et le montant déjà calculés par la compagnie dans le fichier.</div>
 
     ${sectionCard('Fichier', '#38bdf8', `
       <input type="file" id="imp-file-input" accept=".xlsx,.xls" style="display:none" onchange="analyserDecompteExcel()"/>
@@ -635,6 +635,36 @@ function viewImportDecompte() {
 
 let _decompteLignes = [];
 
+// Compare deux textes en ignorant accents, casse et ordre des mots (utile pour rapprocher un nom
+// "Preneur d'assurance / Prénom" du fichier compagnie avec "prenom nom" tel que saisi dans le CRM,
+// l'ordre des mots n'étant jamais garanti identique entre les deux sources).
+function motsTriesSansAccents(s) {
+  return (s || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9\s]/g, ' ').split(/\s+/).filter(Boolean).sort().join(' ');
+}
+
+// Un n° de police peut être noté avec des espacements différents et surtout des zéros non significatifs
+// différents entre le CRM et le fichier compagnie (ex. CRM "529747 8 1210" vs fichier "00529747 8 1210")
+// — on ne compare que la suite de chiffres significative pour ne pas rater ces correspondances.
+function normPoliceNumero(s) {
+  return (s || '').toString().replace(/\D/g, '').replace(/^0+/, '');
+}
+
+function normEnTeteColonne(h) {
+  return (h == null ? '' : h.toString()).trim().toLowerCase().replace(/\s+/g, ' ');
+}
+function trouverColonne(headers, alias) {
+  const aliasNorm = alias.map(normEnTeteColonne);
+  for (let i = 0; i < headers.length; i++) {
+    if (aliasNorm.includes(normEnTeteColonne(headers[i]))) return i;
+  }
+  return -1;
+}
+function estStatutResilieOuAnnule(statut) {
+  const s = (statut || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return ['resilie', 'annule', 'mandat_resilie'].includes(s);
+}
+
 async function analyserDecompteExcel() {
   const input = document.getElementById('imp-file-input');
   const file = input.files[0];
@@ -644,91 +674,173 @@ async function analyserDecompteExcel() {
   const buffer = await file.arrayBuffer();
   const wb = XLSX.read(buffer, { type: 'array', cellDates: false });
 
-  const feuillePrimes = wb.SheetNames.find(n => n.toLowerCase().includes('prime')) || wb.SheetNames[0];
+  // Le nom de l'onglet varie selon les compagnies/versions ("Commissions" chez La Vaudoise) — on
+  // cherche un onglet dont le nom évoque des commissions/primes avant de retomber sur le premier.
+  const feuillePrimes = wb.SheetNames.find(n => n.toLowerCase().includes('commission'))
+    || wb.SheetNames.find(n => n.toLowerCase().includes('prime')) || wb.SheetNames[0];
   const ws = wb.Sheets[feuillePrimes];
   const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null, raw: true });
 
-  // Métadonnées d'en-tête (nom assureur, destinataire) — informatif
-  let nomAssureur = '';
-  rows.forEach(r => { if (r[0] === "Nom de l'assureur:") nomAssureur = r[1] || ''; });
+  // Métadonnées d'en-tête (nom assureur, total annoncé pour contrôle) — informatif
+  let nomAssureur = '', commissionTotaleAnnoncee = null;
+  rows.forEach(r => {
+    if (r[0] === "Nom de l'assureur:") nomAssureur = r[1] || '';
+    if (r[0] === 'Commission totale:') commissionTotaleAnnoncee = parseFloat(r[1]) || null;
+  });
 
   // Trouve la ligne d'en-tête du tableau (celle qui contient "N° de contrat")
   const idxHeader = rows.findIndex(r => r[0] === 'N° de contrat');
-  if (idxHeader === -1) { showError('Format non reconnu — impossible de trouver la ligne d\u2019en-tête du tableau ("N° de contrat").'); return; }
+  if (idxHeader === -1) { showError('Format non reconnu — impossible de trouver la ligne d’en-tête du tableau ("N° de contrat").'); return; }
   const headers = rows[idxHeader];
-  const col = (nomColonne) => headers.indexOf(nomColonne);
-  const iContrat = col('N° de contrat'), iNom = col("Preneur d'assurance/Nom"), iPrenom = col('Prénom'),
-        iNpa = col('Nopost'), iLocalite = col('Localité'), iGenre = col('Genre'), iD = col('D'),
-        iBrancheIG = col('Branche IG'), iBrancheInterne = col('Branche Interne'), iPrimeCommis = col('Prime commis.'),
-        iPrFactTotal = col('Pr. Fact. Total'), iMonnaie = col('Monnaie');
+
+  // Résolution des colonnes par alias tolérant (accents/casse/espaces) — les décomptes Vaudoise ont
+  // changé de mise en page entre versions (14 colonnes en janvier 2026, 23 colonnes en nov/déc 2025),
+  // une correspondance rigide sur le nom exact de colonne cassait silencieusement l'import.
+  const iContrat = trouverColonne(headers, ['N° de contrat']);
+  const iNom = trouverColonne(headers, ["Preneur d'assurance/Nom", "Preneur d'assurance"]);
+  const iPrenom = trouverColonne(headers, ['Prénom']);
+  const iNpa = trouverColonne(headers, ['Nopost']);
+  const iLocalite = trouverColonne(headers, ['Localité']);
+  const iBranche = trouverColonne(headers, ['Branche interne']);
+  const iCommissionProd = trouverColonne(headers, ['Commission production', 'Prime commis.']);
+  const iTaux = trouverColonne(headers, ['Taux %']);
+  const iMontantDetaille = trouverColonne(headers, ['Montant détaillé']);
+  const iMontantTotal = trouverColonne(headers, ['Montant total', 'Pr. Fact. Total']);
+
+  if (iContrat === -1 || iNom === -1) {
+    showError('Colonnes essentielles introuvables dans ce fichier (n° de contrat / preneur d’assurance) — le format a peut-être encore changé, vérifie les en-têtes du fichier.');
+    return;
+  }
 
   const lignesBrutes = rows.slice(idxHeader + 1).filter(r => r && r[iContrat]);
-  // Règle donnée par la légende du fichier lui-même : exclure les lignes marquées "D" (détail) pour ne pas compter en double
-  const lignesUtiles = lignesBrutes.filter(r => (r[iD] || '').toString().trim().toUpperCase() !== 'D');
 
-  const normPolice = (s) => (s || '').toString().trim().toLowerCase().replace(/\s+/g, '');
+  // Selon la légende du fichier lui-même : "En cas de commission sur plusieurs codes branches
+  // différents, il y a une ligne total suivie de lignes de détail" — on ne garde la ligne total
+  // que si aucune ligne de détail n'existe pour ce contrat, sinon la commission serait comptée 2×.
+  const parContrat = {};
+  lignesBrutes.forEach(r => {
+    const key = (r[iContrat] || '').toString().trim();
+    (parContrat[key] = parContrat[key] || []).push(r);
+  });
+  const lignesUtiles = [];
+  Object.values(parContrat).forEach(groupe => {
+    const detailPresent = iMontantDetaille !== -1 && groupe.some(r => r[iMontantDetaille] != null && r[iMontantDetaille] !== '');
+    groupe.forEach(r => {
+      const estLigneTotal = detailPresent && (r[iMontantDetaille] == null || r[iMontantDetaille] === '');
+      if (!estLigneTotal) lignesUtiles.push(r);
+    });
+  });
 
   _decompteLignes = lignesUtiles.map((r, i) => {
     const numeroContrat = (r[iContrat] || '').toString().trim();
-    const contratTrouve = allContrats.find(c => c.numero_police && normPolice(c.numero_police) === normPolice(numeroContrat));
+    const npReq = normPoliceNumero(numeroContrat);
+    const brancheInterne = iBranche !== -1 ? (r[iBranche] || '') : '';
+    const candidats = allContrats.filter(c => c.numero_police && normPoliceNumero(c.numero_police) === npReq);
+
+    // Plusieurs contrats CRM peuvent partager le même n° de police (ex. RC + Casco saisis en 2 lignes,
+    // ou un ancien contrat résilié jamais nettoyé) — on choisit celui dont le produit ressemble le plus
+    // à la branche du décompte, avec un petit bonus pour un contrat encore actif à score égal.
+    let contratTrouve = null;
+    if (candidats.length === 1) contratTrouve = candidats[0];
+    else if (candidats.length > 1) {
+      const motsB = brancheInterne.toLowerCase().split(/[^a-zàâäéèêëïîôöùûüç0-9]+/).filter(w => w.length >= 4);
+      let meilleur = candidats[0], meilleurScore = -1;
+      candidats.forEach(c => {
+        const p = (c.produit || '').toLowerCase();
+        let score = motsB.reduce((s, m) => s + (p.includes(m) ? 1 : 0), 0);
+        if (!estStatutResilieOuAnnule(c.statut)) score += 0.5;
+        if (score > meilleurScore) { meilleurScore = score; meilleur = c; }
+      });
+      contratTrouve = meilleur;
+    }
     const clientTrouve = contratTrouve ? allClients.find(c => c.id === contratTrouve.client_id) : null;
-    const primeCommis = parseFloat(r[iPrimeCommis]) || 0;
+
+    const nomFichier = `${(r[iNom] || '').toString().trim()}${r[iPrenom] ? ' ' + r[iPrenom].toString().trim() : ''}`.trim();
+
+    // Aucun contrat trouvé par n° de police : on tente quand même de repérer un client probable par
+    // son nom (comparaison insensible à l'ordre des mots et aux accents) plutôt que de laisser une
+    // ligne "Non trouvé" muette alors que le fichier donne bel et bien un nom.
+    let clientSuggere = null;
+    if (!clientTrouve && nomFichier) {
+      const mf = motsTriesSansAccents(nomFichier);
+      clientSuggere = allClients.find(c => {
+        const nomComplet = estEntreprise(c) ? c.nom : `${c.prenom || ''} ${c.nom || ''}`;
+        return nomComplet.trim() && motsTriesSansAccents(nomComplet) === mf;
+      }) || null;
+    }
+
+    const commissionProduction = iCommissionProd !== -1 ? (parseFloat(r[iCommissionProd]) || 0) : 0;
+    const tauxFichier = iTaux !== -1 ? (parseFloat(r[iTaux]) || 0) : 0;
+    const montantDetaille = iMontantDetaille !== -1 ? parseFloat(r[iMontantDetaille]) : null;
+    const montantTotalCol = iMontantTotal !== -1 ? parseFloat(r[iMontantTotal]) : null;
+    // Le fichier donne déjà le montant de commission par ligne (détaillé, ou total si pas de détail) —
+    // on ne le recalcule depuis le taux que si aucun des deux montants n'est fourni.
+    const montantFichier = (montantDetaille != null && !isNaN(montantDetaille)) ? montantDetaille
+      : (montantTotalCol != null && !isNaN(montantTotalCol)) ? montantTotalCol
+      : Math.round(commissionProduction * tauxFichier) / 100;
+
     return {
       idx: i,
       numeroContrat,
-      nomVaudoise: `${r[iNom] || ''} ${r[iPrenom] || ''}`.trim(),
-      npa: r[iNpa], localite: r[iLocalite],
-      brancheIG: r[iBrancheIG], brancheInterne: r[iBrancheInterne] || '',
-      primeCommis,
-      primeFactTotal: parseFloat(r[iPrFactTotal]) || primeCommis,
+      nomVaudoise: nomFichier || '(nom non fourni par le fichier)',
+      npa: iNpa !== -1 ? r[iNpa] : '', localite: iLocalite !== -1 ? r[iLocalite] : '',
+      brancheInterne,
+      commissionProduction,
+      taux: tauxFichier,
+      montant: Math.round((montantFichier || 0) * 100) / 100,
       contratId: contratTrouve ? contratTrouve.id : null,
-      clientId: clientTrouve ? clientTrouve.id : null,
+      clientId: contratTrouve ? (clientTrouve ? clientTrouve.id : null) : (clientSuggere ? clientSuggere.id : null),
       clientNomCRM: clientTrouve ? (estEntreprise(clientTrouve) ? clientTrouve.nom : `${clientTrouve.prenom} ${clientTrouve.nom}`) : null,
+      clientSuggereNom: (!clientTrouve && clientSuggere) ? (estEntreprise(clientSuggere) ? clientSuggere.nom : `${clientSuggere.prenom} ${clientSuggere.nom}`) : null,
       primeCRM: contratTrouve ? contratTrouve.prime_annuelle : null,
-      taux: 0,
+      ambigu: candidats.length > 1,
       selectionne: !!contratTrouve,
     };
   });
 
-  renderImportDecompte(nomAssureur);
+  renderImportDecompte(nomAssureur, commissionTotaleAnnoncee);
 }
 
-function renderImportDecompte(nomAssureur) {
+function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
   const zone = document.getElementById('imp-resultats');
   const nbTrouves = _decompteLignes.filter(l => l.contratId).length;
-  const nbNouveaux = _decompteLignes.length - nbTrouves;
+  const nbSuggeres = _decompteLignes.filter(l => !l.contratId && l.clientSuggereNom).length;
+  const nbRienTrouve = _decompteLignes.length - nbTrouves - nbSuggeres;
+  const totalFichier = _decompteLignes.reduce((s, l) => s + l.montant, 0);
+  const ecartTotal = commissionTotaleAnnoncee != null ? Math.round((totalFichier - commissionTotaleAnnoncee) * 100) / 100 : null;
 
   zone.innerHTML = `
     ${sectionCard(`Résultat de l'analyse — ${nomAssureur || 'Compagnie'}`, '#4ade80', `
-      <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px">${_decompteLignes.length} ligne(s) trouvée(s) (lignes de détail déjà exclues) — ${nbTrouves} contrat(s) reconnu(s) dans le CRM, ${nbNouveaux} non trouvé(s).</div>
+      <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px">${_decompteLignes.length} ligne(s) de commission — ${nbTrouves} contrat(s) reconnu(s) dans le CRM, ${nbSuggeres} client(s) probable(s) trouvé(s) par le nom (contrat à choisir/créer toi-même), ${nbRienTrouve} totalement non trouvé(s).</div>
+      ${commissionTotaleAnnoncee != null ? `
+      <div style="font-size:11.5px;margin-bottom:12px;padding:8px 12px;border-radius:8px;background:var(--surface-alt);color:${Math.abs(ecartTotal) > 1 ? '#f87171' : '#4ade80'}">
+        Total annoncé par le fichier : CHF ${commissionTotaleAnnoncee.toLocaleString()} — total des lignes lues : CHF ${Math.round(totalFichier).toLocaleString()}
+        ${Math.abs(ecartTotal) > 1 ? ` ⚠️ écart de CHF ${ecartTotal.toLocaleString()} — une ligne a probablement été mal lue, vérifie avant d'importer` : ' ✓ les lignes lues correspondent au total du fichier'}
+      </div>` : ''}
       <table style="width:100%;border-collapse:collapse;font-size:12px">
         <thead><tr style="color:var(--text-muted);font-size:10px;text-transform:uppercase">
           <th style="padding:6px 8px"></th>
           <th style="padding:6px 8px;text-align:left">N° contrat</th>
-          <th style="padding:6px 8px;text-align:left">Client (compagnie)</th>
+          <th style="padding:6px 8px;text-align:left">Client (fichier)</th>
           <th style="padding:6px 8px;text-align:left">Client CRM</th>
           <th style="padding:6px 8px;text-align:left">Branche</th>
-          <th style="padding:6px 8px;text-align:right">Prime commis.</th>
-          <th style="padding:6px 8px;text-align:right">Prime CRM</th>
           <th style="padding:6px 8px;text-align:right">Taux %</th>
-          <th style="padding:6px 8px;text-align:right">Commission</th>
+          <th style="padding:6px 8px;text-align:right">Montant</th>
         </tr></thead>
         <tbody>${_decompteLignes.map(l => `
           <tr style="border-top:1px solid var(--border)">
-            <td style="padding:5px 8px"><input type="checkbox" id="imp-check-${l.idx}" ${l.selectionne ? 'checked' : ''} onchange="_decompteLignes[${l.idx}].selectionne = this.checked"/></td>
-            <td style="padding:5px 8px;font-family:monospace">${l.numeroContrat}</td>
+            <td style="padding:5px 8px"><input type="checkbox" id="imp-check-${l.idx}" ${l.selectionne ? 'checked' : ''} ${!l.contratId ? 'disabled' : ''} onchange="_decompteLignes[${l.idx}].selectionne = this.checked"/></td>
+            <td style="padding:5px 8px;font-family:monospace">${l.numeroContrat}${l.ambigu ? ' <span title="Plusieurs contrats CRM partagent ce n° de police — vérifie que le bon a été choisi" style="color:#f59e0b">⚠</span>' : ''}</td>
             <td style="padding:5px 8px">${l.nomVaudoise}<div style="font-size:10px;color:var(--text-muted)">${l.npa || ''} ${l.localite || ''}</div></td>
-            <td style="padding:5px 8px">${l.clientNomCRM ? l.clientNomCRM : '<span style="color:#f87171">Non trouvé</span>'}</td>
-            <td style="padding:5px 8px;color:var(--text-muted)">${l.brancheInterne} <span style="opacity:.6">(${l.brancheIG || ''})</span></td>
-            <td style="padding:5px 8px;text-align:right;font-weight:700">CHF ${l.primeCommis.toLocaleString()}</td>
-            <td style="padding:5px 8px;text-align:right;color:${l.primeCRM !== null && Math.abs(l.primeCRM - l.primeFactTotal) > 1 ? '#f87171' : 'var(--text-muted)'}">${l.primeCRM !== null ? 'CHF ' + l.primeCRM.toLocaleString() : '—'}</td>
-            <td style="padding:5px 8px;text-align:right"><input type="number" step="0.5" value="${l.taux}" style="width:55px;background:var(--surface-alt);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 5px;text-align:right" onchange="_decompteLignes[${l.idx}].taux = parseFloat(this.value)||0; document.getElementById('imp-comm-${l.idx}').textContent = 'CHF ' + Math.round(_decompteLignes[${l.idx}].primeCommis * (parseFloat(this.value)||0) / 100).toLocaleString();"/></td>
-            <td id="imp-comm-${l.idx}" style="padding:5px 8px;text-align:right;font-weight:700;color:#4ade80">CHF 0</td>
+            <td style="padding:5px 8px">${l.clientNomCRM ? l.clientNomCRM : (l.clientSuggereNom ? `<span style="color:#f59e0b">≈ ${l.clientSuggereNom}</span><div style="font-size:9.5px;color:var(--text-muted)">nom trouvé, mais pas de contrat avec ce n° de police — crée-le ou corrige la police</div>` : '<span style="color:#f87171">Non trouvé</span>')}</td>
+            <td style="padding:5px 8px;color:var(--text-muted)">${l.brancheInterne}</td>
+            <td style="padding:5px 8px;text-align:right">${l.taux}%</td>
+            <td style="padding:5px 8px;text-align:right"><input type="number" step="0.01" value="${l.montant}" style="width:75px;background:var(--surface-alt);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 5px;text-align:right" onchange="_decompteLignes[${l.idx}].montant = parseFloat(this.value)||0"/></td>
           </tr>`).join('')}</tbody>
       </table>
-      <div style="font-size:10.5px;color:var(--text-muted);margin-top:10px">⚠️ Ce fichier donne la <strong>prime</strong> de référence, pas directement le montant de commission — indique le taux appliqué par branche pour que le calcul se fasse. Les contrats non trouvés dans le CRM ne peuvent pas recevoir de commission (aucun contrat_id à lier) ; seule la réconciliation reste possible pour eux via une création manuelle de contrat.</div>
+      <div style="font-size:10.5px;color:var(--text-muted);margin-top:10px">Taux et montant sont repris directement du décompte compagnie (modifiable si besoin). Une ligne sans contrat CRM reconnu ne peut pas être importée automatiquement — crée le contrat manquant (ou corrige son n° de police) puis réimporte le fichier.</div>
       <div style="display:flex;gap:10px;margin-top:14px">
-        <button class="btn-save" onclick="importerCommissionsDecompte('${(nomAssureur||'').replace(/'/g,"\\'")}')">✓ Créer les commissions sélectionnées</button>
+        <button class="btn-save" onclick="importerCommissionsDecompte('${(nomAssureur || '').replace(/'/g, "\\'")}')">✓ Créer les commissions sélectionnées</button>
       </div>
     `)}
   `;
@@ -738,9 +850,9 @@ async function importerCommissionsDecompte(nomAssureur) {
   const aTraiter = _decompteLignes.filter(l => l.selectionne && l.contratId);
   if (!aTraiter.length) { showError('Aucune ligne sélectionnée avec un contrat reconnu.'); return; }
   const nature = document.getElementById('imp-nature-commission')?.value || 'gestion';
-  let nbCrees = 0, nbEchecs = 0, nbReconciliees = 0;
+  let nbCrees = 0, nbEchecs = 0;
   for (const l of aTraiter) {
-    const montant = Math.round(l.primeCommis * (l.taux || 0) / 100);
+    const montant = Math.round(l.montant);
     if (montant > 0) {
       const r = await dbPost('commissions_attente', {
         client_id: l.clientId,
@@ -749,7 +861,7 @@ async function importerCommissionsDecompte(nomAssureur) {
         compagnie: nomAssureur || null,
         produit: l.brancheInterne || null,
         montant_estime: montant,
-        detail_calcul: `Décompte compagnie importé (Excel IG B2B) — prime commis. CHF ${l.primeCommis.toLocaleString()} × ${l.taux}% — contrat ${l.numeroContrat}`,
+        detail_calcul: `Décompte compagnie importé (Excel IG B2B) — ${l.brancheInterne || ''} : base CHF ${l.commissionProduction.toLocaleString()} × ${l.taux}% — contrat ${l.numeroContrat}`,
         statut: 'en_attente',
         nature,
         date_creation: new Date().toISOString().split('T')[0],
@@ -757,11 +869,9 @@ async function importerCommissionsDecompte(nomAssureur) {
       if (r && r.error) { nbEchecs++; continue; }
       nbCrees++;
     }
-    // Réconciliation : signale un écart de prime sans écraser silencieusement — on laisse Jonathan valider manuellement sur la fiche contrat
-    if (l.primeCRM !== null && Math.abs(l.primeCRM - l.primeFactTotal) > 1) nbReconciliees++;
   }
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
-  showError(`✓ ${nbCrees} commission(s) créée(s).${nbEchecs ? ' ⚠️ ' + nbEchecs + ' échec(s) d\u2019écriture — vérifie manuellement.' : ''} ${nbReconciliees ? nbReconciliees + ' écart(s) de prime détecté(s) — à vérifier sur les fiches contrat concernées.' : ''}`);
+  showError(`✓ ${nbCrees} commission(s) créée(s).${nbEchecs ? ' ⚠️ ' + nbEchecs + ' échec(s) d’écriture — vérifie manuellement.' : ''}`);
   navigate('import-decompte');
 }
 

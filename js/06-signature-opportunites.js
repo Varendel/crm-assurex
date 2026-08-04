@@ -821,12 +821,13 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
         Total annoncé par le fichier : CHF ${commissionTotaleAnnoncee.toLocaleString()} — total des lignes lues : CHF ${Math.round(totalFichier).toLocaleString()}
         ${Math.abs(ecartTotal) > 1 ? ` ⚠️ écart de CHF ${ecartTotal.toLocaleString()} — une ligne a probablement été mal lue, vérifie avant d'importer` : ' ✓ les lignes lues correspondent au total du fichier'}
       </div>` : ''}
-      <table style="width:100%;border-collapse:collapse;font-size:12px">
+      <div style="overflow-x:auto">
+      <table style="width:100%;min-width:720px;border-collapse:collapse;font-size:12px">
         <thead><tr style="color:var(--text-muted);font-size:10px;text-transform:uppercase">
           <th style="padding:6px 8px"></th>
           <th style="padding:6px 8px;text-align:left">N° contrat</th>
-          <th style="padding:6px 8px;text-align:left">Client (fichier)</th>
-          <th style="padding:6px 8px;text-align:left">Client CRM</th>
+          <th style="padding:6px 8px;text-align:left;max-width:130px">Client (fichier)</th>
+          <th style="padding:6px 8px;text-align:left;max-width:170px">Client CRM</th>
           <th style="padding:6px 8px;text-align:left">Branche</th>
           <th style="padding:6px 8px;text-align:right">Taux %</th>
           <th style="padding:6px 8px;text-align:right">Montant</th>
@@ -834,20 +835,32 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
         <tbody>${_decompteLignes.map(l => `
           <tr style="border-top:1px solid var(--border)">
             <td style="padding:5px 8px"><input type="checkbox" id="imp-check-${l.idx}" ${l.selectionne ? 'checked' : ''} ${!l.contratId ? 'disabled' : ''} onchange="_decompteLignes[${l.idx}].selectionne = this.checked"/></td>
-            <td style="padding:5px 8px;font-family:monospace">${l.numeroContrat}${l.ambigu ? ' <span title="Plusieurs contrats CRM partagent ce n° de police — vérifie que le bon a été choisi" style="color:#f59e0b">⚠</span>' : ''}${l.noFacture ? `<div style="font-size:9.5px;color:var(--text-muted);font-family:inherit">facture n°${l.noFacture}${l.dateFacture ? ' du ' + l.dateFacture : ''}</div>` : ''}</td>
-            <td style="padding:5px 8px">${l.nomVaudoise}<div style="font-size:10px;color:var(--text-muted)">${l.npa || ''} ${l.localite || ''}</div></td>
-            <td style="padding:5px 8px">${l.clientNomCRM ? l.clientNomCRM : (l.clientSuggereNom ? `<span style="color:#f59e0b">≈ ${l.clientSuggereNom}</span><div style="font-size:9.5px;color:var(--text-muted)">nom trouvé, mais pas de contrat avec ce n° de police — crée-le ou corrige la police</div>` : '<span style="color:#f87171">Non trouvé</span>')}</td>
-            <td style="padding:5px 8px;color:var(--text-muted)">${l.brancheInterne}</td>
-            <td style="padding:5px 8px;text-align:right">${l.taux}%</td>
-            <td style="padding:5px 8px;text-align:right"><input type="number" step="0.01" value="${l.montant}" style="width:75px;background:var(--surface-alt);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 5px;text-align:right" onchange="_decompteLignes[${l.idx}].montant = parseFloat(this.value)||0"/></td>
+            <td style="padding:5px 8px;font-family:monospace;white-space:nowrap">${l.numeroContrat}${l.ambigu ? ' <span title="Plusieurs contrats CRM partagent ce n° de police — vérifie que le bon a été choisi" style="color:#f59e0b">⚠</span>' : ''}${l.noFacture ? `<div style="font-size:9.5px;color:var(--text-muted);font-family:inherit">facture n°${l.noFacture}${l.dateFacture ? ' du ' + l.dateFacture : ''}</div>` : ''}</td>
+            <td style="padding:5px 8px;max-width:130px;white-space:normal">${l.nomVaudoise}<div style="font-size:10px;color:var(--text-muted)">${l.npa || ''} ${l.localite || ''}</div></td>
+            <td style="padding:5px 8px;max-width:170px;white-space:normal">${l.clientNomCRM ? l.clientNomCRM : (l.clientSuggereNom ? `<span style="color:#f59e0b">≈ ${l.clientSuggereNom}</span><div style="font-size:9.5px;color:var(--text-muted)">nom trouvé, pas de contrat avec cette police — crée-le/corrige-la</div>` : '<span style="color:#f87171">Non trouvé</span>')}</td>
+            <td style="padding:5px 8px;color:var(--text-muted);white-space:normal;min-width:160px">${l.brancheInterne}</td>
+            <td style="padding:5px 8px;text-align:right;white-space:nowrap">${l.taux}%</td>
+            <td style="padding:5px 8px;text-align:right;white-space:nowrap"><input type="number" step="0.01" value="${l.montant}" class="imp-montant-input" data-idx="${l.idx}" style="width:75px;background:var(--surface-alt);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 5px;text-align:right" onchange="_decompteLignes[${l.idx}].montant = parseFloat(this.value)||0; recalculerTotalImport();"/></td>
           </tr>`).join('')}</tbody>
+        <tfoot><tr style="border-top:2px solid var(--border)">
+          <td colspan="6" style="padding:8px;text-align:right;font-weight:700;color:var(--text)">Total des lignes ci-dessus</td>
+          <td id="imp-total-cell" style="padding:8px;text-align:right;font-weight:800;color:#4ade80;white-space:nowrap">CHF ${Math.round(_decompteLignes.reduce((s,l)=>s+l.montant,0)).toLocaleString()}</td>
+        </tr></tfoot>
       </table>
+      </div>
       <div style="font-size:10.5px;color:var(--text-muted);margin-top:10px">Taux et montant sont repris directement du décompte compagnie (modifiable si besoin). Une ligne sans contrat CRM reconnu ne peut pas être importée automatiquement — crée le contrat manquant (ou corrige son n° de police) puis réimporte le fichier.${_decompteLignes.some(l => l.montant < 0) ? ' Un montant négatif n\'est pas une erreur : la compagnie a émis 2 factures pour la même police (voir le n° de facture sous chaque ligne) — la 2e corrige/ajuste une branche de la 1ère, d\'où une ligne en négatif compensée par une autre en positif.' : ''}</div>
       <div style="display:flex;gap:10px;margin-top:14px">
         <button class="btn-save" onclick="importerCommissionsDecompte('${(nomAssureur || '').replace(/'/g, "\\'")}')">✓ Créer les commissions sélectionnées</button>
       </div>
     `)}
   `;
+}
+
+// Recalcule et réaffiche le total en pied de tableau après modification manuelle d'un montant.
+function recalculerTotalImport() {
+  const total = _decompteLignes.reduce((s, l) => s + l.montant, 0);
+  const cell = document.getElementById('imp-total-cell');
+  if (cell) cell.textContent = 'CHF ' + Math.round(total).toLocaleString();
 }
 
 async function importerCommissionsDecompte(nomAssureur) {

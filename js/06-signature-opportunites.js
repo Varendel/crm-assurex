@@ -822,28 +822,38 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
         ${Math.abs(ecartTotal) > 1 ? ` ⚠️ écart de CHF ${ecartTotal.toLocaleString()} — une ligne a probablement été mal lue, vérifie avant d'importer` : ' ✓ les lignes lues correspondent au total du fichier'}
       </div>` : ''}
       <div style="overflow-x:auto">
-      <table style="width:100%;min-width:720px;border-collapse:collapse;font-size:12px">
+      <table style="width:100%;min-width:1180px;border-collapse:collapse;font-size:12px">
         <thead><tr style="color:var(--text-muted);font-size:10px;text-transform:uppercase">
           <th style="padding:6px 8px"></th>
           <th style="padding:6px 8px;text-align:left">N° contrat</th>
-          <th style="padding:6px 8px;text-align:left;max-width:130px">Client (fichier)</th>
-          <th style="padding:6px 8px;text-align:left;max-width:170px">Client CRM</th>
+          <th style="padding:6px 8px;text-align:left">N° facture</th>
+          <th style="padding:6px 8px;text-align:left">Date facture</th>
+          <th style="padding:6px 8px;text-align:left">Client (fichier)</th>
+          <th style="padding:6px 8px;text-align:left">NPA</th>
+          <th style="padding:6px 8px;text-align:left">Localité</th>
+          <th style="padding:6px 8px;text-align:left">Client CRM</th>
           <th style="padding:6px 8px;text-align:left">Branche</th>
+          <th style="padding:6px 8px;text-align:right">Base commission</th>
           <th style="padding:6px 8px;text-align:right">Taux %</th>
           <th style="padding:6px 8px;text-align:right">Montant</th>
         </tr></thead>
         <tbody>${_decompteLignes.map(l => `
           <tr style="border-top:1px solid var(--border)">
             <td style="padding:5px 8px"><input type="checkbox" id="imp-check-${l.idx}" ${l.selectionne ? 'checked' : ''} ${!l.contratId ? 'disabled' : ''} onchange="_decompteLignes[${l.idx}].selectionne = this.checked"/></td>
-            <td style="padding:5px 8px;font-family:monospace;white-space:nowrap">${l.numeroContrat}${l.ambigu ? ' <span title="Plusieurs contrats CRM partagent ce n° de police — vérifie que le bon a été choisi" style="color:#f59e0b">⚠</span>' : ''}${l.noFacture ? `<div style="font-size:9.5px;color:var(--text-muted);font-family:inherit">facture n°${l.noFacture}${l.dateFacture ? ' du ' + l.dateFacture : ''}</div>` : ''}</td>
-            <td style="padding:5px 8px;max-width:130px;white-space:normal">${l.nomVaudoise}<div style="font-size:10px;color:var(--text-muted)">${l.npa || ''} ${l.localite || ''}</div></td>
-            <td style="padding:5px 8px;max-width:170px;white-space:normal">${l.clientNomCRM ? l.clientNomCRM : (l.clientSuggereNom ? `<span style="color:#f59e0b">≈ ${l.clientSuggereNom}</span><div style="font-size:9.5px;color:var(--text-muted)">nom trouvé, pas de contrat avec cette police — crée-le/corrige-la</div>` : '<span style="color:#f87171">Non trouvé</span>')}</td>
-            <td style="padding:5px 8px;color:var(--text-muted);white-space:normal;min-width:160px">${l.brancheInterne}</td>
+            <td style="padding:5px 8px;font-family:monospace;white-space:nowrap">${l.numeroContrat}${l.ambigu ? ' <span title="Plusieurs contrats CRM partagent ce n° de police — vérifie que le bon a été choisi" style="color:#f59e0b">⚠</span>' : ''}</td>
+            <td style="padding:5px 8px;white-space:nowrap;color:var(--text-muted)">${l.noFacture || '—'}</td>
+            <td style="padding:5px 8px;white-space:nowrap;color:var(--text-muted)">${l.dateFacture || '—'}</td>
+            <td style="padding:5px 8px;white-space:nowrap">${l.nomVaudoise}</td>
+            <td style="padding:5px 8px;white-space:nowrap;color:var(--text-muted)">${l.npa || '—'}</td>
+            <td style="padding:5px 8px;white-space:nowrap;color:var(--text-muted)">${l.localite || '—'}</td>
+            <td style="padding:5px 8px;white-space:nowrap">${l.clientNomCRM ? l.clientNomCRM : (l.clientSuggereNom ? `<span style="color:#f59e0b">≈ ${l.clientSuggereNom}</span>` : '<span style="color:#f87171">Non trouvé</span>')}${!l.clientNomCRM && l.clientSuggereNom ? `<div style="font-size:9.5px;color:var(--text-muted);white-space:normal;max-width:170px">nom trouvé, pas de contrat avec cette police — crée-le/corrige-la</div>` : ''}</td>
+            <td style="padding:5px 8px;color:var(--text-muted);white-space:nowrap">${l.brancheInterne}</td>
+            <td style="padding:5px 8px;text-align:right;white-space:nowrap;color:var(--text-muted)">CHF ${l.commissionProduction.toLocaleString()}</td>
             <td style="padding:5px 8px;text-align:right;white-space:nowrap">${l.taux}%</td>
             <td style="padding:5px 8px;text-align:right;white-space:nowrap"><input type="number" step="0.01" value="${l.montant}" class="imp-montant-input" data-idx="${l.idx}" style="width:75px;background:var(--surface-alt);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 5px;text-align:right" onchange="_decompteLignes[${l.idx}].montant = parseFloat(this.value)||0; recalculerTotalImport();"/></td>
           </tr>`).join('')}</tbody>
         <tfoot><tr style="border-top:2px solid var(--border)">
-          <td colspan="6" style="padding:8px;text-align:right;font-weight:700;color:var(--text)">Total des lignes ci-dessus</td>
+          <td colspan="11" style="padding:8px;text-align:right;font-weight:700;color:var(--text)">Total des lignes ci-dessus</td>
           <td id="imp-total-cell" style="padding:8px;text-align:right;font-weight:800;color:#4ade80;white-space:nowrap">CHF ${Math.round(_decompteLignes.reduce((s,l)=>s+l.montant,0)).toLocaleString()}</td>
         </tr></tfoot>
       </table>

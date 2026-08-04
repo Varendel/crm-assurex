@@ -677,11 +677,7 @@ const CATALOGUE_PRODUITS = {
     { id: 'lpp_individuelle', label: 'LPP rachat / versement volontaire', segment: 'tous', modules: [] },
   ],
   'Santé': [
-    { id: 'lamal', label: 'LAMal (assurance de base)', segment: 'prive', modules: [], combinables: [
-      'helsana_top', 'helsana_sana', 'helsana_completa', 'helsana_completa_plus', 'helsana_primeo',
-      'gm_premium', 'gm_global_smart', 'gm_global_mi_privee', 'gm_global_privee', 'gm_global_flex',
-      'lca_autre_compagnie',
-    ] },
+    { id: 'lamal', label: 'LAMal (assurance de base)', segment: 'prive', modules: [], combinables: ['lca_autre_compagnie'] },
     // ── Helsana (vérifié à jour) ──
     { id: 'helsana_top', label: 'Helsana TOP (ambulatoire)', segment: 'prive', modules: [] },
     { id: 'helsana_sana', label: 'Helsana SANA (ambulatoire)', segment: 'prive', modules: [] },
@@ -695,7 +691,7 @@ const CATALOGUE_PRODUITS = {
     { id: 'gm_global_privee', label: 'GM Global privée', segment: 'prive', modules: [] },
     { id: 'gm_global_flex', label: 'GM Global flex', segment: 'prive', modules: [] },
     // ── Autre compagnie (nom précisé dans les notes du contrat) ──
-    { id: 'lca_autre_compagnie', label: 'LCA — autre compagnie (préciser en note)', segment: 'prive', modules: [] },
+    { id: 'lca_autre_compagnie', label: 'LCA — complémentaire santé (compagnie et produit à préciser)', segment: 'prive', modules: [] },
   ],
   'Assurances de personnes (entreprise)': [
     { id: 'laa', label: 'LAA (assurance-accidents obligatoire)', segment: 'entreprise', modules: ['Accidents professionnels (AP)', 'Accidents non professionnels (ANP)', 'Sursalaire LAA complémentaire'] },

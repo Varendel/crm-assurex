@@ -597,6 +597,9 @@ function updateModulesOptions() {
       combinablesList.innerHTML = '';
     } else {
       combinablesField.style.display = 'block';
+      // La calculette RC+Casco n'a de sens que pour les produits véhicule (casco combinable) —
+      // pas pour ménage ou santé/LCA, qui n'ont rien à voir avec RC/Casco.
+      const estContexteVehicule = combinablesIds.includes('casco_partielle') || combinablesIds.includes('casco_complete');
       combinablesList.innerHTML = combinablesIds.map(id => {
         const p = getProduitParId(id);
         return p ? `
@@ -604,7 +607,7 @@ function updateModulesOptions() {
           <input type="checkbox" class="ct-combinable-checkbox" value="${p.id}" onchange="toggleCombinablePrime('${p.id}')" style="width:15px;height:15px;cursor:pointer"/>+ ${p.label}
         </label>` : '';
       }).join('') + '<div id="ct-combinables-primes" style="width:100%;margin-top:8px"></div>' +
-        `<div id="ct-calculette-vehicule" style="display:none;width:100%;margin-top:10px;padding:12px 14px;background:var(--surface-alt);border:1px solid var(--border);border-radius:9px">
+        (!estContexteVehicule ? '' : `<div id="ct-calculette-vehicule" style="display:none;width:100%;margin-top:10px;padding:12px 14px;background:var(--surface-alt);border:1px solid var(--border);border-radius:9px">
           <div style="font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px">🧮 Calculette RC + Casco — remplis 2 montants, le 3e se calcule</div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
             <div><label class="form-label" style="font-size:10.5px">Prime totale (CHF)</label><input class="form-input" id="ct-calc-total" type="number" placeholder="1929.60" oninput="calculerSoldeVehicule('total')"/></div>
@@ -612,7 +615,7 @@ function updateModulesOptions() {
             <div><label class="form-label" style="font-size:10.5px">Casco (CHF)</label><input class="form-input" id="ct-calc-casco" type="number" placeholder="1602.00" oninput="calculerSoldeVehicule('casco')"/></div>
           </div>
           <div style="font-size:10px;color:var(--text-muted);margin-top:6px">Prime totale = montant final de la police (timbre fédéral et taxes déjà inclus). Remplis-en deux, le troisième se déduit automatiquement et se reporte dans les champs ci-dessus.</div>
-        </div>`;
+        </div>`);
     }
   }
 
@@ -652,8 +655,9 @@ function toggleCombinablePrime(produitId) {
     div.id = `ct-combinable-prime-${produitId}`;
     div.style.cssText = 'margin-top:6px';
     if (produitId === 'lca_autre_compagnie') {
-      // Seul "autre compagnie" garde une saisie libre — les produits Helsana/GM ci-dessus sont
-      // des combinables nommés et fixes, exactement comme Casco partielle/complète.
+      // LCA complémentaire santé : une seule case à cocher générique sous LAMal, avec nom du
+      // produit/compagnie en saisie libre (Helsana/GM restent sélectionnables individuellement
+      // comme Produit principal si besoin, mais ne s'affichent plus dans cette liste de combinables).
       div.innerHTML = `<label class="form-label">Nom du produit complémentaire (ex: SWICA COMPLETA, CSS myFlex...)</label><input class="form-input ct-combinable-nom-input" data-produit-id="${produitId}" placeholder="Nom exact du produit chez la compagnie"/><label class="form-label" style="margin-top:8px">Prime annuelle LCA (CHF)</label><input class="form-input ct-combinable-prime-input" data-produit-id="${produitId}" type="number" placeholder="540"/><div style="font-size:10.5px;color:var(--text-muted);margin-top:3px">Indique le montant annuel (prime mensuelle × 12).</div>`;
     } else {
       div.innerHTML = `<label class="form-label">Prime annuelle pour "${produit.label}" (CHF)</label><input class="form-input ct-combinable-prime-input" data-produit-id="${produitId}" type="number" placeholder="540"/><div style="font-size:10.5px;color:var(--text-muted);margin-top:3px">Casco/ménage sont facturés annuellement — indique le montant annuel, pas mensuel.</div>`;

@@ -644,6 +644,26 @@ function ajouterPlaqueFlotte() {
   list.appendChild(ligne);
 }
 
+function ajouterLigneLCA() {
+  const container = document.getElementById('ct-lca-lignes');
+  if (!container) return;
+  const ligne = document.createElement('div');
+  ligne.className = 'ct-lca-ligne';
+  ligne.style.cssText = 'display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;flex-wrap:wrap';
+  ligne.innerHTML = `
+    <div style="flex:2;min-width:180px">
+      <label class="form-label" style="font-size:10.5px">Nom du produit (ex: SWICA COMPLETA, CSS myFlex...)</label>
+      <input class="form-input ct-lca-nom-input" placeholder="Nom exact du produit chez la compagnie"/>
+    </div>
+    <div style="flex:1;min-width:120px">
+      <label class="form-label" style="font-size:10.5px">Prime annuelle (CHF)</label>
+      <input class="form-input ct-lca-prime-input" type="number" placeholder="540"/>
+    </div>
+    <button type="button" onclick="this.parentElement.remove()" style="background:var(--red-dim);color:var(--red);border:none;border-radius:7px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">✕</button>
+  `;
+  container.appendChild(ligne);
+}
+
 function toggleCombinablePrime(produitId) {
   const checkbox = document.querySelector(`.ct-combinable-checkbox[value="${produitId}"]`);
   const primesZone = document.getElementById('ct-combinables-primes');
@@ -655,14 +675,16 @@ function toggleCombinablePrime(produitId) {
     div.id = `ct-combinable-prime-${produitId}`;
     div.style.cssText = 'margin-top:6px';
     if (produitId === 'lca_autre_compagnie') {
-      // LCA complémentaire santé : une seule case à cocher générique sous LAMal, avec nom du
-      // produit/compagnie en saisie libre (Helsana/GM restent sélectionnables individuellement
-      // comme Produit principal si besoin, mais ne s'affichent plus dans cette liste de combinables).
-      div.innerHTML = `<label class="form-label">Nom du produit complémentaire (ex: SWICA COMPLETA, CSS myFlex...)</label><input class="form-input ct-combinable-nom-input" data-produit-id="${produitId}" placeholder="Nom exact du produit chez la compagnie"/><label class="form-label" style="margin-top:8px">Prime annuelle LCA (CHF)</label><input class="form-input ct-combinable-prime-input" data-produit-id="${produitId}" type="number" placeholder="540"/><div style="font-size:10.5px;color:var(--text-muted);margin-top:3px">Indique le montant annuel (prime mensuelle × 12).</div>`;
+      // LCA complémentaire santé : un client peut avoir plusieurs produits LCA (ex: hospitalisation
+      // + ambulatoire, ou deux compagnies différentes) — on affiche une liste de lignes dynamiques
+      // (nom du produit + prime annuelle), avec un bouton pour en ajouter d'autres.
+      div.innerHTML = `<div id="ct-lca-lignes"></div><button type="button" onclick="ajouterLigneLCA()" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer">+ Ajouter un autre produit LCA</button><div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Une ligne par produit LCA — chacune devient un contrat distinct avec sa propre commission.</div>`;
+      primesZone.appendChild(div);
+      ajouterLigneLCA();
     } else {
       div.innerHTML = `<label class="form-label">Prime annuelle pour "${produit.label}" (CHF)</label><input class="form-input ct-combinable-prime-input" data-produit-id="${produitId}" type="number" placeholder="540"/><div style="font-size:10.5px;color:var(--text-muted);margin-top:3px">Casco/ménage sont facturés annuellement — indique le montant annuel, pas mensuel.</div>`;
+      primesZone.appendChild(div);
     }
-    primesZone.appendChild(div);
   } else if (!checkbox.checked && existant) {
     existant.remove();
   }
@@ -1083,19 +1105,32 @@ async function saveContrat() {
 
   memoriserCompagnie(compagnie);
 
-  // Créer un contrat + commission distincts pour chaque produit combiné coché
+  // Créer un contrat + commission distincts pour chaque produit combiné véhicule/ménage coché
+  // (la LCA est gérée séparément juste après : un client peut avoir plusieurs produits LCA)
   for (const id of combinablesCoches) {
+    if (id === 'lca_autre_compagnie') continue;
     const produitCombinable = getProduitParId(id);
     const input = document.querySelector(`.ct-combinable-prime-input[data-produit-id="${id}"]`);
     const primeCombinableAnnuelle = parseFloat(input.value) || 0;
-    // Pour la LCA, le nom réel du produit (COMPLETA, Premium, Global smart...) est saisi
-    // librement plutôt que d'utiliser le libellé générique "LCA — Complémentaire santé".
-    const nomInput = document.querySelector(`.ct-combinable-nom-input[data-produit-id="${id}"]`);
-    const labelCombinable = (nomInput && nomInput.value.trim())
-      ? `LCA — ${nomInput.value.trim()}`
-      : produitCombinable.label;
     const montantCombinable = Math.round(primeCombinableAnnuelle * 0.1); // estimation par défaut (10% fictif) — ajustable manuellement ensuite
-    await creerContratEtCommission(clientId, compagnie, labelCombinable, primeCombinableAnnuelle, [], montantCombinable, 'Produit combiné — commission estimée à ajuster', null, true);
+    await creerContratEtCommission(clientId, compagnie, produitCombinable.label, primeCombinableAnnuelle, [], montantCombinable, 'Produit combiné — commission estimée à ajuster', null, true);
+  }
+
+  // Produits LCA (santé complémentaire) — un ou plusieurs par client (ex: hospitalisation + ambulatoire),
+  // chacun avec son propre nom de produit et sa propre prime annuelle, saisis via les lignes dynamiques.
+  if (combinablesCoches.includes('lca_autre_compagnie')) {
+    const lignesLCA = document.querySelectorAll('.ct-lca-ligne');
+    for (const ligne of lignesLCA) {
+      const nomInput = ligne.querySelector('.ct-lca-nom-input');
+      const primeInput = ligne.querySelector('.ct-lca-prime-input');
+      const nom = nomInput ? nomInput.value.trim() : '';
+      const primeAnnuelleLCA = primeInput ? parseFloat(primeInput.value) || 0 : 0;
+      if (!nom || !primeAnnuelleLCA) continue; // ligne vide (ajoutée puis pas remplie) — ignorée
+      const primeMensuelleLCA = Math.round(primeAnnuelleLCA / 12 * 100) / 100;
+      const montantLCA = Math.round(primeMensuelleLCA * TAUX_COMMISSION.sante_facteur_mensuel);
+      const detailLCA = `CHF ${primeMensuelleLCA}/mois × ${TAUX_COMMISSION.sante_facteur_mensuel} (taux santé) = CHF ${montantLCA}`;
+      await creerContratEtCommission(clientId, compagnie, `LCA — ${nom}`, primeAnnuelleLCA, [], montantLCA, detailLCA, null, true);
+    }
   }
 
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');

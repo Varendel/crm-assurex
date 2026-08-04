@@ -313,6 +313,12 @@ async function showEditContrat(contratId, returnTo) {
   const perioActuelle = ct.periodicite || 1;
   const primeAff = perioActuelle > 1 ? Math.round((ct.prime_annuelle || 0) / perioActuelle * 100) / 100 : (ct.prime_annuelle || 0);
 
+  // Contrat véhicule (RC/Casco/flotte) : propose le champ plaque même pour un contrat déjà existant
+  // (créé avant l'ajout de ce champ, ou jamais renseigné) — pré-rempli si un véhicule est déjà lié.
+  const estContratVehicule = /véhicule|casco|flotte/i.test(ct.produit || '');
+  const vehiculeLie = estContratVehicule ? (allVehicules || []).find(v => v.contrat_id === ct.id) : null;
+  const nbVehiculesLies = estContratVehicule ? (allVehicules || []).filter(v => v.contrat_id === ct.id).length : 0;
+
   creerModale('modal-edit-contrat', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:520px">
       <h3 style="margin:0 0 20px;font-size:16px;font-weight:800;color:var(--text)">Modifier le contrat</h3>
@@ -320,6 +326,10 @@ async function showEditContrat(contratId, returnTo) {
         <div class="form-field"><label class="form-label">Produit</label><input class="form-input" id="ect-produit" value="${ct.produit || ''}"/></div>
         <div class="form-field"><label class="form-label">Compagnie</label><input class="form-input" id="ect-compagnie" value="${ct.compagnie || ''}"/></div>
         <div class="form-field"><label class="form-label">N° de police</label><input class="form-input" id="ect-police" value="${ct.numero_police || ''}"/></div>
+        ${estContratVehicule && nbVehiculesLies <= 1 ? `
+        <div class="form-field"><label class="form-label">N° de plaque</label><input class="form-input" id="ect-plaque" value="${vehiculeLie?.numero_plaque || ''}" placeholder="VD 123456"/></div>
+        <div class="form-field"><label class="form-label">Marque / modèle</label><input class="form-input" id="ect-plaque-marque" value="${vehiculeLie?.marque || ''}" placeholder="Renault Trafic..."/></div>` : ''}
+        ${estContratVehicule && nbVehiculesLies > 1 ? `<div class="form-field" style="grid-column:span 2;font-size:11px;color:var(--text-muted)">🚗 ${nbVehiculesLies} véhicules liés à ce contrat flotte — gère-les depuis l'onglet Flotte de la fiche client.</div>` : ''}
         <div class="form-field"><label class="form-label">Date d'entrée en vigueur</label><input class="form-input" id="ect-date-debut" type="date" value="${ct.date_debut || ''}"/></div>
         <div class="form-field"><label class="form-label">Date de signature</label><input class="form-input" id="ect-date-signature" type="date" value="${ct.date_signature || ''}"/></div>
         <div class="form-field"><label class="form-label">Date d'échéance</label><input class="form-input" id="ect-echeance" type="date" value="${ct.date_echeance || ''}"/></div>
@@ -439,6 +449,25 @@ async function saveEditContrat(contratId, clientId, returnTo) {
   const r = await dbPatch('contrats', contratId, body);
   if (r && r.error) { showError('Erreur: ' + errMsg(r)); if (btn) { btn.textContent = '✓ Enregistrer'; btn.disabled = false; } return; }
   logAction('edit_contrat', 'contrats', contratId, `${body.produit} — ${body.compagnie}`);
+
+  // Champ plaque (contrat véhicule unique) : crée ou met à jour la ligne vehicules liée, pour que
+  // le véhicule ressorte dans "Recherche véhicules" même pour un contrat créé avant ce champ.
+  const plaqueEl = document.getElementById('ect-plaque');
+  if (plaqueEl) {
+    const plaque = plaqueEl.value.trim();
+    const marqueVeh = document.getElementById('ect-plaque-marque')?.value.trim() || null;
+    const vehiculeExistant = (allVehicules || []).find(v => v.contrat_id === contratId);
+    if (plaque) {
+      const vehBody = { client_id: clientId, contrat_id: contratId, marque: marqueVeh, numero_plaque: plaque, numero_police: body.numero_police };
+      const rVeh = vehiculeExistant ? await dbPatch('vehicules', vehiculeExistant.id, vehBody) : await dbPost('vehicules', vehBody);
+      if (rVeh && rVeh.error) showError('⚠️ Contrat enregistré, mais le véhicule (plaque) n\'a pas pu être sauvegardé : ' + errMsg(rVeh));
+      else allVehicules = await dbGet('vehicules', 'select=*');
+    } else if (vehiculeExistant) {
+      // Plaque vidée volontairement : supprime le véhicule lié plutôt que de laisser une plaque fantôme.
+      await dbDelete('vehicules', vehiculeExistant.id);
+      allVehicules = await dbGet('vehicules', 'select=*');
+    }
+  }
 
   // ── Contrat passé en "Annulé" : supprimer la commission en attente liée ──
   // Un contrat annulé n'a jamais réellement pris effet (réserve refusée, non abouti),

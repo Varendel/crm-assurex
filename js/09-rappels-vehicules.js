@@ -417,9 +417,9 @@ function viewNouveauContrat() {
       <div class="form-field" style="grid-column:span 2" id="ct-modules-field"><label class="form-label">Modules complémentaires</label><div id="ct-modules-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div></div>
       <div class="form-field" style="grid-column:span 2" id="ct-combinables-field"><label class="form-label">Produits souvent combinés</label><div id="ct-combinables-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div></div>
       <div class="form-field" style="grid-column:span 2;display:none" id="ct-plaques-field">
-        <label class="form-label">Plaques d'immatriculation de la flotte</label>
+        <label class="form-label" id="ct-plaques-label">Plaques d'immatriculation de la flotte</label>
         <div id="ct-plaques-list" style="display:flex;flex-direction:column;gap:6px;margin-top:6px"></div>
-        <button type="button" class="btn-secondary" style="margin-top:8px;font-size:12px;padding:6px 14px" onclick="ajouterPlaqueFlotte()">+ Ajouter une plaque</button>
+        <button type="button" class="btn-secondary" id="ct-plaques-add-btn" style="margin-top:8px;font-size:12px;padding:6px 14px" onclick="ajouterPlaqueFlotte()">+ Ajouter une plaque</button>
       </div>
       <div class="form-field"><label class="form-label">N° de police</label><input class="form-input" id="ct-police" placeholder="Optionnel"/></div>
       <div class="form-field"><label class="form-label">Prime (CHF) *</label><input class="form-input" id="ct-prime-mensuelle" type="number" placeholder="150" oninput="updateCommissionPreview()"/></div>
@@ -621,10 +621,26 @@ function updateModulesOptions() {
 
   const plaquesField = document.getElementById('ct-plaques-field');
   if (plaquesField) {
+    const estVehiculeUnique = produit && ['vehicule_rc', 'casco_partielle', 'casco_complete'].includes(produit.id);
     if (produit && produit.flotte) {
+      document.getElementById('ct-plaques-label').textContent = "Plaques d'immatriculation de la flotte";
+      document.getElementById('ct-plaques-add-btn').style.display = '';
+      plaquesField.dataset.mode = 'flotte';
       plaquesField.style.display = 'block';
       if (document.getElementById('ct-plaques-list').children.length === 0) ajouterPlaqueFlotte();
+    } else if (estVehiculeUnique) {
+      // Un seul véhicule pour ce contrat (pas une flotte) — même ligne plaque + marque/modèle,
+      // mais pas de bouton "+" puisqu'il n'y a qu'un seul véhicule assuré par ce contrat.
+      document.getElementById('ct-plaques-label').textContent = 'Véhicule assuré (plaque)';
+      document.getElementById('ct-plaques-add-btn').style.display = 'none';
+      if (plaquesField.dataset.mode !== 'unique') {
+        document.getElementById('ct-plaques-list').innerHTML = '';
+        ajouterPlaqueFlotte();
+      }
+      plaquesField.dataset.mode = 'unique';
+      plaquesField.style.display = 'block';
     } else {
+      plaquesField.dataset.mode = '';
       plaquesField.style.display = 'none';
       document.getElementById('ct-plaques-list').innerHTML = '';
     }
@@ -1071,9 +1087,32 @@ async function saveContrat() {
   const btn = document.querySelector('.btn-save');
   btn.textContent = 'Enregistrement...'; btn.disabled = true;
 
-  const plaquesValeurs = Array.from(document.querySelectorAll('.ct-plaque-input')).map(inp => inp.value.trim()).filter(Boolean);
+  // Une ligne par plaque saisie (mode "flotte" : plusieurs lignes ; mode "véhicule unique" : une seule) —
+  // gardées en paires plaque/marque pour aussi peupler la table vehicules (celle qui alimente réellement
+  // "Recherche véhicules" et l'onglet Flotte de la fiche client, contrats.plaques n'étant qu'un résumé texte).
+  const lignesPlaques = Array.from(document.querySelectorAll('#ct-plaques-list > div')).map(ligne => ({
+    plaque: ligne.querySelector('.ct-plaque-input')?.value.trim() || '',
+    marque: ligne.querySelector('.ct-plaque-marque-input')?.value.trim() || '',
+  })).filter(l => l.plaque);
+  const plaquesValeurs = lignesPlaques.map(l => l.plaque);
   const resultPrincipal = await creerContratEtCommission(clientId, compagnie, produitLabel, primeMensuelle, modulesChoisis, commissionEstimee, detail, plaquesValeurs);
   if (resultPrincipal.error) { showError('Erreur lors de la création du contrat: ' + resultPrincipal.detail); btn.textContent = '✓ Enregistrer le contrat'; btn.disabled = false; return; }
+
+  // Peuple la table vehicules à partir des plaques saisies, pour que ce(s) véhicule(s) ressorte(nt)
+  // dans "Recherche véhicules" et dans l'onglet Flotte de la fiche client — lié au contrat créé.
+  if (lignesPlaques.length > 0 && resultPrincipal.contrat && resultPrincipal.contrat.id) {
+    const nouveauContratId = resultPrincipal.contrat.id;
+    const policeContrat = document.getElementById('ct-police').value.trim() || null;
+    const rVeh = await dbPost('vehicules', lignesPlaques.map(l => ({
+      client_id: clientId,
+      contrat_id: nouveauContratId,
+      marque: l.marque || null,
+      numero_plaque: l.plaque,
+      numero_police: policeContrat,
+    })));
+    if (rVeh && rVeh.error) console.error('Échec de l\'enregistrement du/des véhicule(s) dans la table vehicules :', rVeh.detail);
+    else allVehicules = await dbGet('vehicules', 'select=*');
+  }
 
   // Si le contrat provient d'un import de police PDF par l'IA, on archive ce même PDF sur le contrat
   // — permet d'ouvrir le document d'origine en un clic pour vérifier la saisie (même mécanisme que

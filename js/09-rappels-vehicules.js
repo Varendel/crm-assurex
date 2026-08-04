@@ -735,7 +735,7 @@ const ALIAS_COMPAGNIES = {
   'la vaudoise': 'La Vaudoise', 'vaudoise assurances': 'La Vaudoise', 'vaudoise': 'La Vaudoise',
   'vaudoise générale, compagnie d\u2019assurances sa': 'La Vaudoise', 'vaudoise générale': 'La Vaudoise', 'vaudoise generale, compagnie d\u2019assurances sa': 'La Vaudoise',
   'la mobilière': 'La Mobilière', 'la mobiliere': 'La Mobilière', 'mobilière': 'La Mobilière', 'mobiliere': 'La Mobilière', 'mobilière suisse société d\u2019assurances': 'La Mobilière',
-  'hotela assurances sa': 'HOTELA', 'hotela': 'HOTELA', 'institutions sociales hotela': 'HOTELA',
+  'hotela assurances sa': 'HOTELA', 'hotela': 'HOTELA', 'institutions sociales hotela': 'HOTELA', 'hotela caisse maladie': 'HOTELA', 'hotela caisse de maladie': 'HOTELA',
   'gastrosocial': 'Gastrosocial', 'caisse gastrosocial': 'Gastrosocial',
   'suva': 'SUVA', 'schweizerische unfallversicherungsanstalt': 'SUVA',
   'css assurances': 'CSS', 'css assurance': 'CSS', 'css': 'CSS',

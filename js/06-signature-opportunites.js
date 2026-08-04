@@ -725,6 +725,22 @@ function reassocierLignesImport() {
 async function creerContratDepuisImport(idx) {
   const l = _decompteLignes[idx];
   if (!l || !l.clientId) return;
+
+  // Garde-fou anti-doublon : le client a peut-être déjà ce contrat en base, juste sans (ou avec un
+  // mauvais) n° de police — dans ce cas il vaut mieux corriger la police sur l'existant que d'en
+  // créer un second. On compare la branche du décompte aux produits déjà présents chez ce client.
+  const motsB = (l.brancheInterne || '').toLowerCase().split(/[^a-zàâäéèêëïîôöùûüç0-9]+/).filter(w => w.length >= 4);
+  const contratsSimilaires = allContrats.filter(c => {
+    if (c.client_id !== l.clientId || estStatutResilieOuAnnule(c.statut)) return false;
+    const p = (c.produit || '').toLowerCase();
+    return motsB.some(m => p.includes(m));
+  });
+  if (contratsSimilaires.length > 0) {
+    const liste = contratsSimilaires.map(c => `• ${c.produit} — ${c.compagnie}${c.numero_police ? ' (police ' + c.numero_police + ')' : ' (sans n° de police)'}`).join('\n');
+    const continuer = confirm(`Ce client a déjà ${contratsSimilaires.length > 1 ? 'des contrats qui ressemblent' : 'un contrat qui ressemble'} à "${l.brancheInterne}" :\n\n${liste}\n\nIl s'agit peut-être du même contrat, juste sans le bon n° de police — dans ce cas Annuler ici et corrige plutôt son n° de police sur la fiche client.\n\nCréer quand même un nouveau contrat séparé ?`);
+    if (!continuer) return;
+  }
+
   const btn = document.getElementById(`imp-creer-${idx}`);
   if (btn) { btn.disabled = true; btn.textContent = 'Création...'; }
   const body = {
@@ -899,7 +915,7 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
             <td style="padding:5px 8px;white-space:nowrap">${l.nomVaudoise}</td>
             <td style="padding:5px 8px;white-space:nowrap;color:var(--text-muted)">${l.npa || '—'}</td>
             <td style="padding:5px 8px;white-space:nowrap;color:var(--text-muted)">${l.localite || '—'}</td>
-            <td style="padding:5px 8px;white-space:nowrap">${l.clientNomCRM ? l.clientNomCRM : (l.clientSuggereNom ? `<span style="color:#f59e0b">≈ ${l.clientSuggereNom}</span>` : '<span style="color:#f87171">Non trouvé</span>')}${!l.clientNomCRM && l.clientSuggereNom ? `<div style="font-size:9.5px;color:var(--text-muted);white-space:normal;max-width:170px;margin-bottom:4px">nom trouvé, pas de contrat avec cette police — police probablement jamais reçue</div><button type="button" id="imp-creer-${l.idx}" onclick="creerContratDepuisImport(${l.idx})" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:3px 8px;font-size:10.5px;cursor:pointer;font-weight:700;white-space:nowrap">📝 Créer le contrat</button>` : ''}</td>
+            <td style="padding:5px 8px;white-space:nowrap">${l.clientNomCRM ? l.clientNomCRM : (l.clientSuggereNom ? `<span style="color:#f59e0b">≈ ${l.clientSuggereNom}</span>` : '<span style="color:#f87171">Non trouvé</span>')}${!l.clientNomCRM && l.clientSuggereNom ? `<div style="font-size:9.5px;color:var(--text-muted);white-space:normal;max-width:170px;margin-bottom:4px">nom trouvé, pas de contrat avec cette police — vérifie avant de créer</div><div style="display:flex;gap:6px"><button type="button" onclick="document.getElementById('modal-detail-contrat')?.remove(); showClient('${l.clientId}')" style="background:var(--surface-alt);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:10.5px;cursor:pointer;font-weight:700;white-space:nowrap">👁 Voir la fiche</button><button type="button" id="imp-creer-${l.idx}" onclick="creerContratDepuisImport(${l.idx})" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:3px 8px;font-size:10.5px;cursor:pointer;font-weight:700;white-space:nowrap">📝 Créer</button></div>` : ''}</td>
             <td style="padding:5px 8px;color:var(--text-muted);white-space:nowrap">${l.brancheInterne}</td>
             <td style="padding:5px 8px;text-align:right;white-space:nowrap;color:var(--text-muted)">CHF ${l.commissionProduction.toLocaleString()}</td>
             <td style="padding:5px 8px;text-align:right;white-space:nowrap">${l.taux}%</td>

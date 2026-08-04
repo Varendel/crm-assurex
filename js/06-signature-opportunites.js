@@ -702,6 +702,8 @@ async function analyserDecompteExcel() {
   const iNpa = trouverColonne(headers, ['Nopost']);
   const iLocalite = trouverColonne(headers, ['Localité']);
   const iBranche = trouverColonne(headers, ['Branche interne']);
+  const iNoFacture = trouverColonne(headers, ['No. Facture']);
+  const iDateFacture = trouverColonne(headers, ['Date facture']);
   const iCommissionProd = trouverColonne(headers, ['Commission production', 'Prime commis.']);
   const iTaux = trouverColonne(headers, ['Taux %']);
   const iMontantDetaille = trouverColonne(headers, ['Montant détaillé']);
@@ -782,6 +784,8 @@ async function analyserDecompteExcel() {
     return {
       idx: i,
       numeroContrat,
+      noFacture: iNoFacture !== -1 ? r[iNoFacture] : null,
+      dateFacture: iDateFacture !== -1 ? r[iDateFacture] : null,
       nomVaudoise: nomFichier || '(nom non fourni par le fichier)',
       npa: iNpa !== -1 ? r[iNpa] : '', localite: iLocalite !== -1 ? r[iLocalite] : '',
       brancheInterne,
@@ -830,7 +834,7 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
         <tbody>${_decompteLignes.map(l => `
           <tr style="border-top:1px solid var(--border)">
             <td style="padding:5px 8px"><input type="checkbox" id="imp-check-${l.idx}" ${l.selectionne ? 'checked' : ''} ${!l.contratId ? 'disabled' : ''} onchange="_decompteLignes[${l.idx}].selectionne = this.checked"/></td>
-            <td style="padding:5px 8px;font-family:monospace">${l.numeroContrat}${l.ambigu ? ' <span title="Plusieurs contrats CRM partagent ce n° de police — vérifie que le bon a été choisi" style="color:#f59e0b">⚠</span>' : ''}</td>
+            <td style="padding:5px 8px;font-family:monospace">${l.numeroContrat}${l.ambigu ? ' <span title="Plusieurs contrats CRM partagent ce n° de police — vérifie que le bon a été choisi" style="color:#f59e0b">⚠</span>' : ''}${l.noFacture ? `<div style="font-size:9.5px;color:var(--text-muted);font-family:inherit">facture n°${l.noFacture}${l.dateFacture ? ' du ' + l.dateFacture : ''}</div>` : ''}</td>
             <td style="padding:5px 8px">${l.nomVaudoise}<div style="font-size:10px;color:var(--text-muted)">${l.npa || ''} ${l.localite || ''}</div></td>
             <td style="padding:5px 8px">${l.clientNomCRM ? l.clientNomCRM : (l.clientSuggereNom ? `<span style="color:#f59e0b">≈ ${l.clientSuggereNom}</span><div style="font-size:9.5px;color:var(--text-muted)">nom trouvé, mais pas de contrat avec ce n° de police — crée-le ou corrige la police</div>` : '<span style="color:#f87171">Non trouvé</span>')}</td>
             <td style="padding:5px 8px;color:var(--text-muted)">${l.brancheInterne}</td>
@@ -838,7 +842,7 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
             <td style="padding:5px 8px;text-align:right"><input type="number" step="0.01" value="${l.montant}" style="width:75px;background:var(--surface-alt);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 5px;text-align:right" onchange="_decompteLignes[${l.idx}].montant = parseFloat(this.value)||0"/></td>
           </tr>`).join('')}</tbody>
       </table>
-      <div style="font-size:10.5px;color:var(--text-muted);margin-top:10px">Taux et montant sont repris directement du décompte compagnie (modifiable si besoin). Une ligne sans contrat CRM reconnu ne peut pas être importée automatiquement — crée le contrat manquant (ou corrige son n° de police) puis réimporte le fichier.</div>
+      <div style="font-size:10.5px;color:var(--text-muted);margin-top:10px">Taux et montant sont repris directement du décompte compagnie (modifiable si besoin). Une ligne sans contrat CRM reconnu ne peut pas être importée automatiquement — crée le contrat manquant (ou corrige son n° de police) puis réimporte le fichier.${_decompteLignes.some(l => l.montant < 0) ? ' Un montant négatif n\'est pas une erreur : la compagnie a émis 2 factures pour la même police (voir le n° de facture sous chaque ligne) — la 2e corrige/ajuste une branche de la 1ère, d\'où une ligne en négatif compensée par une autre en positif.' : ''}</div>
       <div style="display:flex;gap:10px;margin-top:14px">
         <button class="btn-save" onclick="importerCommissionsDecompte('${(nomAssureur || '').replace(/'/g, "\\'")}')">✓ Créer les commissions sélectionnées</button>
       </div>
@@ -853,7 +857,10 @@ async function importerCommissionsDecompte(nomAssureur) {
   let nbCrees = 0, nbEchecs = 0;
   for (const l of aTraiter) {
     const montant = Math.round(l.montant);
-    if (montant > 0) {
+    // Un montant négatif est une vraie correction de la compagnie (2e facture ajustant une branche
+    // de la 1ère) — il doit être importé comme les autres, sinon la correction disparaît silencieusement
+    // et le montant en attente reste surestimé du montant qu'elle était censée compenser.
+    if (montant !== 0) {
       const r = await dbPost('commissions_attente', {
         client_id: l.clientId,
         contrat_id: l.contratId,
@@ -861,7 +868,7 @@ async function importerCommissionsDecompte(nomAssureur) {
         compagnie: nomAssureur || null,
         produit: l.brancheInterne || null,
         montant_estime: montant,
-        detail_calcul: `Décompte compagnie importé (Excel IG B2B) — ${l.brancheInterne || ''} : base CHF ${l.commissionProduction.toLocaleString()} × ${l.taux}% — contrat ${l.numeroContrat}`,
+        detail_calcul: `Décompte compagnie importé (Excel IG B2B) — ${l.brancheInterne || ''}${montant < 0 ? ' (correction' + (l.noFacture ? ' facture n°' + l.noFacture : '') + ')' : ''} : base CHF ${l.commissionProduction.toLocaleString()} × ${l.taux}% — contrat ${l.numeroContrat}`,
         statut: 'en_attente',
         nature,
         date_creation: new Date().toISOString().split('T')[0],

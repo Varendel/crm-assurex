@@ -614,12 +614,15 @@ function viewImportDecompte() {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
       <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">📊 Import décompte compagnie (Excel, norme IG B2B)</h2>
     </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Lit directement le fichier Excel "Décompte de commission" envoyé par une compagnie (norme IG B2B — testé avec les décomptes La Vaudoise). Réconcilie automatiquement les contrats par n° de police, propose un client probable par le nom quand le contrat n'est pas trouvé, et reprend directement le taux et le montant déjà calculés par la compagnie dans le fichier.</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Lit directement le fichier envoyé par une compagnie — Excel norme IG B2B (testé avec La Vaudoise) ou PDF lu automatiquement par l'IA (pour les compagnies comme AXA qui n'envoient que du PDF). Réconcilie automatiquement les contrats par n° de police, propose un client probable par le nom quand le contrat n'est pas trouvé, et reprend directement le taux et le montant déjà calculés par la compagnie dans le fichier.</div>
 
     ${sectionCard('Fichier', '#38bdf8', `
       <input type="file" id="imp-file-input" accept=".xlsx,.xls" style="display:none" onchange="analyserDecompteExcel()"/>
+      <input type="file" id="imp-pdf-input" accept="application/pdf" style="display:none" onchange="analyserDecomptePdf(this)"/>
       <button class="btn-secondary" onclick="document.getElementById('imp-file-input').click()">📎 Choisir le fichier Excel</button>
+      <button class="btn-secondary" style="margin-left:8px" onclick="document.getElementById('imp-pdf-input').click()">📄 Choisir un PDF (ex: AXA)</button>
       <span id="imp-file-nom" style="margin-left:10px;font-size:12px;color:var(--text-muted)"></span>
+      <div id="imp-pdf-status" style="margin-top:8px;font-size:12px"></div>
       <div style="margin-top:14px"><label class="form-label">Nature des commissions de ce lot</label>
         <select class="form-select" id="imp-nature-commission" style="max-width:320px">
           <option value="gestion">Gestion (décompte périodique de portefeuille)</option>
@@ -835,9 +838,6 @@ async function analyserDecompteExcel() {
     const numeroContrat = (r[iContrat] || '').toString().trim();
     const brancheInterne = iBranche !== -1 ? (r[iBranche] || '') : '';
     const nomFichier = `${(r[iNom] || '').toString().trim()}${r[iPrenom] ? ' ' + r[iPrenom].toString().trim() : ''}`.trim();
-    const { contratTrouve, clientTrouve, clientSuggere } = matcherContratEtClient(numeroContrat, brancheInterne, nomFichier);
-    const candidats = allContrats.filter(c => c.numero_police && normPoliceNumero(c.numero_police) === normPoliceNumero(numeroContrat));
-
     const commissionProduction = iCommissionProd !== -1 ? (parseFloat(r[iCommissionProd]) || 0) : 0;
     const tauxFichier = iTaux !== -1 ? (parseFloat(r[iTaux]) || 0) : 0;
     const montantDetaille = iMontantDetaille !== -1 ? parseFloat(r[iMontantDetaille]) : null;
@@ -848,30 +848,103 @@ async function analyserDecompteExcel() {
       : (montantTotalCol != null && !isNaN(montantTotalCol)) ? montantTotalCol
       : Math.round(commissionProduction * tauxFichier) / 100;
 
-    return {
-      idx: i,
+    return construireLigneImport(i, {
       numeroContrat,
       noFacture: iNoFacture !== -1 ? r[iNoFacture] : null,
       dateFacture: iDateFacture !== -1 ? r[iDateFacture] : null,
-      nomVaudoise: nomFichier || '(nom non fourni par le fichier)',
+      nomFichier,
       npa: iNpa !== -1 ? r[iNpa] : '', localite: iLocalite !== -1 ? r[iLocalite] : '',
       brancheInterne,
       commissionProduction,
       taux: tauxFichier,
-      montant: Math.round((montantFichier || 0) * 100) / 100,
-      contratId: contratTrouve ? contratTrouve.id : null,
-      clientId: contratTrouve ? (clientTrouve ? clientTrouve.id : null) : (clientSuggere ? clientSuggere.id : null),
-      clientNomCRM: clientTrouve ? (estEntreprise(clientTrouve) ? clientTrouve.nom : `${clientTrouve.prenom} ${clientTrouve.nom}`) : null,
-      clientSuggereNom: (!clientTrouve && clientSuggere) ? (estEntreprise(clientSuggere) ? clientSuggere.nom : `${clientSuggere.prenom} ${clientSuggere.nom}`) : null,
-      primeCRM: contratTrouve ? contratTrouve.prime_annuelle : null,
-      ambigu: candidats.length > 1,
-      selectionne: !!contratTrouve,
-    };
+      montant: montantFichier,
+    });
   });
 
   _decompteNomAssureur = nomAssureur;
   _decompteCommissionTotaleAnnoncee = commissionTotaleAnnoncee;
   renderImportDecompte(nomAssureur, commissionTotaleAnnoncee);
+}
+
+// Construit une ligne _decompteLignes à partir de champs déjà normalisés — commun aux deux sources
+// d'import (Excel norme IG B2B et PDF lu par l'IA), pour que le rapprochement, l'affichage et la
+// création de contrat manquant se comportent exactement pareil quel que soit le format d'origine.
+function construireLigneImport(i, champs) {
+  const { numeroContrat, noFacture, dateFacture, nomFichier, npa, localite, brancheInterne, commissionProduction, taux, montant } = champs;
+  const { contratTrouve, clientTrouve, clientSuggere } = matcherContratEtClient(numeroContrat, brancheInterne, nomFichier);
+  const candidats = allContrats.filter(c => c.numero_police && normPoliceNumero(c.numero_police) === normPoliceNumero(numeroContrat));
+  return {
+    idx: i,
+    numeroContrat,
+    noFacture: noFacture || null,
+    dateFacture: dateFacture || null,
+    nomVaudoise: nomFichier || '(nom non fourni par le fichier)',
+    npa: npa || '', localite: localite || '',
+    brancheInterne: brancheInterne || '',
+    commissionProduction: Number(commissionProduction) || 0,
+    taux: Number(taux) || 0,
+    montant: Math.round((Number(montant) || 0) * 100) / 100,
+    contratId: contratTrouve ? contratTrouve.id : null,
+    clientId: contratTrouve ? (clientTrouve ? clientTrouve.id : null) : (clientSuggere ? clientSuggere.id : null),
+    clientNomCRM: clientTrouve ? (estEntreprise(clientTrouve) ? clientTrouve.nom : `${clientTrouve.prenom} ${clientTrouve.nom}`) : null,
+    clientSuggereNom: (!clientTrouve && clientSuggere) ? (estEntreprise(clientSuggere) ? clientSuggere.nom : `${clientSuggere.prenom} ${clientSuggere.nom}`) : null,
+    primeCRM: contratTrouve ? contratTrouve.prime_annuelle : null,
+    ambigu: candidats.length > 1,
+    selectionne: !!contratTrouve,
+  };
+}
+
+// ═══ IMPORT DÉCOMPTE PDF (compagnies qui n'envoient pas d'Excel, ex: AXA) — lecture par IA ═══
+async function analyserDecomptePdf(input) {
+  const file = input.files[0];
+  if (!file) return;
+  document.getElementById('imp-file-nom').textContent = file.name;
+  const statusEl = document.getElementById('imp-pdf-status');
+  if (statusEl) { statusEl.textContent = '🤖 Lecture du PDF en cours (peut prendre 30-60 secondes)...'; statusEl.style.color = 'var(--accent)'; }
+
+  try {
+    const base64 = await new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result.split(',')[1]);
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+
+    const token = await getValidAccessToken() || SUPABASE_KEY;
+    const r = await fetch(AI_FUNCTION_URL, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'parse_decompte_pdf', pdf_base64: base64 }),
+    });
+    const data = await r.json();
+    if (!r.ok || data.error) throw new Error(data.error || 'Erreur inconnue');
+
+    const lignesBrutes = data.lignes || [];
+    if (!lignesBrutes.length) {
+      if (statusEl) { statusEl.textContent = '⚠ Aucune ligne de commission détectée dans ce PDF.'; statusEl.style.color = '#f59e0b'; }
+      return;
+    }
+
+    _decompteLignes = lignesBrutes.map((l, i) => construireLigneImport(i, {
+      numeroContrat: (l.numero_contrat || '').toString().trim(),
+      noFacture: l.no_facture,
+      dateFacture: l.date_facture,
+      nomFichier: `${(l.preneur_nom || '').toString().trim()}${l.preneur_prenom ? ' ' + l.preneur_prenom.toString().trim() : ''}`.trim(),
+      npa: l.npa, localite: l.localite,
+      brancheInterne: l.branche,
+      commissionProduction: l.commission_production,
+      taux: l.taux,
+      montant: l.montant,
+    }));
+
+    _decompteNomAssureur = data.compagnie || '';
+    _decompteCommissionTotaleAnnoncee = data.commission_totale != null ? Number(data.commission_totale) : null;
+    if (statusEl) { statusEl.textContent = `✓ ${_decompteLignes.length} ligne(s) lue(s) par l'IA — vérifie le rapprochement ci-dessous avant d'importer.`; statusEl.style.color = '#4ade80'; }
+    renderImportDecompte(_decompteNomAssureur, _decompteCommissionTotaleAnnoncee);
+  } catch (e) {
+    if (statusEl) { statusEl.textContent = '✗ ' + e.message + ' — réessaie, ou importe le fichier Excel si la compagnie en fournit un.'; statusEl.style.color = '#f87171'; }
+  }
+  input.value = '';
 }
 
 function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {

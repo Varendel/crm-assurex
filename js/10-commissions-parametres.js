@@ -62,10 +62,21 @@ function showModalEditCommission(commId) {
   const b = c.bordereau_id ? allBordereaux.find(bd => bd.id === c.bordereau_id) : null;
   const ct = c.contrat_id ? allContrats.find(x => x.id === c.contrat_id) : null;
   const cl = ct ? allClients.find(x => x.id === ct.client_id) : (c.client_id ? allClients.find(x => x.id === c.client_id) : null);
+  // Nom résolu depuis la fiche client réelle (cl) — utilisé en repli quand client_nom (simple copie
+  // texte prise à la création) est vide, ce qui arrivait sans qu'aucun lien vers la fiche ne soit
+  // jamais proposé ici alors que le client était bel et bien identifiable via le contrat lié.
+  const nomResolu = cl ? (estEntreprise(cl) ? cl.nom : `${cl.prenom || ''} ${cl.nom || ''}`.trim()) : '';
   creerModale('modal-edit-commission', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:500px">
-      <h3 style="margin:0 0 6px;font-size:16px;font-weight:800;color:var(--text)">Commission — ${c.client_nom || '—'}</h3>
+      <h3 style="margin:0 0 6px;font-size:16px;font-weight:800;color:var(--text)">Commission — ${c.client_nom || nomResolu || '—'}</h3>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">${b ? `Rapprochée du bordereau ${b.numero || ''}` : "Pas encore rapprochée d'un bordereau"}</div>
+
+      ${cl ? `<div style="background:var(--surface-alt);border-radius:10px;padding:12px 14px;margin-bottom:14px">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div style="font-size:12.5px;color:var(--text);font-weight:700">👤 ${nomResolu || '—'}</div>
+          <button type="button" onclick="document.getElementById('modal-edit-commission').remove(); showClient('${cl.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:3px 10px;font-size:10.5px;cursor:pointer;font-weight:700">Voir la fiche client →</button>
+        </div>
+      </div>` : `<div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:11.5px;color:#f87171">⚠ Aucun client identifiable pour cette commission (ni contrat lié, ni client_id) — corrige le champ "Client" ci-dessous à la main si tu sais de qui il s'agit.</div>`}
 
       ${ct ? `<div style="background:var(--surface-alt);border-radius:10px;padding:12px 14px;margin-bottom:14px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -82,7 +93,7 @@ function showModalEditCommission(commId) {
       </div>
 
       <div class="form-grid">
-        <div class="form-field"><label class="form-label">Client</label><input class="form-input" id="ec-client" value="${c.client_nom || ''}"/></div>
+        <div class="form-field"><label class="form-label">Client</label><input class="form-input" id="ec-client" value="${c.client_nom || nomResolu || ''}"/></div>
         <div class="form-field"><label class="form-label">Compagnie</label><input class="form-input" id="ec-compagnie" value="${c.compagnie || ''}"/></div>
         <div class="form-field" style="grid-column:span 2"><label class="form-label">Produit</label><input class="form-input" id="ec-produit" value="${c.produit || ''}"/></div>
         <div class="form-field"><label class="form-label">Montant estimé (CHF)</label><input class="form-input" id="ec-montant-estime" type="number" step="0.01" value="${c.montant_estime || 0}"/></div>

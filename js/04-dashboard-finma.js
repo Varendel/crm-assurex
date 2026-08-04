@@ -221,9 +221,9 @@ const BRANCHES_FINMA = [
   { code: 'B3', label: 'Perte de gain maladie', keywords: ['perte de gain (maladie','perte de gain maladie'] },
   { code: 'C1', label: 'Accidents (LAA / LAA-C)', keywords: ['laa','accident'] },
   { code: 'C2', label: 'Indemnités journalières (IJM)', keywords: ['ijm','indemnité journalière'] },
-  { code: 'D1', label: 'RC privée / Ménage', keywords: ['responsabilité civile (ménage','rc privée','rc ménage'] },
-  { code: 'D2', label: 'RC entreprise / professionnelle', keywords: ['responsabilité civile (entreprise','rc professionnelle','rc d&o','rc dirigeants'] },
-  { code: 'E1', label: 'Véhicule à moteur', keywords: ['véhicule à moteur','casco','rc véhicule'] },
+  { code: 'D1', label: 'RC privée / Ménage', keywords: ['responsabilité civile (ménage','rc privée','rc ménage','inventaire du ménage','ménage'] },
+  { code: 'D2', label: 'RC entreprise / professionnelle', keywords: ['responsabilité civile (entreprise','rc professionnelle','rc d&o','rc dirigeants','rc entreprise','rc commerce','exploitation'] },
+  { code: 'E1', label: 'Véhicule à moteur', keywords: ['véhicule à moteur','casco','rc véhicule','flotte véhicules'] },
   { code: 'E2', label: 'Bâtiment / Choses', keywords: ['bâtiment','choses','inventaire ménage'] },
   { code: 'F1', label: 'Protection juridique', keywords: ['protection juridique'] },
   { code: 'F2', label: 'Voyage / Assistance', keywords: ['voyage','assistance'] },
@@ -455,53 +455,50 @@ async function viewVolumePrimes() {
 
   return `
     ${sectionCard('Filtrer par branche', '#64748b', `
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px">Décoche une branche pour l'exclure du volume de primes affiché ci-dessous.</div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px;flex-wrap:wrap">
+        <div style="font-size:11px;color:var(--text-muted)">Décoche une branche pour l'exclure du volume de primes affiché ci-dessous.</div>
+        <div style="display:flex;gap:8px">
+          <button type="button" onclick="toutCocherVolumePrimes(true)" style="background:var(--surface-alt);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:700">Tout cocher</button>
+          <button type="button" onclick="toutCocherVolumePrimes(false)" style="background:var(--surface-alt);color:var(--text);border:1px solid var(--border);border-radius:7px;padding:4px 10px;font-size:11px;cursor:pointer;font-weight:700">Tout décocher</button>
+        </div>
+      </div>
       <div style="display:flex;gap:14px 20px;flex-wrap:wrap">
-        ${Object.keys(CATALOGUE_PRODUITS).filter(cat => cat !== 'Autre' && cat !== 'Santé').map(cat => `
+        ${BRANCHES_FINMA.map(b => `
           <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12.5px;color:var(--text)">
-            <input type="checkbox" class="vp-branche-checkbox" data-branche="${cat}" checked onchange="filtrerVolumePrimes()" style="width:15px;height:15px;cursor:pointer"/> ${cat}
+            <input type="checkbox" class="vp-branche-checkbox" data-branche="${b.code}" checked onchange="filtrerVolumePrimes()" style="width:15px;height:15px;cursor:pointer"/> ${b.label}
           </label>`).join('')}
-        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12.5px;color:var(--text)">
-          <input type="checkbox" class="vp-branche-checkbox" data-branche="Santé:LAMal" checked onchange="filtrerVolumePrimes()" style="width:15px;height:15px;cursor:pointer"/> LAMal
-        </label>
-        <label style="display:flex;align-items:center;gap:7px;cursor:pointer;font-size:12.5px;color:var(--text)">
-          <input type="checkbox" class="vp-branche-checkbox" data-branche="Santé:Complementaire" checked onchange="filtrerVolumePrimes()" style="width:15px;height:15px;cursor:pointer"/> Complémentaire santé (toutes compagnies)
-        </label>
       </div>
     `)}
     <div id="volume-primes-corps">${renderVolumePrimesCorps(contrats || [], clientsMap)}</div>
   `;
 }
 
-// Recalcule et réaffiche le contenu de Volume de primes selon les branches cochées,
-// sans redemander les données au serveur (déjà en mémoire depuis le chargement initial).
-// La catégorie "Santé" est volontairement scindée en deux sous-branches (LAMal / Complémentaire —
-// toutes compagnies confondues : CSS, Helsana, Groupe Mutuel, SWICA, etc.) car ce sont deux réalités
-// commerciales très différentes qu'on veut pouvoir isoler séparément l'une de l'autre.
+// Recalcule et réaffiche le contenu de Volume de primes selon les branches cochées, sans redemander
+// les données au serveur (déjà en mémoire depuis le chargement initial). Classe chaque contrat par
+// mots-clés (classifierBrancheFinma), pas par correspondance exacte de libellé — les libellés produit
+// réellement saisis (ex. "Complémentaire santé", "Assurance maladie (LAMal)") ne correspondaient presque
+// jamais mot pour mot aux libellés du catalogue, ce qui faisait que décocher une branche ne changeait rien.
 function filtrerVolumePrimes() {
   const branchesActives = new Set(
     Array.from(document.querySelectorAll('.vp-branche-checkbox:checked')).map(cb => cb.dataset.branche)
   );
   const brut = window._volumePrimesContratsBruts || [];
-
-  // Table de correspondance libellé produit -> branche (dérivée du catalogue, pas codée en dur)
-  const brancheParLabel = {};
-  for (const cat in CATALOGUE_PRODUITS) {
-    CATALOGUE_PRODUITS[cat].forEach(p => {
-      const branche = cat === 'Santé' ? (p.id === 'lamal' ? 'Santé:LAMal' : 'Santé:Complementaire') : cat;
-      brancheParLabel[p.label.trim().toLowerCase()] = branche;
-    });
-  }
-
-  const filtres = brut.filter(ct => {
-    const produit = (ct.produit || '').trim().toLowerCase();
-    const branche = brancheParLabel[produit];
-    // Un contrat dont le produit ne correspond à aucune entrée connue du catalogue reste toujours affiché
-    // (mieux vaut le montrer que le faire disparaître silencieusement d'un filtre qui ne le reconnaît pas)
-    if (branche && !branchesActives.has(branche)) return false;
-    return true;
-  });
+  const filtres = brut.filter(ct => branchesActives.has(classifierBrancheFinma(ct.produit).code));
   document.getElementById('volume-primes-corps').innerHTML = renderVolumePrimesCorps(filtres, window._volumePrimesClientsMap || {});
+}
+
+function toutCocherVolumePrimes(etat) {
+  document.querySelectorAll('.vp-branche-checkbox').forEach(cb => { cb.checked = etat; });
+  filtrerVolumePrimes();
+}
+
+// Bascule vers "Tous les contrats" avec la recherche pré-remplie sur un libellé produit exact
+// (utilisé depuis "Détail par catégorie" / "Top produits" du Volume de primes pour retrouver
+// en un clic les contrats précis derrière un montant agrégé).
+async function rechercherContratsProduit(produit) {
+  await navigate('tous-contrats');
+  const el = document.getElementById('tc-search');
+  if (el) { el.value = produit; renderTousContrats(); }
 }
 
 // Reconstruit uniquement le tableau "Meilleurs clients par compagnie" (sélecteur ou clic sur une
@@ -725,9 +722,9 @@ function renderVolumePrimesCorps(contrats, clientsMap) {
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px;margin-bottom:20px">
       <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:16px">Répartition par type de produit</div>
       ${categories.map(([cat, val]) => `
-        <div style="margin-bottom:14px">
+        <div data-produit="${cat}" onclick="rechercherContratsProduit(this.dataset.produit)" style="margin-bottom:14px;cursor:pointer">
           <div style="display:flex;justify-content:space-between;align-items:baseline">
-            <div style="font-size:13px;font-weight:700;color:var(--text)">${cat}</div>
+            <div style="font-size:13px;font-weight:700;color:var(--text);text-decoration:underline dotted">${cat}</div>
             <div style="font-size:13px;font-weight:800;color:var(--accent)">${chf(val)} <span style="font-size:11px;color:var(--text-muted);font-weight:400">(${pct(val)}%)</span></div>
           </div>
           ${bar(val, 'var(--accent)', maxCat)}
@@ -745,9 +742,9 @@ function renderVolumePrimesCorps(contrats, clientsMap) {
           <th style="padding:6px 10px;text-align:right;border-bottom:1px solid var(--border)">Part</th>
         </tr></thead>
         <tbody>${topProduits.map(([prod, val], i) => `
-          <tr style="border-bottom:1px solid var(--border)">
+          <tr data-produit="${prod}" onclick="rechercherContratsProduit(this.dataset.produit)" style="border-bottom:1px solid var(--border);cursor:pointer">
             <td style="padding:10px;color:var(--text-muted);font-weight:700">${i+1}</td>
-            <td style="padding:10px;color:var(--text);font-weight:600">${prod}</td>
+            <td style="padding:10px;color:var(--text);font-weight:600;text-decoration:underline dotted">${prod}</td>
             <td style="padding:10px;text-align:right;font-weight:800;color:#f59e0b">${chf(val)}</td>
             <td style="padding:10px;text-align:right;color:var(--text-muted)">${pct(val)}%</td>
           </tr>`).join('')}

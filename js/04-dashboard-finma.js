@@ -504,6 +504,47 @@ function filtrerVolumePrimes() {
   document.getElementById('volume-primes-corps').innerHTML = renderVolumePrimesCorps(filtres, window._volumePrimesClientsMap || {});
 }
 
+// Reconstruit uniquement le tableau "Meilleurs clients par compagnie" (sélecteur ou clic sur une
+// compagnie de la répartition), sans recalculer tout le reste de la vue Volume de primes.
+function afficherTopClientsCompagnie(compagnie) {
+  const parCompagnieClients = window._volumePrimesParCompagnieClients || {};
+  const clientsMap = window._volumePrimesClientsMap || {};
+  const select = document.getElementById('vp-compagnie-select');
+  if (select && select.value !== compagnie) select.value = compagnie;
+  const corps = document.getElementById('vp-top-clients-corps');
+  if (corps) corps.innerHTML = renderTopClientsCompagnie(compagnie, parCompagnieClients, clientsMap);
+}
+
+// Top 10 clients par prime annuelle pour une compagnie donnée (fonction pure).
+function renderTopClientsCompagnie(compagnie, parCompagnieClients, clientsMap) {
+  const parClient = compagnie ? parCompagnieClients[compagnie] : null;
+  if (!parClient || !Object.keys(parClient).length) {
+    return `<div style="font-size:12px;color:var(--text-muted)">Aucun contrat avec prime pour cette compagnie.</div>`;
+  }
+  const lignes = Object.entries(parClient).map(([clientId, val]) => {
+    const cl = clientsMap[clientId];
+    const nom = cl ? (estEntreprise(cl) ? cl.nom : `${cl.prenom || ''} ${cl.nom || ''}`.trim()) : 'Client inconnu';
+    return { clientId, nom, val };
+  }).sort((a, b) => b.val - a.val).slice(0, 10);
+  const totalCompagnie = Object.values(parClient).reduce((s, v) => s + v, 0) || 1;
+  return `<table style="width:100%;border-collapse:collapse;font-size:13px">
+    <thead><tr style="color:var(--text-muted);font-size:11px;text-transform:uppercase">
+      <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border)">#</th>
+      <th style="padding:6px 10px;text-align:left;border-bottom:1px solid var(--border)">Client</th>
+      <th style="padding:6px 10px;text-align:right;border-bottom:1px solid var(--border)">Prime annuelle</th>
+      <th style="padding:6px 10px;text-align:right;border-bottom:1px solid var(--border)">Part chez ${compagnie}</th>
+    </tr></thead>
+    <tbody>${lignes.map((l, i) => `
+      <tr style="border-bottom:1px solid var(--border);cursor:pointer" onclick="showClient('${l.clientId}')">
+        <td style="padding:10px;color:var(--text-muted);font-weight:700">${i + 1}</td>
+        <td style="padding:10px;color:var(--text);font-weight:600;text-decoration:underline dotted">${l.nom}</td>
+        <td style="padding:10px;text-align:right;font-weight:800;color:#f59e0b">CHF ${Math.round(l.val).toLocaleString('fr-CH')}</td>
+        <td style="padding:10px;text-align:right;color:var(--text-muted)">${Math.round(l.val / totalCompagnie * 100)}%</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>`;
+}
+
 // Calcule et génère tout l'affichage de Volume de primes à partir d'une liste de contrats donnée
 // (fonction pure, appelée à la fois au chargement initial et à chaque changement de filtre par branche).
 function renderVolumePrimesCorps(contrats, clientsMap) {
@@ -517,6 +558,8 @@ function renderVolumePrimesCorps(contrats, clientsMap) {
   const parProduit = {};
   // Détail par compagnie
   const parCompagnie = {};
+  // Détail par compagnie x client (pour la vue "meilleurs clients par compagnie")
+  const parCompagnieClients = {};
   // Détail par catégorie, à l'intérieur de chaque segment (pour sous-détail des 4 carrés)
   const parCategorieVie = {}, parCategorieNonVie = {}, parCategoriePrive = {}, parCategorieEntreprise = {};
 
@@ -534,6 +577,8 @@ function renderVolumePrimesCorps(contrats, clientsMap) {
     parCategorie[catLabel] = (parCategorie[catLabel] || 0) + prime;
     parProduit[ct.produit || 'Autre'] = (parProduit[ct.produit || 'Autre'] || 0) + prime;
     parCompagnie[ct.compagnie || 'Autre'] = (parCompagnie[ct.compagnie || 'Autre'] || 0) + prime;
+    const compClients = parCompagnieClients[ct.compagnie || 'Autre'] || (parCompagnieClients[ct.compagnie || 'Autre'] = {});
+    compClients[ct.client_id] = (compClients[ct.client_id] || 0) + prime;
   });
 
   function topDetail(obj, segTotal, max) {
@@ -570,6 +615,7 @@ function renderVolumePrimesCorps(contrats, clientsMap) {
   const maxCat = categories.length > 0 ? categories[0][1] : 1;
   const PALETTE_CIE = ['#38bdf8','#f59e0b','#a78bfa','#4ade80','#f87171','#fb923c','#22d3ee','#e879f9','#64748b'];
   const compagnies = Object.entries(parCompagnie).sort((a,b) => b[1]-a[1]);
+  window._volumePrimesParCompagnieClients = parCompagnieClients;
   const totalCompagnies = compagnies.reduce((s,[,v]) => s+v, 0) || 1;
   let cumulCie = 0;
   const Rcie = 70, Ccie = 2 * Math.PI * Rcie;
@@ -611,13 +657,24 @@ function renderVolumePrimesCorps(contrats, clientsMap) {
         </svg>
         <div style="flex:1;min-width:200px">
           ${compagnies.map(([comp,val],i) => `
-            <div style="display:flex;align-items:center;gap:8px;margin-bottom:9px;font-size:12.5px">
+            <div data-compagnie="${comp}" onclick="afficherTopClientsCompagnie(this.dataset.compagnie)" style="display:flex;align-items:center;gap:8px;margin-bottom:9px;font-size:12.5px;cursor:pointer">
               <div style="width:10px;height:10px;border-radius:50%;background:${PALETTE_CIE[i % PALETTE_CIE.length]};flex-shrink:0"></div>
               <div style="color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${comp}</div>
               <div style="color:var(--text-muted);font-weight:700;flex-shrink:0">${chf(val)} · ${Math.round(val/totalCompagnies*100)}%</div>
             </div>`).join('')}
         </div>
       </div>
+    </div>
+
+    <!-- Meilleurs clients par compagnie -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px">
+        <div style="font-size:13px;font-weight:800;color:var(--text)">Meilleurs clients par compagnie</div>
+        <select id="vp-compagnie-select" onchange="afficherTopClientsCompagnie(this.value)" style="background:var(--surface-alt);color:var(--text);border:1px solid var(--border);border-radius:8px;padding:6px 10px;font-size:12.5px;cursor:pointer">
+          ${compagnies.map(([comp]) => `<option value="${comp}">${comp}</option>`).join('')}
+        </select>
+      </div>
+      <div id="vp-top-clients-corps">${renderTopClientsCompagnie(compagnies.length ? compagnies[0][0] : null, parCompagnieClients, clientsMap)}</div>
     </div>
 
     <!-- VIE vs NON-VIE -->

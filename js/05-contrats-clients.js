@@ -1119,9 +1119,24 @@ async function supprimerMandatSauvegarde(mandatId, clientId) {
 // fois que la fiche est rouverte pour ce client.
 async function sauvegarderFicheOffre(clientId, data) {
   const r = await dbPatch('clients', clientId, { fiche_offre_data: data });
-  if (r && r.error) { console.error('Échec sauvegarde fiche demande d\'offre :', errMsg(r)); return; }
+  if (r && r.error) {
+    console.error('Échec sauvegarde fiche demande d\'offre :', errMsg(r));
+    return { ok: false, raison: 'Erreur serveur : ' + errMsg(r) };
+  }
+  // Vérifie que l'écriture a réellement été appliquée : une session expirée dans l'onglet
+  // principal fait retomber dbPatch sur la clé anonyme, qui est bloquée par la sécurité de la
+  // base sans remonter d'erreur HTTP (0 ligne modifiée, mais requête "réussie") — d'où le bouton
+  // qui semblait fonctionner sans jamais rien enregistrer.
+  const verif = await dbGet('clients', `id=eq.${clientId}&select=fiche_offre_data`);
+  const enregistre = verif && verif[0] && verif[0].fiche_offre_data;
+  const cles = enregistre ? Object.keys(data) : [];
+  const bienEnregistre = enregistre && cles.length === Object.keys(enregistre).length && cles.every(k => enregistre[k] === data[k]);
+  if (!bienEnregistre) {
+    return { ok: false, raison: 'Session probablement expirée \u2014 reconnectez-vous sur l\u2019onglet principal du CRM puis r\u00e9essayez.' };
+  }
   allClients = await dbGet('clients', 'select=*');
   logAction('edit_fiche_offre', 'clients', clientId, 'Mise à jour de la fiche demande d\'offre');
+  return { ok: true };
 }
 
 function genererFicheDemandeOffre(clientId) {
@@ -1155,6 +1170,7 @@ function genererFicheDemandeOffre(clientId) {
     .rappel-legal { background: #f3f4f6; border-left: 3px solid #113679; padding: 6px 10px; font-size: 9.5px; color: #444; margin: 6px 0 10px }
     .print-btn { position: fixed; top: 16px; right: 16px; background: #113679; color: #fff; border: none; border-radius: 8px; padding: 10px 18px; font-weight: 700; cursor: pointer; font-size: 13px }
     .save-btn { position: fixed; top: 16px; right: 168px; background: #16a34a; color: #fff; border: none; border-radius: 8px; padding: 10px 18px; font-weight: 700; cursor: pointer; font-size: 13px }
+    .save-btn:disabled { opacity: 0.6; cursor: wait }
     .save-note { position: fixed; top: 62px; right: 16px; background: #16a34a; color: #fff; border-radius: 6px; padding: 6px 12px; font-size: 11px; font-weight: 700; display: none }
     table.plaques { width: 100%; border-collapse: collapse; font-size: 10.5px; margin-top: 6px }
     table.plaques th, table.plaques td { border: 1px solid #ccc; padding: 5px 8px; text-align: left }
@@ -1270,17 +1286,33 @@ function genererFicheDemandeOffre(clientId) {
 
     <div class="footer">ASSUREX Sàrl – Rue du Centre 142, 1025 St-Sulpice – Autorisation FINMA F01492173 — Document de travail interne, non contractuel</div>
 
-    <button class="save-btn" onclick="
-      const d = {};
-      document.querySelectorAll('[data-champ]').forEach(el => {
-        if (el.type === 'checkbox') { d[el.dataset.champ] = el.checked; }
-        else { d[el.dataset.champ] = el.value; }
-      });
-      window.opener.sauvegarderFicheOffre('${clientId}', d);
-      const note = document.querySelector('.save-note');
-      note.style.display = 'block';
-      setTimeout(() => note.style.display = 'none', 2500);
-    ">💾 Enregistrer les infos</button>
+    <button class="save-btn" onclick="(async () => {
+      const btn = document.querySelector('.save-btn');
+      try {
+        if (!window.opener || window.opener.closed || typeof window.opener.sauvegarderFicheOffre !== 'function') {
+          alert('Impossible d\u2019enregistrer : la fen\u00eatre du CRM d\u2019origine est introuvable ou a \u00e9t\u00e9 ferm\u00e9e. Gardez l\u2019onglet du CRM ouvert et rouvrez cette fiche depuis la fiche client.');
+          return;
+        }
+        const d = {};
+        document.querySelectorAll('[data-champ]').forEach(el => {
+          if (el.type === 'checkbox') { d[el.dataset.champ] = el.checked; }
+          else { d[el.dataset.champ] = el.value; }
+        });
+        btn.disabled = true; btn.textContent = 'Enregistrement...';
+        const res = await window.opener.sauvegarderFicheOffre('${clientId}', d);
+        if (res && res.ok) {
+          const note = document.querySelector('.save-note');
+          note.style.display = 'block';
+          setTimeout(() => note.style.display = 'none', 2500);
+        } else {
+          alert('\u00c9chec de l\u2019enregistrement : ' + (res && res.raison ? res.raison : 'erreur inconnue'));
+        }
+      } catch (e) {
+        alert('Erreur lors de l\u2019enregistrement : ' + e.message);
+      } finally {
+        btn.disabled = false; btn.textContent = '\ud83d\udcbe Enregistrer les infos';
+      }
+    })()">💾 Enregistrer les infos</button>
     <div class="save-note">✓ Enregistré — réouvrir la fiche depuis la fiche client pour continuer à la modifier</div>
     <button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
   </body></html>`);

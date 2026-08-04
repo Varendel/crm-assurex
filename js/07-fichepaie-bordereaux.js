@@ -672,9 +672,15 @@ function formPrive() {
   return `
     <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouveau client — Privé</h2>
     ${sectionCard('Identité', '#38bdf8', `<div class="form-grid">
-      <div class="form-field"><label class="form-label">Prénom *</label><input class="form-input" id="f-prenom" placeholder="Jean"/></div>
+      <div class="form-field" style="grid-column:span 2;background:rgba(244,114,182,0.08);border:1px solid rgba(244,114,182,0.25);border-radius:9px;padding:10px 14px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);cursor:pointer;font-weight:700">
+          <input type="checkbox" id="f-prenatal" style="width:16px;height:16px;cursor:pointer" onchange="togglePrenatalForm()"/>🍼 Assurance prénatale (naissance à venir — la date ci-dessous devient la date prévue d'accouchement)
+        </label>
+      </div>
+      <div class="form-field"><label class="form-label">Civilité</label><select class="form-select" id="f-civilite"><option value="">—</option><option value="Monsieur">Monsieur</option><option value="Madame">Madame</option></select></div>
+      <div class="form-field"><label class="form-label" id="f-prenom-label">Prénom *</label><input class="form-input" id="f-prenom" placeholder="Jean"/></div>
       <div class="form-field"><label class="form-label">Nom *</label><input class="form-input" id="f-nom" placeholder="Dupont"/></div>
-      <div class="form-field"><label class="form-label">Date de naissance</label><input class="form-input" id="f-dob" type="date"/></div>
+      <div class="form-field"><label class="form-label" id="f-dob-label">Date de naissance</label><input class="form-input" id="f-dob" type="date"/></div>
       <div class="form-field"><label class="form-label">Nationalité</label><input class="form-input" id="f-nationalite" placeholder="Suisse"/></div>
       <div class="form-field"><label class="form-label">État civil</label><select class="form-select" id="f-etat"><option value="">—</option><option>Célibataire</option><option>Marié</option><option>Divorcé</option><option>Divorcée</option><option>Veuf</option><option>Veuve</option><option>Pacsé</option><option>Pacsée</option></select></div>
       <div class="form-field"><label class="form-label">Enfants</label><input class="form-input" id="f-enfants" type="number" value="0"/></div>
@@ -714,8 +720,20 @@ function formPrive() {
     </div>`;
 }
 
+function togglePrenatalForm() {
+  const prenatal = document.getElementById('f-prenatal')?.checked;
+  const prenomLabel = document.getElementById('f-prenom-label');
+  const dobLabel = document.getElementById('f-dob-label');
+  const prenomInput = document.getElementById('f-prenom');
+  if (prenomLabel) prenomLabel.textContent = prenatal ? 'Prénom (laisser vide = "Baby")' : 'Prénom *';
+  if (dobLabel) dobLabel.textContent = prenatal ? 'Date prévue d\'accouchement' : 'Date de naissance';
+  if (prenomInput) prenomInput.placeholder = prenatal ? 'Laisser vide pour "Baby" en attendant' : 'Jean';
+}
+
 async function saveClient() {
-  const prenom = document.getElementById('f-prenom').value.trim();
+  const prenatal = document.getElementById('f-prenatal') ? document.getElementById('f-prenatal').checked : false;
+  let prenom = document.getElementById('f-prenom').value.trim();
+  if (!prenom && prenatal) prenom = 'Baby'; // en attendant l'annonce de la naissance et le vrai prénom
   const nom = document.getElementById('f-nom').value.trim();
   const email = document.getElementById('f-email').value.trim();
   const adresse = document.getElementById('f-adresse').value.trim();
@@ -729,6 +747,8 @@ async function saveClient() {
   if (missing.length > 0) { alert('Champs obligatoires manquants : ' + missing.join(', ')); return; }
   const body = {
     prenom, nom,
+    civilite: document.getElementById('f-civilite') ? (document.getElementById('f-civilite').value || null) : null,
+    prenatal,
     date_naissance: document.getElementById('f-dob').value || null,
     nationalite: document.getElementById('f-nationalite').value || null,
     etat_civil: document.getElementById('f-etat').value || null,

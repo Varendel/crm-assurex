@@ -1,3 +1,133 @@
+// Petites illustrations pour la fiche client privé (homme / femme / bébé en attente de naissance) —
+// remplacent le cercle d'initiales par défaut quand la civilité (ou le statut prénatal) est connue.
+function iconAvatarClient(type, size) {
+  const s = size;
+  if (type === 'bebe') {
+    return `<div style="width:${s}px;height:${s}px;border-radius:50%;background:rgba(244,114,182,0.14);border:2px solid rgba(244,114,182,0.4);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <svg width="${Math.round(s*0.62)}" height="${Math.round(s*0.62)}" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="20" cy="19" r="13" fill="#f9a8d4"/>
+        <circle cx="15.5" cy="18" r="1.6" fill="#831843"/>
+        <circle cx="24.5" cy="18" r="1.6" fill="#831843"/>
+        <path d="M16 23c1.3 1.4 2.7 2 4 2s2.7-0.6 4-2" stroke="#831843" stroke-width="1.4" stroke-linecap="round" fill="none"/>
+        <path d="M13 10c1.5-2.5 4-4 7-4s5.5 1.5 7 4" stroke="#f472b6" stroke-width="2.4" stroke-linecap="round" fill="none"/>
+        <circle cx="20" cy="5.5" r="2" fill="#f472b6"/>
+      </svg>
+    </div>`;
+  }
+  if (type === 'femme') {
+    return `<div style="width:${s}px;height:${s}px;border-radius:50%;background:rgba(167,139,250,0.12);border:2px solid rgba(167,139,250,0.35);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <svg width="${Math.round(s*0.62)}" height="${Math.round(s*0.62)}" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9 34c0-8 4.5-12.5 11-12.5S31 26 31 34" fill="#a78bfa"/>
+        <circle cx="20" cy="14" r="9" fill="#e9d5ff"/>
+        <path d="M10 15c0-6 4.5-10.5 10-10.5S30 9 30 15c0 1.5-0.3 3-1 4.3-0.6-3-1-6.5-1-9.3-2.6 2-6.5 3-9 3s-4.5-0.6-6-1.8C12.4 13 11.2 15.8 11 19.3 10.3 18 10 16.5 10 15z" fill="#7c3aed"/>
+      </svg>
+    </div>`;
+  }
+  if (type === 'homme') {
+    return `<div style="width:${s}px;height:${s}px;border-radius:50%;background:rgba(56,189,248,0.12);border:2px solid rgba(56,189,248,0.35);display:flex;align-items:center;justify-content:center;flex-shrink:0">
+      <svg width="${Math.round(s*0.62)}" height="${Math.round(s*0.62)}" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M9 34c0-7.5 4.5-11.5 11-11.5S31 26.5 31 34" fill="#38bdf8"/>
+        <circle cx="20" cy="14" r="9" fill="#bae6fd"/>
+        <path d="M11.2 11.5c1.6-4.3 5-6.8 8.8-6.8s7.2 2.5 8.8 6.8c-2.7 0.8-5.9 1.2-8.8 1.2s-6.1-0.4-8.8-1.2z" fill="#0284c7"/>
+      </svg>
+    </div>`;
+  }
+  return null;
+}
+
+// Un contrat compte comme "santé" (LAMal/LCA) s'il correspond à un produit du catalogue Santé,
+// ou à une ligne LCA combinable enregistrée sous le libellé libre "LCA — <nom du produit>".
+function estProduitSante(produitLabel) {
+  if (!produitLabel) return false;
+  if (produitLabel.startsWith('LCA — ')) return true;
+  return (CATALOGUE_PRODUITS['Santé'] || []).some(p => p.label === produitLabel);
+}
+
+// ═══ ASSURANCE PRÉNATALE — annonce de la naissance ═══
+async function ouvrirAnnonceNaissance(clientId) {
+  const c = allClients.find(x => x.id === clientId);
+  if (!c) return;
+  creerModale('modal-annonce-naissance', `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
+      <h3 style="margin:0 0 6px;font-size:16px;font-weight:800;color:var(--text)">🎉 Annoncer la naissance</h3>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">Confirme le prénom et la date de naissance réels — le dossier et les contrats LAMal/LCA basculeront en vigueur, et les commissions liées passeront en suivi normal.</div>
+      <div class="form-grid">
+        <div class="form-field"><label class="form-label">Prénom de l'enfant</label><input class="form-input" id="an-prenom" value="${c.prenom && c.prenom !== 'Baby' ? c.prenom : ''}" placeholder="Prénom réel"/></div>
+        <div class="form-field"><label class="form-label">Date de naissance</label><input class="form-input" id="an-date" type="date" value="${c.date_naissance || ''}"/></div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:20px">
+        <button class="btn-secondary" onclick="document.getElementById('modal-annonce-naissance').remove()">Annuler</button>
+        <button class="btn-save" onclick="confirmerNaissance('${clientId}')">✓ Confirmer la naissance</button>
+      </div>
+    </div>`);
+}
+
+async function confirmerNaissance(clientId) {
+  const prenom = document.getElementById('an-prenom').value.trim() || 'Baby';
+  const dateNaissance = document.getElementById('an-date').value;
+  if (!dateNaissance) { showError('Indique la date de naissance.'); return; }
+  const btn = document.querySelector('#modal-annonce-naissance .btn-save');
+  if (btn) { btn.textContent = 'Confirmation...'; btn.disabled = true; }
+
+  const rClient = await dbPatch('clients', clientId, { prenom, date_naissance: dateNaissance, prenatal: false });
+  if (rClient && rClient.error) { showError('Erreur : ' + errMsg(rClient)); if (btn) { btn.textContent = '✓ Confirmer la naissance'; btn.disabled = false; } return; }
+
+  // Bascule tous les contrats du client (LAMal/LCA prénatals) en vigueur
+  const contratsClient = allContrats.filter(x => x.client_id === clientId);
+  for (const ct of contratsClient) {
+    if (ct.statut !== 'actif') await dbPatch('contrats', ct.id, { statut: 'actif' });
+  }
+
+  // Les commissions "en attente de naissance" deviennent des commissions normales en attente
+  const commissionsClient = allCommissionsAttente.filter(cm => contratsClient.some(ct => ct.id === cm.contrat_id) && cm.statut === 'en_attente_naissance');
+  for (const cm of commissionsClient) {
+    await dbPatch('commissions_attente', cm.id, { statut: 'en_attente' });
+  }
+
+  logAction('naissance_confirmee', 'clients', clientId, `${prenom} — naissance confirmée le ${dateNaissance}`);
+
+  allClients = await dbGet('clients', 'select=*');
+  allContrats = await dbGet('contrats', 'select=*');
+  allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
+
+  const modal = document.getElementById('modal-annonce-naissance');
+  if (modal) modal.remove();
+
+  ouvrirEmailsNaissance(clientId, prenom, dateNaissance);
+}
+
+function ouvrirEmailsNaissance(clientId, prenom, dateNaissance) {
+  const c = allClients.find(x => x.id === clientId);
+  if (!c) { showClient(clientId); return; }
+  const contratsSante = allContrats.filter(ct => ct.client_id === clientId && estProduitSante(ct.produit));
+  const compagnies = [...new Set(contratsSante.map(ct => ct.compagnie).filter(Boolean))];
+  const nomComplet = `${prenom} ${c.nom}`;
+
+  if (compagnies.length === 0) {
+    showError(`Naissance confirmée pour ${nomComplet} — aucun contrat LAMal/LCA trouvé pour proposer une annonce par email.`);
+    showClient(clientId);
+    return;
+  }
+
+  const liensMail = compagnies.map(comp => {
+    const polices = contratsSante.filter(ct => ct.compagnie === comp).map(ct => `- ${ct.produit}${ct.numero_police ? ' (police ' + ct.numero_police + ')' : ''}`).join('\n');
+    const sujet = `Naissance — ${nomComplet} — régularisation de couverture`;
+    const corps = `Bonjour,\n\nNous vous annonçons la naissance de ${nomComplet}, né(e) le ${fmtDate(dateNaissance)}.\n\nMerci de bien vouloir régulariser la/les couverture(s) suivante(s), assurée(s) à titre prénatal :\n${polices}\n\nNous restons à votre disposition pour tout document complémentaire (acte de naissance, etc.).\n\nMeilleures salutations`;
+    const mailto = `mailto:?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`;
+    return `<a href="${mailto}" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;background:var(--surface-alt);border:1px solid var(--border);border-radius:9px;text-decoration:none;color:var(--text);font-size:12.5px;font-weight:700;margin-bottom:8px">✉️ Annoncer à ${comp}<span style="color:var(--accent);font-size:11px">Ouvrir l'email →</span></a>`;
+  }).join('');
+
+  creerModale('modal-emails-naissance', `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
+      <h3 style="margin:0 0 6px;font-size:16px;font-weight:800;color:var(--text)">🎉 Naissance confirmée</h3>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">${nomComplet}, né(e) le ${fmtDate(dateNaissance)} — les contrats sont maintenant actifs. Choisis la compagnie à annoncer par email (destinataire à compléter toi-même) :</div>
+      ${liensMail}
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn-secondary" onclick="document.getElementById('modal-emails-naissance').remove(); showClient('${clientId}')">Fermer</button>
+      </div>
+    </div>`);
+}
+
 async function showClient(id) {
   // Empile où on était avant d'ouvrir cette fiche, pour que la flèche retour y ramène précisément
   const etatPrecedent = capturerEtatActuel();
@@ -32,7 +162,10 @@ async function showClient(id) {
     : `${c.profession || ''}${c.employeur ? ' · ' + c.employeur : ''}`;
   const headerIcon = isEntreprise
     ? `<div style="width:52px;height:52px;border-radius:14px;background:rgba(245,158,11,0.12);border:2px solid rgba(245,158,11,0.35);display:flex;align-items:center;justify-content:center;font-size:24px">🏢</div>`
-    : `<div style="width:52px;height:52px;border-radius:50%;background:var(--accent-dim);border:2px solid var(--accent-border);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:var(--accent)">${(c.prenom||'?')[0]}${(c.nom||'?')[0]}</div>`;
+    : (c.prenatal ? iconAvatarClient('bebe', 52)
+      : c.civilite === 'Madame' ? iconAvatarClient('femme', 52)
+      : c.civilite === 'Monsieur' ? iconAvatarClient('homme', 52)
+      : `<div style="width:52px;height:52px;border-radius:50%;background:var(--accent-dim);border:2px solid var(--accent-border);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:var(--accent)">${(c.prenom||'?')[0]}${(c.nom||'?')[0]}</div>`);
 
   main.innerHTML = `
     <div class="print-header" style="display:none">
@@ -67,6 +200,14 @@ async function showClient(id) {
           </div>
         </div>
       </div>
+      ${c.prenatal ? `<div style="display:flex;align-items:center;gap:12px;padding:12px 16px;background:rgba(244,114,182,0.08);border:1px solid rgba(244,114,182,0.3);border-radius:10px;margin-bottom:16px">
+        <div style="font-size:22px">🍼</div>
+        <div style="flex:1">
+          <div style="font-size:12.5px;font-weight:700;color:var(--text)">Naissance à venir${c.date_naissance ? ' — prévue le ' + fmtDate(c.date_naissance) : ''}</div>
+          <div style="font-size:10.5px;color:var(--text-muted)">Assurance prénatale — les contrats LAMal/LCA sont suivis dès maintenant, la commission se déclenchera une fois la naissance confirmée.</div>
+        </div>
+        <button onclick="ouvrirAnnonceNaissance('${c.id}')" style="background:rgba(244,114,182,0.16);border:1px solid rgba(244,114,182,0.4);color:#f472b6;border-radius:8px;padding:7px 16px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">🎉 Annoncer la naissance</button>
+      </div>` : ''}
       <div class="stat-grid" style="margin-bottom:16px">
         ${statCard('Contrats', contrats.length, '#38bdf8')}
         ${statCard('Rappels ouverts', rappels.filter(r => r.statut === 'ouvert').length, rappels.filter(r => r.statut === 'ouvert').length > 0 ? '#f87171' : '#64748b')}
@@ -135,9 +276,10 @@ async function showClient(id) {
           <div class="form-field"><label class="form-label">Chiffre d'affaires</label><input id="ec-revenu" type="number" class="form-input" value="${c.revenu || ''}"></div>
           <div class="form-field"><label class="form-label">N° AVS (LPP)</label><input id="ec-avs" class="form-input" value="${c.avs || ''}"></div>
         </div>` : `<div class="form-grid">
+          <div class="form-field"><label class="form-label">Civilité</label><select id="ec-civilite" class="form-input"><option value="">—</option><option value="Monsieur" ${c.civilite==='Monsieur'?'selected':''}>Monsieur</option><option value="Madame" ${c.civilite==='Madame'?'selected':''}>Madame</option></select></div>
           <div class="form-field"><label class="form-label">Prénom</label><input id="ec-prenom" class="form-input" value="${c.prenom || ''}"></div>
           <div class="form-field"><label class="form-label">Nom</label><input id="ec-nom" class="form-input" value="${c.nom || ''}"></div>
-          <div class="form-field"><label class="form-label">Date de naissance</label><input id="ec-date-naissance" type="date" class="form-input" value="${c.date_naissance || ''}"></div>
+          <div class="form-field"><label class="form-label">Date de naissance${c.prenatal ? ' prévue (grossesse en cours)' : ''}</label><input id="ec-date-naissance" type="date" class="form-input" value="${c.date_naissance || ''}"></div>
           <div class="form-field"><label class="form-label">Nationalité</label><input id="ec-nationalite" class="form-input" value="${c.nationalite || ''}"></div>
           <div class="form-field"><label class="form-label">État civil</label>
             <select id="ec-etat-civil" class="form-input">
@@ -1126,6 +1268,7 @@ async function saveClientEdit(id, isEntreprise) {
     domaine_suva: document.getElementById('ec-suva') ? document.getElementById('ec-suva').value === 'oui' : undefined,
     ide: document.getElementById('ec-ide') ? document.getElementById('ec-ide').value.trim() : undefined,
   } : {
+    civilite: document.getElementById('ec-civilite') ? (document.getElementById('ec-civilite').value || null) : undefined,
     prenom: document.getElementById('ec-prenom').value.trim(),
     nom: document.getElementById('ec-nom').value.trim(),
     date_naissance: document.getElementById('ec-date-naissance').value || null,

@@ -223,6 +223,7 @@ function viewCommissionsAttente(prefiltreStatut) {
       <select class="form-select" id="tc-statut" style="max-width:180px" onchange="renderToutesCommissions()">
         <option value="">Tous statuts</option>
         <option value="en_attente" ${prefiltreStatut==='en_attente'?'selected':''}>En attente</option>
+        <option value="en_attente_naissance" ${prefiltreStatut==='en_attente_naissance'?'selected':''}>🍼 En attente de naissance</option>
         <option value="reçue" ${prefiltreStatut==='reçue'?'selected':''}>Reçue (Assurex)</option>
         <option value="extourné">Extournée</option>
         <option value="versé_oz" ${prefiltreStatut==='versé_oz'?'selected':''}>Versé OZ (tout)</option>

@@ -1027,14 +1027,17 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
     }
     return { error: false, contrat: rContrat && rContrat[0] ? rContrat[0] : null };
   }
+  // Client "assurance prénatale" : la compagnie ne déclenchera réellement la commission qu'à la
+  // naissance confirmée, mais le suivi existe dès la saisie — statut dédié 'en_attente_naissance',
+  // basculé en 'en_attente' normal par confirmerNaissance() une fois la naissance annoncée.
   const commissionBody = {
     client_id: clientId,
     client_nom: client ? (estEntreprise(client) ? client.nom : `${client.prenom} ${client.nom}`) : '',
     compagnie,
     produit: produitLabel,
     montant_estime: montantCommission,
-    detail_calcul: detailCommission,
-    statut: 'en_attente',
+    detail_calcul: client && client.prenatal ? `${detailCommission} — en attente de naissance` : detailCommission,
+    statut: client && client.prenatal ? 'en_attente_naissance' : 'en_attente',
     nature: document.getElementById('ct-nature-commission')?.value || 'acquisition',
     date_creation: new Date().toISOString().split('T')[0],
     contrat_id: rContrat && rContrat[0] ? rContrat[0].id : null,

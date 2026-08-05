@@ -710,6 +710,68 @@ const CATALOGUE_PRODUITS = {
   ],
 };
 
+// ─── Sélecteur "produits envisagés" sur l'opportunité — vue simplifiée ───────────────────────────────────────────────────────────────
+// Au stade de l'opportunité, le produit exact n'est pas encore arrêté (ça se précise au contrat) ;
+// proposer les 52 variantes du catalogue complet est trop lourd à parcourir (retour Jonathan :
+// "trop complexe, regroupe un peu — RC pas besoin de tout ce détail"). On regroupe donc ici en
+// catégories plus larges pour la sélection rapide au pipeline, chaque entrée pointant vers UN id
+// réel du catalogue (le plus représentatif) afin de rester compatible avec PRODUIT_BRANCHES et
+// avec la conversion en contrat une fois l'opportunité gagnée — le produit précis se choisit à ce
+// moment-là. Le regroupement le plus fort porte sur RC (8→3) et Santé (11→2), les catégories
+// explicitement citées ou manifestement redondantes (variantes de compagnies de complémentaire).
+const PRODUITS_OPPORTUNITE_GROUPES = {
+  'Responsabilité civile': [
+    { id: 'rc_privee', label: 'RC privée (+ inventaire ménage)' },
+    { id: 'rc_entreprise', label: 'RC entreprise / commerce / professionnelle' },
+    { id: 'rc_batiment', label: 'RC bâtiment / propriétaire' },
+  ],
+  'Ménage / habitation': [
+    { id: 'menage', label: 'Inventaire du ménage' },
+  ],
+  'Caution de loyer': [
+    { id: 'caution_bail_prive', label: 'Caution de loyer — bail privé' },
+    { id: 'caution_bail_commercial', label: 'Caution de loyer — bail commercial' },
+  ],
+  'Bâtiment': [
+    { id: 'batiment_prive', label: 'Bâtiment privé (propriétaire)' },
+    { id: 'batiment_entreprise', label: 'Bâtiment commercial / locaux professionnels' },
+  ],
+  'Véhicule': [
+    { id: 'vehicule_rc', label: 'RC véhicule (obligatoire)' },
+    { id: 'casco_partielle', label: 'Casco partielle' },
+    { id: 'casco_complete', label: 'Casco complète' },
+    { id: 'flotte_entreprise', label: 'Flotte véhicules entreprise' },
+  ],
+  'Protection juridique': [
+    { id: 'pj_privee', label: 'Protection juridique privée' },
+    { id: 'pj_circulation', label: 'Protection juridique circulation' },
+    { id: 'pj_pro', label: 'Protection juridique professionnelle / entreprise' },
+  ],
+  'Prévoyance': [
+    { id: 'vie_3a', label: '3a (assurance ou compte)' },
+    { id: 'vie_3b_mixte', label: '3b (libre passage, mixte, risque ou placement)' },
+    { id: 'lpp_entreprise', label: 'LPP (collective ou rachat individuel)' },
+    { id: 'prevoyance_enfant', label: 'Prévoyance enfant' },
+  ],
+  'Santé': [
+    { id: 'lamal', label: 'LAMal (assurance de base)' },
+    { id: 'lca_autre_compagnie', label: 'Complémentaire santé (LCA)' },
+  ],
+  'Assurances de personnes (entreprise)': [
+    { id: 'laa', label: 'LAA (assurance-accidents obligatoire)' },
+    { id: 'perte_gain_maladie_collective', label: 'Perte de gain maladie collective' },
+    { id: 'sante_collective_entreprise', label: 'Assurance maladie collective entreprise' },
+  ],
+  'Entreprise — risques spécifiques': [
+    { id: 'pertes_exploitation', label: 'Perte d\'exploitation' },
+    { id: 'cyber_entreprise', label: 'Cyber-risque entreprise' },
+    { id: 'choses_entreprise', label: 'Assurance choses / inventaire commercial' },
+  ],
+  'Autre': [
+    { id: 'autre', label: 'Autre (saisie manuelle)' },
+  ],
+};
+
 // ═══ Filtre "Compagnie" selon le produit sélectionné ═══════════════════════════════════
 // Objectif : dans le formulaire Nouveau contrat, ne suggérer (datalist, pas de blocage — le
 // champ Compagnie reste un texte libre) que les compagnies pertinentes pour le produit choisi.

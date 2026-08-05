@@ -709,10 +709,11 @@ function renderFlotteClient(clientId) {
   if (el) el.innerHTML = flotteListeHtml(clientId);
 }
 
-function showFormVehicule(clientId, vehiculeId) {
+function showFormVehicule(clientId, vehiculeId, presetContratId) {
   const v = vehiculeId ? allVehicules.find(x => x.id === vehiculeId) : null;
   const contratsFlotte = allContrats.filter(ct => ct.client_id === clientId && (ct.produit||'').toLowerCase().includes('véhicule'));
-  const contratActuel = v?.contrat_id ? contratsFlotte.find(ct => ct.id === v.contrat_id) : null;
+  const contratPreset = !v && presetContratId ? allContrats.find(ct => ct.id === presetContratId) : null;
+  const contratActuel = v?.contrat_id ? contratsFlotte.find(ct => ct.id === v.contrat_id) : contratPreset;
   creerModale('modal-vehicule', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
       <h3 style="margin:0 0 18px;font-size:16px;font-weight:800;color:var(--text)">${v ? 'Modifier le véhicule' : '🚗 Nouveau véhicule'}</h3>
@@ -724,7 +725,7 @@ function showFormVehicule(clientId, vehiculeId) {
         <div class="form-field" style="grid-column:span 2"><label class="form-label">Contrat flotte lié (si applicable)</label>
           <select class="form-select" id="veh-contrat" onchange="afficherCouverturesFlotte('${clientId}')">
             <option value="">— Aucun (police individuelle) —</option>
-            ${contratsFlotte.map(ct => `<option value="${ct.id}" ${v?.contrat_id===ct.id?'selected':''}>${ct.produit} — ${ct.compagnie}</option>`).join('')}
+            ${contratsFlotte.map(ct => `<option value="${ct.id}" ${(v?.contrat_id===ct.id || (!v && presetContratId===ct.id))?'selected':''}>${ct.produit} — ${ct.compagnie}</option>`).join('')}
           </select>
           <div id="veh-couvertures-info" style="font-size:10.5px;color:var(--text-muted);margin-top:5px">
             ${contratActuel ? `📋 Couvertures de la flotte : <strong>${contratActuel.modules || 'aucune couverture définie sur ce contrat — édite le contrat pour les préciser une fois pour toutes'}</strong>` : ''}
@@ -732,7 +733,7 @@ function showFormVehicule(clientId, vehiculeId) {
         </div>
         <div class="form-field"><label class="form-label">Prime brute (CHF/an)</label><input class="form-input" id="veh-prime-brute" type="number" step="0.01" value="${v?.prime_brute || ''}" placeholder="0"/></div>
         <div class="form-field"><label class="form-label">Prime nette (CHF/an)</label><input class="form-input" id="veh-prime-nette" type="number" step="0.01" value="${v?.prime_nette || ''}" placeholder="0"/></div>
-        <div class="form-field" style="grid-column:span 2"><label class="form-label">N° de police individuelle (si pas lié à un contrat flotte)</label><input class="form-input" id="veh-police" value="${v?.numero_police || ''}" placeholder="Laisser vide si couvert par le contrat flotte"/></div>
+        <div class="form-field" style="grid-column:span 2"><label class="form-label">N° de police individuelle (si pas lié à un contrat flotte)</label><input class="form-input" id="veh-police" value="${v?.numero_police || (contratPreset ? (contratPreset.numero_police || '') : '')}" placeholder="Laisser vide si couvert par le contrat flotte"/></div>
       </div>
       <div style="font-size:10.5px;color:var(--text-muted);margin-top:6px">💡 La prime brute de ce véhicule s'ajoute (ou se retire) automatiquement du montant total de la police flotte liée.</div>
       <div style="display:flex;gap:10px;margin-top:16px">
@@ -947,9 +948,20 @@ function viewRechercheVehicules() {
     <div id="rv-liste"></div>`;
 }
 
+// Contrats dont le produit relève de la branche véhicule (RC véhicule, Casco, Flotte...) mais qui
+// n'ont encore aucune fiche détaillée dans la table `vehicules` (ex: contrats importés depuis un
+// bordereau de commission, ou créés avant que le sous-formulaire véhicule existe) — sans ce
+// rattrapage, ces véhicules pourtant bel et bien assurés restent invisibles dans cette recherche.
+function contratsVehiculesSansDetail() {
+  const idsAvecDetail = new Set(allVehicules.map(v => v.contrat_id).filter(Boolean));
+  return allContrats.filter(ct => /vehicul|véhicul|casco|flotte/i.test(ct.produit || '') && !idsAvecDetail.has(ct.id));
+}
+
 function renderRechercheVehicules() {
   const search = (document.getElementById('rv-search')?.value || '').toLowerCase().trim();
   let vehicules = allVehicules;
+  const manquants = contratsVehiculesSansDetail();
+  let manquantsFiltres = manquants;
   if (search) {
     vehicules = vehicules.filter(v =>
       (v.marque||'').toLowerCase().includes(search) ||
@@ -958,22 +970,41 @@ function renderRechercheVehicules() {
       (v.numero_plaque||'').toLowerCase().includes(search) ||
       (v.numero_police||'').toLowerCase().includes(search)
     );
+    manquantsFiltres = manquants.filter(ct => {
+      const cl = allClients.find(c => c.id === ct.client_id);
+      const nomCl = cl ? (estEntreprise(cl) ? cl.nom : `${cl.prenom} ${cl.nom}`) : '';
+      return (ct.produit||'').toLowerCase().includes(search) || (ct.numero_police||'').toLowerCase().includes(search) || nomCl.toLowerCase().includes(search);
+    });
   }
-  document.getElementById('rv-stats').innerHTML = `${statCard('Véhicules', vehicules.length, '#38bdf8')}${statCard('Total flotte', allVehicules.length, '#64748b')}`;
+  document.getElementById('rv-stats').innerHTML = `${statCard('Véhicules', vehicules.length, '#38bdf8')}${statCard('Total flotte', allVehicules.length, '#64748b')}${statCard('À compléter', manquants.length, manquants.length ? '#f59e0b' : '#64748b')}`;
   const cols = '130px 1fr 110px 130px 1fr';
+  const lignesDetail = vehicules.map(v => {
+    const cl = allClients.find(c => c.id === v.client_id);
+    return `<a href="?client=${v.client_id}" class="table-row" style="grid-template-columns:${cols};cursor:pointer;text-decoration:none;color:inherit" onclick="return irVersClient(event, '${v.client_id}')">
+      <div style="font-weight:700;color:var(--text)">${v.marque||'—'}</div>
+      <div style="color:var(--text-muted)">${v.modele||'—'}</div>
+      <div style="color:var(--text-muted)">${v.cylindree||'—'}</div>
+      <div style="font-family:monospace;font-weight:700;color:var(--text)">${v.numero_plaque||'—'}</div>
+      <div style="color:var(--accent);text-decoration:underline dotted">${cl ? (estEntreprise(cl) ? cl.nom : `${cl.prenom} ${cl.nom}`) : '—'}</div>
+    </a>`;
+  }).join('');
+  const lignesManquantes = manquantsFiltres.map(ct => {
+    const cl = allClients.find(c => c.id === ct.client_id);
+    const nomCl = cl ? (estEntreprise(cl) ? cl.nom : `${cl.prenom} ${cl.nom}`) : '—';
+    return `<div class="table-row" style="grid-template-columns:${cols};background:rgba(245,158,11,0.05)">
+      <div style="font-weight:700;color:#f59e0b" colspan="3">⚠️ ${ct.produit || 'Véhicule'} — détails à compléter</div>
+      <div style="font-family:monospace;color:var(--text-muted)">${ct.numero_police || '—'}</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
+        <span style="color:var(--accent);text-decoration:underline dotted;cursor:pointer" onclick="showClient('${ct.client_id}')">${nomCl}</span>
+        <button onclick="showFormVehicule('${ct.client_id}', null, '${ct.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:3px 9px;font-size:10.5px;font-weight:700;cursor:pointer;white-space:nowrap">+ Compléter</button>
+      </div>
+    </div>`;
+  }).join('');
   document.getElementById('rv-liste').innerHTML = `
     <div class="table-wrap">
-      <div class="table-header" style="grid-template-columns:${cols}"><div>Marque</div><div>Modèle</div><div>Cylindrée</div><div>Plaque</div><div>Client</div></div>
-      ${vehicules.map(v => {
-        const cl = allClients.find(c => c.id === v.client_id);
-        return `<a href="?client=${v.client_id}" class="table-row" style="grid-template-columns:${cols};cursor:pointer;text-decoration:none;color:inherit" onclick="return irVersClient(event, '${v.client_id}')">
-          <div style="font-weight:700;color:var(--text)">${v.marque||'—'}</div>
-          <div style="color:var(--text-muted)">${v.modele||'—'}</div>
-          <div style="color:var(--text-muted)">${v.cylindree||'—'}</div>
-          <div style="font-family:monospace;font-weight:700;color:var(--text)">${v.numero_plaque||'—'}</div>
-          <div style="color:var(--accent);text-decoration:underline dotted">${cl ? cl.nom : '—'}</div>
-        </a>`;
-      }).join('') || '<div class="table-empty">Aucun véhicule ne correspond.</div>'}
+      <div class="table-header" style="grid-template-columns:${cols}"><div>Marque</div><div>Modèle</div><div>Cylindrée</div><div>Plaque / police</div><div>Client</div></div>
+      ${lignesDetail}${lignesManquantes}
+      ${(!lignesDetail && !lignesManquantes) ? '<div class="table-empty">Aucun véhicule ne correspond.</div>' : ''}
     </div>`;
 }
 

@@ -1359,6 +1359,7 @@ function viewNouvelleOpportunite() {
   const stadesOptions = ['Contact','Analyse','Proposition','Négociation','Gagné','Perdu'];
   const qa = (s) => (s || '').toString().replace(/"/g, '&quot;');
   if (opp) setTimeout(() => renderDemandeOffreLieeOpportunite(opp.id), 0);
+  setTimeout(() => recalculerCommissionEstimeeOpportunite(), 0);
   const clientFiche = opp && opp.client_id ? allClients.find(c => c.id === opp.client_id) : (clientPrefille || null);
   const nomAffiche = (c) => estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`;
   const produitsChoisis = opp?.produits || [];
@@ -1378,33 +1379,33 @@ function viewNouvelleOpportunite() {
       <div class="form-field" id="o-prospect-field" style="${clientFiche ? 'display:none' : ''}"><label class="form-label">Nom du prospect</label><input class="form-input" id="o-prospect-nom" value="${qa(opp?.prospect_nom)}" placeholder="Ex: Jean Dupont (pas encore client)"/></div>
       <div class="form-field">
         <label class="form-label">Compagnie</label>
-        <select class="form-select" id="o-compagnie-select" onchange="const autre=this.value==='__autre__';document.getElementById('o-compagnie-autre-wrap').style.display=autre?'':'none';document.getElementById('o-compagnie').value=autre?document.getElementById('o-compagnie-autre').value:this.value">
+        <select class="form-select" id="o-compagnie-select" onchange="const autre=this.value==='__autre__';document.getElementById('o-compagnie-autre-wrap').style.display=autre?'':'none';document.getElementById('o-compagnie').value=autre?document.getElementById('o-compagnie-autre').value:this.value;recalculerCommissionEstimeeOpportunite()">
           <option value="">— Sélectionner —</option>
           ${compagniesConnues.map(c => `<option value="${qa(c)}" ${compagnieActuelle === c ? 'selected' : ''}>${c}</option>`).join('')}
           <option value="__autre__" ${compagnieEstAutre ? 'selected' : ''}>+ Autre (préciser)</option>
         </select>
         <input type="hidden" id="o-compagnie" value="${qa(compagnieActuelle)}"/>
         <div id="o-compagnie-autre-wrap" style="display:${compagnieEstAutre ? '' : 'none'};margin-top:6px">
-          <input class="form-input" id="o-compagnie-autre" placeholder="Nom de la compagnie" value="${compagnieEstAutre ? qa(compagnieActuelle) : ''}" oninput="document.getElementById('o-compagnie').value=this.value"/>
+          <input class="form-input" id="o-compagnie-autre" placeholder="Nom de la compagnie" value="${compagnieEstAutre ? qa(compagnieActuelle) : ''}" oninput="document.getElementById('o-compagnie').value=this.value;recalculerCommissionEstimeeOpportunite()"/>
         </div>
       </div>
-      <div class="form-field"><label class="form-label">Montant potentiel (CHF)</label><input class="form-input" id="o-montant" type="number" value="${opp?.montant_potentiel || ''}" placeholder="5000"/></div>
+      <div class="form-field"><label class="form-label">Prime annuelle envisagée (CHF)</label><input class="form-input" id="o-montant" type="number" value="${opp?.montant_potentiel || ''}" placeholder="5000" oninput="recalculerCommissionEstimeeOpportunite()"/></div>
       <div class="form-field"><label class="form-label">Probabilité %</label><input class="form-input" id="o-prob" type="number" value="${opp ? (opp.probabilite ?? 50) : 50}" min="0" max="100"/></div>
       <div class="form-field"><label class="form-label">Stade</label><select class="form-select" id="o-stade">${stadesOptions.map(s => `<option ${opp && opp.stade === s ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
       <div class="form-field"><label class="form-label">Échéance</label><input class="form-input" id="o-date" type="date" value="${opp?.date_echeance || ''}"/></div>
       <div class="form-field"><label class="form-label">Agent responsable</label><select class="form-select" id="o-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
       <div class="form-field" style="grid-column:span 2">
-        <label class="form-label">Produits envisagés <span style="font-weight:400;color:var(--text-muted);font-size:10px">(plusieurs possibles — sert aux stats du pipeline par branche)</span></label>
-        <input class="form-input" placeholder="Filtrer les produits..." oninput="filtrerProduitsOpportunite(this.value)" style="margin-bottom:8px"/>
+        <label class="form-label">Produits envisagés <span style="font-weight:400;color:var(--text-muted);font-size:10px">(plusieurs possibles — sert aux stats du pipeline par branche ; le produit exact se précisera au contrat)</span></label>
         <div id="o-produits-list" style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:10px;background:var(--surface-alt)">
-          ${Object.entries(CATALOGUE_PRODUITS).map(([cat, produits]) => `
+          ${Object.entries(PRODUITS_OPPORTUNITE_GROUPES).map(([cat, produits]) => `
             <div class="o-produit-groupe">
               <div style="font-size:10.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px">${cat}</div>
               ${produits.map(p => `<label class="o-produit-ligne" style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text);cursor:pointer;padding:2px 0">
-                <input type="checkbox" class="o-produit-checkbox" value="${p.id}" ${produitsChoisis.includes(p.id) ? 'checked' : ''} style="width:14px;height:14px;accent-color:var(--accent);flex-shrink:0"/> ${p.label}
+                <input type="checkbox" class="o-produit-checkbox" value="${p.id}" ${produitsChoisis.includes(p.id) ? 'checked' : ''} onchange="recalculerCommissionEstimeeOpportunite()" style="width:14px;height:14px;accent-color:var(--accent);flex-shrink:0"/> ${p.label}
               </label>`).join('')}
             </div>`).join('')}
         </div>
+        <div id="o-commission-estimee" style="margin-top:8px;font-size:12px;color:var(--text-muted)"></div>
       </div>
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Notes</label><textarea class="form-input" id="o-notes" rows="3" style="resize:vertical">${opp?.notes || ''}</textarea></div>
     </div>`);
@@ -1488,9 +1489,41 @@ function renderTachesOpportunite(opp) {
     </div>`).join('') : '<div style="font-size:12.5px;color:var(--text-muted);padding:6px 0">Aucune tâche pour l\u2019instant.</div>';
   return `${liste}
     <div style="display:flex;gap:8px;margin-top:12px">
-      <input class="form-input" id="opp-nouvelle-tache" placeholder="Ex: Relancer le client pour signature" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();ajouterTacheOpportunite('${opp.id}')}"/>
+      <input class="form-input" id="opp-nouvelle-tache" placeholder="Ex: Relancer le client pour signature" style="flex:2" onkeydown="if(event.key==='Enter'){event.preventDefault();ajouterTacheOpportunite('${opp.id}')}"/>
+      <input class="form-input" id="opp-nouvelle-tache-date" type="date" title="Échéance à planifier" style="flex:1;min-width:130px"/>
       <button type="button" class="btn-secondary" onclick="ajouterTacheOpportunite('${opp.id}')">+ Ajouter</button>
     </div>`;
+}
+
+// Prévisualisation live de la commission estimée (= CA potentiel) sur l'opportunité — demandé par
+// Jonathan pour voir tout de suite ce qui l'intéresse (pas juste la prime brute). Ne calcule un
+// montant que si compagnie + prime + EXACTEMENT UN produit sont renseignés : avec plusieurs
+// produits sélectionnés sur une même prime globale, appliquer le taux de chacun sur la prime
+// entière sur-additionnerait (double/triple comptage) — mieux vaut le dire clairement que
+// d'inventer un chiffre trompeur (même principe que l'audit des commissions de compagnie).
+function recalculerCommissionEstimeeOpportunite() {
+  const zone = document.getElementById('o-commission-estimee');
+  if (!zone) return;
+  const primeAnnuelle = parseFloat(document.getElementById('o-montant')?.value) || 0;
+  const compagnie = document.getElementById('o-compagnie')?.value || '';
+  const produitsCoches = [...document.querySelectorAll('.o-produit-checkbox:checked')].map(el => el.value);
+
+  if (!primeAnnuelle || !compagnie) {
+    zone.innerHTML = `💡 Renseigne la prime et la compagnie pour prévisualiser la commission estimée.`;
+    return;
+  }
+  if (produitsCoches.length !== 1) {
+    zone.innerHTML = produitsCoches.length === 0
+      ? `💡 Sélectionne un produit ci-dessus pour prévisualiser la commission estimée.`
+      : `💡 ${produitsCoches.length} produits sélectionnés — sélectionne-en un seul pour prévisualiser une estimation de commission (au-delà, le détail par ligne se précisera au contrat).`;
+    return;
+  }
+  const resultat = estimerCommissionProduit(produitsCoches[0], compagnie, primeAnnuelle);
+  if (!resultat || !resultat.montant) {
+    zone.innerHTML = `⚠️ Taux de commission inconnu pour "${compagnie}" sur ce produit — indique-le manuellement une fois le contrat créé.`;
+    return;
+  }
+  zone.innerHTML = `💰 <strong style="color:var(--text);font-size:14px">CHF ${resultat.montant.toLocaleString()}</strong> de commission estimée <span style="color:var(--text-muted)">— ${resultat.detail || ''}</span>`;
 }
 
 function filtrerProduitsOpportunite(texte) {
@@ -1522,6 +1555,14 @@ async function saveOpportunite(id) {
     apporteur_id: document.getElementById('o-agent').value || null,
     notes: document.getElementById('o-notes').value || null,
     produits: [...document.querySelectorAll('.o-produit-checkbox:checked')].map(el => el.value),
+    commission_estimee: (() => {
+      const produitsCoches = [...document.querySelectorAll('.o-produit-checkbox:checked')].map(el => el.value);
+      const prime = parseFloat(document.getElementById('o-montant').value) || 0;
+      const compagnie = document.getElementById('o-compagnie').value || '';
+      if (produitsCoches.length !== 1 || !prime || !compagnie) return 0;
+      const r = estimerCommissionProduit(produitsCoches[0], compagnie, prime);
+      return (r && r.montant) || 0;
+    })(),
   };
   const btn = document.querySelector('.btn-save');
   btn.textContent = 'Enregistrement...'; btn.disabled = true;

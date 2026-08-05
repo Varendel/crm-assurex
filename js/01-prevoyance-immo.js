@@ -139,6 +139,12 @@ let contratClientId = null;
 let allContrats = [];
 let allOpportunites = [];
 let prefillOpportunite = null;
+// Produit précis (id catalogue) à préremplir dans "Nouveau contrat" pour l'opportunité en cours de
+// conversion, et file d'attente des autres produits sélectionnés sur cette même opportunité —
+// permet d'enchaîner la création d'un contrat par produit quand plusieurs ont été cochés au
+// pipeline, sans perdre le lien avec l'opportunité entre deux créations.
+let prefillOpportuniteProduitId = null;
+let oppFileAttenteProduits = [];
 let prefillDemandeOffreClientId = null;
 let prefillDemandeOffreOpportuniteId = null;
 let demandeOffreEnEditionId = null;

@@ -38,6 +38,7 @@ function viewOpportunites() {
   const perdues = allOpportunites.filter(o => o.stade === 'Perdu');
   const total = OPPS.reduce((s,o) => s+(o.montant_potentiel||0), 0);
   const pondere = OPPS.reduce((s,o) => s+Math.round((o.montant_potentiel||0)*(o.probabilite||0)/100), 0);
+  const caPotentiel = OPPS.reduce((s,o) => s+(o.commission_estimee||0), 0);
 
   function nomClient(o) {
     const c = allClients.find(cl => cl.id === o.client_id);
@@ -63,8 +64,9 @@ function viewOpportunites() {
     </div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Suivi des affaires en négociation, avant signature. Une fois "Gagnée" depuis le menu de stade, l'opportunité ouvre directement le formulaire de contrat pré-rempli.</div>
     <div class="stat-grid" style="margin-bottom:20px">
-      ${statCard('Pipeline total', 'CHF ' + total.toLocaleString(), '#f59e0b')}
-      ${statCard('Pondéré', 'CHF ' + pondere.toLocaleString(), '#38bdf8')}
+      ${statCard('Pipeline total (prime)', 'CHF ' + total.toLocaleString(), '#f59e0b')}
+      ${statCard('Pondéré (prime)', 'CHF ' + pondere.toLocaleString(), '#38bdf8')}
+      ${statCard('CA potentiel (commissions)', 'CHF ' + caPotentiel.toLocaleString(), '#4ade80')}
       ${statCard('En cours', OPPS.length, '#e2e8f0')}
       ${statCard('Gagnées', gagnees.length, '#4ade80')}
     </div>
@@ -230,23 +232,31 @@ async function ajouterTacheOpportunite(oppId) {
   const input = document.getElementById('opp-nouvelle-tache');
   const titre = input.value.trim();
   if (!titre) return;
+  const dateInput = document.getElementById('opp-nouvelle-tache-date');
+  const dateEcheance = dateInput && dateInput.value ? dateInput.value : null;
   const opp = allOpportunites.find(o => o.id === oppId);
   // Sans apporteur_id, la tâche est invisible du badge "mes tâches" de la sidebar et de tout
   // filtre par agent — bug réel repéré par Jonathan (une tâche créée depuis une opp ne
   // remontait nulle part dans le système de rappels). Priorité à l'agent responsable de l'opp
   // elle-même (opp.apporteur_id) ; à défaut, l'agent actuellement connecté.
+  // nature: 'tache' (et non 'rappel') pour que ça se comporte et s'affiche exactement comme les
+  // autres tâches du CRM (icône 📋, checklist d'étapes disponible) — cohérent avec le libellé
+  // "Tâches" de cette section. Sans date_echeance, l'élément tombait tout en bas de la liste
+  // "Tâches & Rappels" (catégorie "Plus d'un an / sans échéance"), invisible en pratique.
   const monAgent = currentUser ? allAgents.find(a => a.email === currentUser.email) : null;
   const body = {
     titre,
-    nature: 'rappel',
+    nature: 'tache',
     type: 'Opportunité',
     client_id: opp ? (opp.client_id || null) : null,
     opportunite_id: oppId,
     apporteur_id: (opp && opp.apporteur_id) || (monAgent ? monAgent.id : null),
+    date_echeance: dateEcheance,
     urgence: 'moyenne',
     statut: 'ouvert',
   };
   input.value = '';
+  if (dateInput) dateInput.value = '';
   const r = await dbPost('rappels', body);
   if (r && r.error) { showError('Erreur lors de l\u2019ajout de la tâche : ' + errMsg(r)); return; }
   allRappels = await dbGet('rappels', 'select=*');
@@ -276,12 +286,54 @@ async function changerStadeOpportunite(id, nouveauStade) {
   opp.stade = nouveauStade;
 
   if (nouveauStade === 'Gagné') {
-    prefillOpportunite = opp;
-    contratClientId = opp.client_id || null;
-    navigate('nouveau-contrat');
+    const produits = Array.isArray(opp.produits) ? opp.produits : [];
+    if (produits.length > 1) {
+      proposerConversionMultiContrats(opp);
+    } else {
+      prefillOpportunite = opp;
+      prefillOpportuniteProduitId = produits[0] || null;
+      oppFileAttenteProduits = [];
+      contratClientId = opp.client_id || null;
+      navigate('nouveau-contrat');
+    }
   } else {
     navigate('opportunites');
   }
+}
+
+// Opportunité gagnée avec PLUSIEURS produits envisagés cochés au pipeline : propose de créer un
+// contrat par produit sélectionné (l'un après l'autre, cf. la reprise dans creerContratEtCommission
+// / le post-enregistrement de "Nouveau contrat"), plutôt qu'un unique contrat générique qui
+// forcerait à deviner lequel des produits a vraiment été signé.
+function proposerConversionMultiContrats(opp) {
+  const produits = (opp.produits || []).map(id => produitCategorieEtObjetParId(id)).filter(Boolean);
+  creerModale('modal-conversion-opp', `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
+      <h3 style="margin:0 0 8px;font-size:16px;font-weight:800;color:var(--text)">🎉 Opportunité gagnée</h3>
+      <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:16px">Plusieurs produits étaient envisagés sur "<strong>${opp.titre}</strong>". Sélectionne ceux réellement signés — un contrat sera créé pour chacun, l'un après l'autre.</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px">
+        ${produits.map(r => `<label style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text);cursor:pointer;padding:8px 10px;border-radius:8px;background:var(--surface-alt)">
+          <input type="checkbox" class="conv-opp-produit" value="${r.produit.id}" checked style="width:15px;height:15px;accent-color:var(--accent)"/>
+          <span>${r.produit.label}</span>
+        </label>`).join('')}
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn-secondary" onclick="document.getElementById('modal-conversion-opp').remove(); navigate('opportunites')">Annuler</button>
+        <button class="btn-save" onclick="confirmerConversionMultiContrats('${opp.id}')">✓ Créer le(s) contrat(s)</button>
+      </div>
+    </div>`);
+}
+
+function confirmerConversionMultiContrats(oppId) {
+  const opp = allOpportunites.find(o => o.id === oppId);
+  const idsChoisis = [...document.querySelectorAll('.conv-opp-produit:checked')].map(el => el.value);
+  document.getElementById('modal-conversion-opp')?.remove();
+  if (!opp || !idsChoisis.length) { navigate('opportunites'); return; }
+  prefillOpportunite = opp;
+  prefillOpportuniteProduitId = idsChoisis[0];
+  oppFileAttenteProduits = idsChoisis.slice(1);
+  contratClientId = opp.client_id || null;
+  navigate('nouveau-contrat');
 }
 
 // SUIVI — tableau de bord du portefeuille signé (après signature, distinct du Pipeline)

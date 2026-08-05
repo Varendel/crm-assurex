@@ -409,6 +409,7 @@ function viewNouveauContrat() {
 
     ${opp ? `<div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:12.5px;color:var(--text)">
       ✓ Pré-rempli depuis l'opportunité gagnée <strong>"${opp.titre}"</strong> — montant potentiel estimé : <strong>CHF ${(opp.montant_potentiel||0).toLocaleString()}</strong>. Vérifie/ajuste la prime exacte ci-dessous avant d'enregistrer.
+      ${oppFileAttenteProduits.length ? `<div style="margin-top:6px;color:var(--accent)">📋 ${oppFileAttenteProduits.length} autre(s) contrat(s) à créer ensuite pour cette même opportunité, une fois celui-ci enregistré.</div>` : ''}
       ${!opp.client_id && opp.prospect_nom ? `<div style="margin-top:8px;color:#f59e0b">⚠ "<strong>${opp.prospect_nom}</strong>" n'a pas encore de fiche client — sélectionne un client existant ci-dessous, ou <a href="#" onclick="navigate('nouveau-client'); return false;" style="color:#f59e0b;text-decoration:underline">crée sa fiche maintenant</a> puis reviens enregistrer ce contrat.</div>` : ''}
     </div>` : ''}
     ${sectionCard('Informations contrat', '#4ade80', `<div class="form-grid">
@@ -479,7 +480,7 @@ function viewNouveauContrat() {
       <div id="commission-preview-detail" style="font-size:11px;color:var(--text-muted);margin-top:2px"></div>
     </div>
     <div style="display:flex;gap:10px;margin-top:14px">
-      <button class="btn-secondary" onclick="prefillOpportunite=null; navigate(contratClientId ? 'clients' : 'suivi')">Annuler</button>
+      <button class="btn-secondary" onclick="prefillOpportunite=null; prefillOpportuniteProduitId=null; oppFileAttenteProduits=[]; navigate(contratClientId ? 'clients' : 'suivi')">Annuler</button>
       <button class="btn-save" onclick="saveContrat()">✓ Enregistrer le contrat</button>
     </div>`;
 }
@@ -499,9 +500,13 @@ function initSegmentContrat() {
     calculerPrimeTotaleLignes();
   }
   updateCategorieOptions();
-  // Si on arrive depuis une opportunité gagnée, tente de présélectionner automatiquement
-  // catégorie + produit à partir de son titre (ex: "RC entreprise — Acme SA" → RC entreprise / exploitation)
-  if (prefillOpportunite && prefillOpportunite.titre) {
+  // Si on arrive depuis une opportunité gagnée : priorité au produit précis choisi au pipeline
+  // (prefillOpportuniteProduitId, id exact — cf. proposerConversionMultiContrats / conversion
+  // simple) ; à défaut (anciennes opportunités sans produits sélectionnés), on retombe sur la
+  // devinette depuis le titre libre, comme avant.
+  if (prefillOpportuniteProduitId) {
+    appliquerProduitTrouve(produitCategorieEtObjetParId(prefillOpportuniteProduitId));
+  } else if (prefillOpportunite && prefillOpportunite.titre) {
     appliquerProduitTrouve(trouverProduitCatalogue(prefillOpportunite.titre));
   }
 }
@@ -1153,6 +1158,58 @@ function memoriserCompagnie(nom) {
   }
 }
 
+// Cherche un produit du catalogue par son id, tous catégories confondues (utilisé par
+// estimerCommissionProduit ci-dessous pour la prévisualisation de commission sur une opportunité).
+function produitParId(id) {
+  for (const cat in CATALOGUE_PRODUITS) {
+    const p = CATALOGUE_PRODUITS[cat].find(x => x.id === id);
+    if (p) return p;
+  }
+  return null;
+}
+
+// Comme trouverProduitCatalogue() mais par id exact (pas de recherche floue sur un texte) —
+// utilisé pour préremplir "Nouveau contrat" depuis le produit précis choisi sur une opportunité
+// (opportunites.produits), plus fiable que deviner depuis le titre libre de l'opportunité.
+function produitCategorieEtObjetParId(id) {
+  if (!id) return null;
+  for (const cat in CATALOGUE_PRODUITS) {
+    const p = CATALOGUE_PRODUITS[cat].find(x => x.id === id);
+    if (p) return { categorie: cat, produit: p };
+  }
+  return null;
+}
+
+// Prévisualisation de la commission estimée sur une OPPORTUNITÉ (avant tout contrat) — réutilise
+// TEL QUEL le moteur calculerCommissionEstimee() du formulaire "Nouveau contrat" (déjà audité,
+// testé par 19 cas de régression réels) via un DOM temporaire invisible, plutôt que de dupliquer
+// la logique tarifaire par compagnie (risque de désynchronisation). Nettoie toujours son DOM
+// temporaire, y compris en cas d'erreur.
+function estimerCommissionProduit(produitId, compagnieNom, primeAnnuelle) {
+  const produit = produitId ? produitParId(produitId) : null;
+  if (!produit || !compagnieNom || !primeAnnuelle) return { montant: 0, detail: null };
+  const temp = [];
+  const creer = (id, valeur) => {
+    const el = document.createElement('input');
+    el.id = id; el.type = 'hidden'; el.value = valeur;
+    document.body.appendChild(el);
+    temp.push(el);
+  };
+  creer('ct-categorie', '');
+  creer('ct-produit', produit.label);
+  creer('ct-prime-mensuelle', String(Math.round((primeAnnuelle / 12) * 100) / 100));
+  creer('ct-periodicite', '12');
+  creer('ct-manuel', '');
+  creer('ct-compagnie', compagnieNom);
+  creer('ct-duree', '1');
+  creer('ct-prime-risque-frais', '0');
+  try {
+    return calculerCommissionEstimee() || { montant: 0, detail: null };
+  } finally {
+    temp.forEach(el => el.remove());
+  }
+}
+
 function calculerCommissionEstimee() {
   const produit = getProduitSelectionne();
   const produitId = produit ? produit.id : null;
@@ -1555,12 +1612,24 @@ async function saveContrat() {
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
   allContrats = await dbGet('contrats', 'select=*');
 
-  // Si ce contrat provient d'une opportunité passée en "Gagné", on la lie au contrat créé
+  // Si ce contrat provient d'une opportunité passée en "Gagné" avec plusieurs produits cochés,
+  // on enchaîne sur le produit suivant de la file d'attente (cf. proposerConversionMultiContrats)
+  // au lieu de considérer la conversion terminée — le lien opportunites.contrat_id (une seule
+  // colonne) est posé sur le DERNIER contrat créé de la série, une fois la file vidée.
   if (prefillOpportunite && prefillOpportunite.id && resultPrincipal.contrat && resultPrincipal.contrat.id) {
+    if (oppFileAttenteProduits.length) {
+      const prochainProduitId = oppFileAttenteProduits.shift();
+      const prochain = produitCategorieEtObjetParId(prochainProduitId);
+      prefillOpportuniteProduitId = prochainProduitId;
+      showError(`✓ Contrat créé — contrat suivant à compléter : ${prochain ? prochain.produit.label : ''} (${oppFileAttenteProduits.length + 1} restant(s))`);
+      navigate('nouveau-contrat');
+      return;
+    }
     const rOpp = await dbPatch('opportunites', prefillOpportunite.id, { contrat_id: resultPrincipal.contrat.id });
     if (rOpp && rOpp.error) showError('⚠️ Contrat créé, mais le lien avec l\u2019opportunité n\u2019a pas pu être enregistré : ' + errMsg(rOpp));
     allOpportunites = await dbGet('opportunites', 'select=*');
     prefillOpportunite = null;
+    prefillOpportuniteProduitId = null;
   }
 
   if (contratClientId) {

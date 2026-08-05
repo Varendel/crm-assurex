@@ -736,8 +736,13 @@ function _deviner_categorie_ligne(table, libelle) {
     return a('autres'); // ménage, bâtiment, complémentaires, caution, PJ, etc.
   }
   if (table.cle === 'vaudoise') {
-    if (/vehicul|voiture|auto\b/.test(s) && /casco.*complet/.test(s)) return a('vehicule_casco_complete');
-    if (/vehicul|voiture|auto\b/.test(s) && /casco/.test(s)) return a('vehicule_casco_partielle');
+    // Casco : le mot "véhicule" n'apparaît presque jamais sur les libellés réels des polices
+    // ("Casco AVENUE segmentée collision", "Casco complète", "Ass. Casco AVENUE segmentée vol") —
+    // "casco" seul suffit à identifier la branche véhicule, sans exiger "véhicule/voiture/auto" en plus.
+    // Vérifié contre le relevé de commission Vaudoise réel (32/2299, 07.2026) : "collision" → complète
+    // (12%), "vol" et les autres sinistres casco → partielle (15%), au même taux que les occupants.
+    if (/casco.*complet|collision/.test(s)) return a('vehicule_casco_complete');
+    if (/casco/.test(s)) return a('vehicule_casco_partielle');
     if (/vehicul|voiture|auto\b/.test(s)) return a('vehicule_rc');
     if (/laa\b/.test(s)) return a('laa');
     if (/maladie collective/.test(s)) return a('maladie_collective');

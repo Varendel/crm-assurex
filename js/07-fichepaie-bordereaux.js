@@ -1199,7 +1199,12 @@ function genererEmailDemandeOffre() {
   const nomClient = val('do-client') ? (document.getElementById('do-client').selectedOptions[0]?.text || '') : (val('do-prospect-nom') || 'Client');
 
   let besoins = [];
-  if (chk('do-perte-gain')) besoins.push('Perte de gain maladie' + (chk('do-pg-14j')?' (délai 14j)':chk('do-pg-30j')?' (délai 30j)':chk('do-pg-60j')?' (délai 60j)':''));
+  // Déclenché par la case "Perte de gain maladie" OU par une case délai (14j/30j/60j) seule —
+  // bug réel repéré par Jonathan : il avait coché uniquement les délais (pas la case parente),
+  // et rien ne remontait dans l'email généré alors que la case délai, elle, était bien cochée.
+  if (chk('do-perte-gain') || chk('do-pg-14j') || chk('do-pg-30j') || chk('do-pg-60j')) {
+    besoins.push('Perte de gain maladie' + (chk('do-pg-14j')?' (délai 14j)':chk('do-pg-30j')?' (délai 30j)':chk('do-pg-60j')?' (délai 60j)':''));
+  }
   if (chk('do-laa')) besoins.push('LAA');
   if (chk('do-laaf')) besoins.push('LAAF (indépendant)');
   if (chk('do-lpp')) besoins.push('LPP');
@@ -1215,25 +1220,27 @@ function genererEmailDemandeOffre() {
   if (val('do-inventaire')) besoins.push(`Inventaire (CHF ${val('do-inventaire')})`);
 
   const lignesInfos = [
+    val('do-adresse') ? `Adresse : ${val('do-adresse')}` : '',
     val('do-activite') ? `Activité principale : ${val('do-activite')}` : '',
     val('do-ca') ? `Chiffre d'affaires : CHF ${val('do-ca')}` : '',
     val('do-nb-collab') ? `Nombre de collaborateurs : ${val('do-nb-collab')}` : '',
     val('do-lieu-risque') ? `Lieu du risque : ${val('do-lieu-risque')}` : '',
   ].filter(Boolean);
 
+  // Modèle mémorisé sur demande de Jonathan (ne pas remodifier le texte/le ton sans son accord).
+  // "PA" = Preneur d'Assurance. La ligne de signature (nom + Assurex Sàrl) est ajoutée
+  // explicitement en dur : un lien mailto: pré-rempli n'active PAS la signature par défaut du
+  // client mail (Outlook n'insère sa signature que sur un nouveau message vide, pas ici) — sans
+  // cette ligne codée en dur, l'email partirait donc sans aucune signature.
   const corps = `Bonjour,
-
-Je me permets de solliciter une offre pour le client suivant :
-
+Pour le PA ci-dessous, je vous serai reconnaissant de bien vouloir me transmettre une offre :
 Client : ${nomClient}
 ${lignesInfos.join('\n')}
-
-Couvertures souhaitées :
+Couvertures souhaitées : 
 ${besoins.length ? besoins.map(b => '- ' + b).join('\n') : '- Voir détails ci-dessous'}
+Je peux rapidement vous fournir toute autre information utile.
+Tout en vous remerciant d\u2019avance, je vous souhaite une agréable journée.
 
-Je reste à votre disposition pour toute information complémentaire.
-
-Meilleures salutations,
 ${currentUser ? currentUser.prenom + ' ' + currentUser.nom : ''}
 Assurex Sàrl`;
 

@@ -164,6 +164,7 @@ function viewSuivi() {
   const produitOptions = produitsDistincts.map(p => `<option value="${p}">${p}</option>`).join('');
 
   setTimeout(() => renderSuiviTables(), 0);
+  setTimeout(() => renderDemandesOffreSuivi(), 0);
 
   return `
     <h2 style="margin:0 0 4px;font-size:18px;font-weight:800;color:var(--text)">Suivi des affaires</h2>
@@ -209,7 +210,32 @@ function viewSuivi() {
     </div>
 
     <div id="su-stats" class="stat-grid" style="margin-bottom:24px"></div>
-    <div id="su-tables"></div>`;
+    <div id="su-tables"></div>
+
+    <div style="margin-top:28px">
+      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px">📝 Demandes d'offre enregistrées</div>
+      <div id="su-demandes-offre" class="table-empty">Chargement...</div>
+    </div>`;
+}
+
+// Liste des demandes_offre sauvegardées (formulaire digital "Demande d'offre") — permet de
+// rouvrir une demande déjà remplie pour cocher des compagnies et générer l'email, sans tout
+// ressaisir. Chargée à part (fetch async) car jamais mise en cache globale ailleurs dans l'app.
+async function renderDemandesOffreSuivi() {
+  const zone = document.getElementById('su-demandes-offre');
+  if (!zone) return;
+  const demandes = await dbGet('demandes_offre', 'select=*&order=created_at.desc&limit=30');
+  if (!Array.isArray(demandes) || !demandes.length) { zone.innerHTML = '<div class="table-empty">Aucune demande d’offre enregistrée pour l’instant.</div>'; return; }
+  function nomPour(d) {
+    if (d.client_id) { const c = allClients.find(cl => cl.id === d.client_id); if (c) return estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`; }
+    return d.prospect_nom ? `${d.prospect_nom} 🆕` : '—';
+  }
+  zone.innerHTML = `<div class="table-wrap">${demandes.map(d => `
+    <div class="table-row" style="grid-template-columns:1fr 150px 130px;cursor:pointer" onclick="demandeOffreEnEditionId='${d.id}';navigate('nouvelle-demande-offre')">
+      <div style="font-weight:700;font-size:13px;color:var(--text)">${nomPour(d)}${d.opportunite_id ? ' <span style="color:var(--text-muted);font-weight:400">🎯 liée à une opp.</span>' : ''}</div>
+      <div style="font-size:12px;color:var(--text-muted)">${fmtDate(d.created_at)}</div>
+      <div><button onclick="event.stopPropagation();demandeOffreEnEditionId='${d.id}';navigate('nouvelle-demande-offre')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 12px;font-size:11.5px;font-weight:700;cursor:pointer">↺ Reprendre / générer l’email</button></div>
+    </div>`).join('')}</div>`;
 }
 
 function renderSuiviTables() {

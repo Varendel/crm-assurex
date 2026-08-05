@@ -970,11 +970,17 @@ function ckb(id, label) {
 }
 
 async function viewNouvelleDemandeOffre() {
-  // Pré-remplissage depuis le bouton "Demande d'offre" de la fiche client, ou depuis le bouton
-  // "Demande d'offre liée" d'une opportunité (auquel cas la demande créée sera rattachée à l'opp
-  // via opportunite_id, et une ligne d'historique sera ajoutée automatiquement à l'opp au save).
-  const clientPrefillId = prefillDemandeOffreClientId;
-  const oppPrefillId = prefillDemandeOffreOpportuniteId;
+  // Pré-remplissage depuis le bouton "Demande d'offre" de la fiche client, depuis le bouton
+  // "Demande d'offre liée" d'une opportunité (la demande créée est rattachée à l'opp via
+  // opportunite_id, avec une ligne d'historique automatique au save), ou en réouverture d'une
+  // demande déjà enregistrée (bouton "Reprendre" depuis Suivi des affaires) — dans ce dernier
+  // cas tous les champs sont repeuplés depuis les données sauvegardées, pour pouvoir générer
+  // l'email sans tout ressaisir.
+  const editId = demandeOffreEnEditionId;
+  demandeOffreEnEditionId = null;
+  const existante = editId ? (await dbGet('demandes_offre', `id=eq.${editId}&select=*`))[0] : null;
+  const clientPrefillId = existante ? existante.client_id : prefillDemandeOffreClientId;
+  const oppPrefillId = existante ? existante.opportunite_id : prefillDemandeOffreOpportuniteId;
   prefillDemandeOffreClientId = null;
   prefillDemandeOffreOpportuniteId = null;
   const oppLiee = oppPrefillId ? allOpportunites.find(o => o.id === oppPrefillId) : null;
@@ -986,7 +992,10 @@ async function viewNouvelleDemandeOffre() {
   const cpAdresse = cp ? [cp.adresse, cp.npa, cp.ville].filter(Boolean).join(', ') : '';
   const cpTel = cp ? (cp.tel || cp.mobile || '') : '';
   const cpNomContact = cp ? (estEntreprise(cp) ? (cp.prenom || '') : (cp.prenom || '')) : '';
+  if (existante) setTimeout(() => prefillChampsDemandeOffre(existante), 0);
   return `
+    ${existante ? `<input type="hidden" id="do-demande-offre-id" value="${existante.id}"/>
+    <div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:10px 16px;margin-bottom:16px;font-size:12px;color:var(--text)">↺ Demande d'offre du ${fmtDate(existante.created_at)} — modifie/complète si besoin, puis génère l'email en bas de page.</div>` : ''}
     ${oppLiee ? `<input type="hidden" id="do-opportunite-id" value="${oppLiee.id}"/>
     <div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:10px 16px;margin-bottom:16px;font-size:12px;color:var(--text)">🎯 Rattachée à l'opportunité <strong>"${oppLiee.titre}"</strong> — cette demande d'offre sera reliée à son historique.</div>` : ''}
     <button onclick="navigate('suivi')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
@@ -1098,9 +1107,50 @@ async function viewNouvelleDemandeOffre() {
 
     <div style="display:flex;gap:10px;margin-top:20px">
       <button class="btn-secondary" onclick="navigate('suivi')">Annuler</button>
-      <button class="btn-save" onclick="saveDemandeOffre()">✓ Enregistrer la demande d'offre</button>
+      <button class="btn-save" onclick="saveDemandeOffre('${existante ? existante.id : ''}')">✓ ${existante ? 'Enregistrer les modifications' : "Enregistrer la demande d'offre"}</button>
       <button onclick="window.print()" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 20px;font-weight:700;font-size:13px;cursor:pointer;color:var(--text-muted)">🖨️ Imprimer</button>
     </div>`;
+}
+
+// Repeuple tous les champs du formulaire "Demande d'offre" depuis un enregistrement existant
+// (colonne donnees, jsonb) — utilisé en réouverture ("Reprendre" depuis Suivi des affaires) pour
+// pouvoir cocher des compagnies et générer l'email sans tout ressaisir. Appelé en setTimeout(0)
+// depuis viewNouvelleDemandeOffre, une fois le HTML effectivement inséré dans le DOM.
+function prefillChampsDemandeOffre(existante) {
+  const d = existante.donnees || {};
+  const setVal = (id, v) => { const el = document.getElementById(id); if (el && v !== undefined && v !== null) el.value = v; };
+  const setChk = (id, v) => { const el = document.getElementById(id); if (el) el.checked = !!v; };
+  const i = d.identite || {}, b = d.base_calcul || {}, ap = d.assurances_personnes || {}, av = d.assurances_vie || {},
+        ac = d.assurances_choses || {}, comp = d.complementaires || {}, lpp = d.lpp || {}, rc = d.rc || {};
+  setVal('do-contact', i.contact); setVal('do-adresse', i.adresse); setVal('do-tel', i.tel); setVal('do-email', i.email);
+  setVal('do-avs', i.avs); setVal('do-activite', i.activite); setVal('do-lieu-risque', i.lieu_risque);
+  setVal('do-suva', i.suva); setVal('do-independant', i.independant);
+  setVal('do-ca', b.ca); setVal('do-nb-collab', b.nb_collab); setVal('do-ap-h', b.ap_h); setVal('do-ap-f', b.ap_f);
+  setVal('do-anp-h', b.anp_h); setVal('do-anp-f', b.anp_f); setVal('do-exc-avs-h', b.exc_avs_h); setVal('do-exc-avs-f', b.exc_avs_f);
+  setVal('do-masse-chef', b.masse_chef);
+  setChk('do-perte-gain', ap.perte_gain); setChk('do-pg-14j', ap.pg_14j); setChk('do-pg-30j', ap.pg_30j); setChk('do-pg-60j', ap.pg_60j);
+  setChk('do-laa', ap.laa); setChk('do-laaf', ap.laaf); setChk('do-laac', ap.laac); setChk('do-semi-privee', ap.semi_privee); setChk('do-lpp', ap.lpp);
+  setChk('do-3a', av.a3a); setChk('do-3a-indep', av.a3a_indep); setChk('do-3b', av.a3b); setChk('do-risque-pure', av.risque_pure);
+  setChk('do-versement-unique', av.versement_unique); setVal('do-budget-epargne', av.budget_epargne); setVal('do-pa', av.pa);
+  setVal('do-inventaire', ac.inventaire); setChk('do-rc-commerce', ac.rc_commerce); setChk('do-prejudice-fortune', ac.prejudice_fortune);
+  setChk('do-cyber', ac.cyber); setChk('do-pj', ac.pj); setChk('do-construction', ac.construction); setChk('do-technique', ac.technique);
+  setChk('do-perte-exploit', ac.perte_exploit);
+  setVal('do-cct', comp.cct); setVal('do-couverture-salaire', comp.couverture_salaire);
+  setVal('do-taux-min-legal', lpp.taux_min_legal); setVal('do-ded-coord', lpp.ded_coord); setVal('do-lpp-exc-h', lpp.exc_h);
+  setVal('do-lpp-exc-f', lpp.exc_f); setVal('do-cap-invalidite', lpp.cap_invalidite); setVal('do-cap-deces', lpp.cap_deces);
+  setChk('do-amelio-rentes', lpp.amelio_rentes); setChk('do-amelio-epargne', lpp.amelio_epargne);
+  setChk('do-amelio-tranches', lpp.amelio_tranches); setChk('do-amelio-rendement', lpp.amelio_rendement);
+  setVal('do-rc-risque', rc.risque); setVal('do-rc-lieux', rc.lieux); setChk('do-marchandises', rc.marchandises);
+  setChk('do-transports', rc.transports); setChk('do-transports-speciaux', rc.transports_speciaux); setChk('do-machines', rc.machines);
+  setChk('do-vol', rc.vol); setChk('do-all-risk', rc.all_risk); setVal('do-rc-inventaire', rc.inventaire);
+  setChk('do-rc-prejudice-fortune', rc.prejudice_fortune); setVal('do-rc-cv-details', rc.cv_details);
+  (d.vehicules || []).forEach(p => {
+    ajouterPlaqueDemandeOffre();
+    const numeros = document.querySelectorAll('.do-plaque-numero'), modeles = document.querySelectorAll('.do-plaque-modele');
+    const idx = numeros.length - 1;
+    if (numeros[idx]) numeros[idx].value = p.numero || '';
+    if (modeles[idx]) modeles[idx].value = p.modele || '';
+  });
 }
 
 function ajouterPlaqueDemandeOffre() {
@@ -1169,7 +1219,7 @@ Assurex Sàrl`;
   }
 }
 
-async function saveDemandeOffre() {
+async function saveDemandeOffre(demandeOffreId) {
   const val = id => document.getElementById(id)?.value || null;
   const chk = id => document.getElementById(id)?.checked || false;
 
@@ -1199,15 +1249,17 @@ async function saveDemandeOffre() {
     donnees,
   };
 
-  const res = await dbPost('demandes_offre', body);
+  const enModification = !!demandeOffreId;
+  const res = enModification ? await dbPatch('demandes_offre', demandeOffreId, body) : await dbPost('demandes_offre', body);
   if (res && res.error) { showError('Erreur: ' + errMsg(res)); return; }
-  logAction('create_demande_offre', 'demandes_offre', res && res[0] ? res[0].id : null, body.prospect_nom || 'Client existant');
+  logAction(enModification ? 'update_demande_offre' : 'create_demande_offre', 'demandes_offre', enModification ? demandeOffreId : (res && res[0] ? res[0].id : null), body.prospect_nom || 'Client existant');
   // Rattachée à une opportunité : trace automatiquement l'envoi dans son historique, pour ne pas
-  // avoir à ressaisir manuellement ce que le formulaire vient déjà de faire.
-  if (opportuniteId) {
+  // avoir à ressaisir manuellement ce que le formulaire vient déjà de faire — seulement à la
+  // création, pour ne pas polluer l'historique à chaque modification ultérieure.
+  if (opportuniteId && !enModification) {
     await ajouterLigneHistoriqueOpportunite(opportuniteId, `📝 Demande d'offre enregistrée${val('do-prospect-nom') || document.getElementById('do-client')?.selectedOptions[0]?.text ? ' pour ' + (document.getElementById('do-client')?.selectedOptions[0]?.text || val('do-prospect-nom')) : ''}`);
   }
-  showError('✓ Demande d\'offre enregistrée.');
+  showError(enModification ? '✓ Demande d\'offre mise à jour.' : '✓ Demande d\'offre enregistrée — retrouve-la dans Suivi des affaires pour générer l\'email plus tard.');
   navigate('suivi');
 }
 

@@ -215,6 +215,18 @@ async function showClient(id) {
         ${statCard('Rappels ouverts', rappels.filter(r => r.statut === 'ouvert').length, rappels.filter(r => r.statut === 'ouvert').length > 0 ? '#f87171' : '#64748b')}
         ${statCard('CA annuel', caClient(c.id) ? 'CHF ' + caClient(c.id).toLocaleString() : '—', '#f59e0b')}
       </div>
+      ${(() => {
+        const oppsClient = (typeof allOpportunites !== 'undefined' ? allOpportunites : []).filter(o => o.client_id === c.id);
+        if (!oppsClient.length) return '';
+        const stadeColor = { Contact:'#64748b', Analyse:'#38bdf8', Proposition:'#f59e0b', Négociation:'#a78bfa', 'Gagné':'#4ade80', 'Perdu':'#f87171' };
+        return `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 16px;background:var(--surface-alt);border:1px solid var(--border);border-radius:10px;margin-bottom:16px">
+          <span style="font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;flex-shrink:0">🎯 Opportunités</span>
+          ${oppsClient.map(o => `<span onclick="opportuniteEnEditionId='${o.id}';navigate('nouvelle-opportunite')" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11.5px;font-weight:700;color:var(--text)">
+            <span style="width:7px;height:7px;border-radius:50%;background:${stadeColor[o.stade]||'#64748b'};flex-shrink:0"></span>
+            ${o.titre} <span style="color:${stadeColor[o.stade]||'#64748b'};font-weight:800">· ${o.stade}</span>
+          </span>`).join('')}
+        </div>`;
+      })()}
       ${renderVueEnsembleCouvertures(c, contrats, isEntreprise)}
       ${(() => { const signataire = allAgents.find(a => a.role === 'signataire'); return signataire ? `<div style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--surface-alt);border-radius:10px;margin-bottom:8px">
         ${avatar(signataire, 32)}

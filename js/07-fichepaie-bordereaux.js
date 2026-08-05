@@ -970,9 +970,14 @@ function ckb(id, label) {
 }
 
 async function viewNouvelleDemandeOffre() {
-  // Pré-remplissage depuis le bouton "Demande d'offre" de la fiche client.
+  // Pré-remplissage depuis le bouton "Demande d'offre" de la fiche client, ou depuis le bouton
+  // "Demande d'offre liée" d'une opportunité (auquel cas la demande créée sera rattachée à l'opp
+  // via opportunite_id, et une ligne d'historique sera ajoutée automatiquement à l'opp au save).
   const clientPrefillId = prefillDemandeOffreClientId;
+  const oppPrefillId = prefillDemandeOffreOpportuniteId;
   prefillDemandeOffreClientId = null;
+  prefillDemandeOffreOpportuniteId = null;
+  const oppLiee = oppPrefillId ? allOpportunites.find(o => o.id === oppPrefillId) : null;
   const clientPrefille = clientPrefillId ? allClients.find(c => c.id === clientPrefillId) : null;
   const clientOptions = allClients.map(c => `<option value="${c.id}" ${clientPrefille && clientPrefille.id === c.id ? 'selected' : ''}>${estEntreprise(c) ? c.nom : c.prenom + ' ' + c.nom}</option>`).join('');
   const contactsCompagnies = await dbGet('compagnies_contacts', 'select=*&order=compagnie.asc');
@@ -982,6 +987,8 @@ async function viewNouvelleDemandeOffre() {
   const cpTel = cp ? (cp.tel || cp.mobile || '') : '';
   const cpNomContact = cp ? (estEntreprise(cp) ? (cp.prenom || '') : (cp.prenom || '')) : '';
   return `
+    ${oppLiee ? `<input type="hidden" id="do-opportunite-id" value="${oppLiee.id}"/>
+    <div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:10px 16px;margin-bottom:16px;font-size:12px;color:var(--text)">🎯 Rattachée à l'opportunité <strong>"${oppLiee.titre}"</strong> — cette demande d'offre sera reliée à son historique.</div>` : ''}
     <button onclick="navigate('suivi')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
     <h2 style="margin:0 0 6px;font-size:18px;font-weight:800;color:var(--text)">Demande d'offre</h2>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">Version digitale du formulaire papier — à remplir directement en clientèle, sans ressaisie ensuite.</div>
@@ -996,7 +1003,7 @@ async function viewNouvelleDemandeOffre() {
 
     ${sectionCard('Identité', '#38bdf8', `<div class="form-grid">
       <div class="form-field"><label class="form-label">Client existant (optionnel)</label><select class="form-select" id="do-client" onchange="document.getElementById('do-prospect-field').style.display=this.value?'none':''"><option value="">— Prospect non fiché —</option>${clientOptions}</select></div>
-      <div class="form-field" id="do-prospect-field" style="${cp ? 'display:none' : ''}"><label class="form-label">Nom/raison sociale</label><input class="form-input" id="do-prospect-nom" value="${cp ? '' : ''}" placeholder="Si pas encore client"/></div>
+      <div class="form-field" id="do-prospect-field" style="${cp ? 'display:none' : ''}"><label class="form-label">Nom/raison sociale</label><input class="form-input" id="do-prospect-nom" value="${cp ? '' : (oppLiee && !oppLiee.client_id ? (oppLiee.prospect_nom || '') : '')}" placeholder="Si pas encore client"/></div>
       <div class="form-field"><label class="form-label">Prénom/contact</label><input class="form-input" id="do-contact" value="${cpNomContact}"/></div>
       <div class="form-field"><label class="form-label">Adresse</label><input class="form-input" id="do-adresse" value="${cpAdresse}"/></div>
       <div class="form-field"><label class="form-label">N° téléphone</label><input class="form-input" id="do-tel" value="${cpTel}"/></div>
@@ -1183,9 +1190,11 @@ async function saveDemandeOffre() {
   };
 
   const clientId = val('do-client');
+  const opportuniteId = document.getElementById('do-opportunite-id')?.value || null;
   const body = {
     client_id: clientId || null,
     prospect_nom: clientId ? null : val('do-prospect-nom'),
+    opportunite_id: opportuniteId,
     agent_id: currentUser.id && allAgents.find(a=>a.email===currentUser.email) ? allAgents.find(a=>a.email===currentUser.email).id : null,
     donnees,
   };
@@ -1193,6 +1202,11 @@ async function saveDemandeOffre() {
   const res = await dbPost('demandes_offre', body);
   if (res && res.error) { showError('Erreur: ' + errMsg(res)); return; }
   logAction('create_demande_offre', 'demandes_offre', res && res[0] ? res[0].id : null, body.prospect_nom || 'Client existant');
+  // Rattachée à une opportunité : trace automatiquement l'envoi dans son historique, pour ne pas
+  // avoir à ressaisir manuellement ce que le formulaire vient déjà de faire.
+  if (opportuniteId) {
+    await ajouterLigneHistoriqueOpportunite(opportuniteId, `📝 Demande d'offre enregistrée${val('do-prospect-nom') || document.getElementById('do-client')?.selectedOptions[0]?.text ? ' pour ' + (document.getElementById('do-client')?.selectedOptions[0]?.text || val('do-prospect-nom')) : ''}`);
+  }
   showError('✓ Demande d\'offre enregistrée.');
   navigate('suivi');
 }
@@ -1224,11 +1238,63 @@ function viewNouvelleOpportunite() {
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Notes</label><textarea class="form-input" id="o-notes" rows="3" style="resize:vertical">${opp?.notes || ''}</textarea></div>
     </div>`)}
     ${opp ? sectionCard('Tâches', '#4ade80', renderTachesOpportunite(opp)) : ''}
-    <div style="display:flex;gap:10px;margin-top:8px">
+    ${opp ? sectionCard('Historique', '#a78bfa', renderHistoriqueOpportunite(opp)) : ''}
+    <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
+      ${opp ? `<button type="button" onclick="prefillDemandeOffreOpportuniteId='${opp.id}'; prefillDemandeOffreClientId=${opp.client_id ? `'${opp.client_id}'` : 'null'}; navigate('nouvelle-demande-offre')" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 16px;color:var(--text-muted);font-weight:700;font-size:13px;cursor:pointer">📝 Demande d'offre liée</button>` : ''}
       ${opp ? `<button onclick="supprimerOpportunite('${opp.id}')" style="background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>` : ''}
       <button class="btn-secondary" onclick="opportuniteEnEditionId=null;navigate('opportunites')">Annuler</button>
       <button class="btn-save" onclick="saveOpportunite('${opp ? opp.id : ''}')">✓ ${opp ? 'Enregistrer les modifications' : 'Enregistrer'}</button>
     </div>`;
+}
+
+// ── Historique d'une opportunité (colonne jsonb opportunites.historique — tableau de lignes
+// {texte, date, auteur}) — journal manuel des actions effectuées (relance, envoi offre, etc.),
+// distinct des tâches à faire (renderTachesOpportunite) qui listent le travail encore ouvert.
+function renderHistoriqueOpportunite(opp) {
+  const lignes = Array.isArray(opp.historique) ? opp.historique.slice().reverse() : [];
+  const indexReel = (i) => (opp.historique.length - 1 - i);
+  const liste = lignes.length ? lignes.map((h, i) => `
+    <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <div style="font-size:10.5px;color:var(--text-muted);white-space:nowrap;flex-shrink:0;padding-top:1px">${h.date ? fmtDate(h.date) : ''}</div>
+      <div style="flex:1;font-size:13px;color:var(--text)">${(h.texte || '').replace(/</g,'&lt;')}${h.auteur ? ` <span style="color:var(--text-muted);font-size:10.5px">— ${h.auteur}</span>` : ''}</div>
+      <button onclick="supprimerLigneHistoriqueOpportunite('${opp.id}', ${indexReel(i)})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px;flex-shrink:0">✕</button>
+    </div>`).join('') : '<div style="font-size:12.5px;color:var(--text-muted);padding:6px 0">Aucune entrée pour l’instant.</div>';
+  return `${liste}
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <input class="form-input" id="opp-nouvelle-histo" placeholder="Ex: Appelé le client, envoyé l'offre AXA par email..." style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();ajouterLigneHistoriqueOpportunite('${opp.id}')}"/>
+      <button type="button" class="btn-secondary" onclick="ajouterLigneHistoriqueOpportunite('${opp.id}')">+ Ajouter</button>
+    </div>`;
+}
+
+// texteAuto : passe un texte tout fait (log automatique, ex: depuis saveDemandeOffre) sans
+// dépendre du champ input de la page opportunité — appelable depuis n'importe quelle page.
+async function ajouterLigneHistoriqueOpportunite(oppId, texteAuto) {
+  const opp = allOpportunites.find(o => o.id === oppId);
+  if (!opp) return;
+  const input = document.getElementById('opp-nouvelle-histo');
+  const texte = texteAuto || (input ? input.value.trim() : '');
+  if (!texte) return;
+  const auteur = currentUser ? `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() : '';
+  const nouvelleLigne = { texte, date: new Date().toISOString(), auteur };
+  const historique = [...(Array.isArray(opp.historique) ? opp.historique : []), nouvelleLigne];
+  const r = await dbPatch('opportunites', oppId, { historique });
+  if (r && r.error) { showError('Erreur lors de l’ajout à l’historique : ' + errMsg(r)); return; }
+  opp.historique = historique;
+  if (input) input.value = '';
+  // Ne rafraîchit la vue "nouvelle-opportunite" que si c'est bien elle qui est affichée —
+  // sinon (ex: appelée depuis la sauvegarde d'une demande d'offre) on resterait bloqué sur
+  // cette vue au lieu de terminer normalement l'action en cours.
+  if (opportuniteEnEditionId === oppId && currentView === 'nouvelle-opportunite') navigate('nouvelle-opportunite');
+}
+
+async function supprimerLigneHistoriqueOpportunite(oppId, index) {
+  const opp = allOpportunites.find(o => o.id === oppId);
+  if (!opp || !Array.isArray(opp.historique)) return;
+  const historique = opp.historique.filter((_, i) => i !== index);
+  const r = await dbPatch('opportunites', oppId, { historique });
+  if (r && r.error) { showError('Erreur lors de la suppression : ' + errMsg(r)); return; }
+  opp.historique = historique;
+  navigate('nouvelle-opportunite');
 }
 
 // Liste des tâches (table rappels, colonne opportunite_id) rattachées à une opportunité —

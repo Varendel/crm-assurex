@@ -417,7 +417,7 @@ function viewNouveauContrat() {
         <option value="prive">Privé</option>
         <option value="entreprise">Entreprise</option>
       </select></div>
-      <div class="form-field"><label class="form-label">Compagnie *</label><input class="form-input" id="ct-compagnie" value="${opp && opp.compagnie ? opp.compagnie : ''}" placeholder="Swiss Life, AXA, Helsana..." list="compagnies-suggestions" autocomplete="off" oninput="updateCommissionPreview()"/><datalist id="compagnies-suggestions">${getCompagniesConnues().map(c => `<option value="${c}">`).join('')}</datalist></div>
+      <div class="form-field"><label class="form-label">Compagnie *</label><input class="form-input" id="ct-compagnie" value="${opp && opp.compagnie ? opp.compagnie : ''}" placeholder="Swiss Life, AXA, Helsana..." list="compagnies-suggestions" autocomplete="off" oninput="refreshCategoriesLignesPrime(); updateCommissionPreview()"/><datalist id="compagnies-suggestions">${getCompagniesConnues().map(c => `<option value="${c}">`).join('')}</datalist></div>
       <div class="form-field"><label class="form-label">Catégorie *</label><select class="form-select" id="ct-categorie" onchange="updateProduitOptions()"></select></div>
       <div class="form-field"><label class="form-label">Produit *</label><select class="form-select" id="ct-produit" onchange="updateModulesOptions(); updateCommissionPreview()"><option value="">— Sélectionner —</option></select></div>
       <div class="form-field" style="grid-column:span 2" id="ct-modules-field"><label class="form-label">Modules complémentaires</label><div id="ct-modules-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div><div style="font-size:10px;color:var(--text-muted);margin-top:4px" id="ct-modules-hint"></div>
@@ -610,12 +610,14 @@ function ajouterLignePrime(libelle = '', montant = '') {
   ligne.style.cssText = 'display:flex;gap:8px;align-items:center';
   const libelleEch = (libelle || '').toString().replace(/"/g, '&quot;');
   ligne.innerHTML = `
-    <input class="form-input ct-prime-ligne-libelle" placeholder="Ex: Responsabilité civile privée" value="${libelleEch}" style="flex:1" oninput="calculerPrimeTotaleLignes()"/>
+    <input class="form-input ct-prime-ligne-libelle" placeholder="Ex: Responsabilité civile privée" value="${libelleEch}" style="flex:1" oninput="refreshCategoriesLignesPrime(); calculerPrimeTotaleLignes()"/>
     <span class="ct-prime-ligne-badge-taxe" title="Taxes/émoluments légaux — exclus du volume de prime et du calcul de commission" style="display:none;font-size:9.5px;font-weight:700;color:#f59e0b;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:5px;padding:2px 6px;white-space:nowrap">hors commission</span>
+    <select class="form-select ct-prime-ligne-categorie" style="display:none;width:190px;font-size:11px" onchange="calculerPrimeTotaleLignes()"></select>
     <input class="form-input ct-prime-ligne-montant" type="number" step="0.01" placeholder="CHF" value="${montant}" style="width:120px" oninput="calculerPrimeTotaleLignes()"/>
     <button type="button" onclick="this.parentElement.remove(); calculerPrimeTotaleLignes()" style="background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;flex-shrink:0">✕</button>
   `;
   list.appendChild(ligne);
+  refreshCategoriesLignesPrime();
   calculerPrimeTotaleLignes();
 }
 // Taxes/émoluments légaux (ex: "Taxes légales", "Taxe cantonale", "Droit de timbre fédéral") ne
@@ -665,6 +667,139 @@ function setOuAjouterLignePrime(libelle, montant) {
   }
   calculerPrimeTotaleLignes();
 }
+
+// ═══ Commission par ligne (par branche) ═══════════════════════════════════
+// Une police combinée (ex: "RC + inventaire du ménage") mélange souvent des branches payées à
+// des taux DIFFÉRENTS par la compagnie (ex AXA : RC hors véhicules 15%, Ménage/Bâtiment et
+// Assurances complémentaires 10% — Tableau de courtage §B4.4, vérifié sur le contrat AXA Des
+// Gouttes & Cie du 10.03.2025). Appliquer un seul taux "produit" à la somme de toutes les lignes
+// surestime ou sous-estime la commission réelle. Ici, chaque ligne de prime reçoit sa propre
+// catégorie tarifaire (devinée depuis le libellé, toujours modifiable), et la commission se
+// calcule ligne par ligne puis se somme — jamais un taux unique sur le total combiné.
+function _categoriesCommissionCompagnie(compagnieChoisie) {
+  if (compagnieChoisie.includes('axa')) {
+    const A = TAUX_COMMISSION.axa;
+    return {
+      cle: 'axa',
+      nom: 'AXA (Tableau de courtage §B4.4)',
+      categories: [
+        { id: 'choses', label: `Choses — incendie/vol/DE/BG (${A.choses}%)`, taux: A.choses },
+        { id: 'rc_hors_vehicules', label: `RC (hors véhicules) (${A.rc_hors_vehicules}%)`, taux: A.rc_hors_vehicules },
+        { id: 'techniques', label: `Techniques — machines (${A.techniques}%)`, taux: A.techniques },
+        { id: 'transport', label: `Transport (${A.transport}%)`, taux: A.transport },
+        { id: 'personnes_accidents', label: `Accidents ind./coll. sans LAA (${A.personnes_accidents}%)`, taux: A.personnes_accidents },
+        { id: 'maladie_collective', label: `Maladie collective (${A.maladie_collective}%)`, taux: A.maladie_collective },
+        { id: 'laa_laaf', label: `Accidents LAA/LAAF (${A.laa_laaf}%)`, taux: A.laa_laaf },
+        { id: 'vehicules', label: `Véhicules — RC/Casco/Flottes (${A.vehicules}%)`, taux: A.vehicules },
+        { id: 'autres', label: `Autres — ménage/bâtiment/complémentaires (${A.autres}%)`, taux: A.autres },
+      ],
+    };
+  }
+  if (compagnieChoisie.includes('vaudoise')) {
+    const V = TAUX_COMMISSION.vaudoise;
+    return {
+      cle: 'vaudoise',
+      nom: 'Vaudoise (Tabelle A1 Non-vie)',
+      categories: [
+        { id: 'accident_individuel_collectif', label: `Accident ind./coll. sans LAA (${V.accident_individuel_collectif}%)`, taux: V.accident_individuel_collectif },
+        { id: 'laa', label: `Accident collective LAA (${V.laa}%)`, taux: V.laa },
+        { id: 'maladie_collective', label: `Maladie collective (${V.maladie_collective}%)`, taux: V.maladie_collective },
+        { id: 'rc_generale', label: `RC générale/privée/immeubles (${V.rc_generale}%)`, taux: V.rc_generale },
+        { id: 'rc_agricole_dirigeant', label: `RC agricole/dirigeant (${V.rc_agricole_dirigeant}%)`, taux: V.rc_agricole_dirigeant },
+        { id: 'caution', label: `Caution/garantie construction (${V.caution}%)`, taux: V.caution },
+        { id: 'vehicule_rc', label: `Véhicule — RC (${V.vehicule_rc}%)`, taux: V.vehicule_rc },
+        { id: 'vehicule_casco_complete', label: `Véhicule — Casco complète (${V.vehicule_casco_complete}%)`, taux: V.vehicule_casco_complete },
+        { id: 'vehicule_casco_partielle', label: `Véhicule — Casco partielle (${V.vehicule_casco_partielle}%)`, taux: V.vehicule_casco_partielle },
+        { id: 'batiment', label: `Bâtiment (${V.batiment}%)`, taux: V.batiment },
+        { id: 'choses', label: `Choses — incendie/vol/DE (${V.choses}%)`, taux: V.choses },
+        { id: 'five_in_one', label: `Five in one — RC/inventaire/PJ (${V.five_in_one}%)`, taux: V.five_in_one },
+        { id: 'assistance', label: `Assistance (${V.assistance}%)`, taux: V.assistance },
+      ],
+    };
+  }
+  return null;
+}
+// Suggestion automatique de catégorie depuis le libellé de la ligne — reste toujours modifiable
+// par l'utilisateur, jamais appliquée de façon silencieuse pour un calcul de commission.
+function _deviner_categorie_ligne(table, libelle) {
+  const s = (libelle || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const a = (id) => table.categories.some(cat => cat.id === id) ? id : table.categories[table.categories.length - 1].id;
+  if (table.cle === 'axa') {
+    if (/vehicul|voiture|auto\b|casco|flotte/.test(s)) return a('vehicules');
+    if (/accident.*laa|laa\/laaf|\blaa\b|\blaaf\b/.test(s)) return a('laa_laaf');
+    if (/maladie collective/.test(s)) return a('maladie_collective');
+    if (/accident/.test(s)) return a('personnes_accidents');
+    if (/responsabilite civile|\brc\b/.test(s)) return a('rc_hors_vehicules');
+    if (/incendie|\bvol\b|degat.*eau|bris de glace/.test(s)) return a('choses');
+    if (/transport|abonnement/.test(s)) return a('transport');
+    if (/machine|technique|montage/.test(s)) return a('techniques');
+    return a('autres'); // ménage, bâtiment, complémentaires, caution, PJ, etc.
+  }
+  if (table.cle === 'vaudoise') {
+    if (/vehicul|voiture|auto\b/.test(s) && /casco.*complet/.test(s)) return a('vehicule_casco_complete');
+    if (/vehicul|voiture|auto\b/.test(s) && /casco/.test(s)) return a('vehicule_casco_partielle');
+    if (/vehicul|voiture|auto\b/.test(s)) return a('vehicule_rc');
+    if (/laa\b/.test(s)) return a('laa');
+    if (/maladie collective/.test(s)) return a('maladie_collective');
+    if (/accident/.test(s)) return a('accident_individuel_collectif');
+    if (/responsabilite civile|\brc\b/.test(s)) return a('rc_generale');
+    if (/caution|garantie/.test(s)) return a('caution');
+    if (/batiment/.test(s)) return a('batiment');
+    if (/incendie|\bvol\b|degat.*eau/.test(s)) return a('choses');
+    return a('rc_generale');
+  }
+  return table.categories[0].id;
+}
+// Affiche/masque et peuple le sélecteur de catégorie sur chaque ligne, selon la compagnie choisie.
+// Conserve la sélection déjà faite par l'utilisateur ; ne devine que pour les lignes pas encore
+// catégorisées (nouvelle ligne, ou changement de compagnie).
+function refreshCategoriesLignesPrime() {
+  const compagnieChoisie = (document.getElementById('ct-compagnie')?.value || '').trim().toLowerCase();
+  const table = _categoriesCommissionCompagnie(compagnieChoisie);
+  document.querySelectorAll('.ct-prime-ligne').forEach(ligne => {
+    const select = ligne.querySelector('.ct-prime-ligne-categorie');
+    if (!select) return;
+    if (!table) { select.style.display = 'none'; select.innerHTML = ''; select.dataset.compagnie = ''; return; }
+    const libelle = ligne.querySelector('.ct-prime-ligne-libelle')?.value || '';
+    if (select.dataset.compagnie !== table.cle) {
+      // Compagnie différente depuis la dernière fois : repeuple les options et redevine.
+      select.innerHTML = table.categories.map(cat => `<option value="${cat.id}">${cat.label}</option>`).join('');
+      select.value = _deviner_categorie_ligne(table, libelle);
+      select.dataset.compagnie = table.cle;
+    }
+    select.style.display = _estLigneTaxe(libelle) ? 'none' : '';
+  });
+}
+// Calcule la commission en sommant chaque ligne de prime (hors taxes) × son propre taux de
+// catégorie — retourne null si aucune ligne n'a de catégorie exploitable (ex: compagnie sans
+// tableau connu, ou contrat existant sans lignes), pour laisser le calcul "produit unique" prendre
+// le relais en repli.
+function _commissionParLignes(table) {
+  const lignes = Array.from(document.querySelectorAll('.ct-prime-ligne'));
+  if (!lignes.length) return null;
+  let total = 0;
+  let auMoinsUneLigne = false;
+  const detailParCategorie = {};
+  for (const ligne of lignes) {
+    const libelle = ligne.querySelector('.ct-prime-ligne-libelle')?.value || '';
+    const montant = parseFloat(ligne.querySelector('.ct-prime-ligne-montant')?.value) || 0;
+    if (montant <= 0 || _estLigneTaxe(libelle)) continue;
+    const select = ligne.querySelector('.ct-prime-ligne-categorie');
+    const catId = select ? select.value : null;
+    const cat = catId ? table.categories.find(c => c.id === catId) : null;
+    if (!cat) continue;
+    auMoinsUneLigne = true;
+    const montantCommission = Math.round(montant * cat.taux) / 100;
+    total += montantCommission;
+    if (!detailParCategorie[cat.id]) detailParCategorie[cat.id] = { label: cat.label.replace(/\s*\([^)]*\)$/, ''), sousTotal: 0 };
+    detailParCategorie[cat.id].sousTotal += montantCommission;
+  }
+  if (!auMoinsUneLigne) return null;
+  total = Math.round(total * 100) / 100;
+  const detailTxt = Object.values(detailParCategorie).map(d => `${d.label} : CHF ${Math.round(d.sousTotal * 100) / 100}`).join(' · ');
+  return { montant: total, detail: `${table.nom} — commission calculée ligne par ligne (${detailTxt}) = CHF ${total}` };
+}
+
 // Réinitialise la liste avec une seule ligne pré-remplie (import PDF, pré-remplissage) — l'utilisateur
 // peut ensuite éclater ce montant en plusieurs lignes ou en ajouter d'autres.
 function initLignesPrimeDepuisMontant(montant, libelle = 'Prime totale') {
@@ -1045,6 +1180,9 @@ function calculerCommissionEstimee() {
   // Commission d'Encaissement uniquement pour les Risques Non-Vie (art. 2.2.1 du Règlement) :
   // Crédit = Prime nette × Taux. Estimation basée sur la prime annuelle (pas de suivi par échéance).
   if (compagnieChoisie.includes('vaudoise')) {
+    const tableVaudoise = _categoriesCommissionCompagnie(compagnieChoisie);
+    const parLignesVaudoise = tableVaudoise ? _commissionParLignes(tableVaudoise) : null;
+    if (parLignesVaudoise) return parLignesVaudoise;
     const V = TAUX_COMMISSION.vaudoise;
     const tauxVaudoiseParProduit = {
       laa: V.laa,
@@ -1089,6 +1227,9 @@ function calculerCommissionEstimee() {
   // Aucune commission sur police échue ou en renouvellement tacite (§B3) — estimation
   // valable uniquement pour une affaire nouvelle.
   if (compagnieChoisie.includes('axa')) {
+    const tableAxa = _categoriesCommissionCompagnie(compagnieChoisie);
+    const parLignesAxa = tableAxa ? _commissionParLignes(tableAxa) : null;
+    if (parLignesAxa) return parLignesAxa;
     const A = TAUX_COMMISSION.axa;
     const tauxAxaParProduit = {
       choses_entreprise: A.choses,

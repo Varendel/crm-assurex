@@ -1362,6 +1362,9 @@ function viewNouvelleOpportunite() {
   const clientFiche = opp && opp.client_id ? allClients.find(c => c.id === opp.client_id) : (clientPrefille || null);
   const nomAffiche = (c) => estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`;
   const produitsChoisis = opp?.produits || [];
+  const compagniesConnues = getCompagniesConnues();
+  const compagnieActuelle = opp?.compagnie || '';
+  const compagnieEstAutre = compagnieActuelle && !compagniesConnues.includes(compagnieActuelle);
   const blocDetails = sectionCard('Détails', '#f59e0b', `<div class="form-grid">
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Titre *</label><input class="form-input" id="o-titre" value="${qa(opp?.titre || (clientPrefille ? (estEntreprise(clientPrefille) ? clientPrefille.nom : clientPrefille.prenom + ' ' + clientPrefille.nom) + ' — ' : ''))}" placeholder="Ex: Assurance vie mixte 20 ans"/></div>
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Client (si déjà fiché)</label>
@@ -1373,7 +1376,18 @@ function viewNouvelleOpportunite() {
         ${clientFiche ? `<div style="margin-top:6px"><button type="button" onclick="viderClientOpportunite()" style="background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;text-decoration:underline">✕ Retirer — pas encore client / autre prospect</button></div>` : ''}
       </div>
       <div class="form-field" id="o-prospect-field" style="${clientFiche ? 'display:none' : ''}"><label class="form-label">Nom du prospect</label><input class="form-input" id="o-prospect-nom" value="${qa(opp?.prospect_nom)}" placeholder="Ex: Jean Dupont (pas encore client)"/></div>
-      <div class="form-field"><label class="form-label">Compagnie</label><input class="form-input" id="o-compagnie" value="${qa(opp?.compagnie)}" placeholder="Swiss Life, AXA..."/></div>
+      <div class="form-field">
+        <label class="form-label">Compagnie</label>
+        <select class="form-select" id="o-compagnie-select" onchange="const autre=this.value==='__autre__';document.getElementById('o-compagnie-autre-wrap').style.display=autre?'':'none';document.getElementById('o-compagnie').value=autre?document.getElementById('o-compagnie-autre').value:this.value">
+          <option value="">— Sélectionner —</option>
+          ${compagniesConnues.map(c => `<option value="${qa(c)}" ${compagnieActuelle === c ? 'selected' : ''}>${c}</option>`).join('')}
+          <option value="__autre__" ${compagnieEstAutre ? 'selected' : ''}>+ Autre (préciser)</option>
+        </select>
+        <input type="hidden" id="o-compagnie" value="${qa(compagnieActuelle)}"/>
+        <div id="o-compagnie-autre-wrap" style="display:${compagnieEstAutre ? '' : 'none'};margin-top:6px">
+          <input class="form-input" id="o-compagnie-autre" placeholder="Nom de la compagnie" value="${compagnieEstAutre ? qa(compagnieActuelle) : ''}" oninput="document.getElementById('o-compagnie').value=this.value"/>
+        </div>
+      </div>
       <div class="form-field"><label class="form-label">Montant potentiel (CHF)</label><input class="form-input" id="o-montant" type="number" value="${opp?.montant_potentiel || ''}" placeholder="5000"/></div>
       <div class="form-field"><label class="form-label">Probabilité %</label><input class="form-input" id="o-prob" type="number" value="${opp ? (opp.probabilite ?? 50) : 50}" min="0" max="100"/></div>
       <div class="form-field"><label class="form-label">Stade</label><select class="form-select" id="o-stade">${stadesOptions.map(s => `<option ${opp && opp.stade === s ? 'selected' : ''}>${s}</option>`).join('')}</select></div>

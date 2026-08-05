@@ -1280,6 +1280,63 @@ async function saveDemandeOffre(demandeOffreId) {
   navigate('suivi');
 }
 
+// ── Sélecteur de client recherchable (Nouvelle opportunité) ────────────────────────────────
+// Remplace le grand <select> natif (pénible à parcourir avec beaucoup de clients) par un champ
+// texte + suggestions filtrées en direct, sur le même principe que le datalist Compagnie.
+// Ne déclenche JAMAIS navigate() lors de la sélection : ça re-render toute la page et ferait
+// perdre les autres champs déjà remplis (titre, montant...) puisque le formulaire se
+// reconstruit alors depuis les données d'origine de l'opportunité, pas depuis l'état à l'écran.
+function _cleRechercheSansAccents(s) {
+  return (s || '').toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+function rechercheClientOpportunite(texte) {
+  const zone = document.getElementById('o-client-resultats');
+  if (!zone) return;
+  const q = _cleRechercheSansAccents(texte);
+  const nomAffiche = (c) => estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`;
+  const resultats = (q
+    ? allClients.filter(c => _cleRechercheSansAccents(nomAffiche(c)).includes(q))
+    : allClients
+  ).slice(0, 8);
+  if (!resultats.length) {
+    zone.innerHTML = `<div style="padding:10px 14px;font-size:12.5px;color:var(--text-muted)">Aucun client ne correspond${q ? ' à "' + texte + '"' : ''}.</div>`;
+  } else {
+    zone.innerHTML = resultats.map(c => `<div onmousedown="selectionnerClientOpportunite('${c.id}')" style="padding:9px 14px;font-size:13px;color:var(--text);cursor:pointer;border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface-alt)'" onmouseout="this.style.background='transparent'">
+      <div style="font-weight:700">${nomAffiche(c)}</div>
+      <div style="font-size:10.5px;color:var(--text-muted)">${estEntreprise(c) ? 'Entreprise' : 'Privé'}${c.ville ? ' · ' + c.ville : ''}</div>
+    </div>`).join('');
+  }
+  zone.style.display = 'block';
+}
+function selectionnerClientOpportunite(clientId) {
+  const c = allClients.find(cl => cl.id === clientId);
+  if (!c) return;
+  const nomAffiche = estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`;
+  document.getElementById('o-client').value = c.id;
+  document.getElementById('o-client-recherche').value = nomAffiche;
+  document.getElementById('o-client-resultats').style.display = 'none';
+  const prospectField = document.getElementById('o-prospect-field');
+  if (prospectField) prospectField.style.display = 'none';
+  // Le bouton "Retirer" n'existe que si le HTML a été régénéré avec un client déjà choisi —
+  // on l'ajoute ici à la volée pour ne pas avoir à re-render toute la page.
+  const champ = document.getElementById('o-client-recherche').closest('.form-field');
+  if (champ && !champ.querySelector('.o-client-retirer')) {
+    const btn = document.createElement('div');
+    btn.style.marginTop = '6px';
+    btn.innerHTML = `<button type="button" class="o-client-retirer" onclick="viderClientOpportunite()" style="background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;text-decoration:underline">✕ Retirer — pas encore client / autre prospect</button>`;
+    champ.appendChild(btn);
+  }
+}
+function viderClientOpportunite() {
+  document.getElementById('o-client').value = '';
+  document.getElementById('o-client-recherche').value = '';
+  const prospectField = document.getElementById('o-prospect-field');
+  if (prospectField) prospectField.style.display = '';
+  const champ = document.getElementById('o-client-recherche').closest('.form-field');
+  champ?.querySelector('.o-client-retirer')?.closest('div')?.remove();
+  document.getElementById('o-client-recherche').focus();
+}
+
 function viewNouvelleOpportunite() {
   const opp = opportuniteEnEditionId ? allOpportunites.find(o => o.id === opportuniteEnEditionId) : null;
   // Pré-remplissage depuis le bouton "Créer une opportunité" de la fiche client (nouvelle
@@ -1288,11 +1345,11 @@ function viewNouvelleOpportunite() {
   const clientPrefille = clientPrefillId ? allClients.find(c => c.id === clientPrefillId) : null;
   prefillOpportuniteClientId = null;
   const agentOptions = allAgents.map(a => `<option value="${a.id}" ${opp && opp.apporteur_id === a.id ? 'selected' : ''}>${a.prenom} ${a.nom}</option>`).join('');
-  const clientOptions = allClients.map(c => `<option value="${c.id}" ${(opp && opp.client_id === c.id) || (clientPrefille && clientPrefille.id === c.id) ? 'selected' : ''}>${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`}</option>`).join('');
   const stadesOptions = ['Contact','Analyse','Proposition','Négociation','Gagné','Perdu'];
   const qa = (s) => (s || '').toString().replace(/"/g, '&quot;');
   if (opp) setTimeout(() => renderDemandeOffreLieeOpportunite(opp.id), 0);
-  const clientFiche = opp && opp.client_id ? allClients.find(c => c.id === opp.client_id) : null;
+  const clientFiche = opp && opp.client_id ? allClients.find(c => c.id === opp.client_id) : (clientPrefille || null);
+  const nomAffiche = (c) => estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`;
   return `
     <button onclick="opportuniteEnEditionId=null;navigate('opportunites')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px">
@@ -1301,8 +1358,15 @@ function viewNouvelleOpportunite() {
     </div>
     ${sectionCard('Détails', '#f59e0b', `<div class="form-grid">
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Titre *</label><input class="form-input" id="o-titre" value="${qa(opp?.titre || (clientPrefille ? (estEntreprise(clientPrefille) ? clientPrefille.nom : clientPrefille.prenom + ' ' + clientPrefille.nom) + ' — ' : ''))}" placeholder="Ex: Assurance vie mixte 20 ans"/></div>
-      <div class="form-field"><label class="form-label">Client (si déjà fiché)</label><select class="form-select" id="o-client" onchange="document.getElementById('o-prospect-field').style.display = this.value ? 'none' : ''"><option value="">— Prospect non encore fiché —</option>${clientOptions}</select></div>
-      <div class="form-field" id="o-prospect-field" style="${(opp && opp.client_id) || clientPrefille ? 'display:none' : ''}"><label class="form-label">Nom du prospect</label><input class="form-input" id="o-prospect-nom" value="${qa(opp?.prospect_nom)}" placeholder="Ex: Jean Dupont (pas encore client)"/></div>
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Client (si déjà fiché)</label>
+        <div style="position:relative">
+          <input class="form-input" id="o-client-recherche" placeholder="Tape le nom du client pour le retrouver..." autocomplete="off" value="${clientFiche ? qa(nomAffiche(clientFiche)) : ''}" oninput="rechercheClientOpportunite(this.value)" onfocus="rechercheClientOpportunite(this.value)" onblur="setTimeout(()=>{const z=document.getElementById('o-client-resultats');if(z)z.style.display='none'},150)"/>
+          <input type="hidden" id="o-client" value="${clientFiche ? clientFiche.id : ''}"/>
+          <div id="o-client-resultats" style="display:none;position:absolute;z-index:20;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:8px;margin-top:4px;max-height:260px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,0.35)"></div>
+        </div>
+        ${clientFiche ? `<div style="margin-top:6px"><button type="button" onclick="viderClientOpportunite()" style="background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;text-decoration:underline">✕ Retirer — pas encore client / autre prospect</button></div>` : ''}
+      </div>
+      <div class="form-field" id="o-prospect-field" style="${clientFiche ? 'display:none' : ''}"><label class="form-label">Nom du prospect</label><input class="form-input" id="o-prospect-nom" value="${qa(opp?.prospect_nom)}" placeholder="Ex: Jean Dupont (pas encore client)"/></div>
       <div class="form-field"><label class="form-label">Compagnie</label><input class="form-input" id="o-compagnie" value="${qa(opp?.compagnie)}" placeholder="Swiss Life, AXA..."/></div>
       <div class="form-field"><label class="form-label">Montant potentiel (CHF)</label><input class="form-input" id="o-montant" type="number" value="${opp?.montant_potentiel || ''}" placeholder="5000"/></div>
       <div class="form-field"><label class="form-label">Probabilité %</label><input class="form-input" id="o-prob" type="number" value="${opp ? (opp.probabilite ?? 50) : 50}" min="0" max="100"/></div>

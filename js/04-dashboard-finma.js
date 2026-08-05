@@ -86,6 +86,25 @@ function viewDashboard() {
   const totalNonGere = nonGerees.reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0);
   const maxHorizon = Math.max(...horizonsData.map(h => h.montant), 1);
 
+  // ── Récap opportunités en cours (pipeline) — pour le dashboard ──
+  const oppsOuvertes = allOpportunites.filter(o => o.stade !== 'Gagné' && o.stade !== 'Perdu');
+  const oppsGagneesRecemment = allOpportunites.filter(o => o.stade === 'Gagné');
+  const stadesOrdre = ['Contact','Analyse','Proposition','Négociation'];
+  const stadeCouleur = { Contact:'#64748b', Analyse:'#38bdf8', Proposition:'#f59e0b', Négociation:'#a78bfa' };
+  const oppTotalPipeline = oppsOuvertes.reduce((s,o) => s + Number(o.montant_potentiel||0), 0);
+  const oppTotalPondere = oppsOuvertes.reduce((s,o) => s + Math.round(Number(o.montant_potentiel||0) * (o.probabilite||0) / 100), 0);
+  const oppParStade = stadesOrdre.map(stade => ({
+    stade, couleur: stadeCouleur[stade],
+    nb: oppsOuvertes.filter(o => o.stade === stade).length,
+    montant: oppsOuvertes.filter(o => o.stade === stade).reduce((s,o) => s + Number(o.montant_potentiel||0), 0),
+  }));
+  function nomClientOpp(o) {
+    const cl = o.client_id ? allClients.find(c => c.id === o.client_id) : null;
+    if (cl) return estEntreprise(cl) ? cl.nom : `${cl.prenom} ${cl.nom}`;
+    return o.prospect_nom ? `${o.prospect_nom} 🆕` : '—';
+  }
+  const oppUrgentes = oppsOuvertes.filter(o => o.date_echeance).sort((a,b) => new Date(a.date_echeance) - new Date(b.date_echeance)).slice(0, 5);
+
   // ── Filet de sécurité : contrats commissionnables sans AUCUNE ligne de commission ──
   // Détecte automatiquement les trous de données (ex: contrat inséré directement en SQL
   // sans passer par le formulaire du CRM, qui aurait dû générer la commission).
@@ -147,6 +166,34 @@ function viewDashboard() {
       </div>
     </div>` : ''}
 
+    ${oppsOuvertes.length > 0 ? `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+        <div style="font-size:13px;font-weight:800;color:var(--text)">🎯 Opportunités en cours</div>
+        <div style="font-size:18px;font-weight:900;color:#f59e0b">CHF ${Math.round(oppTotalPipeline).toLocaleString()}</div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:18px">${oppsOuvertes.length} opportunité(s) ouverte(s) · CHF ${Math.round(oppTotalPondere).toLocaleString()} pondéré par probabilité${oppsGagneesRecemment.length ? ` · ${oppsGagneesRecemment.length} gagnée(s)` : ''}</div>
+      <div style="display:flex;gap:14px;margin-bottom:18px;flex-wrap:wrap">
+        ${oppParStade.map(s => `<div style="flex:1;min-width:90px;text-align:center;background:var(--surface-alt);border-radius:10px;padding:10px 8px">
+          <div style="width:8px;height:8px;border-radius:50%;background:${s.couleur};margin:0 auto 6px"></div>
+          <div style="font-size:16px;font-weight:900;color:var(--text)">${s.nb}</div>
+          <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">${s.stade}</div>
+          <div style="font-size:10px;color:${s.couleur};font-weight:700;margin-top:2px">CHF ${Math.round(s.montant/1000)}k</div>
+        </div>`).join('')}
+      </div>
+      ${oppUrgentes.length ? `<div style="font-size:10.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Échéances les plus proches</div>
+      ${oppUrgentes.map(o => `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="opportuniteEnEditionId='${o.id}';navigate('nouvelle-opportunite')">
+        <div style="font-size:12.5px;color:var(--text)"><strong>${o.titre}</strong> — ${nomClientOpp(o)}</div>
+        <div style="display:flex;align-items:center;gap:10px">
+          <span style="font-size:11px;color:var(--text-muted)">${fmtDate(o.date_echeance)}</span>
+          <span style="font-size:12px;font-weight:800;color:#f59e0b">CHF ${Number(o.montant_potentiel||0).toLocaleString()}</span>
+        </div>
+      </div>`).join('')}` : ''}
+      <div style="margin-top:14px;text-align:right">
+        <button onclick="navigate('opportunites')" style="background:none;border:none;color:var(--accent);font-size:11px;font-weight:700;cursor:pointer">Voir le pipeline →</button>
+      </div>
+    </div>` : ''}
+
     <div id="calendar-widget-container" style="margin-bottom:20px"></div>
 
     <!-- Graphiques commissions -->
@@ -167,16 +214,21 @@ function viewDashboard() {
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
         <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:4px">💼 Pipeline</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px">Signé vs Prévu</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px">Signé (opportunités gagnées) vs Prévu (opportunités ouvertes)</div>
         <div style="display:flex;flex-direction:column;gap:10px">
-          ${[['Chiffre signé','#f59e0b',0],['Chiffre prévu (pipeline)','#a78bfa',0]].map(([l,c,v])=>`
+          ${(() => {
+            const signe = oppsGagneesRecemment.reduce((s,o) => s + Number(o.montant_potentiel||0), 0);
+            const prevu = oppTotalPipeline;
+            const maxVal = Math.max(signe, prevu, 1);
+            return [['Chiffre signé','#f59e0b',signe],['Chiffre prévu (pipeline)','#a78bfa',prevu]].map(([l,c,v])=>`
           <div>
             <div style="display:flex;justify-content:space-between;margin-bottom:4px">
               <span style="font-size:12px;color:var(--text-muted)">${l}</span>
-              <span style="font-size:12px;font-weight:800;color:${c}">CHF ${v.toLocaleString()}</span>
+              <span style="font-size:12px;font-weight:800;color:${c}">CHF ${Math.round(v).toLocaleString()}</span>
             </div>
-            <div class="progress-bar"><div class="progress-fill" style="width:0%;background:${c}"></div></div>
-          </div>`).join('')}
+            <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(v/maxVal*100)}%;background:${c}"></div></div>
+          </div>`).join('');
+          })()}
         </div>
       </div>
     </div>

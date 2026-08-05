@@ -25,6 +25,10 @@ function selectStadeOpportunite(o, stadeActuel, tousLesStades) {
   </select>`;
 }
 
+// Mode d'affichage du pipeline — persisté en mémoire seulement (pas besoin de le garder entre
+// sessions), pour ne pas perdre le choix en changeant de stade/filtre dans la même visite.
+let vueModePipeline = 'kanban'; // 'kanban' | 'liste' | 'echeances'
+
 function viewOpportunites() {
   const stadeColor = { Contact:'#64748b', Analyse:'#38bdf8', Proposition:'#f59e0b', Négociation:'#a78bfa' };
   const stades = ['Contact','Analyse','Proposition','Négociation'];
@@ -41,6 +45,35 @@ function viewOpportunites() {
     return o.prospect_nom ? `${o.prospect_nom} 🆕` : '—';
   }
 
+  const toggleVues = [
+    { id: 'kanban', label: '📋 Kanban' },
+    { id: 'liste', label: '📃 Liste' },
+    { id: 'echeances', label: '📅 Échéances' },
+  ].map(v => `<button class="tab-btn ${vueModePipeline === v.id ? 'active' : ''}" onclick="vueModePipeline='${v.id}';navigate('opportunites')">${v.label}</button>`).join('');
+
+  let corps;
+  if (vueModePipeline === 'liste') corps = renderListeOpportunites(allOpportunites, nomClient, tousLesStades, stadeColor);
+  else if (vueModePipeline === 'echeances') corps = renderEcheancesOpportunites(OPPS, nomClient, stadeColor);
+  else corps = renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, tousLesStades, nomClient);
+
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Pipeline — Opportunités</h2>
+      <button class="btn-add" onclick="opportuniteEnEditionId=null;navigate('nouvelle-opportunite')">+ Nouvelle opportunité</button>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Suivi des affaires en négociation, avant signature. Une fois "Gagnée" depuis le menu de stade, l'opportunité ouvre directement le formulaire de contrat pré-rempli.</div>
+    <div class="stat-grid" style="margin-bottom:20px">
+      ${statCard('Pipeline total', 'CHF ' + total.toLocaleString(), '#f59e0b')}
+      ${statCard('Pondéré', 'CHF ' + pondere.toLocaleString(), '#38bdf8')}
+      ${statCard('En cours', OPPS.length, '#e2e8f0')}
+      ${statCard('Gagnées', gagnees.length, '#4ade80')}
+    </div>
+    <div class="tabs" style="margin-bottom:18px">${toggleVues}</div>
+    ${corps}`;
+}
+
+// ── Vue Kanban (par défaut) — colonnes par stade + tableaux Gagnées/Perdues en dessous ──
+function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, tousLesStades, nomClient) {
   let kanban = stades.map(stade => {
     const opps = OPPS.filter(o => o.stade === stade);
     const color = stadeColor[stade];
@@ -71,19 +104,7 @@ function viewOpportunites() {
     </div>`;
   }).join('');
 
-  return `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Pipeline — Opportunités</h2>
-      <button class="btn-add" onclick="opportuniteEnEditionId=null;navigate('nouvelle-opportunite')">+ Nouvelle opportunité</button>
-    </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Suivi des affaires en négociation, avant signature. Clique sur une carte pour la modifier (titre, montant, notes...). Une fois "Gagnée" depuis le menu de stade, l'opportunité ouvre directement le formulaire de contrat pré-rempli.</div>
-    <div class="stat-grid" style="margin-bottom:20px">
-      ${statCard('Pipeline total', 'CHF ' + total.toLocaleString(), '#f59e0b')}
-      ${statCard('Pondéré', 'CHF ' + pondere.toLocaleString(), '#38bdf8')}
-      ${statCard('En cours', OPPS.length, '#e2e8f0')}
-      ${statCard('Gagnées', gagnees.length, '#4ade80')}
-    </div>
-    <div class="kanban">${kanban}</div>
+  return `<div class="kanban">${kanban}</div>
     ${gagnees.length > 0 ? `<div style="margin-top:24px">
       <div style="font-size:11px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">✓ Gagnées (${gagnees.length})</div>
       <div class="table-wrap">${gagnees.map(o => `<div class="table-row" style="grid-template-columns:1fr 160px 100px 150px 110px;cursor:pointer" onclick="editerOpportunite('${o.id}')">
@@ -103,6 +124,73 @@ function viewOpportunites() {
         <div>${selectStadeOpportunite(o, 'Perdu', tousLesStades)}</div>
       </div>`).join('')}</div>
     </div>` : ''}`;
+}
+
+// ── Vue Liste — toutes les opportunités (tous stades confondus) en une seule table triable ──
+// Utile pour scanner/trier vite par montant, probabilité ou échéance sans le découpage par
+// colonnes du Kanban, notamment quand le pipeline devient long.
+let opportunitesTriListe = 'montant_desc';
+function renderListeOpportunites(toutes, nomClient, tousLesStades, stadeColor) {
+  const tris = {
+    montant_desc: (a,b) => (b.montant_potentiel||0) - (a.montant_potentiel||0),
+    montant_asc: (a,b) => (a.montant_potentiel||0) - (b.montant_potentiel||0),
+    echeance_asc: (a,b) => (a.date_echeance ? new Date(a.date_echeance) : Infinity) - (b.date_echeance ? new Date(b.date_echeance) : Infinity),
+    probabilite_desc: (a,b) => (b.probabilite||0) - (a.probabilite||0),
+    stade: (a,b) => tousLesStades.indexOf(a.stade) - tousLesStades.indexOf(b.stade),
+  };
+  const liste = [...toutes].sort(tris[opportunitesTriListe] || tris.montant_desc);
+  const cols = '1fr 160px 120px 120px 90px 110px';
+  return `
+    <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
+      <select class="form-select" style="max-width:220px" onchange="opportunitesTriListe=this.value;navigate('opportunites')">
+        <option value="montant_desc" ${opportunitesTriListe==='montant_desc'?'selected':''}>Trier : montant décroissant</option>
+        <option value="montant_asc" ${opportunitesTriListe==='montant_asc'?'selected':''}>Trier : montant croissant</option>
+        <option value="echeance_asc" ${opportunitesTriListe==='echeance_asc'?'selected':''}>Trier : échéance la plus proche</option>
+        <option value="probabilite_desc" ${opportunitesTriListe==='probabilite_desc'?'selected':''}>Trier : probabilité décroissante</option>
+        <option value="stade" ${opportunitesTriListe==='stade'?'selected':''}>Trier : par stade</option>
+      </select>
+    </div>
+    <div class="table-wrap">
+      <div class="table-header" style="grid-template-columns:${cols}"><div>Titre</div><div>Client</div><div>Compagnie</div><div>Stade</div><div>Prob.</div><div>Montant</div></div>
+      ${liste.length ? liste.map(o => `<div class="table-row" style="grid-template-columns:${cols};cursor:pointer" onclick="editerOpportunite('${o.id}')">
+        <div><div style="font-weight:700;font-size:13px;color:var(--text)">${o.titre}</div>${o.date_echeance ? `<div style="font-size:10.5px;color:var(--text-muted)">Échéance ${fmtDate(o.date_echeance)}</div>` : ''}</div>
+        <div style="font-size:13px;color:var(--text)">${nomClient(o)}</div>
+        <div style="font-size:12.5px;color:var(--text-muted)">${o.compagnie || '—'}</div>
+        <div>${badge(o.stade, stadeColor[o.stade] || (o.stade === 'Gagné' ? '#4ade80' : '#f87171'))}</div>
+        <div style="font-size:12.5px;color:var(--text-muted)">${o.probabilite||0}%</div>
+        <div style="font-weight:800;color:#f59e0b">CHF ${(o.montant_potentiel||0).toLocaleString()}</div>
+      </div>`).join('') : '<div class="table-empty">Aucune opportunité.</div>'}
+    </div>`;
+}
+
+// ── Vue Échéances — regroupe les opportunités OUVERTES par urgence de date d'échéance ──
+// Pense comme un plan de relance : ce qui est en retard ou cette semaine remonte en premier.
+function renderEcheancesOpportunites(oppsOuvertes, nomClient, stadeColor) {
+  const today = new Date(); today.setHours(0,0,0,0);
+  const in7 = new Date(today.getTime() + 7*86400000);
+  const in30 = new Date(today.getTime() + 30*86400000);
+  function jours(o) { return o.date_echeance ? Math.floor((new Date(o.date_echeance) - today) / 86400000) : null; }
+  const buckets = [
+    { label: '🔴 En retard', test: o => { const j = jours(o); return j !== null && j < 0; } },
+    { label: '🟠 Cette semaine', test: o => { const j = jours(o); return j !== null && j >= 0 && j <= 7; } },
+    { label: '🟡 Ce mois-ci', test: o => { const j = jours(o); return j !== null && j > 7 && j <= 30; } },
+    { label: '⚪ Plus tard', test: o => { const j = jours(o); return j !== null && j > 30; } },
+    { label: '— Sans échéance', test: o => !o.date_echeance },
+  ];
+  return buckets.map(b => {
+    const liste = oppsOuvertes.filter(b.test).sort((a,c) => (a.date_echeance||'9999') < (c.date_echeance||'9999') ? -1 : 1);
+    if (!liste.length) return '';
+    return `<div style="margin-bottom:22px">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">${b.label} (${liste.length})</div>
+      <div class="table-wrap">${liste.map(o => `<div class="table-row" style="grid-template-columns:1fr 160px 110px 100px 120px;cursor:pointer" onclick="editerOpportunite('${o.id}')">
+        <div style="font-weight:700;font-size:13px;color:var(--text)">${o.titre}</div>
+        <div style="font-size:13px;color:var(--text)">${nomClient(o)}</div>
+        <div>${badge(o.stade, stadeColor[o.stade] || '#64748b')}</div>
+        <div style="font-weight:800;color:#f59e0b">CHF ${(o.montant_potentiel||0).toLocaleString()}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${o.date_echeance ? fmtDate(o.date_echeance) : '—'}</div>
+      </div>`).join('')}</div>
+    </div>`;
+  }).join('') || '<div class="table-empty">Aucune opportunité ouverte.</div>';
 }
 
 // ── Tâches liées à une opportunité (réutilise la table rappels, colonne opportunite_id) ──

@@ -417,7 +417,7 @@ function viewNouveauContrat() {
       <div class="form-field" style="grid-column:span 2" id="ct-modules-field"><label class="form-label">Modules complémentaires</label><div id="ct-modules-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div><div style="font-size:10px;color:var(--text-muted);margin-top:4px" id="ct-modules-hint"></div>
         <div id="ct-modules-custom-list" style="margin-top:8px"></div>
         <button type="button" onclick="ajouterModuleComplementaire()" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;margin-top:6px">+ Ajouter un module complémentaire</button>
-        <div style="font-size:10px;color:var(--text-muted);margin-top:4px">Ex: "Assurances complémentaires et services" (AXA) — un module au libellé libre avec sa propre prime, à titre de détail (n'est pas additionné automatiquement à la prime totale ci-dessous, qui reprend déjà le total final de la police).</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:4px">Ex: "Assurances complémentaires et services" (AXA) — sert à lister les options incluses dans la police, à titre de détail. Si cette option a sa propre prime à reporter dans le total, ajoute-la plutôt comme "ligne de prime" ci-dessous (section "Lignes de prime").</div>
       </div>
       <div class="form-field" style="grid-column:span 2" id="ct-combinables-field"><label class="form-label">Produits souvent combinés</label><div id="ct-combinables-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div></div>
       <div class="form-field" style="grid-column:span 2;display:none" id="ct-plaques-field">

@@ -451,6 +451,7 @@ async function showClient(id) {
           <button onclick="showEditContrat('${ct.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer;line-height:1" title="Modifier">✏️</button>
         </div>
       </div>`).join('')}</div>` : '<div class="table-empty">Aucun contrat.</div>'}
+    </div>
 
     <div id="tab-factures" class="hidden">
       <div style="display:flex;justify-content:flex-end;margin-bottom:12px">

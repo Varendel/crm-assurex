@@ -835,7 +835,7 @@ function showDetailContrat(contratId) {
         </div>
 
         <!-- Modules -->
-        ${ct.modules ? `<div style="font-size:11.5px;color:var(--text-muted);padding:0 2px">📋 <strong>Modules :</strong> ${ct.modules}</div>` : ''}
+        ${ct.modules ? `<div style="font-size:11.5px;color:var(--text-muted);padding:0 2px">📋 <strong>Modules complémentaires :</strong> ${ct.modules}</div>` : ''}
 
         <!-- Actions -->
         <div style="display:flex;gap:8px;padding-top:4px">

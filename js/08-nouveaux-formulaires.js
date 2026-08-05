@@ -365,7 +365,7 @@ async function showEditContrat(contratId, returnTo) {
           </select>
           <div id="ect-rappel-note" style="display:${ct.commissionne === false ?'':'none'};font-size:10.5px;color:var(--text-muted);margin-top:4px">ℹ️ Un rappel sera créé 6 mois avant la date d'échéance ci-dessous, pour proposer un transfert vers une compagnie partenaire.</div>
         </div>
-        <div class="form-field"><label class="form-label">Modules / options</label><input class="form-input" id="ect-modules" value="${ct.modules || ''}"/></div>
+        <div class="form-field"><label class="form-label">Modules complémentaires</label><input class="form-input" id="ect-modules" value="${ct.modules || ''}"/></div>
         <div class="form-field" style="grid-column:span 2">
           <label class="form-label">Police PDF</label>
           ${ct.police_url

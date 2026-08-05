@@ -1112,6 +1112,20 @@ async function viewNouvelleDemandeOffre() {
     </div>`;
 }
 
+// Bouton "Demande d'offre" sur la fiche opportunité — si une demande existe déjà pour cette
+// opp, propose de la REPRENDRE (au lieu d'en créer une nouvelle en double par mégarde) ; garde
+// toujours la possibilité d'en démarrer une nouvelle à côté (ex: relance après refus).
+async function renderDemandeOffreLieeOpportunite(oppId) {
+  const zone = document.getElementById('opp-demande-offre-liee');
+  if (!zone) return;
+  const opp = allOpportunites.find(o => o.id === oppId);
+  const existantes = await dbGet('demandes_offre', `opportunite_id=eq.${oppId}&select=*&order=created_at.desc`);
+  const derniere = Array.isArray(existantes) && existantes.length ? existantes[0] : null;
+  const boutonNouvelle = `<button type="button" onclick="prefillDemandeOffreOpportuniteId='${oppId}'; prefillDemandeOffreClientId=${opp && opp.client_id ? `'${opp.client_id}'` : 'null'}; navigate('nouvelle-demande-offre')" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 16px;color:var(--text-muted);font-weight:700;font-size:13px;cursor:pointer">📝 ${derniere ? 'Nouvelle demande d\'offre' : 'Demande d\'offre liée'}</button>`;
+  const boutonReprendre = derniere ? `<button type="button" onclick="demandeOffreEnEditionId='${derniere.id}'; navigate('nouvelle-demande-offre')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:9px;padding:10px 16px;color:var(--accent);font-weight:700;font-size:13px;cursor:pointer">↺ Reprendre la demande d'offre (${fmtDate(derniere.created_at)})</button>` : '';
+  zone.innerHTML = boutonReprendre + boutonNouvelle;
+}
+
 // Repeuple tous les champs du formulaire "Demande d'offre" depuis un enregistrement existant
 // (colonne donnees, jsonb) — utilisé en réouverture ("Reprendre" depuis Suivi des affaires) pour
 // pouvoir cocher des compagnies et générer l'email sans tout ressaisir. Appelé en setTimeout(0)
@@ -1277,9 +1291,14 @@ function viewNouvelleOpportunite() {
   const clientOptions = allClients.map(c => `<option value="${c.id}" ${(opp && opp.client_id === c.id) || (clientPrefille && clientPrefille.id === c.id) ? 'selected' : ''}>${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`}</option>`).join('');
   const stadesOptions = ['Contact','Analyse','Proposition','Négociation','Gagné','Perdu'];
   const qa = (s) => (s || '').toString().replace(/"/g, '&quot;');
+  if (opp) setTimeout(() => renderDemandeOffreLieeOpportunite(opp.id), 0);
+  const clientFiche = opp && opp.client_id ? allClients.find(c => c.id === opp.client_id) : null;
   return `
     <button onclick="opportuniteEnEditionId=null;navigate('opportunites')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
-    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">${opp ? 'Modifier l\u2019opportunité' : 'Nouvelle opportunité'}</h2>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">${opp ? 'Modifier l\u2019opportunité' : 'Nouvelle opportunité'}</h2>
+      ${clientFiche ? `<span onclick="showClient('${clientFiche.id}')" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--surface-alt);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11.5px;font-weight:700;color:var(--accent)">👤 Fiche client : ${estEntreprise(clientFiche) ? clientFiche.nom : `${clientFiche.prenom} ${clientFiche.nom}`} →</span>` : ''}
+    </div>
     ${sectionCard('Détails', '#f59e0b', `<div class="form-grid">
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Titre *</label><input class="form-input" id="o-titre" value="${qa(opp?.titre || (clientPrefille ? (estEntreprise(clientPrefille) ? clientPrefille.nom : clientPrefille.prenom + ' ' + clientPrefille.nom) + ' — ' : ''))}" placeholder="Ex: Assurance vie mixte 20 ans"/></div>
       <div class="form-field"><label class="form-label">Client (si déjà fiché)</label><select class="form-select" id="o-client" onchange="document.getElementById('o-prospect-field').style.display = this.value ? 'none' : ''"><option value="">— Prospect non encore fiché —</option>${clientOptions}</select></div>
@@ -1294,8 +1313,8 @@ function viewNouvelleOpportunite() {
     </div>`)}
     ${opp ? sectionCard('Tâches', '#4ade80', renderTachesOpportunite(opp)) : ''}
     ${opp ? sectionCard('Historique', '#a78bfa', renderHistoriqueOpportunite(opp)) : ''}
-    <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap">
-      ${opp ? `<button type="button" onclick="prefillDemandeOffreOpportuniteId='${opp.id}'; prefillDemandeOffreClientId=${opp.client_id ? `'${opp.client_id}'` : 'null'}; navigate('nouvelle-demande-offre')" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 16px;color:var(--text-muted);font-weight:700;font-size:13px;cursor:pointer">📝 Demande d'offre liée</button>` : ''}
+    <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;align-items:center">
+      ${opp ? `<span id="opp-demande-offre-liee" style="display:flex;gap:10px;flex-wrap:wrap"></span>` : ''}
       ${opp ? `<button onclick="supprimerOpportunite('${opp.id}')" style="background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>` : ''}
       <button class="btn-secondary" onclick="opportuniteEnEditionId=null;navigate('opportunites')">Annuler</button>
       <button class="btn-save" onclick="saveOpportunite('${opp ? opp.id : ''}')">✓ ${opp ? 'Enregistrer les modifications' : 'Enregistrer'}</button>

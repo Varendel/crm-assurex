@@ -414,7 +414,11 @@ function viewNouveauContrat() {
       <div class="form-field"><label class="form-label">Compagnie *</label><input class="form-input" id="ct-compagnie" value="${opp && opp.compagnie ? opp.compagnie : ''}" placeholder="Swiss Life, AXA, Helsana..." list="compagnies-suggestions" autocomplete="off" oninput="updateCommissionPreview()"/><datalist id="compagnies-suggestions">${getCompagniesConnues().map(c => `<option value="${c}">`).join('')}</datalist></div>
       <div class="form-field"><label class="form-label">Catégorie *</label><select class="form-select" id="ct-categorie" onchange="updateProduitOptions()"></select></div>
       <div class="form-field"><label class="form-label">Produit *</label><select class="form-select" id="ct-produit" onchange="updateModulesOptions(); updateCommissionPreview()"><option value="">— Sélectionner —</option></select></div>
-      <div class="form-field" style="grid-column:span 2" id="ct-modules-field"><label class="form-label">Modules complémentaires</label><div id="ct-modules-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div><div style="font-size:10px;color:var(--text-muted);margin-top:6px">Coche un module pour y indiquer sa prime annuelle (facultatif, à titre de détail — n'est pas ajouté automatiquement à la prime totale ci-dessous).</div></div>
+      <div class="form-field" style="grid-column:span 2" id="ct-modules-field"><label class="form-label">Modules complémentaires</label><div id="ct-modules-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div><div style="font-size:10px;color:var(--text-muted);margin-top:4px" id="ct-modules-hint"></div>
+        <div id="ct-modules-custom-list" style="margin-top:8px"></div>
+        <button type="button" onclick="ajouterModuleComplementaire()" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;margin-top:6px">+ Ajouter un module complémentaire</button>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:4px">Ex: "Assurances complémentaires et services" (AXA) — un module au libellé libre avec sa propre prime, à titre de détail (n'est pas additionné automatiquement à la prime totale ci-dessous, qui reprend déjà le total final de la police).</div>
+      </div>
       <div class="form-field" style="grid-column:span 2" id="ct-combinables-field"><label class="form-label">Produits souvent combinés</label><div id="ct-combinables-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div></div>
       <div class="form-field" style="grid-column:span 2;display:none" id="ct-plaques-field">
         <label class="form-label" id="ct-plaques-label">Plaques d'immatriculation de la flotte</label>
@@ -579,11 +583,15 @@ function updateModulesOptions() {
   if (!modulesList) return;
   const produit = getProduitSelectionne();
   const modules = produit ? produit.modules : [];
+  // Le bloc "Modules complémentaires" reste toujours visible (même sans liste prédéfinie pour ce
+  // produit, ex: RC véhicule) car le bouton "+ Ajouter un module complémentaire" (libellé libre)
+  // est toujours disponible en dessous.
+  document.getElementById('ct-modules-hint').textContent = modules.length === 0
+    ? 'Aucun module prédéfini pour ce produit — utilise le bouton ci-dessous pour en ajouter un librement.'
+    : 'Coche un module pour y indiquer sa prime annuelle (facultatif, à titre de détail).';
   if (modules.length === 0) {
-    modulesList.innerHTML = '<span style="font-size:12px;color:var(--text-muted)">Aucun module complémentaire pour ce produit.</span>';
-    document.getElementById('ct-modules-field').style.display = 'none';
+    modulesList.innerHTML = '';
   } else {
-    document.getElementById('ct-modules-field').style.display = 'block';
     modulesList.innerHTML = modules.map((m, i) => `
       <div style="display:flex;align-items:center;gap:8px">
         <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text);cursor:pointer">
@@ -592,6 +600,9 @@ function updateModulesOptions() {
         <input type="number" class="ct-module-prime-input" data-idx="${i}" placeholder="Prime CHF/an" style="display:none;width:110px;background:var(--surface-alt);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11.5px;color:var(--text)"/>
       </div>`).join('');
   }
+  // Réinitialise les modules libres ajoutés manuellement à chaque changement de produit
+  const customList = document.getElementById('ct-modules-custom-list');
+  if (customList) customList.innerHTML = '';
 
   if (combinablesField && combinablesList) {
     const combinablesIds = produit ? (produit.combinables || []) : [];
@@ -648,6 +659,23 @@ function updateModulesOptions() {
       document.getElementById('ct-plaques-list').innerHTML = '';
     }
   }
+}
+
+// Ajoute une ligne "module complémentaire" au libellé libre (ex: "Assurances complémentaires et
+// services" comme chez AXA) avec sa propre prime annuelle — disponible pour tout produit, y compris
+// ceux sans liste de modules prédéfinie dans le catalogue (ex: RC véhicule).
+function ajouterModuleComplementaire() {
+  const list = document.getElementById('ct-modules-custom-list');
+  if (!list) return;
+  const ligne = document.createElement('div');
+  ligne.className = 'ct-module-custom-ligne';
+  ligne.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:6px';
+  ligne.innerHTML = `
+    <input class="form-input ct-module-custom-nom" placeholder="Ex: Assurances complémentaires et services" style="flex:1"/>
+    <input class="form-input ct-module-custom-prime" type="number" placeholder="Prime CHF/an" style="width:130px"/>
+    <button type="button" onclick="this.parentElement.remove()" style="background:var(--red-dim);color:var(--red);border:none;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">✕</button>
+  `;
+  list.appendChild(ligne);
 }
 
 function ajouterPlaqueFlotte() {
@@ -1100,6 +1128,13 @@ async function saveContrat() {
     const primeInput = document.querySelector(`.ct-module-prime-input[data-idx="${cb.dataset.idx}"]`);
     const prime = primeInput ? parseFloat(primeInput.value) : NaN;
     return !isNaN(prime) && prime > 0 ? `${cb.value} (CHF ${prime})` : cb.value;
+  });
+  // Modules complémentaires au libellé libre (ex: "Assurances complémentaires et services")
+  Array.from(document.querySelectorAll('.ct-module-custom-ligne')).forEach(ligne => {
+    const nom = ligne.querySelector('.ct-module-custom-nom')?.value.trim();
+    if (!nom) return;
+    const prime = parseFloat(ligne.querySelector('.ct-module-custom-prime')?.value);
+    modulesChoisis.push(!isNaN(prime) && prime > 0 ? `${nom} (CHF ${prime})` : nom);
   });
   const { montant: commissionEstimee, detail } = calculerCommissionEstimee();
 

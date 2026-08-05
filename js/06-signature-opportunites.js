@@ -360,24 +360,55 @@ function renderSuiviTables() {
     ${statCard('À renouveler', aRenouveler.length, '#f87171')}
     ${statCard('Échéance < 60j', echeanceProche.length, '#fbbf24')}`;
 
-  function table(list, emptyMsg) {
+  // avecReporter : ajoute une colonne d'action "↻ Reporter d'un an" — pour les contrats "à
+  // renouveler" qu'on n'a pas réussi à joindre/signer, plutôt que de les laisser polluer la
+  // liste indéfiniment. Repousse l'échéance d'un an et repasse le contrat "actif" (il
+  // retombera automatiquement en "à renouveler" à la nouvelle échéance, via basculerContratsEchus).
+  function table(list, emptyMsg, avecReporter) {
+    const colsActuelles = avecReporter ? cols + ' 160px' : cols;
     if (!list.length) return `<div class="table-empty">${emptyMsg}</div>`;
-    return `<div class="table-wrap"><div class="table-header" style="grid-template-columns:${cols}"><div>Produit</div><div>Client</div><div>Compagnie</div><div>Échéance</div><div>Prime/an</div><div>Statut</div></div>
-      ${list.map(ct => `<div class="table-row" style="grid-template-columns:${cols};cursor:pointer" onclick="showDetailContrat('${ct.id}')">
+    return `<div class="table-wrap"><div class="table-header" style="grid-template-columns:${colsActuelles}"><div>Produit</div><div>Client</div><div>Compagnie</div><div>Échéance</div><div>Prime/an</div><div>Statut</div>${avecReporter ? '<div></div>' : ''}</div>
+      ${list.map(ct => `<div class="table-row" style="grid-template-columns:${colsActuelles};cursor:pointer" onclick="showDetailContrat('${ct.id}')">
         <div><div style="font-weight:700;font-size:13px;color:var(--text)">${ct.produit}</div><div style="font-size:11px;color:var(--text-muted)">${ct.numero_police || ''}</div></div>
         <div style="font-size:13px;color:var(--text)">${nomClient(ct)}</div>
         <div style="font-size:13px;color:var(--text)">${ct.compagnie}</div>
         <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ct.date_echeance)}</div>
         <div style="font-weight:800;color:#f59e0b">CHF ${Number(ct.prime_annuelle||0).toLocaleString()}</div>
         <div>${badge(ct.statut, ct.statut === 'actif' ? '#4ade80' : ct.statut === 'renouveler' ? '#f59e0b' : '#f87171')}${ct.commissionne === false ? ' ' + badge('Non commissionné', '#64748b') : ''}</div>
+        ${avecReporter ? `<div><button type="button" onclick="event.stopPropagation();reporterRenouvellementContrat('${ct.id}')" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">↻ Reporter d'un an</button></div>` : ''}
       </div>`).join('')}</div>`;
   }
 
   document.getElementById('su-tables').innerHTML = `
     <div style="font-size:11px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">⚠ À renouveler (${aRenouveler.length})</div>
-    ${table(aRenouveler, 'Aucun contrat à renouveler.')}
+    ${table(aRenouveler, 'Aucun contrat à renouveler.', true)}
     <div style="font-size:11px;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:1px;margin:24px 0 10px">⏳ Échéance dans moins de 60 jours (${echeanceProche.length})</div>
     ${table(echeanceProche, 'Aucune échéance proche.')}`;
+}
+
+// Repousse l'échéance d'un contrat "à renouveler" d'un an (même jour/mois, année suivante) et le
+// repasse "actif" — pour les cas où le client n'a pas pu être recontacté/signé cette année-ci et
+// qu'on veut le retirer de la liste "à renouveler" sans perdre le suivi (il y reviendra
+// automatiquement à sa nouvelle échéance, un an plus tard).
+async function reporterRenouvellementContrat(id) {
+  const ct = allContrats.find(c => c.id === id);
+  if (!ct) return;
+  const base = (ct.date_echeance || new Date().toISOString()).split('T')[0];
+  const [y, m, d] = base.split('-').map(Number);
+  // Cas 29 février d'une année bissextile reporté vers une année non bissextile (ex: 2028 -> 2029) :
+  // cette date n'existe pas, on tombe au 1er mars suivant plutôt que de planter le PATCH Postgres.
+  const anneeSuivante = y + 1;
+  const dateValide = new Date(Date.UTC(anneeSuivante, m - 1, d)).getUTCMonth() === m - 1;
+  const nouvelleDate = dateValide
+    ? `${anneeSuivante}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+    : `${anneeSuivante}-03-01`;
+  const r = await dbPatch('contrats', id, { date_echeance: nouvelleDate, statut: 'actif' });
+  if (r && r.error) { showError('Erreur lors du report : ' + errMsg(r)); return; }
+  ct.date_echeance = nouvelleDate;
+  ct.statut = 'actif';
+  logAction('reporter_renouvellement', 'contrats', id, `Échéance reportée au ${fmtDate(nouvelleDate)}`);
+  showError(`✓ Échéance reportée au ${fmtDate(nouvelleDate)} — le contrat repasse "actif" d'ici là.`);
+  renderSuiviTables();
 }
 
 // RAPPELS

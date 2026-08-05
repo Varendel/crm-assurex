@@ -814,10 +814,45 @@ const ALIAS_COMPAGNIES = {
   'gocaution': 'goCaution', 'go caution': 'goCaution',
   'smartcaution': 'SmartCaution', 'smart caution': 'SmartCaution',
 };
+function _cleCompagnieSansAccents(s) {
+  return (s || '').toString().trim().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+}
+// Retire les suffixes juridiques / génériques (SA, AG, "Assurances", "Compagnie d'assurance(s)", etc.)
+// pour ne garder que le "cœur" du nom, afin de rapprocher des variantes non couvertes une-à-une
+// par ALIAS_COMPAGNIES (ex: "AXA Assurances SA", "Baloise Assurance SA", "Bâloise Assurances").
+function _cleCompagnieCanonique(s) {
+  let cle = _cleCompagnieSansAccents(s);
+  cle = cle
+    .replace(/\bcompagnie d.assurances?\b/g, ' ')
+    .replace(/\bassurances?\s*generales?\b/g, ' ')
+    .replace(/\bassurances?\b/g, ' ')
+    .replace(/\bversicherungen?\b/g, ' ')
+    .replace(/\binsurance\b/g, ' ')
+    .replace(/\b(sa|ag|sarl|ltd|inc|llc|gmbh)\b/g, ' ')
+    .replace(/[.,'\u2019]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return cle;
+}
+// Table de correspondance clé-canonique → nom d'alias déjà connu, construite une fois à partir
+// de ALIAS_COMPAGNIES (clé exacte prioritaire, gérée séparément dans normaliserCompagnie).
+const _CANONIQUES_VERS_ALIAS = (() => {
+  const table = new Map();
+  Object.values(ALIAS_COMPAGNIES).forEach(nomAffiche => {
+    const cle = _cleCompagnieCanonique(nomAffiche);
+    if (cle && !table.has(cle)) table.set(cle, nomAffiche);
+  });
+  return table;
+})();
 function normaliserCompagnie(nom) {
   if (!nom) return nom;
   const cle = nom.trim().toLowerCase();
-  return ALIAS_COMPAGNIES[cle] || nom.trim();
+  if (ALIAS_COMPAGNIES[cle]) return ALIAS_COMPAGNIES[cle];
+  const cleCanonique = _cleCompagnieCanonique(nom);
+  if (cleCanonique && _CANONIQUES_VERS_ALIAS.has(cleCanonique)) {
+    return _CANONIQUES_VERS_ALIAS.get(cleCanonique);
+  }
+  return nom.trim();
 }
 
 function getCompagniesConnues() {

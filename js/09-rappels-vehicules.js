@@ -414,7 +414,7 @@ function viewNouveauContrat() {
       <div class="form-field"><label class="form-label">Compagnie *</label><input class="form-input" id="ct-compagnie" value="${opp && opp.compagnie ? opp.compagnie : ''}" placeholder="Swiss Life, AXA, Helsana..." list="compagnies-suggestions" autocomplete="off" oninput="updateCommissionPreview()"/><datalist id="compagnies-suggestions">${getCompagniesConnues().map(c => `<option value="${c}">`).join('')}</datalist></div>
       <div class="form-field"><label class="form-label">Catégorie *</label><select class="form-select" id="ct-categorie" onchange="updateProduitOptions()"></select></div>
       <div class="form-field"><label class="form-label">Produit *</label><select class="form-select" id="ct-produit" onchange="updateModulesOptions(); updateCommissionPreview()"><option value="">— Sélectionner —</option></select></div>
-      <div class="form-field" style="grid-column:span 2" id="ct-modules-field"><label class="form-label">Modules complémentaires</label><div id="ct-modules-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div></div>
+      <div class="form-field" style="grid-column:span 2" id="ct-modules-field"><label class="form-label">Modules complémentaires</label><div id="ct-modules-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div><div style="font-size:10px;color:var(--text-muted);margin-top:6px">Coche un module pour y indiquer sa prime annuelle (facultatif, à titre de détail — n'est pas ajouté automatiquement à la prime totale ci-dessous).</div></div>
       <div class="form-field" style="grid-column:span 2" id="ct-combinables-field"><label class="form-label">Produits souvent combinés</label><div id="ct-combinables-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div></div>
       <div class="form-field" style="grid-column:span 2;display:none" id="ct-plaques-field">
         <label class="form-label" id="ct-plaques-label">Plaques d'immatriculation de la flotte</label>
@@ -585,9 +585,12 @@ function updateModulesOptions() {
   } else {
     document.getElementById('ct-modules-field').style.display = 'block';
     modulesList.innerHTML = modules.map((m, i) => `
-      <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text);cursor:pointer">
-        <input type="checkbox" class="ct-module-checkbox" value="${m}" style="width:15px;height:15px;cursor:pointer"/>${m}
-      </label>`).join('');
+      <div style="display:flex;align-items:center;gap:8px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text);cursor:pointer">
+          <input type="checkbox" class="ct-module-checkbox" value="${m}" data-idx="${i}" onchange="toggleModulePrime(this)" style="width:15px;height:15px;cursor:pointer"/>${m}
+        </label>
+        <input type="number" class="ct-module-prime-input" data-idx="${i}" placeholder="Prime CHF/an" style="display:none;width:110px;background:var(--surface-alt);border:1px solid var(--border);border-radius:6px;padding:4px 8px;font-size:11.5px;color:var(--text)"/>
+      </div>`).join('');
   }
 
   if (combinablesField && combinablesList) {
@@ -678,6 +681,18 @@ function ajouterLigneLCA() {
     <button type="button" onclick="this.parentElement.remove()" style="background:var(--red-dim);color:var(--red);border:none;border-radius:7px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">✕</button>
   `;
   container.appendChild(ligne);
+}
+
+// Révèle/masque le petit champ de prime en regard d'une case "Module complémentaire" cochée
+// (ex: RC privée > "Location de chevaux" CHF 90.40) — optionnel, purement informatif : ce montant
+// n'est PAS additionné automatiquement à la prime totale du contrat (celle-ci reprend déjà le total
+// final de la police), il sert juste à garder trace du détail dans le champ "modules".
+function toggleModulePrime(checkbox) {
+  const idx = checkbox.dataset.idx;
+  const primeInput = document.querySelector(`.ct-module-prime-input[data-idx="${idx}"]`);
+  if (!primeInput) return;
+  primeInput.style.display = checkbox.checked ? 'inline-block' : 'none';
+  if (!checkbox.checked) primeInput.value = '';
 }
 
 function toggleCombinablePrime(produitId) {
@@ -1081,7 +1096,11 @@ async function saveContrat() {
   }
 
   const produitLabel = produitSelectionne.label;
-  const modulesChoisis = Array.from(document.querySelectorAll('.ct-module-checkbox:checked')).map(cb => cb.value);
+  const modulesChoisis = Array.from(document.querySelectorAll('.ct-module-checkbox:checked')).map(cb => {
+    const primeInput = document.querySelector(`.ct-module-prime-input[data-idx="${cb.dataset.idx}"]`);
+    const prime = primeInput ? parseFloat(primeInput.value) : NaN;
+    return !isNaN(prime) && prime > 0 ? `${cb.value} (CHF ${prime})` : cb.value;
+  });
   const { montant: commissionEstimee, detail } = calculerCommissionEstimee();
 
   const btn = document.querySelector('.btn-save');

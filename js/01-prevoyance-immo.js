@@ -139,6 +139,7 @@ let contratClientId = null;
 let allContrats = [];
 let allOpportunites = [];
 let prefillOpportunite = null;
+let prefillDemandeOffreClientId = null;
 let ozAnnualSummary = null;
 let allCommissionsAttente = [];
 let allCommissionTranches = []; // versements partiels (commissions payées en plusieurs fois, ex. AGV TONI SA)

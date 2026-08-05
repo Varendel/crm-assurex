@@ -970,9 +970,17 @@ function ckb(id, label) {
 }
 
 async function viewNouvelleDemandeOffre() {
-  const clientOptions = allClients.map(c => `<option value="${c.id}">${estEntreprise(c) ? c.nom : c.prenom + ' ' + c.nom}</option>`).join('');
+  // Pré-remplissage depuis le bouton "Demande d'offre" de la fiche client.
+  const clientPrefillId = prefillDemandeOffreClientId;
+  prefillDemandeOffreClientId = null;
+  const clientPrefille = clientPrefillId ? allClients.find(c => c.id === clientPrefillId) : null;
+  const clientOptions = allClients.map(c => `<option value="${c.id}" ${clientPrefille && clientPrefille.id === c.id ? 'selected' : ''}>${estEntreprise(c) ? c.nom : c.prenom + ' ' + c.nom}</option>`).join('');
   const contactsCompagnies = await dbGet('compagnies_contacts', 'select=*&order=compagnie.asc');
   window._doContacts = contactsCompagnies || [];
+  const cp = clientPrefille;
+  const cpAdresse = cp ? [cp.adresse, cp.npa, cp.ville].filter(Boolean).join(', ') : '';
+  const cpTel = cp ? (cp.tel || cp.mobile || '') : '';
+  const cpNomContact = cp ? (estEntreprise(cp) ? (cp.prenom || '') : (cp.prenom || '')) : '';
   return `
     <button onclick="navigate('suivi')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
     <h2 style="margin:0 0 6px;font-size:18px;font-weight:800;color:var(--text)">Demande d'offre</h2>
@@ -988,11 +996,11 @@ async function viewNouvelleDemandeOffre() {
 
     ${sectionCard('Identité', '#38bdf8', `<div class="form-grid">
       <div class="form-field"><label class="form-label">Client existant (optionnel)</label><select class="form-select" id="do-client" onchange="document.getElementById('do-prospect-field').style.display=this.value?'none':''"><option value="">— Prospect non fiché —</option>${clientOptions}</select></div>
-      <div class="form-field" id="do-prospect-field"><label class="form-label">Nom/raison sociale</label><input class="form-input" id="do-prospect-nom" placeholder="Si pas encore client"/></div>
-      <div class="form-field"><label class="form-label">Prénom/contact</label><input class="form-input" id="do-contact"/></div>
-      <div class="form-field"><label class="form-label">Adresse</label><input class="form-input" id="do-adresse"/></div>
-      <div class="form-field"><label class="form-label">N° téléphone</label><input class="form-input" id="do-tel"/></div>
-      <div class="form-field"><label class="form-label">E-mail</label><input class="form-input" id="do-email" type="email"/></div>
+      <div class="form-field" id="do-prospect-field" style="${cp ? 'display:none' : ''}"><label class="form-label">Nom/raison sociale</label><input class="form-input" id="do-prospect-nom" value="${cp ? '' : ''}" placeholder="Si pas encore client"/></div>
+      <div class="form-field"><label class="form-label">Prénom/contact</label><input class="form-input" id="do-contact" value="${cpNomContact}"/></div>
+      <div class="form-field"><label class="form-label">Adresse</label><input class="form-input" id="do-adresse" value="${cpAdresse}"/></div>
+      <div class="form-field"><label class="form-label">N° téléphone</label><input class="form-input" id="do-tel" value="${cpTel}"/></div>
+      <div class="form-field"><label class="form-label">E-mail</label><input class="form-input" id="do-email" type="email" value="${cp ? (cp.email || '') : ''}"/></div>
       <div class="form-field"><label class="form-label">N° AVS (pour LPP)</label><input class="form-input" id="do-avs"/></div>
       <div class="form-field"><label class="form-label">Activité principale</label><input class="form-input" id="do-activite"/></div>
       <div class="form-field"><label class="form-label">Lieu du risque</label><input class="form-input" id="do-lieu-risque"/></div>
@@ -1191,17 +1199,22 @@ async function saveDemandeOffre() {
 
 function viewNouvelleOpportunite() {
   const opp = opportuniteEnEditionId ? allOpportunites.find(o => o.id === opportuniteEnEditionId) : null;
+  // Pré-remplissage depuis le bouton "Créer une opportunité" de la fiche client (nouvelle
+  // opportunité uniquement -- sans effet si une opportunité existante est en cours d'édition).
+  const clientPrefillId = (!opp && prefillOpportuniteClientId) ? prefillOpportuniteClientId : null;
+  const clientPrefille = clientPrefillId ? allClients.find(c => c.id === clientPrefillId) : null;
+  prefillOpportuniteClientId = null;
   const agentOptions = allAgents.map(a => `<option value="${a.id}" ${opp && opp.apporteur_id === a.id ? 'selected' : ''}>${a.prenom} ${a.nom}</option>`).join('');
-  const clientOptions = allClients.map(c => `<option value="${c.id}" ${opp && opp.client_id === c.id ? 'selected' : ''}>${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`}</option>`).join('');
+  const clientOptions = allClients.map(c => `<option value="${c.id}" ${(opp && opp.client_id === c.id) || (clientPrefille && clientPrefille.id === c.id) ? 'selected' : ''}>${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`}</option>`).join('');
   const stadesOptions = ['Contact','Analyse','Proposition','Négociation','Gagné','Perdu'];
   const qa = (s) => (s || '').toString().replace(/"/g, '&quot;');
   return `
     <button onclick="opportuniteEnEditionId=null;navigate('opportunites')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
     <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">${opp ? 'Modifier l\u2019opportunité' : 'Nouvelle opportunité'}</h2>
     ${sectionCard('Détails', '#f59e0b', `<div class="form-grid">
-      <div class="form-field" style="grid-column:span 2"><label class="form-label">Titre *</label><input class="form-input" id="o-titre" value="${qa(opp?.titre)}" placeholder="Ex: Assurance vie mixte 20 ans"/></div>
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Titre *</label><input class="form-input" id="o-titre" value="${qa(opp?.titre || (clientPrefille ? (estEntreprise(clientPrefille) ? clientPrefille.nom : clientPrefille.prenom + ' ' + clientPrefille.nom) + ' — ' : ''))}" placeholder="Ex: Assurance vie mixte 20 ans"/></div>
       <div class="form-field"><label class="form-label">Client (si déjà fiché)</label><select class="form-select" id="o-client" onchange="document.getElementById('o-prospect-field').style.display = this.value ? 'none' : ''"><option value="">— Prospect non encore fiché —</option>${clientOptions}</select></div>
-      <div class="form-field" id="o-prospect-field" style="${opp && opp.client_id ? 'display:none' : ''}"><label class="form-label">Nom du prospect</label><input class="form-input" id="o-prospect-nom" value="${qa(opp?.prospect_nom)}" placeholder="Ex: Jean Dupont (pas encore client)"/></div>
+      <div class="form-field" id="o-prospect-field" style="${(opp && opp.client_id) || clientPrefille ? 'display:none' : ''}"><label class="form-label">Nom du prospect</label><input class="form-input" id="o-prospect-nom" value="${qa(opp?.prospect_nom)}" placeholder="Ex: Jean Dupont (pas encore client)"/></div>
       <div class="form-field"><label class="form-label">Compagnie</label><input class="form-input" id="o-compagnie" value="${qa(opp?.compagnie)}" placeholder="Swiss Life, AXA..."/></div>
       <div class="form-field"><label class="form-label">Montant potentiel (CHF)</label><input class="form-input" id="o-montant" type="number" value="${opp?.montant_potentiel || ''}" placeholder="5000"/></div>
       <div class="form-field"><label class="form-label">Probabilité %</label><input class="form-input" id="o-prob" type="number" value="${opp ? (opp.probabilite ?? 50) : 50}" min="0" max="100"/></div>

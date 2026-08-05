@@ -9,6 +9,7 @@ function switchTab(btn, tabId) {
 
 // OPPORTUNITÉS
 let opportuniteEnEditionId = null;
+let prefillOpportuniteClientId = null;
 
 function editerOpportunite(id) {
   opportuniteEnEditionId = id;

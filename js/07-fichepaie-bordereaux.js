@@ -1122,6 +1122,9 @@ function prefillChampsDemandeOffre(existante) {
   const setChk = (id, v) => { const el = document.getElementById(id); if (el) el.checked = !!v; };
   const i = d.identite || {}, b = d.base_calcul || {}, ap = d.assurances_personnes || {}, av = d.assurances_vie || {},
         ac = d.assurances_choses || {}, comp = d.complementaires || {}, lpp = d.lpp || {}, rc = d.rc || {};
+  // prospect_nom vit sur la ligne demandes_offre elle-même (pas dans donnees) — ne s'applique
+  // que si aucun client existant n'est rattaché (sinon le champ reste masqué, client sélectionné).
+  if (!existante.client_id) setVal('do-prospect-nom', existante.prospect_nom);
   setVal('do-contact', i.contact); setVal('do-adresse', i.adresse); setVal('do-tel', i.tel); setVal('do-email', i.email);
   setVal('do-avs', i.avs); setVal('do-activite', i.activite); setVal('do-lieu-risque', i.lieu_risque);
   setVal('do-suva', i.suva); setVal('do-independant', i.independant);

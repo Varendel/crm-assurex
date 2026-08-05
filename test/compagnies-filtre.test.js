@@ -75,5 +75,15 @@ check(`Sans produit : CSS visible`, suggToutes.includes('CSS'), true);
 check(`Compagnie inconnue jamais masquée (RC véhicule)`, compagniePertinentePourProduit('Une Compagnie Jamais Vue Sàrl', 'rc_vehicule'), true);
 check(`Compagnie inconnue jamais masquée (LAMal)`, compagniePertinentePourProduit('Une Compagnie Jamais Vue Sàrl', 'lamal'), true);
 
+// Dédoublonnage compagnie : "Vaudoise Générale, Compagnie d'Assurances SA" (nom légal complet,
+// apostrophe droite, tel que saisi dans Paramètres → Contacts compagnies) doit se fondre avec
+// "La Vaudoise" (ALIAS_COMPAGNIES) plutôt que de ressortir comme une entrée séparée.
+{
+  const n1 = window.normaliserCompagnie("Vaudoise Générale, Compagnie d'Assurances SA");
+  const n2 = window.normaliserCompagnie('La Vaudoise');
+  check(`Dédoublonnage "Vaudoise Générale, Compagnie d'Assurances SA" -> La Vaudoise`, n1, 'La Vaudoise');
+  check(`normaliserCompagnie("La Vaudoise") inchangé`, n2, 'La Vaudoise');
+}
+
 console.log(`\n${pass} tests passés, ${fail} échoués.`);
 process.exit(fail > 0 ? 1 : 0);

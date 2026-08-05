@@ -1072,8 +1072,14 @@ function _cleCompagnieSansAccents(s) {
 function _cleCompagnieCanonique(s) {
   let cle = _cleCompagnieSansAccents(s);
   cle = cle
+    // Article défini en tête ("La Vaudoise", "Le X", "Les X") — uniquement en tête de chaîne,
+    // pour ne jamais toucher un "la/le/les" qui ferait partie du cœur du nom ailleurs.
+    .replace(/^(la|le|les)\s+/, '')
     .replace(/\bcompagnie d.assurances?\b/g, ' ')
     .replace(/\bassurances?\s*generales?\b/g, ' ')
+    // "Générale(s)" isolé — ex: "Vaudoise Générale, Compagnie d'Assurances SA" doit se ramener
+    // au même cœur que "La Vaudoise" une fois l'article et le suffixe juridique retirés.
+    .replace(/\bgenerale?s?\b/g, ' ')
     .replace(/\bassurances?\b/g, ' ')
     .replace(/\bversicherungen?\b/g, ' ')
     .replace(/\binsurance\b/g, ' ')

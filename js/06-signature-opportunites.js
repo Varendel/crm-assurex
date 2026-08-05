@@ -8,9 +8,26 @@ function switchTab(btn, tabId) {
 }
 
 // OPPORTUNITÉS
+let opportuniteEnEditionId = null;
+
+function editerOpportunite(id) {
+  opportuniteEnEditionId = id;
+  navigate('nouvelle-opportunite');
+}
+
+// Select de changement de stade réutilisé partout (kanban, gagnées, perdues) — stoppe la propagation
+// du clic pour ne pas déclencher l'ouverture de la fiche d'édition quand on choisit juste un stade.
+function selectStadeOpportunite(o, stadeActuel, tousLesStades) {
+  return `<select onclick="event.stopPropagation()" onchange="event.stopPropagation();changerStadeOpportunite('${o.id}', this.value)" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);font-size:10.5px;border-radius:5px;padding:3px 6px">
+    <option value="">Changer stade →</option>
+    ${tousLesStades.filter(s => s !== stadeActuel).map(s => `<option value="${s}">${s === 'Gagné' ? '✓ Gagné' : s === 'Perdu' ? '✕ Perdu' : s}</option>`).join('')}
+  </select>`;
+}
+
 function viewOpportunites() {
   const stadeColor = { Contact:'#64748b', Analyse:'#38bdf8', Proposition:'#f59e0b', Négociation:'#a78bfa' };
   const stades = ['Contact','Analyse','Proposition','Négociation'];
+  const tousLesStades = [...stades, 'Gagné', 'Perdu'];
   const OPPS = allOpportunites.filter(o => o.stade !== 'Gagné' && o.stade !== 'Perdu');
   const gagnees = allOpportunites.filter(o => o.stade === 'Gagné');
   const perdues = allOpportunites.filter(o => o.stade === 'Perdu');
@@ -32,9 +49,10 @@ function viewOpportunites() {
         <div style="font-size:11px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:0.8px">${stade}</div>
         <div style="font-size:10px;color:var(--text-muted);margin-left:auto">${opps.length}</div>
       </div>
-      ${opps.map(o => `<div class="kanban-card">
+      ${opps.map(o => `<div class="kanban-card" onclick="editerOpportunite('${o.id}')" style="cursor:pointer">
         <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:4px">${o.titre}</div>
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px">${nomClient(o)}${o.compagnie ? ' · ' + o.compagnie : ''}</div>
+        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:1px">${nomClient(o)}</div>
+        <div style="font-size:10.5px;color:var(--text-muted);margin-bottom:8px">${o.compagnie || '&nbsp;'}</div>
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span style="font-size:13px;font-weight:800;color:#f59e0b">CHF ${(o.montant_potentiel||0).toLocaleString()}</span>
           ${o.apporteur_id ? avatar(agentById(o.apporteur_id), 22) : ''}
@@ -42,12 +60,7 @@ function viewOpportunites() {
         <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:${o.probabilite||0}%;background:${color}"></div></div>
         <div style="font-size:10px;color:var(--text-muted);margin-top:6px;display:flex;justify-content:space-between;align-items:center">
           <span>${o.probabilite||0}%</span>
-          <select onchange="changerStadeOpportunite('${o.id}', this.value)" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);font-size:10px;border-radius:5px;padding:2px 4px">
-            <option value="">Changer →</option>
-            ${stades.filter(s => s !== stade).map(s => `<option value="${s}">${s}</option>`).join('')}
-            <option value="Gagné">✓ Gagné</option>
-            <option value="Perdu">✕ Perdu</option>
-          </select>
+          ${selectStadeOpportunite(o, stade, tousLesStades)}
         </div>
       </div>`).join('')}
       ${opps.length === 0 ? '<div class="kanban-empty">Aucune</div>' : ''}
@@ -57,9 +70,9 @@ function viewOpportunites() {
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
       <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Pipeline — Opportunités</h2>
-      <button class="btn-add" onclick="navigate('nouvelle-opportunite')">+ Nouvelle opportunité</button>
+      <button class="btn-add" onclick="opportuniteEnEditionId=null;navigate('nouvelle-opportunite')">+ Nouvelle opportunité</button>
     </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Suivi des affaires en négociation, avant signature. Une fois "Gagnée", l'opportunité ouvre directement le formulaire de contrat pré-rempli.</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Suivi des affaires en négociation, avant signature. Clique sur une carte pour la modifier (titre, montant, notes...). Une fois "Gagnée" depuis le menu de stade, l'opportunité ouvre directement le formulaire de contrat pré-rempli.</div>
     <div class="stat-grid" style="margin-bottom:20px">
       ${statCard('Pipeline total', 'CHF ' + total.toLocaleString(), '#f59e0b')}
       ${statCard('Pondéré', 'CHF ' + pondere.toLocaleString(), '#38bdf8')}
@@ -69,11 +82,21 @@ function viewOpportunites() {
     <div class="kanban">${kanban}</div>
     ${gagnees.length > 0 ? `<div style="margin-top:24px">
       <div style="font-size:11px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">✓ Gagnées (${gagnees.length})</div>
-      <div class="table-wrap">${gagnees.map(o => `<div class="table-row" style="grid-template-columns:1fr 140px 100px 80px">
+      <div class="table-wrap">${gagnees.map(o => `<div class="table-row" style="grid-template-columns:1fr 160px 100px 150px 110px;cursor:pointer" onclick="editerOpportunite('${o.id}')">
         <div style="font-weight:700;font-size:13px;color:var(--text)">${o.titre}</div>
-        <div style="font-size:12px;color:var(--text-muted)">${nomClient(o)}</div>
+        <div style="font-size:13px;font-weight:800;color:var(--text)">${nomClient(o)}</div>
         <div style="font-size:12px;font-weight:700;color:#f59e0b">CHF ${(o.montant_potentiel||0).toLocaleString()}</div>
+        <div>${selectStadeOpportunite(o, 'Gagné', tousLesStades)}</div>
         <div>${o.contrat_id ? badge('Contrat créé', '#4ade80') : badge('À finaliser', '#f59e0b')}</div>
+      </div>`).join('')}</div>
+    </div>` : ''}
+    ${perdues.length > 0 ? `<div style="margin-top:24px">
+      <div style="font-size:11px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">✕ Perdues (${perdues.length})</div>
+      <div class="table-wrap">${perdues.map(o => `<div class="table-row" style="grid-template-columns:1fr 160px 100px 150px;cursor:pointer" onclick="editerOpportunite('${o.id}')">
+        <div style="font-weight:700;font-size:13px;color:var(--text)">${o.titre}</div>
+        <div style="font-size:13px;font-weight:800;color:var(--text)">${nomClient(o)}</div>
+        <div style="font-size:12px;font-weight:700;color:var(--text-muted)">CHF ${(o.montant_potentiel||0).toLocaleString()}</div>
+        <div>${selectStadeOpportunite(o, 'Perdu', tousLesStades)}</div>
       </div>`).join('')}</div>
     </div>` : ''}`;
 }

@@ -1190,30 +1190,34 @@ async function saveDemandeOffre() {
 }
 
 function viewNouvelleOpportunite() {
-  const agentOptions = allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
-  const clientOptions = allClients.map(c => `<option value="${c.id}">${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`}</option>`).join('');
+  const opp = opportuniteEnEditionId ? allOpportunites.find(o => o.id === opportuniteEnEditionId) : null;
+  const agentOptions = allAgents.map(a => `<option value="${a.id}" ${opp && opp.apporteur_id === a.id ? 'selected' : ''}>${a.prenom} ${a.nom}</option>`).join('');
+  const clientOptions = allClients.map(c => `<option value="${c.id}" ${opp && opp.client_id === c.id ? 'selected' : ''}>${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`}</option>`).join('');
+  const stadesOptions = ['Contact','Analyse','Proposition','Négociation','Gagné','Perdu'];
+  const qa = (s) => (s || '').toString().replace(/"/g, '&quot;');
   return `
-    <button onclick="navigate('opportunites')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
-    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouvelle opportunité</h2>
+    <button onclick="opportuniteEnEditionId=null;navigate('opportunites')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
+    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">${opp ? 'Modifier l\u2019opportunité' : 'Nouvelle opportunité'}</h2>
     ${sectionCard('Détails', '#f59e0b', `<div class="form-grid">
-      <div class="form-field" style="grid-column:span 2"><label class="form-label">Titre *</label><input class="form-input" id="o-titre" placeholder="Ex: Assurance vie mixte 20 ans"/></div>
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Titre *</label><input class="form-input" id="o-titre" value="${qa(opp?.titre)}" placeholder="Ex: Assurance vie mixte 20 ans"/></div>
       <div class="form-field"><label class="form-label">Client (si déjà fiché)</label><select class="form-select" id="o-client" onchange="document.getElementById('o-prospect-field').style.display = this.value ? 'none' : ''"><option value="">— Prospect non encore fiché —</option>${clientOptions}</select></div>
-      <div class="form-field" id="o-prospect-field"><label class="form-label">Nom du prospect</label><input class="form-input" id="o-prospect-nom" placeholder="Ex: Jean Dupont (pas encore client)"/></div>
-      <div class="form-field"><label class="form-label">Compagnie</label><input class="form-input" id="o-compagnie" placeholder="Swiss Life, AXA..."/></div>
-      <div class="form-field"><label class="form-label">Montant potentiel (CHF)</label><input class="form-input" id="o-montant" type="number" placeholder="5000"/></div>
-      <div class="form-field"><label class="form-label">Probabilité %</label><input class="form-input" id="o-prob" type="number" value="50" min="0" max="100"/></div>
-      <div class="form-field"><label class="form-label">Stade</label><select class="form-select" id="o-stade"><option>Contact</option><option>Analyse</option><option>Proposition</option><option>Négociation</option><option>Gagné</option></select></div>
-      <div class="form-field"><label class="form-label">Échéance</label><input class="form-input" id="o-date" type="date"/></div>
+      <div class="form-field" id="o-prospect-field" style="${opp && opp.client_id ? 'display:none' : ''}"><label class="form-label">Nom du prospect</label><input class="form-input" id="o-prospect-nom" value="${qa(opp?.prospect_nom)}" placeholder="Ex: Jean Dupont (pas encore client)"/></div>
+      <div class="form-field"><label class="form-label">Compagnie</label><input class="form-input" id="o-compagnie" value="${qa(opp?.compagnie)}" placeholder="Swiss Life, AXA..."/></div>
+      <div class="form-field"><label class="form-label">Montant potentiel (CHF)</label><input class="form-input" id="o-montant" type="number" value="${opp?.montant_potentiel || ''}" placeholder="5000"/></div>
+      <div class="form-field"><label class="form-label">Probabilité %</label><input class="form-input" id="o-prob" type="number" value="${opp ? (opp.probabilite ?? 50) : 50}" min="0" max="100"/></div>
+      <div class="form-field"><label class="form-label">Stade</label><select class="form-select" id="o-stade">${stadesOptions.map(s => `<option ${opp && opp.stade === s ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
+      <div class="form-field"><label class="form-label">Échéance</label><input class="form-input" id="o-date" type="date" value="${opp?.date_echeance || ''}"/></div>
       <div class="form-field"><label class="form-label">Agent responsable</label><select class="form-select" id="o-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
-      <div class="form-field" style="grid-column:span 2"><label class="form-label">Notes</label><textarea class="form-input" id="o-notes" rows="3" style="resize:vertical"></textarea></div>
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Notes</label><textarea class="form-input" id="o-notes" rows="3" style="resize:vertical">${opp?.notes || ''}</textarea></div>
     </div>`)}
     <div style="display:flex;gap:10px;margin-top:8px">
-      <button class="btn-secondary" onclick="navigate('opportunites')">Annuler</button>
-      <button class="btn-save" onclick="saveOpportunite()">✓ Enregistrer</button>
+      ${opp ? `<button onclick="supprimerOpportunite('${opp.id}')" style="background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>` : ''}
+      <button class="btn-secondary" onclick="opportuniteEnEditionId=null;navigate('opportunites')">Annuler</button>
+      <button class="btn-save" onclick="saveOpportunite('${opp ? opp.id : ''}')">✓ ${opp ? 'Enregistrer les modifications' : 'Enregistrer'}</button>
     </div>`;
 }
 
-async function saveOpportunite() {
+async function saveOpportunite(id) {
   const titre = document.getElementById('o-titre').value.trim();
   if (!titre) { alert('Titre obligatoire.'); return; }
   const body = {
@@ -1230,12 +1234,22 @@ async function saveOpportunite() {
   };
   const btn = document.querySelector('.btn-save');
   btn.textContent = 'Enregistrement...'; btn.disabled = true;
-  const r = await dbPost('opportunites', body);
+  const r = id ? await dbPatch('opportunites', id, body) : await dbPost('opportunites', body);
   if (r && r.error) {
-    showError('Erreur lors de la création de l\u2019opportunité : ' + errMsg(r));
-    btn.textContent = '✓ Enregistrer'; btn.disabled = false;
+    showError(`Erreur lors de ${id ? "la modification" : "la création"} de l\u2019opportunité : ` + errMsg(r));
+    btn.textContent = id ? '✓ Enregistrer les modifications' : '✓ Enregistrer'; btn.disabled = false;
     return;
   }
+  opportuniteEnEditionId = null;
+  allOpportunites = await dbGet('opportunites', 'select=*');
+  navigate('opportunites');
+}
+
+async function supprimerOpportunite(id) {
+  if (!confirm('Supprimer définitivement cette opportunité ?')) return;
+  const r = await dbDelete('opportunites', id);
+  if (r && r.error) { showError('Erreur lors de la suppression : ' + errMsg(r)); return; }
+  opportuniteEnEditionId = null;
   allOpportunites = await dbGet('opportunites', 'select=*');
   navigate('opportunites');
 }

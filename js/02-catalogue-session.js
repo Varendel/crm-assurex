@@ -710,6 +710,111 @@ const CATALOGUE_PRODUITS = {
   ],
 };
 
+// ═══ Filtre "Compagnie" selon le produit sélectionné ═══════════════════════════════════
+// Objectif : dans le formulaire Nouveau contrat, ne suggérer (datalist, pas de blocage — le
+// champ Compagnie reste un texte libre) que les compagnies pertinentes pour le produit choisi.
+// Ex: en saisissant "RC véhicule", Swiss Life/HOTELA/CSS/CAP/goCaution... ne doivent plus sortir.
+//
+// Principe volontairement PRUDENT : chaque produit reçoit une ou plusieurs étiquettes de
+// "branche". Une compagnie n'est exclue d'une branche QUE si elle figure dans
+// COMPAGNIE_BRANCHES avec un périmètre qui ne couvre PAS cette branche (fait structurel/légal
+// bien établi, ex: seules les caisses-maladie agréées LAMal peuvent vendre du LAMal — art. 11-13
+// LSAMal). Toute compagnie absente de COMPAGNIE_BRANCHES (saisie libre, nouvelle compagnie
+// ajoutée dans Paramètres...) reste TOUJOURS suggérée, quel que soit le produit — on ne masque
+// jamais par excès de prudence, on masque seulement les cas certains.
+// Si une compagnie manque à l'appel ou est mal classée : corrige/complète cette table plutôt
+// que de contourner le filtre — il reste un texte libre en dernier recours de toute façon.
+const PRODUIT_BRANCHES = {
+  // Véhicules
+  rc_vehicule: ['vehicule'], vehicule_rc: ['vehicule'], casco_partielle: ['vehicule'], casco_complete: ['vehicule'],
+  flotte_entreprise: ['vehicule'], pj_circulation: ['vehicule', 'protection_juridique'], pj_contractuelle: ['vehicule', 'protection_juridique'],
+  // RC hors véhicules
+  rc_privee: ['rc_non_vehicule'], rc_entreprise: ['rc_non_vehicule'], rc_pro: ['rc_non_vehicule'],
+  rc_commerce: ['rc_non_vehicule'], rc_do: ['rc_non_vehicule'], rc_batiment: ['rc_non_vehicule', 'menage_batiment'],
+  rc_drone: ['rc_non_vehicule'], rc_inventaire: ['rc_non_vehicule', 'menage_batiment'],
+  // Ménage / bâtiment
+  menage: ['menage_batiment'], batiment_prive: ['menage_batiment'], batiment_entreprise: ['menage_batiment'],
+  // Caution de loyer
+  caution_bail_prive: ['caution'], caution_bail_commercial: ['caution'],
+  // Protection juridique
+  pj_privee: ['protection_juridique'], pj_pro: ['protection_juridique'],
+  // Vie / prévoyance liée
+  vie_3a: ['vie'], compte_3a: ['vie'], vie_3b_mixte: ['vie'], vie_3b_risque: ['vie'], vie_3b_placement: ['vie'],
+  libre_passage: ['vie'], prevoyance_enfant: ['vie'],
+  // LPP (2e pilier collectif)
+  lpp_entreprise: ['lpp'], lpp_individuelle: ['lpp'],
+  // LAMal (base)
+  lamal: ['lamal'],
+  // Complémentaire santé (LCA)
+  helsana_top: ['sante_complementaire'], helsana_sana: ['sante_complementaire'], helsana_completa: ['sante_complementaire'],
+  helsana_completa_plus: ['sante_complementaire'], helsana_primeo: ['sante_complementaire'], gm_premium: ['sante_complementaire'],
+  gm_global_smart: ['sante_complementaire'], gm_global_mi_privee: ['sante_complementaire'], gm_global_privee: ['sante_complementaire'],
+  gm_global_flex: ['sante_complementaire'], lca_autre_compagnie: ['sante_complementaire'],
+  // Assurances de personnes entreprise (LAA, perte de gain collective)
+  laa: ['entreprise_personnes'], laac: ['entreprise_personnes'], perte_gain_maladie_collective: ['entreprise_personnes'],
+  perte_gain_accident_collective: ['entreprise_personnes'], sante_collective_entreprise: ['entreprise_personnes'],
+  // Entreprise — risques spécifiques
+  pertes_exploitation: ['entreprise_risques'], cyber_entreprise: ['entreprise_risques'], choses_entreprise: ['entreprise_risques'],
+  // 'autre' volontairement absent : aucun filtre, toutes les compagnies restent suggérées.
+};
+
+// compagnie normalisée (cf. normaliserCompagnie) -> branches qu'elle couvre EFFECTIVEMENT.
+// N'y figurent que les compagnies dont le périmètre est structurellement limité et bien connu ;
+// les compagnies multi-branches "généralistes" (AXA, Zurich, Baloise, La Vaudoise, La Mobilière,
+// Allianz, Generali...) sont volontairement ABSENTES de cette table (donc jamais masquées) à
+// l'exception du LAMal/complémentaire santé, qu'aucune d'elles ne peut légalement vendre.
+const COMPAGNIE_BRANCHES = {
+  // Caisses-maladie agréées LAMal — ne vendent, par construction légale (LSAMal), que du LAMal,
+  // de la complémentaire santé (LCA) et, pour la plupart, de la perte de gain maladie / LAA
+  // collective aux entreprises (Helsana Business, Groupe Mutuel Entreprise, etc.). Jamais de
+  // véhicule, RC, ménage, vie ou LPP.
+  'Helsana': ['lamal', 'sante_complementaire', 'entreprise_personnes'],
+  'Sanitas': ['lamal', 'sante_complementaire', 'entreprise_personnes'],
+  'CSS': ['lamal', 'sante_complementaire', 'entreprise_personnes'],
+  'Visana': ['lamal', 'sante_complementaire', 'entreprise_personnes'],
+  'SWICA': ['lamal', 'sante_complementaire', 'entreprise_personnes'],
+  'Groupe Mutuel': ['lamal', 'sante_complementaire', 'entreprise_personnes'],
+  'Assura': ['lamal', 'sante_complementaire'],
+  // Assureurs-vie purs — pas de licence non-vie en Suisse.
+  'Swiss Life': ['vie', 'lpp'],
+  'PAX': ['vie', 'lpp'],
+  // Institutions sectorielles hôtellerie-restauration (CCNT) — LPP + assurances de personnes,
+  // rien d'autre.
+  'HOTELA': ['lpp', 'entreprise_personnes'],
+  'Gastrosocial': ['lpp', 'entreprise_personnes'],
+  // Assureur-accidents statutaire (LAA obligatoire secteurs industriels) — ne vend que ça.
+  'SUVA': ['entreprise_personnes'],
+  // Spécialiste protection juridique.
+  'CAP': ['protection_juridique'],
+  // Spécialistes caution de loyer.
+  'SwissCaution': ['caution'], 'FirstCaution': ['caution'], 'goCaution': ['caution'], 'SmartCaution': ['caution'],
+};
+
+// Assureurs généralistes non-vie/vie bien identifiés (véhicule, RC, ménage, entreprise, vie,
+// LPP selon les cas) mais qui ne sont PAS des caisses-maladie agréées LSAMal — jamais de LAMal
+// ni de complémentaire santé chez eux. Volontairement PAS dans COMPAGNIE_BRANCHES (allowlist
+// stricte) pour ne pas leur inventer un périmètre exhaustif qu'on ne maîtrise pas branche par
+// branche : cette liste sert uniquement à exclure lamal/sante_complementaire, rien d'autre.
+const COMPAGNIES_GENERALISTES_SANS_LAMAL = ['AXA', 'Zurich', 'Baloise', 'La Vaudoise', 'La Mobilière', 'Allianz', 'Generali'];
+
+// Une compagnie est pertinente pour un produit si :
+//  1. le produit n'a pas d'étiquette de branche connue -> pas de filtre, toujours pertinente ;
+//  2. la compagnie a un périmètre restreint connu (COMPAGNIE_BRANCHES) -> pertinente seulement
+//     si ce périmètre couvre au moins une des branches du produit ;
+//  3. sinon, pour LAMal/complémentaire santé uniquement : exclut les généralistes non-vie/vie
+//     connus (jamais agréés LSAMal), sans rien présumer de leurs autres branches ;
+//  4. dans tous les autres cas (compagnie inconnue, non classée) -> jamais masquée.
+function compagniePertinentePourProduit(nomCompagnie, produitId) {
+  const branchesProduit = PRODUIT_BRANCHES[produitId];
+  if (!branchesProduit || !branchesProduit.length) return true;
+  const nomNormalise = typeof normaliserCompagnie === 'function' ? normaliserCompagnie(nomCompagnie) : nomCompagnie;
+  const branchesCompagnie = COMPAGNIE_BRANCHES[nomNormalise];
+  if (branchesCompagnie) return branchesProduit.some(b => branchesCompagnie.includes(b));
+  const cibleLamalOuSante = branchesProduit.includes('lamal') || branchesProduit.includes('sante_complementaire');
+  if (cibleLamalOuSante && COMPAGNIES_GENERALISTES_SANS_LAMAL.includes(nomNormalise)) return false;
+  return true;
+}
+
 let msalAccessToken = null;
 let calendarEvents = [];
 

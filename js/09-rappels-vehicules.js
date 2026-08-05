@@ -417,7 +417,7 @@ function viewNouveauContrat() {
         <option value="prive">Privé</option>
         <option value="entreprise">Entreprise</option>
       </select></div>
-      <div class="form-field"><label class="form-label">Compagnie *</label><input class="form-input" id="ct-compagnie" value="${opp && opp.compagnie ? opp.compagnie : ''}" placeholder="Swiss Life, AXA, Helsana..." list="compagnies-suggestions" autocomplete="off" oninput="refreshCategoriesLignesPrime(); updateCommissionPreview()"/><datalist id="compagnies-suggestions">${getCompagniesConnues().map(c => `<option value="${c}">`).join('')}</datalist></div>
+      <div class="form-field"><label class="form-label">Compagnie *</label><input class="form-input" id="ct-compagnie" value="${opp && opp.compagnie ? opp.compagnie : ''}" placeholder="Swiss Life, AXA, Helsana..." list="compagnies-suggestions" autocomplete="off" oninput="refreshCategoriesLignesPrime(); updateCommissionPreview()"/><datalist id="compagnies-suggestions">${getCompagniesConnues(getProduitSelectionne() ? getProduitSelectionne().id : null).map(c => `<option value="${c}">`).join('')}</datalist></div>
       <div class="form-field"><label class="form-label">Catégorie *</label><select class="form-select" id="ct-categorie" onchange="updateProduitOptions()"></select></div>
       <div class="form-field"><label class="form-label">Produit *</label><select class="form-select" id="ct-produit" onchange="updateModulesOptions(); updateCommissionPreview()"><option value="">— Sélectionner —</option></select></div>
       <div class="form-field" style="grid-column:span 2" id="ct-modules-field"><label class="form-label">Modules complémentaires</label><div id="ct-modules-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div><div style="font-size:10px;color:var(--text-muted);margin-top:4px" id="ct-modules-hint"></div>
@@ -554,6 +554,7 @@ function updateProduitOptions() {
       const compField = document.getElementById('ct-compagnie');
       if (compField && !compField.value) compField.value = prodTrouve.compagnie_fixe;
     }
+    refreshCompagniesSuggestions();
     updateModulesOptions();
     updateCommissionPreview();
   };
@@ -1103,7 +1104,10 @@ function normaliserCompagnie(nom) {
   return nom.trim();
 }
 
-function getCompagniesConnues() {
+// produitId (optionnel) : filtre la liste aux compagnies pertinentes pour ce produit (cf.
+// COMPAGNIE_BRANCHES / compagniePertinentePourProduit dans 02-catalogue-session.js). Sans
+// produitId, retourne toutes les compagnies connues (comportement inchangé).
+function getCompagniesConnues(produitId) {
   const base = ['Swiss Life', 'AXA', 'Helsana', 'Sanitas', 'Allianz', 'Zurich', 'Generali', 'Baloise', 'CSS', 'Groupe Mutuel', 'Visana', 'SWICA', 'SwissCaution', 'FirstCaution', 'goCaution', 'SmartCaution'];
   // Source prioritaire : Paramètres → Contacts compagnies (Supabase, synchronisé pour toute l'équipe)
   const depuisParametres = (allCompagniesContacts || []).map(c => c.compagnie).filter(Boolean);
@@ -1116,7 +1120,20 @@ function getCompagniesConnues() {
     const cle = nomNormalise.trim().toLowerCase();
     if (!vues.has(cle)) vues.set(cle, nomNormalise);
   });
-  return [...vues.values()].sort();
+  let noms = [...vues.values()];
+  if (produitId) noms = noms.filter(nom => compagniePertinentePourProduit(nom, produitId));
+  return noms.sort();
+}
+
+// Repeuple le datalist #compagnies-suggestions selon le produit actuellement sélectionné —
+// appelée à chaque changement de produit (cf. updateProduitOptions ci-dessous), pour que la
+// saisie de "Compagnie" ne propose plus, par ex., Swiss Life/HOTELA/CSS/CAP pour une "RC véhicule".
+function refreshCompagniesSuggestions() {
+  const datalist = document.getElementById('compagnies-suggestions');
+  if (!datalist) return;
+  const produit = typeof getProduitSelectionne === 'function' ? getProduitSelectionne() : null;
+  const produitId = produit ? produit.id : null;
+  datalist.innerHTML = getCompagniesConnues(produitId).map(c => `<option value="${c}">`).join('');
 }
 
 function memoriserCompagnie(nom) {

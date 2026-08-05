@@ -49,10 +49,12 @@ function viewOpportunites() {
         <div style="font-size:11px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:0.8px">${stade}</div>
         <div style="font-size:10px;color:var(--text-muted);margin-left:auto">${opps.length}</div>
       </div>
-      ${opps.map(o => `<div class="kanban-card" onclick="editerOpportunite('${o.id}')" style="cursor:pointer">
+      ${opps.map(o => {
+        const tachesOuvertes = allRappels.filter(r => r.opportunite_id === o.id && r.statut === 'ouvert').length;
+        return `<div class="kanban-card" onclick="editerOpportunite('${o.id}')" style="cursor:pointer">
         <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:4px">${o.titre}</div>
         <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:1px">${nomClient(o)}</div>
-        <div style="font-size:10.5px;color:var(--text-muted);margin-bottom:8px">${o.compagnie || '&nbsp;'}</div>
+        <div style="font-size:10.5px;color:var(--text-muted);margin-bottom:8px">${o.compagnie || '&nbsp;'}${tachesOuvertes > 0 ? ` · ☑ ${tachesOuvertes} tâche${tachesOuvertes > 1 ? 's' : ''}` : ''}</div>
         <div style="display:flex;justify-content:space-between;align-items:center">
           <span style="font-size:13px;font-weight:800;color:#f59e0b">CHF ${(o.montant_potentiel||0).toLocaleString()}</span>
           ${o.apporteur_id ? avatar(agentById(o.apporteur_id), 22) : ''}
@@ -62,7 +64,8 @@ function viewOpportunites() {
           <span>${o.probabilite||0}%</span>
           ${selectStadeOpportunite(o, stade, tousLesStades)}
         </div>
-      </div>`).join('')}
+      </div>`;
+      }).join('')}
       ${opps.length === 0 ? '<div class="kanban-empty">Aucune</div>' : ''}
     </div>`;
   }).join('');
@@ -99,6 +102,42 @@ function viewOpportunites() {
         <div>${selectStadeOpportunite(o, 'Perdu', tousLesStades)}</div>
       </div>`).join('')}</div>
     </div>` : ''}`;
+}
+
+// ── Tâches liées à une opportunité (réutilise la table rappels, colonne opportunite_id) ──
+async function ajouterTacheOpportunite(oppId) {
+  const input = document.getElementById('opp-nouvelle-tache');
+  const titre = input.value.trim();
+  if (!titre) return;
+  const opp = allOpportunites.find(o => o.id === oppId);
+  const body = {
+    titre,
+    nature: 'rappel',
+    type: 'Opportunité',
+    client_id: opp ? (opp.client_id || null) : null,
+    opportunite_id: oppId,
+    urgence: 'moyenne',
+    statut: 'ouvert',
+  };
+  input.value = '';
+  const r = await dbPost('rappels', body);
+  if (r && r.error) { showError('Erreur lors de l\u2019ajout de la tâche : ' + errMsg(r)); return; }
+  allRappels = await dbGet('rappels', 'select=*');
+  navigate('nouvelle-opportunite');
+}
+
+async function toggleTacheOpportunite(id, fait) {
+  const r = await dbPatch('rappels', id, { statut: fait ? 'traité' : 'ouvert' });
+  if (r && r.error) { showError('Erreur : ' + errMsg(r)); return; }
+  allRappels = await dbGet('rappels', 'select=*');
+  navigate('nouvelle-opportunite');
+}
+
+async function supprimerTacheOpportunite(id) {
+  const r = await dbDelete('rappels', id);
+  if (r && r.error) { showError('Erreur lors de la suppression : ' + errMsg(r)); return; }
+  allRappels = await dbGet('rappels', 'select=*');
+  navigate('nouvelle-opportunite');
 }
 
 async function changerStadeOpportunite(id, nouveauStade) {

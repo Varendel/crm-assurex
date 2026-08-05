@@ -487,6 +487,7 @@ const SECTIONS = [
     { id: 'import-decompte', label: '📊 Import décompte (Excel IG B2B)' },
     { id: 'commissions', label: 'Commissions', staff: true },
     { id: 'commissions-attente', label: 'Toutes les commissions' },
+    { id: 'suivi-financier', label: '💰 Suivi financier' },
     { id: 'fiche-paie', label: 'Fiche de paie (agents)' },
     { id: 'rapport-finma', label: 'Rapport FINMA' },
     { id: 'production', label: 'Production (par période)', staff: true },
@@ -756,6 +757,7 @@ async function renderView() {
       main.innerHTML = viewCommissionsAttente();
       break;
     case 'rapport-finma': main.innerHTML = viewRapportFinma(); break;
+    case 'suivi-financier': main.innerHTML = viewSuiviFinancier(); break;
     case 'production': main.innerHTML = viewProduction(); break;
     case 'opportunites': main.innerHTML = viewOpportunites(); break;
     case 'suivi': main.innerHTML = viewSuivi(); break;

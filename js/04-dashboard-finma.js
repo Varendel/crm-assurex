@@ -1239,3 +1239,163 @@ function renderVueEnsembleCouvertures(client, contrats, isEntreprise) {
     </div>`;
 }
 
+// ═══ SUIVI FINANCIER — pilotage des paiements de commissions (prévu vs réel) ═══
+function viewSuiviFinancier() {
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0, 10);
+  const joursEntre = (d1, d2) => Math.round((new Date(d2) - new Date(d1)) / 86400000);
+
+  const enAttente = allCommissionsAttente.filter(ca => ca.statut === 'en_attente');
+  const totalEnAttente = enAttente.reduce((s, ca) => s + Number(ca.montant_estime || 0), 0);
+
+  const payees = allCommissionsAttente.filter(ca => ca.statut === 'reçue' || ca.statut === 'versé_oz');
+  const totalRecu = payees.reduce((s, ca) => s + Number(ca.montant_final || ca.montant_estime || 0), 0);
+
+  // Délai réel de paiement : uniquement calculable sur les dossiers dont la date de réception a été
+  // capturée (import de décompte rapproché) — la plupart des lignes "versé_oz" historiques (bascule du
+  // 01.06.2026) n'ont pas de date de réception précise, seulement un statut. Ce chiffre s'affinera avec
+  // le temps à mesure que les décomptes compagnies sont importés et rapprochés.
+  const avecDelai = allCommissionsAttente.filter(ca => ca.date_creation && ca.date_reception);
+  const delais = avecDelai.map(ca => joursEntre(ca.date_creation, ca.date_reception)).filter(j => j >= 0);
+  const delaiMoyen = delais.length ? Math.round(delais.reduce((s, j) => s + j, 0) / delais.length) : null;
+
+  const SEUIL_RETARD = 45;
+  const enRetard = enAttente
+    .filter(ca => ca.date_creation && joursEntre(ca.date_creation, todayStr) > SEUIL_RETARD)
+    .sort((a, b) => a.date_creation.localeCompare(b.date_creation));
+  const totalEnRetard = enRetard.reduce((s, ca) => s + Number(ca.montant_estime || 0), 0);
+
+  // ── Chart 1 : pipeline créé par mois (date_creation = quand le dossier est entré en attente) ──
+  const moisListe = [];
+  for (let i = 7; i >= 0; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    moisListe.push({ key: d.toISOString().slice(0, 7), label: d.toLocaleDateString('fr-CH', { month: 'short', year: '2-digit' }) });
+  }
+  const dataMois = moisListe.map(m => {
+    const prevu = allCommissionsAttente.filter(ca => (ca.date_creation || '').slice(0, 7) === m.key).reduce((s, ca) => s + Number(ca.montant_estime || 0), 0);
+    const recu = allCommissionsAttente.filter(ca => (ca.date_reception || '').slice(0, 7) === m.key).reduce((s, ca) => s + Number(ca.montant_final || ca.montant_estime || 0), 0);
+    return { ...m, prevu, recu };
+  });
+  const maxMois = Math.max(...dataMois.map(m => Math.max(m.prevu, m.recu)), 1);
+
+  // ── Chart 2 : ancienneté des dossiers en attente (0-30 / 30-60 / 60-90 / +90 jours) ──
+  const buckets = [
+    { label: '0-30j', test: j => j <= 30, color: '#4ade80' },
+    { label: '30-60j', test: j => j > 30 && j <= 60, color: '#f59e0b' },
+    { label: '60-90j', test: j => j > 60 && j <= 90, color: '#fb923c' },
+    { label: '+90j', test: j => j > 90, color: '#f87171' },
+  ];
+  const bucketsData = buckets.map(b => {
+    const liste = enAttente.filter(ca => ca.date_creation && b.test(joursEntre(ca.date_creation, todayStr)));
+    return { ...b, nb: liste.length, montant: liste.reduce((s, ca) => s + Number(ca.montant_estime || 0), 0) };
+  });
+  const maxBucket = Math.max(...bucketsData.map(b => b.montant), 1);
+
+  // ── Chart 3 : répartition des commissions en attente par compagnie (top 8) ──
+  const parCompagnie = {};
+  enAttente.forEach(ca => {
+    const nom = ca.compagnie || '—';
+    parCompagnie[nom] = (parCompagnie[nom] || 0) + Number(ca.montant_estime || 0);
+  });
+  const compagniesData = Object.entries(parCompagnie).map(([nom, montant]) => ({ nom, montant })).sort((a, b) => b.montant - a.montant).slice(0, 8);
+  const maxCompagnie = Math.max(...compagniesData.map(c => c.montant), 1);
+  const paletteCompagnies = ['#38bdf8', '#f59e0b', '#4ade80', '#a78bfa', '#f87171', '#fb923c', '#22d3ee', '#e879f9'];
+
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">💰 Suivi financier — Pilotage</h2>
+      <button onclick="navigate('suivi-financier')" title="Recharger" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:9px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">🔄 Actualiser</button>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Vue prévu vs réel des paiements de commission, pour piloter la trésorerie au jour le jour.</div>
+
+    <div class="stat-grid" style="margin-bottom:20px">
+      ${statCard('En attente', 'CHF ' + Math.round(totalEnAttente).toLocaleString(), '#f59e0b', `${enAttente.length} dossier(s)`)}
+      ${statCard('Reçu (cumulé)', 'CHF ' + Math.round(totalRecu).toLocaleString(), '#4ade80', `${payees.length} dossier(s)`)}
+      ${statCard('Délai moyen de paiement', delaiMoyen !== null ? delaiMoyen + ' j' : '—', '#38bdf8', delais.length ? `basé sur ${delais.length} dossier(s)` : 'pas encore assez de données')}
+      ${statCard('En retard (+' + SEUIL_RETARD + 'j)', enRetard.length, enRetard.length > 0 ? '#f87171' : '#64748b', 'CHF ' + Math.round(totalEnRetard).toLocaleString())}
+    </div>
+
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">📈 Pipeline créé vs commissions reçues, par mois</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:18px">Barres claires = montant entré dans le pipeline ce mois-là (prévu). Barres pleines = montant dont la date de réception réelle est connue ce mois-là. La majorité des paiements historiques ("versé_oz") n'ont pas encore de date de réception précise — ce graphique se remplira automatiquement au fil des décomptes compagnie importés et rapprochés.</div>
+      <div style="display:flex;align-items:flex-end;gap:10px;height:140px;margin-bottom:8px">
+        ${dataMois.map(m => {
+          const hPrevu = Math.max(Math.round(m.prevu / maxMois * 110), m.prevu > 0 ? 4 : 1);
+          const hRecu = Math.max(Math.round(m.recu / maxMois * 110), m.recu > 0 ? 4 : 1);
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
+            <div style="display:flex;align-items:flex-end;gap:3px;height:100%">
+              <div title="Prévu : CHF ${Math.round(m.prevu).toLocaleString()}" style="width:12px;height:${hPrevu}px;background:rgba(56,189,248,0.25);border:1px solid #38bdf8;border-radius:3px 3px 0 0"></div>
+              <div title="Reçu : CHF ${Math.round(m.recu).toLocaleString()}" style="width:12px;height:${hRecu}px;background:#4ade80;border-radius:3px 3px 0 0"></div>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;gap:10px">
+        ${dataMois.map(m => `<div style="flex:1;text-align:center;font-size:10px;color:var(--text-muted)">${m.label}</div>`).join('')}
+      </div>
+      <div style="display:flex;gap:16px;margin-top:14px">
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted)"><div style="width:10px;height:10px;border-radius:2px;background:rgba(56,189,248,0.25);border:1px solid #38bdf8"></div>Prévu</div>
+        <div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-muted)"><div style="width:10px;height:10px;border-radius:2px;background:#4ade80"></div>Reçu (date connue)</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px">
+        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">⏳ Ancienneté des dossiers en attente</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:18px">Depuis combien de temps chaque dossier attend son paiement</div>
+        <div style="display:flex;align-items:flex-end;gap:14px;height:110px;margin-bottom:6px">
+          ${bucketsData.map(b => {
+            const h = Math.max(Math.round(b.montant / maxBucket * 90), b.montant > 0 ? 6 : 2);
+            return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
+              <div style="font-size:10px;font-weight:800;color:${b.color};margin-bottom:4px">${b.montant > 0 ? Math.round(b.montant/1000) + 'k' : '—'}</div>
+              <div style="width:100%;max-width:44px;height:${h}px;background:${b.color};border-radius:5px 5px 2px 2px;opacity:${b.nb>0?1:0.25}"></div>
+            </div>`;
+          }).join('')}
+        </div>
+        <div style="display:flex;gap:14px">
+          ${bucketsData.map(b => `<div style="flex:1;text-align:center"><div style="font-size:10px;color:var(--text-muted)">${b.label}</div><div style="font-size:10px;color:var(--text-dim)">${b.nb}</div></div>`).join('')}
+        </div>
+      </div>
+
+      <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px">
+        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">🏢 En attente par compagnie</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:18px">Où sont concentrés les montants en attente</div>
+        ${compagniesData.map((c, i) => `
+          <div style="margin-bottom:10px">
+            <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px">
+              <span style="color:var(--text);font-weight:700">${c.nom}</span>
+              <span style="color:var(--text-muted)">CHF ${Math.round(c.montant).toLocaleString()}</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(c.montant/maxCompagnie*100)}%;background:${paletteCompagnies[i % paletteCompagnies.length]}"></div></div>
+          </div>`).join('')}
+      </div>
+    </div>
+
+    ${enRetard.length > 0 ? `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:800;color:#f87171;margin-bottom:14px">🚨 Dossiers en retard de plus de ${SEUIL_RETARD} jours (${enRetard.length})</div>
+      <div class="table-wrap">
+        <div class="table-header" style="grid-template-columns:1fr 130px 100px 90px 90px"><div>Client</div><div>Compagnie</div><div>Depuis le</div><div>Jours</div><div>Montant</div></div>
+        ${enRetard.map(ca => `<div class="table-row" style="grid-template-columns:1fr 130px 100px 90px 90px">
+          <div style="font-weight:700;font-size:13px;color:var(--text)">${ca.client_nom || '—'}</div>
+          <div style="font-size:12px;color:var(--text-muted)">${ca.compagnie || '—'}</div>
+          <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ca.date_creation)}</div>
+          <div style="font-size:12px;font-weight:700;color:#f87171">${joursEntre(ca.date_creation, todayStr)} j</div>
+          <div style="font-size:12px;font-weight:700;color:#f59e0b">CHF ${Math.round(ca.montant_estime||0).toLocaleString()}</div>
+        </div>`).join('')}
+      </div>
+    </div>` : ''}
+
+    <div style="background:var(--surface-alt);border:1px solid var(--border);border-radius:14px;padding:22px">
+      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:12px">💡 Idées de pilotage supplémentaires (chantier à développer)</div>
+      <div style="font-size:12px;color:var(--text-muted);line-height:1.9">
+        • <strong style="color:var(--text)">Fiabiliser les dates de paiement réelles</strong> — les 140 lignes "versé_oz" historiques n'ont pas de date de réception précise (import en bloc lors de la bascule du 01.06.2026). Chaque décompte compagnie importé et rapproché capture désormais cette date automatiquement : le graphique prévu/reçu et le délai moyen s'affineront tout seuls avec le temps.<br/>
+        • <strong style="color:var(--text)">Délai moyen par compagnie</strong> — une fois assez de décomptes rapprochés, un graphique dédié pourra montrer quelles compagnies paient vite ou lentement, pour prioriser les relances.<br/>
+        • <strong style="color:var(--text)">Objectif de trésorerie mensuel</strong> — définir une cible CHF/mois et afficher une barre de progression (réalisé vs objectif) en temps réel.<br/>
+        • <strong style="color:var(--text)">Alerte de retard anormal</strong> — signaler automatiquement un dossier qui dépasse le délai moyen habituel de sa compagnie, plutôt qu'un seuil fixe unique.<br/>
+        • <strong style="color:var(--text)">Prévision de trésorerie à 30/60/90 jours</strong> — projeter les encaissements attendus en pondérant le montant en attente par un taux de recouvrement historique par compagnie.<br/>
+        • <strong style="color:var(--text)">Taux de perte</strong> — suivre le % de dossiers qui passent en "annulé" avant paiement, par compagnie et par produit, pour détecter un problème récurrent.<br/>
+        • <strong style="color:var(--text)">Export mensuel</strong> — packet PDF/Excel de ce pilotage, prêt à transmettre au comptable ou à Assurex.
+      </div>
+    </div>`;
+}

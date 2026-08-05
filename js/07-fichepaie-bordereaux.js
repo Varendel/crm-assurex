@@ -1210,10 +1210,29 @@ function viewNouvelleOpportunite() {
       <div class="form-field"><label class="form-label">Agent responsable</label><select class="form-select" id="o-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Notes</label><textarea class="form-input" id="o-notes" rows="3" style="resize:vertical">${opp?.notes || ''}</textarea></div>
     </div>`)}
+    ${opp ? sectionCard('Tâches', '#4ade80', renderTachesOpportunite(opp)) : ''}
     <div style="display:flex;gap:10px;margin-top:8px">
       ${opp ? `<button onclick="supprimerOpportunite('${opp.id}')" style="background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>` : ''}
       <button class="btn-secondary" onclick="opportuniteEnEditionId=null;navigate('opportunites')">Annuler</button>
       <button class="btn-save" onclick="saveOpportunite('${opp ? opp.id : ''}')">✓ ${opp ? 'Enregistrer les modifications' : 'Enregistrer'}</button>
+    </div>`;
+}
+
+// Liste des tâches (table rappels, colonne opportunite_id) rattachées à une opportunité —
+// cases à cocher pour marquer fait/à faire, sans quitter le formulaire d'édition.
+function renderTachesOpportunite(opp) {
+  const taches = allRappels.filter(r => r.opportunite_id === opp.id).sort((a, b) => (a.statut === b.statut) ? 0 : (a.statut === 'ouvert' ? -1 : 1));
+  const liste = taches.length ? taches.map(t => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <input type="checkbox" ${t.statut === 'traité' ? 'checked' : ''} onchange="toggleTacheOpportunite('${t.id}', this.checked)" style="width:16px;height:16px;cursor:pointer;flex-shrink:0"/>
+      <span style="flex:1;font-size:13px;color:${t.statut === 'traité' ? 'var(--text-muted)' : 'var(--text)'};${t.statut === 'traité' ? 'text-decoration:line-through' : ''}">${t.titre}</span>
+      ${t.date_echeance ? `<span style="font-size:11px;color:var(--text-muted)">${fmtDate(t.date_echeance)}</span>` : ''}
+      <button onclick="supprimerTacheOpportunite('${t.id}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px">✕</button>
+    </div>`).join('') : '<div style="font-size:12.5px;color:var(--text-muted);padding:6px 0">Aucune tâche pour l\u2019instant.</div>';
+  return `${liste}
+    <div style="display:flex;gap:8px;margin-top:12px">
+      <input class="form-input" id="opp-nouvelle-tache" placeholder="Ex: Relancer le client pour signature" style="flex:1" onkeydown="if(event.key==='Enter'){event.preventDefault();ajouterTacheOpportunite('${opp.id}')}"/>
+      <button type="button" class="btn-secondary" onclick="ajouterTacheOpportunite('${opp.id}')">+ Ajouter</button>
     </div>`;
 }
 

@@ -437,9 +437,10 @@ function viewNouveauContrat() {
         <div id="ct-prime-lignes-list" style="display:flex;flex-direction:column;gap:6px;margin-top:6px"></div>
         <button type="button" onclick="ajouterLignePrime()" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;margin-top:8px">+ Ajouter une ligne</button>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-          <span style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Prime totale</span>
+          <span style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Prime totale <span style="font-weight:400;text-transform:none">(hors taxes — base de commission)</span></span>
           <span id="ct-prime-total-affiche" style="font-size:17px;font-weight:900;color:var(--accent)">CHF 0</span>
         </div>
+        <div id="ct-prime-taxes-note" style="font-size:10px;color:var(--text-muted);margin-top:3px;text-align:right"></div>
         <input type="hidden" id="ct-prime-mensuelle" value=""/>
       </div>
       <div class="form-field" id="ct-prime-risque-frais-field" style="display:none">
@@ -609,19 +610,45 @@ function ajouterLignePrime(libelle = '', montant = '') {
   ligne.style.cssText = 'display:flex;gap:8px;align-items:center';
   const libelleEch = (libelle || '').toString().replace(/"/g, '&quot;');
   ligne.innerHTML = `
-    <input class="form-input ct-prime-ligne-libelle" placeholder="Ex: Responsabilité civile privée" value="${libelleEch}" style="flex:1"/>
+    <input class="form-input ct-prime-ligne-libelle" placeholder="Ex: Responsabilité civile privée" value="${libelleEch}" style="flex:1" oninput="calculerPrimeTotaleLignes()"/>
+    <span class="ct-prime-ligne-badge-taxe" title="Taxes/émoluments légaux — exclus du volume de prime et du calcul de commission" style="display:none;font-size:9.5px;font-weight:700;color:#f59e0b;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:5px;padding:2px 6px;white-space:nowrap">hors commission</span>
     <input class="form-input ct-prime-ligne-montant" type="number" step="0.01" placeholder="CHF" value="${montant}" style="width:120px" oninput="calculerPrimeTotaleLignes()"/>
     <button type="button" onclick="this.parentElement.remove(); calculerPrimeTotaleLignes()" style="background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;flex-shrink:0">✕</button>
   `;
   list.appendChild(ligne);
+  calculerPrimeTotaleLignes();
+}
+// Taxes/émoluments légaux (ex: "Taxes légales", "Taxe cantonale", "Droit de timbre fédéral") ne
+// sont pas rémunérés par les compagnies — à exclure du volume de prime et de la base de commission,
+// tout en restant visibles/reportées dans le détail (elles font bien partie du montant facturé au client).
+function _estLigneTaxe(libelle) {
+  const s = (libelle || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  return /\btaxes?\b|\bdroit de timbre\b|\bemolument/.test(s);
 }
 function calculerPrimeTotaleLignes() {
-  const montants = Array.from(document.querySelectorAll('.ct-prime-ligne-montant')).map(i => parseFloat(i.value) || 0);
-  const total = Math.round(montants.reduce((a, b) => a + b, 0) * 100) / 100;
+  const lignes = Array.from(document.querySelectorAll('.ct-prime-ligne'));
+  let totalCommissionnable = 0;
+  let totalTaxes = 0;
+  lignes.forEach(ligne => {
+    const libelle = ligne.querySelector('.ct-prime-ligne-libelle')?.value || '';
+    const montant = parseFloat(ligne.querySelector('.ct-prime-ligne-montant')?.value) || 0;
+    const badge = ligne.querySelector('.ct-prime-ligne-badge-taxe');
+    const estTaxe = _estLigneTaxe(libelle);
+    if (badge) badge.style.display = estTaxe ? '' : 'none';
+    if (estTaxe) totalTaxes += montant; else totalCommissionnable += montant;
+  });
+  const total = Math.round(totalCommissionnable * 100) / 100;
   const hidden = document.getElementById('ct-prime-mensuelle');
   if (hidden) hidden.value = total > 0 ? total : '';
+  const decimales = lignes.some(l => (parseFloat(l.querySelector('.ct-prime-ligne-montant')?.value) || 0) % 1 !== 0);
   const affiche = document.getElementById('ct-prime-total-affiche');
-  if (affiche) affiche.textContent = 'CHF ' + total.toLocaleString('fr-CH', { minimumFractionDigits: montants.some(m => m % 1 !== 0) ? 2 : 0 });
+  if (affiche) affiche.textContent = 'CHF ' + total.toLocaleString('fr-CH', { minimumFractionDigits: decimales ? 2 : 0 });
+  const note = document.getElementById('ct-prime-taxes-note');
+  if (note) {
+    note.textContent = totalTaxes > 0
+      ? `Taxes/émoluments légaux exclus : CHF ${Math.round(totalTaxes * 100) / 100} (facturés au client mais hors volume de prime et hors commission)`
+      : '';
+  }
   updateCommissionPreview();
 }
 // Met à jour la ligne portant ce libellé si elle existe déjà (ex: reportée par la calculette

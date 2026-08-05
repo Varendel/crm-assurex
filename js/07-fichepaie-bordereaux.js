@@ -1059,7 +1059,13 @@ async function viewNouvelleDemandeOffre() {
     ${sectionCard('Assurances choses', '#fb923c', `<div class="form-grid">
       <div class="form-field"><label class="form-label">Inventaire — somme d'assurance (CHF)</label><input class="form-input" id="do-inventaire" type="number" onfocus="document.getElementById('do-inventaire-ckb').checked=true"/></div>
       <div class="form-field">${ckb('do-rc-commerce','RC/commerce')}${ckb('do-prejudice-fortune','Préjudices de fortune (CV et copie diplômes requis)')}${ckb('do-cyber','Cyber')}</div>
-      <div class="form-field">${ckb('do-pj','Protection juridique')}${ckb('do-construction','Construction & maître ouvrage')}${ckb('do-technique','Technique')}${ckb('do-perte-exploit','Perte d\'exploitation')}</div>
+      <div class="form-field">${ckb('do-construction','Construction & maître ouvrage')}${ckb('do-technique','Technique')}${ckb('do-perte-exploit','Perte d\'exploitation')}</div>
+    </div>`)}
+
+    ${sectionCard('Protection juridique', '#facc15', `<div class="form-grid">
+      <div class="form-field">${ckb('do-pj-privee','PJ privée (vie privée, famille, logement)')}</div>
+      <div class="form-field">${ckb('do-pj-circulation','PJ circulation (véhicules)')}</div>
+      <div class="form-field">${ckb('do-pj-professionnelle','PJ professionnelle / entreprise')}</div>
     </div>`)}
 
     ${sectionCard('Données complémentaires — Assurances de personnes', '#4ade80', `<div class="form-grid">
@@ -1150,8 +1156,10 @@ function prefillChampsDemandeOffre(existante) {
   setChk('do-3a', av.a3a); setChk('do-3a-indep', av.a3a_indep); setChk('do-3b', av.a3b); setChk('do-risque-pure', av.risque_pure);
   setChk('do-versement-unique', av.versement_unique); setVal('do-budget-epargne', av.budget_epargne); setVal('do-pa', av.pa);
   setVal('do-inventaire', ac.inventaire); setChk('do-rc-commerce', ac.rc_commerce); setChk('do-prejudice-fortune', ac.prejudice_fortune);
-  setChk('do-cyber', ac.cyber); setChk('do-pj', ac.pj); setChk('do-construction', ac.construction); setChk('do-technique', ac.technique);
+  setChk('do-cyber', ac.cyber); setChk('do-construction', ac.construction); setChk('do-technique', ac.technique);
   setChk('do-perte-exploit', ac.perte_exploit);
+  const pj = d.protection_juridique || {};
+  setChk('do-pj-privee', pj.privee); setChk('do-pj-circulation', pj.circulation); setChk('do-pj-professionnelle', pj.professionnelle);
   setVal('do-cct', comp.cct); setVal('do-couverture-salaire', comp.couverture_salaire);
   setVal('do-taux-min-legal', lpp.taux_min_legal); setVal('do-ded-coord', lpp.ded_coord); setVal('do-lpp-exc-h', lpp.exc_h);
   setVal('do-lpp-exc-f', lpp.exc_f); setVal('do-cap-invalidite', lpp.cap_invalidite); setVal('do-cap-deces', lpp.cap_deces);
@@ -1199,7 +1207,9 @@ function genererEmailDemandeOffre() {
   if (chk('do-3b')) besoins.push('Vie 3B');
   if (chk('do-rc-commerce')) besoins.push('RC/commerce');
   if (chk('do-cyber')) besoins.push('Cyber');
-  if (chk('do-pj')) besoins.push('Protection juridique');
+  if (chk('do-pj-privee')) besoins.push('Protection juridique privée');
+  if (chk('do-pj-circulation')) besoins.push('Protection juridique circulation');
+  if (chk('do-pj-professionnelle')) besoins.push('Protection juridique professionnelle');
   if (chk('do-construction')) besoins.push('Construction & maître ouvrage');
   if (chk('do-perte-exploit')) besoins.push("Perte d'exploitation");
   if (val('do-inventaire')) besoins.push(`Inventaire (CHF ${val('do-inventaire')})`);
@@ -1249,7 +1259,8 @@ async function saveDemandeOffre(demandeOffreId) {
     base_calcul: { ca: val('do-ca'), nb_collab: val('do-nb-collab'), ap_h: val('do-ap-h'), ap_f: val('do-ap-f'), anp_h: val('do-anp-h'), anp_f: val('do-anp-f'), exc_avs_h: val('do-exc-avs-h'), exc_avs_f: val('do-exc-avs-f'), masse_chef: val('do-masse-chef') },
     assurances_personnes: { perte_gain: chk('do-perte-gain'), pg_14j: chk('do-pg-14j'), pg_30j: chk('do-pg-30j'), pg_60j: chk('do-pg-60j'), laa: chk('do-laa'), laaf: chk('do-laaf'), laac: chk('do-laac'), semi_privee: chk('do-semi-privee'), lpp: chk('do-lpp') },
     assurances_vie: { a3a: chk('do-3a'), a3a_indep: chk('do-3a-indep'), a3b: chk('do-3b'), risque_pure: chk('do-risque-pure'), versement_unique: chk('do-versement-unique'), budget_epargne: val('do-budget-epargne'), pa: val('do-pa') },
-    assurances_choses: { inventaire: val('do-inventaire'), rc_commerce: chk('do-rc-commerce'), prejudice_fortune: chk('do-prejudice-fortune'), cyber: chk('do-cyber'), pj: chk('do-pj'), construction: chk('do-construction'), technique: chk('do-technique'), perte_exploit: chk('do-perte-exploit') },
+    assurances_choses: { inventaire: val('do-inventaire'), rc_commerce: chk('do-rc-commerce'), prejudice_fortune: chk('do-prejudice-fortune'), cyber: chk('do-cyber'), construction: chk('do-construction'), technique: chk('do-technique'), perte_exploit: chk('do-perte-exploit') },
+    protection_juridique: { privee: chk('do-pj-privee'), circulation: chk('do-pj-circulation'), professionnelle: chk('do-pj-professionnelle') },
     complementaires: { cct: val('do-cct'), couverture_salaire: val('do-couverture-salaire') },
     lpp: { taux_min_legal: val('do-taux-min-legal'), ded_coord: val('do-ded-coord'), exc_h: val('do-lpp-exc-h'), exc_f: val('do-lpp-exc-f'), cap_invalidite: val('do-cap-invalidite'), cap_deces: val('do-cap-deces'), amelio_rentes: chk('do-amelio-rentes'), amelio_epargne: chk('do-amelio-epargne'), amelio_tranches: chk('do-amelio-tranches'), amelio_rendement: chk('do-amelio-rendement') },
     rc: { risque: val('do-rc-risque'), lieux: val('do-rc-lieux'), marchandises: chk('do-marchandises'), transports: chk('do-transports'), transports_speciaux: chk('do-transports-speciaux'), machines: chk('do-machines'), vol: chk('do-vol'), all_risk: chk('do-all-risk'), inventaire: val('do-rc-inventaire'), prejudice_fortune: chk('do-rc-prejudice-fortune'), cv_details: val('do-rc-cv-details') },
@@ -1350,13 +1361,8 @@ function viewNouvelleOpportunite() {
   if (opp) setTimeout(() => renderDemandeOffreLieeOpportunite(opp.id), 0);
   const clientFiche = opp && opp.client_id ? allClients.find(c => c.id === opp.client_id) : (clientPrefille || null);
   const nomAffiche = (c) => estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`;
-  return `
-    <button onclick="opportuniteEnEditionId=null;navigate('opportunites')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">${opp ? 'Modifier l\u2019opportunité' : 'Nouvelle opportunité'}</h2>
-      ${clientFiche ? `<span onclick="showClient('${clientFiche.id}')" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--surface-alt);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11.5px;font-weight:700;color:var(--accent)">👤 Fiche client : ${estEntreprise(clientFiche) ? clientFiche.nom : `${clientFiche.prenom} ${clientFiche.nom}`} →</span>` : ''}
-    </div>
-    ${sectionCard('Détails', '#f59e0b', `<div class="form-grid">
+  const produitsChoisis = opp?.produits || [];
+  const blocDetails = sectionCard('Détails', '#f59e0b', `<div class="form-grid">
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Titre *</label><input class="form-input" id="o-titre" value="${qa(opp?.titre || (clientPrefille ? (estEntreprise(clientPrefille) ? clientPrefille.nom : clientPrefille.prenom + ' ' + clientPrefille.nom) + ' — ' : ''))}" placeholder="Ex: Assurance vie mixte 20 ans"/></div>
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Client (si déjà fiché)</label>
         <div style="position:relative">
@@ -1373,10 +1379,30 @@ function viewNouvelleOpportunite() {
       <div class="form-field"><label class="form-label">Stade</label><select class="form-select" id="o-stade">${stadesOptions.map(s => `<option ${opp && opp.stade === s ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
       <div class="form-field"><label class="form-label">Échéance</label><input class="form-input" id="o-date" type="date" value="${opp?.date_echeance || ''}"/></div>
       <div class="form-field"><label class="form-label">Agent responsable</label><select class="form-select" id="o-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
+      <div class="form-field" style="grid-column:span 2">
+        <label class="form-label">Produits envisagés <span style="font-weight:400;color:var(--text-muted);font-size:10px">(plusieurs possibles — sert aux stats du pipeline par branche)</span></label>
+        <input class="form-input" placeholder="Filtrer les produits..." oninput="filtrerProduitsOpportunite(this.value)" style="margin-bottom:8px"/>
+        <div id="o-produits-list" style="max-height:220px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:10px;background:var(--surface-alt)">
+          ${Object.entries(CATALOGUE_PRODUITS).map(([cat, produits]) => `
+            <div class="o-produit-groupe">
+              <div style="font-size:10.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px">${cat}</div>
+              ${produits.map(p => `<label class="o-produit-ligne" style="display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text);cursor:pointer;padding:2px 0">
+                <input type="checkbox" class="o-produit-checkbox" value="${p.id}" ${produitsChoisis.includes(p.id) ? 'checked' : ''} style="width:14px;height:14px;accent-color:var(--accent);flex-shrink:0"/> ${p.label}
+              </label>`).join('')}
+            </div>`).join('')}
+        </div>
+      </div>
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Notes</label><textarea class="form-input" id="o-notes" rows="3" style="resize:vertical">${opp?.notes || ''}</textarea></div>
-    </div>`)}
-    ${opp ? sectionCard('Tâches', '#4ade80', renderTachesOpportunite(opp)) : ''}
-    ${opp ? sectionCard('Historique', '#a78bfa', renderHistoriqueOpportunite(opp)) : ''}
+    </div>`);
+  const blocTaches = opp ? sectionCard('Tâches', '#4ade80', renderTachesOpportunite(opp)) : '';
+  const blocHistorique = opp ? sectionCard('Historique', '#a78bfa', renderHistoriqueOpportunite(opp)) : '';
+  return `
+    <button onclick="opportuniteEnEditionId=null;navigate('opportunites')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">${opp ? 'Modifier l\u2019opportunité' : 'Nouvelle opportunité'}</h2>
+      ${clientFiche ? `<span onclick="showClient('${clientFiche.id}')" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--surface-alt);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11.5px;font-weight:700;color:var(--accent)">👤 Fiche client : ${estEntreprise(clientFiche) ? clientFiche.nom : `${clientFiche.prenom} ${clientFiche.nom}`} →</span>` : ''}
+    </div>
+    ${opp ? `${blocTaches}${blocHistorique}${blocDetails}` : blocDetails}
     <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;align-items:center">
       ${opp ? `<span id="opp-demande-offre-liee" style="display:flex;gap:10px;flex-wrap:wrap"></span>` : ''}
       ${opp ? `<button onclick="supprimerOpportunite('${opp.id}')" style="background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>` : ''}
@@ -1453,6 +1479,20 @@ function renderTachesOpportunite(opp) {
     </div>`;
 }
 
+function filtrerProduitsOpportunite(texte) {
+  const q = _cleRechercheSansAccents(texte || '');
+  document.querySelectorAll('#o-produits-list .o-produit-groupe').forEach(groupe => {
+    let visibles = 0;
+    groupe.querySelectorAll('.o-produit-ligne').forEach(ligne => {
+      const label = _cleRechercheSansAccents(ligne.textContent || '');
+      const show = !q || label.includes(q);
+      ligne.style.display = show ? '' : 'none';
+      if (show) visibles++;
+    });
+    groupe.style.display = visibles ? '' : 'none';
+  });
+}
+
 async function saveOpportunite(id) {
   const titre = document.getElementById('o-titre').value.trim();
   if (!titre) { alert('Titre obligatoire.'); return; }
@@ -1467,6 +1507,7 @@ async function saveOpportunite(id) {
     date_echeance: document.getElementById('o-date').value || null,
     apporteur_id: document.getElementById('o-agent').value || null,
     notes: document.getElementById('o-notes').value || null,
+    produits: [...document.querySelectorAll('.o-produit-checkbox:checked')].map(el => el.value),
   };
   const btn = document.querySelector('.btn-save');
   btn.textContent = 'Enregistrement...'; btn.disabled = true;

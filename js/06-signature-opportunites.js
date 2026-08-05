@@ -68,8 +68,40 @@ function viewOpportunites() {
       ${statCard('En cours', OPPS.length, '#e2e8f0')}
       ${statCard('Gagnées', gagnees.length, '#4ade80')}
     </div>
+    ${renderStatsBranchesPipeline(OPPS)}
     <div class="tabs" style="margin-bottom:18px">${toggleVues}</div>
     ${corps}`;
+}
+
+// ── Stats du pipeline par branche — nécessite que les opportunités aient un champ `produits`
+// (tableau d'ids catalogue) rempli. Basé sur PRODUIT_BRANCHES (js/02-catalogue-session.js).
+// Principe "jamais 0 sans être sûr" : une opp sans produits sélectionnés n'entre dans aucun total.
+function renderStatsBranchesPipeline(OPPS) {
+  let volumeEntreprise = 0;
+  let commissionSante = 0;
+  let commissionVie = 0;
+  OPPS.forEach(o => {
+    const produits = Array.isArray(o.produits) ? o.produits : [];
+    if (!produits.length) return;
+    const client = allClients.find(c => c.id === o.client_id);
+    const entreprise = client ? estEntreprise(client) : false;
+    const branches = new Set();
+    produits.forEach(pid => (PRODUIT_BRANCHES[pid] || []).forEach(b => branches.add(b)));
+    const montant = o.montant_potentiel || 0;
+    if (entreprise) {
+      volumeEntreprise += montant;
+    } else {
+      if (branches.has('lamal') || branches.has('sante_complementaire')) commissionSante += montant;
+      if (branches.has('vie') || branches.has('lpp')) commissionVie += montant;
+    }
+  });
+  if (!volumeEntreprise && !commissionSante && !commissionVie) return '';
+  return `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;background:var(--surface-alt);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+    <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;width:100%;margin-bottom:2px">📊 Pipeline par branche (selon produits sélectionnés)</div>
+    <div style="flex:1;min-width:160px"><div style="font-size:10.5px;color:var(--text-muted)">Volume prime entreprises</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${volumeEntreprise.toLocaleString()}</div></div>
+    <div style="flex:1;min-width:160px"><div style="font-size:10.5px;color:var(--text-muted)">Santé — privés</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${commissionSante.toLocaleString()}</div></div>
+    <div style="flex:1;min-width:160px"><div style="font-size:10.5px;color:var(--text-muted)">Vie / LPP — privés</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${commissionVie.toLocaleString()}</div></div>
+  </div>`;
 }
 
 // ── Vue Kanban (par défaut) — colonnes par stade + tableaux Gagnées/Perdues en dessous ──
@@ -199,12 +231,18 @@ async function ajouterTacheOpportunite(oppId) {
   const titre = input.value.trim();
   if (!titre) return;
   const opp = allOpportunites.find(o => o.id === oppId);
+  // Sans apporteur_id, la tâche est invisible du badge "mes tâches" de la sidebar et de tout
+  // filtre par agent — bug réel repéré par Jonathan (une tâche créée depuis une opp ne
+  // remontait nulle part dans le système de rappels). Priorité à l'agent responsable de l'opp
+  // elle-même (opp.apporteur_id) ; à défaut, l'agent actuellement connecté.
+  const monAgent = currentUser ? allAgents.find(a => a.email === currentUser.email) : null;
   const body = {
     titre,
     nature: 'rappel',
     type: 'Opportunité',
     client_id: opp ? (opp.client_id || null) : null,
     opportunite_id: oppId,
+    apporteur_id: (opp && opp.apporteur_id) || (monAgent ? monAgent.id : null),
     urgence: 'moyenne',
     statut: 'ouvert',
   };

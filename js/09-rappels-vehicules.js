@@ -357,11 +357,11 @@ async function importPolicePdfAI(input) {
     if (data.date_echeance) document.getElementById('ct-echeance').value = data.date_echeance;
     if (data.prime_mensuelle) {
       // Prime réellement mensuelle (ex: santé complémentaire) — la périodicité annualise correctement
-      document.getElementById('ct-prime-mensuelle').value = data.prime_mensuelle;
+      initLignesPrimeDepuisMontant(data.prime_mensuelle, 'Prime (import PDF)');
       document.getElementById('ct-periodicite').value = '12';
     } else if (data.prime_annuelle) {
       // Prime déjà annuelle (ex: RC, véhicule) — on l'utilise telle quelle, sans la diviser puis la remultiplier
-      document.getElementById('ct-prime-mensuelle').value = data.prime_annuelle;
+      initLignesPrimeDepuisMontant(data.prime_annuelle, 'Prime totale (import PDF)');
       document.getElementById('ct-periodicite').value = '1';
     }
 
@@ -426,7 +426,16 @@ function viewNouveauContrat() {
         <button type="button" class="btn-secondary" id="ct-plaques-add-btn" style="margin-top:8px;font-size:12px;padding:6px 14px" onclick="ajouterPlaqueFlotte()">+ Ajouter une plaque</button>
       </div>
       <div class="form-field"><label class="form-label">N° de police</label><input class="form-input" id="ct-police" placeholder="Optionnel"/></div>
-      <div class="form-field"><label class="form-label">Prime (CHF) *</label><input class="form-input" id="ct-prime-mensuelle" type="number" placeholder="150" oninput="updateCommissionPreview()"/></div>
+      <div class="form-field" style="grid-column:span 2" id="ct-prime-lignes-field">
+        <label class="form-label">Lignes de prime * <span style="font-weight:400;color:var(--text-muted);font-size:10px">(reporte chaque ligne de la police — ex: Responsabilité civile privée, Inventaire du ménage, Assurances complémentaires et services, Taxes légales)</span></label>
+        <div id="ct-prime-lignes-list" style="display:flex;flex-direction:column;gap:6px;margin-top:6px"></div>
+        <button type="button" onclick="ajouterLignePrime()" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;margin-top:8px">+ Ajouter une ligne</button>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+          <span style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Prime totale</span>
+          <span id="ct-prime-total-affiche" style="font-size:17px;font-weight:900;color:var(--accent)">CHF 0</span>
+        </div>
+        <input type="hidden" id="ct-prime-mensuelle" value=""/>
+      </div>
       <div class="form-field" id="ct-prime-risque-frais-field" style="display:none">
         <label class="form-label">Dont prime risque + frais (CHF/an) — base de calcul COG</label>
         <input class="form-input" id="ct-prime-risque-frais" type="number" placeholder="Hors part épargne" oninput="updateCommissionPreview()"/>
@@ -474,6 +483,13 @@ function initSegmentContrat() {
   if (contratClientId) {
     const client = allClients.find(c => c.id === contratClientId);
     if (client) segmentSelect.value = estEntreprise(client) ? 'entreprise' : 'prive';
+  }
+  // 3 lignes vides par défaut, prêtes à recevoir les tarifs de la police (RC privée, inventaire
+  // du ménage, modules complémentaires, taxes légales, etc.) — le total se calcule automatiquement.
+  const lignesList = document.getElementById('ct-prime-lignes-list');
+  if (lignesList && !lignesList.children.length) {
+    ajouterLignePrime(); ajouterLignePrime(); ajouterLignePrime();
+    calculerPrimeTotaleLignes();
   }
   updateCategorieOptions();
   // Si on arrive depuis une opportunité gagnée, tente de présélectionner automatiquement
@@ -574,6 +590,56 @@ function getProduitSelectionne() {
     }
   }
   return null;
+}
+
+// ═══ Lignes de prime (Nouveau contrat) — chaque ligne de la police (RC privée, inventaire du
+// ménage, modules complémentaires, taxes légales, etc.) est saisie séparément ; la prime totale
+// est calculée une seule fois, automatiquement, comme somme de ces lignes — jamais ressaisie à la main.
+function ajouterLignePrime(libelle = '', montant = '') {
+  const list = document.getElementById('ct-prime-lignes-list');
+  if (!list) return;
+  const ligne = document.createElement('div');
+  ligne.className = 'ct-prime-ligne';
+  ligne.style.cssText = 'display:flex;gap:8px;align-items:center';
+  const libelleEch = (libelle || '').toString().replace(/"/g, '&quot;');
+  ligne.innerHTML = `
+    <input class="form-input ct-prime-ligne-libelle" placeholder="Ex: Responsabilité civile privée" value="${libelleEch}" style="flex:1"/>
+    <input class="form-input ct-prime-ligne-montant" type="number" step="0.01" placeholder="CHF" value="${montant}" style="width:120px" oninput="calculerPrimeTotaleLignes()"/>
+    <button type="button" onclick="this.parentElement.remove(); calculerPrimeTotaleLignes()" style="background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;flex-shrink:0">✕</button>
+  `;
+  list.appendChild(ligne);
+}
+function calculerPrimeTotaleLignes() {
+  const montants = Array.from(document.querySelectorAll('.ct-prime-ligne-montant')).map(i => parseFloat(i.value) || 0);
+  const total = Math.round(montants.reduce((a, b) => a + b, 0) * 100) / 100;
+  const hidden = document.getElementById('ct-prime-mensuelle');
+  if (hidden) hidden.value = total > 0 ? total : '';
+  const affiche = document.getElementById('ct-prime-total-affiche');
+  if (affiche) affiche.textContent = 'CHF ' + total.toLocaleString('fr-CH', { minimumFractionDigits: montants.some(m => m % 1 !== 0) ? 2 : 0 });
+  updateCommissionPreview();
+}
+// Met à jour la ligne portant ce libellé si elle existe déjà (ex: reportée par la calculette
+// RC+Casco), sinon en crée une nouvelle — pour ne jamais écraser les autres lignes déjà saisies.
+function setOuAjouterLignePrime(libelle, montant) {
+  const list = document.getElementById('ct-prime-lignes-list');
+  if (!list) return;
+  const lignes = Array.from(list.querySelectorAll('.ct-prime-ligne'));
+  const existante = lignes.find(l => (l.querySelector('.ct-prime-ligne-libelle')?.value || '').trim().toLowerCase() === libelle.toLowerCase());
+  if (existante) {
+    existante.querySelector('.ct-prime-ligne-montant').value = montant;
+  } else {
+    ajouterLignePrime(libelle, montant);
+  }
+  calculerPrimeTotaleLignes();
+}
+// Réinitialise la liste avec une seule ligne pré-remplie (import PDF, pré-remplissage) — l'utilisateur
+// peut ensuite éclater ce montant en plusieurs lignes ou en ajouter d'autres.
+function initLignesPrimeDepuisMontant(montant, libelle = 'Prime totale') {
+  const list = document.getElementById('ct-prime-lignes-list');
+  if (!list) return;
+  list.innerHTML = '';
+  ajouterLignePrime(libelle, montant || '');
+  calculerPrimeTotaleLignes();
 }
 
 function updateModulesOptions() {
@@ -778,8 +844,7 @@ function calculerSoldeVehicule(champModifie) {
   const rcFinal = parseFloat(rcEl.value);
   const cascoFinal = parseFloat(cascoEl.value);
   if (!isNaN(rcFinal)) {
-    const primeRC = document.getElementById('ct-prime-mensuelle');
-    if (primeRC) { primeRC.value = rcFinal; updateCommissionPreview(); }
+    setOuAjouterLignePrime('Prime RC (calculette)', rcFinal);
   }
   if (!isNaN(cascoFinal)) {
     const premierCombinable = document.querySelector('.ct-combinable-prime-input');

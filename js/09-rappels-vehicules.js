@@ -355,13 +355,19 @@ async function importPolicePdfAI(input) {
     if (data.numero_police) document.getElementById('ct-police').value = data.numero_police;
     if (data.date_debut) document.getElementById('ct-date').value = data.date_debut;
     if (data.date_echeance) document.getElementById('ct-echeance').value = data.date_echeance;
-    if (data.prime_mensuelle) {
-      // Prime réellement mensuelle (ex: santé complémentaire) — la périodicité annualise correctement
+    if (Array.isArray(data.lignes_prime) && data.lignes_prime.length > 0) {
+      // La police détaille la prime poste par poste (ex: RC privée, inventaire du ménage, modules
+      // complémentaires, taxes légales) — on reporte chaque ligne telle quelle, le total se
+      // recalcule automatiquement en sommant ces lignes (jamais resaisi/dupliqué à la main).
+      initLignesPrimeDepuisLignes(data.lignes_prime);
+      document.getElementById('ct-periodicite').value = '1';
+    } else if (data.prime_mensuelle) {
+      // Pas de détail par poste, mais une prime réellement mensuelle (ex: santé complémentaire)
       initLignesPrimeDepuisMontant(data.prime_mensuelle, 'Prime (import PDF)');
       document.getElementById('ct-periodicite').value = '12';
     } else if (data.prime_annuelle) {
-      // Prime déjà annuelle (ex: RC, véhicule) — on l'utilise telle quelle, sans la diviser puis la remultiplier
-      initLignesPrimeDepuisMontant(data.prime_annuelle, 'Prime totale (import PDF)');
+      // Pas de détail par poste : un seul montant global déjà annuel (ex: RC, véhicule)
+      initLignesPrimeDepuisMontant(data.prime_annuelle, 'Prime (import PDF)');
       document.getElementById('ct-periodicite').value = '1';
     }
 
@@ -639,6 +645,16 @@ function initLignesPrimeDepuisMontant(montant, libelle = 'Prime totale') {
   if (!list) return;
   list.innerHTML = '';
   ajouterLignePrime(libelle, montant || '');
+  calculerPrimeTotaleLignes();
+}
+// Pré-remplit directement le détail poste par poste renvoyé par l'extraction IA de la police
+// (data.lignes_prime) — évite de resaisir à la main ce que le PDF affiche déjà en toutes lettres.
+function initLignesPrimeDepuisLignes(lignes) {
+  const list = document.getElementById('ct-prime-lignes-list');
+  if (!list) return;
+  list.innerHTML = '';
+  lignes.forEach(l => ajouterLignePrime(l.libelle || '', (l.montant ?? '')));
+  if (!lignes.length) ajouterLignePrime();
   calculerPrimeTotaleLignes();
 }
 

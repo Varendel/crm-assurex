@@ -1184,6 +1184,8 @@ function prefillChampsDemandeOffre(existante) {
     if (row.querySelector('.do-collab-naissance')) row.querySelector('.do-collab-naissance').value = c.date_naissance || '';
     if (row.querySelector('.do-collab-adresse')) row.querySelector('.do-collab-adresse').value = c.adresse || '';
     if (row.querySelector('.do-collab-avs')) row.querySelector('.do-collab-avs').value = c.avs || '';
+    const salaireEl = row.querySelector('.do-collab-salaire');
+    if (salaireEl) { salaireEl.value = c.salaire || ''; verifierPlafondLppCollaborateur(salaireEl); }
   });
   (d.vehicules || []).forEach(p => {
     ajouterPlaqueDemandeOffre();
@@ -1204,21 +1206,48 @@ function ajouterPlaqueDemandeOffre() {
 }
 
 // Lignes de saisie collaborateur pour la demande d'offre LPP — mêmes champs que la fiche
-// "Collaborateur" du client (nom, prénom, date de naissance, adresse privée, n° AVS), nécessaires
-// à la compagnie pour établir une offre LPP nominative.
+// "Collaborateur" du client (nom, prénom, date de naissance, adresse privée, n° AVS, salaire AVS),
+// nécessaires à la compagnie pour établir une offre LPP nominative. Chaque ligne est enveloppée
+// dans un wrapper (do-collab-wrapper) pour pouvoir afficher, juste en dessous, un avertissement de
+// dépassement du plafond LPP sans casser la mise en page en grille de la ligne de champs.
 function ajouterCollaborateurDemandeOffre() {
   const list = document.getElementById('do-collabs-list');
+  const wrapper = document.createElement('div');
+  wrapper.className = 'do-collab-wrapper';
   const row = document.createElement('div');
   row.className = 'do-collab-row';
-  row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 130px 1.6fr 120px 28px;gap:8px;align-items:center';
+  row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 130px 1.6fr 120px 110px 28px;gap:8px;align-items:center';
   row.innerHTML = `
     <input class="form-input do-collab-nom" placeholder="Nom"/>
     <input class="form-input do-collab-prenom" placeholder="Prénom"/>
     <input class="form-input do-collab-naissance" type="date" title="Date de naissance"/>
     <input class="form-input do-collab-adresse" placeholder="Adresse privée"/>
     <input class="form-input do-collab-avs" placeholder="N° AVS"/>
-    <button type="button" onclick="this.closest('.do-collab-row').remove()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px">✕</button>`;
-  list.appendChild(row);
+    <input class="form-input do-collab-salaire" type="number" placeholder="Salaire AVS" oninput="verifierPlafondLppCollaborateur(this)"/>
+    <button type="button" onclick="this.closest('.do-collab-wrapper').remove()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px">✕</button>`;
+  const warning = document.createElement('div');
+  warning.className = 'do-collab-warning';
+  warning.style.cssText = 'font-size:10.5px;color:#f59e0b;margin:3px 0 0 2px;display:none';
+  wrapper.appendChild(row);
+  wrapper.appendChild(warning);
+  list.appendChild(wrapper);
+}
+
+// Avertit dès que le salaire d'un collaborateur dépasse le plafond LPP légal (LPP_LEGAL.salaire_max,
+// CHF 90'720 en 2026 — cf. js/01-prevoyance-immo.js) : au-delà, seule la part jusqu'au plafond est
+// obligatoirement assurable, le surplus relève d'une éventuelle couverture sur-obligatoire à
+// négocier séparément avec la compagnie.
+function verifierPlafondLppCollaborateur(input) {
+  const warning = input.closest('.do-collab-wrapper')?.querySelector('.do-collab-warning');
+  if (!warning) return;
+  const salaire = parseFloat(input.value) || 0;
+  if (salaire > LPP_LEGAL.salaire_max) {
+    const depassement = salaire - LPP_LEGAL.salaire_max;
+    warning.textContent = `⚠️ Dépasse le plafond LPP (CHF ${LPP_LEGAL.salaire_max.toLocaleString()}) de CHF ${depassement.toLocaleString()} — seule la part jusqu'au plafond est obligatoirement assurable.`;
+    warning.style.display = 'block';
+  } else {
+    warning.style.display = 'none';
+  }
 }
 
 function genererEmailDemandeOffre() {
@@ -1301,6 +1330,7 @@ async function saveDemandeOffre(demandeOffreId) {
     date_naissance: row.querySelector('.do-collab-naissance')?.value || '',
     adresse: row.querySelector('.do-collab-adresse')?.value || '',
     avs: row.querySelector('.do-collab-avs')?.value || '',
+    salaire: row.querySelector('.do-collab-salaire')?.value || '',
   })).filter(c => c.nom || c.prenom || c.avs);
 
   const donnees = {

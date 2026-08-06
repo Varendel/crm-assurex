@@ -28,3 +28,18 @@ Notes de fonctionnalités envisagées mais pas encore planifiées. Chaque idée 
 **Statut** : idée notée, non planifiée. À reprendre quand la boîte mail sera connectée.
 
 ---
+
+## Bouton "Synchroniser Outlook" + suivi par compagnie (mise à jour du 06.08.2026)
+
+**Contexte** : bonne nouvelle découverte en creusant ce point — le CRM a déjà une intégration Microsoft Graph fonctionnelle côté navigateur (MSAL, voir `initMSAL()` / `msalAccessToken` dans js/03), utilisée aujourd'hui pour l'agenda et l'envoi de mails (scopes actuels : `Calendars.ReadWrite`, `Mail.Send`). Il **manque le scope `Mail.Read`** pour pouvoir lire les réponses reçues dans la boîte mail. Contrairement à ce qu'on pensait initialement, ça ne nécessite pas de serveur/backend séparé : un bouton dans le CRM peut appeler directement Microsoft Graph (`GET /me/messages`) depuis le navigateur, avec le même token.
+
+**Ce que ça implique concrètement** :
+- Ajouter `Mail.Read` aux scopes MSAL → Jonathan devra se reconnecter à Outlook une fois (nouveau consentement Microsoft) après ce changement.
+- Un bouton « 🔄 Synchroniser Outlook » (dashboard, et/ou sur chaque demande d'offre) qui : pour chaque compagnie en statut "envoyée" sur une demande d'offre, cherche dans la boîte mail une réponse (par domaine expéditeur = email connu de la compagnie dans Contacts compagnies, après la date d'envoi) ; si trouvée, passe cette ligne à "reçue" avec la date.
+- **Prérequis déjà posé le 06.08.2026** : chaque demande d'offre mémorise maintenant QUELLES compagnies ont été sollicitées et QUAND (`demandes_offre.compagnies_envoi`), affiché ligne par ligne sur la fiche client ET la fiche opportunité (au lieu d'un statut global unique "envoyée" qui ne disait pas à qui).
+
+## Upload des offres reçues + préparation à la signature (mise à jour du 06.08.2026)
+
+Une fois une offre marquée "reçue" pour une compagnie : possibilité d'uploader le PDF de l'offre (stockage déjà existant, bucket Supabase `documents`, même mécanisme que les autres pièces jointes du CRM), puis un bouton « Préparer l'envoi pour signature » qui réutilise le système de signature des mandats de courtage déjà existant (canvas sur place, QR code / lien à distance avec sondage automatique, envoi par e-mail) — généralisé pour signer un document quelconque (offre) et non plus seulement le mandat de courtage.
+
+**Décisions à prendre avec Jonathan avant de construire cette partie** : logique de rapprochement email→compagnie (domaine expéditeur uniquement, ou aussi mots-clés sujet/nom client) ; extraction automatique de la pièce jointe PDF depuis le mail reçu, ou upload manuel après coup.

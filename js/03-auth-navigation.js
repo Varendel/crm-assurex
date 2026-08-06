@@ -573,7 +573,17 @@ let vueDetailActive = null; // { type: 'client'|'rappel'|'campagne', id } — qu
 // Capture l'état actuellement affiché, sous une forme qui permet de le restaurer fidèlement
 // (une fiche détail précise, pas juste "on était sur la page Rappels" en général).
 function capturerEtatActuel() {
-  return vueDetailActive || { type: 'view', view: currentView };
+  if (vueDetailActive) return vueDetailActive;
+  // Écrans d'édition "pleine page" (opportunité, demande d'offre) : pas gérés par
+  // vueDetailActive, mais on a quand même besoin de mémoriser QUEL enregistrement était ouvert,
+  // sans quoi le retour arrière rouvrirait un formulaire vide au lieu de celui en cours d'édition.
+  if (currentView === 'nouvelle-opportunite' && opportuniteEnEditionId) {
+    return { type: 'opportunite', id: opportuniteEnEditionId };
+  }
+  if (currentView === 'nouvelle-demande-offre' && demandeOffreActiveId) {
+    return { type: 'demande-offre', id: demandeOffreActiveId };
+  }
+  return { type: 'view', view: currentView };
 }
 
 // Restaure un état précédemment capturé — redirige vers la bonne fiche détail si applicable,
@@ -583,6 +593,20 @@ async function restaurerEtat(etat) {
   if (etat.type === 'client') { await showClient(etat.id); return; }
   if (etat.type === 'rappel') { showRappel(etat.id); return; }
   if (etat.type === 'campagne') { showCampagne(etat.id); return; }
+  if (etat.type === 'opportunite') {
+    opportuniteEnEditionId = etat.id;
+    currentView = 'nouvelle-opportunite';
+    renderSidebar();
+    await renderView();
+    return;
+  }
+  if (etat.type === 'demande-offre') {
+    demandeOffreEnEditionId = etat.id;
+    currentView = 'nouvelle-demande-offre';
+    renderSidebar();
+    await renderView();
+    return;
+  }
   currentView = etat.view;
   renderSidebar();
   await renderView();

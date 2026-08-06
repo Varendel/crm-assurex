@@ -148,6 +148,11 @@ let oppFileAttenteProduits = [];
 let prefillDemandeOffreClientId = null;
 let prefillDemandeOffreOpportuniteId = null;
 let demandeOffreEnEditionId = null;
+// Contrairement à demandeOffreEnEditionId (consommé et remis à null dès le premier rendu,
+// pour ne servir qu'une fois comme "trigger" d'ouverture), demandeOffreActiveId persiste
+// tant qu'on reste sur l'écran "nouvelle-demande-offre" : c'est lui qui permet au bouton
+// retour de savoir QUELLE demande était affichée, pour la restaurer correctement.
+let demandeOffreActiveId = null;
 let ozAnnualSummary = null;
 let allCommissionsAttente = [];
 let allCommissionTranches = []; // versements partiels (commissions payées en plusieurs fois, ex. AGV TONI SA)

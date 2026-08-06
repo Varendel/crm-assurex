@@ -978,6 +978,7 @@ async function viewNouvelleDemandeOffre() {
   // l'email sans tout ressaisir.
   const editId = demandeOffreEnEditionId;
   demandeOffreEnEditionId = null;
+  demandeOffreActiveId = editId; // persiste tant qu'on reste sur cette vue, pour que le retour arrière la retrouve
   const existante = editId ? (await dbGet('demandes_offre', `id=eq.${editId}&select=*`))[0] : null;
   const clientPrefillId = existante ? existante.client_id : prefillDemandeOffreClientId;
   const oppPrefillId = existante ? existante.opportunite_id : prefillDemandeOffreOpportuniteId;
@@ -1367,6 +1368,7 @@ async function saveDemandeOffre(demandeOffreId) {
   if (opportuniteId && !enModification) {
     await ajouterLigneHistoriqueOpportunite(opportuniteId, `📝 Demande d'offre enregistrée${val('do-prospect-nom') || document.getElementById('do-client')?.selectedOptions[0]?.text ? ' pour ' + (document.getElementById('do-client')?.selectedOptions[0]?.text || val('do-prospect-nom')) : ''}`);
   }
+  demandeOffreActiveId = null;
   showError(enModification ? '✓ Demande d\'offre mise à jour.' : '✓ Demande d\'offre enregistrée — retrouve-la dans Suivi des affaires pour générer l\'email plus tard.');
   navigate('suivi');
 }

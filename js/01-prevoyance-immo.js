@@ -162,6 +162,9 @@ let prefillOpportuniteProduitId = null;
 let oppFileAttenteProduits = [];
 let prefillDemandeOffreClientId = null;
 let prefillDemandeOffreOpportuniteId = null;
+// Pré-remplissage du formulaire "Nouvelle tâche / rappel" depuis le bouton dédié sur la fiche
+// client (onglet Rappels) — pré-sélectionne le client et force nature='tache' d'emblée.
+let prefillRappelClientId = null;
 let demandeOffreEnEditionId = null;
 // Contrairement à demandeOffreEnEditionId (consommé et remis à null dès le premier rendu,
 // pour ne servir qu'une fois comme "trigger" d'ouverture), demandeOffreActiveId persiste

@@ -540,6 +540,9 @@ async function showClient(id) {
     </div>
 
     <div id="tab-rappels" class="hidden">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn-add" onclick="prefillRappelClientId='${c.id}'; navigate('nouveau-rappel')" title="Créer une tâche liée à ce client">📋+ Tâche</button>
+      </div>
       ${rappels.length > 0 ? rappels.map(r => `<div class="rappel-item" style="cursor:pointer" onclick="showRappel('${r.id}')">
         <div class="urgence-dot" style="background:${r.urgence === 'haute' ? '#f87171' : r.urgence === 'moyenne' ? '#f59e0b' : '#64748b'}"></div>
         <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--text)">${r.titre}</div><div style="font-size:11px;color:var(--text-muted)">${r.type || ''}</div></div>

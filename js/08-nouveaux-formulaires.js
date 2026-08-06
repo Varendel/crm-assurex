@@ -2,7 +2,12 @@ function viewNouveauRappel() {
   const agentOptions = allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
   const prefill = window._prefillRappelDepuisPostit || null;
   window._prefillRappelDepuisPostit = null; // évite qu'un rechargement ultérieur du formulaire ne le réutilise par erreur
-  const clientOptions = allClients.map(c => `<option value="${c.id}" ${prefill && prefill.clientId === c.id ? 'selected' : ''}>${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`}</option>`).join('');
+  // Pré-remplissage depuis le bouton "+ Tâche" de la fiche client (onglet Rappels) — voir
+  // prefillRappelClientId (js/01). Force nature='tache' d'emblée (c'est bien une tâche qu'on veut).
+  const clientPrefillId = prefillRappelClientId;
+  prefillRappelClientId = null;
+  const clientOptions = allClients.map(c => `<option value="${c.id}" ${(prefill && prefill.clientId === c.id) || clientPrefillId === c.id ? 'selected' : ''}>${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`}</option>`).join('');
+  const natureTache = !!clientPrefillId;
   return `
     <button onclick="navigate('rappels')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
     <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouvelle tâche / rappel</h2>
@@ -10,8 +15,8 @@ function viewNouveauRappel() {
       <div class="form-field" style="grid-column:span 2">
         <label class="form-label">Type d'élément *</label>
         <select class="form-select" id="r-nature" onchange="toggleNatureFields()">
-          <option value="rappel">🔔 Rappel simple</option>
-          <option value="tache">📋 Tâche (structurée, avec étapes)</option>
+          <option value="rappel" ${natureTache ? '' : 'selected'}>🔔 Rappel simple</option>
+          <option value="tache" ${natureTache ? 'selected' : ''}>📋 Tâche (structurée, avec étapes)</option>
         </select>
       </div>
     </div>`)}
@@ -26,7 +31,7 @@ function viewNouveauRappel() {
       <div class="form-field"><label class="form-label">Date échéance (limite)</label><input class="form-input" id="r-date" type="date" onchange="updateRappelIntelligentPreview()"/></div>
       <div class="form-field"><label class="form-label">Assigné à</label><select class="form-select" id="r-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
     </div>`)}
-    <div id="r-checklist-section" style="display:none">
+    <div id="r-checklist-section" style="display:${natureTache ? 'block' : 'none'}">
       ${sectionCard('Étapes de la tâche', '#f59e0b', `
         <div id="r-etapes-list" style="margin-bottom:10px"></div>
         <div style="display:flex;gap:8px">

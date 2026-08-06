@@ -975,7 +975,23 @@ const USER_ROLES = {
   'jo@cofidex.ch': { prenom: 'Jonathan', nom: 'Özkan', role: 'signataire', taux: 100 },
   'dp@cofidex.ch': { prenom: 'David', nom: 'Pereira', role: 'apporteur', taux: 50 },
   'ae@cofidex.ch': { prenom: 'Alejandro', nom: 'Espinoza', role: 'apporteur', taux: 50 },
+  // Session RH (Cofidex) — saisie et consultation pure (clients, collaborateurs, tâches, agenda),
+  // sans accès aux chiffres financiers de l'activité (commissions, primes, pipeline, comptabilité).
+  // Le nom affiché est un placeholder générique ; Jonathan peut le personnaliser via Paramètres → Agents.
+  'rh@cofidex.ch': { prenom: 'RH', nom: 'Cofidex', role: 'rh', taux: 0 },
 };
+
+// ═══ RESTRICTION D'ACCÈS — RÔLE "rh" ═══
+// Session volontairement limitée : uniquement la liste/fiches clients (hors chiffres), la gestion
+// des collaborateurs (données LPP), les tâches/rappels et l'agenda. Tout le reste (dashboard,
+// pipeline, contrats, commissions, comptabilité, paramètres) reste réservé aux rôles apporteur/
+// signataire. Liste blanche volontaire (plutôt qu'une liste noire) : toute nouvelle vue ajoutée au
+// CRM à l'avenir sera invisible pour ce rôle par défaut, sauf ajout explicite ici.
+const RH_VUES_AUTORISEES = new Set(['portefeuille', 'clients-prives', 'clients-entreprises', 'rappels', 'agenda']);
+
+function estRoleRH() {
+  return !!(currentUser && currentUser.role === 'rh');
+}
 
 // ═══ SESSION SUPABASE AUTH ═══
 let supaSession = null; // { access_token, refresh_token, expires_at, email }

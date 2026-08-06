@@ -213,7 +213,7 @@ async function showClient(id) {
       <div class="stat-grid" style="margin-bottom:16px">
         ${statCard('Contrats', contrats.length, '#38bdf8')}
         ${statCard('Rappels ouverts', rappels.filter(r => r.statut === 'ouvert').length, rappels.filter(r => r.statut === 'ouvert').length > 0 ? '#f87171' : '#64748b')}
-        ${statCard('CA annuel', caClient(c.id) ? 'CHF ' + caClient(c.id).toLocaleString() : '—', '#f59e0b')}
+        ${estRoleRH() ? '' : statCard('CA annuel', caClient(c.id) ? 'CHF ' + caClient(c.id).toLocaleString() : '—', '#f59e0b')}
       </div>
       ${(() => {
         const oppsClient = (typeof allOpportunites !== 'undefined' ? allOpportunites : []).filter(o => o.client_id === c.id);
@@ -271,11 +271,11 @@ async function showClient(id) {
 
     <div class="tabs">
       <button class="tab-btn active" onclick="switchTab(this,'tab-identite')">Identité</button>
-      <button class="tab-btn" onclick="switchTab(this,'tab-prevoyance')">Prévoyance</button>
+      ${estRoleRH() ? '' : `<button class="tab-btn" onclick="switchTab(this,'tab-prevoyance')">Prévoyance</button>`}
       ${isEntreprise ? `<button class="tab-btn" onclick="switchTab(this,'tab-collaborateurs')">Collaborateurs (${collaborateurs.length})</button>` : ''}
       ${isEntreprise ? `<button class="tab-btn" onclick="switchTab(this,'tab-flotte')">🚗 Flotte (${allVehicules.filter(v=>v.client_id===c.id).length})</button>` : ''}
-      <button class="tab-btn" onclick="switchTab(this,'tab-contrats')">Contrats (${contrats.length})</button>
-      <button class="tab-btn" onclick="switchTab(this,'tab-factures')">Factures (${factures.length})</button>
+      ${estRoleRH() ? '' : `<button class="tab-btn" onclick="switchTab(this,'tab-contrats')">Contrats (${contrats.length})</button>`}
+      ${estRoleRH() ? '' : `<button class="tab-btn" onclick="switchTab(this,'tab-factures')">Factures (${factures.length})</button>`}
       <button class="tab-btn" onclick="switchTab(this,'tab-rappels')">Rappels (${rappels.length})</button>
       <button class="tab-btn" onclick="switchTab(this,'tab-notes')">Notes</button>
     </div>

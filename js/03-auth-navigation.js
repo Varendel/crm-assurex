@@ -433,7 +433,7 @@ async function enterApp(user) {
   if (clientDeepLink && allClients.some(c => c.id === clientDeepLink)) {
     await showClient(clientDeepLink);
   } else {
-    navigate('dashboard');
+    navigate(user.role === 'rh' ? 'portefeuille' : 'dashboard');
   }
 }
 
@@ -469,14 +469,14 @@ const SECTIONS = [
     { id: 'nouvelle-demande-offre', label: 'Demande d\'offre' },
     { id: 'calc-lpp', label: '🧮 Bilan de prévoyance' },
     { id: 'calc-immo', label: '🏠 Financement immobilier' },
-    { id: 'rappels', label: 'Tâches & Rappels' },
-    { id: 'agenda', label: 'Agenda' },
+    { id: 'rappels', label: 'Tâches & Rappels', rhAllowed: true },
+    { id: 'agenda', label: 'Agenda', rhAllowed: true },
     { id: 'campagnes', label: 'Campagnes' },
   ]},
   { id: 'portefeuille', label: 'Portefeuille', icon: '◑', sub: [
-    { id: 'portefeuille', label: 'Tous les clients', staff: true },
-    { id: 'clients-prives', label: 'Clients privés' },
-    { id: 'clients-entreprises', label: 'Entreprises' },
+    { id: 'portefeuille', label: 'Tous les clients', staff: true, rhAllowed: true },
+    { id: 'clients-prives', label: 'Clients privés', rhAllowed: true },
+    { id: 'clients-entreprises', label: 'Entreprises', rhAllowed: true },
     { id: 'clients-oz', label: 'Clients OZ Assure', staff: true },
     { id: 'volume-primes', label: 'Volume de primes', staff: true },
     { id: 'tous-contrats', label: 'Tous les contrats' },
@@ -501,10 +501,12 @@ const SECTIONS = [
 
 function renderSidebar() {
   // Nav
+  const rh = estRoleRH();
   let nav = '';
   SECTIONS.forEach(sec => {
     if (sec.signataireOnly && (!currentUser || currentUser.role !== 'signataire')) return;
     if (sec.solo) {
+      if (rh) return; // Dashboard/Pipeline/OZ Assure : hors périmètre de la session RH
       const active = currentView === sec.target;
       if (sec.logo) {
         nav += `<button class="nav-solo-btn nav-solo-logo ${active ? 'active' : ''}" onclick="navigate('${sec.target}')" title="OZ Assure">
@@ -518,13 +520,17 @@ function renderSidebar() {
       </button>`;
       return;
     }
-    const isActive = sec.sub.some(s => s.id === currentView);
+    // Session RH : liste blanche stricte (RH_VUES_AUTORISEES) — un groupe entier (ex: Comptabilité,
+    // Paramètres) disparaît si aucun de ses sous-éléments n'est autorisé.
+    const subVisibles = rh ? sec.sub.filter(s => s.rhAllowed) : sec.sub;
+    if (rh && !subVisibles.length) return;
+    const isActive = subVisibles.some(s => s.id === currentView);
     nav += `<button class="nav-section-btn ${isActive ? 'active' : ''}" onclick="toggleSection('${sec.id}')">
       <span style="font-size:14px">${sec.icon}</span>${sec.label}
       <span class="arrow">${openSections[sec.id] ? '▲' : '▼'}</span>
     </button>`;
     if (openSections[sec.id]) {
-      sec.sub.forEach(s => {
+      subVisibles.forEach(s => {
         const active = s.id === currentView;
         let badgeHtml = '';
         if (s.id === 'rappels') {
@@ -601,6 +607,11 @@ async function refreshCoreData() {
 }
 
 async function navigate(view, opts) {
+  // Garde-fou session RH (liste blanche RH_VUES_AUTORISEES) — en plus du filtrage de la sidebar,
+  // pour bloquer aussi les liens/redirections directes vers une vue financière hors périmètre.
+  if (estRoleRH() && !RH_VUES_AUTORISEES.has(view)) {
+    view = 'portefeuille';
+  }
   // Empile l'état précédent (vue normale OU fiche détail précise) pour permettre le retour arrière,
   // sauf navigation silencieuse ou si on reste sur le même état (évite un doublon inutile).
   if (!opts || !opts.silent) {

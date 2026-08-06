@@ -1238,7 +1238,7 @@ async function renderDemandeOffreLieeOpportunite(oppId) {
   const derniere = Array.isArray(existantes) && existantes.length ? existantes[0] : null;
   const boutonNouvelle = `<button type="button" onclick="prefillDemandeOffreOpportuniteId='${oppId}'; prefillDemandeOffreClientId=${opp && opp.client_id ? `'${opp.client_id}'` : 'null'}; navigate('nouvelle-demande-offre')" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 16px;color:var(--text-muted);font-weight:700;font-size:13px;cursor:pointer">📝 ${derniere ? 'Nouvelle demande d\'offre' : 'Demande d\'offre liée'}</button>`;
   const boutonReprendre = derniere ? `<button type="button" onclick="demandeOffreEnEditionId='${derniere.id}'; navigate('nouvelle-demande-offre')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:9px;padding:10px 16px;color:var(--accent);font-weight:700;font-size:13px;cursor:pointer">↺ Reprendre la demande d'offre (${fmtDate(derniere.created_at)})</button>` : '';
-  zone.innerHTML = boutonReprendre + boutonNouvelle;
+  zone.innerHTML = renderEtatDossiers(existantes) + `<div style="display:flex;gap:10px;flex-wrap:wrap">${boutonReprendre}${boutonNouvelle}</div>`;
 }
 
 // Repeuple tous les champs du formulaire "Demande d'offre" depuis un enregistrement existant
@@ -1354,12 +1354,17 @@ function verifierPlafondLppCollaborateur(input) {
   }
 }
 
-function genererEmailDemandeOffre() {
+async function genererEmailDemandeOffre() {
   const checked = [...document.querySelectorAll('.do-cie-checkbox:checked')];
   if (!checked.length) { showError('Sélectionne au moins une compagnie.'); return; }
   const cies = checked.map(el => (window._doContacts || []).find(c => c.id === el.value)).filter(Boolean);
   const emails = cies.map(c => c.email).filter(Boolean);
   const sansEmail = cies.filter(c => !c.email).map(c => c.compagnie);
+
+  // Sauvegarde silencieuse si le dossier n'existe pas encore, pour pouvoir tracer QUELLES
+  // compagnies ont été sollicitées et QUAND (affiché ensuite sur la fiche client/opportunité).
+  let demandeOffreId = document.getElementById('do-demande-offre-id')?.value || null;
+  if (!demandeOffreId) demandeOffreId = await enregistrerDemandeOffreSansNaviguer(null);
 
   const val = id => document.getElementById(id)?.value || '';
   const chk = id => document.getElementById(id)?.checked;
@@ -1432,6 +1437,21 @@ function genererEmailDemandeOffre() {
 
   const sujet = `Demande d'offre — ${nomClient}`;
   const mailto = `mailto:${emails.join(',')}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`;
+
+  // Trace quelles compagnies viennent d'être sollicitées (fusionne avec les envois précédents,
+  // ne duplique pas une compagnie déjà tracée — met juste à jour sa date d'envoi).
+  if (demandeOffreId) {
+    const existantes = (await dbGet('demandes_offre', `id=eq.${demandeOffreId}&select=compagnies_envoi`))?.[0]?.compagnies_envoi || [];
+    const maintenant = new Date().toISOString();
+    const compagniesEnvoi = [...existantes];
+    cies.forEach(cie => {
+      const i = compagniesEnvoi.findIndex(e => e.compagnie_id === cie.id);
+      const entree = { compagnie_id: cie.id, compagnie: cie.compagnie, email: cie.email || null, envoye_le: maintenant, statut: 'envoyée' };
+      if (i >= 0) compagniesEnvoi[i] = entree; else compagniesEnvoi.push(entree);
+    });
+    await dbPatch('demandes_offre', demandeOffreId, { compagnies_envoi: compagniesEnvoi });
+  }
+
   window.location.href = mailto;
 
   if (sansEmail.length) {
@@ -1439,7 +1459,12 @@ function genererEmailDemandeOffre() {
   }
 }
 
-async function saveDemandeOffre(demandeOffreId) {
+// Construit le corps de la requête (donnees + liens client/opp) à partir du formulaire — factorisé
+// pour être réutilisé à la fois par le bouton "Enregistrer" (saveDemandeOffre, qui navigue ensuite)
+// et par la sauvegarde silencieuse déclenchée automatiquement quand on génère l'email (voir
+// genererEmailDemandeOffre), qui a besoin d'un id AVANT d'exister sans pour autant faire naviguer
+// hors de l'écran.
+function construireBodyDemandeOffre() {
   const val = id => document.getElementById(id)?.value || null;
   const chk = id => document.getElementById(id)?.checked || false;
 
@@ -1472,26 +1497,37 @@ async function saveDemandeOffre(demandeOffreId) {
 
   const clientId = val('do-client');
   const opportuniteId = document.getElementById('do-opportunite-id')?.value || null;
-  const body = {
+  return {
     client_id: clientId || null,
     prospect_nom: clientId ? null : val('do-prospect-nom'),
     opportunite_id: opportuniteId,
     agent_id: currentUser.id && allAgents.find(a=>a.email===currentUser.email) ? allAgents.find(a=>a.email===currentUser.email).id : null,
     donnees,
   };
+}
 
+// Enregistre (création ou mise à jour) sans naviguer — retourne l'id du dossier. Utilisé par le
+// bouton "Enregistrer" ET par la sauvegarde silencieuse au moment de générer l'email.
+async function enregistrerDemandeOffreSansNaviguer(demandeOffreId) {
+  const body = construireBodyDemandeOffre();
   const enModification = !!demandeOffreId;
   const res = enModification ? await dbPatch('demandes_offre', demandeOffreId, body) : await dbPost('demandes_offre', body);
-  if (res && res.error) { showError('Erreur: ' + errMsg(res)); return; }
-  logAction(enModification ? 'update_demande_offre' : 'create_demande_offre', 'demandes_offre', enModification ? demandeOffreId : (res && res[0] ? res[0].id : null), body.prospect_nom || 'Client existant');
-  // Rattachée à une opportunité : trace automatiquement l'envoi dans son historique, pour ne pas
-  // avoir à ressaisir manuellement ce que le formulaire vient déjà de faire — seulement à la
-  // création, pour ne pas polluer l'historique à chaque modification ultérieure.
-  if (opportuniteId && !enModification) {
-    await ajouterLigneHistoriqueOpportunite(opportuniteId, `📝 Demande d'offre enregistrée${val('do-prospect-nom') || document.getElementById('do-client')?.selectedOptions[0]?.text ? ' pour ' + (document.getElementById('do-client')?.selectedOptions[0]?.text || val('do-prospect-nom')) : ''}`);
+  if (res && res.error) { showError('Erreur: ' + errMsg(res)); return null; }
+  const id = enModification ? demandeOffreId : (res && res[0] ? res[0].id : null);
+  logAction(enModification ? 'update_demande_offre' : 'create_demande_offre', 'demandes_offre', id, body.prospect_nom || 'Client existant');
+  if (body.opportunite_id && !enModification) {
+    const val = key => document.getElementById(key)?.value || null;
+    await ajouterLigneHistoriqueOpportunite(body.opportunite_id, `📝 Demande d'offre enregistrée${val('do-prospect-nom') || document.getElementById('do-client')?.selectedOptions[0]?.text ? ' pour ' + (document.getElementById('do-client')?.selectedOptions[0]?.text || val('do-prospect-nom')) : ''}`);
   }
+  if (id) { const hidden = document.getElementById('do-demande-offre-id'); if (hidden) hidden.value = id; }
+  return id;
+}
+
+async function saveDemandeOffre(demandeOffreId) {
+  const id = await enregistrerDemandeOffreSansNaviguer(demandeOffreId);
+  if (!id) return;
   demandeOffreActiveId = null;
-  showError(enModification ? '✓ Demande d\'offre mise à jour.' : '✓ Demande d\'offre enregistrée — retrouve-la dans Suivi des affaires pour générer l\'email plus tard.');
+  showError(demandeOffreId ? '✓ Demande d\'offre mise à jour.' : '✓ Demande d\'offre enregistrée — retrouve-la dans Suivi des affaires pour générer l\'email plus tard.');
   navigate('suivi');
 }
 

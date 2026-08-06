@@ -811,6 +811,11 @@ function formEntreprise() {
       <div class="form-field"><label class="form-label">Soumis SUVA ?</label><select class="form-select" id="e-suva"><option value="">—</option><option value="oui">Oui</option><option value="non">Non</option></select></div>
     </div>`)}
     ${sectionCard('Contact & Adresse', '#38bdf8', `<div class="form-grid">
+      <div class="form-field" style="grid-column:span 2;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.25);border-radius:9px;padding:10px 14px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);cursor:pointer;font-weight:700">
+          <input type="checkbox" id="e-domiciliation-cofidex" style="width:16px;height:16px;cursor:pointer" onchange="toggleDomiciliationCofidex()"/>🏢 Domiciliation Cofidex (remplit automatiquement l'adresse c/o Cofidex SA)
+        </label>
+      </div>
       <div class="form-field"><label class="form-label">Adresse *</label><input class="form-input" id="e-adresse" placeholder="Rue du Commerce 1"/></div>
       <div class="form-field"><label class="form-label">c/o (optionnel)</label><input class="form-input" id="e-co" placeholder="c/o Nom Prénom"/></div>
       <div class="form-field"><label class="form-label">NPA *</label><input class="form-input" id="e-npa" placeholder="1000"/></div>
@@ -905,6 +910,32 @@ function formEntreprise() {
       <button onclick="printEntreprise()" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 20px;font-weight:700;font-size:13px;cursor:pointer;color:var(--text-muted)">🖨️ Imprimer PDF</button>
       <button class="btn-save" onclick="saveEntreprise()">✓ Enregistrer</button>
     </div>`;
+}
+
+// Domiciliation chez Cofidex SA : coche -> remplit et verrouille adresse/c-o/NPA/ville avec
+// l'adresse fixe de Cofidex ; décoche -> déverrouille et restaure ce que l'utilisateur avait
+// saisi avant (mémorisé sur la checkbox elle-même via data-*, pour ne rien perdre).
+const ADRESSE_COFIDEX = { co: 'c/o Cofidex SA', adresse: 'Rue du Centre 142', npa: '1025', ville: 'St-Sulpice' };
+function toggleDomiciliationCofidex() {
+  const cb = document.getElementById('e-domiciliation-cofidex');
+  const champs = { co: document.getElementById('e-co'), adresse: document.getElementById('e-adresse'), npa: document.getElementById('e-npa'), ville: document.getElementById('e-ville') };
+  if (!cb) return;
+  if (cb.checked) {
+    Object.entries(champs).forEach(([k, el]) => {
+      if (!el) return;
+      cb.dataset['prev_' + k] = el.value; // mémorise la valeur saisie avant, pour la restaurer si décoché
+      el.value = ADRESSE_COFIDEX[k];
+      el.readOnly = true;
+      el.style.background = 'var(--surface-alt)';
+    });
+  } else {
+    Object.entries(champs).forEach(([k, el]) => {
+      if (!el) return;
+      el.value = cb.dataset['prev_' + k] || '';
+      el.readOnly = false;
+      el.style.background = '';
+    });
+  }
 }
 
 async function saveEntreprise() {

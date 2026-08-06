@@ -1085,6 +1085,11 @@ async function viewNouvelleDemandeOffre() {
       </div>
       <div class="form-field" style="margin-top:10px"><label class="form-label">Améliorations générales souhaitées</label>
         <div style="display:flex;gap:16px;flex-wrap:wrap">${ckb('do-amelio-rentes','Rentes')}${ckb('do-amelio-epargne','Épargne')}${ckb('do-amelio-tranches','Tranches de cotisations')}${ckb('do-amelio-rendement','Rendement')}</div>
+      </div>
+      <div style="margin-top:16px">
+        <label class="form-label">Collaborateurs à assurer (LPP)</label>
+        <div id="do-collabs-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
+        <button type="button" class="btn-secondary" style="font-size:12px;padding:6px 14px" onclick="ajouterCollaborateurDemandeOffre()">+ Ajouter un collaborateur</button>
       </div>`)}
 
     ${sectionCard('Responsabilité civile', '#f87171', `<div class="form-grid">
@@ -1169,6 +1174,17 @@ function prefillChampsDemandeOffre(existante) {
   setChk('do-transports', rc.transports); setChk('do-transports-speciaux', rc.transports_speciaux); setChk('do-machines', rc.machines);
   setChk('do-vol', rc.vol); setChk('do-all-risk', rc.all_risk); setVal('do-rc-inventaire', rc.inventaire);
   setChk('do-rc-prejudice-fortune', rc.prejudice_fortune); setVal('do-rc-cv-details', rc.cv_details);
+  (d.collaborateurs_lpp || []).forEach(c => {
+    ajouterCollaborateurDemandeOffre();
+    const rows = document.querySelectorAll('.do-collab-row');
+    const row = rows[rows.length - 1];
+    if (!row) return;
+    if (row.querySelector('.do-collab-nom')) row.querySelector('.do-collab-nom').value = c.nom || '';
+    if (row.querySelector('.do-collab-prenom')) row.querySelector('.do-collab-prenom').value = c.prenom || '';
+    if (row.querySelector('.do-collab-naissance')) row.querySelector('.do-collab-naissance').value = c.date_naissance || '';
+    if (row.querySelector('.do-collab-adresse')) row.querySelector('.do-collab-adresse').value = c.adresse || '';
+    if (row.querySelector('.do-collab-avs')) row.querySelector('.do-collab-avs').value = c.avs || '';
+  });
   (d.vehicules || []).forEach(p => {
     ajouterPlaqueDemandeOffre();
     const numeros = document.querySelectorAll('.do-plaque-numero'), modeles = document.querySelectorAll('.do-plaque-modele');
@@ -1184,6 +1200,24 @@ function ajouterPlaqueDemandeOffre() {
   const row = document.createElement('div');
   row.style.cssText = 'display:flex;gap:10px';
   row.innerHTML = `<input class="form-input do-plaque-numero" placeholder="N° plaque"/><input class="form-input do-plaque-modele" placeholder="Modèle"/>`;
+  list.appendChild(row);
+}
+
+// Lignes de saisie collaborateur pour la demande d'offre LPP — mêmes champs que la fiche
+// "Collaborateur" du client (nom, prénom, date de naissance, adresse privée, n° AVS), nécessaires
+// à la compagnie pour établir une offre LPP nominative.
+function ajouterCollaborateurDemandeOffre() {
+  const list = document.getElementById('do-collabs-list');
+  const row = document.createElement('div');
+  row.className = 'do-collab-row';
+  row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 130px 1.6fr 120px 28px;gap:8px;align-items:center';
+  row.innerHTML = `
+    <input class="form-input do-collab-nom" placeholder="Nom"/>
+    <input class="form-input do-collab-prenom" placeholder="Prénom"/>
+    <input class="form-input do-collab-naissance" type="date" title="Date de naissance"/>
+    <input class="form-input do-collab-adresse" placeholder="Adresse privée"/>
+    <input class="form-input do-collab-avs" placeholder="N° AVS"/>
+    <button type="button" onclick="this.closest('.do-collab-row').remove()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px">✕</button>`;
   list.appendChild(row);
 }
 
@@ -1261,6 +1295,14 @@ async function saveDemandeOffre(demandeOffreId) {
     numero: el.value, modele: document.querySelectorAll('.do-plaque-modele')[i]?.value || '',
   })).filter(p => p.numero || p.modele);
 
+  const collaborateursLpp = [...document.querySelectorAll('.do-collab-row')].map(row => ({
+    nom: row.querySelector('.do-collab-nom')?.value || '',
+    prenom: row.querySelector('.do-collab-prenom')?.value || '',
+    date_naissance: row.querySelector('.do-collab-naissance')?.value || '',
+    adresse: row.querySelector('.do-collab-adresse')?.value || '',
+    avs: row.querySelector('.do-collab-avs')?.value || '',
+  })).filter(c => c.nom || c.prenom || c.avs);
+
   const donnees = {
     identite: { contact: val('do-contact'), adresse: val('do-adresse'), tel: val('do-tel'), email: val('do-email'), avs: val('do-avs'), activite: val('do-activite'), lieu_risque: val('do-lieu-risque'), suva: val('do-suva'), independant: val('do-independant') },
     base_calcul: { ca: val('do-ca'), nb_collab: val('do-nb-collab'), ap_h: val('do-ap-h'), ap_f: val('do-ap-f'), anp_h: val('do-anp-h'), anp_f: val('do-anp-f'), exc_avs_h: val('do-exc-avs-h'), exc_avs_f: val('do-exc-avs-f'), masse_chef: val('do-masse-chef') },
@@ -1272,6 +1314,7 @@ async function saveDemandeOffre(demandeOffreId) {
     lpp: { taux_min_legal: val('do-taux-min-legal'), ded_coord: val('do-ded-coord'), exc_h: val('do-lpp-exc-h'), exc_f: val('do-lpp-exc-f'), cap_invalidite: val('do-cap-invalidite'), cap_deces: val('do-cap-deces'), amelio_rentes: chk('do-amelio-rentes'), amelio_epargne: chk('do-amelio-epargne'), amelio_tranches: chk('do-amelio-tranches'), amelio_rendement: chk('do-amelio-rendement') },
     rc: { risque: val('do-rc-risque'), lieux: val('do-rc-lieux'), marchandises: chk('do-marchandises'), transports: chk('do-transports'), transports_speciaux: chk('do-transports-speciaux'), machines: chk('do-machines'), vol: chk('do-vol'), all_risk: chk('do-all-risk'), inventaire: val('do-rc-inventaire'), prejudice_fortune: chk('do-rc-prejudice-fortune'), cv_details: val('do-rc-cv-details') },
     vehicules: plaques,
+    collaborateurs_lpp: collaborateursLpp,
   };
 
   const clientId = val('do-client');

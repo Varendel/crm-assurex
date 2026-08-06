@@ -229,7 +229,7 @@ async function showClient(id) {
           </span>`).join('')}
         </div>`;
       })()}
-      ${renderEtatDossiers(demandesOffre)}
+      ${renderEtatDossiers(demandesOffre, 'client', id)}
       ${renderVueEnsembleCouvertures(c, contrats, isEntreprise)}
       ${(() => { const signataire = allAgents.find(a => a.role === 'signataire'); return signataire ? `<div style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--surface-alt);border-radius:10px;margin-bottom:8px">
         ${avatar(signataire, 32)}

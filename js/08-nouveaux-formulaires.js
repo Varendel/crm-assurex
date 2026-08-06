@@ -258,6 +258,63 @@ async function ouvrirPieceJointe(path) {
   } catch(e) { showError("Erreur lors de l'ouverture du document."); }
 }
 
+// ═══ UPLOAD DE L'OFFRE REÇUE (PDF) — pièce jointe rattachée à une compagnie sollicitée ═══
+// Décision de Jonathan le 06.08.2026 : upload manuel du PDF reçu (pas de parsing automatique
+// de pièce jointe Outlook pour l'instant). Une fois uploadée, l'offre devient consultable
+// (bouton "Voir l'offre", même mécanisme de lien signé que les autres documents) et débloque
+// le bouton "Préparer signature" qui ouvre directement le mandat de courtage existant.
+async function uploadOffreCompagnie(demandeOffreId, idx, input, refreshType, refreshId) {
+  const file = input.files[0];
+  if (!file) return;
+  if (file.type !== 'application/pdf') { showError('Seuls les fichiers PDF sont acceptés pour une offre.'); return; }
+  if (file.size > 10 * 1024 * 1024) { showError('Fichier trop lourd — maximum 10 Mo.'); return; }
+
+  showError('⏳ Upload de l\'offre en cours...');
+  try {
+    const path = `offres/${demandeOffreId}/${idx}-${Date.now()}.pdf`;
+    const token = await getValidAccessToken() || SUPABASE_KEY;
+    let uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${path}`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/pdf' },
+      body: file,
+    });
+    if (!uploadRes.ok) {
+      uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${path}`, {
+        method: 'PUT',
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/pdf' },
+        body: file,
+      });
+      if (!uploadRes.ok) throw new Error("Échec de l'upload");
+    }
+
+    const rows = await dbGet('demandes_offre', `id=eq.${demandeOffreId}&select=id,compagnies_envoi`);
+    const d = Array.isArray(rows) && rows[0];
+    if (!d) throw new Error('Demande d\'offre introuvable');
+    const compagniesEnvoi = (d.compagnies_envoi || []).map(e => ({ ...e }));
+    if (!compagniesEnvoi[idx]) throw new Error('Compagnie introuvable sur ce dossier');
+    compagniesEnvoi[idx].offre_path = path;
+    compagniesEnvoi[idx].offre_nom = file.name;
+    const r = await dbPatch('demandes_offre', demandeOffreId, { compagnies_envoi: compagniesEnvoi });
+    if (r && r.error) throw new Error(errMsg(r));
+
+    logAction('upload_offre', 'demandes_offre', demandeOffreId, `${compagniesEnvoi[idx].compagnie} — ${file.name}`);
+    showError('✓ Offre archivée avec succès.');
+    if (refreshType === 'client' && refreshId) showClient(refreshId);
+    else if (refreshType === 'opp' && refreshId) renderDemandeOffreLieeOpportunite(refreshId);
+  } catch (e) {
+    showError('Erreur upload : ' + e.message);
+  }
+}
+
+// ═══ PRÉPARATION DE L'ENVOI POUR SIGNATURE — depuis une offre reçue et uploadée ═══
+// Réutilise tel quel le système de mandat de courtage existant (lien/QR/mobile/e-mail, capture
+// tactile) — voir ouvrirSignatureMandat() dans js/05-contrats-clients.js. Nécessite un client
+// déjà rattaché au dossier (pas juste un prospect) puisque le mandat se génère au nom du client.
+function preparerEnvoiSignatureOffre(clientId) {
+  if (!clientId) { showError("Ce dossier n'est pas encore rattaché à une fiche client — crée ou lie d'abord la fiche client avant de préparer la signature du mandat."); return; }
+  ouvrirSignatureMandat(clientId);
+}
+
 // Upload d'un mandat signé à la main (papier scanné ou photographié) — vient compléter
 // les mandats générés et signés numériquement dans le CRM, dans la même liste sur la fiche.
 async function uploadMandatSigne(clientId, input) {

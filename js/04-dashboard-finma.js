@@ -4,10 +4,13 @@
 // attente" (demandes_offre.compagnies_envoi) par DOMAINE de l'expéditeur (celui déjà enregistré
 // dans Contacts compagnies) et par date (mail reçu après la date d'envoi). Pas de reconnaissance
 // par sujet/mots-clés pour l'instant — volontairement laissé de côté pour rester fiable.
-async function synchroniserOutlook() {
-  if (!msalAccessToken) { showError("Connecte-toi à Outlook (bouton Microsoft dans le menu) pour synchroniser."); return; }
-  const btn = document.getElementById('btn-sync-outlook');
-  if (btn) { btn.textContent = '🔄 Synchronisation...'; btn.disabled = true; }
+//
+// synchroniserOutlookInterne(oppIdFiltre) fait le travail réel et est appelée par :
+//  - synchroniserOutlook() : bouton du dashboard, portée globale (toutes opportunités en cours)
+//  - synchroniserOutlookOpportunite(oppId) (js/07) : bouton sur la fiche opportunité, portée à
+//    cette seule opportunité — permet de "Mettre à jour l'avancement" sans quitter la fiche.
+async function synchroniserOutlookInterne(oppIdFiltre) {
+  if (!msalAccessToken) { showError("Connecte-toi à Outlook (bouton Microsoft dans le menu) pour synchroniser."); return { ok: false, nbMaj: 0 }; }
 
   try {
     const toutes = await dbGet('demandes_offre', 'select=id,opportunite_id,compagnies_envoi&order=created_at.desc');
@@ -16,15 +19,18 @@ async function synchroniserOutlook() {
     // un dossier rattaché à une opportunité Gagnée ou Perdue n'est plus synchronisé (plus la
     // peine de vérifier les réponses reçues sur une affaire déjà classée). Un dossier sans
     // opportunité liée (simple prospect) reste synchronisé — rien à filtrer dans ce cas.
-    const enAttente = enAttenteBrut.filter(d => {
+    // Si oppIdFiltre est fourni (bouton sur fiche opportunité), on restreint en plus à cette
+    // seule opportunité.
+    let enAttente = enAttenteBrut.filter(d => {
       if (!d.opportunite_id) return true;
       const opp = (allOpportunites || []).find(o => o.id === d.opportunite_id);
       return !opp || !['Gagné', 'Perdu'].includes(opp.stade);
     });
+    if (oppIdFiltre) enAttente = enAttente.filter(d => d.opportunite_id === oppIdFiltre);
+
     if (!enAttente.length) {
       showError('Rien à synchroniser — aucun dossier en attente de réponse.');
-      if (btn) { btn.textContent = '📧 Synchroniser Outlook'; btn.disabled = false; }
-      return;
+      return { ok: true, nbMaj: 0 };
     }
 
     const depuis = new Date(Date.now() - 60 * 24 * 3600 * 1000).toISOString();
@@ -36,8 +42,7 @@ async function synchroniserOutlook() {
       messages = data.value || [];
     } else if (r.status === 401) {
       showError('Session Outlook expirée — reconnecte-toi (bouton Microsoft dans le menu) puis réessaie.');
-      if (btn) { btn.textContent = '📧 Synchroniser Outlook'; btn.disabled = false; }
-      return;
+      return { ok: false, nbMaj: 0 };
     }
 
     let nbMaj = 0;
@@ -63,9 +68,17 @@ async function synchroniserOutlook() {
     }
 
     showError(nbMaj ? `✓ Synchronisation terminée — ${nbMaj} offre(s) marquée(s) reçue(s).` : 'Synchronisation terminée — aucune nouvelle réponse détectée.');
+    return { ok: true, nbMaj };
   } catch (e) {
     showError('Erreur pendant la synchronisation Outlook : ' + e.message);
+    return { ok: false, nbMaj: 0 };
   }
+}
+
+async function synchroniserOutlook() {
+  const btn = document.getElementById('btn-sync-outlook');
+  if (btn) { btn.textContent = '🔄 Synchronisation...'; btn.disabled = true; }
+  await synchroniserOutlookInterne(null);
   if (btn) { btn.textContent = '📧 Synchroniser Outlook'; btn.disabled = false; }
   if (currentView === 'dashboard') navigate('dashboard');
 }

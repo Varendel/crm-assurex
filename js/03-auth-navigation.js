@@ -757,32 +757,52 @@ function infoBlock(label, value) {
 // pas à qui) — voir demandes_offre.compagnies_envoi, alimenté par genererEmailDemandeOffre().
 // Repli sur une ligne générique si aucune compagnie n'a encore été tracée (dossier enregistré
 // mais email pas encore généré, ou ancien dossier antérieur à ce suivi).
-function renderEtatDossiers(demandesOffre) {
+// refreshType/refreshId : comment rafraîchir l'affichage après upload d'une offre PDF —
+// ('client', clientId) depuis la fiche client, ('opp', oppId) depuis la fiche opportunité.
+// Laissés vides si appelé depuis un contexte où le rafraîchissement n'a pas de sens.
+function renderEtatDossiers(demandesOffre, refreshType, refreshId) {
   if (!demandesOffre || !demandesOffre.length) return '';
   const statutColorDo = { 'envoyée': '#f59e0b', 'reçue': '#4ade80', 'relance': '#f87171', 'clôturée': '#64748b' };
   const lignes = [];
   demandesOffre.forEach(d => {
     if (d.compagnies_envoi && d.compagnies_envoi.length) {
-      d.compagnies_envoi.forEach(e => lignes.push({
-        id: d.id,
+      d.compagnies_envoi.forEach((e, idx) => lignes.push({
+        demandeOffreId: d.id,
+        idx,
+        clientId: d.client_id || '',
         libelle: `En attente d'offre — ${e.compagnie}`,
         statut: e.statut || 'envoyée',
         date: e.recu_le || e.envoye_le,
         verbe: e.statut === 'reçue' ? 'Offre reçue' : "En attente d'offre",
         compagnie: e.compagnie,
+        offrePath: e.offre_path || null,
       }));
     } else {
-      lignes.push({ id: d.id, libelle: `Demande d'offre du ${fmtDate(d.created_at)}`, statut: d.statut || 'envoyée', date: d.created_at, verbe: null, compagnie: null });
+      lignes.push({ demandeOffreId: d.id, idx: null, clientId: d.client_id || '', libelle: `Demande d'offre du ${fmtDate(d.created_at)}`, statut: d.statut || 'envoyée', date: d.created_at, verbe: null, compagnie: null, offrePath: null });
     }
   });
+  // Actions pièce jointe / signature — uniquement disponibles sur les lignes suivies par
+  // compagnie (idx non-null) et une fois l'offre reçue. Upload manuel du PDF (décision de
+  // Jonathan le 06.08.2026), puis bouton pour lancer directement le mandat de signature.
+  const actionsOffre = (l) => {
+    if (l.idx === null || l.statut !== 'reçue') return '';
+    if (l.offrePath) {
+      return `<button type="button" onclick="event.stopPropagation();ouvrirPieceJointe('${l.offrePath}')" style="background:var(--surface);border:1px solid var(--border);color:var(--text-muted);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer">📄 Voir l'offre</button>
+        <button type="button" onclick="event.stopPropagation();preparerEnvoiSignatureOffre('${l.clientId}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer">✍️ Préparer signature</button>`;
+    }
+    return `<label onclick="event.stopPropagation()" style="cursor:pointer;background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700">📎 Joindre l'offre
+      <input type="file" accept="application/pdf" style="display:none" onclick="event.stopPropagation()" onchange="event.stopPropagation();uploadOffreCompagnie('${l.demandeOffreId}',${l.idx},this,'${refreshType || ''}','${refreshId || ''}')">
+    </label>`;
+  };
   return `<div style="padding:10px 16px;background:var(--surface-alt);border:1px solid var(--border);border-radius:10px;margin-bottom:16px">
     <div style="font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">📋 État des dossiers (demandes d'offre)</div>
     <div style="display:flex;flex-direction:column;gap:6px">
-      ${lignes.map(l => `<div onclick="demandeOffreEnEditionId='${l.id}';navigate('nouvelle-demande-offre')" style="cursor:pointer;display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 10px">
+      ${lignes.map(l => `<div onclick="demandeOffreEnEditionId='${l.demandeOffreId}';navigate('nouvelle-demande-offre')" style="cursor:pointer;display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 10px;flex-wrap:wrap">
         <span style="width:7px;height:7px;border-radius:50%;background:${statutColorDo[l.statut] || '#64748b'};flex-shrink:0"></span>
         <span style="font-size:12px;color:var(--text);font-weight:600;flex:1">${l.verbe ? `${l.verbe} — ${l.compagnie}` : l.libelle}</span>
         <span style="font-size:10.5px;color:var(--text-muted)">${fmtDate(l.date)}</span>
         <span style="font-size:10.5px;font-weight:700;color:${statutColorDo[l.statut] || '#64748b'};text-transform:capitalize">${l.statut}</span>
+        ${actionsOffre(l)}
       </div>`).join('')}
     </div>
   </div>`;

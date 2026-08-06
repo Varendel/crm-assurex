@@ -1238,7 +1238,20 @@ async function renderDemandeOffreLieeOpportunite(oppId) {
   const derniere = Array.isArray(existantes) && existantes.length ? existantes[0] : null;
   const boutonNouvelle = `<button type="button" onclick="prefillDemandeOffreOpportuniteId='${oppId}'; prefillDemandeOffreClientId=${opp && opp.client_id ? `'${opp.client_id}'` : 'null'}; navigate('nouvelle-demande-offre')" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 16px;color:var(--text-muted);font-weight:700;font-size:13px;cursor:pointer">📝 ${derniere ? 'Nouvelle demande d\'offre' : 'Demande d\'offre liée'}</button>`;
   const boutonReprendre = derniere ? `<button type="button" onclick="demandeOffreEnEditionId='${derniere.id}'; navigate('nouvelle-demande-offre')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:9px;padding:10px 16px;color:var(--accent);font-weight:700;font-size:13px;cursor:pointer">↺ Reprendre la demande d'offre (${fmtDate(derniere.created_at)})</button>` : '';
-  zone.innerHTML = renderEtatDossiers(existantes) + `<div style="display:flex;gap:10px;flex-wrap:wrap">${boutonReprendre}${boutonNouvelle}</div>`;
+  // Bouton "Mettre à jour l'avancement" — version scopée à cette seule opportunité du bouton
+  // "Synchroniser Outlook" du dashboard (mêmes règles : domaine expéditeur + date d'envoi).
+  const boutonSyncOutlook = existantes && existantes.length ? `<button type="button" id="btn-sync-outlook-opp" onclick="synchroniserOutlookOpportunite('${oppId}')" title="Vérifie dans Outlook si une des compagnies sollicitées sur cette opportunité a répondu" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 16px;color:var(--text-muted);font-weight:700;font-size:13px;cursor:pointer">📧 Mettre à jour l'avancement (check Outlook)</button>` : '';
+  zone.innerHTML = renderEtatDossiers(existantes, 'opp', oppId) + `<div style="display:flex;gap:10px;flex-wrap:wrap">${boutonReprendre}${boutonNouvelle}${boutonSyncOutlook}</div>`;
+}
+
+// Appelée par le bouton "Mettre à jour l'avancement (check Outlook)" sur la fiche opportunité —
+// délègue à synchroniserOutlookInterne (js/04) en la scopant à cette seule opportunité, puis
+// rafraîchit uniquement la zone État des dossiers (pas besoin de recharger toute la fiche).
+async function synchroniserOutlookOpportunite(oppId) {
+  const btn = document.getElementById('btn-sync-outlook-opp');
+  if (btn) { btn.textContent = '🔄 Vérification...'; btn.disabled = true; }
+  await synchroniserOutlookInterne(oppId);
+  await renderDemandeOffreLieeOpportunite(oppId);
 }
 
 // Repeuple tous les champs du formulaire "Demande d'offre" depuis un enregistrement existant

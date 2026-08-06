@@ -1,3 +1,66 @@
+// ═══ SYNCHRONISATION OUTLOOK — détecte les réponses reçues aux demandes d'offre ═══
+// Approche volontairement simple (validée avec Jonathan le 06.08.2026) : UN seul appel Graph
+// récupère les mails des 60 derniers jours, puis on rapproche chaque compagnie encore "en
+// attente" (demandes_offre.compagnies_envoi) par DOMAINE de l'expéditeur (celui déjà enregistré
+// dans Contacts compagnies) et par date (mail reçu après la date d'envoi). Pas de reconnaissance
+// par sujet/mots-clés pour l'instant — volontairement laissé de côté pour rester fiable.
+async function synchroniserOutlook() {
+  if (!msalAccessToken) { showError("Connecte-toi à Outlook (bouton Microsoft dans le menu) pour synchroniser."); return; }
+  const btn = document.getElementById('btn-sync-outlook');
+  if (btn) { btn.textContent = '🔄 Synchronisation...'; btn.disabled = true; }
+
+  try {
+    const toutes = await dbGet('demandes_offre', 'select=id,compagnies_envoi&order=created_at.desc');
+    const enAttente = (toutes || []).filter(d => (d.compagnies_envoi || []).some(e => e.statut !== 'reçue'));
+    if (!enAttente.length) {
+      showError('Rien à synchroniser — aucun dossier en attente de réponse.');
+      if (btn) { btn.textContent = '📧 Synchroniser Outlook'; btn.disabled = false; }
+      return;
+    }
+
+    const depuis = new Date(Date.now() - 60 * 24 * 3600 * 1000).toISOString();
+    let messages = [];
+    const url = `https://graph.microsoft.com/v1.0/me/messages?$filter=receivedDateTime ge ${depuis}&$orderby=receivedDateTime desc&$top=200&$select=id,subject,from,receivedDateTime`;
+    const r = await fetch(url, { headers: { Authorization: `Bearer ${msalAccessToken}` } });
+    if (r.ok) {
+      const data = await r.json();
+      messages = data.value || [];
+    } else if (r.status === 401) {
+      showError('Session Outlook expirée — reconnecte-toi (bouton Microsoft dans le menu) puis réessaie.');
+      if (btn) { btn.textContent = '📧 Synchroniser Outlook'; btn.disabled = false; }
+      return;
+    }
+
+    let nbMaj = 0;
+    for (const d of enAttente) {
+      const compagniesEnvoi = (d.compagnies_envoi || []).map(e => ({ ...e }));
+      let modifie = false;
+      compagniesEnvoi.forEach(e => {
+        if (e.statut === 'reçue' || !e.email || !e.email.includes('@')) return;
+        const domaine = e.email.split('@')[1].toLowerCase();
+        const envoyeLe = new Date(e.envoye_le || 0);
+        const match = messages.find(m => {
+          const addr = (m.from && m.from.emailAddress && m.from.emailAddress.address || '').toLowerCase();
+          return addr.endsWith('@' + domaine) && new Date(m.receivedDateTime) >= envoyeLe;
+        });
+        if (match) {
+          e.statut = 'reçue';
+          e.recu_le = match.receivedDateTime;
+          modifie = true;
+          nbMaj++;
+        }
+      });
+      if (modifie) await dbPatch('demandes_offre', d.id, { compagnies_envoi: compagniesEnvoi });
+    }
+
+    showError(nbMaj ? `✓ Synchronisation terminée — ${nbMaj} offre(s) marquée(s) reçue(s).` : 'Synchronisation terminée — aucune nouvelle réponse détectée.');
+  } catch (e) {
+    showError('Erreur pendant la synchronisation Outlook : ' + e.message);
+  }
+  if (btn) { btn.textContent = '📧 Synchroniser Outlook'; btn.disabled = false; }
+  if (currentView === 'dashboard') navigate('dashboard');
+}
+
 function viewDashboard() {
   const actifs = allClients.filter(c => c.statut === 'actif').length;
   const totalCAFull = allContrats.filter(ct => !['résilié','annulé','mandat_resilie'].includes(ct.statut)).reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0);
@@ -122,7 +185,10 @@ function viewDashboard() {
         <div style="margin-bottom:4px;color:var(--text-muted);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase">${now}</div>
         <h1 style="margin:0 0 4px;font-size:24px;font-weight:900;color:var(--text)">Bonjour, ${currentUser.prenom} 👋</h1>
       </div>
-      <button onclick="navigate('dashboard')" title="Recharger les données depuis Supabase" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:9px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">🔄 Actualiser</button>
+      <div style="display:flex;gap:8px">
+        <button id="btn-sync-outlook" onclick="synchroniserOutlook()" title="Vérifie dans Outlook si des compagnies ont répondu aux demandes d'offre envoyées" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:9px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">📧 Synchroniser Outlook</button>
+        <button onclick="navigate('dashboard')" title="Recharger les données depuis Supabase" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:9px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">🔄 Actualiser</button>
+      </div>
     </div>
     <div style="color:var(--text-muted);font-size:13px;margin-bottom:24px">Assurex Sàrl · EX Groupe · Commissions actives depuis le 01.06.2026</div>
     <div class="stat-grid" style="grid-template-columns:repeat(5,1fr)">

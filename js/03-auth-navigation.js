@@ -17,7 +17,7 @@ async function tryRestoreOutlookSession() {
     if (!accounts || accounts.length === 0) return false;
     const result = await msalInstance.acquireTokenSilent({
       account: accounts[0],
-      scopes: ['openid', 'profile', 'email', 'User.Read', 'Calendars.ReadWrite', 'Mail.Send'],
+      scopes: ['openid', 'profile', 'email', 'User.Read', 'Calendars.ReadWrite', 'Mail.Send', 'Mail.Read'],
     });
     msalAccessToken = result.accessToken;
     return true;
@@ -30,7 +30,7 @@ async function loginMicrosoft() {
   try {
     if (!msalInstance) { await initMSAL(); }
     if (!msalInstance) { showError('Erreur initialisation Microsoft.'); return; }
-    const result = await msalInstance.loginPopup({ scopes: ['openid', 'profile', 'email', 'User.Read', 'Calendars.ReadWrite', 'Mail.Send'] });
+    const result = await msalInstance.loginPopup({ scopes: ['openid', 'profile', 'email', 'User.Read', 'Calendars.ReadWrite', 'Mail.Send', 'Mail.Read'] });
     msalAccessToken = result.accessToken;
     calendarEvents = await fetchCalendarEvents();
     showError('✓ Outlook connecté — synchronisation activée.');

@@ -100,9 +100,9 @@ function renderStatsBranchesPipeline(OPPS) {
   if (!volumeEntreprise && !commissionSante && !commissionVie) return '';
   return `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;background:var(--surface-alt);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
     <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;width:100%;margin-bottom:2px">📊 Pipeline par branche (selon produits sélectionnés)</div>
-    <div style="flex:1;min-width:160px"><div style="font-size:10.5px;color:var(--text-muted)">Volume prime entreprises</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${volumeEntreprise.toLocaleString()}</div></div>
-    <div style="flex:1;min-width:160px"><div style="font-size:10.5px;color:var(--text-muted)">Santé — privés</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${commissionSante.toLocaleString()}</div></div>
-    <div style="flex:1;min-width:160px"><div style="font-size:10.5px;color:var(--text-muted)">Vie / LPP — privés</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${commissionVie.toLocaleString()}</div></div>
+    <div style="flex:1;min-width:160px"><div style="font-size:10.5px;color:var(--text-muted)">Volume prime entreprises</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${fmtCHF(volumeEntreprise)}</div></div>
+    <div style="flex:1;min-width:160px"><div style="font-size:10.5px;color:var(--text-muted)">Santé — privés</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${fmtCHF(commissionSante)}</div></div>
+    <div style="flex:1;min-width:160px"><div style="font-size:10.5px;color:var(--text-muted)">Vie / LPP — privés</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${fmtCHF(commissionVie)}</div></div>
   </div>`;
 }
 
@@ -124,7 +124,7 @@ function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, to
         <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:1px">${nomClient(o)}</div>
         <div style="font-size:10.5px;color:var(--text-muted);margin-bottom:8px">${o.compagnie || '&nbsp;'}${tachesOuvertes > 0 ? ` · ☑ ${tachesOuvertes} tâche${tachesOuvertes > 1 ? 's' : ''}` : ''}</div>
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:13px;font-weight:800;color:#f59e0b">CHF ${(o.montant_potentiel||0).toLocaleString()}</span>
+          <span style="font-size:13px;font-weight:800;color:#f59e0b">CHF ${fmtCHF((o.montant_potentiel||0))}</span>
           ${o.apporteur_id ? avatar(agentById(o.apporteur_id), 22) : ''}
         </div>
         <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:${o.probabilite||0}%;background:${color}"></div></div>
@@ -144,7 +144,7 @@ function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, to
       <div class="table-wrap">${gagnees.map(o => `<div class="table-row" style="grid-template-columns:1fr 160px 100px 150px 110px;cursor:pointer" onclick="editerOpportunite('${o.id}')">
         <div style="font-weight:700;font-size:13px;color:var(--text)">${o.titre}</div>
         <div style="font-size:13px;font-weight:800;color:var(--text)">${nomClient(o)}</div>
-        <div style="font-size:12px;font-weight:700;color:#f59e0b">CHF ${(o.montant_potentiel||0).toLocaleString()}</div>
+        <div style="font-size:12px;font-weight:700;color:#f59e0b">CHF ${fmtCHF((o.montant_potentiel||0))}</div>
         <div>${selectStadeOpportunite(o, 'Gagné', tousLesStades)}</div>
         <div>${o.contrat_id ? badge('Contrat créé', '#4ade80') : badge('À finaliser', '#f59e0b')}</div>
       </div>`).join('')}</div>
@@ -154,7 +154,7 @@ function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, to
       <div class="table-wrap">${perdues.map(o => `<div class="table-row" style="grid-template-columns:1fr 160px 100px 150px;cursor:pointer" onclick="editerOpportunite('${o.id}')">
         <div style="font-weight:700;font-size:13px;color:var(--text)">${o.titre}</div>
         <div style="font-size:13px;font-weight:800;color:var(--text)">${nomClient(o)}</div>
-        <div style="font-size:12px;font-weight:700;color:var(--text-muted)">CHF ${(o.montant_potentiel||0).toLocaleString()}</div>
+        <div style="font-size:12px;font-weight:700;color:var(--text-muted)">CHF ${fmtCHF((o.montant_potentiel||0))}</div>
         <div>${selectStadeOpportunite(o, 'Perdu', tousLesStades)}</div>
       </div>`).join('')}</div>
     </div>` : ''}`;
@@ -192,7 +192,7 @@ function renderListeOpportunites(toutes, nomClient, tousLesStades, stadeColor) {
         <div style="font-size:12.5px;color:var(--text-muted)">${o.compagnie || '—'}</div>
         <div>${badge(o.stade, stadeColor[o.stade] || (o.stade === 'Gagné' ? '#4ade80' : '#f87171'))}</div>
         <div style="font-size:12.5px;color:var(--text-muted)">${o.probabilite||0}%</div>
-        <div style="font-weight:800;color:#f59e0b">CHF ${(o.montant_potentiel||0).toLocaleString()}</div>
+        <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF((o.montant_potentiel||0))}</div>
       </div>`).join('') : '<div class="table-empty">Aucune opportunité.</div>'}
     </div>`;
 }
@@ -220,7 +220,7 @@ function renderEcheancesOpportunites(oppsOuvertes, nomClient, stadeColor) {
         <div style="font-weight:700;font-size:13px;color:var(--text)">${o.titre}</div>
         <div style="font-size:13px;color:var(--text)">${nomClient(o)}</div>
         <div>${badge(o.stade, stadeColor[o.stade] || '#64748b')}</div>
-        <div style="font-weight:800;color:#f59e0b">CHF ${(o.montant_potentiel||0).toLocaleString()}</div>
+        <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF((o.montant_potentiel||0))}</div>
         <div style="font-size:12px;color:var(--text-muted)">${o.date_echeance ? fmtDate(o.date_echeance) : '—'}</div>
       </div>`).join('')}</div>
     </div>`;
@@ -359,7 +359,7 @@ function viewSuivi() {
       return `<div style="background:linear-gradient(135deg,rgba(74,222,128,0.06) 0%,rgba(56,189,248,0.04) 100%);border:1px solid rgba(74,222,128,0.2);border-radius:14px;padding:20px;margin-bottom:24px">
         <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:14px">💰 Pilotage commissions (depuis le 01.06.2026)</div>
         <div class="stat-grid">
-          ${statCard('Commissions en attente', 'CHF ' + Math.round(totalComm).toLocaleString(), '#4ade80', `dont CHF ${Math.round(totalCommGestion).toLocaleString()} gestion — ${commissionsEstimees.length} dossiers`)}
+          ${statCard('Commissions en attente', 'CHF ' + Math.round(totalComm).toLocaleString(), '#4ade80', `dont CHF ${fmtCHF(Math.round(totalCommGestion))} gestion — ${commissionsEstimees.length} dossiers`)}
           ${statCard('Contrats "en cours"', enCours.length, '#38bdf8', 'CHF ' + Math.round(totalEnCours).toLocaleString() + ' de primes')}
         </div>
         ${enCours.length ? `<div style="margin-top:14px;font-size:11px;color:var(--text-muted)">
@@ -370,7 +370,7 @@ function viewSuivi() {
             return `<div style="padding:6px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between">
               <a href="?client=${ct.client_id}" onclick="return irVersClient(event, '${ct.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${nom}</a>
               <span>${ct.produit||''} · ${ct.compagnie||''}</span>
-              <span style="font-weight:700;color:#f59e0b">CHF ${Number(ct.prime_annuelle||0).toLocaleString()}/an</span>
+              <span style="font-weight:700;color:#f59e0b">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}/an</span>
             </div>`;
           }).join('')}
         </div>` : ''}
@@ -463,7 +463,7 @@ function renderSuiviTables() {
         <div style="font-size:13px;color:var(--text)">${nomClient(ct)}</div>
         <div style="font-size:13px;color:var(--text)">${ct.compagnie}</div>
         <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ct.date_echeance)}</div>
-        <div style="font-weight:800;color:#f59e0b">CHF ${Number(ct.prime_annuelle||0).toLocaleString()}</div>
+        <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}</div>
         <div>${badge(ct.statut, ct.statut === 'actif' ? '#4ade80' : ct.statut === 'renouveler' ? '#f59e0b' : '#f87171')}${ct.commissionne === false ? ' ' + badge('Non commissionné', '#64748b') : ''}</div>
         ${avecReporter ? `<div><button type="button" onclick="event.stopPropagation();reporterRenouvellementContrat('${ct.id}')" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">↻ Reporter d'un an</button></div>` : ''}
       </div>`).join('')}</div>`;
@@ -745,9 +745,9 @@ function renderFichePaieApercu() {
         <div style="font-size:11px;color:var(--text-muted)">${l.ca.produit||''} · ${l.ca.compagnie||''}</div>
       </div>
       <div style="font-size:12px;color:var(--text-muted)">${fmtDate(commissionDateReception(l.ca))}</div>
-      <div style="font-weight:800;color:var(--text);text-align:right">CHF ${l.montant.toLocaleString()}</div>
-      <div style="text-align:right">${sig ? `<div style="font-size:11px;color:${agentColor(sig)}">${sig.prenom}: CHF ${l.pJ}</div>` : ''}</div>
-      <div style="text-align:right">${l.agent ? `<div style="font-size:11px;color:${agentColor(l.agent)}">${l.agent.prenom}: CHF ${l.pA}</div>` : `<div style="font-size:11px;color:var(--text-muted)">—</div>`}</div>
+      <div style="font-weight:800;color:var(--text);text-align:right">CHF ${fmtCHF(l.montant)}</div>
+      <div style="text-align:right">${sig ? `<div style="font-size:11px;color:${agentColor(sig)}">${sig.prenom}: CHF ${fmtCHF(l.pJ)}</div>` : ''}</div>
+      <div style="text-align:right">${l.agent ? `<div style="font-size:11px;color:${agentColor(l.agent)}">${l.agent.prenom}: CHF ${fmtCHF(l.pA)}</div>` : `<div style="font-size:11px;color:var(--text-muted)">—</div>`}</div>
       <div style="text-align:right;font-size:10px;color:var(--text-muted)">${l.agent ? (l.agent.taux||0)+'%' : '0%'}</div>
     </div>`;
   }).join('');
@@ -774,7 +774,7 @@ function renderHistoriqueFichesPaie() {
       ${fiches.map(f => `<div class="table-row" style="grid-template-columns:140px 140px 120px 1fr">
         <div style="font-size:12px;color:var(--text)">${fmtDate(f.date_debut)}</div>
         <div style="font-size:12px;color:var(--text)">${fmtDate(f.date_fin)}</div>
-        <div style="font-weight:800;color:#f59e0b">CHF ${Math.round(f.total_montant||0).toLocaleString()}</div>
+        <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF(Math.round(f.total_montant||0))}</div>
         <div style="font-size:11px;color:var(--text-muted)">${fmtDate(f.created_at)}</div>
       </div>`).join('')}
     </div>` : '<div class="table-empty">Aucune fiche de paie générée pour l\'instant.</div>';
@@ -809,7 +809,7 @@ async function genererFichePaie() {
     showError(`⚠️ ${echecsLiaison} commission(s) sur ${eligibles.length} n'ont pas pu être liée(s) à cette fiche de paie — elles risquent de réapparaître dans une prochaine fiche alors qu'elles sont déjà comptées ici. Vérifie manuellement.`);
   }
 
-  logAction('generer_fiche_paie', 'fiches_paie', ficheId, `${fmtDate(debut)} → ${fmtDate(fin)} · CHF ${Math.round(totalMontant)}`);
+  logAction('generer_fiche_paie', 'fiches_paie', ficheId, `${fmtDate(debut)} → ${fmtDate(fin)} · CHF ${fmtCHF(Math.round(totalMontant))}`);
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
   allFichesPaie = await dbGet('fiches_paie', 'select=*');
 
@@ -835,7 +835,7 @@ function imprimerBordereau(bordereauId) {
     const sig = allAgents.find(a => a.role === 'signataire');
     return `<tr>
       <td>${c.client_nom||''}</td><td>${c.produit||''}</td><td>${c.numero_police||''}</td>
-      <td style="text-align:right">CHF ${montant.toLocaleString()}</td>
+      <td style="text-align:right">CHF ${fmtCHF(montant)}</td>
       <td>${statutCommissionLabel(c.statut)}</td>
     </tr>`;
   }).join('');
@@ -858,14 +858,14 @@ function imprimerBordereau(bordereauId) {
     <h1>Bordereau ${b.numero || ''} — ${b.compagnie}</h1>
     <div class="sub">${b.mois}${contact ? ` · Contact : ${contact.libelle_contact||''} ${contact.email ? '('+contact.email+')' : ''}` : ''}</div>
     <div class="grid">
-      <div class="box"><div class="l">Montant brut</div><div class="v">CHF ${(b.montant_brut||0).toLocaleString()}</div></div>
-      <div class="box"><div class="l">Caution (${tauxCaution}%)</div><div class="v">CHF ${montantCaution.toLocaleString()}</div></div>
-      <div class="box"><div class="l">Net après caution</div><div class="v">CHF ${montantNet.toLocaleString()}</div></div>
+      <div class="box"><div class="l">Montant brut</div><div class="v">CHF ${fmtCHF((b.montant_brut||0))}</div></div>
+      <div class="box"><div class="l">Caution (${tauxCaution}%)</div><div class="v">CHF ${fmtCHF(montantCaution)}</div></div>
+      <div class="box"><div class="l">Net après caution</div><div class="v">CHF ${fmtCHF(montantNet)}</div></div>
       <div class="box"><div class="l">Statut</div><div class="v">${b.statut === 'reçu' ? 'Reçu' : 'Attendu'}${b.date_reception ? ' le '+fmtDate(b.date_reception) : ''}</div></div>
     </div>
     <table><thead><tr><th>Client</th><th>Produit</th><th>N° police</th><th>Montant</th><th>Statut</th></tr></thead>
     <tbody>${lignesHtml || '<tr><td colspan="5">Aucune commission rapprochée</td></tr>'}</tbody></table>
-    <div class="total">Part Jonathan : CHF ${pJ.toLocaleString()} · Part apporteurs : CHF ${pA.toLocaleString()}</div>
+    <div class="total">Part Jonathan : CHF ${fmtCHF(pJ)} · Part apporteurs : CHF ${fmtCHF(pA)}</div>
     <button onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#0f2244;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Imprimer / Enregistrer en PDF</button>
     </body></html>`);
   win.document.close();
@@ -882,7 +882,7 @@ function imprimerFichePaie(ficheId, lignesCommissions, debut, fin, totalMontant)
     const sig = allAgents.find(a => a.role === 'signataire');
     return `<tr>
       <td>${nom}</td><td>${ca.produit||''}</td><td>${ca.compagnie||''}</td>
-      <td style="text-align:right">CHF ${montant.toLocaleString()}</td>
+      <td style="text-align:right">CHF ${fmtCHF(montant)}</td>
       <td style="text-align:right">${sig ? sig.prenom+': CHF '+s.pJ : ''}</td>
       <td style="text-align:right">${s.agent ? s.agent.prenom+': CHF '+s.pA : '—'}</td>
     </tr>`;
@@ -900,7 +900,7 @@ function imprimerFichePaie(ficheId, lignesCommissions, debut, fin, totalMontant)
     <p>Période : ${fmtDate(debut)} au ${fmtDate(fin)}</p>
     <table><thead><tr><th>Client</th><th>Produit</th><th>Compagnie</th><th>Montant</th><th>Part signataire</th><th>Part apporteur</th></tr></thead>
     <tbody>${lignesHtml}</tbody></table>
-    <div class="total">Total : CHF ${Math.round(totalMontant).toLocaleString()}</div>
+    <div class="total">Total : CHF ${fmtCHF(Math.round(totalMontant))}</div>
     <button onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#0f2244;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Imprimer / Enregistrer en PDF</button>
     </body></html>`);
   win.document.close();
@@ -1060,7 +1060,7 @@ async function creerContratDepuisImport(idx) {
   }
   logAction('create_contrat', 'contrats', r && r[0] ? r[0].id : null, `${body.produit} — ${body.compagnie} (créé depuis import décompte, police jamais reçue)`);
   allContrats = await dbGet('contrats', 'select=*');
-  showError(`✓ Contrat créé (${body.produit} — ${body.compagnie}, police ${body.numero_police}). Prime annuelle estimée à CHF ${body.prime_annuelle.toLocaleString()} depuis la base de commission du décompte — vérifie/corrige-la sur la fiche contrat, c'est une estimation de départ.`);
+  showError(`✓ Contrat créé (${body.produit} — ${body.compagnie}, police ${body.numero_police}). Prime annuelle estimée à CHF ${fmtCHF(body.prime_annuelle)} depuis la base de commission du décompte — vérifie/corrige-la sur la fiche contrat, c'est une estimation de départ.`);
   reassocierLignesImport();
 }
 
@@ -1258,8 +1258,8 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
       <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px">${_decompteLignes.length} ligne(s) de commission — ${nbTrouves} contrat(s) reconnu(s) dans le CRM, ${nbSuggeres} client(s) probable(s) trouvé(s) par le nom (contrat à choisir/créer toi-même), ${nbRienTrouve} totalement non trouvé(s).</div>
       ${commissionTotaleAnnoncee != null ? `
       <div style="font-size:11.5px;margin-bottom:12px;padding:8px 12px;border-radius:8px;background:var(--surface-alt);color:${Math.abs(ecartTotal) > 1 ? '#f87171' : '#4ade80'}">
-        Total annoncé par le fichier : CHF ${commissionTotaleAnnoncee.toLocaleString()} — total des lignes lues : CHF ${Math.round(totalFichier).toLocaleString()}
-        ${Math.abs(ecartTotal) > 1 ? ` ⚠️ écart de CHF ${ecartTotal.toLocaleString()} — une ligne a probablement été mal lue, vérifie avant d'importer` : ' ✓ les lignes lues correspondent au total du fichier'}
+        Total annoncé par le fichier : CHF ${fmtCHF(commissionTotaleAnnoncee)} — total des lignes lues : CHF ${fmtCHF(Math.round(totalFichier))}
+        ${Math.abs(ecartTotal) > 1 ? ` ⚠️ écart de CHF ${fmtCHF(ecartTotal)} — une ligne a probablement été mal lue, vérifie avant d'importer` : ' ✓ les lignes lues correspondent au total du fichier'}
       </div>` : ''}
       <div style="overflow-x:auto">
       <table style="width:100%;min-width:1180px;border-collapse:collapse;font-size:12px">
@@ -1288,13 +1288,13 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
             <td style="padding:5px 8px;white-space:nowrap;color:var(--text-muted)">${l.localite || '—'}</td>
             <td style="padding:5px 8px;white-space:nowrap">${l.clientNomCRM ? l.clientNomCRM : (l.clientSuggereNom ? `<span style="color:#f59e0b">≈ ${l.clientSuggereNom}</span>` : '<span style="color:#f87171">Non trouvé</span>')}${!l.clientNomCRM && l.clientSuggereNom ? `<div style="font-size:9.5px;color:var(--text-muted);white-space:normal;max-width:170px;margin-bottom:4px">nom trouvé, pas de contrat avec cette police — vérifie avant de créer</div><div style="display:flex;gap:6px"><button type="button" onclick="document.getElementById('modal-detail-contrat')?.remove(); showClient('${l.clientId}')" style="background:var(--surface-alt);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:10.5px;cursor:pointer;font-weight:700;white-space:nowrap">👁 Voir la fiche</button><button type="button" id="imp-creer-${l.idx}" onclick="creerContratDepuisImport(${l.idx})" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:3px 8px;font-size:10.5px;cursor:pointer;font-weight:700;white-space:nowrap">📝 Créer</button></div>` : ''}</td>
             <td style="padding:5px 8px;color:var(--text-muted);white-space:nowrap">${l.brancheInterne}</td>
-            <td style="padding:5px 8px;text-align:right;white-space:nowrap;color:var(--text-muted)">CHF ${l.commissionProduction.toLocaleString()}</td>
+            <td style="padding:5px 8px;text-align:right;white-space:nowrap;color:var(--text-muted)">CHF ${fmtCHF(l.commissionProduction)}</td>
             <td style="padding:5px 8px;text-align:right;white-space:nowrap">${l.taux}%</td>
             <td style="padding:5px 8px;text-align:right;white-space:nowrap"><input type="number" step="0.01" value="${l.montant}" class="imp-montant-input" data-idx="${l.idx}" style="width:75px;background:var(--surface-alt);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 5px;text-align:right" onchange="_decompteLignes[${l.idx}].montant = parseFloat(this.value)||0; recalculerTotalImport();"/></td>
           </tr>`).join('')}</tbody>
         <tfoot><tr style="border-top:2px solid var(--border)">
           <td colspan="11" style="padding:8px;text-align:right;font-weight:700;color:var(--text)">Total des lignes ci-dessus</td>
-          <td id="imp-total-cell" style="padding:8px;text-align:right;font-weight:800;color:#4ade80;white-space:nowrap">CHF ${Math.round(_decompteLignes.reduce((s,l)=>s+l.montant,0)).toLocaleString()}</td>
+          <td id="imp-total-cell" style="padding:8px;text-align:right;font-weight:800;color:#4ade80;white-space:nowrap">CHF ${fmtCHF(Math.round(_decompteLignes.reduce((s,l)=>s+l.montant,0)))}</td>
         </tr></tfoot>
       </table>
       </div>
@@ -1331,7 +1331,7 @@ async function importerCommissionsDecompte(nomAssureur) {
         compagnie: nomAssureur || null,
         produit: l.brancheInterne || null,
         montant_estime: montant,
-        detail_calcul: `Décompte compagnie importé (Excel IG B2B) — ${l.brancheInterne || ''}${montant < 0 ? ' (correction' + (l.noFacture ? ' facture n°' + l.noFacture : '') + ')' : ''} : base CHF ${l.commissionProduction.toLocaleString()} × ${l.taux}% — contrat ${l.numeroContrat}`,
+        detail_calcul: `Décompte compagnie importé (Excel IG B2B) — ${l.brancheInterne || ''}${montant < 0 ? ' (correction' + (l.noFacture ? ' facture n°' + l.noFacture : '') + ')' : ''} : base CHF ${fmtCHF(l.commissionProduction)} × ${l.taux}% — contrat ${l.numeroContrat}`,
         statut: 'en_attente',
         nature,
         date_creation: new Date().toISOString().split('T')[0],

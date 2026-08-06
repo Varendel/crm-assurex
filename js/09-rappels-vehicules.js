@@ -107,7 +107,7 @@ async function importBordereauPdf(input) {
       zone.innerHTML = `
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
           <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:10px">📋 ${data.lignes.length} ligne(s) détectée(s) — à vérifier avant d'enregistrer</div>
-          ${data.lignes.map(l => `<div style="font-size:11.5px;color:var(--text-muted);padding:4px 0;border-bottom:1px solid var(--border)">${l.client_nom || '—'} · ${l.produit || ''} · ${l.type_mouvement || ''} · CHF ${l.credit || l.debit || 0}</div>`).join('')}
+          ${data.lignes.map(l => `<div style="font-size:11.5px;color:var(--text-muted);padding:4px 0;border-bottom:1px solid var(--border)">${l.client_nom || '—'} · ${l.produit || ''} · ${l.type_mouvement || ''} · CHF ${fmtCHF(l.credit || l.debit || 0)}</div>`).join('')}
         </div>`;
     }
     statusEl.textContent = '✓ Champs remplis automatiquement — vérifie avant d\'enregistrer.';
@@ -408,7 +408,7 @@ function viewNouveauContrat() {
     </div>
 
     ${opp ? `<div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:12.5px;color:var(--text)">
-      ✓ Pré-rempli depuis l'opportunité gagnée <strong>"${opp.titre}"</strong> — montant potentiel estimé : <strong>CHF ${(opp.montant_potentiel||0).toLocaleString()}</strong>. Vérifie/ajuste la prime exacte ci-dessous avant d'enregistrer.
+      ✓ Pré-rempli depuis l'opportunité gagnée <strong>"${opp.titre}"</strong> — montant potentiel estimé : <strong>CHF ${fmtCHF((opp.montant_potentiel||0))}</strong>. Vérifie/ajuste la prime exacte ci-dessous avant d'enregistrer.
       ${oppFileAttenteProduits.length ? `<div style="margin-top:6px;color:var(--accent)">📋 ${oppFileAttenteProduits.length} autre(s) contrat(s) à créer ensuite pour cette même opportunité, une fois celui-ci enregistré.</div>` : ''}
       ${!opp.client_id && opp.prospect_nom ? `<div style="margin-top:8px;color:#f59e0b">⚠ "<strong>${opp.prospect_nom}</strong>" n'a pas encore de fiche client — sélectionne un client existant ci-dessous, ou <a href="#" onclick="navigate('nouveau-client'); return false;" style="color:#f59e0b;text-decoration:underline">crée sa fiche maintenant</a> puis reviens enregistrer ce contrat.</div>` : ''}
     </div>` : ''}
@@ -654,7 +654,7 @@ function calculerPrimeTotaleLignes() {
   const note = document.getElementById('ct-prime-taxes-note');
   if (note) {
     note.textContent = totalTaxes > 0
-      ? `Taxes/émoluments légaux exclus : CHF ${Math.round(totalTaxes * 100) / 100} (facturés au client mais hors volume de prime et hors commission)`
+      ? `Taxes/émoluments légaux exclus : CHF ${fmtCHF(Math.round(totalTaxes * 100) / 100)} (facturés au client mais hors volume de prime et hors commission)`
       : '';
   }
   updateCommissionPreview();
@@ -807,8 +807,8 @@ function _commissionParLignes(table) {
   }
   if (!auMoinsUneLigne) return null;
   total = Math.round(total * 100) / 100;
-  const detailTxt = Object.values(detailParCategorie).map(d => `${d.label} : CHF ${Math.round(d.sousTotal * 100) / 100}`).join(' · ');
-  return { montant: total, detail: `${table.nom} — commission calculée ligne par ligne (${detailTxt}) = CHF ${total}` };
+  const detailTxt = Object.values(detailParCategorie).map(d => `${d.label} : CHF ${fmtCHF(Math.round(d.sousTotal * 100) / 100)}`).join(' · ');
+  return { montant: total, detail: `${table.nom} — commission calculée ligne par ligne (${detailTxt}) = CHF ${fmtCHF(total)}` };
 }
 
 // Réinitialise la liste avec une seule ligne pré-remplie (import PDF, pré-remplissage) — l'utilisateur
@@ -1248,15 +1248,15 @@ function calculerCommissionEstimee() {
   if (compagnieChoisie.includes('hotela')) {
     if (produitId === 'perte_gain_maladie_collective') {
       const montant = Math.round(primeAnnuelle * TAUX_COMMISSION.hotela.ij_maladie / 100);
-      return { montant, detail: `HOTELA — Indemnités journalières maladie : ${TAUX_COMMISSION.hotela.ij_maladie}% × CHF ${primeAnnuelle} = CHF ${montant}` };
+      return { montant, detail: `HOTELA — Indemnités journalières maladie : ${TAUX_COMMISSION.hotela.ij_maladie}% × CHF ${fmtCHF(primeAnnuelle)} = CHF ${fmtCHF(montant)}` };
     }
     if (produitId === 'laa') {
       const montant = Math.round(primeAnnuelle * TAUX_COMMISSION.hotela.accidents / 100);
-      return { montant, detail: `HOTELA — Assurance-accidents : ${TAUX_COMMISSION.hotela.accidents}% × CHF ${primeAnnuelle} = CHF ${montant}` };
+      return { montant, detail: `HOTELA — Assurance-accidents : ${TAUX_COMMISSION.hotela.accidents}% × CHF ${fmtCHF(primeAnnuelle)} = CHF ${fmtCHF(montant)}` };
     }
     if (produitId === 'perte_gain_accident_collective' || produitId === 'laac') {
       const montant = Math.round(primeAnnuelle * TAUX_COMMISSION.hotela.accidents_complementaire / 100);
-      return { montant, detail: `HOTELA — Assurance-accidents complémentaire : ${TAUX_COMMISSION.hotela.accidents_complementaire}% × CHF ${primeAnnuelle} = CHF ${montant}` };
+      return { montant, detail: `HOTELA — Assurance-accidents complémentaire : ${TAUX_COMMISSION.hotela.accidents_complementaire}% × CHF ${fmtCHF(primeAnnuelle)} = CHF ${fmtCHF(montant)}` };
     }
     if (produitId === 'lpp_entreprise') {
       const montantBrut = Math.round(primeAnnuelle * TAUX_COMMISSION.hotela.lpp / 100);
@@ -1264,7 +1264,7 @@ function calculerCommissionEstimee() {
       const montant = Math.min(montantBrut, plafond);
       return {
         montant,
-        detail: `HOTELA — Prévoyance professionnelle : ${TAUX_COMMISSION.hotela.lpp}% × CHF ${primeAnnuelle} = CHF ${montantBrut}${montantBrut > plafond ? ` — plafonné à CHF ${plafond.toLocaleString()}/an (preneur soumis CCNT hôtellerie-restauration)` : ''}`,
+        detail: `HOTELA — Prévoyance professionnelle : ${TAUX_COMMISSION.hotela.lpp}% × CHF ${fmtCHF(primeAnnuelle)} = CHF ${fmtCHF(montantBrut)}${montantBrut > plafond ? ` — plafonné à CHF ${fmtCHF(plafond)}/an (preneur soumis CCNT hôtellerie-restauration)` : ''}`,
       };
     }
   }
@@ -1272,7 +1272,7 @@ function calculerCommissionEstimee() {
   // ── GASTROSOCIAL — LPP restauration/hôtellerie, taux fixe sur la prime totale ──
   if (compagnieChoisie.includes('gastrosocial') && produitId === 'lpp_entreprise') {
     const montant = Math.round(primeAnnuelle * TAUX_COMMISSION.gastrosocial.lpp / 100);
-    return { montant, detail: `Gastrosocial — Prévoyance professionnelle : ${TAUX_COMMISSION.gastrosocial.lpp}% × CHF ${primeAnnuelle} (prime totale) = CHF ${montant}` };
+    return { montant, detail: `Gastrosocial — Prévoyance professionnelle : ${TAUX_COMMISSION.gastrosocial.lpp}% × CHF ${fmtCHF(primeAnnuelle)} (prime totale) = CHF ${fmtCHF(montant)}` };
   }
 
   // ── VAUDOISE — Tabelle de commissions A1 non-vie (édition 01.11.2024) ──
@@ -1314,7 +1314,7 @@ function calculerCommissionEstimee() {
       const montantArrondi = Math.round(primeAnnuelle * tauxVaudoise) / 100; // arrondi au centime
       return {
         montant: montantArrondi,
-        detail: `Vaudoise — Commission d'Encaissement (Tabelle A1, éd. 01.11.2024) : ${tauxVaudoise}% × CHF ${primeAnnuelle} = CHF ${montantArrondi} — estimation annuelle, versement réel étalé selon échéances d'encaissement`,
+        detail: `Vaudoise — Commission d'Encaissement (Tabelle A1, éd. 01.11.2024) : ${tauxVaudoise}% × CHF ${fmtCHF(primeAnnuelle)} = CHF ${fmtCHF(montantArrondi)} — estimation annuelle, versement réel étalé selon échéances d'encaissement`,
       };
     }
   }
@@ -1362,7 +1362,7 @@ function calculerCommissionEstimee() {
       const montantArrondi = Math.round(primeAnnuelle * tauxAxa) / 100; // arrondi au centime
       return {
         montant: montantArrondi,
-        detail: `AXA (Des Gouttes & Cie) — Commission de courtage (Tableau §B4.4) : ${tauxAxa}% × CHF ${primeAnnuelle} = CHF ${montantArrondi} — affaire nouvelle uniquement, aucune commission sur renouvellement tacite`,
+        detail: `AXA (Des Gouttes & Cie) — Commission de courtage (Tableau §B4.4) : ${tauxAxa}% × CHF ${fmtCHF(primeAnnuelle)} = CHF ${fmtCHF(montantArrondi)} — affaire nouvelle uniquement, aucune commission sur renouvellement tacite`,
       };
     }
   }
@@ -1370,7 +1370,7 @@ function calculerCommissionEstimee() {
   // ── Santé / complémentaire ──────────────────────────────────────────────
   if (['helsana_top','helsana_sana','helsana_completa','helsana_completa_plus','helsana_primeo','gm_premium','gm_global_smart','gm_global_mi_privee','gm_global_privee','gm_global_flex','lca_autre_compagnie'].includes(produitId)) {
     const montant = Math.round(primeMensuelle * TAUX_COMMISSION.sante_facteur_mensuel);
-    return { montant, detail: `CHF ${primeMensuelle}/mois × ${TAUX_COMMISSION.sante_facteur_mensuel} (taux santé) = CHF ${montant}` };
+    return { montant, detail: `CHF ${fmtCHF(primeMensuelle)}/mois × ${TAUX_COMMISSION.sante_facteur_mensuel} (taux santé) = CHF ${fmtCHF(montant)}` };
   }
 
   // ── Vie / 3a et 3B mixte — même taux (à ajuster si Jonathan donne un taux différent pour le 3B) ──
@@ -1378,7 +1378,7 @@ function calculerCommissionEstimee() {
     const duree = parseFloat(document.getElementById('ct-duree')?.value) || 1;
     const capitalProduction = primeMensuelle * 12 * duree;
     const montant = Math.round(capitalProduction * (TAUX_COMMISSION.vie_taux_capital / 100));
-    return { montant, detail: `${TAUX_COMMISSION.vie_taux_capital}% × CHF ${capitalProduction.toLocaleString()} (capital = ${primeMensuelle} × 12 × ${duree} ans) = CHF ${montant}` };
+    return { montant, detail: `${TAUX_COMMISSION.vie_taux_capital}% × CHF ${fmtCHF(capitalProduction)} (capital = ${primeMensuelle} × 12 × ${duree} ans) = CHF ${fmtCHF(montant)}` };
   }
 
   // ── LPP (prévoyance professionnelle 2e pilier) ─────────────────────────
@@ -1389,14 +1389,14 @@ function calculerCommissionEstimee() {
     const primeRisqueFrais = parseFloat(document.getElementById('ct-prime-risque-frais')?.value) || 0;
     const baseCalcul = primeRisqueFrais > 0 ? primeRisqueFrais : primeAnnuelle;
     if (baseCalcul < 2000) {
-      return { montant: 0, detail: `Base de calcul CHF ${baseCalcul} < CHF 2\u2019000 minimum — aucune COG Swiss Life` };
+      return { montant: 0, detail: `Base de calcul CHF ${fmtCHF(baseCalcul)} < CHF 2\u2019000 minimum — aucune COG Swiss Life` };
     }
     const cogAnnuelle = Math.round(baseCalcul * TAUX_COMMISSION.lpp_fp * (TAUX_COMMISSION.lpp_taux / 100));
     const cogTrimestrielle = Math.round(cogAnnuelle / 4);
     const avertissement = primeRisqueFrais > 0 ? '' : ' ⚠️ Prime risque+frais non renseignée ci-dessus — calcul sur la prime TOTALE, probablement surestimé (inclut la part épargne).';
     return {
       montant: cogAnnuelle,
-      detail: `COG Swiss Life : CHF ${baseCalcul} (risque+frais) × ${TAUX_COMMISSION.lpp_fp} (FP) × ${TAUX_COMMISSION.lpp_taux}% = CHF ${cogAnnuelle}/an (CHF ${cogTrimestrielle}/trimestre, versée en mars/juin/sept/déc)${avertissement}`,
+      detail: `COG Swiss Life : CHF ${fmtCHF(baseCalcul)} (risque+frais) × ${TAUX_COMMISSION.lpp_fp} (FP) × ${TAUX_COMMISSION.lpp_taux}% = CHF ${fmtCHF(cogAnnuelle)}/an (CHF ${fmtCHF(cogTrimestrielle)}/trimestre, versée en mars/juin/sept/déc)${avertissement}`,
     };
   }
 
@@ -1404,7 +1404,7 @@ function calculerCommissionEstimee() {
   if (produitId === 'lamal' || (produitId && produitId.toLowerCase().includes('lamal'))) {
     return {
       montant: TAUX_COMMISSION.lamal_forfait,
-      detail: `LAMal : forfait unique CHF ${TAUX_COMMISSION.lamal_forfait} à la signature`,
+      detail: `LAMal : forfait unique CHF ${fmtCHF(TAUX_COMMISSION.lamal_forfait)} à la signature`,
     };
   }
   return { montant: 0, detail: 'Saisis le montant estimé ci-dessous' };
@@ -1511,14 +1511,14 @@ async function saveContrat() {
   const modulesChoisis = Array.from(document.querySelectorAll('.ct-module-checkbox:checked')).map(cb => {
     const primeInput = document.querySelector(`.ct-module-prime-input[data-idx="${cb.dataset.idx}"]`);
     const prime = primeInput ? parseFloat(primeInput.value) : NaN;
-    return !isNaN(prime) && prime > 0 ? `${cb.value} (CHF ${prime})` : cb.value;
+    return !isNaN(prime) && prime > 0 ? `${cb.value} (CHF ${fmtCHF(prime)})` : cb.value;
   });
   // Modules complémentaires au libellé libre (ex: "Assurances complémentaires et services")
   Array.from(document.querySelectorAll('.ct-module-custom-ligne')).forEach(ligne => {
     const nom = ligne.querySelector('.ct-module-custom-nom')?.value.trim();
     if (!nom) return;
     const prime = parseFloat(ligne.querySelector('.ct-module-custom-prime')?.value);
-    modulesChoisis.push(!isNaN(prime) && prime > 0 ? `${nom} (CHF ${prime})` : nom);
+    modulesChoisis.push(!isNaN(prime) && prime > 0 ? `${nom} (CHF ${fmtCHF(prime)})` : nom);
   });
   // Détail des "lignes de prime" (ex: RC véhicule + Casco complète + Casco partielle, ou RC privée +
   // inventaire du ménage) — persisté ici pour que les couvertures annexes restent visibles sur la
@@ -1529,7 +1529,7 @@ async function saveContrat() {
     montant: parseFloat(ligne.querySelector('.ct-prime-ligne-montant')?.value) || 0,
   })).filter(l => l.libelle && l.montant > 0);
   if (lignesPrimeSaisies.length > 1) {
-    lignesPrimeSaisies.forEach(l => modulesChoisis.push(`${l.libelle} (CHF ${l.montant})`));
+    lignesPrimeSaisies.forEach(l => modulesChoisis.push(`${l.libelle} (CHF ${fmtCHF(l.montant)})`));
   }
   const { montant: commissionEstimee, detail } = calculerCommissionEstimee();
 
@@ -1619,7 +1619,7 @@ async function saveContrat() {
       if (!nom || !primeAnnuelleLCA) continue; // ligne vide (ajoutée puis pas remplie) — ignorée
       const primeMensuelleLCA = Math.round(primeAnnuelleLCA / 12 * 100) / 100;
       const montantLCA = Math.round(primeMensuelleLCA * TAUX_COMMISSION.sante_facteur_mensuel);
-      const detailLCA = `CHF ${primeMensuelleLCA}/mois × ${TAUX_COMMISSION.sante_facteur_mensuel} (taux santé) = CHF ${montantLCA}`;
+      const detailLCA = `CHF ${fmtCHF(primeMensuelleLCA)}/mois × ${TAUX_COMMISSION.sante_facteur_mensuel} (taux santé) = CHF ${fmtCHF(montantLCA)}`;
       await creerContratEtCommission(clientId, compagnie, `LCA — ${nom}`, primeAnnuelleLCA, [], montantLCA, detailLCA, null, true);
     }
   }

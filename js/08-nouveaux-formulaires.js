@@ -339,7 +339,7 @@ async function showEditContrat(contratId, returnTo) {
             ${perioOpts.map(o => `<option value="${o.value}" ${String(o.value)===String(perioActuelle)?'selected':''}>${o.label}</option>`).join('')}
           </select>
         </div>
-        <div class="form-field" style="grid-column:span 2"><div id="ect-apercu-annuel" style="font-size:12px;color:var(--text-muted);padding:6px 12px;background:var(--surface-alt);border-radius:8px">Prime annuelle calculée : CHF ${(ct.prime_annuelle||0).toLocaleString()}</div></div>
+        <div class="form-field" style="grid-column:span 2"><div id="ect-apercu-annuel" style="font-size:12px;color:var(--text-muted);padding:6px 12px;background:var(--surface-alt);border-radius:8px">Prime annuelle calculée : CHF ${fmtCHF((ct.prime_annuelle||0))}</div></div>
         <div class="form-field"><label class="form-label">Agent / Apporteur</label><select class="form-select" id="ect-apporteur">
           <option value="">— Aucun / pas de partage —</option>
           ${allAgents.map(a => `<option value="${a.id}" ${ct.apporteur_id===a.id?'selected':''}>${a.prenom} ${a.nom}${a.role==='signataire'?' (moi-même)':''}</option>`).join('')}
@@ -633,7 +633,7 @@ async function saveFacture(clientId) {
   if (btn) { btn.textContent = 'Création...'; btn.disabled = true; }
   const res = await dbPost('factures', body);
   if (res && res.error) { showError('Erreur: ' + errMsg(res)); if (btn) { btn.textContent = '✓ Créer la facture'; btn.disabled = false; } return; }
-  logAction('create_facture', 'factures', res && res[0] ? res[0].id : null, `${body.numero} — CHF ${montant}`);
+  logAction('create_facture', 'factures', res && res[0] ? res[0].id : null, `${body.numero} — CHF ${fmtCHF(montant)}`);
   document.getElementById('modal-facture').remove();
   showClient(clientId);
 }
@@ -674,8 +674,8 @@ function flotteListeHtml(clientId, searchOverride) {
 
   return `<div style="display:flex;gap:10px;margin-bottom:12px">
       <div style="background:var(--surface-alt);border-radius:8px;padding:8px 14px"><span style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Véhicules</span><div style="font-weight:800;color:var(--text)">${vehicules.length}</div></div>
-      <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:8px 14px"><span style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Total prime brute</span><div style="font-weight:800;color:#f59e0b">CHF ${totalBrut.toLocaleString()}</div></div>
-      <div style="background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2);border-radius:8px;padding:8px 14px"><span style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Total prime nette</span><div style="font-weight:800;color:#4ade80">CHF ${totalNet.toLocaleString()}</div></div>
+      <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:8px 14px"><span style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Total prime brute</span><div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF(totalBrut)}</div></div>
+      <div style="background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2);border-radius:8px;padding:8px 14px"><span style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Total prime nette</span><div style="font-weight:800;color:#4ade80">CHF ${fmtCHF(totalNet)}</div></div>
     </div>
     <table style="width:100%;border-collapse:collapse;font-size:13px">
       <thead><tr style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px">
@@ -693,8 +693,8 @@ function flotteListeHtml(clientId, searchOverride) {
           <td style="padding:9px 12px;color:var(--text)">${v.modele || '—'}</td>
           <td style="padding:9px 12px;color:var(--text-muted)">${v.cylindree || '—'}</td>
           <td style="padding:9px 12px;color:var(--text-muted);font-family:monospace;font-weight:700">${v.numero_plaque || '—'}</td>
-          <td style="padding:9px 12px;text-align:right;color:#f59e0b;font-weight:700">CHF ${Number(v.prime_brute||0).toLocaleString()}</td>
-          <td style="padding:9px 12px;text-align:right;color:#4ade80;font-weight:700">CHF ${Number(v.prime_nette||0).toLocaleString()}</td>
+          <td style="padding:9px 12px;text-align:right;color:#f59e0b;font-weight:700">CHF ${fmtCHF(Number(v.prime_brute||0))}</td>
+          <td style="padding:9px 12px;text-align:right;color:#4ade80;font-weight:700">CHF ${fmtCHF(Number(v.prime_nette||0))}</td>
           <td style="padding:9px 12px;text-align:right;display:flex;gap:6px;justify-content:flex-end">
             <button onclick="showFormVehicule('${clientId}','${v.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">✏️</button>
             <button onclick="deleteVehicule('${v.id}','${clientId}')" style="background:rgba(248,113,113,0.1);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">🗑️</button>

@@ -204,7 +204,7 @@ function viewDashboard() {
       ${statCard('Clients', allClients.length, '#38bdf8', `${actifs} actifs`)}
       ${statCard('CA portefeuille /an', 'CHF ' + Math.round(totalCAFull).toLocaleString(), '#f59e0b', `${nbContratsActifs} contrats`)}
       ${statCard('Commissions en attente', 'CHF ' + Math.round(totalCommActives).toLocaleString(), '#f59e0b', `depuis 01.06.2026`)}
-      ${statCard('Commissions reçues', 'CHF ' + Math.round(totalCommRecues).toLocaleString(), '#4ade80', `Acquisition CHF ${Math.round(totalAcquisitionRecue).toLocaleString()} · Gestion CHF ${Math.round(totalGestionRecue).toLocaleString()}`)}
+      ${statCard('Commissions reçues', 'CHF ' + Math.round(totalCommRecues).toLocaleString(), '#4ade80', `Acquisition CHF ${fmtCHF(Math.round(totalAcquisitionRecue))} · Gestion CHF ${fmtCHF(Math.round(totalGestionRecue))}`)}
       ${statCard('Rappels urgents', urgents.length, urgents.length > 0 ? '#f87171' : '#64748b')}
     </div>
 
@@ -221,7 +221,7 @@ function viewDashboard() {
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
         <div style="font-size:13px;font-weight:800;color:var(--text)">🎯 Polices non commissionnées à bouger</div>
-        <div style="font-size:18px;font-weight:900;color:#fb923c">CHF ${Math.round(totalNonGere).toLocaleString()}</div>
+        <div style="font-size:18px;font-weight:900;color:#fb923c">CHF ${fmtCHF(Math.round(totalNonGere))}</div>
       </div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:18px">${nonGerees.length} contrat(s) sans convention de collaboration — volume de primes potentiellement récupérable par transfert, classé par proximité d'échéance</div>
       <div style="display:flex;align-items:flex-end;gap:14px;height:120px;margin-bottom:6px">
@@ -245,15 +245,15 @@ function viewDashboard() {
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
         <div style="font-size:13px;font-weight:800;color:var(--text)">🎯 Opportunités en cours</div>
-        <div style="font-size:18px;font-weight:900;color:#f59e0b">CHF ${Math.round(oppTotalPipeline).toLocaleString()}</div>
+        <div style="font-size:18px;font-weight:900;color:#f59e0b">CHF ${fmtCHF(Math.round(oppTotalPipeline))}</div>
       </div>
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:18px">${oppsOuvertes.length} opportunité(s) ouverte(s) · CHF ${Math.round(oppTotalPondere).toLocaleString()} pondéré par probabilité${oppsGagneesRecemment.length ? ` · ${oppsGagneesRecemment.length} gagnée(s)` : ''}</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:18px">${oppsOuvertes.length} opportunité(s) ouverte(s) · CHF ${fmtCHF(Math.round(oppTotalPondere))} pondéré par probabilité${oppsGagneesRecemment.length ? ` · ${oppsGagneesRecemment.length} gagnée(s)` : ''}</div>
       <div style="display:flex;gap:14px;margin-bottom:18px;flex-wrap:wrap">
         ${oppParStade.map(s => `<div style="flex:1;min-width:90px;text-align:center;background:var(--surface-alt);border-radius:10px;padding:10px 8px">
           <div style="width:8px;height:8px;border-radius:50%;background:${s.couleur};margin:0 auto 6px"></div>
           <div style="font-size:16px;font-weight:900;color:var(--text)">${s.nb}</div>
           <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">${s.stade}</div>
-          <div style="font-size:10px;color:${s.couleur};font-weight:700;margin-top:2px">CHF ${Math.round(s.montant/1000)}k</div>
+          <div style="font-size:10px;color:${s.couleur};font-weight:700;margin-top:2px">CHF ${fmtCHF(Math.round(s.montant/1000))}k</div>
         </div>`).join('')}
       </div>
       ${oppUrgentes.length ? `<div style="font-size:10.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Échéances les plus proches</div>
@@ -261,7 +261,7 @@ function viewDashboard() {
         <div style="font-size:12.5px;color:var(--text)"><strong>${o.titre}</strong> — ${nomClientOpp(o)}</div>
         <div style="display:flex;align-items:center;gap:10px">
           <span style="font-size:11px;color:var(--text-muted)">${fmtDate(o.date_echeance)}</span>
-          <span style="font-size:12px;font-weight:800;color:#f59e0b">CHF ${Number(o.montant_potentiel||0).toLocaleString()}</span>
+          <span style="font-size:12px;font-weight:800;color:#f59e0b">CHF ${fmtCHF(Number(o.montant_potentiel||0))}</span>
         </div>
       </div>`).join('')}` : ''}
       <div style="margin-top:14px;text-align:right">
@@ -281,7 +281,7 @@ function viewDashboard() {
           <div>
             <div style="display:flex;justify-content:space-between;margin-bottom:4px">
               <span style="font-size:12px;color:var(--text-muted)">${l}</span>
-              <span style="font-size:12px;font-weight:800;color:${c}">CHF ${v.toLocaleString()}</span>
+              <span style="font-size:12px;font-weight:800;color:${c}">CHF ${fmtCHF(v)}</span>
             </div>
             <div class="progress-bar"><div class="progress-fill" style="width:0%;background:${c}"></div></div>
           </div>`).join('')}
@@ -299,7 +299,7 @@ function viewDashboard() {
           <div>
             <div style="display:flex;justify-content:space-between;margin-bottom:4px">
               <span style="font-size:12px;color:var(--text-muted)">${l}</span>
-              <span style="font-size:12px;font-weight:800;color:${c}">CHF ${Math.round(v).toLocaleString()}</span>
+              <span style="font-size:12px;font-weight:800;color:${c}">CHF ${fmtCHF(Math.round(v))}</span>
             </div>
             <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(v/maxVal*100)}%;background:${c}"></div></div>
           </div>`).join('');
@@ -452,7 +452,7 @@ function renderProduction() {
       <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:14px">Production par agent</div>
       ${agentsTries.map(([nom,val]) => `
         <div style="margin-bottom:10px">
-          <div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--text)">${nom}</span><span style="color:#f59e0b;font-weight:700">CHF ${Math.round(val).toLocaleString()}</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--text)">${nom}</span><span style="color:#f59e0b;font-weight:700">CHF ${fmtCHF(Math.round(val))}</span></div>
           <div style="height:7px;border-radius:4px;background:var(--border);margin-top:4px;overflow:hidden"><div style="height:100%;width:${Math.round(val/maxAgent*100)}%;background:#38bdf8;border-radius:4px"></div></div>
         </div>`).join('')}
     </div>` : '';
@@ -462,7 +462,7 @@ function renderProduction() {
     <div style="font-size:13px;font-weight:700;color:var(--text)">${nomClient(ct)}</div>
     <div style="font-size:12px;color:var(--text-muted)">${ct.produit || ''} · ${ct.compagnie || ''}</div>
     <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ct.date_debut)}</div>
-    <div style="font-weight:800;color:#f59e0b;text-align:right">CHF ${Number(ct.prime_annuelle||0).toLocaleString()}</div>
+    <div style="font-weight:800;color:#f59e0b;text-align:right">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}</div>
     <div>${ct.commissionne === false ? badge('Non comm.', '#64748b') : badge('OK', '#4ade80')}</div>
   </div>`).join('');
 
@@ -553,10 +553,10 @@ function exportFinmaTxt() {
   txt += `${'='.repeat(60)}\n\n`;
   lignes.forEach(([code, v]) => {
     txt += `${code}  ${v.label}\n`;
-    txt += `     Contrats: ${v.nb}   Prime annuelle: CHF ${v.prime.toFixed(2)}   Part: ${total > 0 ? Math.round(v.prime/total*100) : 0}%\n\n`;
+    txt += `     Contrats: ${v.nb}   Prime annuelle: CHF ${fmtCHF2(v.prime)}   Part: ${total > 0 ? Math.round(v.prime/total*100) : 0}%\n\n`;
   });
   txt += `${'-'.repeat(60)}\n`;
-  txt += `TOTAL — Contrats: ${window._finmaTotalNb}   Prime annuelle: CHF ${total.toFixed(2)}\n`;
+  txt += `TOTAL — Contrats: ${window._finmaTotalNb}   Prime annuelle: CHF ${fmtCHF2(total)}\n`;
   downloadBlob(txt, `rapport_finma_${new Date().toISOString().slice(0,10)}.txt`, 'text/plain;charset=utf-8');
 }
 
@@ -909,8 +909,8 @@ function showDetailContrat(contratId) {
             <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:4px">👤 <span style="cursor:pointer;text-decoration:underline dotted" onclick="document.getElementById('modal-detail-contrat').remove(); showClient('${ct.client_id}')">${nom}</span></div>
           </div>
           <div style="text-align:right">
-            <div style="font-size:20px;font-weight:900;color:#f59e0b">CHF ${Number(ct.prime_annuelle||0).toLocaleString()}</div>
-            <div style="font-size:10px;color:rgba(255,255,255,0.5)">/an · CHF ${primenMois}/mois</div>
+            <div style="font-size:20px;font-weight:900;color:#f59e0b">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}</div>
+            <div style="font-size:10px;color:rgba(255,255,255,0.5)">/an · CHF ${fmtCHF(primenMois)}/mois</div>
             <div style="margin-top:6px">${badge(ct.statut==='annulé'?'❌ Annulé':ct.statut==='mandat_resilie'?'🚫 Mandat résilié':ct.statut, ct.statut==='actif'?'#4ade80':ct.statut==='mandat_resilie'?'#f87171':ct.statut==='résilié'?'#94a3b8':ct.statut==='annulé'?'#f87171':'#f59e0b')}</div>
           </div>
         </div>
@@ -946,7 +946,7 @@ function showDetailContrat(contratId) {
             <div style="font-size:13px;font-weight:700;color:var(--text)">${commission.detail_calcul ? commission.detail_calcul.split('[')[0].trim() : '—'}</div>
           </div>
           <div style="text-align:right">
-            <div style="font-size:16px;font-weight:900;color:#f59e0b">CHF ${Number(commission.montant_estime||0).toLocaleString()}</div>
+            <div style="font-size:16px;font-weight:900;color:#f59e0b">CHF ${fmtCHF(Number(commission.montant_estime||0))}</div>
             <div>${badge(statutCommissionLabel(commission.statut), statutCommissionColor(commission.statut))}</div>
           </div>
         </div>` : `<div style="background:var(--surface-alt);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--text-muted)">${ct.commissionne === false ? '⚠️ Contrat non commissionné (hors convention)' : 'Aucune commission liée à ce contrat'}</div>`}
@@ -1021,7 +1021,7 @@ function renderContratsOrphelins() {
         <div style="font-size:11px;color:var(--text-muted)">${ct.produit||''}</div>
       </div>
       <div style="font-size:12px;color:var(--text-muted)">${ct.compagnie||''}</div>
-      <div style="font-weight:800;color:#f59e0b">CHF ${Number(ct.prime_annuelle||0).toLocaleString()}</div>
+      <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}</div>
       <div>${badge(ct.statut, ct.statut==='actif'?'#4ade80':'#f59e0b')}</div>
       <div><button onclick="creerCommissionManquante('${ct.id}')" style="background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);color:#4ade80;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">+ Créer</button></div>
     </div>`;
@@ -1156,7 +1156,7 @@ function renderTousContrats() {
       </div>
       <div style="font-size:12px;color:var(--text-muted)">${ct.compagnie||'—'}</div>
       <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ct.date_debut)}</div>
-      <div style="font-weight:800;color:#f59e0b;text-align:right">CHF ${Number(ct.prime_annuelle||0).toLocaleString()}</div>
+      <div style="font-weight:800;color:#f59e0b;text-align:right">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}</div>
       <div>${badge(ct.statut==='annulé'?'❌ Annulé':ct.statut==='mandat_resilie'?'🚫 Mandat résilié':ct.statut, ct.statut==='actif'?'#4ade80':ct.statut==='mandat_resilie'?'#f87171':ct.statut==='résilié'?'#94a3b8':ct.statut==='annulé'?'#f87171':'#f59e0b')}</div>
       <div style="font-size:11px;color:var(--text-muted)">${(() => {
         if (agent) return agent.prenom + ' ' + agent.nom;
@@ -1451,8 +1451,8 @@ function viewSuiviFinancier() {
           const hRecu = Math.max(Math.round(m.recu / maxMois * 110), m.recu > 0 ? 4 : 1);
           return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
             <div style="display:flex;align-items:flex-end;gap:3px;height:100%">
-              <div title="Prévu : CHF ${Math.round(m.prevu).toLocaleString()}" style="width:12px;height:${hPrevu}px;background:rgba(56,189,248,0.25);border:1px solid #38bdf8;border-radius:3px 3px 0 0"></div>
-              <div title="Reçu : CHF ${Math.round(m.recu).toLocaleString()}" style="width:12px;height:${hRecu}px;background:#4ade80;border-radius:3px 3px 0 0"></div>
+              <div title="Prévu : CHF ${fmtCHF(Math.round(m.prevu))}" style="width:12px;height:${hPrevu}px;background:rgba(56,189,248,0.25);border:1px solid #38bdf8;border-radius:3px 3px 0 0"></div>
+              <div title="Reçu : CHF ${fmtCHF(Math.round(m.recu))}" style="width:12px;height:${hRecu}px;background:#4ade80;border-radius:3px 3px 0 0"></div>
             </div>
           </div>`;
         }).join('')}
@@ -1491,7 +1491,7 @@ function viewSuiviFinancier() {
           <div style="margin-bottom:10px">
             <div style="display:flex;justify-content:space-between;font-size:11.5px;margin-bottom:3px">
               <span style="color:var(--text);font-weight:700">${c.nom}</span>
-              <span style="color:var(--text-muted)">CHF ${Math.round(c.montant).toLocaleString()}</span>
+              <span style="color:var(--text-muted)">CHF ${fmtCHF(Math.round(c.montant))}</span>
             </div>
             <div class="progress-bar"><div class="progress-fill" style="width:${Math.round(c.montant/maxCompagnie*100)}%;background:${paletteCompagnies[i % paletteCompagnies.length]}"></div></div>
           </div>`).join('')}
@@ -1508,7 +1508,7 @@ function viewSuiviFinancier() {
           <div style="font-size:12px;color:var(--text-muted)">${ca.compagnie || '—'}</div>
           <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ca.date_creation)}</div>
           <div style="font-size:12px;font-weight:700;color:#f87171">${joursEntre(ca.date_creation, todayStr)} j</div>
-          <div style="font-size:12px;font-weight:700;color:#f59e0b">CHF ${Math.round(ca.montant_estime||0).toLocaleString()}</div>
+          <div style="font-size:12px;font-weight:700;color:#f59e0b">CHF ${fmtCHF(Math.round(ca.montant_estime||0))}</div>
         </div>`).join('')}
       </div>
     </div>` : ''}

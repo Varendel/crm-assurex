@@ -91,7 +91,7 @@ function renderBordereauxList() {
           <div style="font-size:11px;color:var(--text-muted)">${b.mois}${b.date_reception ? ' · Reçu le ' + fmtDate(b.date_reception) : ''}${tauxCaution > 0 ? ' · Caution ' + tauxCaution + '%' : ''}</div>
         </div>
         <div style="text-align:right">
-          <div style="font-size:16px;font-weight:900;color:#f59e0b">CHF ${(b.montant_brut||0).toLocaleString()}</div>
+          <div style="font-size:16px;font-weight:900;color:#f59e0b">CHF ${fmtCHF((b.montant_brut||0))}</div>
           <div style="font-size:10px;color:var(--text-muted)">Brut</div>
         </div>
         ${badge(b.statut, b.statut === 'reçu' ? '#4ade80' : '#f59e0b')}
@@ -101,18 +101,18 @@ function renderBordereauxList() {
         ${tauxCaution > 0 ? `<div style="display:flex;gap:10px;margin-bottom:14px">
           <div style="flex:1;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);border-radius:8px;padding:10px 14px">
             <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Caution retenue (${tauxCaution}%)</div>
-            <div style="font-size:16px;font-weight:900;color:#a78bfa">CHF ${montantCaution.toLocaleString()}</div>
+            <div style="font-size:16px;font-weight:900;color:#a78bfa">CHF ${fmtCHF(montantCaution)}</div>
           </div>
           <div style="flex:1;background:var(--surface-alt);border-radius:8px;padding:10px 14px">
             <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Net après caution</div>
-            <div style="font-size:16px;font-weight:900;color:var(--text)">CHF ${montantNetApresCaution.toLocaleString()}</div>
+            <div style="font-size:16px;font-weight:900;color:var(--text)">CHF ${fmtCHF(montantNetApresCaution)}</div>
           </div>
         </div>` : ''}
 
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.25);border-radius:9px;padding:12px 16px">
           <div>
             <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px">Montant net total versé (rapproché)</div>
-            <div style="font-size:20px;font-weight:900;color:#4ade80">CHF ${(pJ+pA).toLocaleString()}</div>
+            <div style="font-size:20px;font-weight:900;color:#4ade80">CHF ${fmtCHF((pJ+pA))}</div>
           </div>
           <button onclick="event.stopPropagation(); toggleBordereauVerse('${b.id}')" style="background:${b.statut==='reçu' ? 'rgba(74,222,128,0.15)' : 'var(--accent-dim)'};border:1px solid ${b.statut==='reçu' ? 'rgba(74,222,128,0.4)' : 'var(--accent-border)'};color:${b.statut==='reçu' ? '#4ade80' : 'var(--accent)'};border-radius:8px;padding:9px 18px;font-weight:800;font-size:12.5px;cursor:pointer;white-space:nowrap">${b.statut==='reçu' ? '↺ Remettre en attendu' : '✓ Marquer comme versé'}</button>
         </div>
@@ -120,11 +120,11 @@ function renderBordereauxList() {
         <div style="display:flex;gap:10px;margin-bottom:14px">
           <div style="flex:1;background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:10px 14px">
             <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Part Jonathan</div>
-            <div style="font-size:16px;font-weight:900;color:#38bdf8">CHF ${pJ.toLocaleString()}</div>
+            <div style="font-size:16px;font-weight:900;color:#38bdf8">CHF ${fmtCHF(pJ)}</div>
           </div>
           <div style="flex:1;background:var(--gold-dim);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:10px 14px">
             <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">${apporteurUnique ? 'Part ' + apporteurUnique.prenom : (agentsDistincts.size > 1 ? 'Part apporteurs (mixte)' : 'Part apporteurs')}</div>
-            <div style="font-size:16px;font-weight:900;color:#f59e0b">CHF ${pA.toLocaleString()}</div>
+            <div style="font-size:16px;font-weight:900;color:#f59e0b">CHF ${fmtCHF(pA)}</div>
           </div>
         </div>
 
@@ -144,15 +144,15 @@ function renderBordereauxList() {
             ${s.agent ? avatar(s.agent, 24) : ''}
             <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--text)">${c.client_nom}</div><div style="font-size:11px;color:var(--text-muted)">${c.produit}${c.numero_police ? ' · ' + c.numero_police : ''}</div></div>
             <div style="text-align:right">
-              <div style="font-size:12px;color:#38bdf8;font-weight:700">${sig ? sig.prenom : 'Jonathan'}: CHF ${s.pJ}</div>
+              <div style="font-size:12px;color:#38bdf8;font-weight:700">${sig ? sig.prenom : 'Jonathan'}: CHF ${fmtCHF(s.pJ)}</div>
               ${s.agent
-                ? `<div style="font-size:12px;color:#f59e0b;font-weight:700">${s.agent.prenom}: CHF ${s.pA}</div>`
+                ? `<div style="font-size:12px;color:#f59e0b;font-weight:700">${s.agent.prenom}: CHF ${fmtCHF(s.pA)}</div>`
                 : (c.contrat_id
                     ? `<div onclick="event.stopPropagation(); showEditContrat('${c.contrat_id}', 'bordereaux')" style="font-size:11px;color:var(--accent);font-weight:700;cursor:pointer;text-decoration:underline dotted">🖊️ Cliquer pour renseigner l'apporteur</div>`
                     : `<div style="font-size:10.5px;color:var(--text-dim)">Aucun contrat lié</div>`)
               }
             </div>
-            <div style="font-weight:800;color:var(--text);font-size:13px;min-width:70px;text-align:right">CHF ${s.montant.toLocaleString()}</div>
+            <div style="font-weight:800;color:var(--text);font-size:13px;min-width:70px;text-align:right">CHF ${fmtCHF(s.montant)}</div>
           </div>`;
         }).join('')}
         ${commissions.length === 0 ? '<div class="table-empty">Aucune commission rapprochée pour ce bordereau encore.</div>' : ''}
@@ -337,7 +337,7 @@ function showModalValidationCommission(bordereauId) {
             <label class="form-label">Commission en attente *</label>
             <select class="form-select" id="val-commission" onchange="prefillMontantEstime()">
               <option value="">— Sélectionner —</option>
-              ${enAttente.map(c => `<option value="${c.id}" data-montant="${c.montant_estime||0}" data-client="${c.client_nom}">${c.nature === 'gestion' ? '🔄' : '🆕'} ${c.client_nom} — ${c.produit} (CHF ${(c.montant_estime||0).toLocaleString()})</option>`).join('')}
+              ${enAttente.map(c => `<option value="${c.id}" data-montant="${c.montant_estime||0}" data-client="${c.client_nom}">${c.nature === 'gestion' ? '🔄' : '🆕'} ${c.client_nom} — ${c.produit} (CHF ${fmtCHF((c.montant_estime||0))})</option>`).join('')}
             </select>
             ${enAttente.length === 0 ? `<div style="font-size:11px;color:#f59e0b;margin-top:6px">Aucune commission en attente pour ${b.compagnie}.</div>` : ''}
           </div>
@@ -494,9 +494,9 @@ function viewCommissions() {
     return `<div class="table-row" style="grid-template-columns:${cols}">
       <div style="font-size:13px;font-weight:600;color:var(--text)">${c.client_nom || '—'}</div>
       <div style="font-size:11px;color:var(--text-muted)">${c.produit || ''}${c.mouvement ? ' · ' + c.mouvement : ''}</div>
-      <div style="font-weight:800;color:var(--text)">CHF ${m.toLocaleString()}</div>
-      <div style="font-weight:800;color:#38bdf8">CHF ${s.pJ.toLocaleString()}</div>
-      <div>${s.pA > 0 ? `<div style="display:flex;align-items:center;gap:6px">${s.agent ? avatar(s.agent, 18) : ''}<span style="font-weight:700;color:#f59e0b">CHF ${s.pA.toLocaleString()}</span></div>` : '<span style="color:var(--text-dim)">—</span>'}</div>
+      <div style="font-weight:800;color:var(--text)">CHF ${fmtCHF(m)}</div>
+      <div style="font-weight:800;color:#38bdf8">CHF ${fmtCHF(s.pJ)}</div>
+      <div>${s.pA > 0 ? `<div style="display:flex;align-items:center;gap:6px">${s.agent ? avatar(s.agent, 18) : ''}<span style="font-weight:700;color:#f59e0b">CHF ${fmtCHF(s.pA)}</span></div>` : '<span style="color:var(--text-dim)">—</span>'}</div>
     </div>`;
   }).join('');
 
@@ -512,7 +512,7 @@ function viewCommissions() {
     </div>
 
     <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">🔁 Commissions de gestion (récurrentes)</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Suivi de ce qui a été reçu — total : <strong style="color:#4ade80">CHF ${totalGestion.toLocaleString()}</strong> sur ${gestion.length} mouvement(s)</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Suivi de ce qui a été reçu — total : <strong style="color:#4ade80">CHF ${fmtCHF(totalGestion)}</strong> sur ${gestion.length} mouvement(s)</div>
     <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:24px">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px">
         <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:14px">Évolution par période</div>
@@ -520,7 +520,7 @@ function viewCommissions() {
           ${moisGestionKeys.map(k => {
             const h = Math.max(Math.round(parMoisGestion[k]/maxMoisGestion*100), 3);
             return `<div style="display:flex;flex-direction:column;align-items:center;flex:1;min-width:0">
-              <div title="CHF ${Math.round(parMoisGestion[k]).toLocaleString()}" style="width:100%;max-width:28px;height:${h}px;background:linear-gradient(180deg,#4ade80,#16a34a);border-radius:4px 4px 2px 2px"></div>
+              <div title="CHF ${fmtCHF(Math.round(parMoisGestion[k]))}" style="width:100%;max-width:28px;height:${h}px;background:linear-gradient(180deg,#4ade80,#16a34a);border-radius:4px 4px 2px 2px"></div>
               <div style="font-size:8.5px;color:var(--text-muted);margin-top:5px;white-space:nowrap;overflow:hidden;max-width:40px">${k}</div>
             </div>`;
           }).join('')}
@@ -530,7 +530,7 @@ function viewCommissions() {
         <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:14px">Par compagnie</div>
         ${compGestion.map(([comp,val]) => `
           <div style="margin-bottom:10px">
-            <div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--text)">${comp}</span><span style="color:#4ade80;font-weight:700">CHF ${Math.round(val).toLocaleString()}</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--text)">${comp}</span><span style="color:#4ade80;font-weight:700">CHF ${fmtCHF(Math.round(val))}</span></div>
             <div style="height:6px;border-radius:3px;background:var(--border);margin-top:4px;overflow:hidden"><div style="height:100%;width:${compGestion.length?Math.round(val/compGestion[0][1]*100):0}%;background:#4ade80;border-radius:3px"></div></div>
           </div>`).join('') || '<div class="table-empty">—</div>'}
       </div>
@@ -617,16 +617,16 @@ function genererFicheCommission() {
           <tr style="border-bottom:1px solid var(--border)">
             <td style="padding:7px 10px;color:var(--text)">${d.client_nom || '—'}</td>
             <td style="padding:7px 10px;color:var(--text-muted)">${d.produit || ''}</td>
-            <td style="padding:7px 10px;text-align:right;color:var(--text)">CHF ${d.montant.toLocaleString()}</td>
+            <td style="padding:7px 10px;text-align:right;color:var(--text)">CHF ${fmtCHF(d.montant)}</td>
             <td style="padding:7px 10px;text-align:right;color:var(--text-muted)">${d.tauxAgent}%</td>
-            <td style="padding:7px 10px;text-align:right;font-weight:700;color:#f59e0b">CHF ${d.part.toLocaleString()}</td>
+            <td style="padding:7px 10px;text-align:right;font-weight:700;color:#f59e0b">CHF ${fmtCHF(d.part)}</td>
           </tr>`).join('') || `<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted)">Aucune commission rapprochée pour cet agent sur cette période.</td></tr>`}
         </tbody>
       </table>
 
       <div style="display:flex;justify-content:flex-end;gap:30px;border-top:1px solid var(--border);padding-top:14px">
-        <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Total brut</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${totalBrut.toLocaleString()}</div></div>
-        <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Total dû à ${agent.prenom}</div><div style="font-size:20px;font-weight:900;color:#f59e0b">CHF ${totalPart.toLocaleString()}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Total brut</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${fmtCHF(totalBrut)}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Total dû à ${agent.prenom}</div><div style="font-size:20px;font-weight:900;color:#f59e0b">CHF ${fmtCHF(totalPart)}</div></div>
       </div>
     </div>`;
 }
@@ -1347,7 +1347,7 @@ function verifierPlafondLppCollaborateur(input) {
   const salaire = parseFloat(input.value) || 0;
   if (salaire > LPP_LEGAL.salaire_max) {
     const depassement = salaire - LPP_LEGAL.salaire_max;
-    warning.textContent = `⚠️ Dépasse le plafond LPP (CHF ${LPP_LEGAL.salaire_max.toLocaleString()}) de CHF ${depassement.toLocaleString()} — seule la part jusqu'au plafond est obligatoirement assurable.`;
+    warning.textContent = `⚠️ Dépasse le plafond LPP (CHF ${fmtCHF(LPP_LEGAL.salaire_max)}) de CHF ${fmtCHF(depassement)} — seule la part jusqu'au plafond est obligatoirement assurable.`;
     warning.style.display = 'block';
   } else {
     warning.style.display = 'none';
@@ -1395,7 +1395,7 @@ async function genererEmailDemandeOffre() {
   if (chk('do-pj-professionnelle')) besoins.push('Protection juridique professionnelle');
   if (chk('do-construction')) besoins.push('Construction & maître ouvrage');
   if (chk('do-perte-exploit')) besoins.push("Perte d'exploitation");
-  if (val('do-inventaire')) besoins.push(`Inventaire (CHF ${val('do-inventaire')})`);
+  if (val('do-inventaire')) besoins.push(`Inventaire (CHF ${fmtCHF(val('do-inventaire'))})`);
 
   const ca = val('do-ca') || (clientSel && clientSel.revenu ? String(clientSel.revenu) : '');
   const nbCollab = val('do-nb-collab') || (clientSel && clientSel.taux_activite ? String(clientSel.taux_activite) : '');
@@ -1829,7 +1829,7 @@ function recalculerCommissionEstimeeOpportunite() {
     return;
   }
   if (!compagnie) {
-    zone.innerHTML = `💡 Prime totale : CHF ${primeTotale.toLocaleString()} — sélectionne une compagnie pour prévisualiser la commission estimée.`;
+    zone.innerHTML = `💡 Prime totale : CHF ${fmtCHF(primeTotale)} — sélectionne une compagnie pour prévisualiser la commission estimée.`;
     return;
   }
   const { duree: dureeVie, estimee: dureeEstimee } = dureeVieJusqua65Ans();
@@ -1840,7 +1840,7 @@ function recalculerCommissionEstimeeOpportunite() {
     const utiliseDureeVie = PRODUITS_VIE_DUREE_65ANS.includes(l.id);
     if (utiliseDureeVie) uneLigneUtiliseDureeVie = true;
     const r = estimerCommissionProduit(l.id, compagnie, l.prime, utiliseDureeVie ? dureeVie : 1);
-    if (r && r.montant) { totalCommission += r.montant; return `✓ ${produitLabelParId(l.id)} : CHF ${r.montant.toLocaleString()}${utiliseDureeVie ? ` (${dureeVie} an${dureeVie>1?'s':''})` : ''}`; }
+    if (r && r.montant) { totalCommission += r.montant; return `✓ ${produitLabelParId(l.id)} : CHF ${fmtCHF(r.montant)}${utiliseDureeVie ? ` (${dureeVie} an${dureeVie>1?'s':''})` : ''}`; }
     return `⚠️ ${produitLabelParId(l.id)} : taux inconnu pour "${compagnie}"`;
   });
   const noteDuree = uneLigneUtiliseDureeVie
@@ -1848,7 +1848,7 @@ function recalculerCommissionEstimeeOpportunite() {
         ? `<div style="margin-top:4px;font-size:10.5px;color:var(--text-muted)">Durée vie 3a/3B estimée jusqu'à 65 ans (${dureeVie} an${dureeVie>1?'s':''}) depuis la date de naissance du client.</div>`
         : `<div style="margin-top:4px;font-size:10.5px;color:#f59e0b">⚠️ Date de naissance du client inconnue — durée vie 3a/3B estimée à 1 an seulement (probablement sous-évalué).</div>`)
     : '';
-  zone.innerHTML = `💰 <strong style="color:var(--text);font-size:14px">CHF ${totalCommission.toLocaleString()}</strong> de commission estimée <span style="color:var(--text-muted)">(prime totale CHF ${primeTotale.toLocaleString()})</span>
+  zone.innerHTML = `💰 <strong style="color:var(--text);font-size:14px">CHF ${fmtCHF(totalCommission)}</strong> de commission estimée <span style="color:var(--text-muted)">(prime totale CHF ${fmtCHF(primeTotale)})</span>
     <div style="margin-top:5px;font-size:11px;color:var(--text-muted)">${details.join(' · ')}</div>${noteDuree}`;
 }
 

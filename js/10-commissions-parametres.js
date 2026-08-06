@@ -19,11 +19,11 @@ function blocVersementsPartiels(c) {
     <div style="background:var(--surface-alt);border-radius:10px;padding:12px 14px;margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Versements partiels ${tranches.length > 0 ? `(${tranches.length})` : ''}</div>
-        ${tranches.length > 0 ? `<div style="font-size:11.5px;font-weight:700;color:${solde ? '#4ade80' : '#f59e0b'}">Reçu CHF ${recu.toLocaleString()} / ${cible.toLocaleString()} — ${solde ? 'soldé ✓' : `reste CHF ${reste.toLocaleString()}`}</div>` : ''}
+        ${tranches.length > 0 ? `<div style="font-size:11.5px;font-weight:700;color:${solde ? '#4ade80' : '#f59e0b'}">Reçu CHF ${fmtCHF(recu)} / ${cible.toLocaleString()} — ${solde ? 'soldé ✓' : `reste CHF ${fmtCHF(reste)}`}</div>` : ''}
       </div>
       ${tranches.length > 0 ? tranches.map(t => `
         <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:11.5px;color:var(--text)">
-          <span>${fmtDate(t.date_reception)} — CHF ${Number(t.montant).toLocaleString()}${t.note ? ` · ${t.note}` : ''}</span>
+          <span>${fmtDate(t.date_reception)} — CHF ${fmtCHF(Number(t.montant))}${t.note ? ` · ${t.note}` : ''}</span>
           <button type="button" onclick="supprimerVersementCommission('${t.id}', '${c.id}')" style="background:none;border:none;color:#f87171;cursor:pointer;font-size:12px">✕</button>
         </div>`).join('') : `<div style="font-size:11px;color:var(--text-dim);margin-bottom:8px">Aucun versement enregistré — utile si cette commission est payée en plusieurs fois (ex. convention hors décompte assureur).</div>`}
       <div style="display:flex;gap:8px;margin-top:8px">
@@ -42,7 +42,7 @@ async function ajouterVersementCommission(commId) {
   if (!montant || montant <= 0) { showError('Indique un montant valide pour le versement.'); return; }
   const r = await dbPost('commission_tranches', { commission_id: commId, montant, date_reception, note });
   if (r && r.error) { showError('Erreur lors de l\'enregistrement du versement.'); return; }
-  logAction('add_versement_commission', 'commission_tranches', commId, `CHF ${montant} le ${date_reception}`);
+  logAction('add_versement_commission', 'commission_tranches', commId, `CHF ${fmtCHF(montant)} le ${date_reception}`);
   allCommissionTranches = await dbGet('commission_tranches', 'select=*');
   showModalEditCommission(commId);
   renderToutesCommissions();
@@ -84,7 +84,7 @@ function showModalEditCommission(commId) {
           <button type="button" onclick="document.getElementById('modal-edit-commission').remove(); showDetailContrat('${ct.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:3px 10px;font-size:10.5px;cursor:pointer;font-weight:700">Voir le contrat →</button>
         </div>
         <div style="font-size:12.5px;color:var(--text)">${ct.produit} · ${ct.compagnie}</div>
-        <div style="font-size:11px;color:var(--text-muted)">Prime CHF ${Number(ct.prime_annuelle||0).toLocaleString()}/an${ct.date_debut ? ' · Signé le ' + fmtDate(ct.date_debut) : ''}${ct.numero_police ? ' · № ' + ct.numero_police : ''}</div>
+        <div style="font-size:11px;color:var(--text-muted)">Prime CHF ${fmtCHF(Number(ct.prime_annuelle||0))}/an${ct.date_debut ? ' · Signé le ' + fmtDate(ct.date_debut) : ''}${ct.numero_police ? ' · № ' + ct.numero_police : ''}</div>
       </div>` : `<div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:11.5px;color:#f87171">⚠ Aucun contrat lié à cette commission — impossible de vérifier son origine automatiquement.</div>`}
 
       <div class="form-field" style="margin-bottom:14px">
@@ -198,7 +198,7 @@ async function saveEditCommission(commId) {
         compagnie: body.compagnie,
         produit: body.produit,
         montant_estime: -montantOriginal,
-        detail_calcul: `↩ Reprise automatique suite à l'extourne de la commission d'origine (CHF ${montantOriginal.toLocaleString()}). À rapprocher avec la ligne de débit correspondante sur le prochain bordereau ${body.compagnie}.`,
+        detail_calcul: `↩ Reprise automatique suite à l'extourne de la commission d'origine (CHF ${fmtCHF(montantOriginal)}). À rapprocher avec la ligne de débit correspondante sur le prochain bordereau ${body.compagnie}.`,
         statut: 'en_attente',
         date_creation: new Date().toISOString().split('T')[0],
       });
@@ -317,11 +317,11 @@ function renderToutesCommissions() {
   const rows = filtered.map(c => {
     const numBord = numeroBordereauDe(c);
     return `<div class="table-row" style="grid-template-columns:${cols};cursor:pointer" onclick="showModalEditCommission('${c.id}')">
-      <div><div style="font-size:13px;font-weight:700;color:var(--text)">${c.client_id ? `<span onclick="event.stopPropagation(); showClient('${c.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${c.client_nom || '—'}</span>` : (c.client_nom || '—')}${getClientMiniLogos(allClients.find(x => x.id === c.client_id))}</div><div style="font-size:11px;color:var(--text-muted)">${c.produit || ''}</div>${c.detail_calcul ? `<div style="font-size:10px;color:var(--text-dim);margin-top:2px;font-style:italic">${c.detail_calcul.split('[')[0].trim()}</div>` : `<div style="font-size:10px;color:#f59e0b;margin-top:2px">⚠ Détail du calcul manquant — clique pour préciser</div>`}${totalVersementsCommission(c.id) > 0 ? `<div style="font-size:10px;color:#4ade80;margin-top:2px">💰 Reçu CHF ${totalVersementsCommission(c.id).toLocaleString()} / ${montantC(c).toLocaleString()} (versements partiels)</div>` : ''}</div>
+      <div><div style="font-size:13px;font-weight:700;color:var(--text)">${c.client_id ? `<span onclick="event.stopPropagation(); showClient('${c.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${c.client_nom || '—'}</span>` : (c.client_nom || '—')}${getClientMiniLogos(allClients.find(x => x.id === c.client_id))}</div><div style="font-size:11px;color:var(--text-muted)">${c.produit || ''}</div>${c.detail_calcul ? `<div style="font-size:10px;color:var(--text-dim);margin-top:2px;font-style:italic">${c.detail_calcul.split('[')[0].trim()}</div>` : `<div style="font-size:10px;color:#f59e0b;margin-top:2px">⚠ Détail du calcul manquant — clique pour préciser</div>`}${totalVersementsCommission(c.id) > 0 ? `<div style="font-size:10px;color:#4ade80;margin-top:2px">💰 Reçu CHF ${fmtCHF(totalVersementsCommission(c.id))} / ${montantC(c).toLocaleString()} (versements partiels)</div>` : ''}</div>
       <div style="font-size:12px;color:var(--text-muted)">${c.compagnie || ''}</div>
       <div style="font-size:11px;color:var(--text-muted)">${numBord ? `<span style="font-family:monospace">${numBord}</span>` : '—'}</div>
       <div style="font-size:12px;color:var(--text-muted)">${c.date_creation || ''}</div>
-      <div style="font-weight:800;color:#f59e0b;text-align:right">CHF ${montantC(c).toLocaleString()}</div>
+      <div style="font-weight:800;color:#f59e0b;text-align:right">CHF ${fmtCHF(montantC(c))}</div>
       <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start">${badge(statutCommissionLabel(c.statut), statutCommissionColor(c.statut))}${badgeNatureCommission(c.nature)}</div>
     </div>`;
   }).join('');
@@ -785,7 +785,7 @@ function exportFinmaOzTxt() {
   Object.entries(d.remuneration).forEach(([compagnie, cats]) => {
     t += `\n-- ${compagnie} --\n`;
     Object.entries(cats).forEach(([cat, v]) => {
-      t += `  ${CAT_LABELS[cat]}: Souscription CHF ${v.acquisition.toFixed(2)} / Portefeuille CHF ${v.gestion.toFixed(2)}\n`;
+      t += `  ${CAT_LABELS[cat]}: Souscription CHF ${fmtCHF2(v.acquisition)} / Portefeuille CHF ${fmtCHF2(v.gestion)}\n`;
     });
   });
   t += `\n3.5.1 HONORAIRES\nQ: Avez-vous reçu des honoraires directement de preneurs d'assurance ?\nR: [À compléter — l'an dernier : Non]\n\n`;
@@ -823,7 +823,7 @@ function viewOzCommissionsAssurex() {
       ${lignes.map(c => `<div class="table-row" style="grid-template-columns:1fr 130px 110px 130px 90px">
         <div><div style="font-size:13px;font-weight:700;color:var(--text)">${c.client_nom||'—'}</div><div style="font-size:11px;color:var(--text-muted)">${c.produit||''}</div></div>
         <div style="font-size:12px;color:var(--text-muted)">${c.compagnie||''}</div>
-        <div style="font-weight:800;color:#1a56db">CHF ${Number(c.montant_final != null ? c.montant_final : (c.montant_estime||0)).toLocaleString()}</div>
+        <div style="font-weight:800;color:#1a56db">CHF ${fmtCHF(Number(c.montant_final != null ? c.montant_final : (c.montant_estime||0)))}</div>
         <div>${c.refacture_le ? `<span style="color:#4ade80;font-size:11.5px;font-weight:700">✓ Faite le ${fmtDate(c.refacture_le)}</span>` : `<span style="color:#f59e0b;font-size:11.5px;font-weight:700">⏳ À refacturer</span>`}</div>
         <div><button onclick="showModalEditCommission('${c.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:4px 10px;font-size:11px;cursor:pointer">✏️</button></div>
       </div>`).join('') || '<div class="table-empty">Aucune commission versée à OZ Assure enregistrée.</div>'}
@@ -1336,11 +1336,11 @@ function viewAgents() {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);border-radius:9px;padding:10px 14px">
             <div style="color:var(--text-muted);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px">CA géré</div>
-            <div style="color:#38bdf8;font-size:14px;font-weight:800">CHF ${ca.toLocaleString()}</div>
+            <div style="color:#38bdf8;font-size:14px;font-weight:800">CHF ${fmtCHF(ca)}</div>
           </div>
           <div style="background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2);border-radius:9px;padding:10px 14px">
             <div style="color:var(--text-muted);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px">Commissions générées (via fiche de paie)</div>
-            <div style="color:#4ade80;font-size:14px;font-weight:800">CHF ${Math.round(commGeneree).toLocaleString()}</div>
+            <div style="color:#4ade80;font-size:14px;font-weight:800">CHF ${fmtCHF(Math.round(commGeneree))}</div>
           </div>
         </div>
       </div>`;

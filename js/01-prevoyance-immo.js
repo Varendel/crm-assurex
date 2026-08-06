@@ -4,6 +4,21 @@ const DATE_BASCULE_ASSUREX = '2026-06-01'; // Date à partir de laquelle les com
 const AI_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/clever-worker`;
 const SUPABASE_KEY = 'sb_publishable_DJtZwHKeA5X1ck1coAQFOA_xOd7c02i';
 
+// ═══ FORMATAGE DES MONTANTS CHF (séparateur de milliers) ═══
+// Utilisé partout où un montant CHF est affiché, pour la lisibilité — décision de Jonathan le
+// 06.08.2026. fmtCHF garde le nombre de décimales tel quel (aucune si entier, jusqu'à 2 sinon) ;
+// fmtCHF2 force toujours 2 décimales (relevés/rapports comptables).
+function fmtCHF(n) {
+  const num = Number(n);
+  if (!isFinite(num)) return '0';
+  return num.toLocaleString('fr-CH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+}
+function fmtCHF2(n) {
+  const num = Number(n);
+  if (!isFinite(num)) return '0.00';
+  return num.toLocaleString('fr-CH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 // ═══ AUTOCOMPLÉTION ADRESSES SUISSES (swisstopo geo.admin.ch — sans clé, CORS OK) ═══
 const CANTON_MAP = {
   'AG':'AG','AI':'AI','AR':'AR','BE':'BE','BL':'BL','BS':'BS','FR':'FR','GE':'GE',

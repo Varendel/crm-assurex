@@ -437,8 +437,8 @@ async function showClient(id) {
                   <div style="font-size:11px;color:var(--text-muted)">${ct.numero_police ? 'Police № ' + ct.numero_police : ''}</div>
                 </div>
                 <div style="text-align:right">
-                  <div style="font-weight:800;color:#f59e0b;font-size:13px">CHF ${Number(ct.prime_annuelle||0).toLocaleString()}/an</div>
-                  <div style="font-size:10px;color:var(--text-muted)">CHF ${Math.round(Number(ct.prime_annuelle||0)/12*100)/100}/mois</div>
+                  <div style="font-weight:800;color:#f59e0b;font-size:13px">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}/an</div>
+                  <div style="font-size:10px;color:var(--text-muted)">CHF ${fmtCHF(Math.round(Number(ct.prime_annuelle||0)/12*100)/100)}/mois</div>
                   ${badge(ct.statut, ct.statut==='actif'?'#4ade80':'#f59e0b')}
                 </div>
               </div>`).join('')}
@@ -459,7 +459,7 @@ async function showClient(id) {
         </div>
         <div style="font-size:13px;color:var(--text)">${ct.compagnie}</div>
         <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ct.date_echeance)}</div>
-        <div style="font-weight:800;color:#f59e0b">CHF ${Number(ct.prime_annuelle || 0).toLocaleString()}</div>
+        <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF(Number(ct.prime_annuelle || 0))}</div>
         <div>${badge(ct.statut, ct.statut === 'actif' ? '#4ade80' : ct.statut === 'renouveler' ? '#f59e0b' : '#f87171')}${ct.commissionne === false ? ' ' + badge('Non commissionné', '#64748b') : ''}</div>
         <div style="display:flex;gap:4px;align-items:center" onclick="event.stopPropagation()">
           ${ct.police_url
@@ -485,7 +485,7 @@ async function showClient(id) {
           <div style="font-size:13px;color:var(--text)">${f.objet || '—'}</div>
           <div style="font-size:12px;color:var(--text-muted)">${f.date_emission || ''}</div>
           <div style="font-size:12px;color:var(--text-muted)">${fmtDate(f.date_echeance)}</div>
-          <div style="font-weight:800;color:#f59e0b">CHF ${Number(f.montant||0).toLocaleString()}</div>
+          <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF(Number(f.montant||0))}</div>
           <div>${badge(statutLabel, statutColor2)}</div>
         </div>`;
       }).join('')}</div>` : '<div class="table-empty">Aucune facture.</div>'}

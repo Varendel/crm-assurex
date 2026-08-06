@@ -8,6 +8,9 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
 <meta name="apple-mobile-web-app-title" content="Assurex CRM"/>
 <meta name="theme-color" content="#0f172a"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="icon" href="icon-192.png" type="image/png"/>
+<link rel="apple-touch-icon" href="icon-180.png"/>
 <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
@@ -359,5 +362,15 @@
 <script src="js/08-nouveaux-formulaires.js?v=1786034423"></script>
 <script src="js/09-rappels-vehicules.js?v=1786020580"></script>
 <script src="js/10-commissions-parametres.js?v=1786020580"></script>
+<script>
+  // Enregistrement du service worker — rend le CRM installable comme une vraie application
+  // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de
+  // l'app si ça échoue (navigateur non compatible, etc.) — best effort silencieux.
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => {});
+    });
+  }
+</script>
 </body>
 </html>

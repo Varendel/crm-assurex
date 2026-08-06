@@ -10,8 +10,17 @@ async function synchroniserOutlook() {
   if (btn) { btn.textContent = '🔄 Synchronisation...'; btn.disabled = true; }
 
   try {
-    const toutes = await dbGet('demandes_offre', 'select=id,compagnies_envoi&order=created_at.desc');
-    const enAttente = (toutes || []).filter(d => (d.compagnies_envoi || []).some(e => e.statut !== 'reçue'));
+    const toutes = await dbGet('demandes_offre', 'select=id,opportunite_id,compagnies_envoi&order=created_at.desc');
+    const enAttenteBrut = (toutes || []).filter(d => (d.compagnies_envoi || []).some(e => e.statut !== 'reçue'));
+    // Recherche scopée aux opportunités créées et EN COURS (décision de Jonathan le 06.08.2026) :
+    // un dossier rattaché à une opportunité Gagnée ou Perdue n'est plus synchronisé (plus la
+    // peine de vérifier les réponses reçues sur une affaire déjà classée). Un dossier sans
+    // opportunité liée (simple prospect) reste synchronisé — rien à filtrer dans ce cas.
+    const enAttente = enAttenteBrut.filter(d => {
+      if (!d.opportunite_id) return true;
+      const opp = (allOpportunites || []).find(o => o.id === d.opportunite_id);
+      return !opp || !['Gagné', 'Perdu'].includes(opp.stade);
+    });
     if (!enAttente.length) {
       showError('Rien à synchroniser — aucun dossier en attente de réponse.');
       if (btn) { btn.textContent = '📧 Synchroniser Outlook'; btn.disabled = false; }

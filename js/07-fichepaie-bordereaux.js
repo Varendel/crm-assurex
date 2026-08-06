@@ -1436,11 +1436,49 @@ async function genererEmailDemandeOffre() {
   const corps = paragraphes.join('\n\n');
 
   const sujet = `Demande d'offre — ${nomClient}`;
-  const mailto = `mailto:${emails.join(',')}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`;
+
+  // Envoi DIRECT via Microsoft Graph (compte Outlook connecté, jo@cofidex.ch) au lieu d'un lien
+  // mailto: — décision de Jonathan le 06.08.2026 : un mailto: laisse le client mail local choisir
+  // le compte d'envoi par défaut (ça partait parfois avec une autre adresse que jo@cofidex.ch,
+  // sans qu'on puisse le contrôler depuis le CRM). L'envoi via Graph garantit l'expéditeur.
+  if (!msalAccessToken) {
+    showError("Connecte-toi à Outlook (bouton Microsoft dans le menu) pour envoyer cette demande d'offre — l'envoi se fait maintenant directement depuis jo@cofidex.ch, plus de sélection via le client mail local.");
+    return;
+  }
+  if (!emails.length) {
+    showError("Aucune compagnie sélectionnée n'a d'email enregistré — ajoute-en dans Paramètres → Contacts compagnies.");
+    return;
+  }
+
+  let envoiOk = false;
+  try {
+    const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: {
+          subject: sujet,
+          body: { contentType: 'text', content: corps },
+          toRecipients: emails.map(e => ({ emailAddress: { address: e } })),
+        },
+        saveToSentItems: true,
+      }),
+    });
+    envoiOk = r.ok;
+    if (!r.ok && r.status === 401) {
+      showError('Session Outlook expirée — reconnecte-toi (bouton Microsoft dans le menu) puis réessaie.');
+      return;
+    }
+    if (!r.ok) { showError("Échec de l'envoi via Outlook — réessaie."); return; }
+  } catch (e) {
+    showError("Erreur réseau lors de l'envoi via Outlook : " + e.message);
+    return;
+  }
 
   // Trace quelles compagnies viennent d'être sollicitées (fusionne avec les envois précédents,
-  // ne duplique pas une compagnie déjà tracée — met juste à jour sa date d'envoi).
-  if (demandeOffreId) {
+  // ne duplique pas une compagnie déjà tracée — met juste à jour sa date d'envoi) — uniquement
+  // si l'envoi a effectivement réussi.
+  if (envoiOk && demandeOffreId) {
     const existantes = (await dbGet('demandes_offre', `id=eq.${demandeOffreId}&select=compagnies_envoi`))?.[0]?.compagnies_envoi || [];
     const maintenant = new Date().toISOString();
     const compagniesEnvoi = [...existantes];
@@ -1452,7 +1490,7 @@ async function genererEmailDemandeOffre() {
     await dbPatch('demandes_offre', demandeOffreId, { compagnies_envoi: compagniesEnvoi });
   }
 
-  window.location.href = mailto;
+  showError(envoiOk ? `✓ Demande d'offre envoyée depuis jo@cofidex.ch à ${emails.join(', ')}.` : "Échec de l'envoi.");
 
   if (sansEmail.length) {
     showError(`⚠ Pas d'email enregistré pour : ${sansEmail.join(', ')} — ajoute-les dans Paramètres → Contacts compagnies.`);
@@ -1766,6 +1804,19 @@ function ligneesProduitsOpportunite() {
 
 // Prévisualisation live de la commission estimée (= CA potentiel) sur l'opportunité — demandé par
 // Jonathan pour voir tout de suite ce qui l'intéresse (pas juste la prime brute).
+// Produits vie dont le capital de production dépend de la durée du contrat — sur une opportunité
+// (pas encore de vrai champ "durée"), on estime automatiquement la durée restante jusqu'à 65 ans
+// depuis la date de naissance du client déjà fiché, décision de Jonathan le 06.08.2026 (plutôt
+// qu'un champ à ressaisir à la main). Repli sur 1 an si la date de naissance est inconnue.
+const PRODUITS_VIE_DUREE_65ANS = ['vie_3a', 'vie_3b_mixte'];
+function dureeVieJusqua65Ans() {
+  const clientId = document.getElementById('o-client')?.value || '';
+  const client = clientId ? allClients.find(c => c.id === clientId) : null;
+  const age = client ? ageDepuisNaissance(client.date_naissance) : null;
+  if (age === null) return { duree: 1, estimee: false };
+  return { duree: Math.max(1, 65 - age), estimee: true };
+}
+
 function recalculerCommissionEstimeeOpportunite() {
   const zone = document.getElementById('o-commission-estimee');
   if (!zone) return;
@@ -1781,15 +1832,24 @@ function recalculerCommissionEstimeeOpportunite() {
     zone.innerHTML = `💡 Prime totale : CHF ${primeTotale.toLocaleString()} — sélectionne une compagnie pour prévisualiser la commission estimée.`;
     return;
   }
+  const { duree: dureeVie, estimee: dureeEstimee } = dureeVieJusqua65Ans();
   let totalCommission = 0;
+  let uneLigneUtiliseDureeVie = false;
   const details = lignes.map(l => {
     if (!l.prime) return `⚠️ ${produitLabelParId(l.id)} : prime non renseignée`;
-    const r = estimerCommissionProduit(l.id, compagnie, l.prime);
-    if (r && r.montant) { totalCommission += r.montant; return `✓ ${produitLabelParId(l.id)} : CHF ${r.montant.toLocaleString()}`; }
+    const utiliseDureeVie = PRODUITS_VIE_DUREE_65ANS.includes(l.id);
+    if (utiliseDureeVie) uneLigneUtiliseDureeVie = true;
+    const r = estimerCommissionProduit(l.id, compagnie, l.prime, utiliseDureeVie ? dureeVie : 1);
+    if (r && r.montant) { totalCommission += r.montant; return `✓ ${produitLabelParId(l.id)} : CHF ${r.montant.toLocaleString()}${utiliseDureeVie ? ` (${dureeVie} an${dureeVie>1?'s':''})` : ''}`; }
     return `⚠️ ${produitLabelParId(l.id)} : taux inconnu pour "${compagnie}"`;
   });
+  const noteDuree = uneLigneUtiliseDureeVie
+    ? (dureeEstimee
+        ? `<div style="margin-top:4px;font-size:10.5px;color:var(--text-muted)">Durée vie 3a/3B estimée jusqu'à 65 ans (${dureeVie} an${dureeVie>1?'s':''}) depuis la date de naissance du client.</div>`
+        : `<div style="margin-top:4px;font-size:10.5px;color:#f59e0b">⚠️ Date de naissance du client inconnue — durée vie 3a/3B estimée à 1 an seulement (probablement sous-évalué).</div>`)
+    : '';
   zone.innerHTML = `💰 <strong style="color:var(--text);font-size:14px">CHF ${totalCommission.toLocaleString()}</strong> de commission estimée <span style="color:var(--text-muted)">(prime totale CHF ${primeTotale.toLocaleString()})</span>
-    <div style="margin-top:5px;font-size:11px;color:var(--text-muted)">${details.join(' · ')}</div>`;
+    <div style="margin-top:5px;font-size:11px;color:var(--text-muted)">${details.join(' · ')}</div>${noteDuree}`;
 }
 
 function filtrerProduitsOpportunite(texte) {
@@ -1817,8 +1877,14 @@ async function saveOpportunite(id) {
   const produitsPrimes = {};
   lignesProduits.forEach(l => { if (l.prime) produitsPrimes[l.id] = l.prime; });
   const montantPotentiel = lignesProduits.reduce((s, l) => s + l.prime, 0);
+  const { duree: dureeVieSave } = dureeVieJusqua65Ans();
   const commissionEstimee = compagnieBody
-    ? lignesProduits.reduce((s, l) => { if (!l.prime) return s; const r = estimerCommissionProduit(l.id, compagnieBody, l.prime); return s + ((r && r.montant) || 0); }, 0)
+    ? lignesProduits.reduce((s, l) => {
+        if (!l.prime) return s;
+        const duree = PRODUITS_VIE_DUREE_65ANS.includes(l.id) ? dureeVieSave : 1;
+        const r = estimerCommissionProduit(l.id, compagnieBody, l.prime, duree);
+        return s + ((r && r.montant) || 0);
+      }, 0)
     : 0;
   const body = {
     titre,

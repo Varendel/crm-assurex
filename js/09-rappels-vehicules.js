@@ -1185,7 +1185,22 @@ function produitCategorieEtObjetParId(id) {
 // testé par 19 cas de régression réels) via un DOM temporaire invisible, plutôt que de dupliquer
 // la logique tarifaire par compagnie (risque de désynchronisation). Nettoie toujours son DOM
 // temporaire, y compris en cas d'erreur.
-function estimerCommissionProduit(produitId, compagnieNom, primeAnnuelle) {
+// Âge en années pleines à partir d'une date de naissance (YYYY-MM-DD) — utilisé pour estimer la
+// durée restante jusqu'à 65 ans sur les produits vie 3a/3b au stade opportunité (avant qu'un vrai
+// champ "durée" ne soit saisi sur le contrat).
+function ageDepuisNaissance(dateNaissance) {
+  if (!dateNaissance) return null;
+  const naissance = new Date(dateNaissance);
+  if (isNaN(naissance.getTime())) return null;
+  const aujourdhui = new Date();
+  let age = aujourdhui.getFullYear() - naissance.getFullYear();
+  const pasEncoreAnniversaire = (aujourdhui.getMonth() < naissance.getMonth()) ||
+    (aujourdhui.getMonth() === naissance.getMonth() && aujourdhui.getDate() < naissance.getDate());
+  if (pasEncoreAnniversaire) age--;
+  return age;
+}
+
+function estimerCommissionProduit(produitId, compagnieNom, primeAnnuelle, dureeAnnees) {
   const produit = produitId ? produitParId(produitId) : null;
   if (!produit || !compagnieNom || !primeAnnuelle) return { montant: 0, detail: null };
   const temp = [];
@@ -1201,7 +1216,7 @@ function estimerCommissionProduit(produitId, compagnieNom, primeAnnuelle) {
   creer('ct-periodicite', '12');
   creer('ct-manuel', '');
   creer('ct-compagnie', compagnieNom);
-  creer('ct-duree', '1');
+  creer('ct-duree', String(dureeAnnees && dureeAnnees > 0 ? dureeAnnees : 1));
   creer('ct-prime-risque-frais', '0');
   try {
     return calculerCommissionEstimee() || { montant: 0, detail: null };
@@ -1358,8 +1373,8 @@ function calculerCommissionEstimee() {
     return { montant, detail: `CHF ${primeMensuelle}/mois × ${TAUX_COMMISSION.sante_facteur_mensuel} (taux santé) = CHF ${montant}` };
   }
 
-  // ── Vie / 3a ────────────────────────────────────────────────────────────
-  if (produitId === 'vie_3a') {
+  // ── Vie / 3a et 3B mixte — même taux (à ajuster si Jonathan donne un taux différent pour le 3B) ──
+  if (produitId === 'vie_3a' || produitId === 'vie_3b_mixte') {
     const duree = parseFloat(document.getElementById('ct-duree')?.value) || 1;
     const capitalProduction = primeMensuelle * 12 * duree;
     const montant = Math.round(capitalProduction * (TAUX_COMMISSION.vie_taux_capital / 100));

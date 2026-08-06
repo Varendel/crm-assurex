@@ -808,7 +808,7 @@ function formEntreprise() {
       <div class="form-field"><label class="form-label">N° IDE (CHE)</label><input class="form-input" id="e-ide" placeholder="CHE-123.456.789"/></div>
       <div class="form-field"><label class="form-label">Secteur d'activité</label><input class="form-input" id="e-secteur" placeholder="Construction, Restauration..."/></div>
       <div class="form-field"><label class="form-label">Activité principale</label><input class="form-input" id="e-activite" placeholder="Décrire l'activité"/></div>
-      <div class="form-field"><label class="form-label">Soumis SUVA ?</label><select class="form-select" id="e-suva"><option value="">—</option><option value="oui">Oui</option><option value="non">Non</option></select></div>
+      <div class="form-field"><label class="form-label">Soumis SUVA ?</label><select class="form-select" id="e-soumis-suva-ide"><option value="">—</option><option value="oui">Oui</option><option value="non">Non</option></select></div>
     </div>`)}
     ${sectionCard('Contact & Adresse', '#38bdf8', `<div class="form-grid">
       <div class="form-field" style="grid-column:span 2;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.25);border-radius:9px;padding:10px 14px">
@@ -860,7 +860,7 @@ function formEntreprise() {
     ${sectionCard('Assurances vie', '#a78bfa', `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px">
       ${['3a','3a indépendant','3B','Risque pur','Versement unique'].map(l => `
       <label style="display:flex;align-items:center;gap:8px;background:var(--surface-alt);border-radius:8px;padding:10px 12px;cursor:pointer">
-        <input type="checkbox" style="width:14px;height:14px;accent-color:#a78bfa"/>
+        <input type="checkbox" id="e-vie-${l.replace(/\s/g,'-').toLowerCase()}" style="width:14px;height:14px;accent-color:#a78bfa"/>
         <span style="font-size:12px;color:var(--text);font-weight:600">${l}</span>
       </label>`).join('')}
     </div>
@@ -885,7 +885,7 @@ function formEntreprise() {
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
       ${['RC/Commerce','Inventaire','Protection juridique','Perte exploitation','Machines','Vol','All Risk','Transports','Cyber','Construction/MO'].map(l => `
       <label style="display:flex;align-items:center;gap:8px;background:var(--surface-alt);border-radius:8px;padding:10px 12px;cursor:pointer">
-        <input type="checkbox" style="width:14px;height:14px;accent-color:#f87171"/>
+        <input type="checkbox" id="e-rcc-${l.replace(/\s/g,'-').toLowerCase()}" style="width:14px;height:14px;accent-color:#f87171"/>
         <span style="font-size:12px;color:var(--text);font-weight:600">${l}</span>
       </label>`).join('')}
     </div>
@@ -938,6 +938,77 @@ function toggleDomiciliationCofidex() {
   }
 }
 
+// Regroupe TOUS les champs "avancés" du formulaire entreprise qui n'ont pas de colonne dédiée en
+// base (masse salariale détaillée, assurances de personnes/vie, LPP étendu, RC & assurances
+// choses, véhicules) dans un seul objet JSON, stocké dans clients.details_entreprise.
+// Avant ce correctif, ces champs étaient saisis à l'écran mais jamais envoyés au serveur — d'où
+// la perte de données constatée à l'enregistrement d'un nouveau client entreprise.
+// Chaque groupe n'est inclus que si ses éléments existent réellement dans le DOM (le formulaire
+// de création et la vue "Compléter les détails entreprise" ne rendent pas exactement les mêmes
+// blocs), afin que saveDetailsEntrepriseClient() puisse fusionner sans écraser ce qui n'a pas été
+// re-rendu.
+function collecterDetailsEntreprise() {
+  const el = id => document.getElementById(id);
+  const v = id => { const e = el(id); return e ? e.value.trim() : undefined; };
+  const n = id => { const e = el(id); return e && e.value !== '' ? Number(e.value) : undefined; };
+  const chk = id => { const e = el(id); return e ? e.checked : undefined; };
+  const slug = s => s.replace(/\s/g, '-').toLowerCase();
+  const details = {};
+  const set = (k, val) => { if (val !== undefined && val !== '') details[k] = val; };
+
+  set('forme', v('e-forme'));
+  set('activite', v('e-activite'));
+  set('lieu_risque', v('e-risque'));
+  set('soumis_suva', v('e-soumis-suva-ide'));
+  set('contact_fonction', v('e-contact-fonction'));
+  set('contact_mobile', v('e-contact-mobile'));
+  set('independant', v('e-independant'));
+  set('ms_total', n('e-ms-total'));
+  set('ms_chef', n('e-ms-chef'));
+  set('ms_ap_h', n('e-ms-ap-h'));
+  set('ms_ap_f', n('e-ms-ap-f'));
+  set('ms_anp_h', n('e-ms-anp-h'));
+  set('ms_anp_f', n('e-ms-anp-f'));
+  set('exc_h', n('e-exc-h'));
+  set('exc_f', n('e-exc-f'));
+
+  const labelsAp = ['Perte de gain maladie','LAA','LPP','LAAF (indépendant)','LAAC','Semi-privée'];
+  if (el('e-ap-' + slug(labelsAp[0]))) {
+    details.assurances_personnes = Object.fromEntries(labelsAp.map(l => [l, !!chk('e-ap-' + slug(l))]));
+  }
+  const delaiEl = document.querySelector('input[name="e-delai"]:checked');
+  if (delaiEl) details.delai_attente = delaiEl.value;
+
+  const labelsVie = ['3a','3a indépendant','3B','Risque pur','Versement unique'];
+  if (el('e-vie-' + slug(labelsVie[0]))) {
+    details.assurances_vie = Object.fromEntries(labelsVie.map(l => [l, !!chk('e-vie-' + slug(l))]));
+  }
+  set('budget_epargne', n('e-budget-epargne'));
+  set('pa', n('e-pa'));
+  set('taux_lpp', v('e-taux-lpp'));
+  set('cap_invalidite', n('e-cap-invalidite'));
+  set('cap_deces', n('e-cap-deces'));
+  set('ameliorations', v('e-ameliorations'));
+  set('ded_coord', v('e-ded-coord'));
+  set('rc_risque', v('e-rc-risque'));
+  set('lieux_exploitation', v('e-lieux'));
+
+  const labelsRcc = ['RC/Commerce','Inventaire','Protection juridique','Perte exploitation','Machines','Vol','All Risk','Transports','Cyber','Construction/MO'];
+  if (el('e-rcc-' + slug(labelsRcc[0]))) {
+    details.rc_assurances_choses = Object.fromEntries(labelsRcc.map(l => [l, !!chk('e-rcc-' + slug(l))]));
+  }
+  set('inventaire_somme', n('e-inventaire'));
+  set('perte_exploitation', n('e-perte-exploit'));
+
+  const vehicules = [
+    { plaque: v('e-plaque1'), modele: v('e-modele1') },
+    { plaque: v('e-plaque2'), modele: v('e-modele2') },
+  ].filter(veh => veh.plaque || veh.modele);
+  if (vehicules.length) details.vehicules = vehicules;
+
+  return details;
+}
+
 async function saveEntreprise() {
   const nom = document.getElementById('e-nom').value.trim();
   const email = document.getElementById('e-email').value.trim();
@@ -974,6 +1045,7 @@ async function saveEntreprise() {
     apporteur_id: document.getElementById('e-agent').value || null,
     apporteur_externe: document.getElementById('e-apporteur-ext').value.trim() || null,
     notes: document.getElementById('e-notes').value || null,
+    details_entreprise: collecterDetailsEntreprise(),
   };
   const btn = document.querySelector('.btn-save');
   btn.textContent = 'Enregistrement...'; btn.disabled = true;

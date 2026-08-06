@@ -180,6 +180,7 @@ async function showClient(id) {
         <button onclick="prefillOpportuniteClientId='${c.id}'; opportuniteEnEditionId=null; navigate('nouvelle-opportunite')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:7px 16px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">🎯 Créer une opportunité</button>
         <button onclick="prefillDemandeOffreClientId='${c.id}'; navigate('nouvelle-demande-offre')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📝 Demande d'offre</button>
         ${estEntreprise(c) ? `<button onclick="genererFicheDemandeOffre('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🖨️ Fiche papier (demande d'offre)</button>` : ''}
+        ${estEntreprise(c) ? `<button onclick="showCompleterDetailsEntreprise('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📋 Détails entreprise (masse salariale, assurances, LPP...)</button>` : ''}
         <button onclick="window.print()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🖨️ Imprimer la fiche</button>
       </div>
     </div>
@@ -1100,6 +1101,137 @@ function genererMandatCourtage(clientId, signatureDataUrl) {
   }).then(r => {
     if (r && r.error) console.error('Échec de l\u2019enregistrement du mandat sur la fiche :', errMsg(r));
   });
+}
+
+// ═══ DÉTAILS ENTREPRISE (masse salariale, assurances, LPP, RC & choses, véhicules) ═══
+// Ces champs n'ont pas de colonne dédiée sur `clients` — ils étaient auparavant saisis sur le
+// formulaire de création mais jamais envoyés au serveur (bug corrigé le 06.08.2026). Cette vue
+// permet de les compléter/corriger après coup, stockés dans clients.details_entreprise (jsonb).
+// Réutilise exactement les mêmes ids de champs que formEntreprise() afin que
+// collecterDetailsEntreprise() (définie dans js/07) fonctionne identiquement pour les deux vues.
+function viewCompleterDetailsEntreprise(c) {
+  const d = c.details_entreprise || {};
+  const slug = s => s.replace(/\s/g, '-').toLowerCase();
+  const ap = d.assurances_personnes || {};
+  const vie = d.assurances_vie || {};
+  const rcc = d.rc_assurances_choses || {};
+  const veh = d.vehicules || [];
+  return `
+    <h2 style="margin:0 0 6px;font-size:18px;font-weight:800;color:var(--text)">Détails entreprise — ${c.nom}</h2>
+    <div style="color:var(--text-muted);font-size:13px;margin-bottom:20px">Masse salariale, assurances envisagées, LPP, RC &amp; assurances choses, véhicules. L'identité, l'adresse et le contact se modifient via "✏️ Modifier" sur la fiche.</div>
+    ${sectionCard('Interlocuteur — compléments', '#a78bfa', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">Fonction</label><input class="form-input" id="e-contact-fonction" value="${d.contact_fonction || ''}" placeholder="Directeur, RH..."/></div>
+      <div class="form-field"><label class="form-label">Mobile direct</label><input class="form-input" id="e-contact-mobile" value="${d.contact_mobile || ''}" placeholder="+41 79 XXX XX XX"/></div>
+      <div class="form-field"><label class="form-label">Statut indépendant</label><select class="form-select" id="e-independant"><option value="non" ${d.independant==='non'?'selected':''}>Non</option><option value="oui" ${d.independant==='oui'?'selected':''}>Oui</option></select></div>
+    </div>`)}
+    ${sectionCard("Données de base de calcul (masse salariale AVS — max. 90'720)", '#4ade80', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">Chiffre d'affaires (CHF)</label><input class="form-input" id="e-ca" type="number" value="${c.revenu || ''}" placeholder="500000"/></div>
+      <div class="form-field"><label class="form-label">Nb collaborateurs</label><input class="form-input" id="e-collaborateurs" type="number" value="${c.taux_activite || ''}" placeholder="5"/></div>
+      <div class="form-field"><label class="form-label">Masse salariale totale (CHF)</label><input class="form-input" id="e-ms-total" type="number" value="${d.ms_total || ''}" placeholder="250000"/></div>
+      <div class="form-field"><label class="form-label">MS chef d'entreprise (CHF)</label><input class="form-input" id="e-ms-chef" type="number" value="${d.ms_chef || ''}" placeholder="120000"/></div>
+      <div class="form-field"><label class="form-label">MS AP Hommes (CHF)</label><input class="form-input" id="e-ms-ap-h" type="number" value="${d.ms_ap_h || ''}" placeholder="0"/></div>
+      <div class="form-field"><label class="form-label">MS AP Femmes (CHF)</label><input class="form-input" id="e-ms-ap-f" type="number" value="${d.ms_ap_f || ''}" placeholder="0"/></div>
+      <div class="form-field"><label class="form-label">MS ANP Hommes (CHF)</label><input class="form-input" id="e-ms-anp-h" type="number" value="${d.ms_anp_h || ''}" placeholder="0"/></div>
+      <div class="form-field"><label class="form-label">MS ANP Femmes (CHF)</label><input class="form-input" id="e-ms-anp-f" type="number" value="${d.ms_anp_f || ''}" placeholder="0"/></div>
+      <div class="form-field"><label class="form-label">Sal. excéd. AVS H (CHF)</label><input class="form-input" id="e-exc-h" type="number" value="${d.exc_h || ''}" placeholder="0"/></div>
+      <div class="form-field"><label class="form-label">Sal. excéd. AVS F (CHF)</label><input class="form-input" id="e-exc-f" type="number" value="${d.exc_f || ''}" placeholder="0"/></div>
+    </div>`)}
+    ${sectionCard('Assurances de personnes', '#38bdf8', `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
+      ${['Perte de gain maladie','LAA','LPP','LAAF (indépendant)','LAAC','Semi-privée'].map(l => `
+      <label style="display:flex;align-items:center;gap:8px;background:var(--surface-alt);border-radius:8px;padding:10px 12px;cursor:pointer">
+        <input type="checkbox" id="e-ap-${slug(l)}" ${ap[l] ? 'checked' : ''} style="width:14px;height:14px;accent-color:#38bdf8"/>
+        <span style="font-size:12px;color:var(--text);font-weight:600">${l}</span>
+      </label>`).join('')}
+    </div>
+    <div style="margin-top:12px">
+      <div style="font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-bottom:8px">Perte de gain — délai d'attente</div>
+      <div style="display:flex;gap:8px">
+        ${['14j','30j','60j'].map(dl => `<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="e-delai" value="${dl}" ${d.delai_attente===dl?'checked':''} style="accent-color:#38bdf8"/><span style="font-size:12px;color:var(--text)">${dl}</span></label>`).join('')}
+      </div>
+    </div>`)}
+    ${sectionCard('Assurances vie', '#a78bfa', `<div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px">
+      ${['3a','3a indépendant','3B','Risque pur','Versement unique'].map(l => `
+      <label style="display:flex;align-items:center;gap:8px;background:var(--surface-alt);border-radius:8px;padding:10px 12px;cursor:pointer">
+        <input type="checkbox" id="e-vie-${slug(l)}" ${vie[l] ? 'checked' : ''} style="width:14px;height:14px;accent-color:#a78bfa"/>
+        <span style="font-size:12px;color:var(--text);font-weight:600">${l}</span>
+      </label>`).join('')}
+    </div>
+    <div class="form-grid" style="margin-top:12px">
+      <div class="form-field"><label class="form-label">Budget épargne (CHF/an)</label><input class="form-input" id="e-budget-epargne" type="number" value="${d.budget_epargne || ''}" placeholder="0"/></div>
+      <div class="form-field"><label class="form-label">PA (prime annuelle)</label><input class="form-input" id="e-pa" type="number" value="${d.pa || ''}" placeholder="0"/></div>
+    </div>`)}
+    ${sectionCard('LPP', '#4ade80', `<div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">Sal. min coord. LPP 3780 - max. 64260 CHF - seuil entree 22680 - plafond sans ded. coord. 90720 CHF</div>
+    <div class="form-grid">
+      <div class="form-field"><label class="form-label">Soumis CCT ?</label><select class="form-select" id="e-cct"><option value="non" ${c.cct===false?'selected':''}>Non</option><option value="oui" ${c.cct===true?'selected':''}>Oui</option></select></div>
+      <div class="form-field"><label class="form-label">Domaine SUVA (monopole accident) ?</label><select class="form-select" id="e-suva"><option value="non" ${c.domaine_suva===false?'selected':''}>Non</option><option value="oui" ${c.domaine_suva===true?'selected':''}>Oui</option></select></div>
+      <div class="form-field"><label class="form-label">Taux LPP souhaité</label><select class="form-select" id="e-taux-lpp"><option ${d.taux_lpp==='Min. légal 7/10/15/18'?'selected':''}>Min. légal 7/10/15/18</option><option ${d.taux_lpp==='Spécifique'?'selected':''}>Spécifique</option></select></div>
+      <div class="form-field"><label class="form-label">Capital invalidité souhaité (CHF)</label><input class="form-input" id="e-cap-invalidite" type="number" value="${d.cap_invalidite || ''}" placeholder="0"/></div>
+      <div class="form-field"><label class="form-label">Capital décès souhaité (CHF)</label><input class="form-input" id="e-cap-deces" type="number" value="${d.cap_deces || ''}" placeholder="0"/></div>
+      <div class="form-field"><label class="form-label">Améliorations</label><input class="form-input" id="e-ameliorations" value="${d.ameliorations || ''}" placeholder="rentes, épargne, tranches..."/></div>
+      <div class="form-field"><label class="form-label">Déduction coordinée</label><select class="form-select" id="e-ded-coord"><option ${d.ded_coord==='Avec déd. coord.'?'selected':''}>Avec déd. coord.</option><option ${d.ded_coord==='Sans déd. coord.'?'selected':''}>Sans déd. coord.</option></select></div>
+    </div>`)}
+    ${sectionCard('Responsabilité civile & Assurances choses', '#f87171', `<div class="form-grid">
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Risque particulier dans le domaine d'activité ?</label><input class="form-input" id="e-rc-risque" value="${d.rc_risque || ''}" placeholder="Décrire si applicable"/></div>
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Lieux d'exploitation</label><input class="form-input" id="e-lieux" value="${d.lieux_exploitation || ''}" placeholder="Tous les lieux de risque"/></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
+      ${['RC/Commerce','Inventaire','Protection juridique','Perte exploitation','Machines','Vol','All Risk','Transports','Cyber','Construction/MO'].map(l => `
+      <label style="display:flex;align-items:center;gap:8px;background:var(--surface-alt);border-radius:8px;padding:10px 12px;cursor:pointer">
+        <input type="checkbox" id="e-rcc-${slug(l)}" ${rcc[l] ? 'checked' : ''} style="width:14px;height:14px;accent-color:#f87171"/>
+        <span style="font-size:12px;color:var(--text);font-weight:600">${l}</span>
+      </label>`).join('')}
+    </div>
+    <div class="form-grid" style="margin-top:12px">
+      <div class="form-field"><label class="form-label">Inventaire — somme assurée (CHF)</label><input class="form-input" id="e-inventaire" type="number" value="${d.inventaire_somme || ''}" placeholder="0"/></div>
+      <div class="form-field"><label class="form-label">Perte exploitation (CHF)</label><input class="form-input" id="e-perte-exploit" type="number" value="${d.perte_exploitation || ''}" placeholder="0"/></div>
+    </div>`)}
+    ${sectionCard('Véhicules', '#64748b', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">N° plaque 1</label><input class="form-input" id="e-plaque1" value="${(veh[0]&&veh[0].plaque)||''}" placeholder="VD 123456"/></div>
+      <div class="form-field"><label class="form-label">Modèle 1</label><input class="form-input" id="e-modele1" value="${(veh[0]&&veh[0].modele)||''}" placeholder="VW Transporter"/></div>
+      <div class="form-field"><label class="form-label">N° plaque 2</label><input class="form-input" id="e-plaque2" value="${(veh[1]&&veh[1].plaque)||''}" placeholder="VD 654321"/></div>
+      <div class="form-field"><label class="form-label">Modèle 2</label><input class="form-input" id="e-modele2" value="${(veh[1]&&veh[1].modele)||''}" placeholder=""/></div>
+    </div>`)}
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn-secondary" onclick="showClient('${c.id}')">✕ Annuler</button>
+      <button class="btn-save" onclick="saveDetailsEntrepriseClient('${c.id}')">✓ Enregistrer</button>
+    </div>`;
+}
+
+// Ouvre la vue "Détails entreprise" depuis la fiche client — même logique de mémorisation de
+// l'état précédent que showClient()/showRappel(), pour que le retour arrière fonctionne
+// correctement (voir capturerEtatActuel()/restaurerEtat() dans js/03-auth-navigation.js).
+function showCompleterDetailsEntreprise(clientId) {
+  const c = allClients.find(x => x.id === clientId);
+  if (!c) return;
+  const etatPrecedent = capturerEtatActuel();
+  if (!(etatPrecedent.type === 'client' && etatPrecedent.id === clientId)) navHistory.push(etatPrecedent);
+  vueDetailActive = { type: 'client', id: clientId };
+  const main = document.getElementById('main-content');
+  main.innerHTML = viewCompleterDetailsEntreprise(c);
+  insertBackBar({ homeId: 'clients', homeLabel: 'Clients', itemLabel: "Détails entreprise — " + c.nom });
+}
+
+// Fusionne avec les détails déjà enregistrés (ne remplace jamais l'objet entier) : cette vue ne
+// re-rend pas forcément tous les groupes de champs possibles, donc écraser aveuglément
+// details_entreprise perdrait des informations saisies ailleurs (ex: à la création).
+async function saveDetailsEntrepriseClient(clientId) {
+  const c = allClients.find(x => x.id === clientId);
+  if (!c) return;
+  const nouveaux = collecterDetailsEntreprise();
+  const body = {
+    details_entreprise: Object.assign({}, c.details_entreprise || {}, nouveaux),
+    revenu: Number(document.getElementById('e-ca')?.value) || c.revenu || 0,
+    taux_activite: Number(document.getElementById('e-collaborateurs')?.value) || c.taux_activite || 0,
+    cct: document.getElementById('e-cct') ? document.getElementById('e-cct').value === 'oui' : c.cct,
+    domaine_suva: document.getElementById('e-suva') ? document.getElementById('e-suva').value === 'oui' : c.domaine_suva,
+  };
+  const btn = document.querySelector('.btn-save');
+  if (btn) { btn.textContent = 'Enregistrement...'; btn.disabled = true; }
+  const r = await dbPatch('clients', clientId, body);
+  if (r && r.error) { showError('Erreur lors de l\'enregistrement : ' + errMsg(r)); if (btn) { btn.textContent = '✓ Enregistrer'; btn.disabled = false; } return; }
+  logAction('edit_details_entreprise', 'clients', clientId, c.nom);
+  allClients = await dbGet('clients', 'select=*');
+  await showClient(clientId);
 }
 
 // ═══ FICHE DE TRAVAIL — DEMANDE D'OFFRE ENTREPRISE ═══

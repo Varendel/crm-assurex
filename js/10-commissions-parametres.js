@@ -1188,7 +1188,7 @@ async function viewContactsCompagnies() {
     <div class="table-wrap">
       <div class="table-header" style="grid-template-columns:1fr 1fr 1fr 60px"><div>Compagnie</div><div>Contact</div><div>Email</div><div></div></div>
       ${(contacts||[]).map(c => `<div class="table-row" style="grid-template-columns:1fr 1fr 1fr 60px">
-        <div style="font-weight:700;font-size:13px;color:var(--text)">${c.compagnie}</div>
+        <div style="font-weight:700;font-size:13px;color:var(--text)">${c.compagnie}${c.convention && c.convention.valable_des ? `<div style="font-size:10px;font-weight:600;color:#4ade80;margin-top:2px">📄 Convention active dès ${fmtDate(c.convention.valable_des)}</div>` : ''}</div>
         <div style="font-size:12.5px;color:var(--text-muted)">${c.libelle_contact || '—'}</div>
         <div style="font-size:12.5px;color:${c.email ? 'var(--text)' : '#f87171'}">${c.email || 'Non renseigné'}</div>
         <div><button onclick="showFormContactCompagnie('${c.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:4px 8px;font-size:12px;cursor:pointer">✏️</button></div>
@@ -1198,13 +1198,24 @@ async function viewContactsCompagnies() {
 
 function showFormContactCompagnie(id) {
   const existant = id ? (window._contactsCompagnies || []).find(c => c.id === id) : null;
+  const conv = (existant && existant.convention) || {};
   creerModale('modal-contact-cie', `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:440px">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto">
       <h3 style="margin:0 0 20px;font-size:16px;font-weight:800;color:var(--text)">${existant ? 'Modifier' : 'Ajouter'} une compagnie</h3>
       <div class="form-grid">
         <div class="form-field" style="grid-column:span 2"><label class="form-label">Nom de la compagnie *</label><input class="form-input" id="cc-nom" value="${existant ? existant.compagnie : ''}"/></div>
         <div class="form-field" style="grid-column:span 2"><label class="form-label">Libellé contact (agence/courtier)</label><input class="form-input" id="cc-libelle" value="${existant ? (existant.libelle_contact||'') : ''}"/></div>
         <div class="form-field" style="grid-column:span 2"><label class="form-label">Email</label><input class="form-input" id="cc-email" type="email" value="${existant ? (existant.email||'') : ''}"/></div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;margin:18px 0 8px">Convention / contrat de collaboration (facultatif)</div>
+      <div class="form-grid">
+        <div class="form-field"><label class="form-label">Valable dès le</label><input class="form-input" id="cc-conv-valable" type="date" value="${conv.valable_des || ''}"/></div>
+        <div class="form-field"><label class="form-label">Signée le</label><input class="form-input" id="cc-conv-signee" type="date" value="${conv.signee_le || ''}"/></div>
+        <div class="form-field"><label class="form-label">Facteur rémun. Non-vie</label><input class="form-input" id="cc-conv-fnv" type="number" step="0.1" value="${conv.facteur_nv || ''}" placeholder="1.8"/></div>
+        <div class="form-field"><label class="form-label">Facteur rémun. Vie indiv.</label><input class="form-input" id="cc-conv-fvi" type="number" step="0.1" value="${conv.facteur_vi || ''}" placeholder="0.9"/></div>
+        <div class="form-field"><label class="form-label">Facteur rémun. Vie coll.</label><input class="form-input" id="cc-conv-fvc" type="number" step="0.1" value="${conv.facteur_vc || ''}" placeholder="1.0"/></div>
+        <div class="form-field"><label class="form-label">Contact agence générale</label><input class="form-input" id="cc-conv-contact" value="${conv.contact_agence || ''}" placeholder="Nom, adresse"/></div>
+        <div class="form-field" style="grid-column:span 2"><label class="form-label">Notes (barème, particularités...)</label><textarea class="form-input" id="cc-conv-notes" rows="2" style="resize:vertical">${conv.notes || ''}</textarea></div>
       </div>
       <div style="display:flex;gap:10px;margin-top:20px">
         <button class="btn-secondary" onclick="document.getElementById('modal-contact-cie').remove()">Annuler</button>
@@ -1214,10 +1225,22 @@ function showFormContactCompagnie(id) {
 }
 
 async function saveContactCompagnie(id) {
+  const v = key => { const el = document.getElementById(key); return el && el.value.trim() ? el.value.trim() : undefined; };
+  const convention = {};
+  const setConv = (k, val) => { if (val !== undefined) convention[k] = val; };
+  setConv('valable_des', v('cc-conv-valable'));
+  setConv('signee_le', v('cc-conv-signee'));
+  setConv('facteur_nv', v('cc-conv-fnv') !== undefined ? Number(v('cc-conv-fnv')) : undefined);
+  setConv('facteur_vi', v('cc-conv-fvi') !== undefined ? Number(v('cc-conv-fvi')) : undefined);
+  setConv('facteur_vc', v('cc-conv-fvc') !== undefined ? Number(v('cc-conv-fvc')) : undefined);
+  setConv('contact_agence', v('cc-conv-contact'));
+  setConv('notes', v('cc-conv-notes'));
+
   const body = {
     compagnie: document.getElementById('cc-nom').value.trim(),
     libelle_contact: document.getElementById('cc-libelle').value.trim() || null,
     email: document.getElementById('cc-email').value.trim() || null,
+    convention,
   };
   if (!body.compagnie) { showError('Le nom de la compagnie est obligatoire.'); return; }
   const r = id ? await dbPatch('compagnies_contacts', id, body) : await dbPost('compagnies_contacts', body);

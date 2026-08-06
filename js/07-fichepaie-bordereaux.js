@@ -1093,7 +1093,7 @@ async function viewNouvelleDemandeOffre() {
   const contactsCompagnies = await dbGet('compagnies_contacts', 'select=*&order=compagnie.asc');
   window._doContacts = contactsCompagnies || [];
   const cp = clientPrefille;
-  const cpAdresse = cp ? [cp.adresse, cp.npa, cp.ville].filter(Boolean).join(', ') : '';
+  const cpAdresse = cp ? [cp.co, cp.adresse, cp.npa, cp.ville].filter(Boolean).join(', ') : '';
   const cpTel = cp ? (cp.tel || cp.mobile || '') : '';
   const cpNomContact = cp ? (estEntreprise(cp) ? (cp.prenom || '') : (cp.prenom || '')) : '';
   if (existante) setTimeout(() => prefillChampsDemandeOffre(existante), 0);
@@ -1365,6 +1365,12 @@ function genererEmailDemandeOffre() {
   const chk = id => document.getElementById(id)?.checked;
   const nomClient = val('do-client') ? (document.getElementById('do-client').selectedOptions[0]?.text || '') : (val('do-prospect-nom') || 'Client');
 
+  // Client sélectionné (si existant) : sert de repli pour CA / nb collaborateurs / masse salariale
+  // quand ces champs n'ont pas été ressaisis sur CE formulaire alors qu'ils sont déjà connus sur
+  // la fiche client — évite de devoir tout retaper alors que l'info existe déjà (cas 360skillvue).
+  const clientSelId = val('do-client');
+  const clientSel = clientSelId ? (allClients || []).find(x => x.id === clientSelId) : null;
+
   let besoins = [];
   // Déclenché par la case "Perte de gain maladie" OU par une case délai (14j/30j/60j) seule —
   // bug réel repéré par Jonathan : il avait coché uniquement les délais (pas la case parente),
@@ -1386,30 +1392,43 @@ function genererEmailDemandeOffre() {
   if (chk('do-perte-exploit')) besoins.push("Perte d'exploitation");
   if (val('do-inventaire')) besoins.push(`Inventaire (CHF ${val('do-inventaire')})`);
 
-  const lignesInfos = [
+  const ca = val('do-ca') || (clientSel && clientSel.revenu ? String(clientSel.revenu) : '');
+  const nbCollab = val('do-nb-collab') || (clientSel && clientSel.taux_activite ? String(clientSel.taux_activite) : '');
+  // Masse salariale : somme des composantes AP/ANP/chef d'entreprise saisies sur CE formulaire ;
+  // à défaut (rien saisi ici), reprend le total déjà enregistré sur la fiche client (compléter
+  // les détails entreprise), pour ne pas perdre une info déjà connue.
+  const msSaisie = ['do-ap-h','do-ap-f','do-anp-h','do-anp-f','do-masse-chef'].reduce((s, id) => s + (Number(val(id)) || 0), 0);
+  const masseSalariale = msSaisie > 0 ? msSaisie : (clientSel && clientSel.details_entreprise && clientSel.details_entreprise.ms_total ? Number(clientSel.details_entreprise.ms_total) : 0);
+
+  const ligneAdresse = [
     val('do-adresse') ? `Adresse : ${val('do-adresse')}` : '',
     val('do-activite') ? `Activité principale : ${val('do-activite')}` : '',
-    val('do-ca') ? `Chiffre d'affaires : CHF ${val('do-ca')}` : '',
-    val('do-nb-collab') ? `Nombre de collaborateurs : ${val('do-nb-collab')}` : '',
     val('do-lieu-risque') ? `Lieu du risque : ${val('do-lieu-risque')}` : '',
-  ].filter(Boolean);
+  ].filter(Boolean).join('\n');
 
-  // Modèle mémorisé sur demande de Jonathan (ne pas remodifier le texte/le ton sans son accord).
-  // "PA" = Preneur d'Assurance. La ligne de signature (nom + Assurex Sàrl) est ajoutée
-  // explicitement en dur : un lien mailto: pré-rempli n'active PAS la signature par défaut du
-  // client mail (Outlook n'insère sa signature que sur un nouveau message vide, pas ici) — sans
+  const ligneTaille = [
+    ca ? `Chiffre d'affaires : CHF ${Number(ca).toLocaleString('fr-CH')}` : '',
+    masseSalariale ? `Masse salariale : CHF ${masseSalariale.toLocaleString('fr-CH')}` : '',
+    nbCollab ? `Nombre de collaborateurs : ${nbCollab}` : '',
+  ].filter(Boolean).join('\n');
+
+  // Modèle mis en page sur demande de Jonathan le 06.08.2026 (paragraphes séparés par des lignes
+  // vides : Client / Adresse / Taille de l'entreprise / Couvertures) — ne pas remodifier le texte
+  // sans son accord. "PA" = Preneur d'Assurance. La ligne de signature (nom + Assurex Sàrl) est
+  // ajoutée explicitement en dur : un lien mailto: pré-rempli n'active PAS la signature par défaut
+  // du client mail (Outlook n'insère sa signature que sur un nouveau message vide, pas ici) — sans
   // cette ligne codée en dur, l'email partirait donc sans aucune signature.
-  const corps = `Bonjour,
-Pour le PA ci-dessous, je vous serai reconnaissant de bien vouloir me transmettre une offre :
-Client : ${nomClient}
-${lignesInfos.join('\n')}
-Couvertures souhaitées : 
-${besoins.length ? besoins.map(b => '- ' + b).join('\n') : '- Voir détails ci-dessous'}
-Je peux rapidement vous fournir toute autre information utile.
-Tout en vous remerciant d\u2019avance, je vous souhaite une agréable journée.
-
-${currentUser ? currentUser.prenom + ' ' + currentUser.nom : ''}
-Assurex Sàrl`;
+  const paragraphes = [
+    `Bonjour,\nPour le PA ci-dessous, et selon les questionnaires et divers documents en pièce jointe, je vous serai reconnaissant de bien vouloir me transmettre une offre :`,
+    `Client :\n${nomClient}`,
+    ligneAdresse,
+    ligneTaille,
+    `Couvertures souhaitées :\n\n${besoins.length ? besoins.map(b => '- ' + b).join('\n') : '- Voir détails ci-dessous'}`,
+    `Je peux rapidement vous fournir toute autre information utile.`,
+    `Tout en vous remerciant d\u2019avance, je vous souhaite une agréable journée.`,
+    `${currentUser ? currentUser.prenom + ' ' + currentUser.nom : ''}\nAssurex Sàrl`,
+  ].filter(Boolean);
+  const corps = paragraphes.join('\n\n');
 
   const sujet = `Demande d'offre — ${nomClient}`;
   const mailto = `mailto:${emails.join(',')}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`;

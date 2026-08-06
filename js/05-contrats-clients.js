@@ -138,7 +138,7 @@ async function showClient(id) {
   renderSidebar();
   const main = document.getElementById('main-content');
   main.innerHTML = '<div class="loader">Chargement...</div>';
-  const [clients, contrats, rappels, collaborateurs, factures, postits, bilansPrevoyance, mandatsSignes] = await Promise.all([
+  const [clients, contrats, rappels, collaborateurs, factures, postits, bilansPrevoyance, mandatsSignes, demandesOffre] = await Promise.all([
     dbGet('clients', `id=eq.${id}&select=*`),
     dbGet('contrats', `client_id=eq.${id}&select=*`),
     dbGet('rappels', `client_id=eq.${id}&select=*`),
@@ -147,6 +147,7 @@ async function showClient(id) {
     dbGet('postits', `client_id=eq.${id}&select=*&order=created_at.asc`),
     getBilansPrevoyanceClient(id),
     getMandatsSignesClient(id),
+    dbGet('demandes_offre', `client_id=eq.${id}&select=*&order=created_at.desc`),
   ]);
   const c = clients[0];
   if (!c) { main.innerHTML = '<div class="loader">Client introuvable.</div>'; return; }
@@ -226,6 +227,20 @@ async function showClient(id) {
             <span style="width:7px;height:7px;border-radius:50%;background:${stadeColor[o.stade]||'#64748b'};flex-shrink:0"></span>
             ${o.titre} <span style="color:${stadeColor[o.stade]||'#64748b'};font-weight:800">· ${o.stade}</span>
           </span>`).join('')}
+        </div>`;
+      })()}
+      ${(() => {
+        if (!demandesOffre || !demandesOffre.length) return '';
+        const statutColorDo = { 'envoyée': '#f59e0b', 'reçue': '#4ade80', 'relance': '#f87171', 'clôturée': '#64748b' };
+        return `<div style="padding:10px 16px;background:var(--surface-alt);border:1px solid var(--border);border-radius:10px;margin-bottom:16px">
+          <div style="font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">📋 État des dossiers (demandes d'offre)</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            ${demandesOffre.map(d => `<div onclick="demandeOffreEnEditionId='${d.id}';navigate('nouvelle-demande-offre')" style="cursor:pointer;display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 10px">
+              <span style="width:7px;height:7px;border-radius:50%;background:${statutColorDo[d.statut] || '#64748b'};flex-shrink:0"></span>
+              <span style="font-size:12px;color:var(--text);font-weight:600;flex:1">Demande d'offre du ${fmtDate(d.created_at)}</span>
+              <span style="font-size:10.5px;font-weight:700;color:${statutColorDo[d.statut] || '#64748b'};text-transform:capitalize">${d.statut || 'envoyée'}</span>
+            </div>`).join('')}
+          </div>
         </div>`;
       })()}
       ${renderVueEnsembleCouvertures(c, contrats, isEntreprise)}

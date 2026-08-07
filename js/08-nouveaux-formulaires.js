@@ -311,6 +311,32 @@ async function uploadOffreCompagnie(demandeOffreId, idx, input, refreshType, ref
   }
 }
 
+// ═══ MARQUER MANUELLEMENT UNE COMPAGNIE COMME "REÇUE" ═══
+// Repli quand la synchro Outlook automatique ne trouve pas la réponse (mauvais domaine détecté,
+// mail pas encore arrivé, offre reçue par un autre canal que l'email...). Même effet que la
+// synchro automatique sur ce point précis : passe le statut à 'reçue' avec la date du jour,
+// débloque ensuite l'upload du PDF de l'offre puis le bouton "Préparer signature".
+async function marquerCompagnieRecue(demandeOffreId, idx, refreshType, refreshId) {
+  try {
+    const rows = await dbGet('demandes_offre', `id=eq.${demandeOffreId}&select=id,compagnies_envoi`);
+    const d = Array.isArray(rows) && rows[0];
+    if (!d) throw new Error('Demande d\'offre introuvable');
+    const compagniesEnvoi = (d.compagnies_envoi || []).map(e => ({ ...e }));
+    if (!compagniesEnvoi[idx]) throw new Error('Compagnie introuvable sur ce dossier');
+    compagniesEnvoi[idx].statut = 'reçue';
+    compagniesEnvoi[idx].recu_le = new Date().toISOString();
+    const r = await dbPatch('demandes_offre', demandeOffreId, { compagnies_envoi: compagniesEnvoi });
+    if (r && r.error) throw new Error(errMsg(r));
+
+    logAction('marquer_offre_recue', 'demandes_offre', demandeOffreId, compagniesEnvoi[idx].compagnie);
+    showError('✓ Marquée comme reçue.');
+    if (refreshType === 'client' && refreshId) showClient(refreshId);
+    else if (refreshType === 'opp' && refreshId) renderDemandeOffreLieeOpportunite(refreshId);
+  } catch (e) {
+    showError('Erreur : ' + e.message);
+  }
+}
+
 // ═══ PRÉPARATION DE L'ENVOI POUR SIGNATURE — depuis une offre reçue et uploadée ═══
 // Réutilise tel quel le système de mandat de courtage existant (lien/QR/mobile/e-mail, capture
 // tactile) — voir ouvrirSignatureMandat() dans js/05-contrats-clients.js. Nécessite un client

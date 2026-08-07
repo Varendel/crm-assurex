@@ -785,7 +785,12 @@ function renderEtatDossiers(demandesOffre, refreshType, refreshId) {
   // compagnie (idx non-null) et une fois l'offre reçue. Upload manuel du PDF (décision de
   // Jonathan le 06.08.2026), puis bouton pour lancer directement le mandat de signature.
   const actionsOffre = (l) => {
-    if (l.idx === null || l.statut !== 'reçue') return '';
+    if (l.idx === null) return '';
+    if (l.statut !== 'reçue') {
+      // Marquer manuellement comme reçue (repli si la synchro Outlook ne trouve pas la réponse —
+      // mauvais domaine, réponse pas encore arrivée, offre reçue par un autre canal, etc.).
+      return `<button type="button" onclick="event.stopPropagation();marquerCompagnieRecue('${l.demandeOffreId}',${l.idx},'${refreshType || ''}','${refreshId || ''}')" style="background:var(--surface);border:1px solid var(--border);color:var(--text-muted);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer">✓ Marquer reçue</button>`;
+    }
     if (l.offrePath) {
       return `<button type="button" onclick="event.stopPropagation();ouvrirPieceJointe('${l.offrePath}')" style="background:var(--surface);border:1px solid var(--border);color:var(--text-muted);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer">📄 Voir l'offre</button>
         <button type="button" onclick="event.stopPropagation();preparerEnvoiSignatureOffre('${l.clientId}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer">✍️ Préparer signature</button>`;

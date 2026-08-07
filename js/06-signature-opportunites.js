@@ -704,6 +704,7 @@ function viewRappels() {
           <div style="font-size:11px;color:var(--text-muted)">${nomClientRappel(r) ? `👤 <span onclick="event.stopPropagation(); showClient('${r.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${nomClientRappel(r)}</span> · ` : ''}${r.date_echeance ? fmtDate(r.date_echeance) : 'Sans échéance'}${dateRelative(r.date_echeance)}${r.date_planifiee ? ` · 📅 planifié le ${fmtDate(r.date_planifiee)}` : ''}${r.piece_jointe_nom ? ' · 📎 ' + r.piece_jointe_nom : ''}</div>
           ${r.notes ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:3px;font-style:italic">${r.notes.split('[')[0].substring(0,120)}${r.notes.length>120?'...':''}</div>` : ''}
         </div>
+        ${(!r.outlook_event_id && (r.date_echeance || r.date_planifiee)) ? `<button onclick="event.stopPropagation(); synchroniserRappelOutlook('${r.id}')" title="Absent de l'agenda Outlook — cliquer pour synchroniser" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;border-radius:7px;padding:4px 8px;font-size:11px;cursor:pointer">📅</button>` : ''}
         ${badge(r.type || 'Suivi', '#64748b')}
         <button class="btn-traite" onclick="event.stopPropagation(); traiterRappel('${r.id}')">✓ Traité</button>
       </div>`;

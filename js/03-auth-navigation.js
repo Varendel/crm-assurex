@@ -106,6 +106,38 @@ async function updateOutlookEventDate(eventId, dateEvenement) {
   } catch(e) { console.error('Graph update event exception', e); return false; }
 }
 
+// Resynchronisation manuelle d'un rappel/tâche avec Outlook — bouton "📅 Absent d'Outlook" sur
+// la fiche du rappel et dans la liste (demande de Jonathan le 07.08.2026 : plusieurs tâches créées
+// pendant que sa session Outlook était expirée n'étaient jamais arrivées dans son agenda, en
+// silence — createOutlookEventFromRappel() échoue sans rien signaler si msalAccessToken est vide).
+// Permet de rattraper le coup une fois reconnecté, sans recréer le rappel.
+async function synchroniserRappelOutlook(id) {
+  const r = allRappels.find(x => x.id === id);
+  if (!r) return;
+  if (!msalAccessToken) { showError('Connecte-toi d\'abord à Outlook (bouton "Connecter Outlook"), puis réessaie.'); return; }
+  const dateEvenement = dateAgendaRappel(r);
+  if (!dateEvenement) { showError('Ce rappel n\'a ni date planifiée ni échéance — rien à synchroniser.'); return; }
+  try {
+    if (r.outlook_event_id) {
+      const ok = await updateOutlookEventDate(r.outlook_event_id, dateEvenement);
+      if (!ok) throw new Error('update échoué');
+      showError('✓ Agenda Outlook mis à jour.');
+    } else {
+      const eventId = await createOutlookEventFromRappel(r);
+      if (!eventId) throw new Error('création échouée');
+      const patchR = await dbPatch('rappels', id, { outlook_event_id: eventId });
+      if (patchR && patchR.error) throw new Error('enregistrement échoué');
+      r.outlook_event_id = eventId;
+      showError('✓ Ajouté à l\'agenda Outlook.');
+    }
+  } catch (e) {
+    showError('Échec de la synchronisation Outlook — réessaie dans un instant.');
+    return;
+  }
+  if (vueDetailActive && vueDetailActive.type === 'rappel' && vueDetailActive.id === id) showRappel(id);
+  else if (currentView === 'rappels') navigate('rappels', { silent: true });
+}
+
 async function deleteOutlookEvent(eventId) {
   if (!msalAccessToken || !eventId) return;
   try {

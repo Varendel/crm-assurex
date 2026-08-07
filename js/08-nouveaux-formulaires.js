@@ -179,6 +179,7 @@ async function saveRappel() {
     try {
       const eventId = await createOutlookEventFromRappel(created[0]);
       if (eventId) await dbPatch('rappels', created[0].id, { outlook_event_id: eventId });
+      else if (!msalAccessToken) showError("⚠️ Rappel créé, mais pas dans l'agenda Outlook — tu n'es pas connecté à Outlook (ou la connexion a expiré). Reconnecte-toi puis utilise le bouton 📅 sur la fiche du rappel.");
     } catch (e) { /* sync Outlook échouée, le rappel reste créé dans le CRM */ }
   }
 
@@ -1166,9 +1167,12 @@ function showRappel(id) {
   const tacheParente = r.tache_parent_id ? (allRappels || []).find(x => x.id === r.tache_parent_id) : null;
 
   document.getElementById('main-content').innerHTML = `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
       <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">${isTache ? '📋' : '🔔'} ${r.titre}</h2>
-      ${badge(r.statut === 'ouvert' ? 'Ouvert' : 'Traité', r.statut === 'ouvert' ? '#f59e0b' : '#4ade80')}
+      <div style="display:flex;align-items:center;gap:8px">
+        ${(!r.outlook_event_id && (r.date_echeance || r.date_planifiee)) ? `<button onclick="synchroniserRappelOutlook('${r.id}')" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;border-radius:8px;padding:5px 12px;font-size:11.5px;font-weight:700;cursor:pointer">📅 Absent d'Outlook — synchroniser</button>` : ''}
+        ${badge(r.statut === 'ouvert' ? 'Ouvert' : 'Traité', r.statut === 'ouvert' ? '#f59e0b' : '#4ade80')}
+      </div>
     </div>
 
     ${sectionCard('Détails', '#38bdf8', `<div class="form-grid">
@@ -1276,10 +1280,12 @@ async function saveRappelEdit() {
     const dateEvenement = body.date_planifiee || body.date_echeance;
     if (dateEvenement) {
       if (rappelAvant && rappelAvant.outlook_event_id) {
-        await updateOutlookEventDate(rappelAvant.outlook_event_id, dateEvenement);
+        const ok = await updateOutlookEventDate(rappelAvant.outlook_event_id, dateEvenement);
+        if (!ok && !msalAccessToken) showError("⚠️ Modifications enregistrées, mais l'agenda Outlook n'a pas pu être mis à jour — tu n'es pas connecté. Reconnecte-toi puis utilise le bouton 📅 sur cette fiche.");
       } else {
         const eventId = await createOutlookEventFromRappel({ ...body, id: currentRappelId });
         if (eventId) await dbPatch('rappels', currentRappelId, { outlook_event_id: eventId });
+        else if (!msalAccessToken) showError("⚠️ Modifications enregistrées, mais pas dans l'agenda Outlook — tu n'es pas connecté. Reconnecte-toi puis utilise le bouton 📅 sur cette fiche.");
       }
     }
   } catch (e) { /* synchro Outlook échouée, la modification reste enregistrée dans le CRM */ }

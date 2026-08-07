@@ -763,7 +763,13 @@ function ouvrirModaleResiliation(clientId) {
         </div>` : ''}
         <div class="form-field"><label class="form-label">Compagnie destinataire</label><input class="form-input" id="res-compagnie" placeholder="Ex: CSS Assurance"/></div>
         <div class="form-field"><label class="form-label">N° de police</label><input class="form-input" id="res-police" placeholder="Ex: 123.456.789"/></div>
-        <div class="form-field" style="grid-column:span 2"><label class="form-label">Date d'effet souhaitée</label><input class="form-input" id="res-date-effet" type="date"/></div>
+        <div class="form-field" style="grid-column:span 2"><label class="form-label">Adresse de la compagnie (optionnel)</label><input class="form-input" id="res-compagnie-adresse" placeholder="Ex: Case postale, 1001 Lausanne"/></div>
+        <div class="form-field"><label class="form-label">Date d'effet souhaitée</label><input class="form-input" id="res-date-effet" type="date"/></div>
+        <div class="form-field" style="display:flex;align-items:flex-end;padding-bottom:8px">
+          <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;color:var(--text)">
+            <input type="checkbox" id="res-recommandee" checked style="width:15px;height:15px;cursor:pointer"/> Envoi recommandé
+          </label>
+        </div>
       </div>
       <div id="erreur-resiliation" style="color:#f87171;font-size:11.5px;margin-top:8px;display:none"></div>
       <div style="display:flex;gap:10px;margin-top:16px">
@@ -773,21 +779,29 @@ function ouvrirModaleResiliation(clientId) {
     </div>`, { opacite: 0.8, padding: '16px', overflowY: false });
 }
 
+// Modèle de lettre commerciale suisse classique (entête société, date/lieu et mention
+// "Recommandée" en haut à droite, bloc destinataire, objet en gras, corps, formule de politesse,
+// signature) — reprend la structure et les formulations d'un modèle de résiliation d'assurance
+// fourni par Jonathan le 07.08.2026, avec le bandeau Assurex (genererBadgeLogoAssurex, déjà
+// utilisé pour le mandat de courtage) plutôt qu'un logo générique.
 function construireHtmlResiliation(corps, titre, signatureDataUrl) {
-  return `<html><head><title>${(titre || 'Résiliation').replace(/</g, '&lt;')}</title><style>
-    body{font-family:Arial,sans-serif;padding:35px;color:#1a1a1a;font-size:13px;line-height:1.6}
-    .entete-lettre{border-bottom:2px solid #113679;padding-bottom:10px;margin-bottom:6px;font-size:12.5px}
-    .signature-zone{margin-top:34px}
+  return `<html><head><meta charset="utf-8"><title>${(titre || 'Résiliation').replace(/</g, '&lt;')}</title><style>
+    body{font-family:Arial,sans-serif;padding:35px;color:#1a1a1a;font-size:12.5px;line-height:1.65}
+    .entete{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
+    .entete-adresse{font-size:9.5px;color:#666;margin-top:6px}
+    .recommandee{font-weight:800;font-size:12px;color:#113679;text-align:right}
+    .date-ligne{text-align:right;margin-top:8px;font-size:12px;color:#333}
+    .destinataire{margin-top:38px;font-size:12.5px}
+    .objet{margin-top:32px;font-weight:800;font-size:13.5px;color:#113679}
+    .case-type{background:#f2f5fa;border-radius:8px;padding:10px 14px;margin:14px 0;font-size:12.5px}
+    .signature-zone{margin-top:40px}
+    .ligne-signature{border-top:1px solid #333;margin-top:46px;padding-top:5px;font-style:italic;font-size:11px;color:#555;max-width:220px}
     .print-btn{margin-top:25px;padding:10px 20px;background:#113679;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px}
-    .footer{text-align:center;font-size:9.5px;color:#888;margin-top:30px;border-top:1px solid #ddd;padding-top:10px}
+    .footer{text-align:center;font-size:9.5px;color:#888;margin-top:34px;border-top:1px solid #ddd;padding-top:10px}
     @media print { .print-btn { display: none !important; } }
   </style></head><body>
     ${corps}
-    <div class="signature-zone">
-      <strong>Signature</strong>
-      ${signatureDataUrl ? `<div style="margin-top:8px"><img src="${signatureDataUrl}" style="max-height:80px;max-width:260px;display:block;border:1px solid #ddd;border-radius:6px;padding:6px"/></div>` : `<div style="color:#888;font-size:11.5px;margin-top:6px">(à signer)</div>`}
-    </div>
-    ${signatureDataUrl ? `<button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>` : ''}
+    ${signatureDataUrl ? `<button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>` : `<button class="print-btn" onclick="window.print()">🖨️ Imprimer</button>`}
     <div class="footer">ASSUREX Sàrl — Rue du Centre 142, 1025 St-Sulpice — Autorisation FINMA F01492173</div>
   </body></html>`;
 }
@@ -798,8 +812,10 @@ function confirmerResiliation(clientId) {
   const typeId = document.getElementById('res-type').value;
   const typeInfo = RESILIATION_TYPES.find(t => t.id === typeId);
   const compagnie = document.getElementById('res-compagnie').value.trim();
+  const compagnieAdresse = document.getElementById('res-compagnie-adresse').value.trim();
   const police = document.getElementById('res-police').value.trim();
   const dateEffet = document.getElementById('res-date-effet').value;
+  const recommandee = document.getElementById('res-recommandee').checked;
   const erreurEl = document.getElementById('erreur-resiliation');
   if (!compagnie) { erreurEl.textContent = 'Indique la compagnie destinataire.'; erreurEl.style.display = 'block'; return; }
   if (!dateEffet) { erreurEl.textContent = "Indique la date d'effet souhaitée."; erreurEl.style.display = 'block'; return; }
@@ -809,18 +825,33 @@ function confirmerResiliation(clientId) {
   const adresseClient = `${c.adresse || ''}${c.adresse ? ', ' : ''}${c.npa || ''} ${c.ville || ''}`.trim();
   const dateEffetFr = fmtDate(dateEffet);
   const aujourdhui = fmtDate(new Date().toISOString());
+  const echapper = s => (s || '').replace(/</g, '&lt;');
+
+  const noteLamal = typeId === 'lamal'
+    ? `<p>Pour la LAMal, le nouvel assureur vous adressera prochainement une attestation d'assurance.</p>`
+    : '';
 
   const corps = `
-    <div class="entete-lettre">
-      <div><strong>${nomClient.replace(/</g, '&lt;')}</strong><br/>${adresseClient.replace(/</g, '&lt;')}</div>
-      <div style="text-align:right;margin-top:10px">St-Sulpice, le ${aujourdhui}</div>
+    <div class="entete">
+      <div>
+        ${genererBadgeLogoAssurex(26, '9px 14px', 'inline-block')}
+        <div class="entete-adresse">ASSUREX Sàrl — Rue du Centre 142 — 1025 St-Sulpice</div>
+      </div>
+      ${recommandee ? `<div class="recommandee">Recommandée</div>` : ''}
     </div>
-    <div style="margin-top:20px">${compagnie.replace(/</g, '&lt;')}</div>
-    <div style="margin-top:24px"><strong>Objet : Résiliation de la police ${typeInfo.label}${police ? ' n° ' + police.replace(/</g, '&lt;') : ''}</strong></div>
+    <div class="date-ligne">St-Sulpice, le ${aujourdhui}</div>
+    <div class="destinataire">
+      <strong>${echapper(compagnie)}</strong>${compagnieAdresse ? `<br/>${echapper(compagnieAdresse)}` : ''}
+    </div>
+    <div class="objet">Résiliation du contrat d'assurance${police ? ' n° ' + echapper(police) : ''}</div>
     <p style="margin-top:18px">Madame, Monsieur,</p>
-    <p>Par la présente, je soussigné(e) ${nomClient.replace(/</g, '&lt;')} vous informe de la résiliation de la police d'assurance ${typeInfo.label}${police ? ' n° ' + police.replace(/</g, '&lt;') : ''}, avec effet au <strong>${dateEffetFr}</strong>.</p>
-    <p>Je vous remercie de bien vouloir me confirmer par écrit la bonne prise en compte de cette résiliation.</p>
-    <p style="margin-top:18px">Meilleures salutations.</p>
+    <p>Par la présente lettre, je vous notifie de la résiliation de mon contrat d'assurance cité en référence :</p>
+    <div class="case-type">☑ ${typeInfo.label} avec effet au <strong>${dateEffetFr}</strong></div>
+    ${noteLamal}
+    <p>Je vous remercie de bien vouloir me faire parvenir une confirmation par courrier, et dans cette attente, de bien vouloir croire en l'expression de mes meilleures salutations.</p>
+    <div class="signature-zone">
+      <div>${echapper(nomClient)}${adresseClient ? `<br/><span style="font-size:11px;color:#666">${echapper(adresseClient)}</span>` : ''}</div>
+    </div>
   `;
 
   document.getElementById('modal-resiliation').remove();
@@ -835,7 +866,15 @@ function confirmerResiliation(clientId) {
 }
 
 function genererLettreResiliationSignee(clientId, signatureDataUrl, contexte) {
-  const html = construireHtmlResiliation(contexte.contenuCorps, contexte.documentNom, signatureDataUrl);
+  // La zone de signature est injectée ici (et non dans contenuCorps) car elle dépend de
+  // signatureDataUrl, connu seulement au moment de la signature — contenuCorps reste identique
+  // entre l'aperçu (avant signature) et le document final.
+  const corpsAvecSignature = contexte.contenuCorps + `
+    <div class="signature-zone" style="margin-top:10px">
+      <strong>Signature</strong>
+      ${signatureDataUrl ? `<div style="margin-top:8px"><img src="${signatureDataUrl}" style="max-height:80px;max-width:260px;display:block;border:1px solid #ddd;border-radius:6px;padding:6px"/></div>` : `<div class="ligne-signature">Le preneur d'assurance</div>`}
+    </div>`;
+  const html = construireHtmlResiliation(corpsAvecSignature, contexte.documentNom, signatureDataUrl);
   const win = window.open('', '_blank');
   win.document.write(html);
   win.document.close();
@@ -866,7 +905,7 @@ function ouvrirSignatureMandat(clientId, contexte) {
       </div>
       <div id="zone-mode-signature"></div>
       <div style="display:flex;gap:10px;margin-top:12px">
-        <button class="btn-secondary" onclick="signatureContexteActuel=null;document.getElementById('modal-signature-mandat').remove()">Sans signature</button>
+        <button class="btn-secondary" onclick="genererSansSignature('${clientId}')">🖨️ Sans signature (impression)</button>
       </div>
     </div>`, { opacite: 0.8, padding: '16px', overflowY: false });
   basculerModeSignature('ici', clientId);
@@ -937,6 +976,18 @@ function initCanvasSignature() {
 function effacerSignature() {
   const canvas = document.getElementById('canvas-signature');
   if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+}
+
+// Bug corrigé le 07.08.2026 : le bouton "Sans signature" fermait la modale sans rien produire.
+// Il doit ouvrir le document (contrat/résiliation/mandat) prêt à imprimer, sans image de
+// signature — utile quand le client signe à la main sur une version papier plutôt qu'à l'écran.
+function genererSansSignature(clientId) {
+  document.getElementById('modal-signature-mandat').remove();
+  const contexte = signatureContexteActuel;
+  signatureContexteActuel = null;
+  if (contexte && contexte.type === 'contrat') genererDocumentSigne(clientId, null, contexte);
+  else if (contexte && contexte.type === 'resiliation') genererLettreResiliationSignee(clientId, null, contexte);
+  else genererMandatCourtage(clientId, null);
 }
 
 function validerSignatureEtGenerer(clientId) {
@@ -1212,7 +1263,7 @@ function genererMandatCourtage(clientId, signatureDataUrl) {
   };
 
   const win = window.open('', '_blank');
-  const contenuMandatHtml = `<html><head><title>Mandat de courtage — ${isEnt ? champs.societe : champs.prenom + ' ' + champs.nom}</title><style>
+  const contenuMandatHtml = `<html><head><meta charset="utf-8"><title>Mandat de courtage — ${isEnt ? champs.societe : champs.prenom + ' ' + champs.nom}</title><style>
     body{font-family:Arial,sans-serif;padding:35px;color:#1a1a1a;font-size:12.5px;line-height:1.5}
     .entete{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #113679;padding-bottom:14px;margin-bottom:20px}
     h1{font-size:19px;color:#113679;text-align:center;margin:10px 0 2px}
@@ -1360,7 +1411,7 @@ function genererDocumentSigne(clientId, signatureDataUrl, contexte) {
   const maintenant = new Date();
   const dateFr = fmtDate(maintenant.toISOString());
 
-  const contenuHtml = `<html><head><title>Signature — ${(contexte.documentNom || 'Document').replace(/</g,'&lt;')}</title><style>
+  const contenuHtml = `<html><head><meta charset="utf-8"><title>Signature — ${(contexte.documentNom || 'Document').replace(/</g,'&lt;')}</title><style>
     body{font-family:Arial,sans-serif;padding:35px;color:#1a1a1a;font-size:13px;line-height:1.6}
     .entete{border-bottom:2px solid #113679;padding-bottom:14px;margin-bottom:20px}
     h1{font-size:18px;color:#113679;margin:0 0 4px}

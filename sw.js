@@ -3,7 +3,13 @@
 // Stratégie réseau-prioritaire partout : le CRM travaille avec des données Supabase/Outlook
 // en direct, donc on ne veut JAMAIS servir une version périmée du code (index.html + JS déjà
 // versionnés via ?v=timestamp) tant qu'il y a du réseau. Le cache n'est qu'un filet de secours.
-const CACHE_NAME = 'crm-assurex-shell-v1';
+//
+// v2 — correctif (07.08.2026) : le fetch() du gestionnaire 'fetch' passait par le cache HTTP
+// normal du navigateur, qui pouvait resservir une vieille version d'index.html même en étant
+// en ligne (d'où "je ne vois pas la mise à jour malgré F5"). Forcé { cache: 'no-store' } pour
+// garantir une requête réseau réellement fraîche à chaque fois. CACHE_NAME bumpé pour purger
+// l'ancien cache au passage (voir 'activate').
+const CACHE_NAME = 'crm-assurex-shell-v2';
 const SHELL_ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (event) => {
@@ -23,7 +29,7 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
   event.respondWith(
-    fetch(event.request)
+    fetch(event.request, { cache: 'no-store' })
       .then((response) => {
         const copy = response.clone();
         caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy)).catch(() => {});

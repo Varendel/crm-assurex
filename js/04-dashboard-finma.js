@@ -49,6 +49,12 @@ async function synchroniserOutlookInterne(oppIdFiltre) {
     for (const d of enAttente) {
       const compagniesEnvoi = (d.compagnies_envoi || []).map(e => ({ ...e }));
       let modifie = false;
+      // Compagnies détectées reçues sur CETTE demande — on y ajoute une ligne d'historique sur
+      // l'opportunité liée une fois le patch compagnies_envoi passé (demande explicite de
+      // Jonathan le 07.08.2026 : voir clairement, dans le fil de l'opportunité, à quelle
+      // compagnie l'offre a été envoyée et quand, PUIS une ligne distincte "offre reçue" avec
+      // compagnie + date quand la synchro Outlook la détecte — sans écraser la ligne d'envoi).
+      const compagniesRecuesCetteFois = [];
       compagniesEnvoi.forEach(e => {
         if (e.statut === 'reçue' || !e.email || !e.email.includes('@')) return;
         const domaine = e.email.split('@')[1].toLowerCase();
@@ -62,9 +68,17 @@ async function synchroniserOutlookInterne(oppIdFiltre) {
           e.recu_le = match.receivedDateTime;
           modifie = true;
           nbMaj++;
+          compagniesRecuesCetteFois.push({ compagnie: e.compagnie, recu_le: match.receivedDateTime });
         }
       });
-      if (modifie) await dbPatch('demandes_offre', d.id, { compagnies_envoi: compagniesEnvoi });
+      if (modifie) {
+        await dbPatch('demandes_offre', d.id, { compagnies_envoi: compagniesEnvoi });
+        if (d.opportunite_id) {
+          for (const c of compagniesRecuesCetteFois) {
+            await ajouterLigneHistoriqueOpportunite(d.opportunite_id, `📨 Offre reçue — ${c.compagnie} — ${fmtDate(c.recu_le)}`);
+          }
+        }
+      }
     }
 
     showError(nbMaj ? `✓ Synchronisation terminée — ${nbMaj} offre(s) marquée(s) reçue(s).` : 'Synchronisation terminée — aucune nouvelle réponse détectée.');

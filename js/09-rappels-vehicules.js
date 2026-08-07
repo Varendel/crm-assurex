@@ -592,16 +592,43 @@ function getProduitSelectionne() {
   }
   // Fallback 2 : correspondance partielle (utile après un import IA dont le texte libre ne colle pas
   // mot pour mot au libellé du catalogue, ex: "Responsabilité civile d'entreprise" vs "RC entreprise / exploitation")
+  //
+  // Refonte du 07.08.2026 (retour Jonathan : le texte libre pour LAA/LAAC/perte de gain
+  // "référence souvent en Prévoyance") — l'ancienne version rendait le PREMIER mot-clé partagé
+  // trouvé en itérant les catégories dans leur ordre de déclaration. Comme 'Prévoyance' est
+  // déclarée avant 'Assurances de personnes (entreprise)' dans CATALOGUE_PRODUITS, et que des
+  // mots très génériques ("entreprise", "collective") apparaissent dans les deux (ex: "LPP
+  // collective (2e pilier entreprise)"), un texte comme "perte de gain maladie collective"
+  // tombait sur la LPP avant même d'atteindre la bonne catégorie. Deux correctifs :
+  //  1. la catégorie actuellement sélectionnée (`categorie`) est toujours scannée EN PREMIER ;
+  //  2. les mots-clés trop génériques (STOPWORDS ci-dessous) ne comptent plus comme signal de
+  //     correspondance, et on garde le MEILLEUR score (nombre de mots partagés) plutôt que le
+  //     premier trouvé.
+  const STOPWORDS_RECHERCHE_PRODUIT = new Set(['entreprise', 'entreprises', 'collective', 'collectif', 'assurance', 'assurances', 'complementaire', 'complémentaire', 'privee', 'privée', 'prive', 'privé', 'individuel', 'individuelle', 'obligatoire']);
   const motsTexte = texteTape.split(/[\s\/'’,-]+/).filter(m => m.length > 3);
-  for (const cat in CATALOGUE_PRODUITS) {
-    for (const p of CATALOGUE_PRODUITS[cat]) {
-      const labelLower = p.label.toLowerCase();
-      if (labelLower.includes(texteTape) || texteTape.includes(labelLower)) return p;
-      // correspondance par mots-clés significatifs communs (au moins 1 mot de plus de 3 lettres partagé)
-      const motsLabel = labelLower.split(/[\s\/'’,-]+/).filter(m => m.length > 3);
-      if (motsTexte.some(m => motsLabel.includes(m))) return p;
+  const motsTexteSignificatifs = motsTexte.filter(m => !STOPWORDS_RECHERCHE_PRODUIT.has(m));
+
+  function meilleureCorrespondance(categories) {
+    let meilleur = null, meilleurScore = 0;
+    for (const cat of categories) {
+      for (const p of CATALOGUE_PRODUITS[cat]) {
+        const labelLower = p.label.toLowerCase();
+        if (labelLower.includes(texteTape) || texteTape.includes(labelLower)) return p; // correspondance forte, retour immédiat
+        const motsLabel = labelLower.split(/[\s\/'’,-]+/).filter(m => m.length > 3);
+        const score = motsTexteSignificatifs.filter(m => motsLabel.includes(m)).length;
+        if (score > meilleurScore) { meilleurScore = score; meilleur = p; }
+      }
     }
+    return meilleur;
   }
+
+  if (categorie && CATALOGUE_PRODUITS[categorie]) {
+    const dansCategorieActuelle = meilleureCorrespondance([categorie]);
+    if (dansCategorieActuelle) return dansCategorieActuelle;
+  }
+  const autresCategories = Object.keys(CATALOGUE_PRODUITS).filter(cat => cat !== categorie);
+  const ailleurs = meilleureCorrespondance(autresCategories);
+  if (ailleurs) return ailleurs;
   return null;
 }
 
@@ -1246,7 +1273,7 @@ function calculerCommissionEstimee() {
   // pour ces 4 produits, avant toute formule générique (ex: LPP Swiss Life ci-dessous).
   const compagnieChoisie = (document.getElementById('ct-compagnie')?.value || '').trim().toLowerCase();
   if (compagnieChoisie.includes('hotela')) {
-    if (produitId === 'perte_gain_maladie_collective') {
+    if (produitId === 'perte_gain_maladie_lca') {
       const montant = Math.round(primeAnnuelle * TAUX_COMMISSION.hotela.ij_maladie / 100);
       return { montant, detail: `HOTELA — Indemnités journalières maladie : ${TAUX_COMMISSION.hotela.ij_maladie}% × CHF ${fmtCHF(primeAnnuelle)} = CHF ${fmtCHF(montant)}` };
     }
@@ -1254,7 +1281,7 @@ function calculerCommissionEstimee() {
       const montant = Math.round(primeAnnuelle * TAUX_COMMISSION.hotela.accidents / 100);
       return { montant, detail: `HOTELA — Assurance-accidents : ${TAUX_COMMISSION.hotela.accidents}% × CHF ${fmtCHF(primeAnnuelle)} = CHF ${fmtCHF(montant)}` };
     }
-    if (produitId === 'perte_gain_accident_collective' || produitId === 'laac') {
+    if (produitId === 'perte_gain_maladie_accident_lca' || produitId === 'laac') {
       const montant = Math.round(primeAnnuelle * TAUX_COMMISSION.hotela.accidents_complementaire / 100);
       return { montant, detail: `HOTELA — Assurance-accidents complémentaire : ${TAUX_COMMISSION.hotela.accidents_complementaire}% × CHF ${fmtCHF(primeAnnuelle)} = CHF ${fmtCHF(montant)}` };
     }
@@ -1286,9 +1313,8 @@ function calculerCommissionEstimee() {
     const V = TAUX_COMMISSION.vaudoise;
     const tauxVaudoiseParProduit = {
       laa: V.laa,
-      perte_gain_accident_collective: V.accident_individuel_collectif,
-      perte_gain_maladie_collective: V.maladie_collective,
-      sante_collective_entreprise: V.maladie_collective,
+      perte_gain_maladie_accident_lca: V.accident_individuel_collectif,
+      perte_gain_maladie_lca: V.maladie_collective,
       rc_entreprise: V.rc_generale,
       rc_pro: V.rc_generale,
       rc_privee: V.rc_generale,
@@ -1342,9 +1368,8 @@ function calculerCommissionEstimee() {
       rc_batiment: A.rc_hors_vehicules,
       rc_commerce: A.rc_hors_vehicules,
       rc_do: A.rc_hors_vehicules,
-      perte_gain_accident_collective: A.personnes_accidents,
-      perte_gain_maladie_collective: A.maladie_collective,
-      sante_collective_entreprise: A.maladie_collective,
+      perte_gain_maladie_accident_lca: A.personnes_accidents,
+      perte_gain_maladie_lca: A.maladie_collective,
       laa: A.laa_laaf,
       rc_vehicule: A.vehicules,
       vehicule_rc: A.vehicules,

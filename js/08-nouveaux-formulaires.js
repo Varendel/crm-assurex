@@ -318,17 +318,23 @@ async function uploadOffreCompagnie(demandeOffreId, idx, input, refreshType, ref
 // débloque ensuite l'upload du PDF de l'offre puis le bouton "Préparer signature".
 async function marquerCompagnieRecue(demandeOffreId, idx, refreshType, refreshId) {
   try {
-    const rows = await dbGet('demandes_offre', `id=eq.${demandeOffreId}&select=id,compagnies_envoi`);
+    const rows = await dbGet('demandes_offre', `id=eq.${demandeOffreId}&select=id,opportunite_id,compagnies_envoi`);
     const d = Array.isArray(rows) && rows[0];
-    if (!d) throw new Error('Demande d\'offre introuvable');
+    if (!d) throw new Error("Demande d'offre introuvable");
     const compagniesEnvoi = (d.compagnies_envoi || []).map(e => ({ ...e }));
     if (!compagniesEnvoi[idx]) throw new Error('Compagnie introuvable sur ce dossier');
+    const recuLe = new Date().toISOString();
     compagniesEnvoi[idx].statut = 'reçue';
-    compagniesEnvoi[idx].recu_le = new Date().toISOString();
+    compagniesEnvoi[idx].recu_le = recuLe;
     const r = await dbPatch('demandes_offre', demandeOffreId, { compagnies_envoi: compagniesEnvoi });
     if (r && r.error) throw new Error(errMsg(r));
 
     logAction('marquer_offre_recue', 'demandes_offre', demandeOffreId, compagniesEnvoi[idx].compagnie);
+    // Même trace que la synchro Outlook automatique (js/04) : une ligne dédiée dans l'historique
+    // de l'opportunité, en plus de la mise à jour de la ligne "État des dossiers".
+    if (d.opportunite_id) {
+      await ajouterLigneHistoriqueOpportunite(d.opportunite_id, `📨 Offre reçue — ${compagniesEnvoi[idx].compagnie} — ${fmtDate(recuLe)}`);
+    }
     showError('✓ Marquée comme reçue.');
     if (refreshType === 'client' && refreshId) showClient(refreshId);
     else if (refreshType === 'opp' && refreshId) renderDemandeOffreLieeOpportunite(refreshId);

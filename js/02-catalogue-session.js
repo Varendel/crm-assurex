@@ -694,11 +694,10 @@ const CATALOGUE_PRODUITS = {
     { id: 'lca_autre_compagnie', label: 'LCA — complémentaire santé (compagnie et produit à préciser)', segment: 'prive', modules: [] },
   ],
   'Assurances de personnes (entreprise)': [
+    { id: 'perte_gain_maladie_accident_lca', label: 'Perte de gain maladie/accident LCA', segment: 'entreprise', modules: ['Délai d\'attente réduit', 'Couverture 720 jours étendue'] },
+    { id: 'perte_gain_maladie_lca', label: 'Perte de gain maladie LCA', segment: 'entreprise', modules: ['Délai d\'attente réduit', 'Couverture 720 jours étendue'] },
     { id: 'laa', label: 'LAA (assurance-accidents obligatoire)', segment: 'entreprise', modules: ['Accidents professionnels (AP)', 'Accidents non professionnels (ANP)', 'Sursalaire LAA complémentaire'] },
-    { id: 'laac', label: 'LAAC — LAA complémentaire (sursalaire au-delà du plafond LAA)', segment: 'entreprise', modules: [] },
-    { id: 'perte_gain_maladie_collective', label: 'Perte de gain maladie collective', segment: 'entreprise', modules: ['Délai d\'attente réduit', 'Couverture 720 jours étendue'] },
-    { id: 'perte_gain_accident_collective', label: 'Perte de gain accident collective (complémentaire LAA)', segment: 'entreprise', modules: [] },
-    { id: 'sante_collective_entreprise', label: 'Assurance maladie collective entreprise', segment: 'entreprise', modules: [] },
+    { id: 'laac', label: 'LAAC — LAA complémentaire (sursalaire au-delà du plafond LAA)', segment: 'entreprise', modules: ['Indemnité de salaire 0-20%', 'Division privée / semi-privée', 'Prise en charge accident antérieur'] },
   ],
   'Entreprise — risques spécifiques': [
     { id: 'pertes_exploitation', label: 'Perte d\'exploitation', segment: 'entreprise', modules: [] },
@@ -758,9 +757,9 @@ const PRODUITS_OPPORTUNITE_GROUPES = {
     { id: 'lca_autre_compagnie', label: 'Complémentaire santé (LCA)' },
   ],
   'Assurances de personnes (entreprise)': [
+    { id: 'perte_gain_maladie_accident_lca', label: 'Perte de gain maladie/accident LCA' },
     { id: 'laa', label: 'LAA (assurance-accidents obligatoire)' },
-    { id: 'perte_gain_maladie_collective', label: 'Perte de gain maladie collective' },
-    { id: 'sante_collective_entreprise', label: 'Assurance maladie collective entreprise' },
+    { id: 'laac', label: 'LAAC — LAA complémentaire' },
   ],
   'Entreprise — risques spécifiques': [
     { id: 'pertes_exploitation', label: 'Perte d\'exploitation' },
@@ -813,8 +812,8 @@ const PRODUIT_BRANCHES = {
   gm_global_smart: ['sante_complementaire'], gm_global_mi_privee: ['sante_complementaire'], gm_global_privee: ['sante_complementaire'],
   gm_global_flex: ['sante_complementaire'], lca_autre_compagnie: ['sante_complementaire'],
   // Assurances de personnes entreprise (LAA, perte de gain collective)
-  laa: ['entreprise_personnes'], laac: ['entreprise_personnes'], perte_gain_maladie_collective: ['entreprise_personnes'],
-  perte_gain_accident_collective: ['entreprise_personnes'], sante_collective_entreprise: ['entreprise_personnes'],
+  laa: ['entreprise_personnes'], laac: ['entreprise_personnes'], perte_gain_maladie_accident_lca: ['entreprise_personnes'],
+  perte_gain_maladie_lca: ['entreprise_personnes'],
   // Entreprise — risques spécifiques
   pertes_exploitation: ['entreprise_risques'], cyber_entreprise: ['entreprise_risques'], choses_entreprise: ['entreprise_risques'],
   // 'autre' volontairement absent : aucun filtre, toutes les compagnies restent suggérées.

@@ -245,6 +245,11 @@ function viewCommissionsAttente(prefiltreStatut) {
         <option value="acquisition">Acquisition uniquement</option>
         <option value="gestion">Gestion uniquement</option>
       </select>
+      <select class="form-select" id="tc-typeclient" style="max-width:170px" onchange="renderToutesCommissions()">
+        <option value="">Privés + Entreprises</option>
+        <option value="prive">Client privé</option>
+        <option value="entreprise">Entreprise</option>
+      </select>
       <select class="form-select" id="tc-tri" style="max-width:190px" onchange="renderToutesCommissions()">
         <option value="date">Plus récent d'abord</option>
         <option value="montant_desc" selected>Montant décroissant</option>
@@ -260,7 +265,16 @@ function renderToutesCommissions() {
   const compagnieFilter = document.getElementById('tc-compagnie')?.value || '';
   const statutFilter = document.getElementById('tc-statut')?.value || '';
   const natureFilter = document.getElementById('tc-nature')?.value || '';
+  const typeClientFilter = document.getElementById('tc-typeclient')?.value || '';
   const tri = document.getElementById('tc-tri')?.value || 'montant_desc';
+
+  // Client privé vs entreprise — déduit du client lié (allClients). Une commission sans client_id
+  // rattaché (rare, prospect converti sans fiche) ne matche aucun des deux filtres explicites.
+  function typeClientDe(c) {
+    const cl = c.client_id ? allClients.find(x => x.id === c.client_id) : null;
+    if (!cl) return null;
+    return estEntreprise(cl) ? 'entreprise' : 'prive';
+  }
 
   function numeroBordereauDe(c) {
     if (!c.bordereau_id) return '';
@@ -287,6 +301,7 @@ function renderToutesCommissions() {
       if (!(c.statut === 'versé_oz' && !c.refacture_le)) return false;
     } else if (statutFilter && c.statut !== statutFilter) return false;
     if (natureFilter && (c.nature || 'acquisition') !== natureFilter) return false;
+    if (typeClientFilter && typeClientDe(c) !== typeClientFilter) return false;
     if (search) {
       const haystack = `${c.client_nom||''} ${c.compagnie||''} ${c.produit||''} ${numeroBordereauDe(c)}`.toLowerCase();
       if (!haystack.includes(search)) return false;

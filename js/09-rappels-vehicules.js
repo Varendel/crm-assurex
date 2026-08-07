@@ -352,6 +352,21 @@ async function importPolicePdfAI(input) {
       const segmentConnu = document.getElementById('ct-segment')?.value;
       appliquerProduitTrouve(trouverProduitCatalogue(data.produit, segmentConnu));
     }
+    // Plaque / marque / modèle — uniquement présents dans data si l'IA a détecté une police
+    // véhicule (voir prompt parse_police côté edge function). updateModulesOptions(), déjà
+    // appelé par appliquerProduitTrouve() ci-dessus, a créé la ligne #ct-plaques-list si le
+    // produit détecté est bien un véhicule (RC véhicule / casco / flotte) — on la peuple ici
+    // pour que le véhicule remonte dans la table `vehicules` (et donc dans Recherche véhicules)
+    // à l'enregistrement du contrat, exactement comme une saisie manuelle.
+    if (data.numero_plaque || data.marque || data.modele) {
+      const premiereLigne = document.querySelector('#ct-plaques-list > div');
+      if (premiereLigne) {
+        const plaqueInput = premiereLigne.querySelector('.ct-plaque-input');
+        const marqueInput = premiereLigne.querySelector('.ct-plaque-marque-input');
+        if (plaqueInput && data.numero_plaque) plaqueInput.value = data.numero_plaque;
+        if (marqueInput) marqueInput.value = [data.marque, data.modele].filter(Boolean).join(' ');
+      }
+    }
     if (data.numero_police) document.getElementById('ct-police').value = data.numero_police;
     if (data.date_debut) document.getElementById('ct-date').value = data.date_debut;
     if (data.date_echeance) document.getElementById('ct-echeance').value = data.date_echeance;

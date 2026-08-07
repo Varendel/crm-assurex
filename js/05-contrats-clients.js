@@ -180,6 +180,7 @@ async function showClient(id) {
       <div style="display:flex;gap:10px">
         <button onclick="toggleEditClient()" style="background:${editingClient ? 'var(--red-dim)' : 'var(--surface)'};border:1px solid ${editingClient ? 'rgba(248,113,113,0.3)' : 'var(--border)'};border-radius:8px;padding:7px 16px;color:${editingClient ? 'var(--red)' : 'var(--text-muted)'};font-size:12px;font-weight:700;cursor:pointer">${editingClient ? '✕ Annuler' : '✏️ Modifier'}</button>
         <button onclick="ouvrirSignatureMandat('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📄 Mandat de courtage</button>
+        <button onclick="ouvrirUploadContratSignature('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📎 Faire signer un contrat</button>
         <button onclick="prefillOpportuniteClientId='${c.id}'; opportuniteEnEditionId=null; navigate('nouvelle-opportunite')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:7px 16px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">🎯 Créer une opportunité</button>
         <button onclick="prefillDemandeOffreClientId='${c.id}'; navigate('nouvelle-demande-offre')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📝 Demande d'offre</button>
         ${estEntreprise(c) ? `<button onclick="genererFicheDemandeOffre('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🖨️ Fiche papier (demande d'offre)</button>` : ''}
@@ -378,7 +379,7 @@ async function showClient(id) {
         ${infoBlock("Taux d'activité", c.taux_activite ? c.taux_activite + '%' : '—')}
       </div>`) : ''}
       `}
-      ${sectionCard('📄 Mandats de courtage enregistrés', '#38bdf8', `
+      ${sectionCard('📄 Documents & mandats signés', '#38bdf8', `
         <div style="margin-bottom:12px">
           <label style="background:var(--surface-alt);border:1px solid var(--border);border-radius:8px;padding:7px 14px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer;display:inline-block">
             📤 Uploader un mandat signé à la main (PDF ou photo)
@@ -397,7 +398,7 @@ async function showClient(id) {
               <button onclick="supprimerMandatSauvegarde('${m.id}','${c.id}')" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:16px;padding:0 4px" title="Supprimer">✕</button>
             </div>`).join('')}
         </div>
-        ` : `<div style="font-size:12px;color:var(--text-muted)">Aucun mandat encore enregistré — génère-en un avec le bouton "📄 Mandat de courtage" en haut de la fiche, ou uploade un mandat déjà signé à la main.</div>`}
+        ` : `<div style="font-size:12px;color:var(--text-muted)">Rien d'enregistré pour l'instant — utilise "📄 Mandat de courtage" ou "📎 Faire signer un contrat" en haut de la fiche, ou uploade un document déjà signé à la main.</div>`}
       `)}
     </div>
 
@@ -708,19 +709,29 @@ async function changerAgentClient(clientId, agentId) {
 // électronique qualifiée au sens de la loi suisse (SCSE/ZertES) — suffisant pour un mandat
 // de courtage (aucune exigence légale de forme stricte), mais moins probant qu'une signature
 // manuscrite ou une solution qualifiée type Skribble/DocuSign.
-function ouvrirSignatureMandat(clientId) {
+// Contexte de la signature en cours — null pour le mandat de courtage générique (comportement
+// d'origine), ou {type:'contrat', documentNom, documentPath} quand ouvrirSignatureMandat() est
+// appelée depuis ouvrirUploadContratSignature() pour faire signer un contrat quelconque déjà
+// uploadé (demande de Jonathan le 07.08.2026 : « uploader des contrats et récupérer la
+// signature », au-delà du seul mandat de courtage à texte fixe).
+let signatureContexteActuel = null;
+
+function ouvrirSignatureMandat(clientId, contexte) {
+  signatureContexteActuel = contexte || null;
+  const titreModale = signatureContexteActuel ? `✍️ Signature — ${signatureContexteActuel.documentNom}` : '✍️ Signature du mandant';
   creerModale('modal-signature-mandat', `
     <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:520px;width:100%">
-      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">✍️ Signature du mandant</div>
+      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">${titreModale}</div>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">Choisis comment le client va signer :</div>
-      <div style="display:flex;gap:6px;margin-bottom:14px">
-        <button id="onglet-signature-ici" class="btn-secondary" onclick="basculerModeSignature('ici', '${clientId}')" style="flex:1;font-size:11.5px">✍️ Ici, sur cet écran</button>
-        <button id="onglet-signature-qr" class="btn-secondary" onclick="basculerModeSignature('qr', '${clientId}')" style="flex:1;font-size:11.5px">📱 QR code / lien</button>
-        <button id="onglet-signature-email" class="btn-secondary" onclick="basculerModeSignature('email', '${clientId}')" style="flex:1;font-size:11.5px">✉️ Par e-mail</button>
+      <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
+        <button id="onglet-signature-ici" class="btn-secondary" onclick="basculerModeSignature('ici', '${clientId}')" style="flex:1;min-width:110px;font-size:11.5px">✍️ Ici, sur cet écran</button>
+        <button id="onglet-signature-qr" class="btn-secondary" onclick="basculerModeSignature('qr', '${clientId}')" style="flex:1;min-width:110px;font-size:11.5px">📱 QR code / lien</button>
+        <button id="onglet-signature-email" class="btn-secondary" onclick="basculerModeSignature('email', '${clientId}')" style="flex:1;min-width:110px;font-size:11.5px">✉️ Par e-mail</button>
+        <button id="onglet-signature-whatsapp" class="btn-secondary" onclick="basculerModeSignature('whatsapp', '${clientId}')" style="flex:1;min-width:110px;font-size:11.5px">📲 WhatsApp</button>
       </div>
       <div id="zone-mode-signature"></div>
       <div style="display:flex;gap:10px;margin-top:12px">
-        <button class="btn-secondary" onclick="document.getElementById('modal-signature-mandat').remove()">Sans signature</button>
+        <button class="btn-secondary" onclick="signatureContexteActuel=null;document.getElementById('modal-signature-mandat').remove()">Sans signature</button>
       </div>
     </div>`, { opacite: 0.8, padding: '16px', overflowY: false });
   basculerModeSignature('ici', clientId);
@@ -729,7 +740,7 @@ function ouvrirSignatureMandat(clientId) {
 // Bascule entre les 3 modes de signature : ici sur cet écran, via QR code/lien à distance,
 // ou envoi direct par e-mail au client. Ce sont 3 options indépendantes, pas des sous-options.
 function basculerModeSignature(mode, clientId) {
-  ['ici', 'qr', 'email'].forEach(m => {
+  ['ici', 'qr', 'email', 'whatsapp'].forEach(m => {
     document.getElementById(`onglet-signature-${m}`).style.background = mode === m ? 'var(--accent-dim)' : 'var(--surface-alt)';
   });
   clearInterval(window._pollingSignatureInterval);
@@ -798,7 +809,10 @@ function validerSignatureEtGenerer(clientId) {
     if (aDessine) signatureDataUrl = canvas.toDataURL('image/png');
   }
   document.getElementById('modal-signature-mandat').remove();
-  genererMandatCourtage(clientId, signatureDataUrl);
+  const contexte = signatureContexteActuel;
+  signatureContexteActuel = null;
+  if (contexte && contexte.type === 'contrat') genererDocumentSigne(clientId, signatureDataUrl, contexte);
+  else genererMandatCourtage(clientId, signatureDataUrl);
 }
 
 // Génère un lien de signature à distance (QR code + lien copiable) et attend que le client
@@ -808,7 +822,14 @@ async function envoyerVersAutreAppareil(clientId, mode) {
   const nomClient = c ? (estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`) : '';
   const token = (crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2)}`);
 
-  const r = await dbPost('signature_requests', { token, client_id: clientId, client_nom: nomClient });
+  // Contexte figé dès l'ouverture du mode (avant tout await) : signatureContexteActuel pourrait
+  // changer si l'utilisateur rouvre une autre modale entre-temps sur le même onglet.
+  const contexteFige = signatureContexteActuel;
+  const r = await dbPost('signature_requests', {
+    token, client_id: clientId, client_nom: nomClient,
+    type: contexteFige ? contexteFige.type : null,
+    document_nom: contexteFige ? contexteFige.documentNom : null,
+  });
   if (r && r.error) {
     document.getElementById('zone-mode-signature').innerHTML = `<div style="color:#f87171;font-size:12.5px">Impossible de créer le lien de signature : ${errMsg(r)}</div>`;
     return;
@@ -845,6 +866,27 @@ async function envoyerVersAutreAppareil(clientId, mode) {
         ` : `<div style="font-size:12px;color:#f87171">Pas d'e-mail enregistré pour ce client — ajoute-en un sur sa fiche pour utiliser cette option.</div>`}
         ${contenuAttente}
       </div>`;
+  } else if (mode === 'whatsapp') {
+    // Lien "click-to-chat" WhatsApp (wa.me) — pas d'intégration WhatsApp Business API, juste
+    // l'ouverture de WhatsApp (web ou appli) avec le message et le lien de signature déjà rédigés,
+    // à envoyer manuellement d'un clic. Numéro pris depuis la fiche client (c.mobile) ; si absent
+    // ou mal formaté, ouvre WhatsApp sans destinataire pré-rempli (choix du contact à la main).
+    let telClean = (c && c.mobile) ? c.mobile.replace(/[^\d]/g, '') : '';
+    if (telClean.startsWith('00')) telClean = telClean.slice(2);
+    if (telClean.startsWith('0')) telClean = '41' + telClean.slice(1); // 0791234567 → 41791234567 (CH par défaut)
+    const messageWhatsapp = `Bonjour${c && !estEntreprise(c) && c.prenom ? ' ' + c.prenom : ''}, voici le lien pour signer le mandat de courtage en ligne : ${lienSignature}`;
+    const lienWhatsapp = `https://wa.me/${telClean}?text=${encodeURIComponent(messageWhatsapp)}`;
+    zone.innerHTML = `
+      <div style="text-align:center">
+        ${telClean ? `<div style="font-size:12.5px;color:var(--text);margin-bottom:12px">Envoyer le lien de signature par WhatsApp à <strong>${c.mobile}</strong></div>`
+                    : `<div style="font-size:11.5px;color:var(--text-muted);margin-bottom:12px">Aucun mobile enregistré pour ce client — WhatsApp s'ouvrira sans destinataire, choisis le contact à la main.</div>`}
+        <a href="${lienWhatsapp}" target="_blank" rel="noopener" class="btn-save" style="display:block;width:100%;text-decoration:none;box-sizing:border-box">📲 Ouvrir WhatsApp et envoyer</a>
+        <div style="display:flex;gap:6px;margin-top:10px">
+          <input class="form-input" readonly value="${lienSignature}" style="font-size:10.5px" onclick="this.select()"/>
+          <button class="btn-secondary" onclick="navigator.clipboard.writeText('${lienSignature}')">📋 Copier</button>
+        </div>
+        ${contenuAttente}
+      </div>`;
   }
 
   // Sondage de la base toutes les 3 secondes — s'arrête après 10 minutes si personne ne signe
@@ -861,7 +903,9 @@ async function envoyerVersAutreAppareil(clientId, mode) {
     if (demande && demande.signature_data) {
       clearInterval(window._pollingSignatureInterval);
       document.getElementById('modal-signature-mandat')?.remove();
-      genererMandatCourtage(clientId, demande.signature_data);
+      signatureContexteActuel = null;
+      if (contexteFige && contexteFige.type === 'contrat') genererDocumentSigne(clientId, demande.signature_data, contexteFige);
+      else genererMandatCourtage(clientId, demande.signature_data);
     }
   }, 3000);
 }
@@ -921,8 +965,11 @@ async function afficherPageSignatureAutonome(token) {
     return;
   }
 
+  const titreAutonome = demande.type === 'contrat' && demande.document_nom
+    ? `Signature — ${demande.document_nom}`
+    : 'Signature du mandat de courtage';
   zone.innerHTML = `
-    <div style="font-size:15px;font-weight:800;color:#0f2244;margin-bottom:4px">Signature du mandat de courtage</div>
+    <div style="font-size:15px;font-weight:800;color:#0f2244;margin-bottom:4px">${titreAutonome}</div>
     <div style="font-size:12.5px;color:#666;margin-bottom:16px">${demande.client_nom || ''}</div>
     <div style="font-size:11px;color:#888;margin-bottom:10px">Signez ci-dessous avec votre doigt</div>
     <canvas id="canvas-signature" width="340" height="180" style="width:100%;height:180px;background:#f8f8f8;border:1px solid #ddd;border-radius:9px;touch-action:none;display:block"></canvas>
@@ -1110,6 +1157,112 @@ function genererMandatCourtage(clientId, signatureDataUrl) {
   });
 }
 
+// ═══ SIGNATURE D'UN CONTRAT UPLOADÉ (générique, pas le mandat de courtage à texte fixe) ═══
+// Génère une page de confirmation (nom du document, coordonnées client, image de la signature,
+// date) et l'enregistre sur la fiche client dans la même liste que les mandats de courtage —
+// fichier_url pointe vers le contrat ORIGINAL uploadé (ouvrable via le bouton "Voir/Télécharger"
+// de la liste, lien signé généré à la volée comme pour tout autre document du CRM), tandis que
+// html_snapshot garde la preuve de signature elle-même (voir voirMandatSauvegarde plus bas,
+// qui préfère désormais html_snapshot quand les deux sont présents).
+function genererDocumentSigne(clientId, signatureDataUrl, contexte) {
+  const c = allClients.find(x => x.id === clientId);
+  if (!c) { showError('Client introuvable.'); return; }
+  const nomClient = estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`;
+  const maintenant = new Date();
+  const dateFr = fmtDate(maintenant.toISOString());
+
+  const contenuHtml = `<html><head><title>Signature — ${(contexte.documentNom || 'Document').replace(/</g,'&lt;')}</title><style>
+    body{font-family:Arial,sans-serif;padding:35px;color:#1a1a1a;font-size:13px;line-height:1.6}
+    .entete{border-bottom:2px solid #113679;padding-bottom:14px;margin-bottom:20px}
+    h1{font-size:18px;color:#113679;margin:0 0 4px}
+    .sous-titre{color:#555;font-size:12px}
+    .bloc{background:#f2f5fa;border-radius:8px;padding:14px 18px;margin:18px 0}
+    .bloc div{margin-bottom:4px}
+    .signature-zone{margin-top:30px}
+    .print-btn{margin-top:25px;padding:10px 20px;background:#113679;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;margin-right:10px}
+    .voir-btn{margin-top:25px;padding:10px 20px;background:#fff;color:#113679;border:1.5px solid #113679;border-radius:6px;cursor:pointer;font-size:13px}
+    .footer{text-align:center;font-size:9.5px;color:#888;margin-top:30px;border-top:1px solid #ddd;padding-top:10px}
+    @media print { .print-btn, .voir-btn { display: none !important; } }
+  </style></head><body>
+    <div class="entete"><h1>Confirmation de signature électronique</h1><div class="sous-titre">ASSUREX Sàrl — Autorisation FINMA F01492173</div></div>
+    <div class="bloc">
+      <div><strong>Client :</strong> ${nomClient.replace(/</g,'&lt;')}</div>
+      <div><strong>Document :</strong> ${(contexte.documentNom || '—').replace(/</g,'&lt;')}</div>
+      <div><strong>Signé le :</strong> ${dateFr}</div>
+    </div>
+    <p>Le client mentionné ci-dessus a approuvé électroniquement le document « ${(contexte.documentNom || '').replace(/</g,'&lt;')} » en apposant la signature ci-dessous.</p>
+    <div class="signature-zone">
+      <strong>Signature du client</strong>
+      ${signatureDataUrl ? `<div style="margin-top:8px"><img src="${signatureDataUrl}" style="max-height:80px;max-width:260px;display:block;border:1px solid #ddd;border-radius:6px;padding:6px"/></div>` : `<div style="color:#888;font-size:11.5px;margin-top:6px">(signature non capturée)</div>`}
+    </div>
+    <button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
+    <button class="voir-btn" onclick="window.opener && window.opener.ouvrirPieceJointe && window.opener.ouvrirPieceJointe('${contexte.documentPath || ''}')">📎 Voir le contrat original</button>
+    <div class="footer">ASSUREX Sàrl – Rue du Centre 142, 1025 St-Sulpice</div>
+  </body></html>`;
+
+  const win = window.open('', '_blank');
+  win.document.write(contenuHtml);
+  win.document.close();
+
+  dbPost('mandats_signes', {
+    client_id: clientId,
+    signe: !!signatureDataUrl,
+    cree_par: (typeof supaSession !== 'undefined' && supaSession && supaSession.email) || null,
+    html_snapshot: contenuHtml,
+    fichier_url: contexte.documentPath || null,
+    fichier_nom: contexte.documentNom || null,
+  }).then(r => {
+    if (r && r.error) console.error('Échec de l\u2019enregistrement du document signé sur la fiche :', errMsg(r));
+    showClient(clientId);
+  });
+}
+
+// Ouvre une petite modale de sélection de fichier PDF, uploade le contrat vers le stockage, puis
+// enchaîne directement sur la modale de signature (mode contexte "contrat") — bouton "📎 Faire
+// signer un contrat" sur la fiche client, à côté de "📄 Mandat de courtage".
+function ouvrirUploadContratSignature(clientId) {
+  creerModale('modal-upload-contrat', `
+    <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:420px;width:100%">
+      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">📎 Faire signer un contrat</div>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:16px">Choisis le PDF du contrat à faire signer par le client — il sera enregistré puis tu pourras récupérer la signature (ici, par QR/lien, e-mail ou WhatsApp).</div>
+      <input type="file" id="input-contrat-a-signer" accept="application/pdf" class="form-input" style="margin-bottom:16px"/>
+      <div id="erreur-upload-contrat" style="color:#f87171;font-size:11.5px;margin-bottom:8px;display:none"></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn-secondary" onclick="document.getElementById('modal-upload-contrat').remove()">Annuler</button>
+        <button class="btn-save" id="btn-continuer-upload-contrat" onclick="confirmerUploadContratPuisSigner('${clientId}')" style="margin-left:auto">Continuer →</button>
+      </div>
+    </div>`, { opacite: 0.8, padding: '16px', overflowY: false });
+}
+
+async function confirmerUploadContratPuisSigner(clientId) {
+  const input = document.getElementById('input-contrat-a-signer');
+  const file = input && input.files[0];
+  const erreurEl = document.getElementById('erreur-upload-contrat');
+  if (!file) { erreurEl.textContent = 'Choisis un fichier PDF.'; erreurEl.style.display = 'block'; return; }
+  if (file.type !== 'application/pdf') { erreurEl.textContent = 'Seuls les PDF sont acceptés.'; erreurEl.style.display = 'block'; return; }
+  if (file.size > 15 * 1024 * 1024) { erreurEl.textContent = 'Fichier trop lourd — maximum 15 Mo.'; erreurEl.style.display = 'block'; return; }
+
+  const btn = document.getElementById('btn-continuer-upload-contrat');
+  if (btn) { btn.textContent = 'Envoi...'; btn.disabled = true; }
+
+  const path = `contrats-a-signer/${clientId}/${Date.now()}.pdf`;
+  try {
+    const token = await getValidAccessToken() || SUPABASE_KEY;
+    const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${path}`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/pdf' },
+      body: file,
+    });
+    if (!uploadRes.ok) { erreurEl.textContent = "Erreur lors de l'envoi du fichier."; erreurEl.style.display = 'block'; if (btn) { btn.textContent = 'Continuer →'; btn.disabled = false; } return; }
+    document.getElementById('modal-upload-contrat').remove();
+    ouvrirSignatureMandat(clientId, { type: 'contrat', documentNom: file.name, documentPath: path });
+  } catch (e) {
+    erreurEl.textContent = "Erreur lors de l'envoi : " + e.message;
+    erreurEl.style.display = 'block';
+    if (btn) { btn.textContent = 'Continuer →'; btn.disabled = false; }
+  }
+}
+
 // ═══ DÉTAILS ENTREPRISE (masse salariale, assurances, LPP, RC & choses, véhicules) ═══
 // Ces champs n'ont pas de colonne dédiée sur `clients` — ils étaient auparavant saisis sur le
 // formulaire de création mais jamais envoyés au serveur (bug corrigé le 06.08.2026). Cette vue
@@ -1256,10 +1409,13 @@ async function voirMandatSauvegarde(mandatId) {
   const mandats = await dbGet('mandats_signes', `id=eq.${mandatId}&select=*`);
   const m = mandats && mandats[0];
   if (!m) { showError('Mandat introuvable.'); return; }
+  if (m.html_snapshot) {
+    const win = window.open('', '_blank');
+    win.document.write(m.html_snapshot);
+    win.document.close();
+    return;
+  }
   if (m.fichier_url) { ouvrirPieceJointe(m.fichier_url); return; }
-  const win = window.open('', '_blank');
-  win.document.write(m.html_snapshot);
-  win.document.close();
 }
 
 async function supprimerMandatSauvegarde(mandatId, clientId) {

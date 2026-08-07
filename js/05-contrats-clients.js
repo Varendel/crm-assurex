@@ -784,25 +784,28 @@ function ouvrirModaleResiliation(clientId) {
 // signature) — reprend la structure et les formulations d'un modèle de résiliation d'assurance
 // fourni par Jonathan le 07.08.2026, avec le bandeau Assurex (genererBadgeLogoAssurex, déjà
 // utilisé pour le mandat de courtage) plutôt qu'un logo générique.
+// Document volontairement dépourvu de toute mention Assurex (demande de Jonathan le 07.08.2026) :
+// c'est une lettre PERSONNELLE du client à son assureur, pas un document Assurex — y apposer le
+// logo/l'entête du courtier aurait été trompeur sur l'identité de l'expéditeur. Mise en page
+// simple d'une lettre suisse classique : expéditeur en haut à gauche, date/lieu à droite,
+// destinataire, objet, corps, formule de politesse, signature — rien d'autre.
 function construireHtmlResiliation(corps, titre, signatureDataUrl) {
   return `<html><head><meta charset="utf-8"><title>${(titre || 'Résiliation').replace(/</g, '&lt;')}</title><style>
-    body{font-family:Arial,sans-serif;padding:35px;color:#1a1a1a;font-size:12.5px;line-height:1.65}
-    .entete{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px}
-    .entete-adresse{font-size:9.5px;color:#666;margin-top:6px}
-    .recommandee{font-weight:800;font-size:12px;color:#113679;text-align:right}
-    .date-ligne{text-align:right;margin-top:8px;font-size:12px;color:#333}
-    .destinataire{margin-top:38px;font-size:12.5px}
-    .objet{margin-top:32px;font-weight:800;font-size:13.5px;color:#113679}
-    .case-type{background:#f2f5fa;border-radius:8px;padding:10px 14px;margin:14px 0;font-size:12.5px}
-    .signature-zone{margin-top:40px}
-    .ligne-signature{border-top:1px solid #333;margin-top:46px;padding-top:5px;font-style:italic;font-size:11px;color:#555;max-width:220px}
-    .print-btn{margin-top:25px;padding:10px 20px;background:#113679;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px}
-    .footer{text-align:center;font-size:9.5px;color:#888;margin-top:34px;border-top:1px solid #ddd;padding-top:10px}
-    @media print { .print-btn { display: none !important; } }
+    body{font-family:Arial,sans-serif;padding:40px 45px;color:#000;font-size:12.5px;line-height:1.7;max-width:700px;margin:0 auto}
+    .entete{display:flex;justify-content:space-between;align-items:flex-start}
+    .expediteur{font-size:12px}
+    .recommandee{font-weight:700;font-size:12px}
+    .date-ligne{text-align:right;margin-top:10px;font-size:12px}
+    .destinataire{margin-top:42px;font-size:12.5px}
+    .objet{margin-top:36px;font-weight:700;font-size:13px}
+    p{margin:12px 0}
+    .signature-zone{margin-top:44px}
+    .ligne-signature{border-top:1px solid #000;margin-top:46px;padding-top:5px;font-style:italic;font-size:11px;max-width:220px}
+    .print-btn{margin-top:30px;padding:9px 18px;background:#000;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px}
+    @media print { .print-btn { display: none !important; } body { padding: 15px 20px; } }
   </style></head><body>
     ${corps}
-    ${signatureDataUrl ? `<button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>` : `<button class="print-btn" onclick="window.print()">🖨️ Imprimer</button>`}
-    <div class="footer">ASSUREX Sàrl — Rue du Centre 142, 1025 St-Sulpice — Autorisation FINMA F01492173</div>
+    <button class="print-btn" onclick="window.print()">🖨️ Imprimer</button>
   </body></html>`;
 }
 
@@ -830,27 +833,28 @@ function confirmerResiliation(clientId) {
   const noteLamal = typeId === 'lamal'
     ? `<p>Pour la LAMal, le nouvel assureur vous adressera prochainement une attestation d'assurance.</p>`
     : '';
+  // Lieu de la date = localité du client (expéditeur réel de la lettre), pas St-Sulpice —
+  // ce document n'a plus aucune mention Assurex, donc plus de raison d'utiliser l'adresse du
+  // courtier ici. c.ville contient déjà "NPA Localité" (convention du CRM) : on retire le NPA.
+  const localiteClient = (c.ville || '').replace(/^\d{4}\s*/, '').trim();
 
   const corps = `
     <div class="entete">
-      <div>
-        ${genererBadgeLogoAssurex(26, '9px 14px', 'inline-block')}
-        <div class="entete-adresse">ASSUREX Sàrl — Rue du Centre 142 — 1025 St-Sulpice</div>
-      </div>
+      <div class="expediteur"><strong>${echapper(nomClient)}</strong>${adresseClient ? `<br/>${echapper(adresseClient)}` : ''}</div>
       ${recommandee ? `<div class="recommandee">Recommandée</div>` : ''}
     </div>
-    <div class="date-ligne">St-Sulpice, le ${aujourdhui}</div>
+    <div class="date-ligne">${localiteClient ? echapper(localiteClient) + ', ' : ''}le ${aujourdhui}</div>
     <div class="destinataire">
       <strong>${echapper(compagnie)}</strong>${compagnieAdresse ? `<br/>${echapper(compagnieAdresse)}` : ''}
     </div>
     <div class="objet">Résiliation du contrat d'assurance${police ? ' n° ' + echapper(police) : ''}</div>
     <p style="margin-top:18px">Madame, Monsieur,</p>
     <p>Par la présente lettre, je vous notifie de la résiliation de mon contrat d'assurance cité en référence :</p>
-    <div class="case-type">☑ ${typeInfo.label} avec effet au <strong>${dateEffetFr}</strong></div>
+    <p>☑ ${typeInfo.label} avec effet au <strong>${dateEffetFr}</strong></p>
     ${noteLamal}
     <p>Je vous remercie de bien vouloir me faire parvenir une confirmation par courrier, et dans cette attente, de bien vouloir croire en l'expression de mes meilleures salutations.</p>
     <div class="signature-zone">
-      <div>${echapper(nomClient)}${adresseClient ? `<br/><span style="font-size:11px;color:#666">${echapper(adresseClient)}</span>` : ''}</div>
+      <div>${echapper(nomClient)}</div>
     </div>
   `;
 
@@ -870,9 +874,8 @@ function genererLettreResiliationSignee(clientId, signatureDataUrl, contexte) {
   // signatureDataUrl, connu seulement au moment de la signature — contenuCorps reste identique
   // entre l'aperçu (avant signature) et le document final.
   const corpsAvecSignature = contexte.contenuCorps + `
-    <div class="signature-zone" style="margin-top:10px">
-      <strong>Signature</strong>
-      ${signatureDataUrl ? `<div style="margin-top:8px"><img src="${signatureDataUrl}" style="max-height:80px;max-width:260px;display:block;border:1px solid #ddd;border-radius:6px;padding:6px"/></div>` : `<div class="ligne-signature">Le preneur d'assurance</div>`}
+    <div class="signature-zone" style="margin-top:6px">
+      ${signatureDataUrl ? `<div style="margin-top:8px"><img src="${signatureDataUrl}" style="max-height:80px;max-width:260px;display:block"/></div>` : `<div class="ligne-signature">Signature</div>`}
     </div>`;
   const html = construireHtmlResiliation(corpsAvecSignature, contexte.documentNom, signatureDataUrl);
   const win = window.open('', '_blank');

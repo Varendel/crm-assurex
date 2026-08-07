@@ -244,29 +244,15 @@ function viewDashboard() {
       <div style="font-size:11.5px;color:var(--text-muted)">Ces contrats sont commissionnables et actifs, mais aucune ligne de commission n'existe pour eux — souvent le signe d'un contrat ajouté directement en base de données. Clique sur "Voir le détail" pour les corriger un par un.</div>
     </div>` : ''}
 
-    ${nonGerees.length > 0 ? `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
-        <div style="font-size:13px;font-weight:800;color:var(--text)">🎯 Polices non commissionnées à bouger</div>
-        <div style="font-size:18px;font-weight:900;color:#fb923c">CHF ${fmtCHF(Math.round(totalNonGere))}</div>
+    <div class="table-wrap" style="margin-bottom:20px">
+      <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
+        <div style="font-weight:700;font-size:13px;color:var(--text)">🔔 Rappels urgents</div>
+        ${badge(urgents.length + ' urgents', '#f87171')}
       </div>
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:18px">${nonGerees.length} contrat(s) sans convention de collaboration — volume de primes potentiellement récupérable par transfert, classé par proximité d'échéance</div>
-      <div style="display:flex;align-items:flex-end;gap:14px;height:120px;margin-bottom:6px">
-        ${horizonsData.map(h => {
-          const heightPx = Math.max(Math.round(h.montant / maxHorizon * 95), h.montant > 0 ? 6 : 2);
-          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
-            <div style="font-size:10.5px;font-weight:800;color:${h.color};margin-bottom:4px">${h.montant > 0 ? Math.round(h.montant/1000) + 'k' : '—'}</div>
-            <div style="width:100%;max-width:50px;height:${heightPx}px;background:${h.color};border-radius:5px 5px 2px 2px;opacity:${h.nb>0?1:0.25}"></div>
-          </div>`;
-        }).join('')}
-      </div>
-      <div style="display:flex;gap:14px">
-        ${horizonsData.map(h => `<div style="flex:1;text-align:center"><div style="font-size:10px;color:var(--text-muted)">${h.label}</div><div style="font-size:10px;color:var(--text-dim)">${h.nb} contrat(s)</div></div>`).join('')}
-      </div>
-      <div style="margin-top:14px;text-align:right">
-        <button onclick="navigate('suivi')" style="background:none;border:none;color:var(--accent);font-size:11px;font-weight:700;cursor:pointer">Voir le détail →</button>
-      </div>
-    </div>` : ''}
+      ${rappelRows}
+    </div>
+
+    <div id="calendar-widget-container" style="margin-bottom:20px"></div>
 
     ${oppsOuvertes.length > 0 ? `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
@@ -296,7 +282,29 @@ function viewDashboard() {
       </div>
     </div>` : ''}
 
-    <div id="calendar-widget-container" style="margin-bottom:20px"></div>
+    ${nonGerees.length > 0 ? `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
+        <div style="font-size:13px;font-weight:800;color:var(--text)">🎯 Polices non commissionnées à bouger</div>
+        <div style="font-size:18px;font-weight:900;color:#fb923c">CHF ${fmtCHF(Math.round(totalNonGere))}</div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:18px">${nonGerees.length} contrat(s) sans convention de collaboration — volume de primes potentiellement récupérable par transfert, classé par proximité d'échéance</div>
+      <div style="display:flex;align-items:flex-end;gap:14px;height:120px;margin-bottom:6px">
+        ${horizonsData.map(h => {
+          const heightPx = Math.max(Math.round(h.montant / maxHorizon * 95), h.montant > 0 ? 6 : 2);
+          return `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%">
+            <div style="font-size:10.5px;font-weight:800;color:${h.color};margin-bottom:4px">${h.montant > 0 ? Math.round(h.montant/1000) + 'k' : '—'}</div>
+            <div style="width:100%;max-width:50px;height:${heightPx}px;background:${h.color};border-radius:5px 5px 2px 2px;opacity:${h.nb>0?1:0.25}"></div>
+          </div>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;gap:14px">
+        ${horizonsData.map(h => `<div style="flex:1;text-align:center"><div style="font-size:10px;color:var(--text-muted)">${h.label}</div><div style="font-size:10px;color:var(--text-dim)">${h.nb} contrat(s)</div></div>`).join('')}
+      </div>
+      <div style="margin-top:14px;text-align:right">
+        <button onclick="navigate('suivi')" style="background:none;border:none;color:var(--accent);font-size:11px;font-weight:700;cursor:pointer">Voir le détail →</button>
+      </div>
+    </div>` : ''}
 
     <!-- Graphiques commissions -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
@@ -334,18 +342,9 @@ function viewDashboard() {
         </div>
       </div>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
-      <div class="table-wrap">
-        <div style="padding:14px 18px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center">
-          <div style="font-weight:700;font-size:13px;color:var(--text)">🔔 Rappels urgents</div>
-          ${badge(urgents.length + ' urgents', '#f87171')}
-        </div>
-        ${rappelRows}
-      </div>
-      <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
-        <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:16px">👥 Répartition équipe</div>
-        ${teamRows || '<div style="color:var(--text-muted);font-size:13px">Chargement...</div>'}
-      </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
+      <div style="font-weight:700;font-size:13px;color:var(--text);margin-bottom:16px">👥 Répartition équipe</div>
+      ${teamRows || '<div style="color:var(--text-muted);font-size:13px">Chargement...</div>'}
     </div>`;
 }
 

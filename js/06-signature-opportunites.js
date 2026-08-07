@@ -50,11 +50,13 @@ function viewOpportunites() {
     { id: 'kanban', label: '📋 Kanban' },
     { id: 'liste', label: '📃 Liste' },
     { id: 'echeances', label: '📅 Échéances' },
+    { id: 'priorites', label: '🎯 Priorités' },
   ].map(v => `<button class="tab-btn ${vueModePipeline === v.id ? 'active' : ''}" onclick="vueModePipeline='${v.id}';navigate('opportunites')">${v.label}</button>`).join('');
 
   let corps;
   if (vueModePipeline === 'liste') corps = renderListeOpportunites(allOpportunites, nomClient, tousLesStades, stadeColor);
   else if (vueModePipeline === 'echeances') corps = renderEcheancesOpportunites(OPPS, nomClient, stadeColor);
+  else if (vueModePipeline === 'priorites') corps = renderPrioritesOpportunites(OPPS, nomClient, stadeColor);
   else corps = renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, tousLesStades, nomClient);
 
   return `
@@ -225,6 +227,125 @@ function renderEcheancesOpportunites(oppsOuvertes, nomClient, stadeColor) {
       </div>`).join('')}</div>
     </div>`;
   }).join('') || '<div class="table-empty">Aucune opportunité ouverte.</div>';
+}
+
+// ── Vue Priorités — croise chaque opportunité ouverte avec ses tâches liées (rappels.opportunite_id)
+// et un score d'urgence (échéance, retard des tâches, probabilité, valeur pondérée, inactivité).
+// Objectif : une seule vue qui répond à "qu'est-ce que je dois faire aujourd'hui sur mon pipeline ?"
+// — contrairement au Kanban (organisé par stade) ou aux Échéances (organisé seulement par date),
+// ici le tri tient aussi compte des tâches en retard et des opportunités qui stagnent sans relance.
+function scorerPrioriteOpportunite(o, tachesLiees) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const jours = o.date_echeance ? Math.floor((new Date(o.date_echeance) - today) / 86400000) : null;
+  const tachesOuvertes = tachesLiees.filter(r => r.statut === 'ouvert');
+  const tachesEnRetard = tachesOuvertes.filter(r => r.date_echeance && new Date(r.date_echeance) < today);
+  const joursDepuisCreation = o.created_at ? Math.floor((today - new Date(o.created_at)) / 86400000) : 0;
+  // "Stagnante" : idée perso — une opp encore au tout début du pipeline, sans aucune tâche de
+  // relance programmée depuis plus de 2 semaines, est justement celle qui passe le plus souvent
+  // à la trappe. Ni le Kanban ni les Échéances ne la remontent si elle n'a pas de date fixée.
+  const stagnante = tachesOuvertes.length === 0 && ['Contact', 'Analyse'].includes(o.stade) && joursDepuisCreation > 14;
+
+  const reasons = [];
+  let score = 0;
+  if (tachesEnRetard.length) { score += 100; reasons.push(`⏰ ${tachesEnRetard.length} tâche${tachesEnRetard.length > 1 ? 's' : ''} en retard`); }
+  if (jours !== null && jours < 0) { score += 90; reasons.push(`📅 Échéance dépassée (${Math.abs(jours)}j)`); }
+  else if (jours !== null && jours <= 7) { score += 60; reasons.push(`📅 Échéance dans ${jours}j`); }
+  else if (jours !== null && jours <= 30) { score += 25; reasons.push(`📅 Échéance dans ${jours}j`); }
+  if ((o.probabilite || 0) >= 75) { score += 20; reasons.push(`🎯 Probabilité ${o.probabilite}%`); }
+  if (stagnante) { score += 35; reasons.push(`🕸️ Sans tâche depuis ${joursDepuisCreation}j`); }
+  if (!tachesOuvertes.length && !stagnante) reasons.push('— Aucune tâche liée');
+  score += Math.round((o.montant_potentiel || 0) * (o.probabilite || 0) / 100 / 500); // poids valeur pondérée
+
+  let tier;
+  if (tachesEnRetard.length || (jours !== null && jours <= 7)) tier = 'urgent';
+  else if (stagnante || (jours !== null && jours <= 30) || (o.probabilite || 0) >= 75) tier = 'suivre';
+  else tier = 'normal';
+
+  return { score, tier, reasons, tachesOuvertes };
+}
+
+function renderPrioritesOpportunites(OPPS, nomClient, stadeColor) {
+  if (!OPPS.length) return '<div class="table-empty">Aucune opportunité ouverte.</div>';
+  const scored = OPPS.map(o => {
+    const tachesLiees = allRappels.filter(r => r.opportunite_id === o.id);
+    return { o, ...scorerPrioriteOpportunite(o, tachesLiees) };
+  }).sort((a, b) => b.score - a.score);
+
+  const tiers = [
+    { id: 'urgent', label: "🔴 Urgent — à traiter aujourd'hui" },
+    { id: 'suivre', label: '🟠 À suivre cette semaine' },
+    { id: 'normal', label: '🟢 En cours, sous contrôle' },
+  ];
+
+  const corps = tiers.map(t => {
+    const items = scored.filter(s => s.tier === t.id);
+    if (!items.length) return '';
+    return `<div style="margin-bottom:24px">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">${t.label} (${items.length})</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${items.map(s => renderCartePrioriteOpportunite(s, nomClient, stadeColor)).join('')}
+      </div>
+    </div>`;
+  }).join('');
+
+  return corps || '<div class="table-empty">Aucune opportunité ouverte.</div>';
+}
+
+function renderCartePrioriteOpportunite(s, nomClient, stadeColor) {
+  const o = s.o;
+  const valeurPonderee = Math.round((o.montant_potentiel || 0) * (o.probabilite || 0) / 100);
+  const borderColor = s.tier === 'urgent' ? '#f87171' : s.tier === 'suivre' ? '#f59e0b' : 'var(--border)';
+  return `<div style="background:var(--surface-alt);border:1px solid ${borderColor};border-left:3px solid ${borderColor};border-radius:12px;padding:14px 16px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
+      <div style="cursor:pointer;flex:1;min-width:200px" onclick="editerOpportunite('${o.id}')">
+        <div style="font-size:13.5px;font-weight:800;color:var(--text)">${o.titre}</div>
+        <div style="font-size:12.5px;color:var(--text-muted)">${nomClient(o)} · ${badge(o.stade, stadeColor[o.stade] || '#64748b')}</div>
+      </div>
+      <div style="text-align:right">
+        <div style="font-size:13px;font-weight:800;color:#f59e0b">CHF ${fmtCHF(valeurPonderee)} <span style="font-weight:500;color:var(--text-muted);font-size:10.5px">pondéré</span></div>
+        <div style="font-size:10.5px;color:var(--text-muted)">${o.date_echeance ? `Échéance ${fmtDate(o.date_echeance)}` : 'Sans échéance'}</div>
+      </div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:8px">
+      ${s.reasons.map(r => `<span style="font-size:10px;color:var(--text-muted);background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:2px 8px">${r}</span>`).join('')}
+    </div>
+    ${s.tachesOuvertes.length ? `<div style="margin-top:10px;display:flex;flex-direction:column;gap:5px">
+      ${s.tachesOuvertes.map(r => `<label style="display:flex;align-items:center;gap:7px;font-size:12px;color:var(--text);cursor:pointer">
+        <input type="checkbox" onclick="event.stopPropagation();toggleTacheDepuisPriorites('${r.id}')">
+        <span>${r.titre}${r.date_echeance ? ` <span style="color:${new Date(r.date_echeance) < new Date() ? '#f87171' : 'var(--text-muted)'}">(${fmtDate(r.date_echeance)})</span>` : ''}</span>
+      </label>`).join('')}
+    </div>` : `<div style="margin-top:10px">
+      <button type="button" onclick="event.stopPropagation();creerTacheRapideOpportunite('${o.id}','${s.tier}')" style="background:var(--surface);border:1px dashed var(--border);color:var(--text-muted);font-size:11px;border-radius:8px;padding:5px 10px;cursor:pointer">+ Créer une tâche de relance</button>
+    </div>`}
+  </div>`;
+}
+
+async function toggleTacheDepuisPriorites(id) {
+  const r = await dbPatch('rappels', id, { statut: 'traité' });
+  if (r && r.error) { showError('Erreur : ' + errMsg(r)); return; }
+  allRappels = await dbGet('rappels', 'select=*');
+  navigate('opportunites');
+}
+
+async function creerTacheRapideOpportunite(oppId, tier) {
+  const opp = allOpportunites.find(o => o.id === oppId);
+  const monAgent = currentUser ? allAgents.find(a => a.email === currentUser.email) : null;
+  const demain = new Date(); demain.setDate(demain.getDate() + 1);
+  const body = {
+    titre: `Relancer — ${opp ? opp.titre : ''}`,
+    nature: 'tache',
+    type: 'Opportunité',
+    client_id: opp ? (opp.client_id || null) : null,
+    opportunite_id: oppId,
+    apporteur_id: (opp && opp.apporteur_id) || (monAgent ? monAgent.id : null),
+    date_echeance: demain.toISOString().slice(0, 10),
+    urgence: tier === 'urgent' ? 'haute' : 'moyenne',
+    statut: 'ouvert',
+  };
+  const r = await dbPost('rappels', body);
+  if (r && r.error) { showError('Erreur lors de la création de la tâche : ' + errMsg(r)); return; }
+  allRappels = await dbGet('rappels', 'select=*');
+  navigate('opportunites');
 }
 
 // ── Tâches liées à une opportunité (réutilise la table rappels, colonne opportunite_id) ──

@@ -30,6 +30,10 @@ function selectStadeOpportunite(o, stadeActuel, tousLesStades) {
 let vueModePipeline = 'kanban'; // 'kanban' | 'liste' | 'echeances'
 
 function viewOpportunites() {
+  // Session RH (Cofidex) : Pipeline visible mais en lecture seule et sans aucun chiffre (primes,
+  // commissions, valeur pondérée) — cf. RH_VUES_AUTORISEES et le garde-fou sidebar (js/03). Le
+  // drapeau est calculé une fois ici et passé à chaque sous-vue plutôt que ré-appelé partout.
+  const rhMode = estRoleRH();
   const stadeColor = { Contact:'#64748b', Analyse:'#38bdf8', Proposition:'#f59e0b', Négociation:'#a78bfa' };
   const stades = ['Contact','Analyse','Proposition','Négociation'];
   const tousLesStades = [...stades, 'Gagné', 'Perdu'];
@@ -54,25 +58,25 @@ function viewOpportunites() {
   ].map(v => `<button class="tab-btn ${vueModePipeline === v.id ? 'active' : ''}" onclick="vueModePipeline='${v.id}';navigate('opportunites')">${v.label}</button>`).join('');
 
   let corps;
-  if (vueModePipeline === 'liste') corps = renderListeOpportunites(allOpportunites, nomClient, tousLesStades, stadeColor);
-  else if (vueModePipeline === 'echeances') corps = renderEcheancesOpportunites(OPPS, nomClient, stadeColor);
-  else if (vueModePipeline === 'priorites') corps = renderPrioritesOpportunites(OPPS, nomClient, stadeColor);
-  else corps = renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, tousLesStades, nomClient);
+  if (vueModePipeline === 'liste') corps = renderListeOpportunites(allOpportunites, nomClient, tousLesStades, stadeColor, rhMode);
+  else if (vueModePipeline === 'echeances') corps = renderEcheancesOpportunites(OPPS, nomClient, stadeColor, rhMode);
+  else if (vueModePipeline === 'priorites') corps = renderPrioritesOpportunites(OPPS, nomClient, stadeColor, rhMode);
+  else corps = renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, tousLesStades, nomClient, rhMode);
 
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
       <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Pipeline — Opportunités</h2>
-      <button class="btn-add" onclick="opportuniteEnEditionId=null;navigate('nouvelle-opportunite')">+ Nouvelle opportunité</button>
+      ${rhMode ? '' : `<button class="btn-add" onclick="opportuniteEnEditionId=null;navigate('nouvelle-opportunite')">+ Nouvelle opportunité</button>`}
     </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Suivi des affaires en négociation, avant signature. Une fois "Gagnée" depuis le menu de stade, l'opportunité ouvre directement le formulaire de contrat pré-rempli.</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">${rhMode ? "Vue d'ensemble des affaires en cours (stades, clients, tâches liées) — lecture seule, sans montants." : 'Suivi des affaires en négociation, avant signature. Une fois "Gagnée" depuis le menu de stade, l\'opportunité ouvre directement le formulaire de contrat pré-rempli.'}</div>
     <div class="stat-grid" style="margin-bottom:20px">
-      ${statCard('Pipeline total (prime)', 'CHF ' + total.toLocaleString(), '#f59e0b')}
-      ${statCard('Pondéré (prime)', 'CHF ' + pondere.toLocaleString(), '#38bdf8')}
-      ${statCard('CA potentiel (commissions)', 'CHF ' + caPotentiel.toLocaleString(), '#4ade80')}
+      ${rhMode ? '' : statCard('Pipeline total (prime)', 'CHF ' + total.toLocaleString(), '#f59e0b')}
+      ${rhMode ? '' : statCard('Pondéré (prime)', 'CHF ' + pondere.toLocaleString(), '#38bdf8')}
+      ${rhMode ? '' : statCard('CA potentiel (commissions)', 'CHF ' + caPotentiel.toLocaleString(), '#4ade80')}
       ${statCard('En cours', OPPS.length, '#e2e8f0')}
       ${statCard('Gagnées', gagnees.length, '#4ade80')}
     </div>
-    ${renderStatsBranchesPipeline(OPPS)}
+    ${rhMode ? '' : renderStatsBranchesPipeline(OPPS)}
     <div class="tabs" style="margin-bottom:18px">${toggleVues}</div>
     ${corps}`;
 }
@@ -109,7 +113,9 @@ function renderStatsBranchesPipeline(OPPS) {
 }
 
 // ── Vue Kanban (par défaut) — colonnes par stade + tableaux Gagnées/Perdues en dessous ──
-function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, tousLesStades, nomClient) {
+// rhMode : carte non cliquable (pas d'accès à la fiche d'édition), sans montant ni menu de
+// changement de stade (action réservée aux rôles apporteur/signataire).
+function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, tousLesStades, nomClient, rhMode) {
   let kanban = stades.map(stade => {
     const opps = OPPS.filter(o => o.stade === stade);
     const color = stadeColor[stade];
@@ -121,18 +127,18 @@ function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, to
       </div>
       ${opps.map(o => {
         const tachesOuvertes = allRappels.filter(r => r.opportunite_id === o.id && r.statut === 'ouvert').length;
-        return `<div class="kanban-card" onclick="editerOpportunite('${o.id}')" style="cursor:pointer">
+        return `<div class="kanban-card" ${rhMode ? '' : `onclick="editerOpportunite('${o.id}')" style="cursor:pointer"`}>
         <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:4px">${o.titre}</div>
         <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:1px">${nomClient(o)}</div>
         <div style="font-size:10.5px;color:var(--text-muted);margin-bottom:8px">${o.compagnie || '&nbsp;'}${tachesOuvertes > 0 ? ` · ☑ ${tachesOuvertes} tâche${tachesOuvertes > 1 ? 's' : ''}` : ''}</div>
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <span style="font-size:13px;font-weight:800;color:#f59e0b">CHF ${fmtCHF((o.montant_potentiel||0))}</span>
+          ${rhMode ? '<span></span>' : `<span style="font-size:13px;font-weight:800;color:#f59e0b">CHF ${fmtCHF((o.montant_potentiel||0))}</span>`}
           ${o.apporteur_id ? avatar(agentById(o.apporteur_id), 22) : ''}
         </div>
         <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:${o.probabilite||0}%;background:${color}"></div></div>
         <div style="font-size:10px;color:var(--text-muted);margin-top:6px;display:flex;justify-content:space-between;align-items:center">
           <span>${o.probabilite||0}%</span>
-          ${selectStadeOpportunite(o, stade, tousLesStades)}
+          ${rhMode ? '' : selectStadeOpportunite(o, stade, tousLesStades)}
         </div>
       </div>`;
       }).join('')}
@@ -143,21 +149,21 @@ function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, to
   return `<div class="kanban">${kanban}</div>
     ${gagnees.length > 0 ? `<div style="margin-top:24px">
       <div style="font-size:11px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">✓ Gagnées (${gagnees.length})</div>
-      <div class="table-wrap">${gagnees.map(o => `<div class="table-row" style="grid-template-columns:1fr 160px 100px 150px 110px;cursor:pointer" onclick="editerOpportunite('${o.id}')">
+      <div class="table-wrap">${gagnees.map(o => `<div class="table-row" style="grid-template-columns:${rhMode ? '1fr 160px 150px' : '1fr 160px 100px 150px 110px'};${rhMode ? '' : 'cursor:pointer'}" ${rhMode ? '' : `onclick="editerOpportunite('${o.id}')"`}>
         <div style="font-weight:700;font-size:13px;color:var(--text)">${o.titre}</div>
         <div style="font-size:13px;font-weight:800;color:var(--text)">${nomClient(o)}</div>
-        <div style="font-size:12px;font-weight:700;color:#f59e0b">CHF ${fmtCHF((o.montant_potentiel||0))}</div>
-        <div>${selectStadeOpportunite(o, 'Gagné', tousLesStades)}</div>
+        ${rhMode ? '' : `<div style="font-size:12px;font-weight:700;color:#f59e0b">CHF ${fmtCHF((o.montant_potentiel||0))}</div>`}
+        ${rhMode ? '' : `<div>${selectStadeOpportunite(o, 'Gagné', tousLesStades)}</div>`}
         <div>${o.contrat_id ? badge('Contrat créé', '#4ade80') : badge('À finaliser', '#f59e0b')}</div>
       </div>`).join('')}</div>
     </div>` : ''}
     ${perdues.length > 0 ? `<div style="margin-top:24px">
       <div style="font-size:11px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">✕ Perdues (${perdues.length})</div>
-      <div class="table-wrap">${perdues.map(o => `<div class="table-row" style="grid-template-columns:1fr 160px 100px 150px;cursor:pointer" onclick="editerOpportunite('${o.id}')">
+      <div class="table-wrap">${perdues.map(o => `<div class="table-row" style="grid-template-columns:${rhMode ? '1fr 160px' : '1fr 160px 100px 150px'};${rhMode ? '' : 'cursor:pointer'}" ${rhMode ? '' : `onclick="editerOpportunite('${o.id}')"`}>
         <div style="font-weight:700;font-size:13px;color:var(--text)">${o.titre}</div>
         <div style="font-size:13px;font-weight:800;color:var(--text)">${nomClient(o)}</div>
-        <div style="font-size:12px;font-weight:700;color:var(--text-muted)">CHF ${fmtCHF((o.montant_potentiel||0))}</div>
-        <div>${selectStadeOpportunite(o, 'Perdu', tousLesStades)}</div>
+        ${rhMode ? '' : `<div style="font-size:12px;font-weight:700;color:var(--text-muted)">CHF ${fmtCHF((o.montant_potentiel||0))}</div>`}
+        ${rhMode ? '' : `<div>${selectStadeOpportunite(o, 'Perdu', tousLesStades)}</div>`}
       </div>`).join('')}</div>
     </div>` : ''}`;
 }
@@ -166,7 +172,7 @@ function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, to
 // Utile pour scanner/trier vite par montant, probabilité ou échéance sans le découpage par
 // colonnes du Kanban, notamment quand le pipeline devient long.
 let opportunitesTriListe = 'montant_desc';
-function renderListeOpportunites(toutes, nomClient, tousLesStades, stadeColor) {
+function renderListeOpportunites(toutes, nomClient, tousLesStades, stadeColor, rhMode) {
   const tris = {
     montant_desc: (a,b) => (b.montant_potentiel||0) - (a.montant_potentiel||0),
     montant_asc: (a,b) => (a.montant_potentiel||0) - (b.montant_potentiel||0),
@@ -174,34 +180,36 @@ function renderListeOpportunites(toutes, nomClient, tousLesStades, stadeColor) {
     probabilite_desc: (a,b) => (b.probabilite||0) - (a.probabilite||0),
     stade: (a,b) => tousLesStades.indexOf(a.stade) - tousLesStades.indexOf(b.stade),
   };
-  const liste = [...toutes].sort(tris[opportunitesTriListe] || tris.montant_desc);
-  const cols = '1fr 160px 120px 120px 90px 110px';
+  // rhMode : tri par montant retiré du menu (rien à trier, rien à afficher) — bascule sur échéance.
+  const triActif = rhMode && opportunitesTriListe.startsWith('montant') ? 'echeance_asc' : opportunitesTriListe;
+  const liste = [...toutes].sort(tris[triActif] || tris.montant_desc);
+  const cols = rhMode ? '1fr 160px 120px 120px 90px' : '1fr 160px 120px 120px 90px 110px';
   return `
     <div style="display:flex;justify-content:flex-end;margin-bottom:10px">
       <select class="form-select" style="max-width:220px" onchange="opportunitesTriListe=this.value;navigate('opportunites')">
-        <option value="montant_desc" ${opportunitesTriListe==='montant_desc'?'selected':''}>Trier : montant décroissant</option>
-        <option value="montant_asc" ${opportunitesTriListe==='montant_asc'?'selected':''}>Trier : montant croissant</option>
-        <option value="echeance_asc" ${opportunitesTriListe==='echeance_asc'?'selected':''}>Trier : échéance la plus proche</option>
-        <option value="probabilite_desc" ${opportunitesTriListe==='probabilite_desc'?'selected':''}>Trier : probabilité décroissante</option>
-        <option value="stade" ${opportunitesTriListe==='stade'?'selected':''}>Trier : par stade</option>
+        ${rhMode ? '' : `<option value="montant_desc" ${opportunitesTriListe==='montant_desc'?'selected':''}>Trier : montant décroissant</option>
+        <option value="montant_asc" ${opportunitesTriListe==='montant_asc'?'selected':''}>Trier : montant croissant</option>`}
+        <option value="echeance_asc" ${triActif==='echeance_asc'?'selected':''}>Trier : échéance la plus proche</option>
+        <option value="probabilite_desc" ${triActif==='probabilite_desc'?'selected':''}>Trier : probabilité décroissante</option>
+        <option value="stade" ${triActif==='stade'?'selected':''}>Trier : par stade</option>
       </select>
     </div>
     <div class="table-wrap">
-      <div class="table-header" style="grid-template-columns:${cols}"><div>Titre</div><div>Client</div><div>Compagnie</div><div>Stade</div><div>Prob.</div><div>Montant</div></div>
-      ${liste.length ? liste.map(o => `<div class="table-row" style="grid-template-columns:${cols};cursor:pointer" onclick="editerOpportunite('${o.id}')">
+      <div class="table-header" style="grid-template-columns:${cols}"><div>Titre</div><div>Client</div><div>Compagnie</div><div>Stade</div><div>Prob.</div>${rhMode ? '' : '<div>Montant</div>'}</div>
+      ${liste.length ? liste.map(o => `<div class="table-row" style="grid-template-columns:${cols};${rhMode ? '' : 'cursor:pointer'}" ${rhMode ? '' : `onclick="editerOpportunite('${o.id}')"`}>
         <div><div style="font-weight:700;font-size:13px;color:var(--text)">${o.titre}</div>${o.date_echeance ? `<div style="font-size:10.5px;color:var(--text-muted)">Échéance ${fmtDate(o.date_echeance)}</div>` : ''}</div>
         <div style="font-size:13px;color:var(--text)">${nomClient(o)}</div>
         <div style="font-size:12.5px;color:var(--text-muted)">${o.compagnie || '—'}</div>
         <div>${badge(o.stade, stadeColor[o.stade] || (o.stade === 'Gagné' ? '#4ade80' : '#f87171'))}</div>
         <div style="font-size:12.5px;color:var(--text-muted)">${o.probabilite||0}%</div>
-        <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF((o.montant_potentiel||0))}</div>
+        ${rhMode ? '' : `<div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF((o.montant_potentiel||0))}</div>`}
       </div>`).join('') : '<div class="table-empty">Aucune opportunité.</div>'}
     </div>`;
 }
 
 // ── Vue Échéances — regroupe les opportunités OUVERTES par urgence de date d'échéance ──
 // Pense comme un plan de relance : ce qui est en retard ou cette semaine remonte en premier.
-function renderEcheancesOpportunites(oppsOuvertes, nomClient, stadeColor) {
+function renderEcheancesOpportunites(oppsOuvertes, nomClient, stadeColor, rhMode) {
   const today = new Date(); today.setHours(0,0,0,0);
   const in7 = new Date(today.getTime() + 7*86400000);
   const in30 = new Date(today.getTime() + 30*86400000);
@@ -218,11 +226,11 @@ function renderEcheancesOpportunites(oppsOuvertes, nomClient, stadeColor) {
     if (!liste.length) return '';
     return `<div style="margin-bottom:22px">
       <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">${b.label} (${liste.length})</div>
-      <div class="table-wrap">${liste.map(o => `<div class="table-row" style="grid-template-columns:1fr 160px 110px 100px 120px;cursor:pointer" onclick="editerOpportunite('${o.id}')">
+      <div class="table-wrap">${liste.map(o => `<div class="table-row" style="grid-template-columns:${rhMode ? '1fr 160px 110px 120px' : '1fr 160px 110px 100px 120px'};${rhMode ? '' : 'cursor:pointer'}" ${rhMode ? '' : `onclick="editerOpportunite('${o.id}')"`}>
         <div style="font-weight:700;font-size:13px;color:var(--text)">${o.titre}</div>
         <div style="font-size:13px;color:var(--text)">${nomClient(o)}</div>
         <div>${badge(o.stade, stadeColor[o.stade] || '#64748b')}</div>
-        <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF((o.montant_potentiel||0))}</div>
+        ${rhMode ? '' : `<div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF((o.montant_potentiel||0))}</div>`}
         <div style="font-size:12px;color:var(--text-muted)">${o.date_echeance ? fmtDate(o.date_echeance) : '—'}</div>
       </div>`).join('')}</div>
     </div>`;
@@ -264,7 +272,7 @@ function scorerPrioriteOpportunite(o, tachesLiees) {
   return { score, tier, reasons, tachesOuvertes };
 }
 
-function renderPrioritesOpportunites(OPPS, nomClient, stadeColor) {
+function renderPrioritesOpportunites(OPPS, nomClient, stadeColor, rhMode) {
   if (!OPPS.length) return '<div class="table-empty">Aucune opportunité ouverte.</div>';
   const scored = OPPS.map(o => {
     const tachesLiees = allRappels.filter(r => r.opportunite_id === o.id);
@@ -283,7 +291,7 @@ function renderPrioritesOpportunites(OPPS, nomClient, stadeColor) {
     return `<div style="margin-bottom:24px">
       <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">${t.label} (${items.length})</div>
       <div style="display:flex;flex-direction:column;gap:10px">
-        ${items.map(s => renderCartePrioriteOpportunite(s, nomClient, stadeColor)).join('')}
+        ${items.map(s => renderCartePrioriteOpportunite(s, nomClient, stadeColor, rhMode)).join('')}
       </div>
     </div>`;
   }).join('');
@@ -291,18 +299,20 @@ function renderPrioritesOpportunites(OPPS, nomClient, stadeColor) {
   return corps || '<div class="table-empty">Aucune opportunité ouverte.</div>';
 }
 
-function renderCartePrioriteOpportunite(s, nomClient, stadeColor) {
+// rhMode : pas de valeur pondérée (CHF) affichée, pas de clic vers la fiche d'édition (hors
+// périmètre RH) — le reste (raisons de priorité, tâches liées, création rapide) reste utile.
+function renderCartePrioriteOpportunite(s, nomClient, stadeColor, rhMode) {
   const o = s.o;
   const valeurPonderee = Math.round((o.montant_potentiel || 0) * (o.probabilite || 0) / 100);
   const borderColor = s.tier === 'urgent' ? '#f87171' : s.tier === 'suivre' ? '#f59e0b' : 'var(--border)';
   return `<div style="background:var(--surface-alt);border:1px solid ${borderColor};border-left:3px solid ${borderColor};border-radius:12px;padding:14px 16px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
-      <div style="cursor:pointer;flex:1;min-width:200px" onclick="editerOpportunite('${o.id}')">
+      <div style="flex:1;min-width:200px;${rhMode ? '' : 'cursor:pointer'}" ${rhMode ? '' : `onclick="editerOpportunite('${o.id}')"`}>
         <div style="font-size:13.5px;font-weight:800;color:var(--text)">${o.titre}</div>
         <div style="font-size:12.5px;color:var(--text-muted)">${nomClient(o)} · ${badge(o.stade, stadeColor[o.stade] || '#64748b')}</div>
       </div>
       <div style="text-align:right">
-        <div style="font-size:13px;font-weight:800;color:#f59e0b">CHF ${fmtCHF(valeurPonderee)} <span style="font-weight:500;color:var(--text-muted);font-size:10.5px">pondéré</span></div>
+        ${rhMode ? '' : `<div style="font-size:13px;font-weight:800;color:#f59e0b">CHF ${fmtCHF(valeurPonderee)} <span style="font-weight:500;color:var(--text-muted);font-size:10.5px">pondéré</span></div>`}
         <div style="font-size:10.5px;color:var(--text-muted)">${o.date_echeance ? `Échéance ${fmtDate(o.date_echeance)}` : 'Sans échéance'}</div>
       </div>
     </div>

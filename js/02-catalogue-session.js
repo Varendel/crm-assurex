@@ -982,12 +982,16 @@ const USER_ROLES = {
 };
 
 // ═══ RESTRICTION D'ACCÈS — RÔLE "rh" ═══
-// Session volontairement limitée : uniquement la liste/fiches clients (hors chiffres), la gestion
-// des collaborateurs (données LPP), les tâches/rappels et l'agenda. Tout le reste (dashboard,
-// pipeline, contrats, commissions, comptabilité, paramètres) reste réservé aux rôles apporteur/
-// signataire. Liste blanche volontaire (plutôt qu'une liste noire) : toute nouvelle vue ajoutée au
-// CRM à l'avenir sera invisible pour ce rôle par défaut, sauf ajout explicite ici.
-const RH_VUES_AUTORISEES = new Set(['portefeuille', 'clients-prives', 'clients-entreprises', 'rappels', 'agenda']);
+// Session volontairement limitée : la liste/fiches clients (hors chiffres), la gestion des
+// collaborateurs (données LPP), les tâches/rappels, l'agenda, et — depuis le 07.08.2026 — une
+// vue Pipeline en lecture seule (stades, clients, tâches liées) mais SANS montants (primes,
+// commissions, valeur pondérée) : voir le drapeau rhMode dans js/06-signature-opportunites.js.
+// "Contacts compagnies" et "Demande d'offre" restent hors périmètre (absents de cette liste et
+// non cochés `rhAllowed` dans la sidebar). Tout le reste (dashboard, contrats, commissions,
+// comptabilité, paramètres) reste réservé aux rôles apporteur/signataire. Liste blanche volontaire
+// (plutôt qu'une liste noire) : toute nouvelle vue ajoutée au CRM à l'avenir sera invisible pour ce
+// rôle par défaut, sauf ajout explicite ici.
+const RH_VUES_AUTORISEES = new Set(['portefeuille', 'clients-prives', 'clients-entreprises', 'rappels', 'agenda', 'opportunites']);
 
 function estRoleRH() {
   return !!(currentUser && currentUser.role === 'rh');

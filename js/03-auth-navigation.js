@@ -461,7 +461,7 @@ async function tryRestoreSession() {
 // ═══ SIDEBAR ═══
 const SECTIONS = [
   { id: 'dashboard-solo', label: 'Dashboard', icon: '⬛', solo: true, target: 'dashboard' },
-  { id: 'pipeline-solo', label: 'Pipeline', icon: '📈', solo: true, target: 'opportunites' },
+  { id: 'pipeline-solo', label: 'Pipeline', icon: '📈', solo: true, target: 'opportunites', rhAllowed: true },
   { id: 'oz-assure-solo', label: 'OZ Assure', solo: true, logo: true, target: 'oz-assure', signataireOnly: true },
   { id: 'vente', label: 'Vente', icon: '◈', sub: [
     { id: 'suivi', label: 'Suivi des affaires' },
@@ -506,7 +506,9 @@ function renderSidebar() {
   SECTIONS.forEach(sec => {
     if (sec.signataireOnly && (!currentUser || currentUser.role !== 'signataire')) return;
     if (sec.solo) {
-      if (rh) return; // Dashboard/Pipeline/OZ Assure : hors périmètre de la session RH
+      // Dashboard/OZ Assure : hors périmètre de la session RH. Pipeline reste visible (rhAllowed)
+      // mais s'affiche en lecture seule et sans chiffres — voir rhMode dans js/06.
+      if (rh && !sec.rhAllowed) return;
       const active = currentView === sec.target;
       if (sec.logo) {
         nav += `<button class="nav-solo-btn nav-solo-logo ${active ? 'active' : ''}" onclick="navigate('${sec.target}')" title="OZ Assure">

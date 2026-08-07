@@ -170,8 +170,9 @@ async function saveRappel() {
     } catch (e) { /* upload échoué, le rappel reste créé sans pièce jointe */ }
   }
 
-  // Création de l'événement Outlook correspondant (si une date d'échéance est définie)
-  if (created && created[0] && created[0].id && body.date_echeance) {
+  // Création de l'événement Outlook correspondant — dès qu'une date planifiée OU une échéance
+  // est définie (voir dateAgendaRappel() dans js/03 : priorité à la date planifiée).
+  if (created && created[0] && created[0].id && (body.date_echeance || body.date_planifiee)) {
     try {
       const eventId = await createOutlookEventFromRappel(created[0]);
       if (eventId) await dbPatch('rappels', created[0].id, { outlook_event_id: eventId });
@@ -1256,8 +1257,26 @@ async function saveRappelEdit() {
   };
   const btn = document.querySelector('.btn-save');
   btn.textContent = 'Enregistrement...'; btn.disabled = true;
+  const rappelAvant = allRappels.find(x => x.id === currentRappelId);
   const r = await dbPatch('rappels', currentRappelId, body);
   if (r && r.error) { showError('Erreur lors de la mise à jour: ' + errMsg(r)); btn.textContent = '💾 Enregistrer les modifications'; btn.disabled = false; return; }
+
+  // Synchro Outlook : crée l'événement s'il n'existait pas encore et qu'une date est
+  // maintenant définie, ou déplace l'événement existant si sa date a changé (demande de
+  // Jonathan le 07.08.2026 — les tâches planifiées doivent être visibles dans l'agenda,
+  // y compris après modification, pas seulement à la création).
+  try {
+    const dateEvenement = body.date_planifiee || body.date_echeance;
+    if (dateEvenement) {
+      if (rappelAvant && rappelAvant.outlook_event_id) {
+        await updateOutlookEventDate(rappelAvant.outlook_event_id, dateEvenement);
+      } else {
+        const eventId = await createOutlookEventFromRappel({ ...body, id: currentRappelId });
+        if (eventId) await dbPatch('rappels', currentRappelId, { outlook_event_id: eventId });
+      }
+    }
+  } catch (e) { /* synchro Outlook échouée, la modification reste enregistrée dans le CRM */ }
+
   allRappels = await dbGet('rappels', 'select=*');
   navigate('rappels');
 }

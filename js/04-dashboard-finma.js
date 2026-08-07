@@ -1373,7 +1373,7 @@ const ICONES_CATEGORIE_COUVERTURE = {
 // et le produit exact en petit sous le nom quand une couverture est active. Remplace l'ancien
 // système ✅/❌ texte brut — refonte demandée par Jonathan le 07.08.2026 ("plus joli et
 // professionnel", "intègre des pictogrammes").
-function carteCouverture(label, ok, detail) {
+function carteCouverture(label, ok, detail, police) {
   const icone = ICONES_CATEGORIE_COUVERTURE[label] || '📄';
   return `
     <div style="position:relative;background:${ok ? 'rgba(74,222,128,0.05)' : 'var(--surface)'};border:1px solid ${ok ? 'rgba(74,222,128,0.25)' : 'var(--border)'};border-radius:12px;padding:11px 13px;display:flex;align-items:center;gap:11px;min-height:56px">
@@ -1383,6 +1383,7 @@ function carteCouverture(label, ok, detail) {
         ${detail
           ? `<div style="font-size:10px;color:#4ade80;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px">${detail}</div>`
           : `<div style="font-size:10px;color:var(--text-muted);margin-top:2px">Non couvert</div>`}
+        ${ok && police ? `<div style="font-size:11px;font-weight:800;color:#fff;margin-top:2px">N° ${police}</div>` : ''}
       </div>
       ${ok ? `<div style="position:absolute;top:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:#4ade80;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#0b1220;box-shadow:0 0 0 2px var(--surface-alt)">✓</div>` : ''}
     </div>`;
@@ -1400,7 +1401,7 @@ function renderVueEnsembleCouvertures(client, contrats, isEntreprise) {
 
   const items = categories.map(cat => {
     const trouve = contratPourCategorie(cat);
-    return { label: cat, ok: !!trouve, detail: trouve ? trouve.produit : null };
+    return { label: cat, ok: !!trouve, detail: trouve ? trouve.produit : null, police: trouve ? trouve.numero_police : null };
   });
   const nbCouvertes = items.filter(i => i.ok).length;
   const ratioColor = nbCouvertes === 0 ? 'var(--text-muted)' : nbCouvertes === items.length ? '#4ade80' : '#f59e0b';
@@ -1419,7 +1420,7 @@ function renderVueEnsembleCouvertures(client, contrats, isEntreprise) {
         <div style="font-size:11px;font-weight:800;color:${ratioColor};background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:3px 11px">${nbCouvertes}/${items.length} actives</div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px">
-        ${items.map(i => carteCouverture(i.label, i.ok, i.detail)).join('')}
+        ${items.map(i => carteCouverture(i.label, i.ok, i.detail, i.police)).join('')}
       </div>
       ${cctBadge}
     </div>`;

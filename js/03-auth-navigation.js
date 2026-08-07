@@ -54,17 +54,27 @@ async function fetchCalendarEvents() {
 }
 
 // ═══ MICROSOFT GRAPH — SYNC RAPPELS → OUTLOOK ═══
+// Date utilisée pour l'événement Outlook d'une tâche/rappel : priorité à la date PLANIFIÉE
+// (le jour où on compte réellement s'en occuper — demande de Jonathan le 07.08.2026 : "les
+// tâches planifiées doivent être écrites dans mon agenda"), sinon repli sur l'échéance si aucune
+// date planifiée n'est renseignée.
+function dateAgendaRappel(rappel) {
+  return rappel.date_planifiee || rappel.date_echeance || null;
+}
+
 async function createOutlookEventFromRappel(rappel) {
-  if (!msalAccessToken || !rappel.date_echeance) return null;
+  const dateEvenement = dateAgendaRappel(rappel);
+  if (!msalAccessToken || !dateEvenement) return null;
   try {
     const client = rappel.client_id ? allClients.find(c => c.id === rappel.client_id) : null;
     const clientLine = client ? `Client : ${client.prenom} ${client.nom}\n` : '';
+    const icone = rappel.date_planifiee ? '📋' : '🔔';
     const body = {
-      subject: `🔔 ${rappel.titre}`,
+      subject: `${icone} ${rappel.titre}`,
       isAllDay: true,
-      start: { dateTime: rappel.date_echeance, timeZone: 'Europe/Zurich' },
-      end: { dateTime: rappel.date_echeance, timeZone: 'Europe/Zurich' },
-      body: { contentType: 'text', content: `${clientLine}Type : ${rappel.type || ''}\nUrgence : ${rappel.urgence || ''}\n\n${rappel.notes || ''}` },
+      start: { dateTime: dateEvenement, timeZone: 'Europe/Zurich' },
+      end: { dateTime: dateEvenement, timeZone: 'Europe/Zurich' },
+      body: { contentType: 'text', content: `${clientLine}Type : ${rappel.type || ''}\nUrgence : ${rappel.urgence || ''}${rappel.date_echeance && rappel.date_planifiee ? `\nÉchéance : ${fmtDate(rappel.date_echeance)}` : ''}\n\n${rappel.notes || ''}` },
     };
     const r = await fetch('https://graph.microsoft.com/v1.0/me/events', {
       method: 'POST',
@@ -75,6 +85,25 @@ async function createOutlookEventFromRappel(rappel) {
     const data = await r.json();
     return data.id || null;
   } catch(e) { console.error('Graph create event exception', e); return null; }
+}
+
+// Déplace un événement Outlook déjà créé sur une nouvelle date (ex: la date planifiée ou
+// l'échéance d'une tâche a été modifiée depuis sa fiche) — évite de laisser un événement
+// "fantôme" à l'ancienne date tout en créant un doublon à la nouvelle.
+async function updateOutlookEventDate(eventId, dateEvenement) {
+  if (!msalAccessToken || !eventId || !dateEvenement) return false;
+  try {
+    const r = await fetch(`https://graph.microsoft.com/v1.0/me/events/${eventId}`, {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        isAllDay: true,
+        start: { dateTime: dateEvenement, timeZone: 'Europe/Zurich' },
+        end: { dateTime: dateEvenement, timeZone: 'Europe/Zurich' },
+      }),
+    });
+    return r.ok;
+  } catch(e) { console.error('Graph update event exception', e); return false; }
 }
 
 async function deleteOutlookEvent(eventId) {

@@ -746,7 +746,11 @@ function basculerModeSignature(mode, clientId) {
   clearInterval(window._pollingSignatureInterval);
   const zone = document.getElementById('zone-mode-signature');
   if (mode === 'ici') {
+    const boutonVoirDocumentIci = (signatureContexteActuel && signatureContexteActuel.type === 'contrat' && signatureContexteActuel.documentPath)
+      ? `<button type="button" onclick="ouvrirPieceJointe('${signatureContexteActuel.documentPath}')" style="display:block;width:100%;margin-bottom:10px;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface-alt);color:var(--text);font-weight:700;font-size:11.5px;cursor:pointer">📄 Voir le document avant de faire signer</button>`
+      : '';
     zone.innerHTML = `
+      ${boutonVoirDocumentIci}
       <canvas id="canvas-signature" width="460" height="200" style="width:100%;height:200px;background:#fff;border-radius:9px;touch-action:none;cursor:crosshair;display:block"></canvas>
       <div style="display:flex;gap:10px;margin-top:12px">
         <button class="btn-secondary" onclick="effacerSignature()">🗑️ Effacer</button>
@@ -825,13 +829,30 @@ async function envoyerVersAutreAppareil(clientId, mode) {
   // Contexte figé dès l'ouverture du mode (avant tout await) : signatureContexteActuel pourrait
   // changer si l'utilisateur rouvre une autre modale entre-temps sur le même onglet.
   const contexteFige = signatureContexteActuel;
-  const r = await dbPost('signature_requests', {
-    token, client_id: clientId, client_nom: nomClient,
-    type: contexteFige ? contexteFige.type : null,
-    document_nom: contexteFige ? contexteFige.documentNom : null,
-  });
-  if (r && r.error) {
-    document.getElementById('zone-mode-signature').innerHTML = `<div style="color:#f87171;font-size:12.5px">Impossible de créer le lien de signature : ${errMsg(r)}</div>`;
+  // Insertion en fetch direct avec Prefer: return=minimal (plutôt que dbPost, qui demande
+  // return=representation) — corrige un bug du 07.08.2026 : la lecture de la ligne fraîchement
+  // insérée nécessite une policy SELECT, or celle-ci a été retirée pour le rôle anonyme lors du
+  // durcissement sécurité (elle exposait toutes les signatures à qui connaît la clé publique).
+  // Comme le token est déjà connu côté client (généré juste au-dessus), on n'a de toute façon
+  // pas besoin que le serveur nous renvoie la ligne — return=minimal évite complètement le
+  // problème, sans rouvrir l'accès en lecture anonyme.
+  let insertOk = false;
+  try {
+    const tokenAcces = await getValidAccessToken() || SUPABASE_KEY;
+    const resInsert = await fetch(`${SUPABASE_URL}/rest/v1/signature_requests`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${tokenAcces}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        token, client_id: clientId, client_nom: nomClient,
+        type: contexteFige ? contexteFige.type : null,
+        document_nom: contexteFige ? contexteFige.documentNom : null,
+        document_data: contexteFige ? (contexteFige.documentData || null) : null,
+      }),
+    });
+    insertOk = resInsert.ok;
+  } catch (e) { insertOk = false; }
+  if (!insertOk) {
+    document.getElementById('zone-mode-signature').innerHTML = `<div style="color:#f87171;font-size:12.5px">Impossible de créer le lien de signature — réessaie, ou contacte le support si le problème persiste.</div>`;
     return;
   }
 
@@ -874,7 +895,10 @@ async function envoyerVersAutreAppareil(clientId, mode) {
     let telClean = (c && c.mobile) ? c.mobile.replace(/[^\d]/g, '') : '';
     if (telClean.startsWith('00')) telClean = telClean.slice(2);
     if (telClean.startsWith('0')) telClean = '41' + telClean.slice(1); // 0791234567 → 41791234567 (CH par défaut)
-    const messageWhatsapp = `Bonjour${c && !estEntreprise(c) && c.prenom ? ' ' + c.prenom : ''}, voici le lien pour signer le mandat de courtage en ligne : ${lienSignature}`;
+    const estContratWa = contexteFige && contexteFige.type === 'contrat';
+    const messageWhatsapp = estContratWa
+      ? `Bonjour${c && !estEntreprise(c) && c.prenom ? ' ' + c.prenom : ''}, afin de valider la proposition d'assurance, veuillez signer dans l'encadré en suivant ce lien : ${lienSignature}`
+      : `Bonjour${c && !estEntreprise(c) && c.prenom ? ' ' + c.prenom : ''}, afin de valider votre mandat de courtage, veuillez signer dans l'encadré en suivant ce lien : ${lienSignature}`;
     const lienWhatsapp = `https://wa.me/${telClean}?text=${encodeURIComponent(messageWhatsapp)}`;
     zone.innerHTML = `
       <div style="text-align:center">
@@ -921,10 +945,19 @@ async function envoyerLienSignatureParEmail(clientId, lienSignature, emailDestin
   if (btn) { btn.textContent = 'Envoi en cours...'; btn.disabled = true; }
   const c = allClients.find(x => x.id === clientId);
   const nomClient = c ? (estEntreprise(c) ? c.nom : c.prenom) : '';
-  const contenu = `Bonjour ${nomClient || ''},\n\nMerci de signer votre mandat de courtage en suivant ce lien depuis votre téléphone ou votre ordinateur :\n\n${lienSignature}\n\nLa signature ne prend qu'une minute.\n\nMeilleures salutations,\nAssurex Sàrl`;
+  // Message adapté au contexte — mandat de courtage générique, ou validation d'un contrat/d'une
+  // proposition d'assurance uploadée (demande de Jonathan le 07.08.2026 : le mail ne doit plus
+  // toujours parler de "mandat" quand ce n'est pas le mandat de courtage qui est signé).
+  const estContrat = signatureContexteActuel && signatureContexteActuel.type === 'contrat';
+  const sujet = estContrat
+    ? `Signature — ${signatureContexteActuel.documentNom} — Assurex Sàrl`
+    : 'Signature de votre mandat de courtage — Assurex Sàrl';
+  const contenu = estContrat
+    ? `Bonjour ${nomClient || ''},\n\nAfin de valider la proposition d'assurance, veuillez signer dans l'encadré prévu à cet effet en suivant ce lien depuis votre téléphone ou votre ordinateur :\n\n${lienSignature}\n\nLa signature ne prend qu'une minute.\n\nMeilleures salutations,\nAssurex Sàrl`
+    : `Bonjour ${nomClient || ''},\n\nAfin de valider votre mandat de courtage, veuillez signer dans l'encadré prévu à cet effet en suivant ce lien depuis votre téléphone ou votre ordinateur :\n\n${lienSignature}\n\nLa signature ne prend qu'une minute.\n\nMeilleures salutations,\nAssurex Sàrl`;
   const body = {
     message: {
-      subject: 'Signature de votre mandat de courtage — Assurex Sàrl',
+      subject: sujet,
       body: { contentType: 'text', content: contenu },
       toRecipients: [{ emailAddress: { address: emailDestinataire } }],
     },
@@ -968,9 +1001,18 @@ async function afficherPageSignatureAutonome(token) {
   const titreAutonome = demande.type === 'contrat' && demande.document_nom
     ? `Signature — ${demande.document_nom}`
     : 'Signature du mandat de courtage';
+  // Le client doit pouvoir consulter le document avant de le signer — condition de base pour
+  // une signature électronique valable (demande de Jonathan le 07.08.2026 : "est-ce qu'il peut
+  // visualiser avant [de signer] ?"). Le PDF est embarqué en base64 dans document_data au moment
+  // de la création de la demande (voir confirmerUploadContratPuisSigner), justement pour rester
+  // consultable ici sans que ce client, non connecté, ait besoin d'un accès au stockage privé.
+  const boutonVoirDocument = demande.document_data
+    ? `<a href="${demande.document_data}" target="_blank" rel="noopener" style="display:block;margin-bottom:14px;padding:10px;border-radius:8px;border:1.5px solid #0f2244;color:#0f2244;font-weight:700;font-size:12.5px;text-decoration:none">📄 Voir le document avant de signer</a>`
+    : '';
   zone.innerHTML = `
     <div style="font-size:15px;font-weight:800;color:#0f2244;margin-bottom:4px">${titreAutonome}</div>
     <div style="font-size:12.5px;color:#666;margin-bottom:16px">${demande.client_nom || ''}</div>
+    ${boutonVoirDocument}
     <div style="font-size:11px;color:#888;margin-bottom:10px">Signez ci-dessous avec votre doigt</div>
     <canvas id="canvas-signature" width="340" height="180" style="width:100%;height:180px;background:#f8f8f8;border:1px solid #ddd;border-radius:9px;touch-action:none;display:block"></canvas>
     <div style="display:flex;gap:8px;margin-top:14px">
@@ -1254,8 +1296,14 @@ async function confirmerUploadContratPuisSigner(clientId) {
       body: file,
     });
     if (!uploadRes.ok) { erreurEl.textContent = "Erreur lors de l'envoi du fichier."; erreurEl.style.display = 'block'; if (btn) { btn.textContent = 'Continuer →'; btn.disabled = false; } return; }
+    const documentData = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = () => resolve(null);
+      reader.readAsDataURL(file);
+    });
     document.getElementById('modal-upload-contrat').remove();
-    ouvrirSignatureMandat(clientId, { type: 'contrat', documentNom: file.name, documentPath: path });
+    ouvrirSignatureMandat(clientId, { type: 'contrat', documentNom: file.name, documentPath: path, documentData });
   } catch (e) {
     erreurEl.textContent = "Erreur lors de l'envoi : " + e.message;
     erreurEl.style.display = 'block';

@@ -197,6 +197,7 @@ async function showClient(id) {
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
           ${badge(c.segment || 'Privé', isEntreprise ? '#f59e0b' : '#38bdf8')} ${badge(c.statut || 'prospect', statutColor(c.statut))}
+          ${badge(mandatsSignes.some(m => m.signe) ? '🖊️ Mandat signé' : '🖊️ Mandat non signé', mandatsSignes.some(m => m.signe) ? '#4ade80' : '#64748b')}
           <div style="display:flex;gap:4px;margin-left:6px">
             ${c.statut !== 'prospect' ? `<button onclick="changerStatutClient('${c.id}','prospect')" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:6px;padding:3px 9px;font-size:10.5px;cursor:pointer;font-weight:700">→ Prospect</button>` : ''}
             ${c.statut !== 'actif' ? `<button onclick="changerStatutClient('${c.id}','actif')" style="background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);color:#4ade80;border-radius:6px;padding:3px 9px;font-size:10.5px;cursor:pointer;font-weight:700">✓ Client actif</button>` : ''}

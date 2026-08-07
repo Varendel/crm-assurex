@@ -1241,7 +1241,54 @@ async function renderDemandeOffreLieeOpportunite(oppId) {
   // Bouton "Mettre à jour l'avancement" — version scopée à cette seule opportunité du bouton
   // "Synchroniser Outlook" du dashboard (mêmes règles : domaine expéditeur + date d'envoi).
   const boutonSyncOutlook = existantes && existantes.length ? `<button type="button" id="btn-sync-outlook-opp" onclick="synchroniserOutlookOpportunite('${oppId}')" title="Vérifie dans Outlook si une des compagnies sollicitées sur cette opportunité a répondu" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 16px;color:var(--text-muted);font-weight:700;font-size:13px;cursor:pointer">📧 Mettre à jour l'avancement (check Outlook)</button>` : '';
-  zone.innerHTML = renderEtatDossiers(existantes, 'opp', oppId) + `<div style="display:flex;gap:10px;flex-wrap:wrap">${boutonReprendre}${boutonNouvelle}${boutonSyncOutlook}</div>`;
+  // L'ancien État des dossiers (par compagnie) a été retiré d'ici — remplacé par le bloc
+  // "📧 Emails détectés" (rechercherEmailsOpportunite, plus haut sur la fiche). Ce span ne garde
+  // plus que les actions liées à la demande d'offre elle-même.
+  zone.innerHTML = `<div style="display:flex;gap:10px;flex-wrap:wrap">${boutonReprendre}${boutonNouvelle}${boutonSyncOutlook}</div>`;
+}
+
+// ═══ RELEVÉ SIMPLE DES EMAILS LIÉS À UNE OPPORTUNITÉ ═══
+// Remplace l'ancien "État des dossiers" structuré par compagnie (statuts envoyée/reçue/soumise
+// au client, boutons marquer reçue/joindre offre/signature) — décision de Jonathan le 07.08.2026 :
+// trop de friction, jamais assez clair à son goût (le destinataire et l'expéditeur des échanges
+// n'étaient jamais assez visibles). Approche radicalement plus simple : recherche Outlook (objet
+// + corps, envoyés ET reçus, toute la boîte, pas seulement Inbox) du nom du client/prospect lié à
+// l'opportunité, et affichage brut des correspondances trouvées — objet, expéditeur, destinataire,
+// date. Pas de statut à maintenir, pas de logique métier : juste la preuve brute des échanges.
+// Déclenché par bouton (pas automatique à l'ouverture de la fiche) pour ne pas ralentir l'ouverture
+// et ne pas multiplier les appels Graph à chaque clic sur une opportunité.
+async function rechercherEmailsOpportunite(oppId) {
+  const zone = document.getElementById('opp-emails-detectes');
+  if (!zone) return;
+  if (!msalAccessToken) { zone.innerHTML = '<div style="font-size:12px;color:var(--text-muted)">Connecte-toi à Outlook (bouton Microsoft dans le menu) pour chercher les emails.</div>'; return; }
+  const opp = allOpportunites.find(o => o.id === oppId);
+  if (!opp) return;
+  const client = opp.client_id ? allClients.find(c => c.id === opp.client_id) : null;
+  const nomRecherche = (client ? (estEntreprise(client) ? client.nom : `${client.prenom} ${client.nom}`) : (opp.prospect_nom || '')).trim();
+  if (!nomRecherche) { zone.innerHTML = '<div style="font-size:12px;color:var(--text-muted)">Aucun nom de client/prospect à rechercher sur cette opportunité.</div>'; return; }
+  zone.innerHTML = '<div style="font-size:12px;color:var(--text-muted)">Recherche en cours...</div>';
+  try {
+    const requete = encodeURIComponent('"' + nomRecherche.replace(/"/g, '') + '"');
+    const url = `https://graph.microsoft.com/v1.0/me/messages?$search=${requete}&$top=25&$select=subject,from,toRecipients,receivedDateTime,sentDateTime,webLink`;
+    const r = await fetch(url, { headers: { Authorization: `Bearer ${msalAccessToken}`, ConsistencyLevel: 'eventual' } });
+    if (r.status === 401) { zone.innerHTML = '<div style="font-size:12px;color:#f87171">Session Outlook expirée — reconnecte-toi (bouton Microsoft dans le menu) puis réessaie.</div>'; return; }
+    if (!r.ok) { zone.innerHTML = '<div style="font-size:12px;color:#f87171">Erreur lors de la recherche Outlook.</div>'; return; }
+    const data = await r.json();
+    const messages = (data.value || []).slice().sort((a, b) => new Date(b.sentDateTime || b.receivedDateTime || 0) - new Date(a.sentDateTime || a.receivedDateTime || 0));
+    if (!messages.length) { zone.innerHTML = `<div style="font-size:12px;color:var(--text-muted)">Aucun email trouvé mentionnant « ${nomRecherche.replace(/</g, '&lt;')} ».</div>`; return; }
+    zone.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px">${messages.map(m => {
+      const date = m.sentDateTime || m.receivedDateTime;
+      const de = ((m.from && m.from.emailAddress && (m.from.emailAddress.name || m.from.emailAddress.address)) || '—').replace(/</g, '&lt;');
+      const a = ((m.toRecipients && m.toRecipients[0] && m.toRecipients[0].emailAddress && (m.toRecipients[0].emailAddress.name || m.toRecipients[0].emailAddress.address)) || '—').replace(/</g, '&lt;');
+      return `<a href="${m.webLink || '#'}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px;text-decoration:none;color:inherit;flex-wrap:wrap">
+        <span style="font-size:10.5px;color:var(--text-muted);white-space:nowrap;flex-shrink:0">${fmtDate(date)}</span>
+        <span style="font-size:12.5px;font-weight:700;color:var(--text);flex:1;min-width:160px">${(m.subject || '(sans objet)').replace(/</g, '&lt;')}</span>
+        <span style="font-size:10.5px;color:var(--text-muted);white-space:nowrap">De : ${de} → À : ${a}</span>
+      </a>`;
+    }).join('')}</div>`;
+  } catch (e) {
+    zone.innerHTML = `<div style="font-size:12px;color:#f87171">Erreur : ${e.message}</div>`;
+  }
 }
 
 // Appelée par le bouton "Mettre à jour l'avancement (check Outlook)" sur la fiche opportunité —
@@ -1657,7 +1704,11 @@ function viewNouvelleOpportunite() {
   const compagniesConnues = getCompagniesConnues();
   const compagnieActuelle = opp?.compagnie || '';
   const compagnieEstAutre = compagnieActuelle && !compagniesConnues.includes(compagnieActuelle);
-  const blocDetails = sectionCard('Détails', '#f59e0b', `<div class="form-grid">
+  // "Contrat" — le formulaire d'affaire proprement dit (compagnie, produits, primes, stade...).
+  // Volontairement descendu tout en bas de la fiche (réorg du 07.08.2026, demande de Jonathan) :
+  // ce qui compte au quotidien (l'état des échanges, les tâches, l'historique, les notes) doit
+  // être visible sans scroller ; le formulaire d'affaire ne se consulte/modifie que ponctuellement.
+  const blocContrat = sectionCard('Contrat', '#f59e0b', `<div class="form-grid">
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Titre *</label><input class="form-input" id="o-titre" value="${qa(opp?.titre || (clientPrefille ? (estEntreprise(clientPrefille) ? clientPrefille.nom : clientPrefille.prenom + ' ' + clientPrefille.nom) + ' — ' : ''))}" placeholder="Ex: Assurance vie mixte 20 ans"/></div>
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Client (si déjà fiché)</label>
         <div style="position:relative">
@@ -1699,17 +1750,36 @@ function viewNouvelleOpportunite() {
         </div>
         <div id="o-commission-estimee" style="margin-top:10px;font-size:12px;color:var(--text-muted)"></div>
       </div>
-      <div class="form-field" style="grid-column:span 2"><label class="form-label">Notes</label><textarea class="form-input" id="o-notes" rows="3" style="resize:vertical">${opp?.notes || ''}</textarea></div>
     </div>`);
+  // "Notes" — sortie du formulaire "Contrat" et remontée tout en haut avec les tâches/état/
+  // historique (demande de Jonathan le 07.08.2026), pour rester visible sans avoir à dérouler
+  // tout le formulaire d'affaire. L'id #o-notes est inchangé — saveOpportunite() continue de
+  // fonctionner sans modification.
+  const blocNotes = sectionCard('Notes', '#64748b', `<div class="form-field"><textarea class="form-input" id="o-notes" rows="4" style="resize:vertical;width:100%">${opp?.notes || ''}</textarea></div>`);
+  // "Emails détectés" — remplace entièrement l'ancien "État des dossiers" (compagnies_envoi,
+  // statuts envoyée/reçue/soumise au client, boutons marquer reçue/joindre offre/signature —
+  // décision de Jonathan le 07.08.2026 : trop de friction, jamais assez clair). Approche radicale-
+  // ment plus simple : recherche Outlook (objet + corps, envoyés et reçus, toute la boîte) du nom
+  // du client/prospect lié, affichage brut des correspondances (objet, expéditeur, destinataire,
+  // date) — voir rechercherEmailsOpportunite() plus bas dans ce fichier. Uniquement sur la fiche
+  // opportunité (pas sur la fiche client — demande explicite). Déclenché par bouton, pas
+  // automatiquement à l'ouverture (coût d'appel Graph, cohérent avec "Synchroniser Outlook").
+  const blocEtatEmails = opp ? sectionCard('📧 Emails détectés', '#38bdf8', `
+    <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:10px">Recherche dans Outlook (envoyés et reçus) tout email mentionnant le nom du client/prospect de cette opportunité.</div>
+    <button type="button" onclick="rechercherEmailsOpportunite('${opp.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:8px;padding:8px 16px;font-size:12.5px;font-weight:700;cursor:pointer;margin-bottom:10px">🔍 Chercher les emails</button>
+    <div id="opp-emails-detectes"></div>
+  `) : '';
   const blocTaches = opp ? sectionCard('Tâches', '#4ade80', renderTachesOpportunite(opp)) : '';
   const blocHistorique = opp ? sectionCard('Historique', '#a78bfa', renderHistoriqueOpportunite(opp)) : '';
   return `
     <button onclick="opportuniteEnEditionId=null;navigate('opportunites')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">${opp ? 'Modifier l\u2019opportunité' : 'Nouvelle opportunité'}</h2>
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">${opp ? 'Modifier l’opportunité' : 'Nouvelle opportunité'}</h2>
       ${clientFiche ? `<span onclick="showClient('${clientFiche.id}')" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--surface-alt);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11.5px;font-weight:700;color:var(--accent)">👤 Fiche client : ${estEntreprise(clientFiche) ? clientFiche.nom : `${clientFiche.prenom} ${clientFiche.nom}`} →</span>` : ''}
     </div>
-    ${opp ? `${blocTaches}${blocHistorique}${blocDetails}` : blocDetails}
+    ${opp ? `${blocEtatEmails}${blocTaches}${blocHistorique}` : ''}
+    ${blocNotes}
+    ${blocContrat}
     <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;align-items:center">
       ${opp ? `<span id="opp-demande-offre-liee" style="display:flex;gap:10px;flex-wrap:wrap"></span>` : ''}
       ${opp ? `<button onclick="supprimerOpportunite('${opp.id}')" style="background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>` : ''}

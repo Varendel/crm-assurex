@@ -138,7 +138,10 @@ async function showClient(id) {
   renderSidebar();
   const main = document.getElementById('main-content');
   main.innerHTML = '<div class="loader">Chargement...</div>';
-  const [clients, contrats, rappels, collaborateurs, factures, postits, bilansPrevoyance, mandatsSignes, demandesOffre] = await Promise.all([
+  // État des dossiers (demandes_offre) retiré de la fiche client le 07.08.2026 (demande de
+  // Jonathan) — ce suivi vit désormais uniquement sur la fiche opportunité (bloc "📧 Emails
+  // détectés"), donc plus besoin de charger demandes_offre ici.
+  const [clients, contrats, rappels, collaborateurs, factures, postits, bilansPrevoyance, mandatsSignes] = await Promise.all([
     dbGet('clients', `id=eq.${id}&select=*`),
     dbGet('contrats', `client_id=eq.${id}&select=*`),
     dbGet('rappels', `client_id=eq.${id}&select=*`),
@@ -147,7 +150,6 @@ async function showClient(id) {
     dbGet('postits', `client_id=eq.${id}&select=*&order=created_at.asc`),
     getBilansPrevoyanceClient(id),
     getMandatsSignesClient(id),
-    dbGet('demandes_offre', `client_id=eq.${id}&select=*&order=created_at.desc`),
   ]);
   const c = clients[0];
   if (!c) { main.innerHTML = '<div class="loader">Client introuvable.</div>'; return; }
@@ -230,7 +232,6 @@ async function showClient(id) {
           </span>`).join('')}
         </div>`;
       })()}
-      ${renderEtatDossiers(demandesOffre, 'client', id)}
       ${renderVueEnsembleCouvertures(c, contrats, isEntreprise)}
       ${(() => { const signataire = allAgents.find(a => a.role === 'signataire'); return signataire ? `<div style="display:flex;align-items:center;gap:12px;padding:10px 16px;background:var(--surface-alt);border-radius:10px;margin-bottom:8px">
         ${avatar(signataire, 32)}

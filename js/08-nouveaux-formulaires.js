@@ -343,6 +343,36 @@ async function marquerCompagnieRecue(demandeOffreId, idx, refreshType, refreshId
   }
 }
 
+// ═══ MARQUER UNE OFFRE REÇUE COMME "SOUMISE AU CLIENT" ═══
+// Étape distincte de la réception compagnie (statut 'reçue') : trace le moment où Jonathan a
+// effectivement présenté/transmis l'offre reçue au client (demande explicite de Jonathan le
+// 07.08.2026 — il voulait pouvoir distinguer "la compagnie m'a envoyé l'offre" de "j'ai soumis
+// cette offre au client"). N'a de sens qu'une fois l'offre reçue de la compagnie.
+async function marquerOffreSoumiseClient(demandeOffreId, idx, refreshType, refreshId) {
+  try {
+    const rows = await dbGet('demandes_offre', `id=eq.${demandeOffreId}&select=id,opportunite_id,compagnies_envoi`);
+    const d = Array.isArray(rows) && rows[0];
+    if (!d) throw new Error("Demande d'offre introuvable");
+    const compagniesEnvoi = (d.compagnies_envoi || []).map(e => ({ ...e }));
+    if (!compagniesEnvoi[idx]) throw new Error('Compagnie introuvable sur ce dossier');
+    const maintenant = new Date().toISOString();
+    compagniesEnvoi[idx].soumis_client = true;
+    compagniesEnvoi[idx].soumis_client_le = maintenant;
+    const r = await dbPatch('demandes_offre', demandeOffreId, { compagnies_envoi: compagniesEnvoi });
+    if (r && r.error) throw new Error(errMsg(r));
+
+    logAction('marquer_offre_soumise_client', 'demandes_offre', demandeOffreId, compagniesEnvoi[idx].compagnie);
+    if (d.opportunite_id) {
+      await ajouterLigneHistoriqueOpportunite(d.opportunite_id, `📨 Offre soumise au client — ${compagniesEnvoi[idx].compagnie} — ${fmtDate(maintenant)}`);
+    }
+    showError('✓ Marquée comme soumise au client.');
+    if (refreshType === 'client' && refreshId) showClient(refreshId);
+    else if (refreshType === 'opp' && refreshId) renderDemandeOffreLieeOpportunite(refreshId);
+  } catch (e) {
+    showError('Erreur : ' + e.message);
+  }
+}
+
 // ═══ PRÉPARATION DE L'ENVOI POUR SIGNATURE — depuis une offre reçue et uploadée ═══
 // Réutilise tel quel le système de mandat de courtage existant (lien/QR/mobile/e-mail, capture
 // tactile) — voir ouvrirSignatureMandat() dans js/05-contrats-clients.js. Nécessite un client

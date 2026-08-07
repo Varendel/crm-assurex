@@ -1353,6 +1353,42 @@ function renderClientsTable() {
 // pertinentes pour son segment (privé ou entreprise), avec ✅/❌ selon qu'un contrat actif existe ou non.
 // S'adapte automatiquement : un privé voit RC privée/Ménage/Véhicule/Prévoyance/Santé..., une entreprise
 // voit RC entreprise/LAA/LPP collective/PGM/Bâtiment commercial..., sans avoir à ouvrir chaque contrat.
+// Pictogramme représentatif par catégorie — purement décoratif (aucune logique métier dessus),
+// pensé pour qu'un client ou collaborateur reconnaisse la branche d'un coup d'œil sans lire le
+// libellé complet. Fallback '📄' si une nouvelle catégorie catalogue n'a pas encore son icône ici.
+const ICONES_CATEGORIE_COUVERTURE = {
+  'Responsabilité civile': '🛡️',
+  'Ménage / habitation': '🏡',
+  'Caution de loyer': '🔑',
+  'Bâtiment': '🏢',
+  'Véhicule': '🚗',
+  'Protection juridique': '⚖️',
+  'Prévoyance': '🌱',
+  'Santé': '➕',
+  'Assurances de personnes (entreprise)': '👥',
+  'Entreprise — risques spécifiques': '🏭',
+};
+
+// Une "carte" par catégorie plutôt qu'une ligne de tableau : pictogramme dans un badge rond
+// (plein et coché en vert si couvert, contour pointillé et estompé sinon), nom de la catégorie,
+// et le produit exact en petit sous le nom quand une couverture est active. Remplace l'ancien
+// système ✅/❌ texte brut — refonte demandée par Jonathan le 07.08.2026 ("plus joli et
+// professionnel", "intègre des pictogrammes").
+function carteCouverture(label, ok, detail) {
+  const icone = ICONES_CATEGORIE_COUVERTURE[label] || '📄';
+  return `
+    <div style="position:relative;background:${ok ? 'rgba(74,222,128,0.05)' : 'var(--surface)'};border:1px solid ${ok ? 'rgba(74,222,128,0.25)' : 'var(--border)'};border-radius:12px;padding:11px 13px;display:flex;align-items:center;gap:11px;min-height:56px">
+      <div style="width:36px;height:36px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:17px;background:${ok ? 'rgba(74,222,128,0.16)' : 'var(--surface-alt)'};border:1px ${ok ? 'solid rgba(74,222,128,0.35)' : 'dashed var(--border)'};${ok ? '' : 'filter:grayscale(35%);opacity:0.6'}">${icone}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12.5px;font-weight:700;color:var(--text)">${label}</div>
+        ${detail
+          ? `<div style="font-size:10px;color:#4ade80;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px">${detail}</div>`
+          : `<div style="font-size:10px;color:var(--text-muted);margin-top:2px">Non couvert</div>`}
+      </div>
+      ${ok ? `<div style="position:absolute;top:-6px;right:-6px;width:17px;height:17px;border-radius:50%;background:#4ade80;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:900;color:#0b1220;box-shadow:0 0 0 2px var(--surface-alt)">✓</div>` : ''}
+    </div>`;
+}
+
 function renderVueEnsembleCouvertures(client, contrats, isEntreprise) {
   const segment = isEntreprise ? 'entreprise' : 'prive';
   const categories = getCategoriesPourSegment(segment).filter(cat => cat !== 'Autre');
@@ -1367,29 +1403,26 @@ function renderVueEnsembleCouvertures(client, contrats, isEntreprise) {
     const trouve = contratPourCategorie(cat);
     return { label: cat, ok: !!trouve, detail: trouve ? trouve.produit : null };
   });
+  const nbCouvertes = items.filter(i => i.ok).length;
+  const ratioColor = nbCouvertes === 0 ? 'var(--text-muted)' : nbCouvertes === items.length ? '#4ade80' : '#f59e0b';
 
-  const ligne = (label, ok, detail) => `
-    <div style="display:flex;align-items:flex-start;gap:10px;padding:8px 6px;border-bottom:1px solid var(--border)">
-      <span style="font-size:14px;width:18px;text-align:center;flex-shrink:0;margin-top:1px">${ok ? '✅' : '❌'}</span>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:12.5px;font-weight:700;color:var(--text)">${label}</div>
-        ${detail ? `<div style="font-size:10px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${detail}</div>` : ''}
-      </div>
-    </div>`;
-
-  const cctLigne = isEntreprise ? `
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 6px;margin-top:2px;border-top:1px solid var(--border)">
-      <span style="font-size:14px;width:18px;text-align:center;flex-shrink:0">${client.cct ? '✓' : '—'}</span>
-      <div style="font-size:12.5px;font-weight:700;color:var(--text)">Soumis à une CCT</div>
+  const cctBadge = isEntreprise ? `
+    <div style="display:inline-flex;align-items:center;gap:7px;background:${client.cct ? 'rgba(74,222,128,0.1)' : 'var(--surface)'};border:1px solid ${client.cct ? 'rgba(74,222,128,0.3)' : 'var(--border)'};border-radius:20px;padding:5px 12px;margin-top:12px;font-size:11.5px;font-weight:700;color:${client.cct ? '#4ade80' : 'var(--text-muted)'}">
+      <span>🤝</span> Soumis à une CCT ${client.cct ? '— oui' : '— non'}
     </div>` : '';
 
   return `
-    <div style="background:var(--surface-alt);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:16px">
-      <div style="font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.3px;margin-bottom:8px">Couvertures — vue d'ensemble</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:0 24px">
-        ${items.map(i => ligne(i.label, i.ok, i.detail)).join('')}
+    <div style="background:var(--surface-alt);border:1px solid var(--border);border-radius:14px;padding:18px 20px;margin-bottom:16px">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+        <div style="font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:7px">
+          <span style="font-size:14px">🧭</span> Couvertures — vue d'ensemble
+        </div>
+        <div style="font-size:11px;font-weight:800;color:${ratioColor};background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:3px 11px">${nbCouvertes}/${items.length} actives</div>
       </div>
-      ${cctLigne}
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px">
+        ${items.map(i => carteCouverture(i.label, i.ok, i.detail)).join('')}
+      </div>
+      ${cctBadge}
     </div>`;
 }
 

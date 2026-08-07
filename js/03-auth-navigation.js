@@ -478,8 +478,8 @@ const SECTIONS = [
     { id: 'clients-prives', label: 'Clients privés', rhAllowed: true },
     { id: 'clients-entreprises', label: 'Entreprises', rhAllowed: true },
     { id: 'clients-oz', label: 'Clients OZ Assure', staff: true },
-    { id: 'volume-primes', label: 'Volume de primes', staff: true },
-    { id: 'tous-contrats', label: 'Tous les contrats' },
+    { id: 'volume-primes', label: 'Volume de primes', staff: true, rhAllowed: true },
+    { id: 'tous-contrats', label: 'Tous les contrats', rhAllowed: true },
     { id: 'recherche-vehicules', label: '🚗 Recherche véhicules' },
   ]},
   { id: 'compta', label: 'Comptabilité', icon: '◎', sub: [

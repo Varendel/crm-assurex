@@ -952,8 +952,8 @@ function showDetailContrat(contratId) {
           </div>
         </div>
 
-        <!-- Commission -->
-        ${commission ? `<div style="background:${commission.statut==='en_attente'?'rgba(245,158,11,0.08)':commission.statut==='annulé'?'rgba(248,113,113,0.08)':'rgba(74,222,128,0.08)'};border:1px solid ${commission.statut==='en_attente'?'rgba(245,158,11,0.2)':commission.statut==='annulé'?'rgba(248,113,113,0.2)':'rgba(74,222,128,0.2)'};border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between">
+        <!-- Commission — masqué pour la session RH (hors périmètre financier) -->
+        ${estRoleRH() ? '' : (commission ? `<div style="background:${commission.statut==='en_attente'?'rgba(245,158,11,0.08)':commission.statut==='annulé'?'rgba(248,113,113,0.08)':'rgba(74,222,128,0.08)'};border:1px solid ${commission.statut==='en_attente'?'rgba(245,158,11,0.2)':commission.statut==='annulé'?'rgba(248,113,113,0.2)':'rgba(74,222,128,0.2)'};border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between">
           <div>
             <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">Commission</div>
             <div style="font-size:13px;font-weight:700;color:var(--text)">${commission.detail_calcul ? commission.detail_calcul.split('[')[0].trim() : '—'}</div>
@@ -962,7 +962,7 @@ function showDetailContrat(contratId) {
             <div style="font-size:16px;font-weight:900;color:#f59e0b">CHF ${fmtCHF(Number(commission.montant_estime||0))}</div>
             <div>${badge(statutCommissionLabel(commission.statut), statutCommissionColor(commission.statut))}</div>
           </div>
-        </div>` : `<div style="background:var(--surface-alt);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--text-muted)">${ct.commissionne === false ? '⚠️ Contrat non commissionné (hors convention)' : 'Aucune commission liée à ce contrat'}</div>`}
+        </div>` : `<div style="background:var(--surface-alt);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--text-muted)">${ct.commissionne === false ? '⚠️ Contrat non commissionné (hors convention)' : 'Aucune commission liée à ce contrat'}</div>`)}
 
         <!-- Police PDF -->
         <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface-alt);border-radius:10px">
@@ -1115,11 +1115,11 @@ function viewTousContrats() {
         <option value="résilié">Résilié</option>
         <option value="renouveler">À renouveler</option>
       </select>
-      <select class="form-select" id="tc-comm" style="max-width:160px" onchange="renderTousContrats()">
+      ${estRoleRH() ? '' : `<select class="form-select" id="tc-comm" style="max-width:160px" onchange="renderTousContrats()">
         <option value="">Commissionné/Non</option>
         <option value="oui">Commissionné</option>
         <option value="non">Non commissionné</option>
-      </select>
+      </select>`}
     </div>
     <div id="tc-stats" class="stat-grid" style="margin-bottom:16px"></div>
     <div id="tc-body"></div>`;

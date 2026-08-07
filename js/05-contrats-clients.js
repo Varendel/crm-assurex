@@ -942,8 +942,8 @@ function basculerModeSignature(mode, clientId) {
 // Attache le mécanisme de dessin à un canvas de signature (id="canvas-signature") —
 // utilisé à la fois pour la signature directe sur PC et pour la page autonome sur téléphone.
 // Pointer events unifie souris/doigt/stylet en un seul mécanisme.
-function initCanvasSignature() {
-  const canvas = document.getElementById('canvas-signature');
+function initCanvasSignature(canvasId = 'canvas-signature') {
+  const canvas = document.getElementById(canvasId);
   if (!canvas) return;
   const ctx = canvas.getContext('2d');
   ctx.strokeStyle = '#0f2244';
@@ -973,8 +973,8 @@ function initCanvasSignature() {
   ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => canvas.addEventListener(ev, () => { enTrainDeDessiner = false; }));
 }
 
-function effacerSignature() {
-  const canvas = document.getElementById('canvas-signature');
+function effacerSignature(canvasId = 'canvas-signature') {
+  const canvas = document.getElementById(canvasId);
   if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
 }
 
@@ -1262,6 +1262,13 @@ function genererMandatCourtage(clientId, signatureDataUrl) {
     contactEntreprise: isEnt ? (c.prenom || '') : '',
   };
 
+  // Signature du mandataire (Jonathan/Assurex) enregistrée une fois dans Paramètres → Agents
+  // (voir enregistrerMaSignature, js/10) et reprise automatiquement sur tous les mandats générés,
+  // avec la date du jour — demande de Jonathan le 07.08.2026 : ne plus avoir à signer à la main
+  // à chaque mandat.
+  const agentSignataire = allAgents.find(a => a.role === 'signataire');
+  const signatureMandataire = agentSignataire ? agentSignataire.signature_image : null;
+
   const win = window.open('', '_blank');
   const contenuMandatHtml = `<html><head><meta charset="utf-8"><title>Mandat de courtage — ${isEnt ? champs.societe : champs.prenom + ' ' + champs.nom}</title><style>
     body{font-family:Arial,sans-serif;padding:35px;color:#1a1a1a;font-size:12.5px;line-height:1.5}
@@ -1341,11 +1348,11 @@ function genererMandatCourtage(clientId, signatureDataUrl) {
       <li>Entrée en vigueur du mandat : à la date de signature.</li>
     </ol>
 
-    <p>Fait en deux exemplaires, à _________________________, le _________________________.</p>
+    <p>Fait en deux exemplaires, à St-Sulpice, le ${fmtDate(new Date().toISOString())}.</p>
 
     <div class="signatures">
       <div><strong>Signature du mandant</strong>${signatureDataUrl ? `<div style="margin-top:8px"><img src="${signatureDataUrl}" style="max-height:60px;max-width:220px;display:block"/></div><div class="ligne-signature" style="margin-top:6px">Le mandant</div>` : `<div class="ligne-signature">Le mandant</div>`}</div>
-      <div><strong>Signature du mandataire (ASSUREX Sàrl)</strong><div class="ligne-signature">Le mandataire</div></div>
+      <div><strong>Signature du mandataire (ASSUREX Sàrl)</strong>${signatureMandataire ? `<div style="margin-top:8px"><img src="${signatureMandataire}" style="max-height:60px;max-width:220px;display:block"/></div><div class="ligne-signature" style="margin-top:6px">Le mandataire</div>` : `<div class="ligne-signature">Le mandataire</div>`}</div>
     </div>
 
     <div class="footer">ASSUREX Sàrl – Rue du Centre 142, 1025 St-Sulpice – Autorisation FINMA F01492173</div>
@@ -1375,7 +1382,7 @@ function genererMandatCourtage(clientId, signatureDataUrl) {
 
     <div class="signatures">
       <div><strong>Signature du mandant</strong>${signatureDataUrl ? `<div style="margin-top:8px"><img src="${signatureDataUrl}" style="max-height:60px;max-width:220px;display:block"/></div><div class="ligne-signature" style="margin-top:6px">Le mandant</div>` : `<div class="ligne-signature">Le mandant</div>`}</div>
-      <div><strong>Signature du mandataire (ASSUREX Sàrl)</strong><div class="ligne-signature">Le mandataire</div></div>
+      <div><strong>Signature du mandataire (ASSUREX Sàrl)</strong>${signatureMandataire ? `<div style="margin-top:8px"><img src="${signatureMandataire}" style="max-height:60px;max-width:220px;display:block"/></div><div class="ligne-signature" style="margin-top:6px">Le mandataire</div>` : `<div class="ligne-signature">Le mandataire</div>`}</div>
     </div>
 
     <div class="footer">ASSUREX Sàrl – Rue du Centre 142, 1025 St-Sulpice – Autorisation FINMA F01492173</div>

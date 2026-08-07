@@ -1358,12 +1358,59 @@ function viewAgents() {
             <div style="color:#4ade80;font-size:14px;font-weight:800">CHF ${fmtCHF(Math.round(commGeneree))}</div>
           </div>
         </div>
+        ${a.email === currentUser.email ? `
+        <div style="margin-top:14px;background:var(--surface-alt);border-radius:10px;padding:16px">
+          <div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:8px">✍️ Ma signature — reprise automatiquement sur les mandats de courtage</div>
+          ${a.signature_image ? `
+            <img src="${a.signature_image}" style="max-height:60px;max-width:220px;background:#fff;border-radius:6px;padding:6px;display:block;margin-bottom:10px"/>
+            <button class="btn-secondary" onclick="ouvrirModaleMaSignature('${a.id}')">✏️ Redessiner</button>
+          ` : `
+            <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:10px">Aucune signature enregistrée — une fois enregistrée, elle sera ajoutée automatiquement (avec la date du jour) sur tous les mandats de courtage générés.</div>
+            <button class="btn-save" onclick="ouvrirModaleMaSignature('${a.id}')">✍️ Enregistrer ma signature</button>
+          `}
+        </div>` : ''}
       </div>`;
     }).join('')}
     ${currentUser.role === 'signataire' ? `<button class="btn-save" style="margin-top:4px" onclick="navigate('nouveau-agent')">+ Ajouter un agent</button>` : ''}
     <div style="margin-top:20px">
       <button onclick="logout()" style="background:var(--red-dim);color:var(--red);border:1px solid rgba(248,113,113,0.3);border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer">🚪 Se déconnecter</button>
     </div>`;
+}
+
+// ═══ SIGNATURE DE L'AGENT (Jonathan) — enregistrée une fois, reprise automatiquement sur les
+// mandats de courtage générés (js/05, genererMandatCourtage). Réutilise le même mécanisme de
+// canvas que la capture de signature client (initCanvasSignature/effacerSignature, js/05),
+// avec un id de canvas distinct pour ne jamais interférer avec une signature en cours ailleurs.
+function ouvrirModaleMaSignature(agentId) {
+  creerModale('modal-ma-signature', `
+    <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:480px;width:100%">
+      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">✍️ Ma signature</div>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">Dessine ta signature ci-dessous — elle sera reprise automatiquement sur tous les mandats de courtage générés (côté « Le mandataire »), avec la date du jour.</div>
+      <canvas id="canvas-signature-agent" width="460" height="200" style="width:100%;height:200px;background:#fff;border-radius:9px;touch-action:none;cursor:crosshair;display:block"></canvas>
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button class="btn-secondary" onclick="effacerSignature('canvas-signature-agent')">🗑️ Effacer</button>
+        <button class="btn-secondary" onclick="document.getElementById('modal-ma-signature').remove()">Annuler</button>
+        <button class="btn-save" onclick="enregistrerMaSignature('${agentId}')" style="margin-left:auto">✓ Enregistrer</button>
+      </div>
+    </div>`, { opacite: 0.8, padding: '16px', overflowY: false });
+  initCanvasSignature('canvas-signature-agent');
+}
+
+async function enregistrerMaSignature(agentId) {
+  const canvas = document.getElementById('canvas-signature-agent');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+  const aDessine = pixels.some((v, i) => i % 4 === 3 && v > 0);
+  if (!aDessine) { showError('Dessine ta signature avant d\'enregistrer.'); return; }
+  const signatureDataUrl = canvas.toDataURL('image/png');
+  const r = await dbPatch('agents', agentId, { signature_image: signatureDataUrl });
+  if (r && r.error) { showError('Erreur lors de l\'enregistrement : ' + errMsg(r)); return; }
+  const agent = allAgents.find(a => a.id === agentId);
+  if (agent) agent.signature_image = signatureDataUrl;
+  document.getElementById('modal-ma-signature')?.remove();
+  showError('✓ Signature enregistrée — elle apparaîtra désormais sur tes mandats de courtage.');
+  navigate('agents');
 }
 
 function toggleTauxLibre(id) {

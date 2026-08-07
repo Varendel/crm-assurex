@@ -1,4 +1,5 @@
 function viewNouveauRappel() {
+  const rh = estRoleRH();
   const agentOptions = allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
   const prefill = window._prefillRappelDepuisPostit || null;
   window._prefillRappelDepuisPostit = null; // évite qu'un rechargement ultérieur du formulaire ne le réutilise par erreur
@@ -10,7 +11,7 @@ function viewNouveauRappel() {
   const natureTache = !!clientPrefillId;
   return `
     <button onclick="navigate('rappels')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
-    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouvelle tâche / rappel</h2>
+    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">${rh ? 'Nouvelle tâche pour Jonathan' : 'Nouvelle tâche / rappel'}</h2>
     ${sectionCard('Nature', '#4ade80', `<div class="form-grid">
       <div class="form-field" style="grid-column:span 2">
         <label class="form-label">Type d'élément *</label>
@@ -29,7 +30,7 @@ function viewNouveauRappel() {
       <div class="form-field"><label class="form-label">Urgence</label><select class="form-select" id="r-urgence" onchange="updateRappelIntelligentPreview()"><option value="basse">Basse</option><option value="moyenne">Moyenne</option><option value="haute">Haute</option></select></div>
       <div class="form-field"><label class="form-label">Date planifiée (quand tu comptes t'en occuper)</label><input class="form-input" id="r-date-planifiee" type="date"/></div>
       <div class="form-field"><label class="form-label">Date échéance (limite)</label><input class="form-input" id="r-date" type="date" onchange="updateRappelIntelligentPreview()"/></div>
-      <div class="form-field"><label class="form-label">Assigné à</label><select class="form-select" id="r-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
+      <div class="form-field" style="${rh ? 'display:none' : ''}"><label class="form-label">Assigné à</label><select class="form-select" id="r-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
     </div>`)}
     <div id="r-checklist-section" style="display:${natureTache ? 'block' : 'none'}">
       ${sectionCard('Étapes de la tâche', '#f59e0b', `
@@ -117,6 +118,7 @@ function renderEtapesLocales() {
 }
 
 async function saveRappel() {
+  const rh = estRoleRH();
   const titre = document.getElementById('r-titre').value.trim();
   if (!titre) { alert('Titre obligatoire.'); return; }
   const body = {
@@ -129,9 +131,10 @@ async function saveRappel() {
     urgence: document.getElementById('r-urgence').value,
     date_echeance: document.getElementById('r-date').value || null,
     date_planifiee: document.getElementById('r-date-planifiee') ? (document.getElementById('r-date-planifiee').value || null) : null,
-    apporteur_id: document.getElementById('r-agent').value || null,
+    apporteur_id: rh ? (allAgents.find(a => a.role === 'signataire')?.id || null) : (document.getElementById('r-agent').value || null),
     notes: document.getElementById('r-notes').value || null,
     statut: 'ouvert',
+    ...(rh ? { cree_par: `${currentUser.prenom} ${currentUser.nom}`.trim() } : {}),
   };
   const btn = document.querySelector('.btn-save');
   btn.textContent = 'Enregistrement...'; btn.disabled = true;
@@ -1146,6 +1149,10 @@ function showRappel(id) {
   renderSidebar();
   const r = allRappels.find(x => x.id === id);
   if (!r) { return; }
+  if (!estRoleRH() && r.cree_par && !r.notif_vue) {
+    r.notif_vue = true;
+    dbPatch('rappels', id, { notif_vue: true }).catch(() => {});
+  }
   const client = allClients.find(c => c.id === r.client_id);
   const clientNom = client ? (estEntreprise(client) ? client.nom : `${client.prenom} ${client.nom}`) : '';
   const agentOptions = allAgents.map(a => `<option value="${a.id}" ${a.id === r.apporteur_id ? 'selected' : ''}>${a.prenom} ${a.nom}</option>`).join('');

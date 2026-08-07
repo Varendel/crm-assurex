@@ -181,6 +181,7 @@ async function showClient(id) {
         <button onclick="toggleEditClient()" style="background:${editingClient ? 'var(--red-dim)' : 'var(--surface)'};border:1px solid ${editingClient ? 'rgba(248,113,113,0.3)' : 'var(--border)'};border-radius:8px;padding:7px 16px;color:${editingClient ? 'var(--red)' : 'var(--text-muted)'};font-size:12px;font-weight:700;cursor:pointer">${editingClient ? '✕ Annuler' : '✏️ Modifier'}</button>
         <button onclick="ouvrirSignatureMandat('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📄 Mandat de courtage</button>
         <button onclick="ouvrirUploadContratSignature('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📎 Faire signer un contrat</button>
+        <button onclick="ouvrirModaleResiliation('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📝 Feuille de résiliation</button>
         <button onclick="prefillOpportuniteClientId='${c.id}'; opportuniteEnEditionId=null; navigate('nouvelle-opportunite')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:7px 16px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">🎯 Créer une opportunité</button>
         <button onclick="prefillDemandeOffreClientId='${c.id}'; navigate('nouvelle-demande-offre')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📝 Demande d'offre</button>
         ${estEntreprise(c) ? `<button onclick="genererFicheDemandeOffre('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🖨️ Fiche papier (demande d'offre)</button>` : ''}
@@ -716,6 +717,140 @@ async function changerAgentClient(clientId, agentId) {
 // signature », au-delà du seul mandat de courtage à texte fixe).
 let signatureContexteActuel = null;
 
+// ═══ FEUILLE DE RÉSILIATION — génération + signature via le même système que les contrats/mandats ═══
+// Demande de Jonathan le 07.08.2026 : bouton sur la fiche client pour générer une lettre de
+// résiliation (LAMal, LCA, vie liée 3A, vie libre 3B) avec les coordonnées du client reprises
+// automatiquement, puis faire signer via les 4 canaux existants (ici, QR/lien, e-mail, WhatsApp).
+// Réutilise ouvrirSignatureMandat() avec contexte.type = 'resiliation' — contenuCorps porte le
+// texte de la lettre (sans l'entête HTML complète), documentData porte une URL data:text/html
+// pour la prévisualisation (côté staff ET côté client à distance, sans compte).
+const RESILIATION_TYPES = [
+  { id: 'lamal', label: 'LAMal (assurance de base)', note: "Délai légal : la résiliation pour la fin de l'année doit parvenir à la caisse au plus tard le 30 novembre (art. 7 LAMal)." },
+  { id: 'lca', label: 'LCA (complémentaires)', note: "Vérifie le délai contractuel de résiliation (souvent 3 mois avant l'échéance annuelle)." },
+  { id: 'vie3a', label: 'Assurance vie liée — pilier 3A', note: "Le rachat/transfert du pilier 3a obéit à des règles spécifiques — vérifie les conditions du contrat avant d'envoyer." },
+  { id: 'vie3b', label: 'Assurance vie libre — pilier 3B', note: "Vérifie la valeur de rachat et d'éventuelles pénalités avant d'envoyer." },
+];
+
+function afficherNoteResiliation(typeId) {
+  const t = RESILIATION_TYPES.find(x => x.id === typeId);
+  const el = document.getElementById('res-note');
+  if (el) el.textContent = t ? t.note : '';
+}
+
+function ouvrirModaleResiliation(clientId) {
+  const c = allClients.find(x => x.id === clientId);
+  if (!c) return;
+  const contratsClient = allContrats.filter(ct => ct.client_id === clientId);
+  const contratOptions = contratsClient.map(ct => `<option value="${ct.id}" data-compagnie="${(ct.compagnie || '').replace(/"/g, '&quot;')}" data-police="${(ct.numero_police || '').replace(/"/g, '&quot;')}">${ct.produit || 'Contrat'} — ${ct.compagnie || ''}${ct.numero_police ? ' (' + ct.numero_police + ')' : ''}</option>`).join('');
+  creerModale('modal-resiliation', `
+    <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:480px;width:100%">
+      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">📝 Générer une feuille de résiliation</div>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:16px">Sélectionne le type d'assurance à résilier — les coordonnées du client sont reprises automatiquement dans la lettre.</div>
+      <div class="form-grid">
+        <div class="form-field" style="grid-column:span 2">
+          <label class="form-label">Type d'assurance *</label>
+          <select class="form-select" id="res-type" onchange="afficherNoteResiliation(this.value)">
+            ${RESILIATION_TYPES.map(t => `<option value="${t.id}">${t.label}</option>`).join('')}
+          </select>
+          <div id="res-note" style="font-size:10.5px;color:var(--text-muted);margin-top:6px">${RESILIATION_TYPES[0].note}</div>
+        </div>
+        ${contratsClient.length ? `<div class="form-field" style="grid-column:span 2">
+          <label class="form-label">Contrat concerné (optionnel — pré-remplit compagnie et n° de police)</label>
+          <select class="form-select" id="res-contrat" onchange="const o=this.selectedOptions[0];document.getElementById('res-compagnie').value=o?o.dataset.compagnie||'':'';document.getElementById('res-police').value=o?o.dataset.police||'':''">
+            <option value="">— Aucun / saisie manuelle —</option>
+            ${contratOptions}
+          </select>
+        </div>` : ''}
+        <div class="form-field"><label class="form-label">Compagnie destinataire</label><input class="form-input" id="res-compagnie" placeholder="Ex: CSS Assurance"/></div>
+        <div class="form-field"><label class="form-label">N° de police</label><input class="form-input" id="res-police" placeholder="Ex: 123.456.789"/></div>
+        <div class="form-field" style="grid-column:span 2"><label class="form-label">Date d'effet souhaitée</label><input class="form-input" id="res-date-effet" type="date"/></div>
+      </div>
+      <div id="erreur-resiliation" style="color:#f87171;font-size:11.5px;margin-top:8px;display:none"></div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn-secondary" onclick="document.getElementById('modal-resiliation').remove()">Annuler</button>
+        <button class="btn-save" onclick="confirmerResiliation('${clientId}')" style="margin-left:auto">Continuer →</button>
+      </div>
+    </div>`, { opacite: 0.8, padding: '16px', overflowY: false });
+}
+
+function construireHtmlResiliation(corps, titre, signatureDataUrl) {
+  return `<html><head><title>${(titre || 'Résiliation').replace(/</g, '&lt;')}</title><style>
+    body{font-family:Arial,sans-serif;padding:35px;color:#1a1a1a;font-size:13px;line-height:1.6}
+    .entete-lettre{border-bottom:2px solid #113679;padding-bottom:10px;margin-bottom:6px;font-size:12.5px}
+    .signature-zone{margin-top:34px}
+    .print-btn{margin-top:25px;padding:10px 20px;background:#113679;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px}
+    .footer{text-align:center;font-size:9.5px;color:#888;margin-top:30px;border-top:1px solid #ddd;padding-top:10px}
+    @media print { .print-btn { display: none !important; } }
+  </style></head><body>
+    ${corps}
+    <div class="signature-zone">
+      <strong>Signature</strong>
+      ${signatureDataUrl ? `<div style="margin-top:8px"><img src="${signatureDataUrl}" style="max-height:80px;max-width:260px;display:block;border:1px solid #ddd;border-radius:6px;padding:6px"/></div>` : `<div style="color:#888;font-size:11.5px;margin-top:6px">(à signer)</div>`}
+    </div>
+    ${signatureDataUrl ? `<button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>` : ''}
+    <div class="footer">ASSUREX Sàrl — Rue du Centre 142, 1025 St-Sulpice — Autorisation FINMA F01492173</div>
+  </body></html>`;
+}
+
+function confirmerResiliation(clientId) {
+  const c = allClients.find(x => x.id === clientId);
+  if (!c) return;
+  const typeId = document.getElementById('res-type').value;
+  const typeInfo = RESILIATION_TYPES.find(t => t.id === typeId);
+  const compagnie = document.getElementById('res-compagnie').value.trim();
+  const police = document.getElementById('res-police').value.trim();
+  const dateEffet = document.getElementById('res-date-effet').value;
+  const erreurEl = document.getElementById('erreur-resiliation');
+  if (!compagnie) { erreurEl.textContent = 'Indique la compagnie destinataire.'; erreurEl.style.display = 'block'; return; }
+  if (!dateEffet) { erreurEl.textContent = "Indique la date d'effet souhaitée."; erreurEl.style.display = 'block'; return; }
+
+  const isEnt = estEntreprise(c);
+  const nomClient = isEnt ? c.nom : `${c.civilite ? c.civilite + ' ' : ''}${c.prenom} ${c.nom}`;
+  const adresseClient = `${c.adresse || ''}${c.adresse ? ', ' : ''}${c.npa || ''} ${c.ville || ''}`.trim();
+  const dateEffetFr = fmtDate(dateEffet);
+  const aujourdhui = fmtDate(new Date().toISOString());
+
+  const corps = `
+    <div class="entete-lettre">
+      <div><strong>${nomClient.replace(/</g, '&lt;')}</strong><br/>${adresseClient.replace(/</g, '&lt;')}</div>
+      <div style="text-align:right;margin-top:10px">St-Sulpice, le ${aujourdhui}</div>
+    </div>
+    <div style="margin-top:20px">${compagnie.replace(/</g, '&lt;')}</div>
+    <div style="margin-top:24px"><strong>Objet : Résiliation de la police ${typeInfo.label}${police ? ' n° ' + police.replace(/</g, '&lt;') : ''}</strong></div>
+    <p style="margin-top:18px">Madame, Monsieur,</p>
+    <p>Par la présente, je soussigné(e) ${nomClient.replace(/</g, '&lt;')} vous informe de la résiliation de la police d'assurance ${typeInfo.label}${police ? ' n° ' + police.replace(/</g, '&lt;') : ''}, avec effet au <strong>${dateEffetFr}</strong>.</p>
+    <p>Je vous remercie de bien vouloir me confirmer par écrit la bonne prise en compte de cette résiliation.</p>
+    <p style="margin-top:18px">Meilleures salutations.</p>
+  `;
+
+  document.getElementById('modal-resiliation').remove();
+  const titreDoc = `Résiliation ${typeInfo.label}${compagnie ? ' — ' + compagnie : ''}`;
+  const previewHtml = construireHtmlResiliation(corps, titreDoc, null);
+  ouvrirSignatureMandat(clientId, {
+    type: 'resiliation',
+    documentNom: titreDoc,
+    contenuCorps: corps,
+    documentData: 'data:text/html;charset=utf-8,' + encodeURIComponent(previewHtml),
+  });
+}
+
+function genererLettreResiliationSignee(clientId, signatureDataUrl, contexte) {
+  const html = construireHtmlResiliation(contexte.contenuCorps, contexte.documentNom, signatureDataUrl);
+  const win = window.open('', '_blank');
+  win.document.write(html);
+  win.document.close();
+  dbPost('mandats_signes', {
+    client_id: clientId,
+    signe: !!signatureDataUrl,
+    cree_par: (typeof supaSession !== 'undefined' && supaSession && supaSession.email) || null,
+    html_snapshot: html,
+    fichier_nom: contexte.documentNom || null,
+  }).then(r => {
+    if (r && r.error) console.error("Échec de l'enregistrement de la résiliation sur la fiche :", errMsg(r));
+    showClient(clientId);
+  });
+}
+
 function ouvrirSignatureMandat(clientId, contexte) {
   signatureContexteActuel = contexte || null;
   const titreModale = signatureContexteActuel ? `✍️ Signature — ${signatureContexteActuel.documentNom}` : '✍️ Signature du mandant';
@@ -748,6 +883,8 @@ function basculerModeSignature(mode, clientId) {
   if (mode === 'ici') {
     const boutonVoirDocumentIci = (signatureContexteActuel && signatureContexteActuel.type === 'contrat' && signatureContexteActuel.documentPath)
       ? `<button type="button" onclick="ouvrirPieceJointe('${signatureContexteActuel.documentPath}')" style="display:block;width:100%;margin-bottom:10px;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface-alt);color:var(--text);font-weight:700;font-size:11.5px;cursor:pointer">📄 Voir le document avant de faire signer</button>`
+      : (signatureContexteActuel && signatureContexteActuel.type === 'resiliation' && signatureContexteActuel.documentData)
+      ? `<button type="button" onclick="window.open(signatureContexteActuel.documentData, '_blank')" style="display:block;width:100%;margin-bottom:10px;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface-alt);color:var(--text);font-weight:700;font-size:11.5px;cursor:pointer">📄 Voir le document avant de faire signer</button>`
       : '';
     zone.innerHTML = `
       ${boutonVoirDocumentIci}
@@ -816,6 +953,7 @@ function validerSignatureEtGenerer(clientId) {
   const contexte = signatureContexteActuel;
   signatureContexteActuel = null;
   if (contexte && contexte.type === 'contrat') genererDocumentSigne(clientId, signatureDataUrl, contexte);
+  else if (contexte && contexte.type === 'resiliation') genererLettreResiliationSignee(clientId, signatureDataUrl, contexte);
   else genererMandatCourtage(clientId, signatureDataUrl);
 }
 
@@ -896,8 +1034,11 @@ async function envoyerVersAutreAppareil(clientId, mode) {
     if (telClean.startsWith('00')) telClean = telClean.slice(2);
     if (telClean.startsWith('0')) telClean = '41' + telClean.slice(1); // 0791234567 → 41791234567 (CH par défaut)
     const estContratWa = contexteFige && contexteFige.type === 'contrat';
+    const estResiliationWa = contexteFige && contexteFige.type === 'resiliation';
     const messageWhatsapp = estContratWa
       ? `Bonjour${c && !estEntreprise(c) && c.prenom ? ' ' + c.prenom : ''}, afin de valider la proposition d'assurance, veuillez signer dans l'encadré en suivant ce lien : ${lienSignature}`
+      : estResiliationWa
+      ? `Bonjour${c && !estEntreprise(c) && c.prenom ? ' ' + c.prenom : ''}, afin de valider la résiliation de votre police, veuillez signer dans l'encadré en suivant ce lien : ${lienSignature}`
       : `Bonjour${c && !estEntreprise(c) && c.prenom ? ' ' + c.prenom : ''}, afin de valider votre mandat de courtage, veuillez signer dans l'encadré en suivant ce lien : ${lienSignature}`;
     const lienWhatsapp = `https://wa.me/${telClean}?text=${encodeURIComponent(messageWhatsapp)}`;
     zone.innerHTML = `
@@ -929,6 +1070,7 @@ async function envoyerVersAutreAppareil(clientId, mode) {
       document.getElementById('modal-signature-mandat')?.remove();
       signatureContexteActuel = null;
       if (contexteFige && contexteFige.type === 'contrat') genererDocumentSigne(clientId, demande.signature_data, contexteFige);
+      else if (contexteFige && contexteFige.type === 'resiliation') genererLettreResiliationSignee(clientId, demande.signature_data, contexteFige);
       else genererMandatCourtage(clientId, demande.signature_data);
     }
   }, 3000);
@@ -949,11 +1091,16 @@ async function envoyerLienSignatureParEmail(clientId, lienSignature, emailDestin
   // proposition d'assurance uploadée (demande de Jonathan le 07.08.2026 : le mail ne doit plus
   // toujours parler de "mandat" quand ce n'est pas le mandat de courtage qui est signé).
   const estContrat = signatureContexteActuel && signatureContexteActuel.type === 'contrat';
+  const estResiliation = signatureContexteActuel && signatureContexteActuel.type === 'resiliation';
   const sujet = estContrat
+    ? `Signature — ${signatureContexteActuel.documentNom} — Assurex Sàrl`
+    : estResiliation
     ? `Signature — ${signatureContexteActuel.documentNom} — Assurex Sàrl`
     : 'Signature de votre mandat de courtage — Assurex Sàrl';
   const contenu = estContrat
     ? `Bonjour ${nomClient || ''},\n\nAfin de valider la proposition d'assurance, veuillez signer dans l'encadré prévu à cet effet en suivant ce lien depuis votre téléphone ou votre ordinateur :\n\n${lienSignature}\n\nLa signature ne prend qu'une minute.\n\nMeilleures salutations,\nAssurex Sàrl`
+    : estResiliation
+    ? `Bonjour ${nomClient || ''},\n\nAfin de valider la résiliation de votre police, veuillez signer dans l'encadré prévu à cet effet en suivant ce lien depuis votre téléphone ou votre ordinateur :\n\n${lienSignature}\n\nLa signature ne prend qu'une minute.\n\nMeilleures salutations,\nAssurex Sàrl`
     : `Bonjour ${nomClient || ''},\n\nAfin de valider votre mandat de courtage, veuillez signer dans l'encadré prévu à cet effet en suivant ce lien depuis votre téléphone ou votre ordinateur :\n\n${lienSignature}\n\nLa signature ne prend qu'une minute.\n\nMeilleures salutations,\nAssurex Sàrl`;
   const body = {
     message: {
@@ -998,7 +1145,7 @@ async function afficherPageSignatureAutonome(token) {
     return;
   }
 
-  const titreAutonome = demande.type === 'contrat' && demande.document_nom
+  const titreAutonome = (demande.type === 'contrat' || demande.type === 'resiliation') && demande.document_nom
     ? `Signature — ${demande.document_nom}`
     : 'Signature du mandat de courtage';
   // Le client doit pouvoir consulter le document avant de le signer — condition de base pour

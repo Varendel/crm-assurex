@@ -1688,6 +1688,7 @@ function viderClientOpportunite() {
 }
 
 function viewNouvelleOpportunite() {
+  const rh = estRoleRH();
   const opp = opportuniteEnEditionId ? allOpportunites.find(o => o.id === opportuniteEnEditionId) : null;
   // Pré-remplissage depuis le bouton "Créer une opportunité" de la fiche client (nouvelle
   // opportunité uniquement -- sans effet si une opportunité existante est en cours d'édition).
@@ -1710,6 +1711,7 @@ function viewNouvelleOpportunite() {
   // ce qui compte au quotidien (l'état des échanges, les tâches, l'historique, les notes) doit
   // être visible sans scroller ; le formulaire d'affaire ne se consulte/modifie que ponctuellement.
   const blocContrat = sectionCard('Contrat', '#f59e0b', `<div class="form-grid">
+      ${rh ? `<div class="form-field" style="grid-column:span 2;background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:10px 12px;font-size:11.5px;color:var(--accent)">💡 Formulaire simplifié — Jonathan complètera compagnie, produits et primes plus tard.</div>` : ''}
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Titre *</label><input class="form-input" id="o-titre" value="${qa(opp?.titre || (clientPrefille ? (estEntreprise(clientPrefille) ? clientPrefille.nom : clientPrefille.prenom + ' ' + clientPrefille.nom) + ' — ' : ''))}" placeholder="Ex: Assurance vie mixte 20 ans"/></div>
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Client (si déjà fiché)</label>
         <div style="position:relative">
@@ -1720,7 +1722,7 @@ function viewNouvelleOpportunite() {
         ${clientFiche ? `<div style="margin-top:6px"><button type="button" onclick="viderClientOpportunite()" style="background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;text-decoration:underline">✕ Retirer — pas encore client / autre prospect</button></div>` : ''}
       </div>
       <div class="form-field" id="o-prospect-field" style="${clientFiche ? 'display:none' : ''}"><label class="form-label">Nom du prospect</label><input class="form-input" id="o-prospect-nom" value="${qa(opp?.prospect_nom)}" placeholder="Ex: Jean Dupont (pas encore client)"/></div>
-      <div class="form-field">
+      <div class="form-field" style="${rh ? 'display:none' : ''}">
         <label class="form-label">Compagnie</label>
         <select class="form-select" id="o-compagnie-select" onchange="const autre=this.value==='__autre__';document.getElementById('o-compagnie-autre-wrap').style.display=autre?'':'none';document.getElementById('o-compagnie').value=autre?document.getElementById('o-compagnie-autre').value:this.value;recalculerCommissionEstimeeOpportunite()">
           <option value="">— Sélectionner —</option>
@@ -1732,11 +1734,11 @@ function viewNouvelleOpportunite() {
           <input class="form-input" id="o-compagnie-autre" placeholder="Nom de la compagnie" value="${compagnieEstAutre ? qa(compagnieActuelle) : ''}" oninput="document.getElementById('o-compagnie').value=this.value;recalculerCommissionEstimeeOpportunite()"/>
         </div>
       </div>
-      <div class="form-field"><label class="form-label">Probabilité %</label><input class="form-input" id="o-prob" type="number" value="${opp ? (opp.probabilite ?? 50) : 50}" min="0" max="100"/></div>
-      <div class="form-field"><label class="form-label">Stade</label><select class="form-select" id="o-stade">${stadesOptions.map(s => `<option ${opp && opp.stade === s ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
+      <div class="form-field" style="${rh ? 'display:none' : ''}"><label class="form-label">Probabilité %</label><input class="form-input" id="o-prob" type="number" value="${opp ? (opp.probabilite ?? 50) : 50}" min="0" max="100"/></div>
+      <div class="form-field" style="${rh ? 'display:none' : ''}"><label class="form-label">Stade</label><select class="form-select" id="o-stade">${stadesOptions.map(s => `<option ${opp && opp.stade === s ? 'selected' : ''}>${s}</option>`).join('')}</select></div>
       <div class="form-field"><label class="form-label">Échéance</label><input class="form-input" id="o-date" type="date" value="${opp?.date_echeance || ''}"/></div>
-      <div class="form-field"><label class="form-label">Agent responsable</label><select class="form-select" id="o-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
-      <div class="form-field" style="grid-column:span 2">
+      <div class="form-field" style="${rh ? 'display:none' : ''}"><label class="form-label">Agent responsable</label><select class="form-select" id="o-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
+      <div class="form-field" style="grid-column:span 2;${rh ? 'display:none' : ''}">
         <label class="form-label">Produits envisagés <span style="font-weight:400;color:var(--text-muted);font-size:10px">(coche un produit pour faire apparaître sa case "prime CHF/an" — plusieurs possibles ; le produit exact se précisera au contrat)</span></label>
         <div id="o-produits-list" style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:10px;background:var(--surface-alt)">
           ${Object.entries(PRODUITS_OPPORTUNITE_GROUPES).map(([cat, produits]) => `
@@ -1771,19 +1773,20 @@ function viewNouvelleOpportunite() {
     <div id="opp-emails-detectes"></div>
   `) : '';
   const blocTaches = opp ? sectionCard('Tâches', '#4ade80', renderTachesOpportunite(opp)) : '';
+  const blocDocuments = opp ? sectionCard('📎 Documents', '#f59e0b', renderPiecesJointesOpportunite(opp)) : '';
   const blocHistorique = opp ? sectionCard('Historique', '#a78bfa', renderHistoriqueOpportunite(opp)) : '';
   return `
     <button onclick="opportuniteEnEditionId=null;navigate('opportunites')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">${opp ? 'Modifier l’opportunité' : 'Nouvelle opportunité'}</h2>
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">${opp ? 'Modifier l’opportunité' : (rh ? 'Nouvelle opportunité pour Jonathan' : 'Nouvelle opportunité')}</h2>
       ${clientFiche ? `<span onclick="showClient('${clientFiche.id}')" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--surface-alt);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11.5px;font-weight:700;color:var(--accent)">👤 Fiche client : ${estEntreprise(clientFiche) ? clientFiche.nom : `${clientFiche.prenom} ${clientFiche.nom}`} →</span>` : ''}
     </div>
-    ${opp ? `${blocEtatEmails}${blocTaches}${blocHistorique}` : ''}
+    ${opp ? `${blocEtatEmails}${blocTaches}${blocDocuments}${blocHistorique}` : ''}
     ${blocNotes}
     ${blocContrat}
     <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;align-items:center">
       ${opp ? `<span id="opp-demande-offre-liee" style="display:flex;gap:10px;flex-wrap:wrap"></span>` : ''}
-      ${opp ? `<button onclick="supprimerOpportunite('${opp.id}')" style="background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>` : ''}
+      ${opp && !rh ? `<button onclick="supprimerOpportunite('${opp.id}')" style="background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>` : ''}
       <button class="btn-secondary" onclick="opportuniteEnEditionId=null;navigate('opportunites')">Annuler</button>
       <button class="btn-save" onclick="saveOpportunite('${opp ? opp.id : ''}')">✓ ${opp ? 'Enregistrer les modifications' : 'Enregistrer'}</button>
     </div>`;
@@ -1951,6 +1954,7 @@ function filtrerProduitsOpportunite(texte) {
 }
 
 async function saveOpportunite(id) {
+  const rh = estRoleRH();
   const titre = document.getElementById('o-titre').value.trim();
   if (!titre) { alert('Titre obligatoire.'); return; }
   // Prime et commission ne sont plus saisies dans un champ global unique : chaque produit coché
@@ -1979,11 +1983,12 @@ async function saveOpportunite(id) {
     probabilite: parseInt(document.getElementById('o-prob').value) || 50,
     stade: document.getElementById('o-stade').value,
     date_echeance: document.getElementById('o-date').value || null,
-    apporteur_id: document.getElementById('o-agent').value || null,
+    apporteur_id: rh ? (allAgents.find(a => a.role === 'signataire')?.id || null) : (document.getElementById('o-agent').value || null),
     notes: document.getElementById('o-notes').value || null,
     produits: lignesProduits.map(l => l.id),
     produits_primes: produitsPrimes,
     commission_estimee: commissionEstimee,
+    ...(rh ? { cree_par: `${currentUser.prenom} ${currentUser.nom}`.trim() } : {}),
   };
   const btn = document.querySelector('.btn-save');
   btn.textContent = 'Enregistrement...'; btn.disabled = true;
@@ -1996,6 +2001,74 @@ async function saveOpportunite(id) {
   opportuniteEnEditionId = null;
   allOpportunites = await dbGet('opportunites', 'select=*');
   navigate('opportunites');
+}
+
+// ── Pièces jointes d'une opportunité (colonne jsonb opportunites.pieces_jointes — tableau de
+// {path, nom, uploaded_par, uploaded_at}) — dépôt de fichiers multiples, utilisable aussi bien
+// par Jonathan que par la session RH ("les filles" — demande du 07.08.2026), ex: pièce d'identité,
+// devis reçu, document du prospect... Réutilise le bucket storage "documents" (déjà utilisé pour
+// les polices/pièces jointes de rappels) avec un chemin dédié opportunites/{id}/....
+function renderPiecesJointesOpportunite(opp) {
+  const fichiers = Array.isArray(opp.pieces_jointes) ? opp.pieces_jointes : [];
+  const liste = fichiers.length ? fichiers.map((f, i) => `
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:14px">📎</span>
+      <a href="#" onclick="ouvrirPieceJointe('${f.path}');return false;" style="flex:1;color:var(--accent);font-size:13px;font-weight:700;text-decoration:none">${f.nom}</a>
+      <span style="font-size:10.5px;color:var(--text-muted)">${f.uploaded_par || ''}</span>
+      <button onclick="supprimerPieceJointeOpportunite('${opp.id}', ${i})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px">✕</button>
+    </div>`).join('') : '<div style="font-size:12.5px;color:var(--text-muted);padding:6px 0">Aucun fichier déposé pour l\u2019instant.</div>';
+  return `${liste}
+    <div style="margin-top:12px">
+      <input type="file" id="opp-fichiers-input" multiple style="display:none" onchange="uploaderFichiersOpportunite('${opp.id}')"/>
+      <button type="button" class="btn-secondary" onclick="document.getElementById('opp-fichiers-input').click()">📎 Déposer un ou plusieurs fichiers</button>
+      <div id="opp-fichiers-status" style="font-size:11px;color:var(--text-muted);margin-top:8px"></div>
+    </div>`;
+}
+
+async function uploaderFichiersOpportunite(oppId) {
+  const input = document.getElementById('opp-fichiers-input');
+  const fichiers = [...(input && input.files ? input.files : [])];
+  if (!fichiers.length) return;
+  const statusZone = document.getElementById('opp-fichiers-status');
+  const opp = allOpportunites.find(o => o.id === oppId);
+  if (!opp) return;
+  const dejaLa = Array.isArray(opp.pieces_jointes) ? opp.pieces_jointes : [];
+  const nouveaux = [];
+  const token = await getValidAccessToken() || SUPABASE_KEY;
+  for (let i = 0; i < fichiers.length; i++) {
+    const file = fichiers[i];
+    if (statusZone) statusZone.textContent = `⏳ Upload ${i + 1}/${fichiers.length}...`;
+    try {
+      const path = `opportunites/${oppId}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, '_')}`;
+      const res = await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${path}`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, 'Content-Type': file.type || 'application/octet-stream' },
+        body: file,
+      });
+      if (res.ok) {
+        nouveaux.push({ path, nom: file.name, uploaded_par: currentUser ? `${currentUser.prenom} ${currentUser.nom}`.trim() : '', uploaded_at: new Date().toISOString() });
+      }
+    } catch (e) { /* fichier ignoré en cas d'échec — les autres continuent d'être tentés */ }
+  }
+  if (nouveaux.length) {
+    const piecesJointes = [...dejaLa, ...nouveaux];
+    const r = await dbPatch('opportunites', oppId, { pieces_jointes: piecesJointes });
+    if (r && r.error) { showError('Erreur lors de l\u2019enregistrement des fichiers : ' + errMsg(r)); return; }
+    opp.pieces_jointes = piecesJointes;
+  }
+  if (statusZone) statusZone.textContent = nouveaux.length === fichiers.length ? `✓ ${nouveaux.length} fichier(s) déposé(s).` : `⚠️ ${nouveaux.length}/${fichiers.length} fichier(s) déposé(s) — certains ont échoué.`;
+  navigate('nouvelle-opportunite');
+}
+
+async function supprimerPieceJointeOpportunite(oppId, index) {
+  const opp = allOpportunites.find(o => o.id === oppId);
+  if (!opp || !Array.isArray(opp.pieces_jointes)) return;
+  if (!confirm('Retirer ce fichier ?')) return;
+  const piecesJointes = opp.pieces_jointes.filter((_, i) => i !== index);
+  const r = await dbPatch('opportunites', oppId, { pieces_jointes: piecesJointes });
+  if (r && r.error) { showError('Erreur lors de la suppression : ' + errMsg(r)); return; }
+  opp.pieces_jointes = piecesJointes;
+  navigate('nouvelle-opportunite');
 }
 
 async function supprimerOpportunite(id) {

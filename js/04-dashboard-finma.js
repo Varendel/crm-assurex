@@ -215,6 +215,29 @@ function viewDashboard() {
     !idsAvecCommission.has(ct.id)
   );
 
+  // ── Notifications « créées par l'équipe » (session RH) — opportunités/tâches assignées à
+  // Jonathan par défaut, pas encore ouvertes/traitées par lui (notif_vue). Placé tout en haut du
+  // dashboard (avant même les chiffres de CA) car explicitement demandé « prioritaire ».
+  const notifsOpp = allOpportunites.filter(o => o.cree_par && !o.notif_vue && o.stade !== 'Gagné' && o.stade !== 'Perdu');
+  const notifsTaches = allRappels.filter(r => r.cree_par && !r.notif_vue && r.statut === 'ouvert');
+  const totalNotifsEquipe = notifsOpp.length + notifsTaches.length;
+  const blocNotifsEquipe = totalNotifsEquipe > 0 ? `
+    <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);border-radius:14px;padding:18px 22px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:800;color:#f59e0b;margin-bottom:10px">${PICTO_CREE_EQUIPE} ${totalNotifsEquipe} élément${totalNotifsEquipe > 1 ? 's' : ''} créé${totalNotifsEquipe > 1 ? 's' : ''} par l'équipe pour toi</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${notifsOpp.map(o => `<div style="display:flex;align-items:center;gap:10px;cursor:pointer;background:var(--surface);border-radius:9px;padding:9px 14px" onclick="editerOpportunite('${o.id}')">
+          <span style="font-size:14px">🎯</span>
+          <div style="flex:1"><div style="font-size:12.5px;font-weight:700;color:var(--text)">${o.titre}</div><div style="font-size:10.5px;color:var(--text-muted)">Opportunité · créée par ${o.cree_par}</div></div>
+          <span style="font-size:11px;color:var(--accent)">&#8594;</span>
+        </div>`).join('')}
+        ${notifsTaches.map(r => `<div style="display:flex;align-items:center;gap:10px;cursor:pointer;background:var(--surface);border-radius:9px;padding:9px 14px" onclick="showRappel('${r.id}')">
+          <span style="font-size:14px">${r.nature === 'tache' ? '📋' : '🔔'}</span>
+          <div style="flex:1"><div style="font-size:12.5px;font-weight:700;color:var(--text)">${r.titre}</div><div style="font-size:10.5px;color:var(--text-muted)">Tâche · créée par ${r.cree_par}</div></div>
+          <span style="font-size:11px;color:var(--accent)">&#8594;</span>
+        </div>`).join('')}
+      </div>
+    </div>` : '';
+
   return `
     <div style="display:flex;justify-content:space-between;align-items:flex-start">
       <div>
@@ -227,6 +250,7 @@ function viewDashboard() {
       </div>
     </div>
     <div style="color:var(--text-muted);font-size:13px;margin-bottom:24px">Assurex Sàrl · EX Groupe · Commissions actives depuis le 01.06.2026</div>
+    ${blocNotifsEquipe}
     <div class="stat-grid" style="grid-template-columns:repeat(5,1fr)">
       ${statCard('Clients', allClients.length, '#38bdf8', `${actifs} actifs`)}
       ${statCard('CA portefeuille /an', 'CHF ' + Math.round(totalCAFull).toLocaleString(), '#f59e0b', `${nbContratsActifs} contrats`)}

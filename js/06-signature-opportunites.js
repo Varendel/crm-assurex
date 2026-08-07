@@ -13,6 +13,15 @@ let prefillOpportuniteClientId = null;
 
 function editerOpportunite(id) {
   opportuniteEnEditionId = id;
+  // Marque la notification « créée par l'équipe » comme vue dès que Jonathan (pas la
+  // session RH) ouvre la fiche — la notification du dashboard/pipeline disparaît d'elle-même.
+  if (!estRoleRH()) {
+    const oppVue = allOpportunites.find(o => o.id === id);
+    if (oppVue && oppVue.cree_par && !oppVue.notif_vue) {
+      oppVue.notif_vue = true;
+      dbPatch('opportunites', id, { notif_vue: true }).catch(() => {});
+    }
+  }
   navigate('nouvelle-opportunite');
 }
 
@@ -66,9 +75,12 @@ function viewOpportunites() {
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
       <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Pipeline — Opportunités</h2>
-      ${rhMode ? '' : `<button class="btn-add" onclick="opportuniteEnEditionId=null;navigate('nouvelle-opportunite')">+ Nouvelle opportunité</button>`}
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn-add" onclick="opportuniteEnEditionId=null;navigate('nouvelle-opportunite')">${rhMode ? PICTO_CREE_EQUIPE + ' Créer une opportunité pour Jonathan' : '+ Nouvelle opportunité'}</button>
+        ${rhMode ? `<button class="btn-secondary" onclick="navigate('nouveau-rappel')">${PICTO_CREE_EQUIPE} Créer une tâche pour Jonathan</button>` : ''}
+      </div>
     </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">${rhMode ? "Vue d'ensemble des affaires en cours (stades, clients, tâches liées) — lecture seule, sans montants." : 'Suivi des affaires en négociation, avant signature. Une fois "Gagnée" depuis le menu de stade, l\'opportunité ouvre directement le formulaire de contrat pré-rempli.'}</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">${rhMode ? "Vue d'ensemble des affaires en cours (stades, clients, tâches liées) — lecture seule, sans montants. Utilise les boutons ci-dessus pour créer une opportunité ou une tâche pour Jonathan." : 'Suivi des affaires en négociation, avant signature. Une fois "Gagnée" depuis le menu de stade, l\'opportunité ouvre directement le formulaire de contrat pré-rempli.'}</div>
     <div class="stat-grid" style="margin-bottom:20px">
       ${rhMode ? '' : statCard('Pipeline total (prime)', 'CHF ' + total.toLocaleString(), '#f59e0b')}
       ${rhMode ? '' : statCard('Pondéré (prime)', 'CHF ' + pondere.toLocaleString(), '#38bdf8')}
@@ -127,7 +139,8 @@ function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, to
       </div>
       ${opps.map(o => {
         const tachesOuvertes = allRappels.filter(r => r.opportunite_id === o.id && r.statut === 'ouvert').length;
-        return `<div class="kanban-card" ${rhMode ? '' : `onclick="editerOpportunite('${o.id}')" style="cursor:pointer"`}>
+        return `<div class="kanban-card" onclick="editerOpportunite('${o.id}')" style="cursor:pointer;position:relative">
+        ${o.cree_par ? `<div title="Créée par ${o.cree_par}" style="position:absolute;top:8px;right:8px;font-size:13px">${PICTO_CREE_EQUIPE}${o.notif_vue ? '' : ' 🔴'}</div>` : ''}
         <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:4px">${o.titre}</div>
         <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:1px">${nomClient(o)}</div>
         <div style="font-size:10.5px;color:var(--text-muted);margin-bottom:8px">${o.compagnie || '&nbsp;'}${tachesOuvertes > 0 ? ` · ☑ ${tachesOuvertes} tâche${tachesOuvertes > 1 ? 's' : ''}` : ''}</div>
@@ -196,8 +209,8 @@ function renderListeOpportunites(toutes, nomClient, tousLesStades, stadeColor, r
     </div>
     <div class="table-wrap">
       <div class="table-header" style="grid-template-columns:${cols}"><div>Titre</div><div>Client</div><div>Compagnie</div><div>Stade</div><div>Prob.</div>${rhMode ? '' : '<div>Montant</div>'}</div>
-      ${liste.length ? liste.map(o => `<div class="table-row" style="grid-template-columns:${cols};${rhMode ? '' : 'cursor:pointer'}" ${rhMode ? '' : `onclick="editerOpportunite('${o.id}')"`}>
-        <div><div style="font-weight:700;font-size:13px;color:var(--text)">${o.titre}</div>${o.date_echeance ? `<div style="font-size:10.5px;color:var(--text-muted)">Échéance ${fmtDate(o.date_echeance)}</div>` : ''}</div>
+      ${liste.length ? liste.map(o => `<div class="table-row" style="grid-template-columns:${cols};cursor:pointer" onclick="editerOpportunite('${o.id}')">
+        <div><div style="font-weight:700;font-size:13px;color:var(--text)">${o.cree_par ? PICTO_CREE_EQUIPE + ' ' : ''}${o.titre}</div>${o.date_echeance ? `<div style="font-size:10.5px;color:var(--text-muted)">Échéance ${fmtDate(o.date_echeance)}</div>` : ''}</div>
         <div style="font-size:13px;color:var(--text)">${nomClient(o)}</div>
         <div style="font-size:12.5px;color:var(--text-muted)">${o.compagnie || '—'}</div>
         <div>${badge(o.stade, stadeColor[o.stade] || (o.stade === 'Gagné' ? '#4ade80' : '#f87171'))}</div>
@@ -226,8 +239,8 @@ function renderEcheancesOpportunites(oppsOuvertes, nomClient, stadeColor, rhMode
     if (!liste.length) return '';
     return `<div style="margin-bottom:22px">
       <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">${b.label} (${liste.length})</div>
-      <div class="table-wrap">${liste.map(o => `<div class="table-row" style="grid-template-columns:${rhMode ? '1fr 160px 110px 120px' : '1fr 160px 110px 100px 120px'};${rhMode ? '' : 'cursor:pointer'}" ${rhMode ? '' : `onclick="editerOpportunite('${o.id}')"`}>
-        <div style="font-weight:700;font-size:13px;color:var(--text)">${o.titre}</div>
+      <div class="table-wrap">${liste.map(o => `<div class="table-row" style="grid-template-columns:${rhMode ? '1fr 160px 110px 120px' : '1fr 160px 110px 100px 120px'};cursor:pointer" onclick="editerOpportunite('${o.id}')">
+        <div style="font-weight:700;font-size:13px;color:var(--text)">${o.cree_par ? PICTO_CREE_EQUIPE + ' ' : ''}${o.titre}</div>
         <div style="font-size:13px;color:var(--text)">${nomClient(o)}</div>
         <div>${badge(o.stade, stadeColor[o.stade] || '#64748b')}</div>
         ${rhMode ? '' : `<div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF((o.montant_potentiel||0))}</div>`}
@@ -307,8 +320,8 @@ function renderCartePrioriteOpportunite(s, nomClient, stadeColor, rhMode) {
   const borderColor = s.tier === 'urgent' ? '#f87171' : s.tier === 'suivre' ? '#f59e0b' : 'var(--border)';
   return `<div style="background:var(--surface-alt);border:1px solid ${borderColor};border-left:3px solid ${borderColor};border-radius:12px;padding:14px 16px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
-      <div style="flex:1;min-width:200px;${rhMode ? '' : 'cursor:pointer'}" ${rhMode ? '' : `onclick="editerOpportunite('${o.id}')"`}>
-        <div style="font-size:13.5px;font-weight:800;color:var(--text)">${o.titre}</div>
+      <div style="flex:1;min-width:200px;cursor:pointer" onclick="editerOpportunite('${o.id}')">
+        <div style="font-size:13.5px;font-weight:800;color:var(--text)">${o.cree_par ? PICTO_CREE_EQUIPE + ' ' : ''}${o.titre}</div>
         <div style="font-size:12.5px;color:var(--text-muted)">${nomClient(o)} · ${badge(o.stade, stadeColor[o.stade] || '#64748b')}</div>
       </div>
       <div style="text-align:right">
@@ -687,7 +700,7 @@ function viewRappels() {
   const renderItem = r => `<div class="rappel-item" style="cursor:pointer" onclick="showRappel('${r.id}')">
         <div class="urgence-dot" style="background:${uc(r.urgence||'basse')}"></div>
         <div style="flex:1">
-          <div style="font-size:13px;font-weight:700;color:var(--text)">${r.nature === 'tache' ? '📋' : (r.tache_parent_id ? '🔗🔔' : '🔔')} ${r.titre}</div>
+          <div style="font-size:13px;font-weight:700;color:var(--text)">${r.cree_par ? PICTO_CREE_EQUIPE + ' ' : ''}${r.nature === 'tache' ? '📋' : (r.tache_parent_id ? '🔗🔔' : '🔔')} ${r.titre}</div>
           <div style="font-size:11px;color:var(--text-muted)">${nomClientRappel(r) ? `👤 <span onclick="event.stopPropagation(); showClient('${r.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${nomClientRappel(r)}</span> · ` : ''}${r.date_echeance ? fmtDate(r.date_echeance) : 'Sans échéance'}${dateRelative(r.date_echeance)}${r.date_planifiee ? ` · 📅 planifié le ${fmtDate(r.date_planifiee)}` : ''}${r.piece_jointe_nom ? ' · 📎 ' + r.piece_jointe_nom : ''}</div>
           ${r.notes ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:3px;font-style:italic">${r.notes.split('[')[0].substring(0,120)}${r.notes.length>120?'...':''}</div>` : ''}
         </div>

@@ -990,7 +990,7 @@ const USER_ROLES = {
 // comptabilité, paramètres) reste réservé aux rôles apporteur/signataire. Liste blanche volontaire
 // (plutôt qu'une liste noire) : toute nouvelle vue ajoutée au CRM à l'avenir sera invisible pour ce
 // rôle par défaut, sauf ajout explicite ici.
-const RH_VUES_AUTORISEES = new Set(['portefeuille', 'clients-prives', 'clients-entreprises', 'rappels', 'agenda', 'opportunites', 'volume-primes', 'tous-contrats']);
+const RH_VUES_AUTORISEES = new Set(['portefeuille', 'clients-prives', 'clients-entreprises', 'rappels', 'agenda', 'opportunites', 'volume-primes', 'tous-contrats', 'recherche-vehicules']);
 
 function estRoleRH() {
   return !!(currentUser && currentUser.role === 'rh');

@@ -480,7 +480,7 @@ const SECTIONS = [
     { id: 'clients-oz', label: 'Clients OZ Assure', staff: true },
     { id: 'volume-primes', label: 'Volume de primes', staff: true, rhAllowed: true },
     { id: 'tous-contrats', label: 'Tous les contrats', rhAllowed: true },
-    { id: 'recherche-vehicules', label: '🚗 Recherche véhicules' },
+    { id: 'recherche-vehicules', label: '🚗 Recherche véhicules', rhAllowed: true },
   ]},
   { id: 'compta', label: 'Comptabilité', icon: '◎', sub: [
     { id: 'bordereaux', label: 'Bordereaux (reçus des compagnies)' },

@@ -697,17 +697,33 @@ function viewRappels() {
     { label: '⚪ Plus d\'un an / sans échéance', color: '#64748b', items: ouverts.filter(r => !r.date_echeance || Math.round((new Date(r.date_echeance)-today)/86400000) > 365) },
   ];
 
-  const renderItem = r => `<div class="rappel-item" style="cursor:pointer" onclick="showRappel('${r.id}')">
+  // Date d'échéance mise en avant en premier (colonne dédiée, étiquetée) — demande de Jonathan
+  // le 10.08.2026 : il ne savait pas quelle date était affichée. La date planifiée (quand on
+  // compte s'en occuper, distincte de l'échéance) reste visible mais clairement étiquetée à part.
+  const renderItem = r => {
+    const enRetardItem = r.date_echeance && new Date(r.date_echeance) < today;
+    const details = [];
+    if (nomClientRappel(r)) details.push(`👤 <span onclick="event.stopPropagation(); showClient('${r.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${nomClientRappel(r)}</span>`);
+    const relatif = dateRelative(r.date_echeance).replace(/^ · /, '');
+    if (relatif) details.push(relatif);
+    if (r.date_planifiee) details.push(`📅 Planifié : ${fmtDate(r.date_planifiee)}`);
+    if (r.piece_jointe_nom) details.push(`📎 ${r.piece_jointe_nom}`);
+    return `<div class="rappel-item" style="cursor:pointer;align-items:center" onclick="showRappel('${r.id}')">
+        <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:60px;text-align:center;flex-shrink:0">
+          <div style="font-size:14px;font-weight:800;color:${enRetardItem ? '#f87171' : 'var(--text)'}">${r.date_echeance ? fmtDate(r.date_echeance) : '—'}</div>
+          <div style="font-size:8px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-top:1px">Échéance</div>
+        </div>
         <div class="urgence-dot" style="background:${uc(r.urgence||'basse')}"></div>
         <div style="flex:1">
           <div style="font-size:13px;font-weight:700;color:var(--text)">${r.cree_par ? PICTO_CREE_EQUIPE + ' ' : ''}${r.nature === 'tache' ? '📋' : (r.tache_parent_id ? '🔗🔔' : '🔔')} ${r.titre}</div>
-          <div style="font-size:11px;color:var(--text-muted)">${nomClientRappel(r) ? `👤 <span onclick="event.stopPropagation(); showClient('${r.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${nomClientRappel(r)}</span> · ` : ''}${r.date_echeance ? fmtDate(r.date_echeance) : 'Sans échéance'}${dateRelative(r.date_echeance)}${r.date_planifiee ? ` · 📅 planifié le ${fmtDate(r.date_planifiee)}` : ''}${r.piece_jointe_nom ? ' · 📎 ' + r.piece_jointe_nom : ''}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${details.join(' · ')}</div>
           ${r.notes ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:3px;font-style:italic">${r.notes.split('[')[0].substring(0,120)}${r.notes.length>120?'...':''}</div>` : ''}
         </div>
         ${(!r.outlook_event_id && (r.date_echeance || r.date_planifiee)) ? `<button onclick="event.stopPropagation(); synchroniserRappelOutlook('${r.id}')" title="Absent de l'agenda Outlook — cliquer pour synchroniser" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;border-radius:7px;padding:4px 8px;font-size:11px;cursor:pointer">📅</button>` : ''}
         ${badge(r.type || 'Suivi', '#64748b')}
         <button class="btn-traite" onclick="event.stopPropagation(); traiterRappel('${r.id}')">✓ Traité</button>
       </div>`;
+  };
 
   const renderGroupes = () => groups.map(g => {
     if (!g.items.length) return '';

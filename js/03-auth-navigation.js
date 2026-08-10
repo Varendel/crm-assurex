@@ -62,6 +62,22 @@ function dateAgendaRappel(rappel) {
   return rappel.date_planifiee || rappel.date_echeance || null;
 }
 
+// Bug corrigé le 10.08.2026 : les événements n'étaient JAMAIS créés dans Outlook, même connecté
+// — Microsoft Graph exige un dateTime ISO 8601 complet ("2026-08-13T00:00:00"), or on lui envoyait
+// une date seule ("2026-08-13") issue telle quelle du <input type="date">, systématiquement rejetée
+// (400) en silence (le fetch échouait, catché, jamais remonté à l'écran). Pour un événement toute
+// la journée, Graph veut en plus une fin = lendemain minuit (fin exclusive), sans quoi l'événement
+// est de durée nulle. Les deux corrigés ici, utilisés par createOutlookEventFromRappel et
+// updateOutlookEventDate.
+function dateTimeGraphMinuit(dateStr) {
+  return `${dateStr}T00:00:00.0000000`;
+}
+function lendemain(dateStr) {
+  const d = new Date(dateStr + 'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate() + 1);
+  return d.toISOString().split('T')[0];
+}
+
 async function createOutlookEventFromRappel(rappel) {
   const dateEvenement = dateAgendaRappel(rappel);
   if (!msalAccessToken || !dateEvenement) return null;
@@ -72,8 +88,8 @@ async function createOutlookEventFromRappel(rappel) {
     const body = {
       subject: `${icone} ${rappel.titre}`,
       isAllDay: true,
-      start: { dateTime: dateEvenement, timeZone: 'Europe/Zurich' },
-      end: { dateTime: dateEvenement, timeZone: 'Europe/Zurich' },
+      start: { dateTime: dateTimeGraphMinuit(dateEvenement), timeZone: 'UTC' },
+      end: { dateTime: dateTimeGraphMinuit(lendemain(dateEvenement)), timeZone: 'UTC' },
       body: { contentType: 'text', content: `${clientLine}Type : ${rappel.type || ''}\nUrgence : ${rappel.urgence || ''}${rappel.date_echeance && rappel.date_planifiee ? `\nÉchéance : ${fmtDate(rappel.date_echeance)}` : ''}\n\n${rappel.notes || ''}` },
     };
     const r = await fetch('https://graph.microsoft.com/v1.0/me/events', {
@@ -98,8 +114,8 @@ async function updateOutlookEventDate(eventId, dateEvenement) {
       headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         isAllDay: true,
-        start: { dateTime: dateEvenement, timeZone: 'Europe/Zurich' },
-        end: { dateTime: dateEvenement, timeZone: 'Europe/Zurich' },
+        start: { dateTime: dateTimeGraphMinuit(dateEvenement), timeZone: 'UTC' },
+        end: { dateTime: dateTimeGraphMinuit(lendemain(dateEvenement)), timeZone: 'UTC' },
       }),
     });
     return r.ok;

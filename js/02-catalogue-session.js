@@ -996,6 +996,12 @@ const RH_VUES_AUTORISEES = new Set(['portefeuille', 'clients-prives', 'clients-e
 // — affiché sur les cartes pipeline, la liste des tâches, et les notifications du dashboard.
 const PICTO_CREE_EQUIPE = '🙋‍♀️';
 
+// Catégories du champ "Type" des tâches/rappels — liste volontairement centralisée ici (au lieu
+// d'être dupliquée dans le formulaire de création et la fiche détail) pour pouvoir en ajouter
+// facilement plus tard. Demande de Jonathan le 10.08.2026 : ajout de 3 catégories réutilisables,
+// d'autres suivront — ne pas en inventer d'autres de son propre chef.
+const TYPES_RAPPEL = ['Suivi', 'Contrat', 'Opportunité', 'Admin', 'Commande fiches ASA', 'Commander attestation SAN', 'À relancer'];
+
 function estRoleRH() {
   return !!(currentUser && currentUser.role === 'rh');
 }

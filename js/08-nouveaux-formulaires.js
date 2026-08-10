@@ -26,7 +26,7 @@ function viewNouveauRappel() {
       <div class="form-field"><label class="form-label">Client</label><select class="form-select" id="r-client" onchange="onClientChangeRappel()"><option value="">— Sélectionner —</option>${clientOptions}</select></div>
       <div class="form-field" id="r-collab-field" style="display:none"><label class="form-label">Collaborateur</label><select class="form-select" id="r-collaborateur"><option value="">— Sélectionner —</option></select></div>
       <div class="form-field"><label class="form-label">Contrat lié</label><select class="form-select" id="r-contrat"><option value="">— Aucun —</option></select></div>
-      <div class="form-field"><label class="form-label">Type</label><select class="form-select" id="r-type"><option>Suivi</option><option>Contrat</option><option>Opportunité</option><option>Admin</option></select></div>
+      <div class="form-field"><label class="form-label">Type</label><select class="form-select" id="r-type">${TYPES_RAPPEL.map(t => `<option>${t}</option>`).join('')}</select></div>
       <div class="form-field"><label class="form-label">Urgence</label><select class="form-select" id="r-urgence" onchange="updateRappelIntelligentPreview()"><option value="basse">Basse</option><option value="moyenne">Moyenne</option><option value="haute">Haute</option></select></div>
       <div class="form-field"><label class="form-label">Date planifiée (quand tu comptes t'en occuper)</label><input class="form-input" id="r-date-planifiee" type="date"/></div>
       <div class="form-field"><label class="form-label">Date échéance (limite)</label><input class="form-input" id="r-date" type="date" onchange="updateRappelIntelligentPreview()"/></div>
@@ -179,7 +179,9 @@ async function saveRappel() {
     try {
       const eventId = await createOutlookEventFromRappel(created[0]);
       if (eventId) await dbPatch('rappels', created[0].id, { outlook_event_id: eventId });
-      else if (!msalAccessToken) showError("⚠️ Rappel créé, mais pas dans l'agenda Outlook — tu n'es pas connecté à Outlook (ou la connexion a expiré). Reconnecte-toi puis utilise le bouton 📅 sur la fiche du rappel.");
+      else showError(!msalAccessToken
+        ? "⚠️ Rappel créé, mais pas dans l'agenda Outlook — tu n'es pas connecté à Outlook (ou la connexion a expiré). Reconnecte-toi puis utilise le bouton 📅 sur la fiche du rappel."
+        : "⚠️ Rappel créé, mais l'ajout à l'agenda Outlook a échoué — réessaie via le bouton 📅 sur la fiche du rappel.");
     } catch (e) { /* sync Outlook échouée, le rappel reste créé dans le CRM */ }
   }
 
@@ -1180,7 +1182,7 @@ function showRappel(id) {
       <div class="form-field"><label class="form-label">Client</label><select class="form-select" id="rd-client"><option value="">— Sélectionner —</option>${clientOptions}</select></div>
       ${collabsDuClient.length ? `<div class="form-field"><label class="form-label">Collaborateur</label><select class="form-select" id="rd-collaborateur"><option value="">— Sélectionner —</option>${collabOptions}</select></div>` : ''}
       <div class="form-field"><label class="form-label">Contrat lié</label><select class="form-select" id="rd-contrat"><option value="">— Aucun —</option>${contratOptions}</select></div>
-      <div class="form-field"><label class="form-label">Type</label><select class="form-select" id="rd-type">${['Suivi','Contrat','Opportunité','Admin'].map(t => `<option ${t === r.type ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
+      <div class="form-field"><label class="form-label">Type</label><select class="form-select" id="rd-type">${TYPES_RAPPEL.map(t => `<option ${t === r.type ? 'selected' : ''}>${t}</option>`).join('')}</select></div>
       <div class="form-field"><label class="form-label">Urgence</label><select class="form-select" id="rd-urgence">
         <option value="basse" ${r.urgence === 'basse' ? 'selected' : ''}>Basse</option>
         <option value="moyenne" ${r.urgence === 'moyenne' ? 'selected' : ''}>Moyenne</option>
@@ -1281,11 +1283,15 @@ async function saveRappelEdit() {
     if (dateEvenement) {
       if (rappelAvant && rappelAvant.outlook_event_id) {
         const ok = await updateOutlookEventDate(rappelAvant.outlook_event_id, dateEvenement);
-        if (!ok && !msalAccessToken) showError("⚠️ Modifications enregistrées, mais l'agenda Outlook n'a pas pu être mis à jour — tu n'es pas connecté. Reconnecte-toi puis utilise le bouton 📅 sur cette fiche.");
+        if (!ok) showError(!msalAccessToken
+          ? "⚠️ Modifications enregistrées, mais l'agenda Outlook n'a pas pu être mis à jour — tu n'es pas connecté. Reconnecte-toi puis utilise le bouton 📅 sur cette fiche."
+          : "⚠️ Modifications enregistrées, mais la mise à jour de l'agenda Outlook a échoué.");
       } else {
         const eventId = await createOutlookEventFromRappel({ ...body, id: currentRappelId });
         if (eventId) await dbPatch('rappels', currentRappelId, { outlook_event_id: eventId });
-        else if (!msalAccessToken) showError("⚠️ Modifications enregistrées, mais pas dans l'agenda Outlook — tu n'es pas connecté. Reconnecte-toi puis utilise le bouton 📅 sur cette fiche.");
+        else showError(!msalAccessToken
+          ? "⚠️ Modifications enregistrées, mais pas dans l'agenda Outlook — tu n'es pas connecté. Reconnecte-toi puis utilise le bouton 📅 sur cette fiche."
+          : "⚠️ Modifications enregistrées, mais l'ajout à l'agenda Outlook a échoué — réessaie via le bouton 📅 sur cette fiche.");
       }
     }
   } catch (e) { /* synchro Outlook échouée, la modification reste enregistrée dans le CRM */ }

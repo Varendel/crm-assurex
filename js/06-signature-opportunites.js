@@ -1,7 +1,7 @@
 function switchTab(btn, tabId) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  ['tab-identite','tab-prevoyance','tab-collaborateurs','tab-flotte','tab-contrats','tab-factures','tab-rappels','tab-notes'].forEach(id => {
+  ['tab-resume','tab-identite','tab-prevoyance','tab-collaborateurs','tab-flotte','tab-contrats','tab-factures','tab-rappels','tab-notes'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('hidden', id !== tabId);
   });

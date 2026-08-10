@@ -79,6 +79,45 @@ function dateAgendaRappel(rappel) {
   return rappel.date_planifiee || rappel.date_echeance || null;
 }
 
+// ═══ CALCUL DES CRÉNEAUX LIBRES — PRISE DE RDV EN AUTONOMIE ═══
+// Génère, pour les prochains jours ouvrés de l'agent (selon sa config rdv_*), la liste des
+// créneaux de `dureeMin` minutes réellement libres : ni dans une plage occupée du cache Outlook
+// (agent.rdv_busy_cache, rafraîchi à chaque connexion du CRM — voir rafraichirCacheDispoRdv),
+// ni chevauchant un rendez_vous déjà confirmé côté CRM (évite un double-booking entre deux
+// réservations prises avant la prochaine synchro Outlook). Aucun créneau avant
+// rdv_delai_min_heures à partir de maintenant. Grille de génération : 15 minutes.
+function calculerCreneauxLibresRdv(agentConfig, rendezVousExistants, dureeMin) {
+  const joursTravail = agentConfig.rdv_jours_travail || [1, 2, 3, 4, 5];
+  const [hDebut, mDebut] = (agentConfig.rdv_heure_debut || '08:00').split(':').map(Number);
+  const [hFin, mFin] = (agentConfig.rdv_heure_fin || '18:00').split(':').map(Number);
+  const delaiMinHeures = agentConfig.rdv_delai_min_heures ?? 24;
+  const horizonJours = agentConfig.rdv_horizon_jours || 30;
+  const busy = (agentConfig.rdv_busy_cache || []).map(b => ({ debut: new Date(b.debut), fin: new Date(b.fin) }))
+    .concat((rendezVousExistants || []).map(r => ({ debut: new Date(r.date_heure), fin: new Date(new Date(r.date_heure).getTime() + (r.duree_min || 45) * 60000) })));
+
+  const maintenant = new Date();
+  const pasAvant = new Date(maintenant.getTime() + delaiMinHeures * 3600000);
+  const GRANULARITE_MIN = 15;
+  const jours = [];
+
+  for (let i = 0; i <= horizonJours; i++) {
+    const jour = new Date(maintenant.getFullYear(), maintenant.getMonth(), maintenant.getDate() + i);
+    const isoJour = jour.getDay() === 0 ? 7 : jour.getDay(); // aligne JS (0=dimanche) sur 1=lundi..7=dimanche
+    if (!joursTravail.includes(isoJour)) continue;
+    const creneaux = [];
+    let curseur = new Date(jour); curseur.setHours(hDebut, mDebut, 0, 0);
+    const finJournee = new Date(jour); finJournee.setHours(hFin, mFin, 0, 0);
+    while (curseur.getTime() + dureeMin * 60000 <= finJournee.getTime()) {
+      const finCreneau = new Date(curseur.getTime() + dureeMin * 60000);
+      const libre = curseur >= pasAvant && !busy.some(b => curseur < b.fin && finCreneau > b.debut);
+      if (libre) creneaux.push(curseur.toTimeString().slice(0, 5));
+      curseur = new Date(curseur.getTime() + GRANULARITE_MIN * 60000);
+    }
+    if (creneaux.length) jours.push({ date: jour.toISOString().slice(0, 10), creneaux });
+  }
+  return jours;
+}
+
 // Bug corrigé le 10.08.2026 : les événements n'étaient JAMAIS créés dans Outlook, même connecté
 // — Microsoft Graph exige un dateTime ISO 8601 complet ("2026-08-13T00:00:00"), or on lui envoyait
 // une date seule ("2026-08-13") issue telle quelle du <input type="date">, systématiquement rejetée
@@ -170,6 +209,91 @@ async function synchroniserRappelOutlook(id) {
   if (vueDetailActive && vueDetailActive.type === 'rappel' && vueDetailActive.id === id) showRappel(id);
   else if (currentView === 'rappels') navigate('rappels', { silent: true });
   else if (currentView === 'nouvelle-opportunite') navigate('nouvelle-opportunite', { silent: true });
+}
+
+// ═══ SYNC OUTLOOK — RENDEZ-VOUS ═══
+// Créé l'événement Outlook d'un RDV avec une heure précise (contrairement aux rappels, qui sont
+// des événements "toute la journée") — même logique UTC explicite que createOutlookEventFromRappel
+// pour éviter tout décalage de fuseau côté Graph.
+async function createOutlookEventFromRdv(rdv) {
+  if (!msalAccessToken || !rdv.date_heure) return null;
+  try {
+    const client = rdv.client_id ? allClients.find(c => c.id === rdv.client_id) : null;
+    const nomInvite = client ? (estEntreprise(client) ? client.nom : `${client.prenom} ${client.nom}`) : (rdv.prospect_nom || '');
+    const debut = new Date(rdv.date_heure);
+    const fin = new Date(debut.getTime() + (rdv.duree_min || 45) * 60000);
+    const contenu = [
+      nomInvite ? `Avec : ${nomInvite}` : '',
+      rdv.prospect_email ? `Email : ${rdv.prospect_email}` : '',
+      rdv.prospect_tel ? `Tél : ${rdv.prospect_tel}` : '',
+      rdv.cree_par === 'client' ? 'Réservé en autonomie par le client.' : '',
+      rdv.notes || '',
+    ].filter(Boolean).join('\n');
+    const body = {
+      subject: `📅 ${rdv.type || 'Rendez-vous'}${nomInvite ? ' — ' + nomInvite : ''}`,
+      isAllDay: false,
+      start: { dateTime: debut.toISOString().split('.')[0], timeZone: 'UTC' },
+      end: { dateTime: fin.toISOString().split('.')[0], timeZone: 'UTC' },
+      body: { contentType: 'text', content: contenu },
+    };
+    const r = await fetch('https://graph.microsoft.com/v1.0/me/events', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+    });
+    if (!r.ok) { console.error('Graph create rdv event error', r.status); return null; }
+    const data = await r.json();
+    return data.id || null;
+  } catch(e) { console.error('Graph create rdv event exception', e); return null; }
+}
+
+// Resynchronisation manuelle d'un RDV — bouton "📅" dans la vue Rendez-vous.
+async function synchroniserRdvOutlook(id) {
+  const r = allRendezVous.find(x => x.id === id);
+  if (!r) return;
+  if (!(await assurerTokenOutlook())) { showError('Connecte-toi d\'abord à Outlook (bouton "Connecter Outlook"), puis réessaie.'); return; }
+  try {
+    const eventId = await createOutlookEventFromRdv(r);
+    if (!eventId) throw new Error('création échouée');
+    const patchR = await dbPatch('rendez_vous', id, { outlook_event_id: eventId, outlook_sync_le: new Date().toISOString() });
+    if (patchR && patchR.error) throw new Error('enregistrement échoué');
+    r.outlook_event_id = eventId;
+    showError('✓ Ajouté à l\'agenda Outlook.');
+  } catch (e) {
+    showError('Échec de la synchronisation Outlook — réessaie dans un instant.');
+    return;
+  }
+  if (currentView === 'rendez-vous') navigate('rendez-vous', { silent: true });
+}
+
+// Appelée automatiquement à la connexion (si Outlook est connecté) : pousse tout RDV confirmé pas
+// encore synchronisé vers l'agenda Outlook, et rafraîchit le cache des créneaux occupés de
+// l'agent courant (agents.rdv_busy_cache) pour que les prochaines réservations publiques restent
+// à jour. Entièrement silencieuse — ne bloque jamais le chargement du CRM, pas d'erreur affichée
+// si Outlook n'est pas connecté (cas normal, pas une panne). Limite connue : fetchCalendarEvents
+// ne couvre que ~2 mois glissants ; un agent configurant un horizon de réservation plus large
+// verrait ses créneaux au-delà non vérifiés contre son agenda Outlook réel.
+async function synchroniserRdvEtDispoOutlook() {
+  if (!(await assurerTokenOutlook())) return;
+  const aSynchroniser = (allRendezVous || []).filter(r => r.statut === 'confirme' && !r.outlook_event_id);
+  for (const r of aSynchroniser) {
+    try {
+      const eventId = await createOutlookEventFromRdv(r);
+      if (eventId) { await dbPatch('rendez_vous', r.id, { outlook_event_id: eventId, outlook_sync_le: new Date().toISOString() }); r.outlook_event_id = eventId; }
+    } catch(e) { /* on retentera à la prochaine connexion */ }
+  }
+
+  const monAgent = allAgents.find(a => a.email === currentUser.email);
+  if (!monAgent || !monAgent.rdv_actif) return;
+  try {
+    const events = await fetchCalendarEvents();
+    const busy = (events || []).filter(e => !e.isCancelled && e.start && e.end)
+      .map(e => ({ debut: e.start.dateTime + 'Z', fin: e.end.dateTime + 'Z' }));
+    const maj = new Date().toISOString();
+    await dbPatch('agents', monAgent.id, { rdv_busy_cache: busy, rdv_busy_cache_maj_le: maj });
+    monAgent.rdv_busy_cache = busy;
+    monAgent.rdv_busy_cache_maj_le = maj;
+  } catch(e) { /* pas grave, retentera à la prochaine connexion */ }
 }
 
 async function deleteOutlookEvent(eventId) {
@@ -504,6 +628,7 @@ async function enterApp(user) {
   allVehicules = await dbGet('vehicules', 'select=*').catch(() => []);
   allContrats = await dbGet('contrats', 'select=*');
   allOpportunites = await dbGet('opportunites', 'select=*');
+  allRendezVous = await dbGet('rendez_vous', 'select=*&order=date_heure.asc').catch(() => []);
 
   // Bascule automatique : contrats actifs dont l'échéance est passée → "à renouveler"
   await basculerContratsEchus();
@@ -522,6 +647,7 @@ async function enterApp(user) {
   }
 
   renderSidebar();
+  synchroniserRdvEtDispoOutlook(); // arrière-plan, non bloquant — voir sa doc plus haut
   // Ouverture directe d'une fiche client si l'onglet a été ouvert via Ctrl/Cmd+clic (deep-link ?client=ID)
   const paramsUrl = new URLSearchParams(window.location.search);
   const clientDeepLink = paramsUrl.get('client');
@@ -566,6 +692,7 @@ const SECTIONS = [
     { id: 'calc-immo', label: '🏠 Financement immobilier' },
     { id: 'rappels', label: 'Tâches & Rappels', rhAllowed: true },
     { id: 'agenda', label: 'Agenda', rhAllowed: true },
+    { id: 'rendez-vous', label: '📅 Rendez-vous', rhAllowed: true },
     { id: 'campagnes', label: 'Campagnes' },
   ]},
   { id: 'portefeuille', label: 'Portefeuille', icon: '◑', sub: [
@@ -977,6 +1104,7 @@ async function renderView() {
     case 'calc-lpp': main.innerHTML = viewCalculateurLPP(); bindAdresseAutocomplete({ adresseId: 'clpp-adresse', npaVilleId: 'clpp-npa-ville' }); break;
     case 'calc-immo': main.innerHTML = viewFinancementImmo(); break;
     case 'agenda': main.innerHTML = viewAgenda(); break;
+    case 'rendez-vous': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewRendezVous(); break;
     case 'campagnes': main.innerHTML = viewCampagnes(); break;
     case 'nouveau-agent': main.innerHTML = viewNouvelAgent(); break;
     case 'bordereaux':

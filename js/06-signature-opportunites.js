@@ -790,6 +790,134 @@ function viewRappels() {
     ${corps}`;
 }
 
+// ═══ VUE INTERNE — RENDEZ-VOUS (pris en autonomie par les clients via le lien public, ou créés
+// ici directement) — demande de Jonathan le 10.08.2026 : prise de RDV reliée aux clients. ═══
+async function viewRendezVous() {
+  allRendezVous = await dbGet('rendez_vous', 'select=*&order=date_heure.asc').catch(() => allRendezVous) || allRendezVous;
+  const maintenant = new Date();
+  const aVenir = allRendezVous.filter(r => r.statut === 'confirme' && new Date(r.date_heure) >= maintenant);
+  const passes = allRendezVous.filter(r => r.statut === 'confirme' && new Date(r.date_heure) < maintenant).sort((a, b) => new Date(b.date_heure) - new Date(a.date_heure));
+  const annules = allRendezVous.filter(r => r.statut === 'annule');
+
+  const nomRdv = r => {
+    if (r.client_id) { const c = allClients.find(x => x.id === r.client_id); return c ? (estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`) : '—'; }
+    return r.prospect_nom || '—';
+  };
+  const heureRdv = iso => new Date(iso).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
+
+  const renderItem = r => `
+    <div class="rappel-item" style="align-items:center">
+      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:60px;text-align:center;flex-shrink:0">
+        <div style="font-size:14px;font-weight:800;color:var(--text)">${fmtDate(r.date_heure)}</div>
+        <div style="font-size:12px;font-weight:700;color:var(--accent)">${heureRdv(r.date_heure)}</div>
+      </div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:var(--text)">${r.cree_par === 'client' ? '🌐 ' : ''}${r.client_id ? `<span onclick="showClient('${r.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${nomRdv(r)}</span>` : nomRdv(r)}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${[r.type, r.duree_min ? `${r.duree_min} min` : '', r.prospect_email, r.prospect_tel].filter(Boolean).join(' · ')}</div>
+        ${r.notes ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:3px;font-style:italic">${r.notes}</div>` : ''}
+      </div>
+      ${!r.outlook_event_id ? `<button onclick="synchroniserRdvOutlook('${r.id}')" title="Absent de l'agenda Outlook — cliquer pour synchroniser" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;border-radius:7px;padding:4px 8px;font-size:11px;cursor:pointer">📅</button>` : `<span title="Synchronisé avec Outlook" style="font-size:13px">✅</span>`}
+      <button onclick="annulerRdv('${r.id}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px" title="Annuler">✕</button>
+    </div>`;
+
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Rendez-vous</h2>
+      <button class="btn-add" onclick="ouvrirModaleNouveauRdv()">+ Nouveau RDV</button>
+    </div>
+    <div style="margin-bottom:22px">
+      <div style="font-size:11px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">À venir (${aVenir.length})</div>
+      ${aVenir.length ? aVenir.map(renderItem).join('') : '<div class="table-empty">Aucun rendez-vous à venir.</div>'}
+    </div>
+    ${passes.length ? `<div style="margin-bottom:22px">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Passés (${passes.length})</div>
+      ${passes.slice(0, 20).map(renderItem).join('')}
+    </div>` : ''}
+    ${annules.length ? `<div>
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Annulés (${annules.length})</div>
+      ${annules.slice(0, 10).map(r => `<div class="rappel-item" style="opacity:.6"><div style="flex:1"><div style="font-size:13px;color:var(--text)">${fmtDate(r.date_heure)} ${heureRdv(r.date_heure)} — ${nomRdv(r)}</div></div></div>`).join('')}
+    </div>` : ''}`;
+}
+
+async function annulerRdv(id) {
+  if (!confirm('Annuler ce rendez-vous ?')) return;
+  const r = allRendezVous.find(x => x.id === id);
+  if (r && r.outlook_event_id) { try { await deleteOutlookEvent(r.outlook_event_id); } catch(e) {} }
+  const res = await dbPatch('rendez_vous', id, { statut: 'annule', outlook_event_id: null });
+  if (res && res.error) { showError('Erreur : ' + errMsg(res)); return; }
+  if (r) { r.statut = 'annule'; r.outlook_event_id = null; }
+  navigate('rendez-vous', { silent: true });
+}
+
+// Création interne d'un RDV (Jonathan crée directement, sans passer par le lien public).
+function ouvrirModaleNouveauRdv() {
+  const monAgent = allAgents.find(a => a.email === currentUser.email) || allAgents[0];
+  creerModale('modal-nouveau-rdv', `
+    <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:480px;width:100%">
+      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:14px">📅 Nouveau rendez-vous</div>
+      <div class="form-field" style="margin-bottom:10px;position:relative">
+        <label class="form-label">Client (ou laisse vide pour un prospect)</label>
+        <input class="form-input" id="rdv-modal-client-recherche" placeholder="Rechercher un client..." oninput="rechercheClientRdvModal(this.value)" autocomplete="off"/>
+        <input type="hidden" id="rdv-modal-client-id"/>
+        <div id="rdv-modal-client-resultats" style="display:none;position:absolute;z-index:10;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:200px;overflow-y:auto;width:100%"></div>
+      </div>
+      <div class="form-field" style="margin-bottom:10px"><label class="form-label">Nom du prospect (si pas de client)</label><input class="form-input" id="rdv-modal-prospect"/></div>
+      <div class="form-field" style="margin-bottom:10px"><label class="form-label">Type</label><select class="form-select" id="rdv-modal-type">${TYPES_RDV.map(t => `<option>${t}</option>`).join('')}</select></div>
+      <div style="display:flex;gap:10px;margin-bottom:10px">
+        <div class="form-field" style="flex:1"><label class="form-label">Date</label><input class="form-input" id="rdv-modal-date" type="date"/></div>
+        <div class="form-field" style="flex:1"><label class="form-label">Heure</label><input class="form-input" id="rdv-modal-heure" type="time"/></div>
+        <div class="form-field" style="flex:1"><label class="form-label">Durée (min)</label><input class="form-input" id="rdv-modal-duree" type="number" value="${(monAgent && monAgent.rdv_duree_defaut) || 45}"/></div>
+      </div>
+      <div class="form-field" style="margin-bottom:14px"><label class="form-label">Notes (facultatif)</label><textarea class="form-input" id="rdv-modal-notes" rows="2"></textarea></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn-secondary" onclick="document.getElementById('modal-nouveau-rdv').remove()">Annuler</button>
+        <button class="btn-save" onclick="creerRdvInterne('${monAgent ? monAgent.id : ''}')" style="margin-left:auto">✓ Créer le RDV</button>
+      </div>
+    </div>`, { padding: '16px' });
+}
+
+function rechercheClientRdvModal(texte) {
+  const zone = document.getElementById('rdv-modal-client-resultats');
+  if (!zone) return;
+  const q = _cleRechercheSansAccents(texte);
+  const nomAffiche = c => estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`;
+  const resultats = (q ? allClients.filter(c => _cleRechercheSansAccents(nomAffiche(c)).includes(q)) : []).slice(0, 8);
+  if (!resultats.length) { zone.style.display = 'none'; return; }
+  zone.innerHTML = resultats.map(c => `<div onmousedown="selectionnerClientRdvModal('${c.id}','${nomAffiche(c).replace(/'/g, "\\'")}')" style="padding:9px 14px;font-size:13px;color:var(--text);cursor:pointer;border-bottom:1px solid var(--border)">${nomAffiche(c)}</div>`).join('');
+  zone.style.display = 'block';
+}
+function selectionnerClientRdvModal(id, nom) {
+  document.getElementById('rdv-modal-client-id').value = id;
+  document.getElementById('rdv-modal-client-recherche').value = nom;
+  document.getElementById('rdv-modal-client-resultats').style.display = 'none';
+}
+
+async function creerRdvInterne(agentId) {
+  const clientId = document.getElementById('rdv-modal-client-id')?.value || null;
+  const prospectNom = (document.getElementById('rdv-modal-prospect')?.value || '').trim() || null;
+  const date = document.getElementById('rdv-modal-date')?.value;
+  const heure = document.getElementById('rdv-modal-heure')?.value;
+  if (!clientId && !prospectNom) { showError('Indique un client ou un nom de prospect.'); return; }
+  if (!date || !heure) { showError('Indique une date et une heure.'); return; }
+  const body = {
+    agent_id: agentId || null,
+    client_id: clientId,
+    prospect_nom: clientId ? null : prospectNom,
+    type: document.getElementById('rdv-modal-type')?.value || null,
+    date_heure: `${date}T${heure}:00`,
+    duree_min: Number(document.getElementById('rdv-modal-duree')?.value) || 45,
+    notes: (document.getElementById('rdv-modal-notes')?.value || '').trim() || null,
+    statut: 'confirme',
+    cree_par: 'agent',
+  };
+  const res = await dbPost('rendez_vous', body);
+  if (res && res.error) { showError('Erreur : ' + errMsg(res)); return; }
+  if (res && res[0]) allRendezVous.push(res[0]);
+  document.getElementById('modal-nouveau-rdv')?.remove();
+  showError('✓ Rendez-vous créé.');
+  navigate('rendez-vous', { silent: true });
+}
+
 async function traiterRappel(id) {
   const r = allRappels.find(x => x.id === id);
   let resultat;

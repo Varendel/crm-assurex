@@ -153,6 +153,7 @@ let openBordereaux = {};
 let contratClientId = null;
 let allContrats = [];
 let allOpportunites = [];
+let allRendezVous = [];
 let prefillOpportunite = null;
 // Produit précis (id catalogue) à préremplir dans "Nouveau contrat" pour l'opportunité en cours de
 // conversion, et file d'attente des autres produits sélectionnés sur cette même opportunité —

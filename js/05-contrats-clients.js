@@ -1244,6 +1244,166 @@ async function envoyerSignatureAutonome(token) {
   zone.innerHTML = `<div style="font-size:40px;margin-bottom:10px">✅</div><p style="color:#333;font-weight:700">Merci, votre signature a été transmise !</p><p style="color:#888;font-size:12.5px">Vous pouvez fermer cette page.</p>`;
 }
 
+// ═══ RÉSERVATION DE RDV EN AUTONOMIE — page publique liée à un agent (?rdv=TOKEN) ═══
+// Même principe que la signature autonome ci-dessus : un lien sans connexion CRM, protégé par un
+// token non devinable (agents.rdv_token). Le client choisit un motif, puis un créneau parmi ceux
+// réellement libres (calculerCreneauxLibresRdv, js/03), saisit ses coordonnées si le lien n'est
+// pas déjà associé à une fiche client connue (paramètre ?client=ID pour un lien personnalisé), et
+// confirme. Le RDV est poussé dans l'agenda Outlook de l'agent à sa prochaine connexion au CRM
+// (voir synchroniserRdvOutlook, js/03) — pas d'écriture directe dans Outlook depuis cette page
+// publique, qui n'a et ne doit pas avoir accès au compte Microsoft de l'agent.
+let _rdvEtat = null;
+
+async function afficherPageReservationRdv(token, clientIdPrefill) {
+  document.body.innerHTML = `<div id="page-rdv-autonome" style="min-height:100vh;background:#0f2244;display:flex;align-items:center;justify-content:center;padding:20px;font-family:Arial,sans-serif">
+    <div style="background:#fff;border-radius:16px;padding:24px;max-width:460px;width:100%">
+      <div id="contenu-rdv-autonome"><p style="color:#666;text-align:center">Chargement...</p></div>
+    </div>
+  </div>`;
+  const zone = document.getElementById('contenu-rdv-autonome');
+
+  const agents = await dbGet('agents', `rdv_token=eq.${encodeURIComponent(token)}&rdv_actif=eq.true&select=id,prenom,nom,rdv_jours_travail,rdv_heure_debut,rdv_heure_fin,rdv_duree_defaut,rdv_delai_min_heures,rdv_horizon_jours,rdv_busy_cache`);
+  const agent = agents && agents[0];
+  if (!agent) { zone.innerHTML = `<p style="color:#c0392b;text-align:center">Ce lien de prise de rendez-vous n'est plus valide.</p>`; return; }
+
+  let clientPrefill = null;
+  if (clientIdPrefill) {
+    const clients = await dbGet('clients', `id=eq.${clientIdPrefill}&select=id,prenom,nom,email,tel`);
+    clientPrefill = (clients && clients[0]) || null;
+  }
+
+  const existants = await dbGet('rendez_vous', `agent_id=eq.${agent.id}&statut=eq.confirme&select=date_heure,duree_min`);
+
+  _rdvEtat = { token, agent, clientPrefill, existants: existants || [], type: null, date: null, heure: null, joursDisponibles: [] };
+  renderEtapeTypeRdv();
+}
+
+function renderEtapeTypeRdv() {
+  const zone = document.getElementById('contenu-rdv-autonome');
+  zone.innerHTML = `
+    <div style="font-size:15px;font-weight:800;color:#0f2244;margin-bottom:4px">Prendre rendez-vous</div>
+    <div style="font-size:12.5px;color:#666;margin-bottom:16px">avec ${_rdvEtat.agent.prenom} ${_rdvEtat.agent.nom}</div>
+    <div style="font-size:11px;color:#888;margin-bottom:10px">Choisissez le motif du rendez-vous</div>
+    <div style="display:flex;flex-direction:column;gap:8px">
+      ${TYPES_RDV.map(t => `<button onclick="choisirTypeRdv('${t.replace(/'/g, "\\'")}')" style="padding:12px;border-radius:8px;border:1.5px solid #0f2244;background:#fff;color:#0f2244;font-weight:700;font-size:13px;cursor:pointer;text-align:left">${t}</button>`).join('')}
+    </div>`;
+}
+
+function choisirTypeRdv(type) {
+  _rdvEtat.type = type;
+  renderEtapeCreneaux();
+}
+
+function renderEtapeCreneaux() {
+  const zone = document.getElementById('contenu-rdv-autonome');
+  const dureeMin = _rdvEtat.agent.rdv_duree_defaut || 45;
+  const jours = calculerCreneauxLibresRdv(_rdvEtat.agent, _rdvEtat.existants, dureeMin);
+  _rdvEtat.joursDisponibles = jours;
+  if (!jours.length) {
+    zone.innerHTML = `<p style="color:#c0392b;text-align:center">Aucun créneau disponible pour le moment — contactez directement ${_rdvEtat.agent.prenom}.</p>
+      <button onclick="renderEtapeTypeRdv()" style="margin-top:14px;width:100%;padding:10px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-weight:700;cursor:pointer">← Retour</button>`;
+    return;
+  }
+  const optionsDates = jours.map(j => `<option value="${j.date}">${fmtDateJourLong(j.date)}</option>`).join('');
+  zone.innerHTML = `
+    <div style="font-size:15px;font-weight:800;color:#0f2244;margin-bottom:4px">${_rdvEtat.type}</div>
+    <div style="font-size:12.5px;color:#666;margin-bottom:16px">Choisissez un jour puis un créneau (${dureeMin} min)</div>
+    <select class="form-select" id="rdv-select-jour" onchange="renderCreneauxDuJour()" style="width:100%;margin-bottom:12px">${optionsDates}</select>
+    <div id="rdv-creneaux-jour" style="display:flex;flex-wrap:wrap;gap:8px"></div>
+    <button onclick="renderEtapeTypeRdv()" style="margin-top:16px;width:100%;padding:10px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-weight:700;cursor:pointer">← Retour</button>`;
+  renderCreneauxDuJour();
+}
+
+function renderCreneauxDuJour() {
+  const sel = document.getElementById('rdv-select-jour');
+  const zone = document.getElementById('rdv-creneaux-jour');
+  if (!sel || !zone) return;
+  const jour = _rdvEtat.joursDisponibles.find(j => j.date === sel.value);
+  zone.innerHTML = (jour ? jour.creneaux : []).map(h => `<button onclick="choisirCreneauRdv('${sel.value}','${h}')" style="padding:8px 12px;border-radius:7px;border:1.5px solid #0f2244;background:#fff;color:#0f2244;font-weight:700;font-size:12.5px;cursor:pointer">${h}</button>`).join('') || `<div style="font-size:12px;color:#888">Aucun créneau ce jour-là.</div>`;
+}
+
+function choisirCreneauRdv(date, heure) {
+  _rdvEtat.date = date; _rdvEtat.heure = heure;
+  renderEtapeCoordonnees();
+}
+
+function renderEtapeCoordonnees() {
+  const zone = document.getElementById('contenu-rdv-autonome');
+  const cp = _rdvEtat.clientPrefill;
+  zone.innerHTML = `
+    <div style="font-size:15px;font-weight:800;color:#0f2244;margin-bottom:4px">${_rdvEtat.type}</div>
+    <div style="font-size:12.5px;color:#666;margin-bottom:16px">${fmtDateJourLong(_rdvEtat.date)} à ${_rdvEtat.heure}</div>
+    ${cp ? `<div style="font-size:13px;color:#333;margin-bottom:14px">Pour : <strong>${cp.prenom} ${cp.nom}</strong></div>` : `
+      <div style="margin-bottom:10px"><input class="form-input" id="rdv-nom" placeholder="Nom complet" style="width:100%"/></div>
+      <div style="margin-bottom:10px"><input class="form-input" id="rdv-email" type="email" placeholder="Email" style="width:100%"/></div>
+      <div style="margin-bottom:10px"><input class="form-input" id="rdv-tel" placeholder="Téléphone" style="width:100%"/></div>
+    `}
+    <div style="margin-bottom:14px"><textarea class="form-input" id="rdv-notes" rows="2" placeholder="Une précision à ajouter ? (facultatif)" style="width:100%"></textarea></div>
+    <div style="display:flex;gap:8px">
+      <button onclick="renderEtapeCreneaux()" style="flex:1;padding:10px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-weight:700;cursor:pointer">← Retour</button>
+      <button onclick="confirmerReservationRdv()" style="flex:2;padding:10px;border-radius:8px;border:none;background:#0f2244;color:#fff;font-weight:700;cursor:pointer">✓ Confirmer le rendez-vous</button>
+    </div>`;
+}
+
+async function confirmerReservationRdv() {
+  const cp = _rdvEtat.clientPrefill;
+  const nom = cp ? `${cp.prenom} ${cp.nom}` : (document.getElementById('rdv-nom')?.value || '').trim();
+  const email = cp ? cp.email : (document.getElementById('rdv-email')?.value || '').trim();
+  const tel = cp ? cp.tel : (document.getElementById('rdv-tel')?.value || '').trim();
+  if (!nom) { alert('Merci d\'indiquer votre nom.'); return; }
+  const notes = (document.getElementById('rdv-notes')?.value || '').trim();
+  const dateHeureIso = `${_rdvEtat.date}T${_rdvEtat.heure}:00`;
+
+  const body = {
+    agent_id: _rdvEtat.agent.id,
+    client_id: cp ? cp.id : null,
+    prospect_nom: cp ? null : nom,
+    prospect_email: email || null,
+    prospect_tel: tel || null,
+    type: _rdvEtat.type,
+    date_heure: dateHeureIso,
+    duree_min: _rdvEtat.agent.rdv_duree_defaut || 45,
+    notes: notes || null,
+    statut: 'confirme',
+    cree_par: 'client',
+  };
+  const res = await dbPost('rendez_vous', body);
+  if (res && res.error) {
+    document.getElementById('contenu-rdv-autonome').innerHTML = `<p style="color:#c0392b;text-align:center">Une erreur est survenue — merci de réessayer ou de contacter directement ${_rdvEtat.agent.prenom}.</p>`;
+    return;
+  }
+  const dureeMin = _rdvEtat.agent.rdv_duree_defaut || 45;
+  const icsUrl = genererIcsRdv(_rdvEtat, dureeMin, nom);
+  document.getElementById('contenu-rdv-autonome').innerHTML = `
+    <div style="font-size:40px;margin-bottom:10px;text-align:center">✅</div>
+    <p style="color:#333;font-weight:700;text-align:center">Rendez-vous confirmé !</p>
+    <p style="color:#666;font-size:13px;text-align:center;margin-bottom:16px">${_rdvEtat.type}<br>${fmtDateJourLong(_rdvEtat.date)} à ${_rdvEtat.heure}</p>
+    <a href="${icsUrl}" download="rendez-vous.ics" style="display:block;text-align:center;padding:10px;border-radius:8px;border:1.5px solid #0f2244;color:#0f2244;font-weight:700;font-size:12.5px;text-decoration:none">📅 Ajouter à mon calendrier</a>
+    <div style="font-size:9.5px;color:#aaa;margin-top:16px;text-align:center">Vous pouvez fermer cette page.</div>`;
+}
+
+function fmtDateJourLong(iso) {
+  const d = new Date(iso + 'T12:00:00');
+  return d.toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+function genererIcsRdv(etat, dureeMin, nomInvite) {
+  const debut = new Date(`${etat.date}T${etat.heure}:00`);
+  const fin = new Date(debut.getTime() + dureeMin * 60000);
+  const fmt = d => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+  const ics = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT',
+    `UID:${Date.now()}@crm-assurex`,
+    `DTSTAMP:${fmt(new Date())}`,
+    `DTSTART:${fmt(debut)}`,
+    `DTEND:${fmt(fin)}`,
+    `SUMMARY:${etat.type} — ${etat.agent.prenom} ${etat.agent.nom}`,
+    `DESCRIPTION:Rendez-vous avec ${nomInvite}`,
+    'END:VEVENT', 'END:VCALENDAR',
+  ].join('\r\n');
+  return 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
+}
+
 function genererMandatCourtage(clientId, signatureDataUrl) {
   const c = allClients.find(x => x.id === clientId);
   if (!c) { showError('Client introuvable.'); return; }

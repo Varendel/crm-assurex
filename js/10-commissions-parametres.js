@@ -1368,6 +1368,35 @@ function viewAgents() {
             <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:10px">Aucune signature enregistrée — une fois enregistrée, elle sera ajoutée automatiquement (avec la date du jour) sur tous les mandats de courtage générés.</div>
             <button class="btn-save" onclick="ouvrirModaleMaSignature('${a.id}')">✍️ Enregistrer ma signature</button>
           `}
+        </div>
+        <div style="margin-top:14px;background:var(--surface-alt);border-radius:10px;padding:16px">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${a.rdv_actif ? '12px' : '0'}">
+            <div style="font-size:12px;font-weight:800;color:var(--text)">📅 Prise de RDV en autonomie — reliée aux clients</div>
+            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11.5px;color:var(--text-muted)">
+              <input type="checkbox" ${a.rdv_actif ? 'checked' : ''} onchange="toggleRdvActif('${a.id}', this.checked)"/> Activer
+            </label>
+          </div>
+          ${a.rdv_actif ? `
+            <div class="form-grid" style="margin-bottom:10px">
+              <div class="form-field" style="grid-column:span 2"><label class="form-label">Jours travaillés</label>
+                <div style="display:flex;gap:10px;flex-wrap:wrap">
+                  ${['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'].map((lbl, i) => `<label style="display:flex;align-items:center;gap:4px;font-size:11.5px;color:var(--text)"><input type="checkbox" id="rdv-jour-${i+1}-${a.id}" ${(a.rdv_jours_travail || [1,2,3,4,5]).includes(i+1) ? 'checked' : ''}/> ${lbl}</label>`).join('')}
+                </div>
+              </div>
+              <div class="form-field"><label class="form-label">Heure de début</label><input class="form-input" id="rdv-heure-debut-${a.id}" type="time" value="${a.rdv_heure_debut || '08:00'}"/></div>
+              <div class="form-field"><label class="form-label">Heure de fin</label><input class="form-input" id="rdv-heure-fin-${a.id}" type="time" value="${a.rdv_heure_fin || '18:00'}"/></div>
+              <div class="form-field"><label class="form-label">Durée du RDV (min)</label><input class="form-input" id="rdv-duree-${a.id}" type="number" value="${a.rdv_duree_defaut || 45}"/></div>
+              <div class="form-field"><label class="form-label">Délai minimum (heures)</label><input class="form-input" id="rdv-delai-${a.id}" type="number" value="${a.rdv_delai_min_heures ?? 24}"/></div>
+              <div class="form-field"><label class="form-label">Réservable jusqu'à (jours)</label><input class="form-input" id="rdv-horizon-${a.id}" type="number" value="${a.rdv_horizon_jours || 30}"/></div>
+            </div>
+            <button class="btn-save" onclick="saveConfigRdv('${a.id}')">💾 Enregistrer les disponibilités</button>
+            ${a.rdv_token ? `
+              <div style="margin-top:12px;display:flex;gap:8px;align-items:center">
+                <input class="form-input" readonly value="${window.location.origin}${window.location.pathname}?rdv=${a.rdv_token}" style="flex:1;font-size:11px;color:var(--text-muted)" onclick="this.select()"/>
+                <button class="btn-secondary" onclick="copierLienRdv('${a.rdv_token}')">📋 Copier le lien</button>
+              </div>
+            ` : ''}
+          ` : `<div style="font-size:11.5px;color:var(--text-muted)">Une fois activée, un lien public sera généré : tes clients/prospects pourront y réserver un créneau libre, qui atterrit automatiquement dans le CRM et — à ta prochaine connexion Outlook — dans ton agenda.</div>`}
         </div>` : ''}
       </div>`;
     }).join('')}
@@ -1411,6 +1440,45 @@ async function enregistrerMaSignature(agentId) {
   document.getElementById('modal-ma-signature')?.remove();
   showError('✓ Signature enregistrée — elle apparaîtra désormais sur tes mandats de courtage.');
   navigate('agents');
+}
+
+// ═══ PRISE DE RDV EN AUTONOMIE — configuration par agent (Paramètres → Agents) ═══
+// Active/désactive le lien public de réservation et génère son token la première fois (jamais
+// régénéré ensuite, pour ne pas casser un lien déjà partagé/imprimé/mis en signature email).
+async function toggleRdvActif(agentId, actif) {
+  const agent = allAgents.find(a => a.id === agentId);
+  const body = { rdv_actif: actif };
+  if (actif && agent && !agent.rdv_token) {
+    body.rdv_token = (crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36) + Math.random().toString(36).slice(2)));
+  }
+  const r = await dbPatch('agents', agentId, body);
+  if (r && r.error) { showError('Erreur : ' + errMsg(r)); return; }
+  if (agent) Object.assign(agent, body);
+  navigate('agents');
+}
+
+async function saveConfigRdv(agentId) {
+  const jours = [1, 2, 3, 4, 5, 6, 7].filter(j => document.getElementById(`rdv-jour-${j}-${agentId}`)?.checked);
+  const body = {
+    rdv_jours_travail: jours,
+    rdv_heure_debut: document.getElementById(`rdv-heure-debut-${agentId}`)?.value || '08:00',
+    rdv_heure_fin: document.getElementById(`rdv-heure-fin-${agentId}`)?.value || '18:00',
+    rdv_duree_defaut: Number(document.getElementById(`rdv-duree-${agentId}`)?.value) || 45,
+    rdv_delai_min_heures: Number(document.getElementById(`rdv-delai-${agentId}`)?.value) || 24,
+    rdv_horizon_jours: Number(document.getElementById(`rdv-horizon-${agentId}`)?.value) || 30,
+  };
+  const r = await dbPatch('agents', agentId, body);
+  if (r && r.error) { showError('Erreur : ' + errMsg(r)); return; }
+  const agent = allAgents.find(a => a.id === agentId);
+  if (agent) Object.assign(agent, body);
+  showError('✓ Disponibilités enregistrées.');
+}
+
+function copierLienRdv(token) {
+  const lien = `${window.location.origin}${window.location.pathname}?rdv=${token}`;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(lien).then(() => showError('✓ Lien copié — prêt à partager.')).catch(() => showError('Lien : ' + lien));
+  } else { showError('Lien : ' + lien); }
 }
 
 function toggleTauxLibre(id) {
@@ -1496,8 +1564,11 @@ async function createAgent() {
 // qui ouvre ce lien sur son téléphone n'a pas de compte, il ne doit voir qu'un écran de signature.
 const _paramsInitiaux = new URLSearchParams(window.location.search);
 const _tokenSignature = _paramsInitiaux.get('signer');
+const _tokenRdv = _paramsInitiaux.get('rdv');
 if (_tokenSignature) {
   afficherPageSignatureAutonome(_tokenSignature);
+} else if (_tokenRdv) {
+  afficherPageReservationRdv(_tokenRdv, _paramsInitiaux.get('client'));
 } else {
   initMSAL();
   tryRestoreSession();

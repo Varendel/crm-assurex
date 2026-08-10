@@ -1451,11 +1451,15 @@ async function genererEmailDemandeOffre() {
   const clientSel = clientSelId ? (allClients || []).find(x => x.id === clientSelId) : null;
 
   let besoins = [];
-  // Déclenché par la case "Perte de gain maladie" OU par une case délai (14j/30j/60j) seule —
-  // bug réel repéré par Jonathan : il avait coché uniquement les délais (pas la case parente),
-  // et rien ne remontait dans l'email généré alors que la case délai, elle, était bien cochée.
+  // Reprend TOUS les délais cochés, pas seulement le premier — bug réel repéré par Jonathan le
+  // 10.08.2026 : cocher 14j ET 30j ne faisait apparaître que "14j" dans l'email (le ternaire ne
+  // retenait que le premier délai coché au lieu de tous les cumuler).
   if (chk('do-perte-gain') || chk('do-pg-14j') || chk('do-pg-30j') || chk('do-pg-60j')) {
-    besoins.push('Perte de gain maladie' + (chk('do-pg-14j')?' (délai 14j)':chk('do-pg-30j')?' (délai 30j)':chk('do-pg-60j')?' (délai 60j)':''));
+    const delaisChoisis = [];
+    if (chk('do-pg-14j')) delaisChoisis.push('14j');
+    if (chk('do-pg-30j')) delaisChoisis.push('30j');
+    if (chk('do-pg-60j')) delaisChoisis.push('60j');
+    besoins.push('Perte de gain maladie' + (delaisChoisis.length ? ` (délai ${delaisChoisis.join(' / ')})` : ''));
   }
   if (chk('do-laa')) besoins.push('LAA');
   if (chk('do-laaf')) besoins.push('LAAF (indépendant)');
@@ -1473,11 +1477,22 @@ async function genererEmailDemandeOffre() {
 
   const ca = val('do-ca') || (clientSel && clientSel.revenu ? String(clientSel.revenu) : '');
   const nbCollab = val('do-nb-collab') || (clientSel && clientSel.taux_activite ? String(clientSel.taux_activite) : '');
-  // Masse salariale : somme des composantes AP/ANP/chef d'entreprise saisies sur CE formulaire ;
-  // à défaut (rien saisi ici), reprend le total déjà enregistré sur la fiche client (compléter
-  // les détails entreprise), pour ne pas perdre une info déjà connue.
-  const msSaisie = ['do-ap-h','do-ap-f','do-anp-h','do-anp-f','do-masse-chef'].reduce((s, id) => s + (Number(val(id)) || 0), 0);
-  const masseSalariale = msSaisie > 0 ? msSaisie : (clientSel && clientSel.details_entreprise && clientSel.details_entreprise.ms_total ? Number(clientSel.details_entreprise.ms_total) : 0);
+
+  // Détail de la masse salariale, ligne par ligne, EXACTEMENT comme saisi sur ce formulaire —
+  // bug réel repéré par Jonathan le 10.08.2026 : l'email additionnait AP/ANP hommes/femmes en un
+  // seul total, alors qu'il avait renseigné chaque case séparément et voulait les voir toutes.
+  const detailMasseSalariale = [
+    ['Masse salariale AP — hommes', val('do-ap-h')],
+    ['Masse salariale AP — femmes', val('do-ap-f')],
+    ['Masse salariale ANP — hommes', val('do-anp-h')],
+    ['Masse salariale ANP — femmes', val('do-anp-f')],
+    ['Salaire excédentaire AVS — hommes', val('do-exc-avs-h')],
+    ['Salaire excédentaire AVS — femmes', val('do-exc-avs-f')],
+    ["Masse salariale chef d'entreprise", val('do-masse-chef')],
+  ].filter(([, v]) => v && Number(v) > 0);
+  // Repli UNIQUEMENT si rien n'a été saisi ici : reprend le total déjà connu sur la fiche client
+  // (pas de détail disponible dans ce cas — on affiche alors le seul total dont on dispose).
+  const masseSalarialeRepli = (!detailMasseSalariale.length && clientSel && clientSel.details_entreprise && clientSel.details_entreprise.ms_total) ? Number(clientSel.details_entreprise.ms_total) : 0;
 
   const ligneAdresse = [
     val('do-adresse') ? `Adresse : ${val('do-adresse')}` : '',
@@ -1485,9 +1500,13 @@ async function genererEmailDemandeOffre() {
     val('do-lieu-risque') ? `Lieu du risque : ${val('do-lieu-risque')}` : '',
   ].filter(Boolean).join('\n');
 
+  const ligneMasseSalariale = detailMasseSalariale.length
+    ? `Masse salariale :\n${detailMasseSalariale.map(([label, v]) => `- ${label} : CHF ${Number(v).toLocaleString('fr-CH')}`).join('\n')}`
+    : (masseSalarialeRepli ? `Masse salariale : CHF ${masseSalarialeRepli.toLocaleString('fr-CH')}` : '');
+
   const ligneTaille = [
     ca ? `Chiffre d'affaires : CHF ${Number(ca).toLocaleString('fr-CH')}` : '',
-    masseSalariale ? `Masse salariale : CHF ${masseSalariale.toLocaleString('fr-CH')}` : '',
+    ligneMasseSalariale,
     nbCollab ? `Nombre de collaborateurs : ${nbCollab}` : '',
   ].filter(Boolean).join('\n');
 
@@ -1508,21 +1527,66 @@ async function genererEmailDemandeOffre() {
     `${currentUser ? currentUser.prenom + ' ' + currentUser.nom : ''}\nAssurex Sàrl`,
   ].filter(Boolean);
   const corps = paragraphes.join('\n\n');
-
   const sujet = `Demande d'offre — ${nomClient}`;
 
-  // Envoi DIRECT via Microsoft Graph (compte Outlook connecté, jo@cofidex.ch) au lieu d'un lien
-  // mailto: — décision de Jonathan le 06.08.2026 : un mailto: laisse le client mail local choisir
-  // le compte d'envoi par défaut (ça partait parfois avec une autre adresse que jo@cofidex.ch,
-  // sans qu'on puisse le contrôler depuis le CRM). L'envoi via Graph garantit l'expéditeur.
-  if (!(await assurerTokenOutlook())) {
-    showError("Connecte-toi à Outlook (bouton Microsoft dans le menu) pour envoyer cette demande d'offre — l'envoi se fait maintenant directement depuis jo@cofidex.ch, plus de sélection via le client mail local.");
-    return;
-  }
-  if (!emails.length) {
-    showError("Aucune compagnie sélectionnée n'a d'email enregistré — ajoute-en dans Paramètres → Contacts compagnies.");
-    return;
-  }
+  ouvrirApercuEmailDemandeOffre({ demandeOffreId, cies, emails, sansEmail, sujet, corps });
+}
+
+// ═══ APERÇU DE L'EMAIL — NE PART JAMAIS TOUT SEUL ═══
+// Correction urgente demandée par Jonathan le 10.08.2026 : "Générer l'email" envoyait en réalité
+// directement via Microsoft Graph sans jamais rien montrer avant — inacceptable. Désormais cette
+// fonction ne fait QUE construire un aperçu modifiable ; l'envoi (si souhaité) est une action
+// séparée et explicite déclenchée depuis cet aperçu (envoyerApercuEmailDemandeOffreViaOutlook),
+// jamais automatique.
+function ouvrirApercuEmailDemandeOffre({ demandeOffreId, cies, emails, sansEmail, sujet, corps }) {
+  window._apercuEmailDemandeOffre = { demandeOffreId, cies, emails };
+  const qa = (s) => (s || '').toString().replace(/"/g, '&quot;');
+  creerModale('modal-apercu-email-do', `
+    <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:600px;width:100%;max-height:90vh;display:flex;flex-direction:column">
+      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">✉️ Aperçu — demande d'offre</div>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:12px">Ce courriel n'est PAS envoyé automatiquement — relis-le, corrige-le si besoin, puis choisis comment le transmettre.</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px"><strong>Destinataires :</strong> ${emails.length ? emails.join(', ') : '— aucun email connu'}</div>
+      ${sansEmail.length ? `<div style="font-size:11px;color:#f59e0b;margin-bottom:10px">⚠ Pas d'email enregistré pour : ${sansEmail.join(', ')}</div>` : ''}
+      <div class="form-field" style="margin-bottom:8px"><label class="form-label">Objet</label><input class="form-input" id="apercu-email-sujet" value="${qa(sujet)}"/></div>
+      <div class="form-field" style="flex:1;display:flex;flex-direction:column;margin-bottom:14px"><label class="form-label">Corps</label><textarea class="form-input" id="apercu-email-corps" style="flex:1;min-height:260px;font-family:inherit;resize:vertical">${corps}</textarea></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-secondary" onclick="document.getElementById('modal-apercu-email-do').remove()">Fermer</button>
+        <button class="btn-secondary" onclick="copierApercuEmailDemandeOffre()">📋 Copier</button>
+        <button class="btn-secondary" onclick="ouvrirMailtoApercuDemandeOffre()">📧 Ouvrir dans mon client mail</button>
+        <button class="btn-save" style="margin-left:auto" onclick="envoyerApercuEmailDemandeOffreViaOutlook()">📨 Envoyer maintenant via Outlook</button>
+      </div>
+    </div>`, { padding: '16px' });
+}
+
+function copierApercuEmailDemandeOffre() {
+  const sujet = document.getElementById('apercu-email-sujet')?.value || '';
+  const corps = document.getElementById('apercu-email-corps')?.value || '';
+  const texte = `Objet : ${sujet}\n\n${corps}`;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(texte).then(() => showError('✓ Texte copié.')).catch(() => showError('Impossible de copier automatiquement — sélectionne le texte manuellement.'));
+  } else { showError('Copie automatique non disponible — sélectionne le texte manuellement.'); }
+}
+
+function ouvrirMailtoApercuDemandeOffre() {
+  const ctx = window._apercuEmailDemandeOffre;
+  if (!ctx) return;
+  const sujet = document.getElementById('apercu-email-sujet')?.value || '';
+  const corps = document.getElementById('apercu-email-corps')?.value || '';
+  const to = (ctx.emails || []).join(',');
+  window.open(`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`, '_blank');
+}
+
+// SEULE action qui envoie réellement quelque chose — déclenchée explicitement par un clic depuis
+// l'aperçu, jamais automatiquement. Demande confirmation puis garantit l'expéditeur (jo@cofidex.ch)
+// via Microsoft Graph, exactement comme avant, mais désormais toujours précédée d'une relecture.
+async function envoyerApercuEmailDemandeOffreViaOutlook() {
+  const ctx = window._apercuEmailDemandeOffre;
+  if (!ctx) return;
+  const sujet = document.getElementById('apercu-email-sujet')?.value || '';
+  const corps = document.getElementById('apercu-email-corps')?.value || '';
+  if (!ctx.emails.length) { showError("Aucune compagnie sélectionnée n'a d'email enregistré — ajoute-en dans Paramètres → Contacts compagnies."); return; }
+  if (!confirm(`Envoyer ce courriel à ${ctx.emails.join(', ')} depuis jo@cofidex.ch ?`)) return;
+  if (!(await assurerTokenOutlook())) { showError('Connecte-toi à Outlook (bouton Microsoft dans le menu) pour envoyer.'); return; }
 
   let envoiOk = false;
   try {
@@ -1530,45 +1594,28 @@ async function genererEmailDemandeOffre() {
       method: 'POST',
       headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message: {
-          subject: sujet,
-          body: { contentType: 'text', content: corps },
-          toRecipients: emails.map(e => ({ emailAddress: { address: e } })),
-        },
+        message: { subject: sujet, body: { contentType: 'text', content: corps }, toRecipients: ctx.emails.map(e => ({ emailAddress: { address: e } })) },
         saveToSentItems: true,
       }),
     });
     envoiOk = r.ok;
-    if (!r.ok && r.status === 401) {
-      showError('Session Outlook expirée — reconnecte-toi (bouton Microsoft dans le menu) puis réessaie.');
-      return;
-    }
+    if (!r.ok && r.status === 401) { showError('Session Outlook expirée — reconnecte-toi (bouton Microsoft dans le menu) puis réessaie.'); return; }
     if (!r.ok) { showError("Échec de l'envoi via Outlook — réessaie."); return; }
-  } catch (e) {
-    showError("Erreur réseau lors de l'envoi via Outlook : " + e.message);
-    return;
-  }
+  } catch (e) { showError("Erreur réseau lors de l'envoi via Outlook : " + e.message); return; }
 
-  // Trace quelles compagnies viennent d'être sollicitées (fusionne avec les envois précédents,
-  // ne duplique pas une compagnie déjà tracée — met juste à jour sa date d'envoi) — uniquement
-  // si l'envoi a effectivement réussi.
-  if (envoiOk && demandeOffreId) {
-    const existantes = (await dbGet('demandes_offre', `id=eq.${demandeOffreId}&select=compagnies_envoi`))?.[0]?.compagnies_envoi || [];
+  if (envoiOk && ctx.demandeOffreId) {
+    const existantes = (await dbGet('demandes_offre', `id=eq.${ctx.demandeOffreId}&select=compagnies_envoi`))?.[0]?.compagnies_envoi || [];
     const maintenant = new Date().toISOString();
     const compagniesEnvoi = [...existantes];
-    cies.forEach(cie => {
+    ctx.cies.forEach(cie => {
       const i = compagniesEnvoi.findIndex(e => e.compagnie_id === cie.id);
       const entree = { compagnie_id: cie.id, compagnie: cie.compagnie, email: cie.email || null, envoye_le: maintenant, statut: 'envoyée' };
       if (i >= 0) compagniesEnvoi[i] = entree; else compagniesEnvoi.push(entree);
     });
-    await dbPatch('demandes_offre', demandeOffreId, { compagnies_envoi: compagniesEnvoi });
+    await dbPatch('demandes_offre', ctx.demandeOffreId, { compagnies_envoi: compagniesEnvoi });
   }
-
-  showError(envoiOk ? `✓ Demande d'offre envoyée depuis jo@cofidex.ch à ${emails.join(', ')}.` : "Échec de l'envoi.");
-
-  if (sansEmail.length) {
-    showError(`⚠ Pas d'email enregistré pour : ${sansEmail.join(', ')} — ajoute-les dans Paramètres → Contacts compagnies.`);
-  }
+  document.getElementById('modal-apercu-email-do')?.remove();
+  showError(envoiOk ? `✓ Courriel envoyé à ${ctx.emails.join(', ')}.` : "Échec de l'envoi.");
 }
 
 // Construit le corps de la requête (donnees + liens client/opp) à partir du formulaire — factorisé

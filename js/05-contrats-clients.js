@@ -1134,7 +1134,7 @@ async function envoyerVersAutreAppareil(clientId, mode) {
 // notifications de rappels/tâches assignées) — nécessite d'être connecté à Outlook dans le CRM.
 async function envoyerLienSignatureParEmail(clientId, lienSignature, emailDestinataire) {
   const btn = document.getElementById('btn-envoi-email-signature');
-  if (!msalAccessToken) {
+  if (!(await assurerTokenOutlook())) {
     showError('Connecte-toi à Outlook (Microsoft) dans le CRM pour pouvoir envoyer cet e-mail.');
     return;
   }

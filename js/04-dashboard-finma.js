@@ -10,7 +10,7 @@
 //  - synchroniserOutlookOpportunite(oppId) (js/07) : bouton sur la fiche opportunité, portée à
 //    cette seule opportunité — permet de "Mettre à jour l'avancement" sans quitter la fiche.
 async function synchroniserOutlookInterne(oppIdFiltre) {
-  if (!msalAccessToken) { showError("Connecte-toi à Outlook (bouton Microsoft dans le menu) pour synchroniser."); return { ok: false, nbMaj: 0 }; }
+  if (!(await assurerTokenOutlook())) { showError("Connecte-toi à Outlook (bouton Microsoft dans le menu) pour synchroniser."); return { ok: false, nbMaj: 0 }; }
 
   try {
     const toutes = await dbGet('demandes_offre', 'select=id,opportunite_id,compagnies_envoi&order=created_at.desc');

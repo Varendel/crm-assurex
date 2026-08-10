@@ -26,6 +26,23 @@ async function tryRestoreOutlookSession() {
   }
 }
 
+// Vérifie qu'on a bien un token Outlook exploitable juste AVANT une action qui en a besoin,
+// au lieu de se fier uniquement à la variable globale msalAccessToken. Bug réel remonté par
+// Jonathan le 10.08.2026 : la demande d'offre refusait de s'enregistrer/s'envoyer en réclamant
+// une connexion Outlook alors qu'il était bel et bien connecté — le token silencieux au
+// chargement de la page (tryRestoreOutlookSession, lancé une seule fois au démarrage) peut ne
+// pas avoir abouti à temps, ou avoir expiré en cours de session ; on retente ici une
+// restauration silencieuse à la volée avant d'afficher un message d'erreur à l'utilisateur.
+async function assurerTokenOutlook() {
+  // Toujours retenter une restauration silencieuse, même si msalAccessToken est déjà défini :
+  // un access token Microsoft Graph expire après environ 1h, et rien ne le rafraîchissait
+  // proactivement — on ne s'en rendait compte qu'APRÈS l'échec (401) de l'appel réel, ce qui est
+  // exactement ce que Jonathan a vécu avec la demande d'offre. acquireTokenSilent (appelé par
+  // tryRestoreOutlookSession) est peu coûteux : il renvoie le token en cache s'il est encore
+  // valide, ou le rafraîchit silencieusement via le refresh token sans réafficher de popup.
+  return await tryRestoreOutlookSession();
+}
+
 async function loginMicrosoft() {
   try {
     if (!msalInstance) { await initMSAL(); }
@@ -130,7 +147,7 @@ async function updateOutlookEventDate(eventId, dateEvenement) {
 async function synchroniserRappelOutlook(id) {
   const r = allRappels.find(x => x.id === id);
   if (!r) return;
-  if (!msalAccessToken) { showError('Connecte-toi d\'abord à Outlook (bouton "Connecter Outlook"), puis réessaie.'); return; }
+  if (!(await assurerTokenOutlook())) { showError('Connecte-toi d\'abord à Outlook (bouton "Connecter Outlook"), puis réessaie.'); return; }
   const dateEvenement = dateAgendaRappel(r);
   if (!dateEvenement) { showError('Ce rappel n\'a ni date planifiée ni échéance — rien à synchroniser.'); return; }
   try {
@@ -335,7 +352,7 @@ function shiftDashboardWeek(days) {
 async function mountCalendarWidget() {
   const el = document.getElementById('calendar-widget-container');
   if (!el) return;
-  if (!msalAccessToken) {
+  if (!(await assurerTokenOutlook())) {
     el.innerHTML = `
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 22px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
         <div style="display:flex;align-items:center;gap:10px">

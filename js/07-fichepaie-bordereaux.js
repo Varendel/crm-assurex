@@ -1180,7 +1180,7 @@ async function viewNouvelleDemandeOffre() {
     ${sectionCard('LPP — souhaits client', '#a78bfa', `
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">Sal. min coord. LPP 3'780 – max. 64'260 CHF – seuil entrée 22'680 – plafond LPP sans déduct. coord. 90'720 CHF</div>
       <div class="form-grid">
-        <div class="form-field"><label class="form-label">Taux par tranches — minimum légal</label><select class="form-select" id="do-taux-min-legal"><option value="">—</option><option value="7/10/15/18">7/10/15/18</option></select></div>
+        <div class="form-field"><label class="form-label">Taux par tranches — minimum légal</label><select class="form-select" id="do-taux-min-legal" onchange="basculerTauxLppPersonnalise(this)"><option value="">—</option><option value="7/10/15/18">7/10/15/18 (minimum légal)</option><option value="personnalise">Personnalisé…</option></select><input class="form-input" id="do-taux-min-legal-custom" placeholder="Ex: 10/15/20/25" style="margin-top:6px;display:none"/></div>
         <div class="form-field"><label class="form-label">Déduction de coordination</label><select class="form-select" id="do-ded-coord"><option value="">—</option><option value="avec">Avec</option><option value="sans">Sans</option></select></div>
         <div class="form-field"><label class="form-label">Salaires excédentaires — hommes</label><input class="form-input" id="do-lpp-exc-h" type="number"/></div>
         <div class="form-field"><label class="form-label">Salaires excédentaires — femmes</label><input class="form-input" id="do-lpp-exc-f" type="number"/></div>
@@ -1261,7 +1261,7 @@ async function renderDemandeOffreLieeOpportunite(oppId) {
 async function rechercherEmailsOpportunite(oppId) {
   const zone = document.getElementById('opp-emails-detectes');
   if (!zone) return;
-  if (!msalAccessToken) { zone.innerHTML = '<div style="font-size:12px;color:var(--text-muted)">Connecte-toi à Outlook (bouton Microsoft dans le menu) pour chercher les emails.</div>'; return; }
+  if (!(await assurerTokenOutlook())) { zone.innerHTML = '<div style="font-size:12px;color:var(--text-muted)">Connecte-toi à Outlook (bouton Microsoft dans le menu) pour chercher les emails.</div>'; return; }
   const opp = allOpportunites.find(o => o.id === oppId);
   if (!opp) return;
   const client = opp.client_id ? allClients.find(c => c.id === opp.client_id) : null;
@@ -1306,6 +1306,15 @@ async function synchroniserOutlookOpportunite(oppId) {
 // (colonne donnees, jsonb) — utilisé en réouverture ("Reprendre" depuis Suivi des affaires) pour
 // pouvoir cocher des compagnies et générer l'email sans tout ressaisir. Appelé en setTimeout(0)
 // depuis viewNouvelleDemandeOffre, une fois le HTML effectivement inséré dans le DOM.
+// Bascule le champ de saisie libre quand "Personnalisé…" est choisi — demande de Jonathan le
+// 10.08.2026 : le taux par tranches LPP proposait uniquement le minimum légal 7/10/15/18, sans
+// possibilité de saisir des taux plus généreux négociés/souhaités pour le client.
+function basculerTauxLppPersonnalise(sel) {
+  const custom = document.getElementById('do-taux-min-legal-custom');
+  if (!custom) return;
+  custom.style.display = sel.value === 'personnalise' ? '' : 'none';
+}
+
 function prefillChampsDemandeOffre(existante) {
   const d = existante.donnees || {};
   const setVal = (id, v) => { const el = document.getElementById(id); if (el && v !== undefined && v !== null) el.value = v; };
@@ -1331,7 +1340,11 @@ function prefillChampsDemandeOffre(existante) {
   const pj = d.protection_juridique || {};
   setChk('do-pj-privee', pj.privee); setChk('do-pj-circulation', pj.circulation); setChk('do-pj-professionnelle', pj.professionnelle);
   setVal('do-cct', comp.cct); setVal('do-couverture-salaire', comp.couverture_salaire);
-  setVal('do-taux-min-legal', lpp.taux_min_legal); setVal('do-ded-coord', lpp.ded_coord); setVal('do-lpp-exc-h', lpp.exc_h);
+  if (lpp.taux_min_legal && lpp.taux_min_legal !== '7/10/15/18') {
+    setVal('do-taux-min-legal', 'personnalise'); setVal('do-taux-min-legal-custom', lpp.taux_min_legal);
+    const _customEl = document.getElementById('do-taux-min-legal-custom'); if (_customEl) _customEl.style.display = '';
+  } else { setVal('do-taux-min-legal', lpp.taux_min_legal); }
+  setVal('do-ded-coord', lpp.ded_coord); setVal('do-lpp-exc-h', lpp.exc_h);
   setVal('do-lpp-exc-f', lpp.exc_f); setVal('do-cap-invalidite', lpp.cap_invalidite); setVal('do-cap-deces', lpp.cap_deces);
   setChk('do-amelio-rentes', lpp.amelio_rentes); setChk('do-amelio-epargne', lpp.amelio_epargne);
   setChk('do-amelio-tranches', lpp.amelio_tranches); setChk('do-amelio-rendement', lpp.amelio_rendement);
@@ -1502,7 +1515,7 @@ async function genererEmailDemandeOffre() {
   // mailto: — décision de Jonathan le 06.08.2026 : un mailto: laisse le client mail local choisir
   // le compte d'envoi par défaut (ça partait parfois avec une autre adresse que jo@cofidex.ch,
   // sans qu'on puisse le contrôler depuis le CRM). L'envoi via Graph garantit l'expéditeur.
-  if (!msalAccessToken) {
+  if (!(await assurerTokenOutlook())) {
     showError("Connecte-toi à Outlook (bouton Microsoft dans le menu) pour envoyer cette demande d'offre — l'envoi se fait maintenant directement depuis jo@cofidex.ch, plus de sélection via le client mail local.");
     return;
   }
@@ -1588,7 +1601,7 @@ function construireBodyDemandeOffre() {
     assurances_choses: { inventaire: val('do-inventaire'), rc_commerce: chk('do-rc-commerce'), prejudice_fortune: chk('do-prejudice-fortune'), cyber: chk('do-cyber'), construction: chk('do-construction'), technique: chk('do-technique'), perte_exploit: chk('do-perte-exploit') },
     protection_juridique: { privee: chk('do-pj-privee'), circulation: chk('do-pj-circulation'), professionnelle: chk('do-pj-professionnelle') },
     complementaires: { cct: val('do-cct'), couverture_salaire: val('do-couverture-salaire') },
-    lpp: { taux_min_legal: val('do-taux-min-legal'), ded_coord: val('do-ded-coord'), exc_h: val('do-lpp-exc-h'), exc_f: val('do-lpp-exc-f'), cap_invalidite: val('do-cap-invalidite'), cap_deces: val('do-cap-deces'), amelio_rentes: chk('do-amelio-rentes'), amelio_epargne: chk('do-amelio-epargne'), amelio_tranches: chk('do-amelio-tranches'), amelio_rendement: chk('do-amelio-rendement') },
+    lpp: { taux_min_legal: (val('do-taux-min-legal') === 'personnalise' ? val('do-taux-min-legal-custom') : val('do-taux-min-legal')), ded_coord: val('do-ded-coord'), exc_h: val('do-lpp-exc-h'), exc_f: val('do-lpp-exc-f'), cap_invalidite: val('do-cap-invalidite'), cap_deces: val('do-cap-deces'), amelio_rentes: chk('do-amelio-rentes'), amelio_epargne: chk('do-amelio-epargne'), amelio_tranches: chk('do-amelio-tranches'), amelio_rendement: chk('do-amelio-rendement') },
     rc: { risque: val('do-rc-risque'), lieux: val('do-rc-lieux'), marchandises: chk('do-marchandises'), transports: chk('do-transports'), transports_speciaux: chk('do-transports-speciaux'), machines: chk('do-machines'), vol: chk('do-vol'), all_risk: chk('do-all-risk'), inventaire: val('do-rc-inventaire'), prejudice_fortune: chk('do-rc-prejudice-fortune'), cv_details: val('do-rc-cv-details') },
     vehicules: plaques,
     collaborateurs_lpp: collaborateursLpp,

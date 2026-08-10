@@ -1850,13 +1850,19 @@ function renderTachesOpportunite(opp) {
     <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
       <input type="checkbox" ${t.statut === 'traité' ? 'checked' : ''} onchange="toggleTacheOpportunite('${t.id}', this.checked)" style="width:16px;height:16px;cursor:pointer;flex-shrink:0"/>
       <span style="flex:1;font-size:13px;color:${t.statut === 'traité' ? 'var(--text-muted)' : 'var(--text)'};${t.statut === 'traité' ? 'text-decoration:line-through' : ''}">${t.titre}</span>
+      ${t.type ? badge(t.type, '#64748b') : ''}
       ${t.date_echeance ? `<span style="font-size:11px;color:var(--text-muted);white-space:nowrap">Échéance : ${fmtDate(t.date_echeance)}</span>` : ''}
       ${(!t.outlook_event_id && t.date_echeance) ? `<button onclick="synchroniserRappelOutlook('${t.id}')" title="Absent de l'agenda Outlook — cliquer pour synchroniser" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;flex-shrink:0">📅</button>` : ''}
       <button onclick="supprimerTacheOpportunite('${t.id}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px">✕</button>
     </div>`).join('') : '<div style="font-size:12.5px;color:var(--text-muted);padding:6px 0">Aucune tâche pour l\u2019instant.</div>';
+  // Sélecteur de Type à l'ajout — demande de Jonathan le 10.08.2026 : les catégories
+  // réutilisables (Commande fiches ASA, Commander attestation SAN, À relancer, etc. — voir
+  // TYPES_RAPPEL, js/02) doivent être choisissables ICI, depuis la fiche opportunité, pas
+  // seulement dans le formulaire complet "Nouvelle tâche / rappel".
   return `${liste}
-    <div style="display:flex;gap:8px;margin-top:12px">
-      <input class="form-input" id="opp-nouvelle-tache" placeholder="Ex: Relancer le client pour signature" style="flex:2" onkeydown="if(event.key==='Enter'){event.preventDefault();ajouterTacheOpportunite('${opp.id}')}"/>
+    <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+      <input class="form-input" id="opp-nouvelle-tache" placeholder="Ex: Relancer le client pour signature" style="flex:2;min-width:200px" onkeydown="if(event.key==='Enter'){event.preventDefault();ajouterTacheOpportunite('${opp.id}')}"/>
+      <select class="form-select" id="opp-nouvelle-tache-type" title="Type de tâche" style="flex:1;min-width:150px">${TYPES_RAPPEL.map(t => `<option ${t === 'Opportunité' ? 'selected' : ''}>${t}</option>`).join('')}</select>
       <input class="form-input" id="opp-nouvelle-tache-date" type="date" title="Échéance à planifier" style="flex:1;min-width:130px"/>
       <button type="button" class="btn-secondary" onclick="ajouterTacheOpportunite('${opp.id}')">+ Ajouter</button>
     </div>`;

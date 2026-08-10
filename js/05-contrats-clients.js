@@ -128,91 +128,6 @@ function ouvrirEmailsNaissance(clientId, prenom, dateNaissance) {
     </div>`);
 }
 
-// ═══ ONGLET RÉSUMÉ — vue d'ensemble d'un client en un coup d'œil ═══
-// Demande de Jonathan le 10.08.2026 : un onglet qui regroupe ce qui compte vraiment (tâches
-// ouvertes, échéances de contrats à surveiller, opportunités en cours, statut du mandat/documents)
-// sans avoir à fouiller dans Identité/Contrats/Rappels séparément — devient l'onglet actif par
-// défaut à l'ouverture d'une fiche client (Identité reste disponible, juste plus en premier).
-// Champs volontairement réutilisés depuis showClient() (déjà chargés) — pas de requête en plus.
-function allerOngletClient(tabId) {
-  const btns = document.querySelectorAll('.tab-btn');
-  for (const b of btns) {
-    if ((b.getAttribute('onclick') || '').includes(`'${tabId}'`)) { switchTab(b, tabId); return; }
-  }
-}
-
-function renderResumeClient(c, contrats, rappels, mandatsSignes, isEntreprise) {
-  const rh = estRoleRH();
-  const today = new Date();
-
-  // Tâches/rappels ouverts, triés par échéance la plus proche (sans échéance en dernier)
-  const rappelsOuverts = rappels
-    .filter(r => r.statut === 'ouvert')
-    .sort((a, b) => (a.date_echeance ? new Date(a.date_echeance) : new Date('9999-01-01')) - (b.date_echeance ? new Date(b.date_echeance) : new Date('9999-01-01')));
-
-  // Contrats à surveiller : échéance dans les 120 prochains jours (ou déjà en retard), ou déjà
-  // marqués "à renouveler" — exclut ce qui est résilié/annulé.
-  const contratsActifs = contrats.filter(ct => !['résilié', 'annulé', 'mandat_resilie'].includes(ct.statut));
-  const contratsSurveiller = contratsActifs
-    .filter(ct => ct.statut === 'renouveler' || (ct.date_echeance && Math.floor((new Date(ct.date_echeance) - today) / 86400000) <= 120))
-    .sort((a, b) => (a.date_echeance ? new Date(a.date_echeance) : new Date('9999-01-01')) - (b.date_echeance ? new Date(b.date_echeance) : new Date('9999-01-01')));
-
-  const oppsClient = (typeof allOpportunites !== 'undefined' ? allOpportunites : []).filter(o => o.client_id === c.id && o.stade !== 'Gagné' && o.stade !== 'Perdu');
-  const mandatSigne = mandatsSignes.some(m => m.signe);
-
-  const blocTaches = sectionCard('⏰ Tâches & rappels ouverts', rappelsOuverts.length ? '#f59e0b' : '#4ade80', rappelsOuverts.length ? `
-    <div style="display:flex;flex-direction:column;gap:2px">
-      ${rappelsOuverts.slice(0, 5).map(r => {
-        const enRetard = r.date_echeance && new Date(r.date_echeance) < today;
-        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="showRappel('${r.id}')">
-          <span style="width:7px;height:7px;border-radius:50%;background:${enRetard ? '#f87171' : r.urgence === 'haute' ? '#f87171' : r.urgence === 'moyenne' ? '#f59e0b' : '#64748b'};flex-shrink:0"></span>
-          <span style="flex:1;font-size:12.5px;color:var(--text)">${r.nature === 'tache' ? '📋' : '🔔'} ${r.titre}</span>
-          <span style="font-size:11px;color:${enRetard ? '#f87171' : 'var(--text-muted)'};white-space:nowrap">${r.date_echeance ? fmtDate(r.date_echeance) : 'Sans échéance'}</span>
-          <button onclick="event.stopPropagation(); traiterRappel('${r.id}')" style="background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);color:#4ade80;border-radius:6px;padding:3px 8px;font-size:10.5px;font-weight:700;cursor:pointer;flex-shrink:0">✓</button>
-        </div>`;
-      }).join('')}
-    </div>
-    ${rappelsOuverts.length > 5 ? `<div style="margin-top:8px"><button onclick="allerOngletClient('tab-rappels')" style="background:none;border:none;color:var(--accent);font-size:11.5px;cursor:pointer;text-decoration:underline;padding:0">Voir les ${rappelsOuverts.length} rappels →</button></div>` : ''}
-  ` : `<div style="font-size:12.5px;color:var(--text-muted)">✅ Aucun rappel ouvert pour ce client.</div>`);
-
-  const blocContrats = sectionCard('📅 Contrats — échéances à surveiller', contratsSurveiller.length ? '#f59e0b' : '#4ade80', contratsSurveiller.length ? `
-    <div style="display:flex;flex-direction:column;gap:2px">
-      ${contratsSurveiller.map(ct => {
-        const jours = ct.date_echeance ? Math.floor((new Date(ct.date_echeance) - today) / 86400000) : null;
-        const enRetard = jours !== null && jours < 0;
-        return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="showDetailContrat('${ct.id}')">
-          <div style="flex:1">
-            <div style="font-size:12.5px;font-weight:700;color:var(--text)">${ct.produit} <span style="font-weight:400;color:var(--text-muted)">— ${ct.compagnie}</span></div>
-            ${ct.statut === 'renouveler' ? badge('À renouveler', '#f59e0b') : ''}
-          </div>
-          <span style="font-size:11px;color:${enRetard ? '#f87171' : jours !== null && jours <= 30 ? '#f59e0b' : 'var(--text-muted)'};white-space:nowrap">${ct.date_echeance ? fmtDate(ct.date_echeance) : '—'}${jours !== null ? (enRetard ? ` · ⚠️ ${Math.abs(jours)}j de retard` : ` · dans ${jours}j`) : ''}</span>
-          ${!rh ? `<span style="font-size:12px;font-weight:800;color:#f59e0b;white-space:nowrap">CHF ${fmtCHF(Number(ct.prime_annuelle || 0))}</span>` : ''}
-        </div>`;
-      }).join('')}
-    </div>
-  ` : `<div style="font-size:12.5px;color:var(--text-muted)">✅ Aucune échéance à surveiller dans les 4 prochains mois.</div>`);
-
-  const blocOpps = oppsClient.length ? sectionCard('🎯 Opportunités en cours', '#a78bfa', `
-    <div style="display:flex;flex-direction:column;gap:2px">
-      ${oppsClient.map(o => `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="editerOpportunite('${o.id}')">
-        <span style="flex:1;font-size:12.5px;color:var(--text)">${o.titre}</span>
-        ${badge(o.stade, '#a78bfa')}
-        ${!rh && o.montant_potentiel ? `<span style="font-size:11.5px;color:var(--text-muted)">CHF ${fmtCHF(o.montant_potentiel)}</span>` : ''}
-      </div>`).join('')}
-    </div>
-  `) : '';
-
-  const blocDocuments = sectionCard('📄 Mandat & documents', mandatSigne ? '#4ade80' : '#64748b', `
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px">
-      ${badge(mandatSigne ? '✓ Mandat de courtage signé' : 'Mandat non signé', mandatSigne ? '#4ade80' : '#64748b')}
-      ${badge(`${mandatsSignes.length} document(s) sur la fiche`, '#38bdf8')}
-    </div>
-    <button onclick="allerOngletClient('tab-identite')" style="background:none;border:none;color:var(--accent);font-size:11.5px;cursor:pointer;text-decoration:underline;padding:0">Voir le détail dans Identité →</button>
-  `);
-
-  return `${blocTaches}${blocContrats}${blocOpps}${blocDocuments}`;
-}
-
 async function showClient(id) {
   // Empile où on était avant d'ouvrir cette fiche, pour que la flèche retour y ramène précisément
   const etatPrecedent = capturerEtatActuel();
@@ -362,8 +277,7 @@ async function showClient(id) {
     </div>
 
     <div class="tabs">
-      <button class="tab-btn active" onclick="switchTab(this,'tab-resume')">🔎 Résumé</button>
-      <button class="tab-btn" onclick="switchTab(this,'tab-identite')">Identité</button>
+      <button class="tab-btn active" onclick="switchTab(this,'tab-identite')">Identité</button>
       ${estRoleRH() ? '' : `<button class="tab-btn" onclick="switchTab(this,'tab-prevoyance')">Prévoyance</button>`}
       ${isEntreprise ? `<button class="tab-btn" onclick="switchTab(this,'tab-collaborateurs')">Collaborateurs (${collaborateurs.length})</button>` : ''}
       ${isEntreprise ? `<button class="tab-btn" onclick="switchTab(this,'tab-flotte')">🚗 Flotte (${allVehicules.filter(v=>v.client_id===c.id).length})</button>` : ''}
@@ -373,11 +287,7 @@ async function showClient(id) {
       <button class="tab-btn" onclick="switchTab(this,'tab-notes')">Notes</button>
     </div>
 
-    <div id="tab-resume">
-      ${renderResumeClient(c, contrats, rappels, mandatsSignes, isEntreprise)}
-    </div>
-
-    <div id="tab-identite" class="hidden">
+    <div id="tab-identite">
       ${editingClient ? `
         ${sectionCard(isEntreprise ? 'Identification entreprise' : 'Coordonnées personnelles', isEntreprise ? '#f59e0b' : '#38bdf8', isEntreprise ? `<div class="form-grid">
           <div class="form-field"><label class="form-label">Raison sociale</label><div style="display:flex;gap:6px"><input id="ec-nom" class="form-input" value="${c.nom || ''}" style="flex:1"><button type="button" onclick="rechercheZefix('ec-nom')" title="Rechercher sur Zefix" style="background:var(--surface-alt);border:1px solid var(--border);border-radius:8px;padding:0 12px;color:var(--text-muted);cursor:pointer;font-size:14px">🔍</button></div></div>

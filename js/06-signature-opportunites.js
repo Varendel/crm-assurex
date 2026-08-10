@@ -1,7 +1,7 @@
 function switchTab(btn, tabId) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  ['tab-resume','tab-identite','tab-prevoyance','tab-collaborateurs','tab-flotte','tab-contrats','tab-factures','tab-rappels','tab-notes'].forEach(id => {
+  ['tab-identite','tab-prevoyance','tab-collaborateurs','tab-flotte','tab-contrats','tab-factures','tab-rappels','tab-notes'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('hidden', id !== tabId);
   });
@@ -378,6 +378,8 @@ async function ajouterTacheOpportunite(oppId) {
   if (!titre) return;
   const dateInput = document.getElementById('opp-nouvelle-tache-date');
   const dateEcheance = dateInput && dateInput.value ? dateInput.value : null;
+  const typeInput = document.getElementById('opp-nouvelle-tache-type');
+  const typeChoisi = typeInput && typeInput.value ? typeInput.value : 'Opportunité';
   const opp = allOpportunites.find(o => o.id === oppId);
   // Sans apporteur_id, la tâche est invisible du badge "mes tâches" de la sidebar et de tout
   // filtre par agent — bug réel repéré par Jonathan (une tâche créée depuis une opp ne
@@ -391,7 +393,7 @@ async function ajouterTacheOpportunite(oppId) {
   const body = {
     titre,
     nature: 'tache',
-    type: 'Opportunité',
+    type: typeChoisi,
     client_id: opp ? (opp.client_id || null) : null,
     opportunite_id: oppId,
     apporteur_id: (opp && opp.apporteur_id) || (monAgent ? monAgent.id : null),

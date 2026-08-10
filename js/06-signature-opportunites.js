@@ -403,6 +403,19 @@ async function ajouterTacheOpportunite(oppId) {
   if (dateInput) dateInput.value = '';
   const r = await dbPost('rappels', body);
   if (r && r.error) { showError('Erreur lors de l\u2019ajout de la tâche : ' + errMsg(r)); return; }
+  // Bug corrigé le 10.08.2026 : ce point d'ajout rapide de tâche (depuis la fiche opportunité)
+  // n'appelait jamais createOutlookEventFromRappel — contrairement à saveRappel() — donc une
+  // tâche créée ici n'atterrissait JAMAIS dans l'agenda, même une fois le bug de format de date
+  // Graph corrigé. Alignée sur le même comportement que le formulaire complet.
+  if (r && r[0] && r[0].id && body.date_echeance) {
+    try {
+      const eventId = await createOutlookEventFromRappel(r[0]);
+      if (eventId) await dbPatch('rappels', r[0].id, { outlook_event_id: eventId });
+      else showError(!msalAccessToken
+        ? "⚠️ Tâche créée, mais pas dans l'agenda Outlook — tu n'es pas connecté. Reconnecte-toi puis synchronise-la depuis \"Tâches & Rappels\"."
+        : "⚠️ Tâche créée, mais l'ajout à l'agenda Outlook a échoué — réessaie depuis \"Tâches & Rappels\".");
+    } catch (e) { /* sync Outlook échouée, la tâche reste créée dans le CRM */ }
+  }
   allRappels = await dbGet('rappels', 'select=*');
   navigate('nouvelle-opportunite');
 }

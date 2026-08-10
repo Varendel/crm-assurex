@@ -1850,7 +1850,8 @@ function renderTachesOpportunite(opp) {
     <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
       <input type="checkbox" ${t.statut === 'traité' ? 'checked' : ''} onchange="toggleTacheOpportunite('${t.id}', this.checked)" style="width:16px;height:16px;cursor:pointer;flex-shrink:0"/>
       <span style="flex:1;font-size:13px;color:${t.statut === 'traité' ? 'var(--text-muted)' : 'var(--text)'};${t.statut === 'traité' ? 'text-decoration:line-through' : ''}">${t.titre}</span>
-      ${t.date_echeance ? `<span style="font-size:11px;color:var(--text-muted)">${fmtDate(t.date_echeance)}</span>` : ''}
+      ${t.date_echeance ? `<span style="font-size:11px;color:var(--text-muted);white-space:nowrap">Échéance : ${fmtDate(t.date_echeance)}</span>` : ''}
+      ${(!t.outlook_event_id && t.date_echeance) ? `<button onclick="synchroniserRappelOutlook('${t.id}')" title="Absent de l'agenda Outlook — cliquer pour synchroniser" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;flex-shrink:0">📅</button>` : ''}
       <button onclick="supprimerTacheOpportunite('${t.id}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px">✕</button>
     </div>`).join('') : '<div style="font-size:12.5px;color:var(--text-muted);padding:6px 0">Aucune tâche pour l\u2019instant.</div>';
   return `${liste}

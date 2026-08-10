@@ -152,6 +152,7 @@ async function synchroniserRappelOutlook(id) {
   }
   if (vueDetailActive && vueDetailActive.type === 'rappel' && vueDetailActive.id === id) showRappel(id);
   else if (currentView === 'rappels') navigate('rappels', { silent: true });
+  else if (currentView === 'nouvelle-opportunite') navigate('nouvelle-opportunite', { silent: true });
 }
 
 async function deleteOutlookEvent(eventId) {

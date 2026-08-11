@@ -581,6 +581,21 @@ async function saveEditContrat(contratId, clientId, returnTo) {
   if (r && r.error) { showError('Erreur: ' + errMsg(r)); if (btn) { btn.textContent = '✓ Enregistrer'; btn.disabled = false; } return; }
   logAction('edit_contrat', 'contrats', contratId, `${body.produit} — ${body.compagnie}`);
 
+  // Resynchronise les copies dupliquées (n° de police, compagnie, produit) dans les commissions
+  // en attente liées à ce contrat — même principe que la resynchro du nom client dans
+  // saveClientEdit (js/05). Sans ça, modifier le n° de police depuis la fiche client (ou
+  // n'importe où ailleurs) ne se répercutait jamais sur les commissions déjà créées, qui
+  // gardaient l'ancienne valeur indéfiniment (bug repéré par Jonathan le 11.08.2026).
+  const commissionsLieesAuContrat = allCommissionsAttente.filter(c => c.contrat_id === contratId);
+  if (commissionsLieesAuContrat.length) {
+    await Promise.all(commissionsLieesAuContrat.map(c => dbPatch('commissions_attente', c.id, {
+      numero_police: body.numero_police,
+      compagnie: body.compagnie,
+      produit: body.produit,
+    })));
+    allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
+  }
+
   // Champ plaque (contrat véhicule unique) : crée ou met à jour la ligne vehicules liée, pour que
   // le véhicule ressorte dans "Recherche véhicules" même pour un contrat créé avant ce champ.
   const plaqueEl = document.getElementById('ect-plaque');

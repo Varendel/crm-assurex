@@ -217,13 +217,18 @@ async function saveEditCommission(commId) {
 }
 
 function viewCommissionsAttente(prefiltreStatut) {
-  window._tcPrefiltre = prefiltreStatut || null;
+  // Par défaut (aucun filtre explicite passé par l'appelant), la vue ne montre que les
+  // commissions EN ATTENTE — c'est ce qui intéresse au quotidien. Les autres statuts (reçues,
+  // versées, extournées...) restent consultables via le filtre "Statut" ci-dessous, jamais
+  // affichés en vrac par défaut (demande de Jonathan le 11.08.2026).
+  const statutInitial = prefiltreStatut !== undefined ? prefiltreStatut : 'en_attente';
+  window._tcPrefiltre = statutInitial || null;
   dbGet('commission_tranches', 'select=*').then(t => { allCommissionTranches = t; renderToutesCommissions(); });
   setTimeout(() => renderToutesCommissions(), 0);
   const compagniesPresentes = [...new Set(allCommissionsAttente.map(c => normaliserCompagnie(c.compagnie)).filter(Boolean))].sort();
   return `
     <h2 style="margin:0 0 6px;font-size:18px;font-weight:800;color:var(--text)">Toutes les commissions</h2>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Estimées à la signature, puis liées à un bordereau une fois reçues. Pour faire passer une commission "en attente" en "reçue", utilise "+ Rapprocher une commission" sur le bordereau concerné — ça garantit le montant net exact et le numéro de police.</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Estimées à la signature, puis liées à un bordereau une fois reçues. Pour faire passer une commission "en attente" en "reçue", utilise "+ Rapprocher une commission" sur le bordereau concerné — ça garantit le montant net exact et le numéro de police. Par défaut, seules les commissions en attente sont affichées — choisis "Tous statuts" ou un autre statut ci-dessous pour voir le reste.</div>
 
     <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
       <input class="form-input" id="tc-search" placeholder="🔍 Client, compagnie, produit, n° bordereau..." style="flex:1;min-width:200px" oninput="renderToutesCommissions()"/>
@@ -232,13 +237,13 @@ function viewCommissionsAttente(prefiltreStatut) {
         ${compagniesPresentes.map(comp => `<option value="${comp}">${comp}</option>`).join('')}
       </select>
       <select class="form-select" id="tc-statut" style="max-width:180px" onchange="renderToutesCommissions()">
-        <option value="">Tous statuts</option>
-        <option value="en_attente" ${prefiltreStatut==='en_attente'?'selected':''}>En attente</option>
-        <option value="en_attente_naissance" ${prefiltreStatut==='en_attente_naissance'?'selected':''}>🍼 En attente de naissance</option>
-        <option value="reçue" ${prefiltreStatut==='reçue'?'selected':''}>Reçue (Assurex)</option>
-        <option value="extourné">Extournée</option>
-        <option value="versé_oz" ${prefiltreStatut==='versé_oz'?'selected':''}>Versé OZ (tout)</option>
-        <option value="versé_oz_a_refacturer" ${prefiltreStatut==='versé_oz_a_refacturer'?'selected':''}>Versé OZ — à refacturer</option>
+        <option value="" ${statutInitial===''?'selected':''}>Tous statuts</option>
+        <option value="en_attente" ${statutInitial==='en_attente'?'selected':''}>En attente</option>
+        <option value="en_attente_naissance" ${statutInitial==='en_attente_naissance'?'selected':''}>🍼 En attente de naissance</option>
+        <option value="reçue" ${statutInitial==='reçue'?'selected':''}>Reçue (Assurex)</option>
+        <option value="extourné" ${statutInitial==='extourné'?'selected':''}>Extournée</option>
+        <option value="versé_oz" ${statutInitial==='versé_oz'?'selected':''}>Versé OZ (tout)</option>
+        <option value="versé_oz_a_refacturer" ${statutInitial==='versé_oz_a_refacturer'?'selected':''}>Versé OZ — à refacturer</option>
       </select>
       <select class="form-select" id="tc-nature" style="max-width:170px" onchange="renderToutesCommissions()">
         <option value="">Acquisition + Gestion</option>

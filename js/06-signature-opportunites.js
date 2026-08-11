@@ -89,6 +89,7 @@ function viewOpportunites() {
       ${statCard('Gagnées', gagnees.length, '#4ade80')}
     </div>
     ${rhMode ? '' : renderStatsBranchesPipeline(OPPS)}
+    ${rhMode ? '' : renderCamembertsPipeline(OPPS)}
     <div class="tabs" style="margin-bottom:18px">${toggleVues}</div>
     ${corps}`;
 }
@@ -121,6 +122,84 @@ function renderStatsBranchesPipeline(OPPS) {
     <div style="flex:1;min-width:160px"><div style="font-size:10.5px;color:var(--text-muted)">Volume prime entreprises</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${fmtCHF(volumeEntreprise)}</div></div>
     <div style="flex:1;min-width:160px"><div style="font-size:10.5px;color:var(--text-muted)">Santé — privés</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${fmtCHF(commissionSante)}</div></div>
     <div style="flex:1;min-width:160px"><div style="font-size:10.5px;color:var(--text-muted)">Vie / LPP — privés</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${fmtCHF(commissionVie)}</div></div>
+  </div>`;
+}
+
+// ── Deux camemberts du pipeline : répartition Privé/Entreprise, et répartition par type de
+// produit (catégories du CATALOGUE_PRODUITS, js/02). SVG généré à la volée à partir des données
+// live (pas une image figée) — se met donc à jour à chaque changement d'opportunité. Masqué en
+// session RH comme le reste des stats du pipeline (cf. rhMode dans viewOpportunites).
+function idProduitVersCategoriePipeline(id) {
+  for (const cat in CATALOGUE_PRODUITS) {
+    if (CATALOGUE_PRODUITS[cat].some(p => p.id === id)) return cat;
+  }
+  return 'Autre';
+}
+
+function renderCamembertsPipeline(OPPS) {
+  if (!OPPS.length) return '';
+
+  let segEntreprise = 0, segPrive = 0;
+  const catCounts = {};
+  let nonPrecise = 0;
+  OPPS.forEach(o => {
+    const client = allClients.find(c => c.id === o.client_id);
+    const entreprise = client ? estEntreprise(client) : false;
+    if (entreprise) segEntreprise++; else segPrive++;
+    const produits = Array.isArray(o.produits) ? o.produits : [];
+    if (!produits.length) { nonPrecise++; return; }
+    const cats = new Set(produits.map(idProduitVersCategoriePipeline));
+    cats.forEach(c => { catCounts[c] = (catCounts[c] || 0) + 1; });
+  });
+  if (nonPrecise) catCounts['Produit non précisé'] = nonPrecise;
+
+  const palette = ['#1f3a5f', '#e8934a', '#3d7a6e', '#a83246', '#6b5b95', '#c9a13b', '#4a7fb5', '#8c8c8c'];
+  const segData = [
+    { label: 'Entreprise', value: segEntreprise, color: palette[0] },
+    { label: 'Privé', value: segPrive, color: palette[1] },
+  ].filter(d => d.value > 0);
+  const catData = Object.keys(catCounts).map((label, i) => ({
+    label, value: catCounts[label],
+    color: label === 'Produit non précisé' ? '#c7c7c7' : palette[i % palette.length],
+  }));
+
+  return `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px">
+    <div style="flex:1;min-width:300px;background:var(--surface-alt);border:1px solid var(--border);border-radius:12px;padding:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">🥧 Pipeline par segment</div>
+      ${svgCamembertPipeline(segData, OPPS.length)}
+    </div>
+    <div style="flex:1;min-width:300px;background:var(--surface-alt);border:1px solid var(--border);border-radius:12px;padding:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">🥧 Pipeline par type de produit</div>
+      ${svgCamembertPipeline(catData, OPPS.length)}
+    </div>
+  </div>`;
+}
+
+function svgCamembertPipeline(data, total) {
+  if (!data.length) return '<div style="font-size:12px;color:var(--text-muted)">Pas encore de données.</div>';
+  const r = 70, cx = 80, cy = 80;
+  let angle = -90;
+  const toRad = a => (a * Math.PI) / 180;
+  const paths = data.map(d => {
+    const pct = d.value / total;
+    const startAngle = angle;
+    const endAngle = angle + pct * 360;
+    angle = endAngle;
+    const large = (endAngle - startAngle) > 180 ? 1 : 0;
+    const x1 = cx + r * Math.cos(toRad(startAngle));
+    const y1 = cy + r * Math.sin(toRad(startAngle));
+    const x2 = cx + r * Math.cos(toRad(endAngle));
+    const y2 = cy + r * Math.sin(toRad(endAngle));
+    const titre = `${d.label}: ${d.value} (${Math.round(pct * 100)}%)`;
+    if (pct >= 0.999) {
+      return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${d.color}" stroke="var(--surface-alt)" stroke-width="2"><title>${titre}</title></circle>`;
+    }
+    return `<path d="M${cx},${cy} L${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${large} 1 ${x2.toFixed(2)},${y2.toFixed(2)} Z" fill="${d.color}" stroke="var(--surface-alt)" stroke-width="2"><title>${titre}</title></path>`;
+  }).join('');
+  const legend = data.map(d => `<div style="display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text)"><span style="width:10px;height:10px;border-radius:2px;background:${d.color};display:inline-block;flex-shrink:0"></span>${d.label} (${d.value} · ${Math.round(d.value / total * 100)}%)</div>`).join('');
+  return `<div style="display:flex;gap:16px;align-items:center;flex-wrap:wrap">
+    <svg width="160" height="160" viewBox="0 0 160 160" style="flex-shrink:0">${paths}</svg>
+    <div style="display:flex;flex-direction:column;gap:5px">${legend}</div>
   </div>`;
 }
 

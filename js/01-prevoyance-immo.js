@@ -1,5 +1,17 @@
 // ═══ CONFIG ═══
 const SUPABASE_URL = 'https://gutlkjovmsyazwcomoyt.supabase.co';
+
+// Ouvre/ferme le menu en tiroir sur mobile (iPhone) — sans effet sur desktop (la sidebar y est
+// toujours visible, cf. CSS). forceState optionnel (true/false) pour fermer explicitement
+// (ex: clic sur l'overlay, ou après avoir choisi une page dans le menu).
+function toggleSidebarMobile(forceState) {
+  const sb = document.querySelector('.sidebar');
+  const ov = document.getElementById('sidebar-overlay');
+  if (!sb || !ov) return;
+  const open = typeof forceState === 'boolean' ? forceState : !sb.classList.contains('open');
+  sb.classList.toggle('open', open);
+  ov.classList.toggle('open', open);
+}
 const DATE_BASCULE_ASSUREX = '2026-06-01'; // Date à partir de laquelle les commissions sont versées à Assurex
 const AI_FUNCTION_URL = `${SUPABASE_URL}/functions/v1/clever-worker`;
 const SUPABASE_KEY = 'sb_publishable_DJtZwHKeA5X1ck1coAQFOA_xOd7c02i';

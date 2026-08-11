@@ -874,6 +874,7 @@ async function navigate(view, opts) {
   vueDetailActive = null; // une navigation normale quitte toute fiche détail affichée
   currentView = view;
   renderSidebar();
+  toggleSidebarMobile(false); // referme le tiroir mobile après un choix dans le menu
   await renderView();
 }
 

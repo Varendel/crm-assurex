@@ -258,15 +258,55 @@
   }
   .oz-print-report { display: none; }
   /* RESPONSIVE */
+  /* Barre + menu mobile — masqués par défaut (desktop), activés dans le @media ci-dessous.
+     Demande de Jonathan le 11.08.2026 : affichage iPhone "à chier", saisie difficile — la
+     sidebar fixe de 180px+ prenait presque la moitié d'un écran d'iPhone en permanence. */
+  .mobile-topbar { display: none; }
+  #sidebar-overlay { display: none; }
   @media (max-width: 768px) {
-    .sidebar { width: 180px; }
-    .main { padding: 20px 16px; }
+    .mobile-topbar {
+      display: flex; align-items: center; gap: 12px;
+      position: sticky; top: 0; z-index: 60;
+      background: var(--navy); border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+    }
+    .mobile-menu-btn {
+      background: none; border: 1px solid var(--border); border-radius: 8px;
+      width: 40px; height: 40px; flex-shrink: 0; font-size: 18px; line-height: 1;
+      color: var(--text); cursor: pointer;
+    }
+    .mobile-topbar-title { font-size: 14px; font-weight: 800; color: var(--text); }
+    /* Sidebar : tiroir escamotable plutôt que rétrécie-mais-toujours-là — libère tout l'écran
+       pour le contenu, comme une vraie app. */
+    .sidebar {
+      position: fixed; top: 0; left: 0; height: 100vh; width: 260px; max-width: 82vw;
+      z-index: 100; transform: translateX(-100%); transition: transform .2s ease;
+      box-shadow: 8px 0 24px rgba(0,0,0,0.45);
+    }
+    .sidebar.open { transform: translateX(0); }
+    #sidebar-overlay.open {
+      display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 90;
+    }
+    .main { padding: 16px 14px; }
     .stat-card { min-width: 100px; }
     .form-grid { grid-template-columns: 1fr; }
     .info-grid { grid-template-columns: 1fr; }
     .table-header { display: none !important; }
     .table-row { grid-template-columns: 1fr !important; gap: 4px !important; padding: 12px !important; }
     .table-row > div { white-space: normal !important; }
+    /* Listes tâches/RDV/rappels (.rappel-item) : on empile au lieu de couper — pas couvert par
+       les règles .table-row ci-dessus car cette liste utilise un layout flex distinct. */
+    .rappel-item { flex-wrap: wrap; gap: 8px 10px; }
+    /* Saisie : taille ≥16px obligatoire pour éviter le zoom automatique de Safari iOS au focus
+       (la cause n°1 d'une saisie pénible sur iPhone), cibles tactiles ≥42px (recommandation
+       Apple ~44px) plutôt que des champs pensés pour une souris. */
+    input, select, textarea, .form-input, .form-select {
+      font-size: 16px !important; min-height: 42px;
+    }
+    .btn-add, .btn-save, .btn-secondary, button { min-height: 38px; }
+    /* Modales (créées dynamiquement en JS, styles inline — !important nécessaire pour les
+       surclasser) : ne jamais dépasser la hauteur d'écran, toujours scrollables. */
+    [id^="modal-"] > div { max-height: 88vh !important; overflow-y: auto !important; }
   }
 </style>
 </head>
@@ -321,6 +361,12 @@
 
 <!-- ═══ APP ═══ -->
 <div id="app">
+  <!-- BARRE MOBILE (iPhone) : masquée sur desktop, gère l'ouverture du menu en tiroir -->
+  <div class="mobile-topbar">
+    <button class="mobile-menu-btn" onclick="toggleSidebarMobile()" aria-label="Ouvrir le menu">☰</button>
+    <div class="mobile-topbar-title">Assurex CRM</div>
+  </div>
+  <div id="sidebar-overlay" onclick="toggleSidebarMobile(false)"></div>
   <!-- SIDEBAR -->
   <div class="sidebar">
     <div class="sidebar-logo">
@@ -352,9 +398,9 @@
   <div class="main" id="main-content"></div>
 </div>
 
-<script src="js/01-prevoyance-immo.js?v=1786442114"></script>
+<script src="js/01-prevoyance-immo.js?v=1786453145"></script>
 <script src="js/02-catalogue-session.js?v=1786442114"></script>
-<script src="js/03-auth-navigation.js?v=1786442114"></script>
+<script src="js/03-auth-navigation.js?v=1786453145"></script>
 <script src="js/04-dashboard-finma.js?v=1786368451"></script>
 <script src="js/05-contrats-clients.js?v=1786451610"></script>
 <script src="js/06-signature-opportunites.js?v=1786451610"></script>

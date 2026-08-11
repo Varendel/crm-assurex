@@ -564,7 +564,9 @@ Comme chaque année, les primes d'assurance maladie sont amenées à augmenter e
 
 Ça ne prend que 15-20 minutes, et ça peut représenter une vraie économie sur l'année.
 
-Prenons rendez-vous dès maintenant, le temps presse un peu avant fin novembre — répondez simplement à cet email avec vos disponibilités et je vous propose un créneau.
+Réservez directement le créneau qui vous convient, en moins d'une minute et sans échange d'emails : {lien_rdv}
+
+Le temps presse un peu avant fin novembre — n'attendez pas le dernier moment.
 
 Bien cordialement,
 Jonathan Özkan
@@ -572,9 +574,80 @@ Assurex Sàrl`
   },
 ];
 
+// Lien de prise de RDV en autonomie (agent unique du cabinet — token fixe) — permet au client de
+// réserver directement un créneau depuis le mail de campagne, sans échange d'emails.
+const LIEN_RESERVATION_RDV = 'https://varendel.github.io/crm-assurex/?rdv=1a5f1ba8-9964-46b2-896d-775248e8d2c3';
+
+// Libellés des produits de complémentaire santé (hors LAMal, base obligatoire) — sert au filtre
+// intelligent "sans complémentaire santé actuelle" des campagnes.
+const LABELS_COMPLEMENTAIRE_SANTE = (CATALOGUE_PRODUITS['Santé'] || []).filter(p => p.id !== 'lamal').map(p => p.label.toLowerCase());
+
+function clientAComplementaireSanteActive(clientId) {
+  return allContrats.some(ct => ct.client_id === clientId && ct.statut === 'actif' && LABELS_COMPLEMENTAIRE_SANTE.some(l => (ct.produit || '').toLowerCase().includes(l)));
+}
+
+// Réglages de ciblage/texte par campagne, ajustables depuis l'écran de détail — en mémoire
+// uniquement (remis à zéro au rechargement), pour rester simple et rapide à utiliser.
+let campagneReglages = {};
+
+function segmentParDefautCampagne(t) {
+  const s = (t.segment || '').trim().toLowerCase();
+  if (s === 'entreprise') return 'entreprise';
+  if (s === 'privé' || s === 'prive') return 'prive';
+  return 'tous';
+}
+
+function reglagesCampagne(t) {
+  if (!campagneReglages[t.id]) {
+    campagneReglages[t.id] = { segment: segmentParDefautCampagne(t), sansSante: false, emailUniquement: false, sujet: null, corps: null };
+  }
+  return campagneReglages[t.id];
+}
+
+function ciblesCampagne(t) {
+  const r = reglagesCampagne(t);
+  return allClients.filter(c => {
+    if (r.segment === 'prive' && estEntreprise(c)) return false;
+    if (r.segment === 'entreprise' && !estEntreprise(c)) return false;
+    if (r.sansSante && clientAComplementaireSanteActive(c.id)) return false;
+    if (r.emailUniquement && !c.email) return false;
+    return t.filtre(c);
+  });
+}
+
+function texteCampagne(t) {
+  const r = reglagesCampagne(t);
+  return { sujet: r.sujet != null ? r.sujet : t.sujet, corps: r.corps != null ? r.corps : t.corps };
+}
+
+function texteCampagneAvecPlaceholders(txt, client) {
+  return (txt || '').replace(/\{prenom\}/g, (client && client.prenom) || '').replace(/\{lien_rdv\}/g, LIEN_RESERVATION_RDV);
+}
+
+function appliquerReglageCampagne(themeId, champ, valeur) {
+  const t = CAMPAGNES_THEMES.find(x => x.id === themeId);
+  if (!t) return;
+  reglagesCampagne(t)[champ] = valeur;
+  showCampagne(themeId);
+}
+
+function sauverTexteCampagne(themeId, champ, valeur) {
+  const t = CAMPAGNES_THEMES.find(x => x.id === themeId);
+  if (!t) return;
+  reglagesCampagne(t)[champ] = valeur;
+}
+
+function reinitialiserTexteCampagne(themeId) {
+  const t = CAMPAGNES_THEMES.find(x => x.id === themeId);
+  if (!t) return;
+  const r = reglagesCampagne(t);
+  r.sujet = null; r.corps = null;
+  showCampagne(themeId);
+}
+
 function viewCampagnes() {
   const cards = CAMPAGNES_THEMES.map(t => {
-    const cibles = allClients.filter(c => (c.segment || 'Privé') === t.segment && t.filtre(c));
+    const cibles = ciblesCampagne(t);
     return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='${t.color}'" onmouseout="this.style.borderColor='var(--border)'" onclick="showCampagne('${t.id}')">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div style="font-size:28px">${t.icon}</div>
@@ -588,7 +661,7 @@ function viewCampagnes() {
 
   return `
     <h2 style="margin:0 0 6px;font-size:18px;font-weight:800;color:var(--text)">Campagnes</h2>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Sélectionnez un thème pour voir les clients ciblés et générer vos emails personnalisés.</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Sélectionnez un thème pour paramétrer la cible, ajuster le texte et générer vos emails personnalisés.</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px">${cards}</div>`;
 }
 
@@ -601,23 +674,25 @@ function showCampagne(themeId) {
   currentCampagneId = themeId;
   currentView = 'campagne-detail';
   const main = document.getElementById('main-content');
-  const cibles = allClients.filter(c => (c.segment || 'Privé') === t.segment && t.filtre(c));
+  const r = reglagesCampagne(t);
+  const cibles = ciblesCampagne(t);
+  const texte = texteCampagne(t);
 
   const rows = cibles.map(c => {
-    const mailtoSujet = encodeURIComponent(t.sujet);
-    const mailtoCorps = encodeURIComponent(t.corps.replace(/{prenom}/g, c.prenom || ''));
-    const mailtoHref = `mailto:${c.email || ''}?subject=${mailtoSujet}&body=${mailtoCorps}`;
+    const corpsClient = texteCampagneAvecPlaceholders(texte.corps, c);
+    const mailtoHref = `mailto:${c.email || ''}?subject=${encodeURIComponent(texte.sujet)}&body=${encodeURIComponent(corpsClient)}`;
     return `<tr>
       <td style="padding:10px 14px;font-size:13px;font-weight:700;color:var(--text)">${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`}</td>
       <td style="padding:10px 14px;font-size:12px;color:var(--text-muted)">${c.email || '—'}</td>
       <td style="padding:10px 14px;font-size:12px;color:var(--text-muted)">${c.mobile || c.tel || '—'}</td>
       <td style="padding:10px 14px;text-align:right">
-        ${c.email ? `<a href="${mailtoHref}" style="background:${t.color}22;color:${t.color};border:1px solid ${t.color}55;border-radius:7px;padding:6px 14px;font-size:11px;font-weight:700;text-decoration:none">✉️ Ouvrir le mail</a>` : '<span style="font-size:11px;color:var(--text-muted)">Pas d\'email</span>'}
+        <div style="display:flex;gap:6px;justify-content:flex-end">
+        ${c.email ? `<a href="${mailtoHref}" style="background:${t.color}22;color:${t.color};border:1px solid ${t.color}55;border-radius:7px;padding:6px 14px;font-size:11px;font-weight:700;text-decoration:none">✉️ mailto</a>` : '<span style="font-size:11px;color:var(--text-muted)">Pas d\'email</span>'}
+        <button class="btn-secondary" style="padding:6px 12px;font-size:11px" onclick="ouvrirApercuEmailCampagne('${t.id}','${c.id}')">👁 Aperçu</button>
+        </div>
       </td>
     </tr>`;
   }).join('');
-
-  const corpsApercu = t.corps.replace(/{prenom}/g, '[Prénom]').replace(/\n/g, '<br>');
 
   main.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
@@ -628,10 +703,37 @@ function showCampagne(themeId) {
       </div>
     </div>
 
-    ${sectionCard('Aperçu du message', t.color, `
-      <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">Objet : <strong style="color:var(--text)">${t.sujet}</strong></div>
-      <div style="background:var(--surface-alt);border-radius:8px;padding:14px;font-size:12px;color:var(--text);line-height:1.6;white-space:pre-line">${corpsApercu}</div>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:10px">Le prénom de chaque client sera automatiquement inséré à la place de [Prénom].</div>
+    ${sectionCard('Ciblage', t.color, `
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px">
+        <div class="form-field"><label class="form-label">Segment</label>
+          <select class="form-select" onchange="appliquerReglageCampagne('${t.id}','segment',this.value)">
+            <option value="tous" ${r.segment === 'tous' ? 'selected' : ''}>Tous les clients</option>
+            <option value="prive" ${r.segment === 'prive' ? 'selected' : ''}>Privés uniquement</option>
+            <option value="entreprise" ${r.segment === 'entreprise' ? 'selected' : ''}>Entreprises uniquement</option>
+          </select>
+        </div>
+      </div>
+      <div style="margin-top:12px;display:flex;flex-direction:column;gap:8px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);cursor:pointer">
+          <input type="checkbox" ${r.sansSante ? 'checked' : ''} onchange="appliquerReglageCampagne('${t.id}','sansSante',this.checked)"/>
+          Recommandation intelligente : cibler uniquement les clients sans complémentaire santé active
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);cursor:pointer">
+          <input type="checkbox" ${r.emailUniquement ? 'checked' : ''} onchange="appliquerReglageCampagne('${t.id}','emailUniquement',this.checked)"/>
+          Email renseigné uniquement (nécessaire pour un envoi)
+        </label>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:10px">${cibles.length} client${cibles.length !== 1 ? 's' : ''} correspond${cibles.length !== 1 ? 'ent' : ''} à ces critères sur ${allClients.length} au total.</div>
+    `)}
+
+    ${sectionCard('Objet et texte du message', t.color, `
+      <div class="form-field" style="margin-bottom:8px"><label class="form-label">Objet</label><input class="form-input" oninput="sauverTexteCampagne('${t.id}','sujet',this.value)" value="${(texte.sujet || '').replace(/"/g, '&quot;')}"/></div>
+      <div class="form-field" style="margin-bottom:8px"><label class="form-label">Corps</label><textarea class="form-input" oninput="sauverTexteCampagne('${t.id}','corps',this.value)" style="min-height:220px;font-family:inherit;resize:vertical">${texte.corps || ''}</textarea></div>
+      <div style="font-size:11px;color:var(--text-muted)">Variables disponibles : {prenom} (prénom du client), {lien_rdv} (lien de réservation de RDV en autonomie).</div>
+      <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-secondary" onclick="reinitialiserTexteCampagne('${t.id}')">↺ Réinitialiser au texte par défaut</button>
+        <button class="btn-save" onclick="ouvrirApercuEmailCampagne('${t.id}')">✉️ Générer le mail prêt à l'envoi</button>
+      </div>
     `)}
 
     <div style="margin-top:18px">
@@ -644,11 +746,97 @@ function showCampagne(themeId) {
             <th style="text-align:left;padding:8px 14px;font-size:11px;color:var(--text-muted);text-transform:uppercase">Téléphone</th>
             <th></th>
           </tr></thead>
-          <tbody>${rows || '<tr><td colspan="4" class="table-empty">Aucun client ne correspond à ce filtre actuellement.</td></tr>'}</tbody>
+          <tbody>${rows || '<tr><td colspan="4" class="table-empty">Aucun client ne correspond à ces critères actuellement.</td></tr>'}</tbody>
         </table>
       </div>
     </div>`;
   insertBackBar({ homeId: 'campagnes', homeLabel: 'Campagnes', itemLabel: t.titre });
+}
+
+// Aperçu de mail — objet + corps modifiables, personnalisé pour un client précis. Ne déclenche
+// JAMAIS d'envoi automatique : uniquement copier / mailto, ou un envoi Outlook explicite derrière
+// une confirmation, exactement comme pour les demandes d'offre (js/07).
+function ouvrirApercuEmailCampagne(themeId, clientId) {
+  const t = CAMPAGNES_THEMES.find(x => x.id === themeId);
+  if (!t) return;
+  const cibles = ciblesCampagne(t);
+  if (!cibles.length) { showError('Aucun client ne correspond aux critères de ciblage actuels.'); return; }
+  const client = (clientId && cibles.find(c => c.id === clientId)) || cibles[0];
+  const texte = texteCampagne(t);
+  window._apercuEmailCampagneCibles = cibles;
+  window._apercuEmailCampagneTexteBrut = texte;
+  const optionsClients = cibles.map(c => `<option value="${c.id}" ${c.id === client.id ? 'selected' : ''}>${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`}${c.email ? '' : ' (sans email)'}</option>`).join('');
+  const qa = (s) => (s || '').toString().replace(/"/g, '&quot;');
+  creerModale('modal-apercu-email-campagne', `
+    <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:600px;width:100%;max-height:90vh;display:flex;flex-direction:column">
+      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">✉️ Aperçu — ${t.titre}</div>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:12px">Ce courriel n'est PAS envoyé automatiquement — relis-le, corrige-le si besoin, puis choisis comment le transmettre.</div>
+      <div class="form-field" style="margin-bottom:10px"><label class="form-label">Client (${cibles.length} ciblé${cibles.length !== 1 ? 's' : ''})</label>
+        <select class="form-select" id="apercu-campagne-client" onchange="changerClientApercuCampagne()">${optionsClients}</select>
+      </div>
+      <div class="form-field" style="margin-bottom:8px"><label class="form-label">Objet</label><input class="form-input" id="apercu-campagne-sujet" value="${qa(texte.sujet)}"/></div>
+      <div class="form-field" style="flex:1;display:flex;flex-direction:column;margin-bottom:14px"><label class="form-label">Corps</label><textarea class="form-input" id="apercu-campagne-corps" style="flex:1;min-height:260px;font-family:inherit;resize:vertical">${texteCampagneAvecPlaceholders(texte.corps, client)}</textarea></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-secondary" onclick="document.getElementById('modal-apercu-email-campagne').remove()">Fermer</button>
+        <button class="btn-secondary" onclick="copierApercuEmailCampagne()">📋 Copier</button>
+        <button class="btn-secondary" onclick="ouvrirMailtoApercuCampagne()">📧 Ouvrir dans mon client mail</button>
+        <button class="btn-save" style="margin-left:auto" onclick="envoyerApercuEmailCampagneViaOutlook()">📨 Envoyer maintenant via Outlook</button>
+      </div>
+    </div>`, { padding: '16px' });
+}
+
+function changerClientApercuCampagne() {
+  const cibles = window._apercuEmailCampagneCibles || [];
+  const clientId = document.getElementById('apercu-campagne-client')?.value;
+  const client = cibles.find(c => c.id === clientId);
+  const texte = window._apercuEmailCampagneTexteBrut;
+  if (!client || !texte) return;
+  const corpsEl = document.getElementById('apercu-campagne-corps');
+  if (corpsEl) corpsEl.value = texteCampagneAvecPlaceholders(texte.corps, client);
+}
+
+function copierApercuEmailCampagne() {
+  const sujet = document.getElementById('apercu-campagne-sujet')?.value || '';
+  const corps = document.getElementById('apercu-campagne-corps')?.value || '';
+  const texteFinal = `Objet : ${sujet}\n\n${corps}`;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(texteFinal).then(() => showError('✓ Texte copié.')).catch(() => showError('Impossible de copier automatiquement — sélectionne le texte manuellement.'));
+  } else { showError('Copie automatique non disponible — sélectionne le texte manuellement.'); }
+}
+
+function ouvrirMailtoApercuCampagne() {
+  const cibles = window._apercuEmailCampagneCibles || [];
+  const clientId = document.getElementById('apercu-campagne-client')?.value;
+  const client = cibles.find(c => c.id === clientId);
+  const sujet = document.getElementById('apercu-campagne-sujet')?.value || '';
+  const corps = document.getElementById('apercu-campagne-corps')?.value || '';
+  if (!client || !client.email) { showError("Ce client n'a pas d'email enregistré."); return; }
+  window.open(`mailto:${encodeURIComponent(client.email)}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`, '_blank');
+}
+
+// SEULE action qui envoie réellement quelque chose — déclenchée explicitement par un clic depuis
+// l'aperçu, jamais automatiquement. Un seul destinataire à la fois (le client sélectionné).
+async function envoyerApercuEmailCampagneViaOutlook() {
+  const cibles = window._apercuEmailCampagneCibles || [];
+  const clientId = document.getElementById('apercu-campagne-client')?.value;
+  const client = cibles.find(c => c.id === clientId);
+  const sujet = document.getElementById('apercu-campagne-sujet')?.value || '';
+  const corps = document.getElementById('apercu-campagne-corps')?.value || '';
+  if (!client || !client.email) { showError("Ce client n'a pas d'email enregistré."); return; }
+  if (!confirm(`Envoyer ce courriel à ${client.email} depuis jo@cofidex.ch ?`)) return;
+  if (!(await assurerTokenOutlook())) { showError('Connecte-toi à Outlook (bouton Microsoft dans le menu) pour envoyer.'); return; }
+  try {
+    const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: { subject: sujet, body: { contentType: 'text', content: corps }, toRecipients: [{ emailAddress: { address: client.email } }] },
+        saveToSentItems: true,
+      }),
+    });
+    if (r.ok) { showError('✓ Email envoyé à ' + client.email); document.getElementById('modal-apercu-email-campagne')?.remove(); }
+    else { showError("Échec de l'envoi — réessaie ou utilise « Ouvrir dans mon client mail »."); }
+  } catch (e) { showError("Échec de l'envoi — réessaie ou utilise « Ouvrir dans mon client mail »."); }
 }
 
 // AGENTS

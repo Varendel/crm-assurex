@@ -1,7 +1,7 @@
 function switchTab(btn, tabId) {
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  ['tab-identite','tab-prevoyance','tab-collaborateurs','tab-flotte','tab-contrats','tab-factures','tab-rappels','tab-notes'].forEach(id => {
+  ['tab-identite','tab-prevoyance','tab-collaborateurs','tab-flotte','tab-contrats','tab-factures','tab-rappels','tab-rdv','tab-notes'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.classList.toggle('hidden', id !== tabId);
   });
@@ -850,15 +850,17 @@ async function annulerRdv(id) {
 }
 
 // Création interne d'un RDV (Jonathan crée directement, sans passer par le lien public).
-function ouvrirModaleNouveauRdv() {
+function ouvrirModaleNouveauRdv(clientIdPrefill) {
   const monAgent = allAgents.find(a => a.email === currentUser.email) || allAgents[0];
+  const clientPrefille = clientIdPrefill ? allClients.find(c => c.id === clientIdPrefill) : null;
+  const nomClientPrefille = clientPrefille ? (estEntreprise(clientPrefille) ? clientPrefille.nom : `${clientPrefille.prenom} ${clientPrefille.nom}`) : '';
   creerModale('modal-nouveau-rdv', `
     <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:480px;width:100%">
       <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:14px">📅 Nouveau rendez-vous</div>
       <div class="form-field" style="margin-bottom:10px;position:relative">
         <label class="form-label">Client (ou laisse vide pour un prospect)</label>
-        <input class="form-input" id="rdv-modal-client-recherche" placeholder="Rechercher un client..." oninput="rechercheClientRdvModal(this.value)" autocomplete="off"/>
-        <input type="hidden" id="rdv-modal-client-id"/>
+        <input class="form-input" id="rdv-modal-client-recherche" placeholder="Rechercher un client..." value="${nomClientPrefille.replace(/"/g, '&quot;')}" oninput="rechercheClientRdvModal(this.value)" autocomplete="off"/>
+        <input type="hidden" id="rdv-modal-client-id" value="${clientPrefille ? clientPrefille.id : ''}"/>
         <div id="rdv-modal-client-resultats" style="display:none;position:absolute;z-index:10;background:var(--surface);border:1px solid var(--border);border-radius:8px;max-height:200px;overflow-y:auto;width:100%"></div>
       </div>
       <div class="form-field" style="margin-bottom:10px"><label class="form-label">Nom du prospect (si pas de client)</label><input class="form-input" id="rdv-modal-prospect"/></div>
@@ -915,7 +917,10 @@ async function creerRdvInterne(agentId) {
   if (res && res[0]) allRendezVous.push(res[0]);
   document.getElementById('modal-nouveau-rdv')?.remove();
   showError('✓ Rendez-vous créé.');
-  navigate('rendez-vous', { silent: true });
+  // Revient sur la fiche client si le RDV a été créé depuis là (onglet RDV) — sinon retour à la
+  // vue liste "Rendez-vous" comme avant.
+  if (vueDetailActive && vueDetailActive.type === 'client' && clientId && vueDetailActive.id === clientId) showClient(clientId);
+  else if (currentView === 'rendez-vous') navigate('rendez-vous', { silent: true });
 }
 
 async function traiterRappel(id) {

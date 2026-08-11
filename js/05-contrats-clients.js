@@ -141,7 +141,7 @@ async function showClient(id) {
   // État des dossiers (demandes_offre) retiré de la fiche client le 07.08.2026 (demande de
   // Jonathan) — ce suivi vit désormais uniquement sur la fiche opportunité (bloc "📧 Emails
   // détectés"), donc plus besoin de charger demandes_offre ici.
-  const [clients, contrats, rappels, collaborateurs, factures, postits, bilansPrevoyance, mandatsSignes] = await Promise.all([
+  const [clients, contrats, rappels, collaborateurs, factures, postits, bilansPrevoyance, mandatsSignes, rendezVousClient] = await Promise.all([
     dbGet('clients', `id=eq.${id}&select=*`),
     dbGet('contrats', `client_id=eq.${id}&select=*`),
     dbGet('rappels', `client_id=eq.${id}&select=*`),
@@ -150,6 +150,7 @@ async function showClient(id) {
     dbGet('postits', `client_id=eq.${id}&select=*&order=created_at.asc`),
     getBilansPrevoyanceClient(id),
     getMandatsSignesClient(id),
+    dbGet('rendez_vous', `client_id=eq.${id}&select=*&order=date_heure.desc`).catch(() => []),
   ]);
   const c = clients[0];
   if (!c) { main.innerHTML = '<div class="loader">Client introuvable.</div>'; return; }
@@ -284,6 +285,7 @@ async function showClient(id) {
       ${estRoleRH() ? '' : `<button class="tab-btn" onclick="switchTab(this,'tab-contrats')">Contrats (${contrats.length})</button>`}
       ${estRoleRH() ? '' : `<button class="tab-btn" onclick="switchTab(this,'tab-factures')">Factures (${factures.length})</button>`}
       <button class="tab-btn" onclick="switchTab(this,'tab-rappels')">Rappels (${rappels.length})</button>
+      <button class="tab-btn" onclick="switchTab(this,'tab-rdv')">📅 RDV (${rendezVousClient.length})</button>
       <button class="tab-btn" onclick="switchTab(this,'tab-notes')">Notes</button>
     </div>
 
@@ -552,6 +554,27 @@ async function showClient(id) {
         <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--text)">${r.titre}</div><div style="font-size:11px;color:var(--text-muted)">${r.type || ''}</div></div>
         <span style="font-size:12px;color:var(--text-muted)">${fmtDate(r.date_echeance)}</span>
       </div>`).join('') : '<div class="table-empty">Aucun rappel.</div>'}
+    </div>
+
+    <div id="tab-rdv" class="hidden">
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn-add" onclick="ouvrirModaleNouveauRdv('${c.id}')" title="Créer un RDV lié à ce client">📅+ RDV</button>
+      </div>
+      ${rendezVousClient.length > 0 ? rendezVousClient.map(r => {
+        const passe = new Date(r.date_heure) < new Date();
+        const heure = new Date(r.date_heure).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
+        return `<div class="rappel-item" style="${r.statut === 'annule' ? 'opacity:.55' : ''}">
+          <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:52px;text-align:center;flex-shrink:0">
+            <div style="font-size:13px;font-weight:800;color:var(--text)">${fmtDate(r.date_heure)}</div>
+            <div style="font-size:11px;font-weight:700;color:var(--accent)">${heure}</div>
+          </div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:700;color:var(--text)">${r.cree_par === 'client' ? '🌐 ' : ''}${r.type || 'Rendez-vous'}${r.statut === 'annule' ? ' — annulé' : ''}</div>
+            <div style="font-size:11px;color:var(--text-muted)">${[r.duree_min ? `${r.duree_min} min` : '', r.notes].filter(Boolean).join(' · ')}</div>
+          </div>
+          ${passe || r.statut === 'annule' ? '' : `<button onclick="annulerRdv('${r.id}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px" title="Annuler">✕</button>`}
+        </div>`;
+      }).join('') : '<div class="table-empty">Aucun rendez-vous pour ce client.</div>'}
     </div>
 
     <div id="tab-notes" class="hidden">

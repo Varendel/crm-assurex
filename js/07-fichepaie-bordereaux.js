@@ -1799,7 +1799,7 @@ function viewNouvelleOpportunite() {
       <div class="form-field"><label class="form-label">Échéance</label><input class="form-input" id="o-date" type="date" value="${opp?.date_echeance || ''}"/></div>
       <div class="form-field" style="${rh ? 'display:none' : ''}"><label class="form-label">Agent responsable</label><select class="form-select" id="o-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
       <div class="form-field" style="grid-column:span 2;${rh ? 'display:none' : ''}">
-        <label class="form-label">Produits envisagés <span style="font-weight:400;color:var(--text-muted);font-size:10px">(coche un produit pour faire apparaître sa case "prime CHF/an" — plusieurs possibles ; le produit exact se précisera au contrat)</span></label>
+        <label class="form-label">Produits envisagés <span style="font-weight:400;color:var(--text-muted);font-size:10px">(coche un produit pour faire apparaître sa case prime — plusieurs possibles ; le produit exact se précisera au contrat. Prime annuelle sauf santé complémentaire, saisie en prime mensuelle)</span></label>
         <div id="o-produits-list" style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:10px;background:var(--surface-alt)">
           ${Object.entries(PRODUITS_OPPORTUNITE_GROUPES).map(([cat, produits]) => `
             <div class="o-produit-groupe">
@@ -1807,7 +1807,7 @@ function viewNouvelleOpportunite() {
               ${produits.map(p => { const coche = produitsChoisis.includes(p.id); const primeExistante = (opp?.produits_primes || {})[p.id] || ''; return `<label class="o-produit-ligne" style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);padding:2px 0">
                 <input type="checkbox" class="o-produit-checkbox" value="${p.id}" ${coche ? 'checked' : ''} onchange="toggleProduitPrimeInput(this)" style="width:14px;height:14px;accent-color:var(--accent);flex-shrink:0;cursor:pointer"/>
                 <span style="flex:1;cursor:pointer">${p.label}</span>
-                <input type="number" class="o-produit-prime" placeholder="Prime CHF/an" value="${primeExistante}" oninput="recalculerCommissionEstimeeOpportunite()" style="display:${coche ? 'inline-block' : 'none'};width:120px;flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:11.5px;color:var(--text)"/>
+                <input type="number" class="o-produit-prime" placeholder="${PRODUITS_SANTE_X16.includes(p.id) ? 'Prime CHF/mois' : 'Prime CHF/an'}" value="${primeExistante}" oninput="recalculerCommissionEstimeeOpportunite()" style="display:${coche ? 'inline-block' : 'none'};width:120px;flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:11.5px;color:var(--text)"/>
               </label>`; }).join('')}
             </div>`).join('')}
         </div>
@@ -1982,7 +1982,10 @@ function recalculerCommissionEstimeeOpportunite() {
   if (!zone) return;
   const compagnie = document.getElementById('o-compagnie')?.value || '';
   const lignes = ligneesProduitsOpportunite();
-  const primeTotale = lignes.reduce((s, l) => s + l.prime, 0);
+  // La case prime est annuelle pour la plupart des produits, mais mensuelle pour la santé
+  // complémentaire (l.prime brut n'est donc pas homogène) — on annualise les lignes santé ici
+  // uniquement pour que ce total affiché reste comparable/additionnable avec les autres produits.
+  const primeTotale = lignes.reduce((s, l) => s + (PRODUITS_SANTE_X16.includes(l.id) ? l.prime * 12 : l.prime), 0);
 
   if (!lignes.length) {
     zone.innerHTML = `💡 Coche un ou plusieurs produits ci-dessus et renseigne leur prime pour prévisualiser la commission estimée.`;

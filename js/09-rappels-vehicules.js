@@ -1242,14 +1242,14 @@ function ageDepuisNaissance(dateNaissance) {
   return age;
 }
 
-function estimerCommissionProduit(produitId, compagnieNom, primeAnnuelle, dureeAnnees) {
+function estimerCommissionProduit(produitId, compagnieNom, primeSaisie, dureeAnnees) {
   const produit = produitId ? produitParId(produitId) : null;
   // La compagnie n'est obligatoire QUE pour les produits dont le taux en dépend — pas pour la
   // santé complémentaire (PRODUITS_SANTE_X16, js/07), rémunérée à taux fixe prime x16 quelle que
   // soit la compagnie. Sans cet assouplissement, l'estimation santé restait à 0 tant qu'aucune
   // compagnie n'était choisie sur l'opportunité (bug repéré par Jonathan le 10.08.2026).
   const compagnieRequise = !PRODUITS_SANTE_X16.includes(produitId);
-  if (!produit || (compagnieRequise && !compagnieNom) || !primeAnnuelle) return { montant: 0, detail: null };
+  if (!produit || (compagnieRequise && !compagnieNom) || !primeSaisie) return { montant: 0, detail: null };
   const temp = [];
   const creer = (id, valeur) => {
     const el = document.createElement('input');
@@ -1257,9 +1257,16 @@ function estimerCommissionProduit(produitId, compagnieNom, primeAnnuelle, dureeA
     document.body.appendChild(el);
     temp.push(el);
   };
+  // primeSaisie représente une prime ANNUELLE pour la plupart des produits (case "Prime CHF/an"
+  // sur l'opportunité), mais une prime MENSUELLE pour la santé complémentaire — en Suisse les
+  // primes LAMal/LCA se paient et se comparent au mois, jamais à l'année (retour Jonathan le
+  // 11.08.2026 : CHF 45/mois de complémentaire, divisé par erreur par 12 avant le calcul x16,
+  // ce qui donnait CHF 60 de commission au lieu de CHF 720).
+  const estSante = PRODUITS_SANTE_X16.includes(produitId);
+  const primeMensuelle = estSante ? primeSaisie : Math.round((primeSaisie / 12) * 100) / 100;
   creer('ct-categorie', '');
   creer('ct-produit', produit.label);
-  creer('ct-prime-mensuelle', String(Math.round((primeAnnuelle / 12) * 100) / 100));
+  creer('ct-prime-mensuelle', String(primeMensuelle));
   creer('ct-periodicite', '12');
   creer('ct-manuel', '');
   creer('ct-compagnie', compagnieNom || '');

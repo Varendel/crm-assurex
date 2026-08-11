@@ -604,12 +604,17 @@ function segmentParDefautCampagne(t) {
 
 function reglagesCampagne(t) {
   if (!campagneReglages[t.id]) {
-    campagneReglages[t.id] = { segment: segmentParDefautCampagne(t), sansSante: false, emailUniquement: false, sujet: null, corps: null };
+    campagneReglages[t.id] = { segment: segmentParDefautCampagne(t), sansSante: false, emailUniquement: false, sujet: null, corps: null, exclusions: [] };
   }
+  if (!campagneReglages[t.id].exclusions) campagneReglages[t.id].exclusions = [];
   return campagneReglages[t.id];
 }
 
-function ciblesCampagne(t) {
+// Clients qui correspondent aux critères automatiques (segment + filtres intelligents), AVANT
+// toute exclusion manuelle — c'est cette liste complète qui s'affiche dans le tableau "Clients
+// ciblés" avec une case à cocher chacun, pour que Jonathan puisse retirer un client précis sans
+// perdre sa place s'il change ensuite un filtre.
+function ciblesEligiblesCampagne(t) {
   const r = reglagesCampagne(t);
   return allClients.filter(c => {
     if (r.segment === 'prive' && estEntreprise(c)) return false;
@@ -618,6 +623,36 @@ function ciblesCampagne(t) {
     if (r.emailUniquement && !c.email) return false;
     return t.filtre(c);
   });
+}
+
+// Cible réelle = éligibles moins les exclusions manuelles (cases décochées une par une, ou via
+// "Tout désélectionner") — c'est cette liste qui compte pour le total affiché et qui alimente la
+// génération d'email.
+function ciblesCampagne(t) {
+  const r = reglagesCampagne(t);
+  return ciblesEligiblesCampagne(t).filter(c => !r.exclusions.includes(c.id));
+}
+
+function toggleClientExclusionCampagne(themeId, clientId, inclus) {
+  const t = CAMPAGNES_THEMES.find(x => x.id === themeId);
+  if (!t) return;
+  const r = reglagesCampagne(t);
+  r.exclusions = inclus ? r.exclusions.filter(id => id !== clientId) : [...new Set([...r.exclusions, clientId])];
+  showCampagne(themeId);
+}
+
+function toutSelectionnerCampagne(themeId) {
+  const t = CAMPAGNES_THEMES.find(x => x.id === themeId);
+  if (!t) return;
+  reglagesCampagne(t).exclusions = [];
+  showCampagne(themeId);
+}
+
+function toutDeselectionnerCampagne(themeId) {
+  const t = CAMPAGNES_THEMES.find(x => x.id === themeId);
+  if (!t) return;
+  reglagesCampagne(t).exclusions = ciblesEligiblesCampagne(t).map(c => c.id);
+  showCampagne(themeId);
 }
 
 function texteCampagne(t) {
@@ -680,20 +715,23 @@ function showCampagne(themeId) {
   currentView = 'campagne-detail';
   const main = document.getElementById('main-content');
   const r = reglagesCampagne(t);
+  const ciblesEligibles = ciblesEligiblesCampagne(t);
   const cibles = ciblesCampagne(t);
   const texte = texteCampagne(t);
 
-  const rows = cibles.map(c => {
+  const rows = ciblesEligibles.map(c => {
+    const inclus = !r.exclusions.includes(c.id);
     const corpsClient = texteCampagneAvecPlaceholders(texte.corps, c);
     const mailtoHref = `mailto:${c.email || ''}?subject=${encodeURIComponent(texte.sujet)}&body=${encodeURIComponent(corpsClient)}`;
-    return `<tr>
+    return `<tr style="opacity:${inclus ? '1' : '0.45'}">
+      <td style="padding:10px 8px 10px 14px;width:30px"><input type="checkbox" ${inclus ? 'checked' : ''} onchange="toggleClientExclusionCampagne('${t.id}','${c.id}',this.checked)" style="width:15px;height:15px;accent-color:${t.color};cursor:pointer"/></td>
       <td style="padding:10px 14px;font-size:13px;font-weight:700;color:var(--text)">${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`}</td>
       <td style="padding:10px 14px;font-size:12px;color:var(--text-muted)">${c.email || '—'}</td>
       <td style="padding:10px 14px;font-size:12px;color:var(--text-muted)">${c.mobile || c.tel || '—'}</td>
       <td style="padding:10px 14px;text-align:right">
         <div style="display:flex;gap:6px;justify-content:flex-end">
-        ${c.email ? `<a href="${mailtoHref}" style="background:${t.color}22;color:${t.color};border:1px solid ${t.color}55;border-radius:7px;padding:6px 14px;font-size:11px;font-weight:700;text-decoration:none">✉️ mailto</a>` : '<span style="font-size:11px;color:var(--text-muted)">Pas d\'email</span>'}
-        <button class="btn-secondary" style="padding:6px 12px;font-size:11px" onclick="ouvrirApercuEmailCampagne('${t.id}','${c.id}')">👁 Aperçu</button>
+        ${inclus && c.email ? `<a href="${mailtoHref}" style="background:${t.color}22;color:${t.color};border:1px solid ${t.color}55;border-radius:7px;padding:6px 14px;font-size:11px;font-weight:700;text-decoration:none">✉️ mailto</a>` : (!inclus ? '<span style="font-size:11px;color:var(--text-muted)">Retiré</span>' : '<span style="font-size:11px;color:var(--text-muted)">Pas d\'email</span>')}
+        ${inclus ? `<button class="btn-secondary" style="padding:6px 12px;font-size:11px" onclick="ouvrirApercuEmailCampagne('${t.id}','${c.id}')">👁 Aperçu</button>` : `<button class="btn-secondary" style="padding:6px 12px;font-size:11px" onclick="toggleClientExclusionCampagne('${t.id}','${c.id}',true)">↺ Remettre</button>`}
         </div>
       </td>
     </tr>`;
@@ -728,7 +766,7 @@ function showCampagne(themeId) {
           Email renseigné uniquement (nécessaire pour un envoi)
         </label>
       </div>
-      <div style="font-size:11px;color:var(--text-muted);margin-top:10px">${cibles.length} client${cibles.length !== 1 ? 's' : ''} correspond${cibles.length !== 1 ? 'ent' : ''} à ces critères sur ${allClients.length} au total.</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:10px">${ciblesEligibles.length} client${ciblesEligibles.length !== 1 ? 's' : ''} correspond${ciblesEligibles.length !== 1 ? 'ent' : ''} à ces critères sur ${allClients.length} au total — ${cibles.length} effectivement ciblé${cibles.length !== 1 ? 's' : ''} après retraits manuels ci-dessous.</div>
     `)}
 
     ${sectionCard('Objet et texte du message', t.color, `
@@ -742,16 +780,23 @@ function showCampagne(themeId) {
     `)}
 
     <div style="margin-top:18px">
-      <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px">Clients ciblés</div>
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px">
+        <div style="font-size:13px;font-weight:700;color:var(--text)">Clients ciblés <span style="font-weight:400;color:var(--text-muted)">(${cibles.length} sur ${ciblesEligibles.length} correspondant aux critères)</span></div>
+        <div style="display:flex;gap:8px">
+          <button class="btn-secondary" style="padding:6px 12px;font-size:11.5px" onclick="toutSelectionnerCampagne('${t.id}')">☑ Tout sélectionner</button>
+          <button class="btn-secondary" style="padding:6px 12px;font-size:11.5px" onclick="toutDeselectionnerCampagne('${t.id}')">☐ Tout désélectionner</button>
+        </div>
+      </div>
       <div class="table-wrap">
         <table style="width:100%;border-collapse:collapse">
           <thead><tr style="border-bottom:1px solid var(--border)">
+            <th></th>
             <th style="text-align:left;padding:8px 14px;font-size:11px;color:var(--text-muted);text-transform:uppercase">Client</th>
             <th style="text-align:left;padding:8px 14px;font-size:11px;color:var(--text-muted);text-transform:uppercase">Email</th>
             <th style="text-align:left;padding:8px 14px;font-size:11px;color:var(--text-muted);text-transform:uppercase">Téléphone</th>
             <th></th>
           </tr></thead>
-          <tbody>${rows || '<tr><td colspan="4" class="table-empty">Aucun client ne correspond à ces critères actuellement.</td></tr>'}</tbody>
+          <tbody>${rows || '<tr><td colspan="5" class="table-empty">Aucun client ne correspond à ces critères actuellement.</td></tr>'}</tbody>
         </table>
       </div>
     </div>`;

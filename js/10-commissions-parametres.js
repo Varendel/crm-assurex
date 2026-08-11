@@ -549,6 +549,27 @@ Bien cordialement,
 Jonathan Özkan
 Assurex Sàrl`
   },
+  {
+    id: 'sante-hausse-primes-2027',
+    titre: 'Santé — Hausse des primes 2027',
+    periode: 'Septembre - décembre (avant l\'annonce officielle des primes et la période de résiliation du 30 novembre)',
+    icon: '📈',
+    color: '#fb923c',
+    segment: 'Privé',
+    filtre: c => true,
+    sujet: 'Primes maladie 2027 : anticipons la hausse ensemble',
+    corps: `Bonjour {prenom},
+
+Comme chaque année, les primes d'assurance maladie sont amenées à augmenter en 2027. Plutôt que de subir la hausse au moment de recevoir votre nouvelle police, je vous propose d'anticiper : on fait le point maintenant sur votre couverture actuelle (base et complémentaire), pour voir si elle correspond toujours à vos besoins et à votre budget avant que la période de changement de caisse (résiliation au 30 novembre) n'arrive.
+
+Ça ne prend que 15-20 minutes, et ça peut représenter une vraie économie sur l'année.
+
+Prenons rendez-vous dès maintenant, le temps presse un peu avant fin novembre — répondez simplement à cet email avec vos disponibilités et je vous propose un créneau.
+
+Bien cordialement,
+Jonathan Özkan
+Assurex Sàrl`
+  },
 ];
 
 function viewCampagnes() {

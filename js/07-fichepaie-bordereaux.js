@@ -1841,7 +1841,10 @@ function viewNouvelleOpportunite() {
       <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">${opp ? 'Modifier l’opportunité' : (rh ? 'Nouvelle opportunité pour Jonathan' : 'Nouvelle opportunité')}</h2>
       ${clientFiche ? `<span onclick="showClient('${clientFiche.id}')" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--surface-alt);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11.5px;font-weight:700;color:var(--accent)">👤 Fiche client : ${estEntreprise(clientFiche) ? clientFiche.nom : `${clientFiche.prenom} ${clientFiche.nom}`} →</span>` : ''}
     </div>
-    ${opp ? `${blocEtatEmails}${blocTaches}${blocDocuments}${blocHistorique}` : ''}
+    ${opp ? `<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+      <div style="flex:1;min-width:280px">${blocEtatEmails}</div>
+      <div style="flex:1;min-width:280px">${blocHistorique}</div>
+    </div>${blocTaches}${blocDocuments}` : ''}
     ${blocNotes}
     ${blocContrat}
     <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;align-items:center">

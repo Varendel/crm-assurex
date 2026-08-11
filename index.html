@@ -264,8 +264,14 @@
   .mobile-topbar { display: none; }
   #sidebar-overlay { display: none; }
   @media (max-width: 768px) {
+    /* BUG réel du 11.08.2026 : #app garde flex-direction:row hérité du desktop, donc la barre
+       mobile et le contenu principal se retrouvaient CÔTE À CÔTE au lieu d'empilés — la barre
+       (fond bleu nuit var(--navy)) écrasait visuellement tout l'écran ("écran bleu"). Sur
+       mobile, #app doit empiler ses enfants verticalement ; la sidebar reste en position fixed
+       (donc hors du flux, non affectée par ce changement) pour agir comme un tiroir superposé. */
+    #app { flex-direction: column; }
     .mobile-topbar {
-      display: flex; align-items: center; gap: 12px;
+      display: flex; align-items: center; gap: 12px; width: 100%;
       position: sticky; top: 0; z-index: 60;
       background: var(--navy); border-bottom: 1px solid var(--border);
       padding: 12px 16px;
@@ -287,7 +293,7 @@
     #sidebar-overlay.open {
       display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 90;
     }
-    .main { padding: 16px 14px; }
+    .main { padding: 16px 14px; width: 100%; }
     .stat-card { min-width: 100px; }
     .form-grid { grid-template-columns: 1fr; }
     .info-grid { grid-template-columns: 1fr; }

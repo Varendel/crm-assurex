@@ -1963,6 +1963,12 @@ function ligneesProduitsOpportunite() {
 // depuis la date de naissance du client déjà fiché, décision de Jonathan le 06.08.2026 (plutôt
 // qu'un champ à ressaisir à la main). Repli sur 1 an si la date de naissance est inconnue.
 const PRODUITS_VIE_DUREE_65ANS = ['vie_3a', 'vie_3b_mixte'];
+// Produits santé complémentaire (LCA) rémunérés selon la règle prime MENSUELLE × 16, INDÉPENDANTE
+// de la compagnie choisie (contrairement à LPP/RC/véhicules dont le taux dépend de la compagnie) —
+// voir TAUX_COMMISSION.sante_facteur_mensuel (js/01) et calculerCommissionEstimee (js/09). Doit
+// rester identique à la liste 'Santé' du CATALOGUE_PRODUITS (js/02), hors LAMal (forfait CHF 70
+// distinct, pas le taux x16).
+const PRODUITS_SANTE_X16 = ['helsana_top', 'helsana_sana', 'helsana_completa', 'helsana_completa_plus', 'helsana_primeo', 'gm_premium', 'gm_global_smart', 'gm_global_mi_privee', 'gm_global_privee', 'gm_global_flex', 'lca_autre_compagnie'];
 function dureeVieJusqua65Ans() {
   const clientId = document.getElementById('o-client')?.value || '';
   const client = clientId ? allClients.find(c => c.id === clientId) : null;
@@ -1982,10 +1988,11 @@ function recalculerCommissionEstimeeOpportunite() {
     zone.innerHTML = `💡 Coche un ou plusieurs produits ci-dessus et renseigne leur prime pour prévisualiser la commission estimée.`;
     return;
   }
-  if (!compagnie) {
-    zone.innerHTML = `💡 Prime totale : CHF ${fmtCHF(primeTotale)} — sélectionne une compagnie pour prévisualiser la commission estimée.`;
-    return;
-  }
+  // La compagnie n'est PAS bloquante pour la santé complémentaire (taux fixe prime x16, identique
+  // quelle que soit la compagnie) — seuls les produits dont le taux dépend réellement de la
+  // compagnie (LPP, RC, véhicules...) en ont besoin. Bug réel repéré par Jonathan le 10.08.2026 :
+  // au stade opportunité, avant même d'avoir choisi une compagnie, la commission santé ne
+  // s'affichait pas du tout (tout l'aperçu était bloqué par cette seule condition).
   const { duree: dureeVie, estimee: dureeEstimee } = dureeVieJusqua65Ans();
   let totalCommission = 0;
   let uneLigneUtiliseDureeVie = false;
@@ -1993,6 +2000,8 @@ function recalculerCommissionEstimeeOpportunite() {
     if (!l.prime) return `⚠️ ${produitLabelParId(l.id)} : prime non renseignée`;
     const utiliseDureeVie = PRODUITS_VIE_DUREE_65ANS.includes(l.id);
     if (utiliseDureeVie) uneLigneUtiliseDureeVie = true;
+    const estSante = PRODUITS_SANTE_X16.includes(l.id);
+    if (!compagnie && !estSante) return `⚠️ ${produitLabelParId(l.id)} : sélectionne une compagnie pour estimer ce produit`;
     const r = estimerCommissionProduit(l.id, compagnie, l.prime, utiliseDureeVie ? dureeVie : 1);
     if (r && r.montant) { totalCommission += r.montant; return `✓ ${produitLabelParId(l.id)} : CHF ${fmtCHF(r.montant)}${utiliseDureeVie ? ` (${dureeVie} an${dureeVie>1?'s':''})` : ''}`; }
     return `⚠️ ${produitLabelParId(l.id)} : taux inconnu pour "${compagnie}"`;
@@ -2033,14 +2042,15 @@ async function saveOpportunite(id) {
   lignesProduits.forEach(l => { if (l.prime) produitsPrimes[l.id] = l.prime; });
   const montantPotentiel = lignesProduits.reduce((s, l) => s + l.prime, 0);
   const { duree: dureeVieSave } = dureeVieJusqua65Ans();
-  const commissionEstimee = compagnieBody
-    ? lignesProduits.reduce((s, l) => {
-        if (!l.prime) return s;
-        const duree = PRODUITS_VIE_DUREE_65ANS.includes(l.id) ? dureeVieSave : 1;
-        const r = estimerCommissionProduit(l.id, compagnieBody, l.prime, duree);
-        return s + ((r && r.montant) || 0);
-      }, 0)
-    : 0;
+  // Même correctif que recalculerCommissionEstimeeOpportunite() : ne pas exiger de compagnie pour
+  // que la santé complémentaire (x16, indépendante de la compagnie) soit prise en compte — sinon
+  // commission_estimee était enregistrée à 0 dès que le champ compagnie était vide.
+  const commissionEstimee = lignesProduits.reduce((s, l) => {
+    if (!l.prime) return s;
+    const duree = PRODUITS_VIE_DUREE_65ANS.includes(l.id) ? dureeVieSave : 1;
+    const r = estimerCommissionProduit(l.id, compagnieBody, l.prime, duree);
+    return s + ((r && r.montant) || 0);
+  }, 0);
   const body = {
     titre,
     client_id: document.getElementById('o-client').value || null,

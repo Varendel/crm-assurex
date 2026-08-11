@@ -1244,7 +1244,12 @@ function ageDepuisNaissance(dateNaissance) {
 
 function estimerCommissionProduit(produitId, compagnieNom, primeAnnuelle, dureeAnnees) {
   const produit = produitId ? produitParId(produitId) : null;
-  if (!produit || !compagnieNom || !primeAnnuelle) return { montant: 0, detail: null };
+  // La compagnie n'est obligatoire QUE pour les produits dont le taux en dépend — pas pour la
+  // santé complémentaire (PRODUITS_SANTE_X16, js/07), rémunérée à taux fixe prime x16 quelle que
+  // soit la compagnie. Sans cet assouplissement, l'estimation santé restait à 0 tant qu'aucune
+  // compagnie n'était choisie sur l'opportunité (bug repéré par Jonathan le 10.08.2026).
+  const compagnieRequise = !PRODUITS_SANTE_X16.includes(produitId);
+  if (!produit || (compagnieRequise && !compagnieNom) || !primeAnnuelle) return { montant: 0, detail: null };
   const temp = [];
   const creer = (id, valeur) => {
     const el = document.createElement('input');
@@ -1257,7 +1262,7 @@ function estimerCommissionProduit(produitId, compagnieNom, primeAnnuelle, dureeA
   creer('ct-prime-mensuelle', String(Math.round((primeAnnuelle / 12) * 100) / 100));
   creer('ct-periodicite', '12');
   creer('ct-manuel', '');
-  creer('ct-compagnie', compagnieNom);
+  creer('ct-compagnie', compagnieNom || '');
   creer('ct-duree', String(dureeAnnees && dureeAnnees > 0 ? dureeAnnees : 1));
   creer('ct-prime-risque-frais', '0');
   try {
@@ -1407,8 +1412,8 @@ function calculerCommissionEstimee() {
     }
   }
 
-  // ── Santé / complémentaire ──────────────────────────────────────────────
-  if (['helsana_top','helsana_sana','helsana_completa','helsana_completa_plus','helsana_primeo','gm_premium','gm_global_smart','gm_global_mi_privee','gm_global_privee','gm_global_flex','lca_autre_compagnie'].includes(produitId)) {
+  // ── Santé / complémentaire — taux fixe, indépendant de la compagnie (voir PRODUITS_SANTE_X16, js/07) ──
+  if (PRODUITS_SANTE_X16.includes(produitId)) {
     const montant = Math.round(primeMensuelle * TAUX_COMMISSION.sante_facteur_mensuel);
     return { montant, detail: `CHF ${fmtCHF(primeMensuelle)}/mois × ${TAUX_COMMISSION.sante_facteur_mensuel} (taux santé) = CHF ${fmtCHF(montant)}` };
   }

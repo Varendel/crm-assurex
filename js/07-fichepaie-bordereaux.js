@@ -1800,10 +1800,10 @@ function viewNouvelleOpportunite() {
       <div class="form-field" style="${rh ? 'display:none' : ''}"><label class="form-label">Agent responsable</label><select class="form-select" id="o-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
       <div class="form-field" style="grid-column:span 2;${rh ? 'display:none' : ''}">
         <label class="form-label">Produits envisagés <span style="font-weight:400;color:var(--text-muted);font-size:10px">(coche un produit pour faire apparaître sa case prime — plusieurs possibles ; le produit exact se précisera au contrat. Prime annuelle sauf santé complémentaire, saisie en prime mensuelle)</span></label>
-        <div id="o-produits-list" style="max-height:260px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px 12px;display:flex;flex-direction:column;gap:10px;background:var(--surface-alt)">
+        <div id="o-produits-list" style="max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px 14px;column-count:2;column-gap:20px;background:var(--surface-alt)">
           ${Object.entries(PRODUITS_OPPORTUNITE_GROUPES).map(([cat, produits]) => `
-            <div class="o-produit-groupe">
-              <div style="font-size:10.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px">${cat}</div>
+            <div class="o-produit-groupe" style="break-inside:avoid;margin-bottom:12px">
+              <div style="font-size:10.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px">${ICONES_CATEGORIE_PRODUIT[cat] || '📌'} ${cat}</div>
               ${produits.map(p => { const coche = produitsChoisis.includes(p.id); const primeExistante = (opp?.produits_primes || {})[p.id] || ''; return `<label class="o-produit-ligne" style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);padding:2px 0">
                 <input type="checkbox" class="o-produit-checkbox" value="${p.id}" ${coche ? 'checked' : ''} onchange="toggleProduitPrimeInput(this)" style="width:14px;height:14px;accent-color:var(--accent);flex-shrink:0;cursor:pointer"/>
                 <span style="flex:1;cursor:pointer">${p.label}</span>
@@ -1971,6 +1971,23 @@ const PRODUITS_VIE_DUREE_65ANS = ['vie_3a', 'vie_3b_mixte'];
 // voir TAUX_COMMISSION.sante_facteur_mensuel (js/01) et calculerCommissionEstimee (js/09). Doit
 // rester identique à la liste 'Santé' du CATALOGUE_PRODUITS (js/02), hors LAMal (forfait CHF 70
 // distinct, pas le taux x16).
+// Petits pictogrammes par catégorie sur le sélecteur "Produits envisagés" de l'opportunité —
+// purement visuel, aide à repérer une catégorie d'un coup d'œil dans la liste sur 2 colonnes
+// (demande de Jonathan le 11.08.2026 : "scinde en deux... c'est plus lisible... petits pictogrammes").
+const ICONES_CATEGORIE_PRODUIT = {
+  'Responsabilité civile': '🛡️',
+  'Ménage / habitation': '🏠',
+  'Caution de loyer': '🔑',
+  'Bâtiment': '🏢',
+  'Véhicule': '🚗',
+  'Protection juridique': '⚖️',
+  'Prévoyance': '💰',
+  'Santé': '⚕️',
+  'Assurances de personnes (entreprise)': '👥',
+  'Entreprise — risques spécifiques': '🏭',
+  'Autre': '📦',
+};
+
 const PRODUITS_SANTE_X16 = ['helsana_top', 'helsana_sana', 'helsana_completa', 'helsana_completa_plus', 'helsana_primeo', 'gm_premium', 'gm_global_smart', 'gm_global_mi_privee', 'gm_global_privee', 'gm_global_flex', 'lca_autre_compagnie'];
 function dureeVieJusqua65Ans() {
   const clientId = document.getElementById('o-client')?.value || '';

@@ -1286,17 +1286,21 @@ async function afficherPageReservationRdv(token, clientIdPrefill) {
   </div>`;
   const zone = document.getElementById('contenu-rdv-autonome');
 
-  const agents = await dbGet('agents', `rdv_token=eq.${encodeURIComponent(token)}&rdv_actif=eq.true&select=id,prenom,nom,rdv_jours_travail,rdv_heure_debut,rdv_heure_fin,rdv_duree_defaut,rdv_delai_min_heures,rdv_horizon_jours,rdv_busy_cache`);
-  const agent = agents && agents[0];
+  // Visiteur non connecté : les tables agents/clients/rendez_vous restent illisibles en direct
+  // (RLS n'autorise que les agents connectés) — on passe par des fonctions RPC dédiées, exactement
+  // comme get_signature_request pour la signature autonome, plutôt que d'ouvrir une lecture
+  // publique large sur ces tables.
+  const agentsRpc = await dbRpc('get_agent_rdv_public', { p_token: token });
+  const agent = agentsRpc && agentsRpc[0];
   if (!agent) { zone.innerHTML = `<p style="color:#c0392b;text-align:center">Ce lien de prise de rendez-vous n'est plus valide.</p>`; return; }
 
   let clientPrefill = null;
   if (clientIdPrefill) {
-    const clients = await dbGet('clients', `id=eq.${clientIdPrefill}&select=id,prenom,nom,email,tel`);
-    clientPrefill = (clients && clients[0]) || null;
+    const clientsRpc = await dbRpc('get_client_prefill_public', { p_client_id: clientIdPrefill });
+    clientPrefill = (clientsRpc && clientsRpc[0]) || null;
   }
 
-  const existants = await dbGet('rendez_vous', `agent_id=eq.${agent.id}&statut=eq.confirme&select=date_heure,duree_min`);
+  const existants = await dbRpc('get_rdv_existants_public', { p_agent_id: agent.id }) || [];
 
   _rdvEtat = { token, agent, clientPrefill, existants: existants || [], type: null, date: null, heure: null, joursDisponibles: [] };
   renderEtapeTypeRdv();

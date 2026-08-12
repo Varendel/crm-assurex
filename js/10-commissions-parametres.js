@@ -655,6 +655,67 @@ function toutDeselectionnerCampagne(themeId) {
   showCampagne(themeId);
 }
 
+// Recherche live (nom/email) dans le tableau "Clients ciblés" — filtre juste l'affichage des
+// lignes déjà rendues (pas de re-render de showCampagne), pour ne pas perdre le focus du champ
+// de recherche ni l'état des cases à cocher pendant la frappe.
+function filtrerClientsCiblesCampagne(query) {
+  const q = (query || '').toLowerCase().trim();
+  const tbody = document.getElementById('campagne-cibles-tbody');
+  if (!tbody) return;
+  let visibles = 0;
+  tbody.querySelectorAll('tr[data-search]').forEach(tr => {
+    const correspond = tr.dataset.search.includes(q);
+    tr.style.display = correspond ? '' : 'none';
+    if (correspond) visibles++;
+  });
+  const videMsg = document.getElementById('campagne-cibles-recherche-vide');
+  if (videMsg) videMsg.style.display = (q && visibles === 0) ? 'block' : 'none';
+}
+
+// Export CSV "prêt pour publipostage" — un seul fichier téléchargé en un clic (au lieu d'ouvrir
+// un mailto par client un par un). Objet et corps déjà personnalisés par client (placeholders
+// {prenom}/{lien_rdv} résolus), pour servir directement de source de fusion Word/Outlook — que ce
+// soit un mailing postal (colonnes Adresse/NPA/Ville) ou un envoi groupé d'emails personnalisés.
+function exporterPublipostageCampagne(themeId) {
+  const t = CAMPAGNES_THEMES.find(x => x.id === themeId);
+  if (!t) return;
+  const cibles = ciblesCampagne(t);
+  if (!cibles.length) { showError('Aucun client ciblé à exporter.'); return; }
+  const texte = texteCampagne(t);
+  const entetes = ['Civilite', 'Prenom', 'Nom', 'Email', 'Adresse', 'NPA', 'Ville', 'Telephone', 'Objet', 'Corps'];
+  const echapper = (v) => {
+    const s = (v == null ? '' : String(v)).replace(/"/g, '""');
+    return /[;"\n]/.test(s) ? `"${s}"` : s;
+  };
+  const lignes = cibles.map(c => {
+    const entreprise = estEntreprise(c);
+    const corpsPerso = texteCampagneAvecPlaceholders(texte.corps, c);
+    return [
+      entreprise ? '' : (c.civilite || ''),
+      entreprise ? '' : (c.prenom || ''),
+      c.nom || '',
+      c.email || '',
+      c.adresse || '',
+      c.npa || '',
+      c.ville || '',
+      c.mobile || c.tel || '',
+      texte.sujet || '',
+      corpsPerso,
+    ].map(echapper).join(';');
+  });
+  const csv = '\uFEFF' + entetes.join(';') + '\n' + lignes.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `publipostage_${(t.titre || t.id).toLowerCase().replace(/[^a-z0-9]+/g, '-')}_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  showError(`✓ Fichier téléchargé — ${cibles.length} client${cibles.length !== 1 ? 's' : ''} prêt${cibles.length !== 1 ? 's' : ''} pour publipostage.`);
+}
+
 function texteCampagne(t) {
   const r = reglagesCampagne(t);
   return { sujet: r.sujet != null ? r.sujet : t.sujet, corps: r.corps != null ? r.corps : t.corps };
@@ -723,7 +784,8 @@ function showCampagne(themeId) {
     const inclus = !r.exclusions.includes(c.id);
     const corpsClient = texteCampagneAvecPlaceholders(texte.corps, c);
     const mailtoHref = `mailto:${c.email || ''}?subject=${encodeURIComponent(texte.sujet)}&body=${encodeURIComponent(corpsClient)}`;
-    return `<tr style="opacity:${inclus ? '1' : '0.45'}">
+    const texteRecherche = `${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`} ${c.email || ''}`.toLowerCase().replace(/"/g, '&quot;');
+    return `<tr data-search="${texteRecherche}" style="opacity:${inclus ? '1' : '0.45'}">
       <td style="padding:10px 8px 10px 14px;width:30px"><input type="checkbox" ${inclus ? 'checked' : ''} onchange="toggleClientExclusionCampagne('${t.id}','${c.id}',this.checked)" style="width:15px;height:15px;accent-color:${t.color};cursor:pointer"/></td>
       <td style="padding:10px 14px;font-size:13px;font-weight:700;color:var(--text)">${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`}</td>
       <td style="padding:10px 14px;font-size:12px;color:var(--text-muted)">${c.email || '—'}</td>
@@ -776,6 +838,7 @@ function showCampagne(themeId) {
       <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="btn-secondary" onclick="reinitialiserTexteCampagne('${t.id}')">↺ Réinitialiser au texte par défaut</button>
         <button class="btn-save" onclick="ouvrirApercuEmailCampagne('${t.id}')">✉️ Générer le mail prêt à l'envoi</button>
+        <button class="btn-secondary" onclick="exporterPublipostageCampagne('${t.id}')">📊 Exporter pour publipostage (CSV)</button>
       </div>
     `)}
 
@@ -787,6 +850,9 @@ function showCampagne(themeId) {
           <button class="btn-secondary" style="padding:6px 12px;font-size:11.5px" onclick="toutDeselectionnerCampagne('${t.id}')">☐ Tout désélectionner</button>
         </div>
       </div>
+      <div style="margin-bottom:10px">
+        <input type="text" class="form-input" placeholder="🔍 Rechercher un client ciblé (nom, email)…" oninput="filtrerClientsCiblesCampagne(this.value)" style="max-width:320px"/>
+      </div>
       <div class="table-wrap">
         <table style="width:100%;border-collapse:collapse">
           <thead><tr style="border-bottom:1px solid var(--border)">
@@ -796,9 +862,10 @@ function showCampagne(themeId) {
             <th style="text-align:left;padding:8px 14px;font-size:11px;color:var(--text-muted);text-transform:uppercase">Téléphone</th>
             <th></th>
           </tr></thead>
-          <tbody>${rows || '<tr><td colspan="5" class="table-empty">Aucun client ne correspond à ces critères actuellement.</td></tr>'}</tbody>
+          <tbody id="campagne-cibles-tbody">${rows || '<tr><td colspan="5" class="table-empty">Aucun client ne correspond à ces critères actuellement.</td></tr>'}</tbody>
         </table>
       </div>
+      <div id="campagne-cibles-recherche-vide" style="display:none;font-size:12px;color:var(--text-muted);padding:14px;text-align:center">Aucun client ne correspond à cette recherche.</div>
     </div>`;
   insertBackBar({ homeId: 'campagnes', homeLabel: 'Campagnes', itemLabel: t.titre });
 }

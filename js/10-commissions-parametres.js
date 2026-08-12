@@ -411,15 +411,15 @@ function viewAgenda() {
 function renderAgendaListe() {
   const grouped = {};
   calendarEvents.forEach(ev => {
-    const d = new Date(ev.start.dateTime).toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long' });
+    const d = dateEvenementGraph(ev.start.dateTime).toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long' });
     if (!grouped[d]) grouped[d] = [];
     grouped[d].push(ev);
   });
 
   const days = Object.keys(grouped).map(day => {
     const events = grouped[day].map(ev => {
-      const start = new Date(ev.start.dateTime).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
-      const end = new Date(ev.end.dateTime).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
+      const start = dateEvenementGraph(ev.start.dateTime).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
+      const end = dateEvenementGraph(ev.end.dateTime).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
       return `<div style="display:flex;gap:14px;padding:11px 18px;border-bottom:1px solid var(--border)">
         <div style="font-size:12px;color:var(--accent);font-weight:700;min-width:90px">${start} - ${end}</div>
         <div style="flex:1">
@@ -470,8 +470,8 @@ function renderAgendaSemaine() {
     const badgesJournee = journeeEntiere.map(ev => `<div style="background:var(--accent-dim);color:var(--accent);font-size:10px;font-weight:700;border-radius:5px;padding:2px 6px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${qa(ev.subject || 'Sans titre')}">${ev.subject || 'Sans titre'}</div>`).join('');
 
     const batons = horaires.map((ev, i) => {
-      const start = new Date(ev.start.dateTime);
-      const end = new Date(ev.end.dateTime);
+      const start = dateEvenementGraph(ev.start.dateTime);
+      const end = dateEvenementGraph(ev.end.dateTime);
       const startH = Math.min(Math.max(start.getHours() + start.getMinutes() / 60, AGENDA_HEURE_DEBUT), AGENDA_HEURE_FIN);
       let endH = Math.min(Math.max(end.getHours() + end.getMinutes() / 60, AGENDA_HEURE_DEBUT), AGENDA_HEURE_FIN);
       if (endH <= startH) endH = Math.min(startH + 0.5, AGENDA_HEURE_FIN);

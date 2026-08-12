@@ -1373,6 +1373,36 @@ function renderEtapeCoordonnees() {
     </div>`;
 }
 
+// Calcule le décalage Europe/Zurich (en minutes d'avance sur UTC : 60 en hiver/CET, 120 en
+// été/CEST) pour une date donnée, sans dépendre du fuseau du navigateur — utile puisque cette page
+// de réservation est publique et peut être ouverte par un client depuis n'importe quel fuseau. On
+// formate midi UTC ce jour-là en heure de Zurich via Intl, puis on compare au même instant lu comme
+// s'il était déjà en UTC : l'écart donne le décalage réel (gère automatiquement le changement d'heure).
+function decalageZurichMinutes(dateStr) {
+  const instant = new Date(dateStr + 'T12:00:00Z');
+  const fmt = new Intl.DateTimeFormat('en-US', {
+    timeZone: 'Europe/Zurich', hour12: false,
+    year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+  });
+  const p = Object.fromEntries(fmt.formatToParts(instant).map(x => [x.type, x.value]));
+  const commeUTC = Date.UTC(+p.year, +p.month - 1, +p.day, p.hour === '24' ? 0 : +p.hour, +p.minute, +p.second);
+  return Math.round((commeUTC - instant.getTime()) / 60000);
+}
+
+// Construit un horodatage ISO avec le décalage Europe/Zurich explicite (ex: 2026-08-12T14:00:00+02:00)
+// pour la colonne `date_heure` (timestamptz). Sans ce décalage explicite, la session Postgres
+// (réglée en UTC sur ce projet) interprétait "14:00" saisi/choisi comme 14:00 UTC — soit 15h ou 16h
+// heure de Zurich une fois relu — un rendez-vous choisi à 14h se retrouvait donc affiché 1-2h plus
+// tard partout dans le CRM (fiche client, agenda, sync Outlook).
+function isoZurich(dateStr, heureStr) {
+  const offsetMin = decalageZurichMinutes(dateStr);
+  const signe = offsetMin >= 0 ? '+' : '-';
+  const abs = Math.abs(offsetMin);
+  const hh = String(Math.floor(abs / 60)).padStart(2, '0');
+  const mm = String(abs % 60).padStart(2, '0');
+  return `${dateStr}T${heureStr}:00${signe}${hh}:${mm}`;
+}
+
 async function confirmerReservationRdv() {
   const cp = _rdvEtat.clientPrefill;
   const nom = cp ? `${cp.prenom} ${cp.nom}` : (document.getElementById('rdv-nom')?.value || '').trim();
@@ -1380,7 +1410,7 @@ async function confirmerReservationRdv() {
   const tel = cp ? cp.tel : (document.getElementById('rdv-tel')?.value || '').trim();
   if (!nom) { alert('Merci d\'indiquer votre nom.'); return; }
   const notes = (document.getElementById('rdv-notes')?.value || '').trim();
-  const dateHeureIso = `${_rdvEtat.date}T${_rdvEtat.heure}:00`;
+  const dateHeureIso = isoZurich(_rdvEtat.date, _rdvEtat.heure);
 
   const body = {
     agent_id: _rdvEtat.agent.id,

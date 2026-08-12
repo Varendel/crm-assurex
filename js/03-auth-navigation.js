@@ -56,6 +56,16 @@ async function loginMicrosoft() {
 }
 
 // ═══ MICROSOFT GRAPH — AGENDA ═══
+// Microsoft Graph renvoie start/end.dateTime en UTC mais SANS suffixe 'Z' (aucun en-tête
+// Prefer: outlook.timezone envoyé ci-dessous) — un new Date(...) direct sur cette chaîne nue est
+// alors interprété comme une heure LOCALE par le navigateur, ce qui décalait l'affichage de TOUS
+// les événements Outlook d'1h (CET) ou 2h (CEST) dans l'Agenda et le widget du dashboard. On force
+// donc ici, une fois pour toutes, l'interprétation UTC avant de construire le Date.
+function dateEvenementGraph(dateTimeStr) {
+  if (!dateTimeStr) return null;
+  return new Date(/[Zz]$|[+-]\d\d:\d\d$/.test(dateTimeStr) ? dateTimeStr : dateTimeStr + 'Z');
+}
+
 async function fetchCalendarEvents() {
   if (!msalAccessToken) return [];
   try {
@@ -457,9 +467,9 @@ function isoDay(d) { return d.toISOString().slice(0,10); }
 
 function eventsForDay(d) {
   return calendarEvents.filter(ev => {
-    const start = ev.start && ev.start.dateTime ? new Date(ev.start.dateTime) : null;
+    const start = ev.start && ev.start.dateTime ? dateEvenementGraph(ev.start.dateTime) : null;
     return start && isSameDay(start, d);
-  }).sort((a,b) => new Date(a.start.dateTime) - new Date(b.start.dateTime));
+  }).sort((a,b) => dateEvenementGraph(a.start.dateTime) - dateEvenementGraph(b.start.dateTime));
 }
 
 function selectDashboardDay(iso) {
@@ -530,8 +540,8 @@ function renderCalendarWidget() {
     return `<div style="flex:1;min-width:0">
       <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">${label}</div>
       ${evs.length ? evs.map(ev => {
-        const start = new Date(ev.start.dateTime);
-        const end = ev.end && ev.end.dateTime ? new Date(ev.end.dateTime) : null;
+        const start = dateEvenementGraph(ev.start.dateTime);
+        const end = ev.end && ev.end.dateTime ? dateEvenementGraph(ev.end.dateTime) : null;
         const heure = ev.isAllDay ? 'Jour entier' : start.toLocaleTimeString('fr-CH', { hour:'2-digit', minute:'2-digit' }) + (end ? ' – ' + end.toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit'}) : '');
         return `<div style="display:flex;gap:8px;margin-bottom:8px;background:var(--surface-alt);border-left:3px solid var(--accent);border-radius:8px;padding:8px 10px">
           <div style="flex:1;min-width:0">

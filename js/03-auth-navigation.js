@@ -629,6 +629,7 @@ async function enterApp(user) {
   allContrats = await dbGet('contrats', 'select=*');
   allOpportunites = await dbGet('opportunites', 'select=*');
   allRendezVous = await dbGet('rendez_vous', 'select=*&order=date_heure.asc').catch(() => []);
+  allCampagnesPersonnalisees = (await dbGet('campagnes_personnalisees', 'select=*&order=created_at.asc').catch(() => [])).map(normaliserCampagnePersonnalisee);
 
   // Bascule automatique : contrats actifs dont l'échéance est passée → "à renouveler"
   await basculerContratsEchus();

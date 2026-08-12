@@ -579,6 +579,101 @@ Assurex Sàrl`
   },
 ];
 
+// Palette cyclique pour les campagnes personnalisées (pas de sélecteur de couleur — on garde la
+// création simple, une couleur cohérente est assignée automatiquement selon le rang de création).
+const PALETTE_CAMPAGNES_PERSONNALISEES = ['#a78bfa', '#f472b6', '#fb923c', '#22d3ee', '#facc15', '#4ade80'];
+
+// Uniformise une ligne de la table `campagnes_personnalisees` (Supabase) au même format que les
+// entrées statiques de CAMPAGNES_THEMES, pour que tout le reste du module (ciblage, aperçu, export
+// CSV, mailto…) puisse traiter indifféremment campagnes prédéfinies et campagnes créées à la volée.
+function normaliserCampagnePersonnalisee(row) {
+  return {
+    ...row,
+    periode: 'Campagne personnalisée',
+    filtre: () => true,
+    personnalisee: true,
+    color: row.color || PALETTE_CAMPAGNES_PERSONNALISEES[allCampagnesPersonnalisees.length % PALETTE_CAMPAGNES_PERSONNALISEES.length],
+    icon: row.icon || '📣',
+  };
+}
+
+// Recherche une campagne par id, qu'elle soit prédéfinie (CAMPAGNES_THEMES) ou personnalisée
+// (allCampagnesPersonnalisees) — point d'entrée unique utilisé partout dans ce module à la place
+// d'un CAMPAGNES_THEMES.find(...) direct qui ignorerait les campagnes créées par Jonathan.
+function trouverCampagne(themeId) {
+  return CAMPAGNES_THEMES.find(x => x.id === themeId) || allCampagnesPersonnalisees.find(x => x.id === themeId);
+}
+
+// Ouvre le formulaire de création d'une campagne personnalisée — mêmes garde-fous que le reste du
+// module (jamais d'envoi automatique) : ça crée seulement l'entrée, le ciblage/texte/envoi se
+// paramètrent ensuite exactement comme pour les 3 campagnes prédéfinies.
+function ouvrirNouvelleCampagnePersonnalisee() {
+  const icones = ['📣', '🎯', '💬', '🎁', '⭐', '🔔', '💼', '🏠', '🚗', '📅'];
+  creerModale('modal-nouvelle-campagne', `
+    <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:560px;width:100%;max-height:90vh;overflow:auto">
+      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">📣 Nouvelle campagne personnalisée</div>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:16px">Une fois créée, tu retrouveras cette campagne dans la liste avec le même ciblage, aperçu et export que les campagnes existantes.</div>
+      <div class="form-field" style="margin-bottom:10px"><label class="form-label">Titre</label><input class="form-input" id="ncp-titre" placeholder="Ex. Relance clients véhicule sans casco"/></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div class="form-field"><label class="form-label">Segment</label>
+          <select class="form-select" id="ncp-segment">
+            <option value="Tous">Tous les clients</option>
+            <option value="Privé">Privés uniquement</option>
+            <option value="Entreprise">Entreprises uniquement</option>
+          </select>
+        </div>
+        <div class="form-field"><label class="form-label">Icône</label>
+          <select class="form-select" id="ncp-icon">${icones.map(i => `<option value="${i}">${i}</option>`).join('')}</select>
+        </div>
+      </div>
+      <div class="form-field" style="margin-bottom:10px"><label class="form-label">Objet</label><input class="form-input" id="ncp-sujet" placeholder="Objet du message"/></div>
+      <div class="form-field" style="margin-bottom:8px"><label class="form-label">Corps</label><textarea class="form-input" id="ncp-corps" style="min-height:180px;font-family:inherit;resize:vertical" placeholder="Bonjour {prenom}, ..."></textarea></div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px">Variables disponibles : {prenom} (prénom du client), {lien_rdv} (lien de réservation de RDV en autonomie). Le ciblage précis (filtres, retraits manuels) se règle ensuite sur l'écran de la campagne.</div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn-secondary" onclick="document.getElementById('modal-nouvelle-campagne').remove()">Annuler</button>
+        <button class="btn-save" onclick="creerCampagnePersonnalisee()">✓ Créer la campagne</button>
+      </div>
+    </div>`, { padding: '16px' });
+}
+
+async function creerCampagnePersonnalisee() {
+  const titre = document.getElementById('ncp-titre').value.trim();
+  if (!titre) { showError('Le titre est obligatoire.'); return; }
+  const body = {
+    titre,
+    segment: document.getElementById('ncp-segment').value,
+    icon: document.getElementById('ncp-icon').value,
+    sujet: document.getElementById('ncp-sujet').value.trim() || `Un mot de la part d'OZ Assure`,
+    corps: document.getElementById('ncp-corps').value.trim() || `Bonjour {prenom},\n\n\n\nBien cordialement,\nJonathan Özkan\nAssurex Sàrl`,
+    cree_par: currentUser ? `${currentUser.prenom} ${currentUser.nom}`.trim() : null,
+  };
+  const btn = document.querySelector('#modal-nouvelle-campagne .btn-save');
+  if (btn) { btn.textContent = 'Création...'; btn.disabled = true; }
+  const r = await dbPost('campagnes_personnalisees', body);
+  if (!r || r.error || !r[0]) {
+    showError('Erreur lors de la création de la campagne : ' + errMsg(r));
+    if (btn) { btn.textContent = '✓ Créer la campagne'; btn.disabled = false; }
+    return;
+  }
+  allCampagnesPersonnalisees.push(normaliserCampagnePersonnalisee(r[0]));
+  document.getElementById('modal-nouvelle-campagne')?.remove();
+  navigate('campagnes');
+}
+
+// Suppression d'une campagne personnalisée (jamais possible pour les 3 campagnes prédéfinies —
+// bouton simplement absent pour elles, cf. showCampagne). Nettoie aussi les réglages de ciblage en
+// mémoire pour cette campagne pour ne pas laisser d'état orphelin.
+async function supprimerCampagnePersonnalisee(themeId) {
+  const t = trouverCampagne(themeId);
+  if (!t || !t.personnalisee) return;
+  if (!confirm(`Supprimer définitivement la campagne « ${t.titre} » ? Cette action ne peut pas être annulée.`)) return;
+  const r = await dbDelete('campagnes_personnalisees', themeId);
+  if (r && r.error) { showError('Erreur lors de la suppression : ' + errMsg(r)); return; }
+  allCampagnesPersonnalisees = allCampagnesPersonnalisees.filter(x => x.id !== themeId);
+  delete campagneReglages[themeId];
+  navigate('campagnes');
+}
+
 // Lien de prise de RDV en autonomie (agent unique du cabinet — token fixe) — permet au client de
 // réserver directement un créneau depuis le mail de campagne, sans échange d'emails.
 const LIEN_RESERVATION_RDV = 'https://varendel.github.io/crm-assurex/?rdv=1a5f1ba8-9964-46b2-896d-775248e8d2c3';
@@ -634,7 +729,7 @@ function ciblesCampagne(t) {
 }
 
 function toggleClientExclusionCampagne(themeId, clientId, inclus) {
-  const t = CAMPAGNES_THEMES.find(x => x.id === themeId);
+  const t = trouverCampagne(themeId);
   if (!t) return;
   const r = reglagesCampagne(t);
   r.exclusions = inclus ? r.exclusions.filter(id => id !== clientId) : [...new Set([...r.exclusions, clientId])];
@@ -642,14 +737,14 @@ function toggleClientExclusionCampagne(themeId, clientId, inclus) {
 }
 
 function toutSelectionnerCampagne(themeId) {
-  const t = CAMPAGNES_THEMES.find(x => x.id === themeId);
+  const t = trouverCampagne(themeId);
   if (!t) return;
   reglagesCampagne(t).exclusions = [];
   showCampagne(themeId);
 }
 
 function toutDeselectionnerCampagne(themeId) {
-  const t = CAMPAGNES_THEMES.find(x => x.id === themeId);
+  const t = trouverCampagne(themeId);
   if (!t) return;
   reglagesCampagne(t).exclusions = ciblesEligiblesCampagne(t).map(c => c.id);
   showCampagne(themeId);
@@ -677,7 +772,7 @@ function filtrerClientsCiblesCampagne(query) {
 // {prenom}/{lien_rdv} résolus), pour servir directement de source de fusion Word/Outlook — que ce
 // soit un mailing postal (colonnes Adresse/NPA/Ville) ou un envoi groupé d'emails personnalisés.
 function exporterPublipostageCampagne(themeId) {
-  const t = CAMPAGNES_THEMES.find(x => x.id === themeId);
+  const t = trouverCampagne(themeId);
   if (!t) return;
   const cibles = ciblesCampagne(t);
   if (!cibles.length) { showError('Aucun client ciblé à exporter.'); return; }
@@ -726,20 +821,20 @@ function texteCampagneAvecPlaceholders(txt, client) {
 }
 
 function appliquerReglageCampagne(themeId, champ, valeur) {
-  const t = CAMPAGNES_THEMES.find(x => x.id === themeId);
+  const t = trouverCampagne(themeId);
   if (!t) return;
   reglagesCampagne(t)[champ] = valeur;
   showCampagne(themeId);
 }
 
 function sauverTexteCampagne(themeId, champ, valeur) {
-  const t = CAMPAGNES_THEMES.find(x => x.id === themeId);
+  const t = trouverCampagne(themeId);
   if (!t) return;
   reglagesCampagne(t)[champ] = valeur;
 }
 
 function reinitialiserTexteCampagne(themeId) {
-  const t = CAMPAGNES_THEMES.find(x => x.id === themeId);
+  const t = trouverCampagne(themeId);
   if (!t) return;
   const r = reglagesCampagne(t);
   r.sujet = null; r.corps = null;
@@ -747,9 +842,9 @@ function reinitialiserTexteCampagne(themeId) {
 }
 
 function viewCampagnes() {
-  const cards = CAMPAGNES_THEMES.map(t => {
+  const cards = [...CAMPAGNES_THEMES, ...allCampagnesPersonnalisees].map(t => {
     const cibles = ciblesCampagne(t);
-    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;transition:border-color .15s" onmouseover="this.style.borderColor='${t.color}'" onmouseout="this.style.borderColor='var(--border)'" onclick="showCampagne('${t.id}')">
+    return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;transition:border-color .15s;position:relative" onmouseover="this.style.borderColor='${t.color}'" onmouseout="this.style.borderColor='var(--border)'" onclick="showCampagne('${t.id}')">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div style="font-size:28px">${t.icon}</div>
         <div style="background:${t.color}22;color:${t.color};border:1px solid ${t.color}55;border-radius:7px;padding:3px 10px;font-size:11px;font-weight:700">${t.segment}</div>
@@ -760,14 +855,19 @@ function viewCampagnes() {
     </div>`;
   }).join('');
 
+  const carteAjout = `<div style="background:var(--surface-alt);border:1.5px dashed var(--border);border-radius:12px;padding:20px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:150px;transition:border-color .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'" onclick="ouvrirNouvelleCampagnePersonnalisee()">
+    <div style="font-size:26px">➕</div>
+    <div style="font-size:13px;font-weight:700;color:var(--accent)">Nouvelle campagne personnalisée</div>
+  </div>`;
+
   return `
     <h2 style="margin:0 0 6px;font-size:18px;font-weight:800;color:var(--text)">Campagnes</h2>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Sélectionnez un thème pour paramétrer la cible, ajuster le texte et générer vos emails personnalisés.</div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px">${cards}</div>`;
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Sélectionnez un thème pour paramétrer la cible, ajuster le texte et générer vos emails personnalisés — ou créez votre propre campagne depuis zéro.</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px">${cards}${carteAjout}</div>`;
 }
 
 function showCampagne(themeId) {
-  const t = CAMPAGNES_THEMES.find(x => x.id === themeId);
+  const t = trouverCampagne(themeId);
   if (!t) return;
   const etatPrecedent = capturerEtatActuel();
   if (!(etatPrecedent.type === 'campagne' && etatPrecedent.id === themeId)) navHistory.push(etatPrecedent);
@@ -802,10 +902,11 @@ function showCampagne(themeId) {
   main.innerHTML = `
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
       <div style="font-size:32px">${t.icon}</div>
-      <div>
+      <div style="flex:1">
         <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">${t.titre}</h2>
         <div style="font-size:12px;color:var(--text-muted)">${t.periode} · ${cibles.length} client${cibles.length !== 1 ? 's' : ''} ciblé${cibles.length !== 1 ? 's' : ''}</div>
       </div>
+      ${t.personnalisee ? `<button class="btn-secondary" style="color:#f87171;border-color:#f8717155" onclick="supprimerCampagnePersonnalisee('${t.id}')">🗑 Supprimer</button>` : ''}
     </div>
 
     ${sectionCard('Ciblage', t.color, `
@@ -874,7 +975,7 @@ function showCampagne(themeId) {
 // JAMAIS d'envoi automatique : uniquement copier / mailto, ou un envoi Outlook explicite derrière
 // une confirmation, exactement comme pour les demandes d'offre (js/07).
 function ouvrirApercuEmailCampagne(themeId, clientId) {
-  const t = CAMPAGNES_THEMES.find(x => x.id === themeId);
+  const t = trouverCampagne(themeId);
   if (!t) return;
   const cibles = ciblesCampagne(t);
   if (!cibles.length) { showError('Aucun client ne correspond aux critères de ciblage actuels.'); return; }

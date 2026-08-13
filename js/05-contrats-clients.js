@@ -181,6 +181,7 @@ async function showClient(id) {
       <div style="display:flex;gap:10px">
         <button onclick="toggleEditClient()" style="background:${editingClient ? 'var(--red-dim)' : 'var(--surface)'};border:1px solid ${editingClient ? 'rgba(248,113,113,0.3)' : 'var(--border)'};border-radius:8px;padding:7px 16px;color:${editingClient ? 'var(--red)' : 'var(--text-muted)'};font-size:12px;font-weight:700;cursor:pointer">${editingClient ? '✕ Annuler' : '✏️ Modifier'}</button>
         <button onclick="ouvrirSignatureMandat('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📄 Mandat de courtage</button>
+        <button onclick="ouvrirEnvoiMandatCompagnies('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">✉️ Envoyer le mandat</button>
         <button onclick="ouvrirUploadContratSignature('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📎 Faire signer un contrat</button>
         <button onclick="ouvrirModaleResiliation('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📝 Feuille de résiliation</button>
         <button onclick="prefillOpportuniteClientId='${c.id}'; opportuniteEnEditionId=null; navigate('nouvelle-opportunite')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:7px 16px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">🎯 Créer une opportunité</button>
@@ -915,6 +916,127 @@ function genererLettreResiliationSignee(clientId, signatureDataUrl, contexte) {
     if (r && r.error) console.error("Échec de l'enregistrement de la résiliation sur la fiche :", errMsg(r));
     showClient(clientId);
   });
+}
+
+// ── Envoi du mandat à une/plusieurs compagnie(s) — sélection des destinataires puis aperçu
+// éditable, exactement le même garde-fou que les demandes d'offre : JAMAIS d'envoi automatique.
+// Réutilise la liste allCompagniesContacts déjà chargée en mémoire (Paramètres → Contacts
+// compagnies) plutôt que de refaire un appel réseau.
+function ouvrirEnvoiMandatCompagnies(clientId) {
+  const contacts = [...(allCompagniesContacts || [])].sort((a, b) => (a.compagnie || '').localeCompare(b.compagnie || ''));
+  window._doMandatContacts = contacts;
+  creerModale('modal-envoi-mandat', `
+    <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:520px;width:100%;max-height:90vh;display:flex;flex-direction:column">
+      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">✉️ Envoyer le mandat</div>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:12px">Sélectionne la ou les compagnies à qui envoyer le mandat — un email pré-rempli s'ouvrira ensuite, à relire avant envoi. N'oublie pas de joindre le mandat signé (PDF) manuellement, l'email ne l'attache pas automatiquement.</div>
+      <div style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;margin-bottom:14px">
+        ${contacts.map(c => `
+          <label style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text);cursor:pointer;padding:6px 8px;border-radius:7px;background:var(--surface-alt)">
+            <input type="checkbox" class="mandat-cie-checkbox" value="${c.id}" style="width:15px;height:15px;accent-color:var(--accent)"/>
+            <span style="flex:1">${c.compagnie}${c.libelle_contact ? ` <span style="color:var(--text-muted);font-size:11px">— ${c.libelle_contact}</span>` : ''}</span>
+            <span style="font-size:11px;color:${c.email ? 'var(--text-muted)' : '#f87171'}">${c.email || 'pas d\'email'}</span>
+          </label>`).join('') || '<div class="table-empty">Aucune compagnie enregistrée — ajoute-en dans Paramètres → Contacts compagnies.</div>'}
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end">
+        <button class="btn-secondary" onclick="document.getElementById('modal-envoi-mandat').remove()">Annuler</button>
+        <button class="btn-save" onclick="genererApercuMandat('${clientId}')">✉️ Générer l'email</button>
+      </div>
+    </div>`, { padding: '16px' });
+}
+
+function genererApercuMandat(clientId) {
+  const checked = [...document.querySelectorAll('.mandat-cie-checkbox:checked')];
+  if (!checked.length) { showError('Sélectionne au moins une compagnie.'); return; }
+  const cies = checked.map(el => (window._doMandatContacts || []).find(c => c.id === el.value)).filter(Boolean);
+  const emails = cies.map(c => c.email).filter(Boolean);
+  const sansEmail = cies.filter(c => !c.email).map(c => c.compagnie);
+
+  const c = allClients.find(x => x.id === clientId);
+  const nomClient = c ? (estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`) : 'Client';
+  const sujet = `Mandat — ${nomClient}`;
+  // Texte dicté par Jonathan le 12.08.2026 — ne pas reformuler. Signature ajoutée en dur pour la
+  // même raison que pour les demandes d'offre (js/07) : un mailto: pré-rempli n'active PAS la
+  // signature par défaut du client mail.
+  const corps = [
+    `Bonjour,`,
+    `Concernant le PA cité en objet, je vous serai reconnaissant de bien vouloir enregistrer le mandat ci-joint, et nous faire parvenir une copie des polices en vigueur chez vous pour copie pour nos dossiers.`,
+    `Tout en vous remerciant d\u2019avance, je vous souhaite une agréable journée.`,
+    `${currentUser ? currentUser.prenom + ' ' + currentUser.nom : ''}\nAssurex Sàrl`,
+  ].join('\n\n');
+
+  document.getElementById('modal-envoi-mandat')?.remove();
+  ouvrirApercuEmailMandat({ clientId, cies, emails, sansEmail, sujet, corps });
+}
+
+function ouvrirApercuEmailMandat({ clientId, cies, emails, sansEmail, sujet, corps }) {
+  window._apercuEmailMandat = { clientId, cies, emails };
+  const qa = (s) => (s || '').toString().replace(/"/g, '&quot;');
+  creerModale('modal-apercu-email-mandat', `
+    <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:600px;width:100%;max-height:90vh;display:flex;flex-direction:column">
+      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">✉️ Aperçu — envoi du mandat</div>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:12px">Ce courriel n'est PAS envoyé automatiquement — relis-le, corrige-le si besoin, joins le mandat signé (PDF), puis choisis comment le transmettre.</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px"><strong>Destinataires :</strong> ${emails.length ? emails.join(', ') : '— aucun email connu'}</div>
+      ${sansEmail.length ? `<div style="font-size:11px;color:#f59e0b;margin-bottom:10px">⚠ Pas d'email enregistré pour : ${sansEmail.join(', ')}</div>` : ''}
+      <div class="form-field" style="margin-bottom:8px"><label class="form-label">Objet</label><input class="form-input" id="apercu-mandat-sujet" value="${qa(sujet)}"/></div>
+      <div class="form-field" style="flex:1;display:flex;flex-direction:column;margin-bottom:14px"><label class="form-label">Corps</label><textarea class="form-input" id="apercu-mandat-corps" style="flex:1;min-height:220px;font-family:inherit;resize:vertical">${corps}</textarea></div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-secondary" onclick="document.getElementById('modal-apercu-email-mandat').remove()">Fermer</button>
+        <button class="btn-secondary" onclick="copierApercuEmailMandat()">📋 Copier</button>
+        <button class="btn-secondary" onclick="ouvrirMailtoApercuMandat()">📧 Ouvrir dans mon client mail</button>
+        <button class="btn-save" style="margin-left:auto" onclick="envoyerApercuEmailMandatViaOutlook()">📨 Envoyer maintenant via Outlook</button>
+      </div>
+    </div>`, { padding: '16px' });
+}
+
+function copierApercuEmailMandat() {
+  const sujet = document.getElementById('apercu-mandat-sujet')?.value || '';
+  const corps = document.getElementById('apercu-mandat-corps')?.value || '';
+  const texte = `Objet : ${sujet}\n\n${corps}`;
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(texte).then(() => showError('✓ Texte copié.')).catch(() => showError('Impossible de copier automatiquement — sélectionne le texte manuellement.'));
+  } else { showError('Copie automatique non disponible — sélectionne le texte manuellement.'); }
+}
+
+// Ouvre le client mail par défaut du système — Outlook choisit alors LUI-MÊME le compte
+// d'expédition (celui réglé comme compte par défaut dans Outlook), le CRM ne peut pas l'imposer
+// via mailto:. Si oz-assure s'ouvre au lieu de jo@cofidex.ch, c'est à régler dans Outlook
+// (Fichier → Paramètres du compte → sélectionner jo@cofidex.ch → "Définir par défaut") — ou
+// utiliser le bouton "Envoyer maintenant via Outlook" ci-contre, qui garantit jo@cofidex.ch
+// puisqu'il passe par le compte Microsoft connecté au CRM plutôt que par le client mail local.
+function ouvrirMailtoApercuMandat() {
+  const ctx = window._apercuEmailMandat;
+  if (!ctx) return;
+  const sujet = document.getElementById('apercu-mandat-sujet')?.value || '';
+  const corps = document.getElementById('apercu-mandat-corps')?.value || '';
+  const to = (ctx.emails || []).join(',');
+  window.open(`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`, '_blank');
+}
+
+// SEULE action qui envoie réellement quelque chose — déclenchée explicitement, jamais automatique.
+// Garantit l'expéditeur jo@cofidex.ch via Microsoft Graph (le compte connecté au CRM), même pattern
+// que pour les demandes d'offre (js/07).
+async function envoyerApercuEmailMandatViaOutlook() {
+  const ctx = window._apercuEmailMandat;
+  if (!ctx) return;
+  const sujet = document.getElementById('apercu-mandat-sujet')?.value || '';
+  const corps = document.getElementById('apercu-mandat-corps')?.value || '';
+  if (!ctx.emails.length) { showError("Aucune compagnie sélectionnée n'a d'email enregistré — ajoute-en dans Paramètres → Contacts compagnies."); return; }
+  if (!confirm(`Envoyer ce courriel à ${ctx.emails.join(', ')} depuis jo@cofidex.ch ?\n\nN'oublie pas : le mandat signé (PDF) n'est pas joint automatiquement.`)) return;
+  if (!(await assurerTokenOutlook())) { showError('Connecte-toi à Outlook (bouton Microsoft dans le menu) pour envoyer.'); return; }
+  try {
+    const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: { subject: sujet, body: { contentType: 'text', content: corps }, toRecipients: ctx.emails.map(e => ({ emailAddress: { address: e } })) },
+        saveToSentItems: true,
+      }),
+    });
+    if (!r.ok && r.status === 401) { showError('Session Outlook expirée — reconnecte-toi (bouton Microsoft dans le menu) puis réessaie.'); return; }
+    if (!r.ok) { showError("Échec de l'envoi via Outlook — réessaie."); return; }
+  } catch (e) { showError("Erreur réseau lors de l'envoi via Outlook : " + e.message); return; }
+  document.getElementById('modal-apercu-email-mandat')?.remove();
+  showError(`✓ Courriel envoyé à ${ctx.emails.join(', ')}. Pense à transmettre le mandat signé séparément si ce n'est pas déjà fait.`);
 }
 
 function ouvrirSignatureMandat(clientId, contexte) {

@@ -81,6 +81,7 @@ function viewOpportunites() {
       </div>
     </div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">${rhMode ? "Vue d'ensemble des affaires en cours (stades, clients, tâches liées) — lecture seule, sans montants. Utilise les boutons ci-dessus pour créer une opportunité ou une tâche pour Jonathan." : 'Suivi des affaires en négociation, avant signature. Une fois "Gagnée" depuis le menu de stade, l\'opportunité ouvre directement le formulaire de contrat pré-rempli.'}</div>
+    ${renderOppsEchuesBanner(OPPS, nomClient)}
     <div class="stat-grid" style="margin-bottom:20px">
       ${rhMode ? '' : statCard('Pipeline total (prime)', 'CHF ' + total.toLocaleString(), '#f59e0b')}
       ${rhMode ? '' : statCard('Pondéré (prime)', 'CHF ' + pondere.toLocaleString(), '#38bdf8')}
@@ -203,6 +204,28 @@ function svgCamembertPipeline(data, total) {
   </div>`;
 }
 
+// ── Bandeau "OPP échues" — toujours visible en haut du Pipeline, quelle que soit la vue active
+// (Kanban/Liste/Échéances/Priorités), pour que les opportunités dont l'échéance est dépassée
+// sautent aux yeux et soient traitées en priorité sans avoir à aller chercher l'onglet Échéances.
+function renderOppsEchuesBanner(OPPS, nomClient) {
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const echues = OPPS.filter(o => o.date_echeance && new Date(o.date_echeance) < today)
+    .sort((a, b) => new Date(a.date_echeance) - new Date(b.date_echeance));
+  if (!echues.length) return '';
+  return `<div style="background:rgba(248,113,113,0.08);border:1.5px solid rgba(248,113,113,0.4);border-radius:12px;padding:14px 16px;margin-bottom:20px">
+    <div style="font-size:12px;font-weight:800;color:#f87171;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">🔴 ${echues.length} opportunité${echues.length !== 1 ? 's' : ''} échue${echues.length !== 1 ? 's' : ''} — à traiter en priorité</div>
+    <div style="display:flex;flex-direction:column;gap:6px">
+      ${echues.map(o => `<div onclick="editerOpportunite('${o.id}')" style="display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--surface);border-radius:8px;padding:8px 12px;cursor:pointer">
+        <div style="min-width:0">
+          <div style="font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${o.titre}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${nomClient(o)}</div>
+        </div>
+        <div style="font-size:11.5px;font-weight:800;color:#f87171;white-space:nowrap">Échue le ${fmtDate(o.date_echeance)}</div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+}
+
 // ── Vue Kanban (par défaut) — colonnes par stade + tableaux Gagnées/Perdues en dessous ──
 // rhMode : carte non cliquable (pas d'accès à la fiche d'édition), sans montant ni menu de
 // changement de stade (action réservée aux rôles apporteur/signataire).
@@ -218,11 +241,13 @@ function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, to
       </div>
       ${opps.map(o => {
         const tachesOuvertes = allRappels.filter(r => r.opportunite_id === o.id && r.statut === 'ouvert').length;
-        return `<div class="kanban-card" onclick="editerOpportunite('${o.id}')" style="cursor:pointer;position:relative">
+        const echue = o.date_echeance && new Date(o.date_echeance) < new Date(new Date().setHours(0,0,0,0));
+        return `<div class="kanban-card" onclick="editerOpportunite('${o.id}')" style="cursor:pointer;position:relative;${echue ? 'border-left:3px solid #f87171' : ''}">
         ${o.cree_par ? `<div title="Créée par ${o.cree_par}" style="position:absolute;top:8px;right:8px;font-size:13px">${PICTO_CREE_EQUIPE}${o.notif_vue ? '' : ' 🔴'}</div>` : ''}
         <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:4px">${o.titre}</div>
         <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:1px">${nomClient(o)}</div>
         <div style="font-size:10.5px;color:var(--text-muted);margin-bottom:8px">${o.compagnie || '&nbsp;'}${tachesOuvertes > 0 ? ` · ☑ ${tachesOuvertes} tâche${tachesOuvertes > 1 ? 's' : ''}` : ''}</div>
+        ${o.date_echeance ? `<div style="font-size:10px;font-weight:700;color:${echue ? '#f87171' : 'var(--text-muted)'};margin-bottom:6px">${echue ? '🔴 Échue le ' : 'Échéance '}${fmtDate(o.date_echeance)}</div>` : ''}
         <div style="display:flex;justify-content:space-between;align-items:center">
           ${rhMode ? '<span></span>' : `<span style="font-size:13px;font-weight:800;color:#f59e0b">CHF ${fmtCHF((o.montant_potentiel||0))}</span>`}
           ${o.apporteur_id ? avatar(agentById(o.apporteur_id), 22) : ''}

@@ -1042,13 +1042,13 @@ function champProduitLcaHtml(valeurActuelle) {
   const valEch = (valeurActuelle || '').replace(/"/g, '&quot;');
   if (produits && produits.length) {
     const connu = produits.includes(valeurActuelle);
-    return `<select class="form-input ct-lca-nom-input" onchange="if(this.value==='__autre__'){ const t=document.createElement('input'); t.className='form-input ct-lca-nom-input'; t.placeholder='Nom exact du produit chez la compagnie'; this.replaceWith(t); t.focus(); }">
+    return `<select class="form-input ct-lca-nom-input" onchange="if(this.value==='__autre__'){ const t=document.createElement('input'); t.className='form-input ct-lca-nom-input'; t.placeholder='Nom exact du produit chez la compagnie'; t.setAttribute('oninput','updateCommissionPreview()'); this.replaceWith(t); t.focus(); } updateCommissionPreview();">
       <option value="">— Sélectionner un produit ${compagnie.trim()} —</option>
       ${produits.map(p => `<option value="${p.replace(/"/g, '&quot;')}" ${p === valeurActuelle ? 'selected' : ''}>${p}</option>`).join('')}
       <option value="__autre__" ${valeurActuelle && !connu ? 'selected' : ''}>Autre produit (préciser)…</option>
     </select>`;
   }
-  return `<input class="form-input ct-lca-nom-input" placeholder="Nom exact du produit chez la compagnie" value="${valEch}"/>`;
+  return `<input class="form-input ct-lca-nom-input" placeholder="Nom exact du produit chez la compagnie" value="${valEch}" oninput="updateCommissionPreview()"/>`;
 }
 
 function ajouterLigneLCA() {
@@ -1064,9 +1064,9 @@ function ajouterLigneLCA() {
     </div>
     <div style="flex:1;min-width:120px">
       <label class="form-label" style="font-size:10.5px">Prime mensuelle (CHF)</label>
-      <input class="form-input ct-lca-prime-input" type="number" placeholder="150"/>
+      <input class="form-input ct-lca-prime-input" type="number" placeholder="150" oninput="updateCommissionPreview()"/>
     </div>
-    <button type="button" onclick="this.parentElement.remove()" style="background:var(--red-dim);color:var(--red);border:none;border-radius:7px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">✕</button>
+    <button type="button" onclick="this.parentElement.remove(); updateCommissionPreview();" style="background:var(--red-dim);color:var(--red);border:none;border-radius:7px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">✕</button>
   `;
   container.appendChild(ligne);
 }
@@ -1125,6 +1125,7 @@ function toggleCombinablePrime(produitId) {
     const auMoinsUneCochee = document.querySelectorAll('.ct-combinable-checkbox:checked').length > 0;
     calculette.style.display = auMoinsUneCochee ? 'block' : 'none';
   }
+  updateCommissionPreview();
 }
 
 // Calculette RC + Casco : remplis 2 des 3 montants (Total / RC / Casco), le 3e se déduit par soustraction
@@ -1537,6 +1538,17 @@ function calculerCommissionEstimee() {
   return { montant: 0, detail: 'Saisis le montant estimé ci-dessous' };
 }
 
+// Lignes LCA valablement remplies (produit + prime mensuelle > 0) parmi les .ct-lca-ligne
+// actuellement affichées — utilisé à la fois pour la prévisualisation de commission et pour la
+// validation à l'enregistrement (cf. saveContrat).
+function calculerLignesLCASaisies() {
+  return Array.from(document.querySelectorAll('.ct-lca-ligne')).map(ligne => {
+    const nom = ligne.querySelector('.ct-lca-nom-input')?.value.trim() || '';
+    const primeMensuelle = parseFloat(ligne.querySelector('.ct-lca-prime-input')?.value) || 0;
+    return { nom, primeMensuelle };
+  }).filter(l => l.nom && l.primeMensuelle > 0);
+}
+
 function updateCommissionPreview() {
   const produit = getProduitSelectionne();
   const produitId = produit ? produit.id : null;
@@ -1546,8 +1558,25 @@ function updateCommissionPreview() {
   const champRisqueFrais = document.getElementById('ct-prime-risque-frais-field');
   if (champRisqueFrais) champRisqueFrais.style.display = (produitId === 'lpp_entreprise' && compagnieChoisie.includes('swiss life')) ? 'block' : 'none';
   const { montant, detail } = calculerCommissionEstimee();
-  document.getElementById('commission-preview-value').textContent = 'CHF ' + montant.toLocaleString();
-  document.getElementById('commission-preview-detail').textContent = detail;
+  // LAMal + LCA = plusieurs contrats distincts (même n° de police, compagnies parfois différentes)
+  // → plusieurs commissions distinctes seront créées à l'enregistrement. L'aperçu doit le montrer,
+  // sinon on ne voit que la commission LAMal (CHF 70 forfait) et les LCA passent inaperçues avant
+  // de sauver (demande de Jonathan le 21.08.2026).
+  const lcaCoche = document.querySelector('.ct-combinable-checkbox[value="lca_autre_compagnie"]');
+  let montantTotal = montant;
+  let detailFinal = detail;
+  if (lcaCoche && lcaCoche.checked) {
+    const lignesLCA = calculerLignesLCASaisies();
+    if (lignesLCA.length > 0) {
+      const parLigne = lignesLCA.map(l => ({ ...l, montant: Math.round(l.primeMensuelle * TAUX_COMMISSION.sante_facteur_mensuel) }));
+      const totalLCA = parLigne.reduce((s, l) => s + l.montant, 0);
+      montantTotal = montant + totalLCA;
+      const detailLCA = parLigne.map(l => `${l.nom} : CHF ${fmtCHF(l.montant)}`).join(', ');
+      detailFinal = `${detail} + ${lignesLCA.length} produit LCA (${detailLCA}) = CHF ${fmtCHF(totalLCA)} — ${1 + lignesLCA.length} commissions distinctes seront créées à l'enregistrement (même n° de police).`;
+    }
+  }
+  document.getElementById('commission-preview-value').textContent = 'CHF ' + montantTotal.toLocaleString();
+  document.getElementById('commission-preview-detail').textContent = detailFinal;
   const natureEl = document.getElementById('ct-nature-commission');
   const labelEl = document.getElementById('commission-preview-label');
   if (natureEl && labelEl) labelEl.textContent = natureEl.value === 'gestion' ? 'Commission de gestion estimée' : 'Commission d\u2019acquisition estimée';
@@ -1627,11 +1656,19 @@ async function saveContrat() {
   if (!compagnie || !primeMensuelle) { showError('Compagnie et prime sont obligatoires.'); return; }
   if (!produitSelectionne) { showError('Sélectionne un produit valide dans la liste proposée.'); return; }
 
-  // Vérifier que les produits combinés cochés ont bien une prime renseignée
+  // Vérifier que les produits combinés cochés ont bien une prime renseignée. La LCA est un cas
+  // à part (pas un simple input, mais des lignes dynamiques .ct-lca-ligne) — validée séparément
+  // juste en dessous, sinon la case "+ LCA" cochée bloquait TOUJOURS l'enregistrement (aucun
+  // .ct-combinable-prime-input n'existe pour elle) — bug repéré par Jonathan le 21.08.2026.
   const combinablesCoches = Array.from(document.querySelectorAll('.ct-combinable-checkbox:checked')).map(cb => cb.value);
   for (const id of combinablesCoches) {
+    if (id === 'lca_autre_compagnie') continue;
     const input = document.querySelector(`.ct-combinable-prime-input[data-produit-id="${id}"]`);
     if (!input || !parseFloat(input.value)) { showError('Renseigne la prime annuelle pour chaque produit combiné coché.'); return; }
+  }
+  if (combinablesCoches.includes('lca_autre_compagnie') && calculerLignesLCASaisies().length === 0) {
+    showError('Renseigne au moins un produit LCA (produit + prime mensuelle), ou décoche la case "+ LCA".');
+    return;
   }
 
   const produitLabel = produitSelectionne.label;

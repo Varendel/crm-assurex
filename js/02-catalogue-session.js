@@ -713,11 +713,44 @@ const CATALOGUE_PRODUITS = {
 // ─── Produits LCA par compagnie (utilisé pour filtrer le sélecteur de produit LCA selon la
 // compagnie renseignée dans le formulaire — ex: "Helsana" ne doit proposer que des produits
 // Helsana, jamais du Groupe Mutuel). Compagnie non reconnue → champ libre (fallback), jamais
-// bloquant.
+// bloquant. Gammes vérifiées sur les sites officiels des 3 compagnies avec lesquelles Jonathan
+// travaille le plus (Groupe Mutuel, Helsana, CSS) le 21.08.2026.
 const CATALOGUE_LCA_PAR_COMPAGNIE = {
-  helsana: ['Helsana TOP (ambulatoire)', 'Helsana SANA (ambulatoire)', 'Helsana COMPLETA (ambulatoire)', 'Helsana COMPLETA PLUS (ambulatoire)', 'Helsana PRIMEO (ambulatoire, jeunes adultes)'],
-  'groupe mutuel': ['GM Premium (ambulatoire)', 'GM Global smart (ambulatoire + hospit.)', 'GM Global mi-privée', 'GM Global privée', 'GM Global flex'],
-  gm: ['GM Premium (ambulatoire)', 'GM Global smart (ambulatoire + hospit.)', 'GM Global mi-privée', 'GM Global privée', 'GM Global flex'],
+  helsana: [
+    'Helsana TOP (ambulatoire)',
+    'Helsana SANA (ambulatoire)',
+    'Helsana COMPLETA (ambulatoire)',
+    'Helsana COMPLETA PLUS (ambulatoire)',
+    'Helsana PRIMEO (ambulatoire, jeunes adultes)',
+    'Helsana WORLD (couverture à l\'étranger)',
+  ],
+  'groupe mutuel': [
+    'GM Optimum (ambulatoire)',
+    'GM Premium (ambulatoire)',
+    'GM Global smart (hospitalisation + ambulatoire combiné)',
+    'GM Global flex (hospitalisation modulable — Hospiflex/Careflex)',
+    'GM Assurance complémentaire d\'hospitalisation',
+    'GM H-Bonus (libre choix de la division hospitalière)',
+  ],
+  gm: [
+    'GM Optimum (ambulatoire)',
+    'GM Premium (ambulatoire)',
+    'GM Global smart (hospitalisation + ambulatoire combiné)',
+    'GM Global flex (hospitalisation modulable — Hospiflex/Careflex)',
+    'GM Assurance complémentaire d\'hospitalisation',
+    'GM H-Bonus (libre choix de la division hospitalière)',
+  ],
+  css: [
+    'CSS myFlex Ambulatoire Economy',
+    'CSS myFlex Ambulatoire Balance',
+    'CSS myFlex Ambulatoire Premium',
+    'CSS myFlex Hospitalisation Economy',
+    'CSS myFlex Hospitalisation Balance',
+    'CSS myFlex Hospitalisation Premium',
+    'CSS myFlex Médecine alternative Economy',
+    'CSS myFlex Médecine alternative Balance',
+    'CSS myFlex Médecine alternative Premium',
+  ],
 };
 function produitsLcaPourCompagnie(compagnieTexte) {
   const s = (compagnieTexte || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();

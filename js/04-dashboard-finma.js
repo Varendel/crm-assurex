@@ -1413,15 +1413,41 @@ function carteCouverture(label, ok, detail, police) {
     </div>`;
 }
 
+// Classification par mots-clés du texte libre "produit" d'un contrat vers une catégorie du
+// catalogue (CATALOGUE_PRODUITS). Remplace une ancienne logique qui exigeait une égalité EXACTE
+// avec un des ~50 libellés précis du catalogue — en pratique la plupart des contrats sont créés
+// avec un libellé plus générique ("Assurance maladie (LAMal)", "Complémentaire santé"...) qui ne
+// matchait jamais rien, faisant passer à tort la quasi-totalité des couvertures santé actives pour
+// "non couvertes" sur la fiche client (repéré par Jonathan le 12.08.2026 sur do Vale Bruno, qui a
+// pourtant bien une LAMal + une complémentaire santé actives). Règles ORDONNÉES : la première qui
+// correspond gagne (évite les collisions, ex. "RC véhicule" doit compter pour Véhicule, pas RC ;
+// "Perte de gain maladie" doit compter pour Assurances de personnes entreprise, pas Santé).
+// Validé contre les 29 libellés distincts effectivement utilisés en base au 12.08.2026.
+const REGLES_CATEGORIE_PRODUIT_LIBRE = [
+  ['Véhicule', p => /véhicule|casco|flotte/i.test(p)],
+  ['Assurances de personnes (entreprise)', p => /perte de gain|\blaa\b|laac|laaf|indemnité journalière|maladie collective/i.test(p)],
+  ['Responsabilité civile', p => /^rc\b|responsabilité civile/i.test(p)],
+  ['Ménage / habitation', p => /ménage/i.test(p)],
+  ['Caution de loyer', p => /caution/i.test(p)],
+  ['Bâtiment', p => /bâtiment/i.test(p)],
+  ['Protection juridique', p => /protection juridique/i.test(p)],
+  ['Prévoyance', p => /\b3a\b|\b3b\b|pilier|assurance vie|vie liée|\blpp\b|libre passage|prévoyance/i.test(p)],
+  ['Santé', p => /lamal|maladie|complémentaire|\blca\b|santé/i.test(p)],
+  ["Entreprise — risques spécifiques", p => /perte d'exploitation|cyber|inventaire commercial|choses/i.test(p)],
+];
+function categoriePourProduitLibre(produitTexte) {
+  const p = (produitTexte || '').trim();
+  if (!p) return null;
+  const regle = REGLES_CATEGORIE_PRODUIT_LIBRE.find(([, test]) => test(p));
+  return regle ? regle[0] : null;
+}
+
 function renderVueEnsembleCouvertures(client, contrats, isEntreprise) {
   const segment = isEntreprise ? 'entreprise' : 'prive';
   const categories = getCategoriesPourSegment(segment).filter(cat => cat !== 'Autre');
   const contratsActifs = contrats.filter(ct => !['résilié','annulé','mandat_resilie'].includes(ct.statut));
 
-  const contratPourCategorie = (cat) => {
-    const labelsCategorie = (CATALOGUE_PRODUITS[cat] || []).map(p => p.label.toLowerCase());
-    return contratsActifs.find(ct => ct.produit && labelsCategorie.includes(ct.produit.trim().toLowerCase()));
-  };
+  const contratPourCategorie = (cat) => contratsActifs.find(ct => categoriePourProduitLibre(ct.produit) === cat);
 
   const items = categories.map(cat => {
     const trouve = contratPourCategorie(cat);

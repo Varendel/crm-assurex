@@ -1798,6 +1798,86 @@ function viderClientOpportunite() {
   document.getElementById('o-client-recherche').focus();
 }
 
+// Créer la fiche client depuis le prospect d'une opportunité, SANS perdre ce qui a déjà été
+// tapé dans le reste du formulaire d'opportunité (titre, compagnie, produits, primes...) : une
+// modale (pas une navigation vers une autre page) qui, une fois le client créé, se contente de
+// re-brancher #o-client / #o-client-recherche via selectionnerClientOpportunite() — le reste du
+// formulaire sous-jacent n'est jamais touché. Demande de Jonathan le 21.08.2026.
+function ouvrirCreationClientDepuisOpportunite() {
+  const nomTape = (document.getElementById('o-prospect-nom')?.value || '').trim();
+  const mots = nomTape.split(/\s+/).filter(Boolean);
+  const prenomDevine = mots.length > 1 ? mots[0] : '';
+  const nomDevine = mots.length > 1 ? mots.slice(1).join(' ') : (mots[0] || '');
+  const qa = (s) => (s || '').toString().replace(/"/g, '&quot;');
+  creerModale('modal-creation-client-opp', `
+    <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:480px;width:100%">
+      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">➕ Créer la fiche client</div>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">Le reste de l'opportunité en cours (titre, compagnie, produits...) reste intact — tu pourras compléter la fiche client plus tard depuis "✏️ Modifier".</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 12px">
+        <div class="form-field" style="grid-column:span 2"><label class="form-label">Civilité</label><select class="form-select" id="occ-civilite"><option value="">—</option><option value="Monsieur">Monsieur</option><option value="Madame">Madame</option></select></div>
+        <div class="form-field"><label class="form-label">Prénom *</label><input class="form-input" id="occ-prenom" value="${qa(prenomDevine)}" placeholder="Jean"/></div>
+        <div class="form-field"><label class="form-label">Nom *</label><input class="form-input" id="occ-nom" value="${qa(nomDevine)}" placeholder="Dupont"/></div>
+        <div class="form-field" style="grid-column:span 2"><label class="form-label">Email *</label><input class="form-input" id="occ-email" type="email" placeholder="jean@email.ch"/></div>
+        <div class="form-field"><label class="form-label">Mobile</label><input class="form-input" id="occ-mobile" placeholder="+41 79 XXX XX XX"/></div>
+        <div class="form-field"><label class="form-label">NPA *</label><input class="form-input" id="occ-npa" placeholder="1000"/></div>
+        <div class="form-field" style="grid-column:span 2"><label class="form-label">Adresse *</label><input class="form-input" id="occ-adresse" placeholder="Rue de la Paix 1"/></div>
+        <div class="form-field"><label class="form-label">Ville</label><input class="form-input" id="occ-ville" placeholder="Lausanne"/></div>
+        <div class="form-field"><label class="form-label">Canton</label><input class="form-input" id="occ-canton" placeholder="VD"/></div>
+      </div>
+      <div id="occ-erreur" style="display:none;color:#f87171;font-size:11.5px;margin-top:10px"></div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn-secondary" onclick="document.getElementById('modal-creation-client-opp').remove()">Annuler</button>
+        <button class="btn-save" onclick="creerClientDepuisOpportunite()" style="margin-left:auto">✓ Créer et lier à l'opportunité</button>
+      </div>
+    </div>`, { padding: '16px' });
+}
+
+async function creerClientDepuisOpportunite() {
+  const prenom = document.getElementById('occ-prenom')?.value.trim() || '';
+  const nom = document.getElementById('occ-nom')?.value.trim() || '';
+  const email = document.getElementById('occ-email')?.value.trim() || '';
+  const adresse = document.getElementById('occ-adresse')?.value.trim() || '';
+  const npa = document.getElementById('occ-npa')?.value.trim() || '';
+  const missing = [];
+  if (!prenom) missing.push('Prénom');
+  if (!nom) missing.push('Nom');
+  if (!email) missing.push('Email');
+  if (!adresse) missing.push('Adresse');
+  if (!npa) missing.push('NPA');
+  const erreurEl = document.getElementById('occ-erreur');
+  if (missing.length > 0) {
+    if (erreurEl) { erreurEl.textContent = 'Champs obligatoires manquants : ' + missing.join(', '); erreurEl.style.display = ''; }
+    return;
+  }
+  const body = {
+    civilite: document.getElementById('occ-civilite')?.value || null,
+    prenom, nom, email,
+    mobile: document.getElementById('occ-mobile')?.value.trim() || null,
+    adresse, npa,
+    ville: document.getElementById('occ-ville')?.value.trim() || null,
+    canton: document.getElementById('occ-canton')?.value.trim() || null,
+    langue: 'FR',
+    enfants: 0,
+    taux_activite: 100,
+    revenu: 0,
+    statut: 'prospect',
+    segment: 'Privé',
+  };
+  const btn = document.querySelector('#modal-creation-client-opp .btn-save');
+  if (btn) { btn.textContent = 'Création...'; btn.disabled = true; }
+  const result = await dbPost('clients', body);
+  if (result && !result.error) {
+    allClients = await dbGet('clients', 'select=*');
+    const nouveauId = (result[0] && result[0].id) || allClients.slice().sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0]?.id;
+    document.getElementById('modal-creation-client-opp')?.remove();
+    if (nouveauId) selectionnerClientOpportunite(nouveauId);
+  } else {
+    const detail = result && result.detail ? JSON.stringify(result.detail) : 'connexion';
+    if (erreurEl) { erreurEl.textContent = 'Erreur lors de la création (' + detail + ').'; erreurEl.style.display = ''; }
+    if (btn) { btn.textContent = "✓ Créer et lier à l'opportunité"; btn.disabled = false; }
+  }
+}
+
 function viewNouvelleOpportunite() {
   const rh = estRoleRH();
   const opp = opportuniteEnEditionId ? allOpportunites.find(o => o.id === opportuniteEnEditionId) : null;
@@ -1832,7 +1912,11 @@ function viewNouvelleOpportunite() {
         </div>
         ${clientFiche ? `<div style="margin-top:6px"><button type="button" onclick="viderClientOpportunite()" style="background:none;border:none;color:var(--text-muted);font-size:11px;cursor:pointer;text-decoration:underline">✕ Retirer — pas encore client / autre prospect</button></div>` : ''}
       </div>
-      <div class="form-field" id="o-prospect-field" style="${clientFiche ? 'display:none' : ''}"><label class="form-label">Nom du prospect</label><input class="form-input" id="o-prospect-nom" value="${qa(opp?.prospect_nom)}" placeholder="Ex: Jean Dupont (pas encore client)"/></div>
+      <div class="form-field" id="o-prospect-field" style="${clientFiche ? 'display:none' : ''}">
+        <label class="form-label">Nom du prospect</label>
+        <input class="form-input" id="o-prospect-nom" value="${qa(opp?.prospect_nom)}" placeholder="Ex: Jean Dupont (pas encore client)"/>
+        <div style="margin-top:6px"><button type="button" onclick="ouvrirCreationClientDepuisOpportunite()" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer">➕ Créer la fiche client maintenant</button></div>
+      </div>
       <div class="form-field" style="${rh ? 'display:none' : ''}">
         <label class="form-label">Compagnie</label>
         <select class="form-select" id="o-compagnie-select" onchange="const autre=this.value==='__autre__';document.getElementById('o-compagnie-autre-wrap').style.display=autre?'':'none';document.getElementById('o-compagnie').value=autre?document.getElementById('o-compagnie-autre').value:this.value;recalculerCommissionEstimeeOpportunite()">

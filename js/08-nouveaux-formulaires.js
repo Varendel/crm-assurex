@@ -647,7 +647,7 @@ async function saveEditContrat(contratId, clientId, returnTo) {
         titre: `Reprendre "${body.produit}" de ${nomClient} (actuellement ${body.compagnie}, non partenaire)`,
         client_id: clientId, type: 'Contrat', urgence: 'moyenne',
         date_echeance: dEch.toISOString().split('T')[0],
-        notes: `Police actuellement chez ${body.compagnie} (compagnie non partenaire) — échéance le ${body.date_echeance}. Objectif : proposer un transfert vers une compagnie partenaire pour générer une commission.`,
+        notes: `Police actuellement chez ${body.compagnie} (compagnie non partenaire) — échéance le ${fmtDate(body.date_echeance)}. Objectif : proposer un transfert vers une compagnie partenaire pour générer une commission.`,
         statut: 'ouvert',
       });
       if (r && r.error) showError('⚠️ Contrat enregistré, mais le rappel de transfert automatique n\u2019a pas pu être créé : ' + errMsg(r));

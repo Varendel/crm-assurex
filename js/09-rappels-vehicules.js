@@ -1648,7 +1648,7 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
         type: 'Contrat',
         urgence: 'moyenne',
         date_echeance: dEch.toISOString().split('T')[0],
-        notes: `Police actuellement chez ${compagnie} (compagnie non partenaire) — échéance le ${contratBody.date_echeance}. Objectif : proposer un transfert vers une compagnie partenaire pour générer une commission.`,
+        notes: `Police actuellement chez ${compagnie} (compagnie non partenaire) — échéance le ${fmtDate(contratBody.date_echeance)}. Objectif : proposer un transfert vers une compagnie partenaire pour générer une commission.`,
         statut: 'ouvert',
       });
       if (rRappel && rRappel.error) console.error('Échec de création du rappel de transfert automatique :', errMsg(rRappel));

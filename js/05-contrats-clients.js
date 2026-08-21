@@ -367,7 +367,7 @@ async function showClient(id) {
         ${infoBlock('Chiffre d\'affaires', c.revenu ? 'CHF ' + Number(c.revenu).toLocaleString() : '—')} ${infoBlock('N° AVS (LPP)', c.avs)}
       </div>`) : sectionCard('Coordonnées personnelles', '#38bdf8', `<div class="info-grid">
         ${infoBlock('Prénom', c.prenom)} ${infoBlock('Nom', c.nom)}
-        ${infoBlock('Date de naissance', c.date_naissance)} ${infoBlock('Nationalité', c.nationalite)}
+        ${infoBlock('Date de naissance', c.date_naissance ? fmtDate(c.date_naissance) : '—')} ${infoBlock('Nationalité', c.nationalite)}
         ${infoBlock('État civil', c.etat_civil)} ${infoBlock('Enfants', c.enfants > 0 ? c.enfants : 'Aucun')}
         ${infoBlock('N° AVS', c.avs)} ${infoBlock('Langue', c.langue === 'FR' ? 'Français' : c.langue === 'DE' ? 'Allemand' : 'Italien')}
       </div>`)}

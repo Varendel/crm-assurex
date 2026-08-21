@@ -433,7 +433,7 @@ function viewNouveauContrat() {
         <option value="prive">Privé</option>
         <option value="entreprise">Entreprise</option>
       </select></div>
-      <div class="form-field"><label class="form-label">Compagnie *</label><input class="form-input" id="ct-compagnie" value="${opp && opp.compagnie ? opp.compagnie : ''}" placeholder="Swiss Life, AXA, Helsana..." list="compagnies-suggestions" autocomplete="off" oninput="refreshCategoriesLignesPrime(); updateCommissionPreview()"/><datalist id="compagnies-suggestions">${getCompagniesConnues(getProduitSelectionne() ? getProduitSelectionne().id : null).map(c => `<option value="${c}">`).join('')}</datalist></div>
+      <div class="form-field"><label class="form-label">Compagnie *</label><input class="form-input" id="ct-compagnie" value="${opp && opp.compagnie ? opp.compagnie : ''}" placeholder="Swiss Life, AXA, Helsana..." list="compagnies-suggestions" autocomplete="off" oninput="refreshCategoriesLignesPrime(); updateCommissionPreview(); refreshLcaLignesOptions()"/><datalist id="compagnies-suggestions">${getCompagniesConnues(getProduitSelectionne() ? getProduitSelectionne().id : null).map(c => `<option value="${c}">`).join('')}</datalist></div>
       <div class="form-field"><label class="form-label">Catégorie *</label><select class="form-select" id="ct-categorie" onchange="updateProduitOptions()"></select></div>
       <div class="form-field"><label class="form-label">Produit *</label><select class="form-select" id="ct-produit" onchange="updateModulesOptions(); updateCommissionPreview()"><option value="">— Sélectionner —</option></select></div>
       <div class="form-field" style="grid-column:span 2" id="ct-modules-field"><label class="form-label">Modules complémentaires</label><div id="ct-modules-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div><div style="font-size:10px;color:var(--text-muted);margin-top:4px" id="ct-modules-hint"></div>
@@ -902,8 +902,9 @@ function updateModulesOptions() {
   const lignesHint = document.getElementById('ct-prime-lignes-hint');
   const lignesAddBtn = document.getElementById('ct-prime-lignes-add-btn');
   const lignesList = document.getElementById('ct-prime-lignes-list');
+  const estLamalSeul = produit && produit.id === 'lamal';
   if (lignesField && lignesList) {
-    if (estSante && lignesField.dataset.mode !== 'sante') {
+    if (estLamalSeul && lignesField.dataset.mode !== 'sante') {
       lignesField.dataset.mode = 'sante';
       if (lignesLabelText) lignesLabelText.textContent = 'Prime LAMal *';
       if (lignesHint) lignesHint.textContent = '(prime annuelle LAMal de ce contrat — la prime LCA se saisit ci-dessus dans "Produits souvent combinés")';
@@ -911,7 +912,7 @@ function updateModulesOptions() {
       const montantExistant = Array.from(lignesList.querySelectorAll('.ct-prime-ligne-montant')).reduce((s, el) => s + (parseFloat(el.value) || 0), 0);
       lignesList.innerHTML = '';
       ajouterLignePrime('Prime LAMal', montantExistant > 0 ? montantExistant : '');
-    } else if (!estSante && lignesField.dataset.mode === 'sante') {
+    } else if (!estLamalSeul && lignesField.dataset.mode === 'sante') {
       lignesField.dataset.mode = '';
       if (lignesLabelText) lignesLabelText.textContent = 'Lignes de prime *';
       if (lignesHint) lignesHint.textContent = '(reporte chaque ligne de la police — ex: Responsabilité civile privée, Inventaire du ménage, Assurances complémentaires et services, Taxes légales)';
@@ -1029,6 +1030,27 @@ function ajouterPlaqueFlotte() {
   list.appendChild(ligne);
 }
 
+// Rend le champ "produit LCA" d'une ligne : un <select> filtré sur les produits de la compagnie
+// renseignée en haut du formulaire (ex: "Helsana" → seulement les produits Helsana, jamais Groupe
+// Mutuel — cf. CATALOGUE_LCA_PAR_COMPAGNIE, js/02) si la compagnie est reconnue, sinon un champ
+// libre (compagnie non cataloguée — jamais bloquant). Choisir "Autre produit" dans le select bascule
+// vers la saisie libre, en conservant toujours la classe .ct-lca-nom-input (lue tel quel à
+// l'enregistrement, cf. creerContratEtCommission).
+function champProduitLcaHtml(valeurActuelle) {
+  const compagnie = document.getElementById('ct-compagnie')?.value || '';
+  const produits = produitsLcaPourCompagnie(compagnie);
+  const valEch = (valeurActuelle || '').replace(/"/g, '&quot;');
+  if (produits && produits.length) {
+    const connu = produits.includes(valeurActuelle);
+    return `<select class="form-input ct-lca-nom-input" onchange="if(this.value==='__autre__'){ const t=document.createElement('input'); t.className='form-input ct-lca-nom-input'; t.placeholder='Nom exact du produit chez la compagnie'; this.replaceWith(t); t.focus(); }">
+      <option value="">— Sélectionner un produit ${compagnie.trim()} —</option>
+      ${produits.map(p => `<option value="${p.replace(/"/g, '&quot;')}" ${p === valeurActuelle ? 'selected' : ''}>${p}</option>`).join('')}
+      <option value="__autre__" ${valeurActuelle && !connu ? 'selected' : ''}>Autre produit (préciser)…</option>
+    </select>`;
+  }
+  return `<input class="form-input ct-lca-nom-input" placeholder="Nom exact du produit chez la compagnie" value="${valEch}"/>`;
+}
+
 function ajouterLigneLCA() {
   const container = document.getElementById('ct-lca-lignes');
   if (!container) return;
@@ -1036,9 +1058,9 @@ function ajouterLigneLCA() {
   ligne.className = 'ct-lca-ligne';
   ligne.style.cssText = 'display:flex;gap:8px;align-items:flex-end;margin-bottom:8px;flex-wrap:wrap';
   ligne.innerHTML = `
-    <div style="flex:2;min-width:180px">
-      <label class="form-label" style="font-size:10.5px">Nom du produit (ex: SWICA COMPLETA, CSS myFlex...)</label>
-      <input class="form-input ct-lca-nom-input" placeholder="Nom exact du produit chez la compagnie"/>
+    <div class="ct-lca-nom-wrap" style="flex:2;min-width:180px">
+      <label class="form-label" style="font-size:10.5px">Produit LCA</label>
+      ${champProduitLcaHtml('')}
     </div>
     <div style="flex:1;min-width:120px">
       <label class="form-label" style="font-size:10.5px">Prime annuelle (CHF)</label>
@@ -1047,6 +1069,18 @@ function ajouterLigneLCA() {
     <button type="button" onclick="this.parentElement.remove()" style="background:var(--red-dim);color:var(--red);border:none;border-radius:7px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">✕</button>
   `;
   container.appendChild(ligne);
+}
+
+// Rafraîchit le sélecteur de produit de chaque ligne LCA déjà saisie quand la compagnie change
+// (ex: le client tape "Helsana" après avoir déjà ajouté une ligne) — conserve la valeur si elle
+// reste valide pour la nouvelle compagnie.
+function refreshLcaLignesOptions() {
+  document.querySelectorAll('.ct-lca-nom-wrap').forEach(wrap => {
+    const actuel = wrap.querySelector('.ct-lca-nom-input');
+    if (!actuel) return;
+    const valeurActuelle = actuel.value && actuel.value !== '__autre__' ? actuel.value : '';
+    wrap.innerHTML = `<label class="form-label" style="font-size:10.5px">Produit LCA</label>${champProduitLcaHtml(valeurActuelle)}`;
+  });
 }
 
 // Révèle/masque le petit champ de prime en regard d'une case "Module complémentaire" cochée

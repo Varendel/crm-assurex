@@ -688,19 +688,10 @@ const CATALOGUE_PRODUITS = {
   ],
   'Santé': [
     { id: 'lamal', label: 'LAMal (assurance de base)', segment: 'prive', modules: [], combinables: ['lca_autre_compagnie'] },
-    // ── Helsana (vérifié à jour) ──
-    { id: 'helsana_top', label: 'Helsana TOP (ambulatoire)', segment: 'prive', modules: [] },
-    { id: 'helsana_sana', label: 'Helsana SANA (ambulatoire)', segment: 'prive', modules: [] },
-    { id: 'helsana_completa', label: 'Helsana COMPLETA (ambulatoire)', segment: 'prive', modules: [] },
-    { id: 'helsana_completa_plus', label: 'Helsana COMPLETA PLUS (ambulatoire)', segment: 'prive', modules: [] },
-    { id: 'helsana_primeo', label: 'Helsana PRIMEO (ambulatoire, jeunes adultes)', segment: 'prive', modules: [] },
-    // ── Groupe Mutuel (vérifié à jour) ──
-    { id: 'gm_premium', label: 'GM Premium (ambulatoire)', segment: 'prive', modules: [] },
-    { id: 'gm_global_smart', label: 'GM Global smart (ambulatoire + hospit.)', segment: 'prive', modules: [] },
-    { id: 'gm_global_mi_privee', label: 'GM Global mi-privée', segment: 'prive', modules: [] },
-    { id: 'gm_global_privee', label: 'GM Global privée', segment: 'prive', modules: [] },
-    { id: 'gm_global_flex', label: 'GM Global flex', segment: 'prive', modules: [] },
-    // ── Autre compagnie (nom précisé dans les notes du contrat) ──
+    // Produits de marque (Helsana, Groupe Mutuel...) ne sont plus des "produits" sélectionnables
+    // ici — ils se choisissent désormais par ligne LCA, filtrés selon la compagnie renseignée
+    // (voir CATALOGUE_LCA_PAR_COMPAGNIE ci-dessous), pour éviter de mélanger les marques de
+    // compagnies différentes dans une seule liste (demande de Jonathan le 21.08.2026).
     { id: 'lca_autre_compagnie', label: 'LCA — complémentaire santé (compagnie et produit à préciser)', segment: 'prive', modules: [] },
   ],
   'Assurances de personnes (entreprise)': [
@@ -718,6 +709,24 @@ const CATALOGUE_PRODUITS = {
     { id: 'autre', label: 'Autre (saisie manuelle)', segment: 'tous', modules: [] },
   ],
 };
+
+// ─── Produits LCA par compagnie (utilisé pour filtrer le sélecteur de produit LCA selon la
+// compagnie renseignée dans le formulaire — ex: "Helsana" ne doit proposer que des produits
+// Helsana, jamais du Groupe Mutuel). Compagnie non reconnue → champ libre (fallback), jamais
+// bloquant.
+const CATALOGUE_LCA_PAR_COMPAGNIE = {
+  helsana: ['Helsana TOP (ambulatoire)', 'Helsana SANA (ambulatoire)', 'Helsana COMPLETA (ambulatoire)', 'Helsana COMPLETA PLUS (ambulatoire)', 'Helsana PRIMEO (ambulatoire, jeunes adultes)'],
+  'groupe mutuel': ['GM Premium (ambulatoire)', 'GM Global smart (ambulatoire + hospit.)', 'GM Global mi-privée', 'GM Global privée', 'GM Global flex'],
+  gm: ['GM Premium (ambulatoire)', 'GM Global smart (ambulatoire + hospit.)', 'GM Global mi-privée', 'GM Global privée', 'GM Global flex'],
+};
+function produitsLcaPourCompagnie(compagnieTexte) {
+  const s = (compagnieTexte || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  if (!s) return null;
+  for (const [cle, produits] of Object.entries(CATALOGUE_LCA_PAR_COMPAGNIE)) {
+    if (s.includes(cle)) return produits;
+  }
+  return null;
+}
 
 // ─── Sélecteur "produits envisagés" sur l'opportunité — vue simplifiée ───────────────────────────────────────────────────────────────
 // Au stade de l'opportunité, le produit exact n'est pas encore arrêté (ça se précise au contrat) ;

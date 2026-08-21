@@ -1442,6 +1442,28 @@ function categoriePourProduitLibre(produitTexte) {
   return regle ? regle[0] : null;
 }
 
+// Couleur par catégorie de branche — sert à distinguer visuellement les lignes de contrats sur la
+// fiche client (liste "Contrats") quand plusieurs branches se mélangent (ex: beaucoup de lignes
+// Santé, puis un contrat RC ou véhicule ajouté ensuite qui devient difficile à repérer). Demande
+// de Jonathan le 21.08.2026. Le vert Santé reprend la couleur déjà utilisée pour le bloc "Santé —
+// couvertures actives" existant, pour rester cohérent.
+const COULEUR_CATEGORIE_PRODUIT = {
+  'Véhicule': '#38bdf8',
+  'Assurances de personnes (entreprise)': '#06b6d4',
+  'Responsabilité civile': '#f59e0b',
+  'Ménage / habitation': '#a78bfa',
+  'Caution de loyer': '#f472b6',
+  'Bâtiment': '#fb923c',
+  'Protection juridique': '#94a3b8',
+  'Prévoyance': '#facc15',
+  'Santé': '#22c55e',
+  "Entreprise — risques spécifiques": '#fb7185',
+};
+function couleurPourProduitLibre(produitTexte) {
+  const cat = categoriePourProduitLibre(produitTexte);
+  return (cat && COULEUR_CATEGORIE_PRODUIT[cat]) || '#64748b';
+}
+
 function renderVueEnsembleCouvertures(client, contrats, isEntreprise) {
   const segment = isEntreprise ? 'entreprise' : 'prive';
   const categories = getCategoriesPourSegment(segment).filter(cat => cat !== 'Autre');

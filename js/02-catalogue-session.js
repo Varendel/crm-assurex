@@ -769,6 +769,17 @@ function produitsLcaPourCompagnie(compagnieTexte) {
   return null;
 }
 
+// Assureurs qui ne vendent QUE de la santé (LAMal/LCA) — pas de RC, véhicule, prévoyance, etc.
+// Sert à restreindre la liste "Catégorie" du formulaire Nouveau contrat à "Santé" uniquement dès
+// que l'une de ces compagnies est renseignée (demande de Jonathan le 21.08.2026 : "Helsana il ne
+// doit y avoir que santé dans les catégories, CSS aussi").
+const COMPAGNIES_SANTE_PURE = ['helsana', 'css'];
+function compagnieEstAssureurSantePur(compagnieTexte) {
+  const s = (compagnieTexte || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  if (!s) return false;
+  return COMPAGNIES_SANTE_PURE.some(c => s.includes(c));
+}
+
 // ─── Sélecteur "produits envisagés" sur l'opportunité — vue simplifiée ───────────────────────────────────────────────────────────────
 // Au stade de l'opportunité, le produit exact n'est pas encore arrêté (ça se précise au contrat) ;
 // proposer les 52 variantes du catalogue complet est trop lourd à parcourir (retour Jonathan :

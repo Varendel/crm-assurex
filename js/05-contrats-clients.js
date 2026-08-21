@@ -460,10 +460,13 @@ async function showClient(id) {
         <button class="btn-add" onclick="contratClientId='${c.id}'; navigate('nouveau-contrat')">+ Nouveau contrat</button>
       </div>
       ${contrats.length > 0 ? `<div class="table-wrap"><div class="table-header" style="grid-template-columns:1fr 120px 100px 110px 100px 40px"><div>Produit</div><div>Compagnie</div><div>Échéance</div><div>Prime/an</div><div>Statut</div><div></div></div>
-      ${contrats.map(ct => `<div class="table-row" style="grid-template-columns:1fr 120px 100px 110px 100px 80px;cursor:pointer" onclick="showDetailContrat('${ct.id}')">
+      ${contrats.map(ct => { const couleurCat = couleurPourProduitLibre(ct.produit); const nomCat = categoriePourProduitLibre(ct.produit); return `<div class="table-row" style="grid-template-columns:1fr 120px 100px 110px 100px 80px;cursor:pointer;border-left:3px solid ${couleurCat}" onclick="showDetailContrat('${ct.id}')">
         <div>
-          <div style="font-weight:700;font-size:13px;color:var(--text)">${ct.produit}</div>
-          <div style="font-size:11px;color:var(--text-muted)">${ct.numero_police ? '№ ' + ct.numero_police : ''}${ct.date_debut ? ' · Dès le ' + fmtDate(ct.date_debut) : ''}${ct.date_echeance ? ' → ' + fmtDate(ct.date_echeance) : ''}</div>
+          <div style="display:flex;align-items:center;gap:7px">
+            <span style="width:8px;height:8px;border-radius:50%;background:${couleurCat};flex-shrink:0" title="${nomCat || 'Autre'}"></span>
+            <div style="font-weight:700;font-size:13px;color:var(--text)">${ct.produit}</div>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${nomCat ? `<span style="color:${couleurCat};font-weight:700">${nomCat}</span> · ` : ''}${ct.numero_police ? '№ ' + ct.numero_police : ''}${ct.date_debut ? ' · Dès le ' + fmtDate(ct.date_debut) : ''}${ct.date_echeance ? ' → ' + fmtDate(ct.date_echeance) : ''}</div>
           ${ct.modules ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:3px;line-height:1.5">🔗 ${ct.modules.split(', ').join(' · ')}</div>` : ''}
         </div>
         <div style="font-size:13px;color:var(--text)">${ct.compagnie}</div>
@@ -477,7 +480,7 @@ async function showClient(id) {
           }
           <button onclick="showEditContrat('${ct.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer;line-height:1" title="Modifier">✏️</button>
         </div>
-      </div>`).join('')}</div>` : '<div class="table-empty">Aucun contrat.</div>'}
+      </div>`; }).join('')}</div>` : '<div class="table-empty">Aucun contrat.</div>'}
     </div>
 
     <div id="tab-factures" class="hidden">

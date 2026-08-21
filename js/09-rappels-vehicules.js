@@ -433,7 +433,7 @@ function viewNouveauContrat() {
         <option value="prive">Privé</option>
         <option value="entreprise">Entreprise</option>
       </select></div>
-      <div class="form-field"><label class="form-label">Compagnie *</label><input class="form-input" id="ct-compagnie" value="${opp && opp.compagnie ? opp.compagnie : ''}" placeholder="Swiss Life, AXA, Helsana..." list="compagnies-suggestions" autocomplete="off" oninput="refreshCategoriesLignesPrime(); updateCommissionPreview(); refreshLcaLignesOptions()"/><datalist id="compagnies-suggestions">${getCompagniesConnues(getProduitSelectionne() ? getProduitSelectionne().id : null).map(c => `<option value="${c}">`).join('')}</datalist></div>
+      <div class="form-field"><label class="form-label">Compagnie *</label><input class="form-input" id="ct-compagnie" value="${opp && opp.compagnie ? opp.compagnie : ''}" placeholder="Swiss Life, AXA, Helsana..." list="compagnies-suggestions" autocomplete="off" oninput="refreshCategoriesLignesPrime(); updateCommissionPreview(); refreshLcaLignesOptions()" onchange="appliquerRestrictionCategorieCompagnie()"/><datalist id="compagnies-suggestions">${getCompagniesConnues(getProduitSelectionne() ? getProduitSelectionne().id : null).map(c => `<option value="${c}">`).join('')}</datalist></div>
       <div class="form-field"><label class="form-label">Catégorie *</label><select class="form-select" id="ct-categorie" onchange="updateProduitOptions()"></select></div>
       <div class="form-field"><label class="form-label">Produit *</label><select class="form-select" id="ct-produit" onchange="updateModulesOptions(); updateCommissionPreview()"><option value="">— Sélectionner —</option></select></div>
       <div class="form-field" style="grid-column:span 2" id="ct-modules-field"><label class="form-label">Modules complémentaires</label><div id="ct-modules-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div><div style="font-size:10px;color:var(--text-muted);margin-top:4px" id="ct-modules-hint"></div>
@@ -549,11 +549,41 @@ function updateCategorieOptions() {
   const catSelect = document.getElementById('ct-categorie');
   if (!segmentSelect || !catSelect) return;
   const segment = segmentSelect.value;
-  const categoriesDisponibles = getCategoriesPourSegment(segment);
+  let categoriesDisponibles = getCategoriesPourSegment(segment);
+  const compagnieTexte = document.getElementById('ct-compagnie')?.value || '';
+  if (compagnieEstAssureurSantePur(compagnieTexte) && categoriesDisponibles.includes('Santé')) {
+    categoriesDisponibles = ['Santé'];
+  }
   const categoriePrecedente = catSelect.value;
   catSelect.innerHTML = categoriesDisponibles.map(cat => `<option value="${cat}">${cat}</option>`).join('');
   if (categoriesDisponibles.includes(categoriePrecedente)) catSelect.value = categoriePrecedente;
   updateProduitOptions();
+}
+
+// Rappelée quand la compagnie change (ex: on tape "Helsana") pour restreindre "Catégorie" à Santé
+// uniquement — sans perturber une saisie déjà faite si la restriction ne change rien à la liste
+// actuellement affichée (évite de réinitialiser le Produit à chaque frappe dans "Compagnie").
+function appliquerRestrictionCategorieCompagnie() {
+  const catSelect = document.getElementById('ct-categorie');
+  const segmentSelect = document.getElementById('ct-segment');
+  if (!catSelect || !segmentSelect) return;
+  const segment = segmentSelect.value;
+  const compagnieTexte = document.getElementById('ct-compagnie')?.value || '';
+  let categoriesDisponibles = getCategoriesPourSegment(segment);
+  if (compagnieEstAssureurSantePur(compagnieTexte) && categoriesDisponibles.includes('Santé')) {
+    categoriesDisponibles = ['Santé'];
+  }
+  const optionsActuelles = Array.from(catSelect.options).map(o => o.value);
+  const inchange = optionsActuelles.length === categoriesDisponibles.length && optionsActuelles.every((v, i) => v === categoriesDisponibles[i]);
+  if (inchange) return;
+  const categoriePrecedente = catSelect.value;
+  catSelect.innerHTML = categoriesDisponibles.map(cat => `<option value="${cat}">${cat}</option>`).join('');
+  if (categoriesDisponibles.includes(categoriePrecedente)) {
+    catSelect.value = categoriePrecedente;
+  } else {
+    catSelect.value = categoriesDisponibles[0] || '';
+    updateProduitOptions();
+  }
 }
 
 function updateProduitOptions() {

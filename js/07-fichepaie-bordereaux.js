@@ -1851,6 +1851,8 @@ function ouvrirCreationClientDepuisOpportunite() {
         <button class="btn-save" onclick="creerClientDepuisOpportunite()" style="margin-left:auto">✓ Créer et lier à l'opportunité</button>
       </div>
     </div>`, { padding: '16px' });
+  bindAdresseAutocomplete({ adresseId: 'occ-adresse', npaId: 'occ-npa', villeId: 'occ-ville', cantonId: 'occ-canton' });
+  bindAdresseAutocomplete({ adresseId: 'occ-e-adresse', npaId: 'occ-e-npa', villeId: 'occ-e-ville' });
 }
 
 function toggleTypeClientOpportunite() {

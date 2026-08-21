@@ -1805,24 +1805,45 @@ function viderClientOpportunite() {
 // formulaire sous-jacent n'est jamais touché. Demande de Jonathan le 21.08.2026.
 function ouvrirCreationClientDepuisOpportunite() {
   const nomTape = (document.getElementById('o-prospect-nom')?.value || '').trim();
+  const ressembleEntreprise = /\b(SA|S\.A\.|Sàrl|Sarl|SNC|AG|GmbH|Fondation|Association)\b/i.test(nomTape);
   const mots = nomTape.split(/\s+/).filter(Boolean);
-  const prenomDevine = mots.length > 1 ? mots[0] : '';
-  const nomDevine = mots.length > 1 ? mots.slice(1).join(' ') : (mots[0] || '');
+  const prenomDevine = !ressembleEntreprise && mots.length > 1 ? mots[0] : '';
+  const nomDevine = !ressembleEntreprise && mots.length > 1 ? mots.slice(1).join(' ') : (mots[0] || '');
   const qa = (s) => (s || '').toString().replace(/"/g, '&quot;');
   creerModale('modal-creation-client-opp', `
     <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:480px;width:100%">
       <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">➕ Créer la fiche client</div>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">Le reste de l'opportunité en cours (titre, compagnie, produits...) reste intact — tu pourras compléter la fiche client plus tard depuis "✏️ Modifier".</div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 12px">
-        <div class="form-field" style="grid-column:span 2"><label class="form-label">Civilité</label><select class="form-select" id="occ-civilite"><option value="">—</option><option value="Monsieur">Monsieur</option><option value="Madame">Madame</option></select></div>
-        <div class="form-field"><label class="form-label">Prénom *</label><input class="form-input" id="occ-prenom" value="${qa(prenomDevine)}" placeholder="Jean"/></div>
-        <div class="form-field"><label class="form-label">Nom *</label><input class="form-input" id="occ-nom" value="${qa(nomDevine)}" placeholder="Dupont"/></div>
-        <div class="form-field" style="grid-column:span 2"><label class="form-label">Email *</label><input class="form-input" id="occ-email" type="email" placeholder="jean@email.ch"/></div>
-        <div class="form-field"><label class="form-label">Mobile</label><input class="form-input" id="occ-mobile" placeholder="+41 79 XXX XX XX"/></div>
-        <div class="form-field"><label class="form-label">NPA *</label><input class="form-input" id="occ-npa" placeholder="1000"/></div>
-        <div class="form-field" style="grid-column:span 2"><label class="form-label">Adresse *</label><input class="form-input" id="occ-adresse" placeholder="Rue de la Paix 1"/></div>
-        <div class="form-field"><label class="form-label">Ville</label><input class="form-input" id="occ-ville" placeholder="Lausanne"/></div>
-        <div class="form-field"><label class="form-label">Canton</label><input class="form-input" id="occ-canton" placeholder="VD"/></div>
+      <div class="form-field" style="margin-bottom:4px"><label class="form-label">Type de client</label><select class="form-select" id="occ-type" onchange="toggleTypeClientOpportunite()">
+        <option value="prive" ${ressembleEntreprise ? '' : 'selected'}>Privé</option>
+        <option value="entreprise" ${ressembleEntreprise ? 'selected' : ''}>Entreprise</option>
+      </select></div>
+      <div id="occ-champs-prive" style="display:${ressembleEntreprise ? 'none' : ''}">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;margin-top:8px">
+          <div class="form-field" style="grid-column:span 2"><label class="form-label">Civilité</label><select class="form-select" id="occ-civilite"><option value="">—</option><option value="Monsieur">Monsieur</option><option value="Madame">Madame</option></select></div>
+          <div class="form-field"><label class="form-label">Prénom *</label><input class="form-input" id="occ-prenom" value="${qa(prenomDevine)}" placeholder="Jean"/></div>
+          <div class="form-field"><label class="form-label">Nom *</label><input class="form-input" id="occ-nom" value="${qa(nomDevine)}" placeholder="Dupont"/></div>
+          <div class="form-field" style="grid-column:span 2"><label class="form-label">Email *</label><input class="form-input" id="occ-email" type="email" placeholder="jean@email.ch"/></div>
+          <div class="form-field"><label class="form-label">Mobile</label><input class="form-input" id="occ-mobile" placeholder="+41 79 XXX XX XX"/></div>
+          <div class="form-field"><label class="form-label">NPA *</label><input class="form-input" id="occ-npa" placeholder="1000"/></div>
+          <div class="form-field" style="grid-column:span 2"><label class="form-label">Adresse *</label><input class="form-input" id="occ-adresse" placeholder="Rue de la Paix 1"/></div>
+          <div class="form-field"><label class="form-label">Ville</label><input class="form-input" id="occ-ville" placeholder="Lausanne"/></div>
+          <div class="form-field"><label class="form-label">Canton</label><input class="form-input" id="occ-canton" placeholder="VD"/></div>
+        </div>
+      </div>
+      <div id="occ-champs-entreprise" style="display:${ressembleEntreprise ? '' : 'none'}">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;margin-top:8px">
+          <div class="form-field" style="grid-column:span 2"><label class="form-label">Raison sociale *</label><input class="form-input" id="occ-e-nom" value="${qa(ressembleEntreprise ? nomTape : '')}" placeholder="Dupont SA"/></div>
+          <div class="form-field"><label class="form-label">N° IDE (CHE)</label><input class="form-input" id="occ-e-ide" placeholder="CHE-123.456.789"/></div>
+          <div class="form-field"><label class="form-label">Secteur d'activité</label><input class="form-input" id="occ-e-secteur" placeholder="Construction, Restauration..."/></div>
+          <div class="form-field" style="grid-column:span 2"><label class="form-label">Email *</label><input class="form-input" id="occ-e-email" type="email" placeholder="contact@entreprise.ch"/></div>
+          <div class="form-field"><label class="form-label">Téléphone</label><input class="form-input" id="occ-e-tel" placeholder="+41 21 XXX XX XX"/></div>
+          <div class="form-field"><label class="form-label">NPA *</label><input class="form-input" id="occ-e-npa" placeholder="1000"/></div>
+          <div class="form-field" style="grid-column:span 2"><label class="form-label">Adresse *</label><input class="form-input" id="occ-e-adresse" placeholder="Rue du Commerce 1"/></div>
+          <div class="form-field"><label class="form-label">Ville *</label><input class="form-input" id="occ-e-ville" placeholder="Lausanne"/></div>
+          <div class="form-field"><label class="form-label">Contact — Prénom</label><input class="form-input" id="occ-e-contact-prenom" placeholder="Jean"/></div>
+          <div class="form-field"><label class="form-label">Contact — Nom</label><input class="form-input" id="occ-e-contact-nom" placeholder="Dupont"/></div>
+        </div>
       </div>
       <div id="occ-erreur" style="display:none;color:#f87171;font-size:11.5px;margin-top:10px"></div>
       <div style="display:flex;gap:10px;margin-top:16px">
@@ -1832,37 +1853,81 @@ function ouvrirCreationClientDepuisOpportunite() {
     </div>`, { padding: '16px' });
 }
 
-async function creerClientDepuisOpportunite() {
-  const prenom = document.getElementById('occ-prenom')?.value.trim() || '';
-  const nom = document.getElementById('occ-nom')?.value.trim() || '';
-  const email = document.getElementById('occ-email')?.value.trim() || '';
-  const adresse = document.getElementById('occ-adresse')?.value.trim() || '';
-  const npa = document.getElementById('occ-npa')?.value.trim() || '';
-  const missing = [];
-  if (!prenom) missing.push('Prénom');
-  if (!nom) missing.push('Nom');
-  if (!email) missing.push('Email');
-  if (!adresse) missing.push('Adresse');
-  if (!npa) missing.push('NPA');
+function toggleTypeClientOpportunite() {
+  const entreprise = document.getElementById('occ-type')?.value === 'entreprise';
+  const blocPrive = document.getElementById('occ-champs-prive');
+  const blocEntreprise = document.getElementById('occ-champs-entreprise');
+  if (blocPrive) blocPrive.style.display = entreprise ? 'none' : '';
+  if (blocEntreprise) blocEntreprise.style.display = entreprise ? '' : 'none';
   const erreurEl = document.getElementById('occ-erreur');
-  if (missing.length > 0) {
-    if (erreurEl) { erreurEl.textContent = 'Champs obligatoires manquants : ' + missing.join(', '); erreurEl.style.display = ''; }
-    return;
+  if (erreurEl) erreurEl.style.display = 'none';
+}
+
+async function creerClientDepuisOpportunite() {
+  const entreprise = document.getElementById('occ-type')?.value === 'entreprise';
+  const erreurEl = document.getElementById('occ-erreur');
+  let body;
+  if (entreprise) {
+    const nom = document.getElementById('occ-e-nom')?.value.trim() || '';
+    const email = document.getElementById('occ-e-email')?.value.trim() || '';
+    const adresse = document.getElementById('occ-e-adresse')?.value.trim() || '';
+    const npa = document.getElementById('occ-e-npa')?.value.trim() || '';
+    const ville = document.getElementById('occ-e-ville')?.value.trim() || '';
+    const missing = [];
+    if (!nom) missing.push('Raison sociale');
+    if (!email) missing.push('Email');
+    if (!adresse) missing.push('Adresse');
+    if (!npa) missing.push('NPA');
+    if (!ville) missing.push('Ville');
+    if (missing.length > 0) {
+      if (erreurEl) { erreurEl.textContent = 'Champs obligatoires manquants : ' + missing.join(', '); erreurEl.style.display = ''; }
+      return;
+    }
+    const contact = (document.getElementById('occ-e-contact-prenom')?.value.trim() + ' ' + document.getElementById('occ-e-contact-nom')?.value.trim()).trim();
+    body = {
+      prenom: contact || document.getElementById('occ-e-contact-prenom')?.value.trim() || '',
+      nom, email,
+      tel: document.getElementById('occ-e-tel')?.value.trim() || null,
+      adresse, npa, ville,
+      ide: document.getElementById('occ-e-ide')?.value.trim() || null,
+      profession: document.getElementById('occ-e-secteur')?.value.trim() || null,
+      employeur: nom,
+      revenu: 0,
+      taux_activite: 0,
+      statut: 'prospect',
+      segment: 'Entreprise',
+    };
+  } else {
+    const prenom = document.getElementById('occ-prenom')?.value.trim() || '';
+    const nom = document.getElementById('occ-nom')?.value.trim() || '';
+    const email = document.getElementById('occ-email')?.value.trim() || '';
+    const adresse = document.getElementById('occ-adresse')?.value.trim() || '';
+    const npa = document.getElementById('occ-npa')?.value.trim() || '';
+    const missing = [];
+    if (!prenom) missing.push('Prénom');
+    if (!nom) missing.push('Nom');
+    if (!email) missing.push('Email');
+    if (!adresse) missing.push('Adresse');
+    if (!npa) missing.push('NPA');
+    if (missing.length > 0) {
+      if (erreurEl) { erreurEl.textContent = 'Champs obligatoires manquants : ' + missing.join(', '); erreurEl.style.display = ''; }
+      return;
+    }
+    body = {
+      civilite: document.getElementById('occ-civilite')?.value || null,
+      prenom, nom, email,
+      mobile: document.getElementById('occ-mobile')?.value.trim() || null,
+      adresse, npa,
+      ville: document.getElementById('occ-ville')?.value.trim() || null,
+      canton: document.getElementById('occ-canton')?.value.trim() || null,
+      langue: 'FR',
+      enfants: 0,
+      taux_activite: 100,
+      revenu: 0,
+      statut: 'prospect',
+      segment: 'Privé',
+    };
   }
-  const body = {
-    civilite: document.getElementById('occ-civilite')?.value || null,
-    prenom, nom, email,
-    mobile: document.getElementById('occ-mobile')?.value.trim() || null,
-    adresse, npa,
-    ville: document.getElementById('occ-ville')?.value.trim() || null,
-    canton: document.getElementById('occ-canton')?.value.trim() || null,
-    langue: 'FR',
-    enfants: 0,
-    taux_activite: 100,
-    revenu: 0,
-    statut: 'prospect',
-    segment: 'Privé',
-  };
   const btn = document.querySelector('#modal-creation-client-opp .btn-save');
   if (btn) { btn.textContent = 'Création...'; btn.disabled = true; }
   const result = await dbPost('clients', body);

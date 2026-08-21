@@ -184,6 +184,7 @@ async function showClient(id) {
         <button onclick="toggleSourceCofidex('${c.id}', ${!c.source_cofidex})" title="${c.source_cofidex ? 'Client EX Groupe — cliquer pour retirer' : 'Marquer comme client Cofidex / EX Groupe'}" style="background:${c.source_cofidex ? 'rgba(0,207,255,0.12)' : 'var(--surface)'};border:1px solid ${c.source_cofidex ? 'rgba(0,207,255,0.4)' : 'var(--border)'};border-radius:8px;padding:7px 12px;cursor:pointer;display:flex;align-items:center;gap:5px;font-size:12px;color:${c.source_cofidex ? '#00cfff' : 'var(--text-muted)'};font-weight:700">${c.source_cofidex ? COFIDEX_MINI_LOGO + ' Client EX' : '+ Marquer EX'}</button>
         <button onclick="ouvrirSignatureMandat('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📄 Mandat de courtage</button>
         <button onclick="ouvrirEnvoiMandatCompagnies('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">✉️ Envoyer le mandat</button>
+        ${!c.prenatal && c.segment !== 'Entreprise' ? `<button onclick="creerPrenataleDepuisParent('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🍼 Créer une prénatale</button>` : ''}
         <button onclick="ouvrirUploadContratSignature('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📎 Faire signer un contrat</button>
         <button onclick="ouvrirModaleResiliation('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📝 Feuille de résiliation</button>
         <button onclick="prefillOpportuniteClientId='${c.id}'; opportuniteEnEditionId=null; navigate('nouvelle-opportunite')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:7px 16px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">🎯 Créer une opportunité</button>
@@ -701,6 +702,12 @@ function toggleEditClient() {
       bindAdresseAutocomplete({ adresseId:'ec-adresse', npaId:'ec-npa', villeId:'ec-ville', cantonId:'ec-canton' });
     }, 0);
   }
+}
+
+// ═══ CRÉER UNE PRÉNATALE DEPUIS UN PARENT ═══
+function creerPrenataleDepuisParent(parentId) {
+  navigate('nouveau-client');
+  showFormClient('prive', parentId);
 }
 
 // ═══ MARQUAGE CLIENT OZ ASSURE ═══

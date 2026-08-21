@@ -655,11 +655,14 @@ function viewNouveauClient() {
     </div>`;
 }
 
-function showFormClient(type) {
+function showFormClient(type, parentId) {
   const main = document.getElementById('main-content');
   if (type === 'prive') {
     main.innerHTML = formPrive();
-    setTimeout(() => bindAdresseAutocomplete({ adresseId:'f-adresse', npaId:'f-npa', villeId:'f-ville', cantonId:'f-canton' }), 0);
+    setTimeout(() => {
+      bindAdresseAutocomplete({ adresseId:'f-adresse', npaId:'f-npa', villeId:'f-ville', cantonId:'f-canton' });
+      if (parentId) preremplirPrenatalDepuisParent(parentId);
+    }, 0);
   } else {
     main.innerHTML = formEntreprise();
     setTimeout(() => bindAdresseAutocomplete({ adresseId:'e-adresse', npaId:'e-npa', villeId:'e-ville', cantonId:null }), 0);
@@ -676,6 +679,12 @@ function formPrive() {
         <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);cursor:pointer;font-weight:700">
           <input type="checkbox" id="f-prenatal" style="width:16px;height:16px;cursor:pointer" onchange="togglePrenatalForm()"/>🍼 Assurance prénatale (naissance à venir — la date ci-dessous devient la date prévue d'accouchement)
         </label>
+        <div id="f-parent-select-wrap" style="display:none;margin-top:10px">
+          <label class="form-label" style="margin-bottom:4px;display:block">Parent (mère/père) — sélectionner remplit automatiquement adresse, email, téléphone</label>
+          <input class="form-input" id="f-parent-search" list="f-parent-suggestions" autocomplete="off" placeholder="Rechercher un client existant…" onchange="selectionnerParentPrenatal()"/>
+          <datalist id="f-parent-suggestions">${(typeof allClients !== 'undefined' ? allClients : []).map(pc => `<option value="${(pc.prenom||'')} ${(pc.nom||'')}${pc.ville ? ' — ' + pc.ville : ''}">`).join('')}</datalist>
+          <input type="hidden" id="f-parent-id"/>
+        </div>
       </div>
       <div class="form-field"><label class="form-label">Civilité</label><select class="form-select" id="f-civilite"><option value="">—</option><option value="Monsieur">Monsieur</option><option value="Madame">Madame</option></select></div>
       <div class="form-field"><label class="form-label" id="f-prenom-label">Prénom *</label><input class="form-input" id="f-prenom" placeholder="Jean"/></div>
@@ -725,9 +734,49 @@ function togglePrenatalForm() {
   const prenomLabel = document.getElementById('f-prenom-label');
   const dobLabel = document.getElementById('f-dob-label');
   const prenomInput = document.getElementById('f-prenom');
+  const parentWrap = document.getElementById('f-parent-select-wrap');
   if (prenomLabel) prenomLabel.textContent = prenatal ? 'Prénom (laisser vide = "Baby")' : 'Prénom *';
   if (dobLabel) dobLabel.textContent = prenatal ? 'Date prévue d\'accouchement' : 'Date de naissance';
   if (prenomInput) prenomInput.placeholder = prenatal ? 'Laisser vide pour "Baby" en attendant' : 'Jean';
+  if (parentWrap) parentWrap.style.display = prenatal ? '' : 'none';
+}
+
+function selectionnerParentPrenatal() {
+  const searchEl = document.getElementById('f-parent-search');
+  const hiddenEl = document.getElementById('f-parent-id');
+  if (!searchEl) return;
+  const val = searchEl.value.trim();
+  const match = (typeof allClients !== 'undefined' ? allClients : []).find(pc => `${(pc.prenom||'')} ${(pc.nom||'')}${pc.ville ? ' — ' + pc.ville : ''}`.trim() === val);
+  if (!match) { if (hiddenEl) hiddenEl.value = ''; return; }
+  if (hiddenEl) hiddenEl.value = match.id;
+  const setVal = (id, v) => { const el = document.getElementById(id); if (el) el.value = v || ''; };
+  const nomEl = document.getElementById('f-nom');
+  if (nomEl && !nomEl.value.trim()) nomEl.value = match.nom || '';
+  setVal('f-email', match.email);
+  setVal('f-adresse', match.adresse);
+  setVal('f-co', match.co);
+  setVal('f-npa', match.npa);
+  setVal('f-ville', match.ville);
+  setVal('f-canton', match.canton);
+  setVal('f-tel', match.tel);
+  setVal('f-mobile', match.mobile);
+  const agentEl = document.getElementById('f-agent');
+  if (agentEl && match.apporteur_id) agentEl.value = match.apporteur_id;
+  const notesEl = document.getElementById('f-notes');
+  if (notesEl) {
+    const noteParent = `Enfant de ${match.prenom || ''} ${match.nom || ''} (client ${match.id})`.trim();
+    if (!notesEl.value.includes(noteParent)) notesEl.value = notesEl.value ? notesEl.value + '\n' + noteParent : noteParent;
+  }
+}
+
+function preremplirPrenatalDepuisParent(parentId) {
+  const match = (typeof allClients !== 'undefined' ? allClients : []).find(pc => pc.id === parentId);
+  if (!match) return;
+  const chk = document.getElementById('f-prenatal');
+  if (chk) { chk.checked = true; togglePrenatalForm(); }
+  const searchEl = document.getElementById('f-parent-search');
+  if (searchEl) searchEl.value = `${match.prenom || ''} ${match.nom || ''}${match.ville ? ' — ' + match.ville : ''}`.trim();
+  selectionnerParentPrenatal();
 }
 
 async function saveClient() {

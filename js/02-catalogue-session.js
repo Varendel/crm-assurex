@@ -626,6 +626,16 @@ function voirBilanSauvegarde(bilanId) {
 }
 
 // Catalogue des produits d'assurance par catégorie, avec modules complémentaires (à enrichir au fur et à mesure)
+// Liste de nationalités pour le sélecteur intelligent (datalist) des formulaires client — "Suisse"
+// épinglé en premier (cas très largement majoritaire dans le portefeuille), reste trié par ordre
+// alphabétique. Champ texte libre conservé en dessous (l'utilisateur peut toujours taper autre
+// chose que la liste), la datalist ne fait que suggérer.
+const LISTE_NATIONALITES = ["Suisse", "Afghanistan", "Afrique du Sud", "Albanie", "Algérie", "Allemagne", "Andorre", "Angola", "Arabie saoudite", "Argentine", "Arménie", "Australie", "Autre", "Autriche", "Azerbaïdjan", "Bahreïn", "Bangladesh", "Belgique", "Biélorussie", "Bolivie", "Bosnie-Herzégovine", "Botswana", "Brésil", "Bulgarie", "Burkina Faso", "Burundi", "Bénin", "Cambodge", "Cameroun", "Canada", "Cap-Vert", "Chili", "Chine", "Chypre", "Colombie", "Congo (Brazzaville)", "Congo (RDC)", "Corée du Nord", "Corée du Sud", "Costa Rica", "Croatie", "Cuba", "Côte d'Ivoire", "Danemark", "Espagne", "Estonie", "Fidji", "Finlande", "France", "Gabon", "Gambie", "Ghana", "Grèce", "Guatemala", "Guinée", "Guinée-Bissau", "Géorgie", "Haïti", "Honduras", "Hongrie", "Inde", "Indonésie", "Irak", "Iran", "Irlande", "Islande", "Israël", "Italie", "Jamaïque", "Japon", "Jordanie", "Kazakhstan", "Kenya", "Kirghizistan", "Kosovo", "Koweït", "Laos", "Lettonie", "Liban", "Liberia", "Libye", "Liechtenstein", "Lituanie", "Luxembourg", "Macédoine du Nord", "Madagascar", "Malaisie", "Mali", "Malte", "Maroc", "Mauritanie", "Mexique", "Moldavie", "Monaco", "Mongolie", "Monténégro", "Mozambique", "Myanmar", "Namibie", "Nicaragua", "Niger", "Nigeria", "Norvège", "Nouvelle-Zélande", "Népal", "Oman", "Ouganda", "Ouzbékistan", "Pakistan", "Palestine", "Panama", "Papouasie-Nouvelle-Guinée", "Paraguay", "Pays-Bas", "Philippines", "Pologne", "Portugal", "Pérou", "Qatar", "Roumanie", "Royaume-Uni", "Russie", "Rwanda", "République centrafricaine", "République dominicaine", "République tchèque", "Saint-Marin", "Salvador", "Serbie", "Sierra Leone", "Singapour", "Slovaquie", "Slovénie", "Somalie", "Soudan", "Sri Lanka", "Suède", "Syrie", "Sénégal", "Tadjikistan", "Tanzanie", "Tchad", "Thaïlande", "Togo", "Tunisie", "Turkménistan", "Turquie", "Ukraine", "Uruguay", "Vatican", "Venezuela", "Vietnam", "Yémen", "Zambie", "Zimbabwe", "Égypte", "Émirats arabes unis", "Équateur", "Érythrée", "États-Unis", "Éthiopie"];
+
+function datalistNationalites(id) {
+  return `<datalist id="${id}">${LISTE_NATIONALITES.map(n => `<option value="${n}">`).join('')}</datalist>`;
+}
+
 const CATALOGUE_PRODUITS = {
   'Responsabilité civile': [
     { id: 'rc_privee', label: 'RC privée', segment: 'prive', modules: ['Véhicules de location / autopartage', 'Animaux domestiques (logement loué)', 'Location de chevaux', 'Usage occasionnel véhicule de tiers'], combinables: ['menage'] },

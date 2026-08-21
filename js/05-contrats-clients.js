@@ -305,7 +305,7 @@ async function showClient(id) {
           <div class="form-field"><label class="form-label">Prénom</label><input id="ec-prenom" class="form-input" value="${c.prenom || ''}"></div>
           <div class="form-field"><label class="form-label">Nom</label><input id="ec-nom" class="form-input" value="${c.nom || ''}"></div>
           <div class="form-field"><label class="form-label">Date de naissance${c.prenatal ? ' prévue (grossesse en cours)' : ''}</label><input id="ec-date-naissance" type="date" class="form-input" value="${c.date_naissance || ''}"></div>
-          <div class="form-field"><label class="form-label">Nationalité</label><input id="ec-nationalite" class="form-input" value="${c.nationalite || ''}"></div>
+          <div class="form-field"><label class="form-label">Nationalité</label><input id="ec-nationalite" class="form-input" list="ec-nationalites-suggestions" autocomplete="off" placeholder="Suisse" value="${c.nationalite || ''}">${datalistNationalites('ec-nationalites-suggestions')}</div>
           <div class="form-field"><label class="form-label">État civil</label>
             <select id="ec-etat-civil" class="form-input">
               <option value="">—</option>

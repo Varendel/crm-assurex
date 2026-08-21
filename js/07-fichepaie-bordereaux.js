@@ -681,7 +681,7 @@ function formPrive() {
       <div class="form-field"><label class="form-label" id="f-prenom-label">Prénom *</label><input class="form-input" id="f-prenom" placeholder="Jean"/></div>
       <div class="form-field"><label class="form-label">Nom *</label><input class="form-input" id="f-nom" placeholder="Dupont"/></div>
       <div class="form-field"><label class="form-label" id="f-dob-label">Date de naissance</label><input class="form-input" id="f-dob" type="date"/></div>
-      <div class="form-field"><label class="form-label">Nationalité</label><input class="form-input" id="f-nationalite" placeholder="Suisse"/></div>
+      <div class="form-field"><label class="form-label">Nationalité</label><input class="form-input" id="f-nationalite" list="f-nationalites-suggestions" autocomplete="off" placeholder="Suisse"/>${datalistNationalites('f-nationalites-suggestions')}</div>
       <div class="form-field"><label class="form-label">État civil</label><select class="form-select" id="f-etat"><option value="">—</option><option>Célibataire</option><option>Marié</option><option>Divorcé</option><option>Divorcée</option><option>Veuf</option><option>Veuve</option><option>Pacsé</option><option>Pacsée</option></select></div>
       <div class="form-field"><label class="form-label">Enfants</label><input class="form-input" id="f-enfants" type="number" value="0"/></div>
       <div class="form-field"><label class="form-label">N° AVS</label><input class="form-input" id="f-avs" placeholder="756.XXXX.XXXX.XX"/></div>

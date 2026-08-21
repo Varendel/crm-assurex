@@ -874,16 +874,30 @@ function initLignesPrimeDepuisLignes(lignes) {
 }
 
 function updateModulesOptions() {
+  const modulesField = document.getElementById('ct-modules-field');
   const modulesList = document.getElementById('ct-modules-list');
   const combinablesField = document.getElementById('ct-combinables-field');
   const combinablesList = document.getElementById('ct-combinables-list');
   if (!modulesList) return;
   const produit = getProduitSelectionne();
-  const modules = produit ? produit.modules : [];
+  // Bloc "Modules complémentaires" sans objet pour les produits Santé (LAMal/LCA — aucun module
+  // n'existe pour cette catégorie dans le catalogue, et la prime se règle via le bloc "Produits
+  // souvent combinés" ci-dessous, pas ici) — masqué entièrement plutôt que laissé vide et confus
+  // (demande de Jonathan le 13.08.2026).
+  const estSante = produit && (CATALOGUE_PRODUITS['Santé'] || []).some(p => p.id === produit.id);
+  if (modulesField) modulesField.style.display = estSante ? 'none' : '';
+  if (estSante) {
+    modulesList.innerHTML = '';
+    const hintEl = document.getElementById('ct-modules-hint');
+    if (hintEl) hintEl.textContent = '';
+    const customList = document.getElementById('ct-modules-custom-list');
+    if (customList) customList.innerHTML = '';
+  }
+  const modules = (produit && !estSante) ? produit.modules : [];
   // Le bloc "Modules complémentaires" reste toujours visible (même sans liste prédéfinie pour ce
   // produit, ex: RC véhicule) car le bouton "+ Ajouter un module complémentaire" (libellé libre)
-  // est toujours disponible en dessous.
-  document.getElementById('ct-modules-hint').textContent = modules.length === 0
+  // est toujours disponible en dessous — sauf pour la Santé, masquée ci-dessus.
+  if (!estSante) document.getElementById('ct-modules-hint').textContent = modules.length === 0
     ? 'Aucun module prédéfini pour ce produit — utilise le bouton ci-dessous pour en ajouter un librement.'
     : 'Coche un module pour y indiquer sa prime annuelle (facultatif, à titre de détail).';
   if (modules.length === 0) {

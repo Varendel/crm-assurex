@@ -449,9 +449,9 @@ function viewNouveauContrat() {
       </div>
       <div class="form-field"><label class="form-label">N° de police</label><input class="form-input" id="ct-police" placeholder="Optionnel"/></div>
       <div class="form-field" style="grid-column:span 2" id="ct-prime-lignes-field">
-        <label class="form-label">Lignes de prime * <span style="font-weight:400;color:var(--text-muted);font-size:10px">(reporte chaque ligne de la police — ex: Responsabilité civile privée, Inventaire du ménage, Assurances complémentaires et services, Taxes légales)</span></label>
+        <label class="form-label"><span id="ct-prime-lignes-label-text">Lignes de prime *</span> <span id="ct-prime-lignes-hint" style="font-weight:400;color:var(--text-muted);font-size:10px">(reporte chaque ligne de la police — ex: Responsabilité civile privée, Inventaire du ménage, Assurances complémentaires et services, Taxes légales)</span></label>
         <div id="ct-prime-lignes-list" style="display:flex;flex-direction:column;gap:6px;margin-top:6px"></div>
-        <button type="button" onclick="ajouterLignePrime()" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;margin-top:8px">+ Ajouter une ligne</button>
+        <button type="button" id="ct-prime-lignes-add-btn" onclick="ajouterLignePrime()" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;margin-top:8px">+ Ajouter une ligne</button>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
           <span style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Prime totale <span style="font-weight:400;text-transform:none">(hors taxes — base de commission)</span></span>
           <span id="ct-prime-total-affiche" style="font-size:17px;font-weight:900;color:var(--accent)">CHF 0</span>
@@ -892,6 +892,33 @@ function updateModulesOptions() {
     if (hintEl) hintEl.textContent = '';
     const customList = document.getElementById('ct-modules-custom-list');
     if (customList) customList.innerHTML = '';
+  }
+  // Pour la Santé (LAMal seul ou LAMal + LCA), la section générique "Lignes de prime" (pensée
+  // pour RC/ménage/etc.) est remplacée par une ligne unique pré-libellée "Prime LAMal" — la
+  // prime LCA se saisit séparément dans "Produits souvent combinés" ci-dessus. Évite la confusion
+  // avec le placeholder générique "Ex: Responsabilité civile privée" (demande de Jonathan).
+  const lignesField = document.getElementById('ct-prime-lignes-field');
+  const lignesLabelText = document.getElementById('ct-prime-lignes-label-text');
+  const lignesHint = document.getElementById('ct-prime-lignes-hint');
+  const lignesAddBtn = document.getElementById('ct-prime-lignes-add-btn');
+  const lignesList = document.getElementById('ct-prime-lignes-list');
+  if (lignesField && lignesList) {
+    if (estSante && lignesField.dataset.mode !== 'sante') {
+      lignesField.dataset.mode = 'sante';
+      if (lignesLabelText) lignesLabelText.textContent = 'Prime LAMal *';
+      if (lignesHint) lignesHint.textContent = '(prime annuelle LAMal de ce contrat — la prime LCA se saisit ci-dessus dans "Produits souvent combinés")';
+      if (lignesAddBtn) lignesAddBtn.style.display = 'none';
+      const montantExistant = Array.from(lignesList.querySelectorAll('.ct-prime-ligne-montant')).reduce((s, el) => s + (parseFloat(el.value) || 0), 0);
+      lignesList.innerHTML = '';
+      ajouterLignePrime('Prime LAMal', montantExistant > 0 ? montantExistant : '');
+    } else if (!estSante && lignesField.dataset.mode === 'sante') {
+      lignesField.dataset.mode = '';
+      if (lignesLabelText) lignesLabelText.textContent = 'Lignes de prime *';
+      if (lignesHint) lignesHint.textContent = '(reporte chaque ligne de la police — ex: Responsabilité civile privée, Inventaire du ménage, Assurances complémentaires et services, Taxes légales)';
+      if (lignesAddBtn) lignesAddBtn.style.display = '';
+      lignesList.innerHTML = '';
+      ajouterLignePrime(); ajouterLignePrime(); ajouterLignePrime();
+    }
   }
   const modules = (produit && !estSante) ? produit.modules : [];
   // Le bloc "Modules complémentaires" reste toujours visible (même sans liste prédéfinie pour ce

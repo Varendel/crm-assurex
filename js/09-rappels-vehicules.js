@@ -906,8 +906,8 @@ function updateModulesOptions() {
   if (lignesField && lignesList) {
     if (estLamalSeul && lignesField.dataset.mode !== 'sante') {
       lignesField.dataset.mode = 'sante';
-      if (lignesLabelText) lignesLabelText.textContent = 'Prime LAMal *';
-      if (lignesHint) lignesHint.textContent = '(prime annuelle LAMal de ce contrat — la prime LCA se saisit ci-dessus dans "Produits souvent combinés")';
+      if (lignesLabelText) lignesLabelText.textContent = 'Prime LAMal (mensuelle) *';
+      if (lignesHint) lignesHint.textContent = '(prime MENSUELLE LAMal — en Suisse les primes santé se paient au mois, jamais à l\'année — la prime LCA se saisit ci-dessus dans "Produits souvent combinés", elle aussi mensuelle)';
       if (lignesAddBtn) lignesAddBtn.style.display = 'none';
       const montantExistant = Array.from(lignesList.querySelectorAll('.ct-prime-ligne-montant')).reduce((s, el) => s + (parseFloat(el.value) || 0), 0);
       lignesList.innerHTML = '';
@@ -1063,8 +1063,8 @@ function ajouterLigneLCA() {
       ${champProduitLcaHtml('')}
     </div>
     <div style="flex:1;min-width:120px">
-      <label class="form-label" style="font-size:10.5px">Prime annuelle (CHF)</label>
-      <input class="form-input ct-lca-prime-input" type="number" placeholder="540"/>
+      <label class="form-label" style="font-size:10.5px">Prime mensuelle (CHF)</label>
+      <input class="form-input ct-lca-prime-input" type="number" placeholder="150"/>
     </div>
     <button type="button" onclick="this.parentElement.remove()" style="background:var(--red-dim);color:var(--red);border:none;border-radius:7px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">✕</button>
   `;
@@ -1735,18 +1735,19 @@ async function saveContrat() {
   }
 
   // Produits LCA (santé complémentaire) — un ou plusieurs par client (ex: hospitalisation + ambulatoire),
-  // chacun avec son propre nom de produit et sa propre prime annuelle, saisis via les lignes dynamiques.
+  // chacun avec son propre nom de produit et sa propre prime MENSUELLE (les primes santé se paient
+  // au mois en Suisse — jamais de conversion annuel/mensuel ici), saisis via les lignes dynamiques.
   if (combinablesCoches.includes('lca_autre_compagnie')) {
     const lignesLCA = document.querySelectorAll('.ct-lca-ligne');
     for (const ligne of lignesLCA) {
       const nomInput = ligne.querySelector('.ct-lca-nom-input');
       const primeInput = ligne.querySelector('.ct-lca-prime-input');
       const nom = nomInput ? nomInput.value.trim() : '';
-      const primeAnnuelleLCA = primeInput ? parseFloat(primeInput.value) || 0 : 0;
-      if (!nom || !primeAnnuelleLCA) continue; // ligne vide (ajoutée puis pas remplie) — ignorée
-      const primeMensuelleLCA = Math.round(primeAnnuelleLCA / 12 * 100) / 100;
+      const primeMensuelleLCA = primeInput ? parseFloat(primeInput.value) || 0 : 0;
+      if (!nom || !primeMensuelleLCA) continue; // ligne vide (ajoutée puis pas remplie) — ignorée
       const montantLCA = Math.round(primeMensuelleLCA * TAUX_COMMISSION.sante_facteur_mensuel);
       const detailLCA = `CHF ${fmtCHF(primeMensuelleLCA)}/mois × ${TAUX_COMMISSION.sante_facteur_mensuel} (taux santé) = CHF ${fmtCHF(montantLCA)}`;
+      const primeAnnuelleLCA = Math.round(primeMensuelleLCA * 12 * 100) / 100;
       await creerContratEtCommission(clientId, compagnie, `LCA — ${nom}`, primeAnnuelleLCA, [], montantLCA, detailLCA, null, true);
     }
   }

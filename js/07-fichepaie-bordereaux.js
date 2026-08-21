@@ -741,9 +741,11 @@ async function saveClient() {
   const missing = [];
   if (!prenom) missing.push('Prénom');
   if (!nom) missing.push('Nom');
-  if (!email) missing.push('Email');
-  if (!adresse) missing.push('Adresse');
-  if (!npa) missing.push('NPA');
+  if (!prenatal) {
+    if (!email) missing.push('Email');
+    if (!adresse) missing.push('Adresse');
+    if (!npa) missing.push('NPA');
+  }
   if (missing.length > 0) { alert('Champs obligatoires manquants : ' + missing.join(', ')); return; }
   const body = {
     prenom, nom,

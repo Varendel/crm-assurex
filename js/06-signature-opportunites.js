@@ -540,6 +540,43 @@ async function supprimerTacheOpportunite(id) {
   navigate('nouvelle-opportunite');
 }
 
+// Version "sans quitter la fiche" de changerStadeOpportunite() — utilisée par les boutons rapides
+// en haut de la fiche opportunité. Contrairement au drag&drop du Kanban, on reste sur place :
+// Jonathan ne veut pas ressortir juste pour changer un statut (demande du 21.08.2026). "Gagné"
+// continue de déclencher la conversion en contrat (ça reste la suite logique attendue), tous les
+// autres stades se mettent à jour sur place sans navigation.
+async function changerStadeOpportuniteRapide(id, nouveauStade) {
+  if (!nouveauStade) return;
+  const opp = allOpportunites.find(o => o.id === id);
+  if (!opp || opp.stade === nouveauStade) return;
+  const r = await dbPatch('opportunites', id, { stade: nouveauStade });
+  if (r && r.error) { showError('Erreur lors du changement de stade : ' + errMsg(r)); return; }
+  opp.stade = nouveauStade;
+  if (nouveauStade === 'Gagné') {
+    const produits = Array.isArray(opp.produits) ? opp.produits : [];
+    if (produits.length > 1) {
+      proposerConversionMultiContrats(opp);
+    } else {
+      prefillOpportunite = opp;
+      prefillOpportuniteProduitId = produits[0] || null;
+      oppFileAttenteProduits = [];
+      contratClientId = opp.client_id || null;
+      navigate('nouveau-contrat');
+    }
+    return;
+  }
+  // Synchronise le <select> #o-stade (caché dans le formulaire "Contrat" plus bas) pour qu'un
+  // "Enregistrer" ultérieur ne réécrase pas ce changement, et rafraîchit la barre de boutons.
+  const selectStade = document.getElementById('o-stade');
+  if (selectStade) selectStade.value = nouveauStade;
+  document.querySelectorAll('.o-stade-rapide-btn').forEach(btn => {
+    const actif = btn.dataset.stade === nouveauStade;
+    btn.style.background = actif ? btn.dataset.couleur : 'var(--surface-alt)';
+    btn.style.color = actif ? '#0a0e1a' : 'var(--text-muted)';
+    btn.style.borderColor = actif ? btn.dataset.couleur : 'var(--border)';
+  });
+}
+
 async function changerStadeOpportunite(id, nouveauStade) {
   if (!nouveauStade) return;
   const opp = allOpportunites.find(o => o.id === id);

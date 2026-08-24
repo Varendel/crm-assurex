@@ -2037,12 +2037,22 @@ function viewNouvelleOpportunite() {
   const blocTaches = opp ? sectionCard('Tâches', '#4ade80', renderTachesOpportunite(opp)) : '';
   const blocDocuments = opp ? sectionCard('📎 Documents', '#f59e0b', renderPiecesJointesOpportunite(opp)) : '';
   const blocHistorique = opp ? sectionCard('Historique', '#a78bfa', renderHistoriqueOpportunite(opp)) : '';
+  const STADE_COULEURS_RAPIDES = { Contact: '#64748b', Analyse: '#38bdf8', Proposition: '#f59e0b', Négociation: '#a78bfa', Gagné: '#4ade80', Perdu: '#f87171' };
+  const blocStadeRapide = (opp && !rh) ? `
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px">
+      ${stadesOptions.map(s2 => {
+        const couleur = STADE_COULEURS_RAPIDES[s2] || '#64748b';
+        const actif = opp.stade === s2;
+        return `<button type="button" class="o-stade-rapide-btn" data-stade="${s2}" data-couleur="${couleur}" onclick="changerStadeOpportuniteRapide('${opp.id}', '${s2}')" style="background:${actif ? couleur : 'var(--surface-alt)'};color:${actif ? '#0a0e1a' : 'var(--text-muted)'};border:1px solid ${actif ? couleur : 'var(--border)'};border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s">${s2}</button>`;
+      }).join('')}
+    </div>` : '';
   return `
     <button onclick="opportuniteEnEditionId=null;navigate('opportunites')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
-    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px">
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
       <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">${opp ? 'Modifier l’opportunité' : (rh ? 'Nouvelle opportunité pour Jonathan' : 'Nouvelle opportunité')}</h2>
       ${clientFiche ? `<span onclick="showClient('${clientFiche.id}')" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--surface-alt);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11.5px;font-weight:700;color:var(--accent)">👤 Fiche client : ${estEntreprise(clientFiche) ? clientFiche.nom : `${clientFiche.prenom} ${clientFiche.nom}`} →</span>` : ''}
     </div>
+    ${blocStadeRapide}
     ${opp ? `<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
       <div style="flex:1;min-width:280px">${blocEtatEmails}</div>
       <div style="flex:1;min-width:280px">${blocHistorique}</div>

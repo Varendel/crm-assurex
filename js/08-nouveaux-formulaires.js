@@ -1188,7 +1188,10 @@ function showRappel(id) {
       <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">${isTache ? '📋' : '🔔'} ${r.titre}</h2>
       <div style="display:flex;align-items:center;gap:8px">
         ${(!r.outlook_event_id && (r.date_echeance || r.date_planifiee)) ? `<button onclick="synchroniserRappelOutlook('${r.id}')" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;border-radius:8px;padding:5px 12px;font-size:11.5px;font-weight:700;cursor:pointer">📅 Absent d'Outlook — synchroniser</button>` : ''}
-        ${badge(r.statut === 'ouvert' ? 'Ouvert' : 'Traité', r.statut === 'ouvert' ? '#f59e0b' : '#4ade80')}
+        <div style="display:flex;gap:6px">
+          <button type="button" onclick="${r.statut === 'ouvert' ? '' : `rouvrirRappelRapide('${r.id}')`}" style="background:${r.statut === 'ouvert' ? '#f59e0b' : 'var(--surface-alt)'};color:${r.statut === 'ouvert' ? '#0a0e1a' : 'var(--text-muted)'};border:1px solid ${r.statut === 'ouvert' ? '#f59e0b' : 'var(--border)'};border-radius:20px;padding:6px 14px;font-size:11.5px;font-weight:800;cursor:pointer">🔓 Ouvert</button>
+          <button type="button" onclick="${r.statut === 'ouvert' ? `traiterRappelRapide('${r.id}')` : ''}" style="background:${r.statut !== 'ouvert' ? '#4ade80' : 'var(--surface-alt)'};color:${r.statut !== 'ouvert' ? '#0a0e1a' : 'var(--text-muted)'};border:1px solid ${r.statut !== 'ouvert' ? '#4ade80' : 'var(--border)'};border-radius:20px;padding:6px 14px;font-size:11.5px;font-weight:800;cursor:pointer">✓ Traité</button>
+        </div>
       </div>
     </div>
 

@@ -1064,6 +1064,40 @@ async function creerRdvInterne(agentId) {
   else if (currentView === 'rendez-vous') navigate('rendez-vous', { silent: true });
 }
 
+// Versions "sans quitter la fiche" de traiterRappel()/rouvrirRappel() — mêmes boutons de principe
+// que sur la fiche opportunité (changerStadeOpportuniteRapide) : on reste sur la fiche du rappel/
+// tâche au lieu de repartir sur la liste. Demande de Jonathan le 21.08.2026.
+async function traiterRappelRapide(id) {
+  const r = allRappels.find(x => x.id === id);
+  if (!r) return;
+  let resultat;
+  if (r.outlook_event_id) {
+    try { await deleteOutlookEvent(r.outlook_event_id); } catch(e) {}
+    resultat = await dbPatch('rappels', id, { statut: 'traité', outlook_event_id: null });
+    if (!(resultat && resultat.error)) r.outlook_event_id = null;
+  } else {
+    resultat = await dbPatch('rappels', id, { statut: 'traité' });
+  }
+  if (resultat && resultat.error) { showError('Erreur lors du traitement du rappel : ' + errMsg(resultat)); return; }
+  r.statut = 'traité';
+  showRappel(id);
+}
+
+async function rouvrirRappelRapide(id) {
+  const r = allRappels.find(x => x.id === id);
+  if (!r) return;
+  const resultat = await dbPatch('rappels', id, { statut: 'ouvert' });
+  if (resultat && resultat.error) { showError('Erreur lors de la réouverture du rappel : ' + errMsg(resultat)); return; }
+  r.statut = 'ouvert';
+  if (r.date_echeance) {
+    try {
+      const eventId = await createOutlookEventFromRappel(r);
+      if (eventId) { await dbPatch('rappels', id, { outlook_event_id: eventId }); r.outlook_event_id = eventId; }
+    } catch(e) {}
+  }
+  showRappel(id);
+}
+
 async function traiterRappel(id) {
   const r = allRappels.find(x => x.id === id);
   let resultat;

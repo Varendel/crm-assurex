@@ -128,6 +128,61 @@ function ouvrirEmailsNaissance(clientId, prenom, dateNaissance) {
     </div>`);
 }
 
+// Regroupe les contrats par n° de police : quand une RC véhicule est combinée à une Casco (ou
+// une LAMal à une/plusieurs LCA), chaque brique devient un contrat distinct en base (commission
+// propre à chacune) mais partage le même numéro de police, saisi une seule fois à la création.
+// Ici on les regroupe visuellement pour qu'on comprenne que c'est UNE seule affaire. Le contrat
+// "parent" (RC, LAMal...) est toujours créé en premier dans saveContrat()/creerContratEtCommission
+// avant les combinables/lignes LCA — trier par created_at suffit donc à le remettre en tête sans
+// avoir à deviner lequel est le "principal" par catégorie. Sans n° de police, chaque contrat reste
+// seul (pas de regroupement possible). Demande de Jonathan le 21.08.2026.
+function grouperContratsParPolice(contratsListe) {
+  const groupes = [];
+  const indexParPolice = new Map();
+  contratsListe.forEach(ct => {
+    const cle = (ct.numero_police || '').trim();
+    if (!cle) { groupes.push([ct]); return; }
+    if (indexParPolice.has(cle)) {
+      groupes[indexParPolice.get(cle)].push(ct);
+    } else {
+      indexParPolice.set(cle, groupes.length);
+      groupes.push([ct]);
+    }
+  });
+  groupes.forEach(g => { if (g.length > 1) g.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0)); });
+  return groupes;
+}
+
+// Une ligne de la table "Contrats" — estSousCouverture=true pour les briques combinées (Casco,
+// LCA...) affichées en retrait sous leur contrat "parent" (même police), avec une "↳" au lieu du
+// point de couleur plein pour bien montrer le lien, sans casser l'alignement des colonnes (seul le
+// contenu de la 1ère cellule est décalé, pas toute la ligne).
+function renderLigneContratClient(ct, estSousCouverture) {
+  const couleurCat = couleurPourProduitLibre(ct.produit);
+  const nomCat = categoriePourProduitLibre(ct.produit);
+  return `<div class="table-row" style="grid-template-columns:1fr 120px 100px 110px 100px 80px;cursor:pointer;border-left:3px solid ${couleurCat};${estSousCouverture ? 'opacity:0.9' : ''}" onclick="showDetailContrat('${ct.id}')">
+        <div style="${estSousCouverture ? 'margin-left:20px;padding-left:10px;border-left:2px dashed var(--border)' : ''}">
+          <div style="display:flex;align-items:center;gap:7px">
+            ${estSousCouverture ? `<span style="color:var(--text-muted);font-size:12px;flex-shrink:0">↳</span>` : `<span style="width:8px;height:8px;border-radius:50%;background:${couleurCat};flex-shrink:0" title="${nomCat || 'Autre'}"></span>`}
+            <div style="font-weight:700;font-size:13px;color:${estSousCouverture ? 'var(--text-muted)' : 'var(--text)'}">${ct.produit}</div>
+          </div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${estSousCouverture ? `<span style="font-style:italic">même police</span> · ` : (nomCat ? `<span style="color:${couleurCat};font-weight:700">${nomCat}</span> · ` : '')}${ct.numero_police && !estSousCouverture ? '№ ' + ct.numero_police : ''}${ct.date_debut ? ' · Dès le ' + fmtDate(ct.date_debut) : ''}${ct.date_echeance ? ' → ' + fmtDate(ct.date_echeance) : ''}</div>
+          ${ct.modules ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:3px;line-height:1.5">🔗 ${ct.modules.split(', ').join(' · ')}</div>` : ''}
+        </div>
+        <div style="font-size:13px;color:var(--text)">${ct.compagnie}</div>
+        <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ct.date_echeance)}</div>
+        <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF(Number(ct.prime_annuelle || 0))}</div>
+        <div>${badge(ct.statut, ct.statut === 'actif' ? '#4ade80' : ct.statut === 'renouveler' ? '#f59e0b' : '#f87171')}${ct.commissionne === false ? ' ' + badge('Non commissionné', '#64748b') : ''}</div>
+        <div style="display:flex;gap:4px;align-items:center" onclick="event.stopPropagation()">
+          ${ct.police_url
+            ? `<button onclick="ouvrirPieceJointe('${ct.police_url}')" title="Voir la police PDF" style="background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);color:#4ade80;border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer;line-height:1">📄</button>`
+            : `<label title="Joindre la police PDF" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer;line-height:1">📎<input type="file" accept="application/pdf" onchange="uploadPolicePdf('${ct.id}', this)" style="display:none"/></label>`
+          }
+          <button onclick="showEditContrat('${ct.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer;line-height:1" title="Modifier">✏️</button>
+        </div>
+      </div>`;
+}
+
 async function showClient(id) {
   // Empile où on était avant d'ouvrir cette fiche, pour que la flèche retour y ramène précisément
   const etatPrecedent = capturerEtatActuel();
@@ -460,27 +515,7 @@ async function showClient(id) {
         <button class="btn-add" onclick="contratClientId='${c.id}'; navigate('nouveau-contrat')">+ Nouveau contrat</button>
       </div>
       ${contrats.length > 0 ? `<div class="table-wrap"><div class="table-header" style="grid-template-columns:1fr 120px 100px 110px 100px 40px"><div>Produit</div><div>Compagnie</div><div>Échéance</div><div>Prime/an</div><div>Statut</div><div></div></div>
-      ${contrats.map(ct => { const couleurCat = couleurPourProduitLibre(ct.produit); const nomCat = categoriePourProduitLibre(ct.produit); return `<div class="table-row" style="grid-template-columns:1fr 120px 100px 110px 100px 80px;cursor:pointer;border-left:3px solid ${couleurCat}" onclick="showDetailContrat('${ct.id}')">
-        <div>
-          <div style="display:flex;align-items:center;gap:7px">
-            <span style="width:8px;height:8px;border-radius:50%;background:${couleurCat};flex-shrink:0" title="${nomCat || 'Autre'}"></span>
-            <div style="font-weight:700;font-size:13px;color:var(--text)">${ct.produit}</div>
-          </div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${nomCat ? `<span style="color:${couleurCat};font-weight:700">${nomCat}</span> · ` : ''}${ct.numero_police ? '№ ' + ct.numero_police : ''}${ct.date_debut ? ' · Dès le ' + fmtDate(ct.date_debut) : ''}${ct.date_echeance ? ' → ' + fmtDate(ct.date_echeance) : ''}</div>
-          ${ct.modules ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:3px;line-height:1.5">🔗 ${ct.modules.split(', ').join(' · ')}</div>` : ''}
-        </div>
-        <div style="font-size:13px;color:var(--text)">${ct.compagnie}</div>
-        <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ct.date_echeance)}</div>
-        <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF(Number(ct.prime_annuelle || 0))}</div>
-        <div>${badge(ct.statut, ct.statut === 'actif' ? '#4ade80' : ct.statut === 'renouveler' ? '#f59e0b' : '#f87171')}${ct.commissionne === false ? ' ' + badge('Non commissionné', '#64748b') : ''}</div>
-        <div style="display:flex;gap:4px;align-items:center" onclick="event.stopPropagation()">
-          ${ct.police_url
-            ? `<button onclick="ouvrirPieceJointe('${ct.police_url}')" title="Voir la police PDF" style="background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);color:#4ade80;border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer;line-height:1">📄</button>`
-            : `<label title="Joindre la police PDF" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer;line-height:1">📎<input type="file" accept="application/pdf" onchange="uploadPolicePdf('${ct.id}', this)" style="display:none"/></label>`
-          }
-          <button onclick="showEditContrat('${ct.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer;line-height:1" title="Modifier">✏️</button>
-        </div>
-      </div>`; }).join('')}</div>` : '<div class="table-empty">Aucun contrat.</div>'}
+      ${grouperContratsParPolice(contrats).map(groupe => groupe.map((ct, idx) => renderLigneContratClient(ct, idx > 0)).join('')).join('')}</div>` : '<div class="table-empty">Aucun contrat.</div>'}
     </div>
 
     <div id="tab-factures" class="hidden">

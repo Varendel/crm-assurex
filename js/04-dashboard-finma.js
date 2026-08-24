@@ -1446,18 +1446,20 @@ function categoriePourProduitLibre(produitTexte) {
 // fiche client (liste "Contrats") quand plusieurs branches se mélangent (ex: beaucoup de lignes
 // Santé, puis un contrat RC ou véhicule ajouté ensuite qui devient difficile à repérer). Demande
 // de Jonathan le 21.08.2026. Le vert Santé reprend la couleur déjà utilisée pour le bloc "Santé —
-// couvertures actives" existant, pour rester cohérent.
+// couvertures actives" existant, pour rester cohérent. Palette retravaillée le 21.08.2026 (retour
+// de Jonathan : "RC et assurances de personnes presque même couleur") — teintes bien espacées sur
+// la roue chromatique pour que deux catégories voisines ne se confondent jamais.
 const COULEUR_CATEGORIE_PRODUIT = {
-  'Véhicule': '#38bdf8',
-  'Assurances de personnes (entreprise)': '#06b6d4',
-  'Responsabilité civile': '#f59e0b',
-  'Ménage / habitation': '#a78bfa',
-  'Caution de loyer': '#f472b6',
-  'Bâtiment': '#fb923c',
+  'Véhicule': '#3b82f6',
+  'Responsabilité civile': '#eab308',
+  'Ménage / habitation': '#8b5cf6',
+  'Caution de loyer': '#14b8a6',
+  'Bâtiment': '#f97316',
   'Protection juridique': '#94a3b8',
-  'Prévoyance': '#facc15',
+  'Prévoyance': '#6366f1',
   'Santé': '#22c55e',
-  "Entreprise — risques spécifiques": '#fb7185',
+  'Assurances de personnes (entreprise)': '#ec4899',
+  "Entreprise — risques spécifiques": '#ef4444',
 };
 function couleurPourProduitLibre(produitTexte) {
   const cat = categoriePourProduitLibre(produitTexte);

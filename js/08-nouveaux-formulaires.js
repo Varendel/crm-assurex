@@ -497,6 +497,12 @@ async function showEditContrat(contratId, returnTo) {
           <div id="ect-rappel-note" style="display:${ct.commissionne === false ?'':'none'};font-size:10.5px;color:var(--text-muted);margin-top:4px">ℹ️ Un rappel sera créé 6 mois avant la date d'échéance ci-dessous, pour proposer un transfert vers une compagnie partenaire.</div>
         </div>
         <div class="form-field"><label class="form-label">Modules complémentaires</label><input class="form-input" id="ect-modules" value="${ct.modules || ''}"/></div>
+        ${(ct.produit || '').includes('LPP') && (ct.compagnie || '').toLowerCase().includes('swiss life') ? `
+        <div class="form-field" style="grid-column:span 2">
+          <label class="form-label">Dont prime risque + frais (CHF/an) — base de calcul COG</label>
+          <input class="form-input" id="ect-prime-risque-frais" type="number" value="${ct.prime_risque_frais || ''}" placeholder="Hors part épargne"/>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:3px">Swiss Life rémunère uniquement sur risque + frais, pas sur la part épargne de la prime totale.</div>
+        </div>` : ''}
         <div class="form-field" style="grid-column:span 2">
           <label class="form-label">Police PDF</label>
           ${ct.police_url
@@ -574,6 +580,11 @@ async function saveEditContrat(contratId, clientId, returnTo) {
     apporteur_id: document.getElementById('ect-apporteur').value || null,
     co_apporteur_id: document.getElementById('ect-co-apporteur') ? (document.getElementById('ect-co-apporteur').value || null) : null,
     modules: document.getElementById('ect-modules').value.trim() || null,
+    prime_risque_frais: (() => {
+      const el = document.getElementById('ect-prime-risque-frais');
+      const v = el ? parseFloat(el.value) : NaN;
+      return Number.isFinite(v) && v > 0 ? v : null;
+    })(),
   };
   const btn = document.querySelector('#modal-edit-contrat .btn-save');
   if (btn) { btn.textContent = 'Enregistrement...'; btn.disabled = true; }

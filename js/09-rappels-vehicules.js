@@ -1668,6 +1668,15 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
     statut: document.getElementById('ct-statut').value,
     commissionne,
     detail_lignes: detailLignes && detailLignes.length > 0 ? detailLignes : null,
+    // "Dont prime risque + frais" (base de calcul COG Swiss Life) n'était utilisée que pour le
+    // calcul en direct puis jetée — jamais sauvegardée nulle part, donc invisible/reperdue dès la
+    // fiche rechargée. Persistée ici pour de bon (demande de Jonathan le 25.08.2026 : "la prime...
+    // ça n'est pas renseigné").
+    prime_risque_frais: (() => {
+      const el = document.getElementById('ct-prime-risque-frais');
+      const v = el ? parseFloat(el.value) : NaN;
+      return Number.isFinite(v) && v > 0 ? v : null;
+    })(),
   };
   const rContrat = await dbPost('contrats', contratBody);
   if (rContrat && rContrat.error) return { error: true, detail: rContrat.detail || rContrat.status };

@@ -2047,7 +2047,7 @@ function viewNouvelleOpportunite() {
               ${produits.map(p => { const coche = produitsChoisis.includes(p.id); const primeExistante = (opp?.produits_primes || {})[p.id] || ''; return `<label class="o-produit-ligne" style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);padding:2px 0">
                 <input type="checkbox" class="o-produit-checkbox" value="${p.id}" ${coche ? 'checked' : ''} onchange="toggleProduitPrimeInput(this)" style="width:14px;height:14px;accent-color:var(--accent);flex-shrink:0;cursor:pointer"/>
                 <span style="flex:1;cursor:pointer">${p.label}</span>
-                <input type="number" class="o-produit-prime" placeholder="${PRODUITS_SANTE_X16.includes(p.id) ? 'Prime CHF/mois' : 'Prime CHF/an'}" value="${primeExistante}" oninput="recalculerCommissionEstimeeOpportunite()" style="display:${coche ? 'inline-block' : 'none'};width:120px;flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:11.5px;color:var(--text)"/>
+                <input type="number" class="o-produit-prime" placeholder="${PRODUITS_SANTE_COMPAGNIE_INDEPENDANTE.includes(p.id) ? 'Prime CHF/mois' : 'Prime CHF/an'}" value="${primeExistante}" oninput="recalculerCommissionEstimeeOpportunite()" style="display:${coche ? 'inline-block' : 'none'};width:120px;flex-shrink:0;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:5px 8px;font-size:11.5px;color:var(--text)"/>
               </label>`; }).join('')}
             </div>`).join('')}
         </div>
@@ -2240,6 +2240,15 @@ const ICONES_CATEGORIE_PRODUIT = {
 };
 
 const PRODUITS_SANTE_X16 = ['helsana_top', 'helsana_sana', 'helsana_completa', 'helsana_completa_plus', 'helsana_primeo', 'gm_premium', 'gm_global_smart', 'gm_global_mi_privee', 'gm_global_privee', 'gm_global_flex', 'lca_autre_compagnie'];
+// LAMal a sa PROPRE règle (forfait fixe CHF 70, jamais x16 — voir calculerCommissionEstimee) mais
+// partage avec PRODUITS_SANTE_X16 les deux mêmes particularités "hors norme" : prime saisie au
+// MOIS (jamais à l'année, convention suisse santé) et commission indépendante de la compagnie.
+// Sans ça, cocher "LAMal" comme produit envisagé sur une opportunité SANS avoir encore choisi de
+// compagnie affichait "sélectionne une compagnie" au lieu du forfait CHF 70 — LAMal semblait
+// "ne pas exister" alors que la règle existe bien, juste jamais atteinte (bug repéré par Jonathan
+// le 25.08.2026). Utiliser cette liste-ci (jamais PRODUITS_SANTE_X16 seul) pour ces deux
+// vérifications précises ; PRODUITS_SANTE_X16 reste réservé au multiplicateur x16 lui-même.
+const PRODUITS_SANTE_COMPAGNIE_INDEPENDANTE = [...PRODUITS_SANTE_X16, 'lamal'];
 function dureeVieJusqua65Ans() {
   const clientId = document.getElementById('o-client')?.value || '';
   const client = clientId ? allClients.find(c => c.id === clientId) : null;
@@ -2256,7 +2265,7 @@ function recalculerCommissionEstimeeOpportunite() {
   // La case prime est annuelle pour la plupart des produits, mais mensuelle pour la santé
   // complémentaire (l.prime brut n'est donc pas homogène) — on annualise les lignes santé ici
   // uniquement pour que ce total affiché reste comparable/additionnable avec les autres produits.
-  const primeTotale = lignes.reduce((s, l) => s + (PRODUITS_SANTE_X16.includes(l.id) ? l.prime * 12 : l.prime), 0);
+  const primeTotale = lignes.reduce((s, l) => s + (PRODUITS_SANTE_COMPAGNIE_INDEPENDANTE.includes(l.id) ? l.prime * 12 : l.prime), 0);
 
   if (!lignes.length) {
     zone.innerHTML = `💡 Coche un ou plusieurs produits ci-dessus et renseigne leur prime pour prévisualiser la commission estimée.`;
@@ -2274,7 +2283,7 @@ function recalculerCommissionEstimeeOpportunite() {
     if (!l.prime) return `⚠️ ${produitLabelParId(l.id)} : prime non renseignée`;
     const utiliseDureeVie = PRODUITS_VIE_DUREE_65ANS.includes(l.id);
     if (utiliseDureeVie) uneLigneUtiliseDureeVie = true;
-    const estSante = PRODUITS_SANTE_X16.includes(l.id);
+    const estSante = PRODUITS_SANTE_COMPAGNIE_INDEPENDANTE.includes(l.id);
     if (!compagnie && !estSante) return `⚠️ ${produitLabelParId(l.id)} : sélectionne une compagnie pour estimer ce produit`;
     const r = estimerCommissionProduit(l.id, compagnie, l.prime, utiliseDureeVie ? dureeVie : 1);
     if (r && r.montant) { totalCommission += r.montant; return `✓ ${produitLabelParId(l.id)} : CHF ${fmtCHF(r.montant)}${utiliseDureeVie ? ` (${dureeVie} an${dureeVie>1?'s':''})` : ''}`; }

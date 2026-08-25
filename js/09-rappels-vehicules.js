@@ -1384,7 +1384,7 @@ function estimerCommissionProduit(produitId, compagnieNom, primeSaisie, dureeAnn
   // santé complémentaire (PRODUITS_SANTE_X16, js/07), rémunérée à taux fixe prime x16 quelle que
   // soit la compagnie. Sans cet assouplissement, l'estimation santé restait à 0 tant qu'aucune
   // compagnie n'était choisie sur l'opportunité (bug repéré par Jonathan le 10.08.2026).
-  const compagnieRequise = !PRODUITS_SANTE_X16.includes(produitId);
+  const compagnieRequise = !PRODUITS_SANTE_COMPAGNIE_INDEPENDANTE.includes(produitId);
   if (!produit || (compagnieRequise && !compagnieNom) || !primeSaisie) return { montant: 0, detail: null };
   const temp = [];
   const creer = (id, valeur) => {
@@ -1398,7 +1398,7 @@ function estimerCommissionProduit(produitId, compagnieNom, primeSaisie, dureeAnn
   // primes LAMal/LCA se paient et se comparent au mois, jamais à l'année (retour Jonathan le
   // 11.08.2026 : CHF 45/mois de complémentaire, divisé par erreur par 12 avant le calcul x16,
   // ce qui donnait CHF 60 de commission au lieu de CHF 720).
-  const estSante = PRODUITS_SANTE_X16.includes(produitId);
+  const estSante = PRODUITS_SANTE_COMPAGNIE_INDEPENDANTE.includes(produitId);
   const primeMensuelle = estSante ? primeSaisie : Math.round((primeSaisie / 12) * 100) / 100;
   creer('ct-categorie', '');
   creer('ct-produit', produit.label);

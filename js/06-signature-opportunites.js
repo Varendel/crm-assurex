@@ -253,9 +253,12 @@ function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, to
           ${o.apporteur_id ? avatar(agentById(o.apporteur_id), 22) : ''}
         </div>
         <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:${o.probabilite||0}%;background:${color}"></div></div>
-        <div style="font-size:10px;color:var(--text-muted);margin-top:6px;display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:10px;color:var(--text-muted);margin-top:6px;display:flex;justify-content:space-between;align-items:center;gap:6px">
           <span>${o.probabilite||0}%</span>
-          ${rhMode ? '' : selectStadeOpportunite(o, stade, tousLesStades)}
+          <div style="display:flex;gap:4px;align-items:center">
+            ${rhMode ? '' : `<button onclick="event.stopPropagation();ouvrirModaleMotifPerte('${o.id}','kanban')" title="Marquer perdue" style="background:none;border:1px solid rgba(248,113,113,0.35);color:#f87171;border-radius:5px;padding:2px 6px;font-size:10px;font-weight:700;cursor:pointer">✕ Perdu</button>`}
+            ${rhMode ? '' : selectStadeOpportunite(o, stade, tousLesStades)}
+          </div>
         </div>
       </div>`;
       }).join('')}
@@ -277,7 +280,10 @@ function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, to
     ${perdues.length > 0 ? `<div style="margin-top:24px">
       <div style="font-size:11px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">✕ Perdues (${perdues.length})</div>
       <div class="table-wrap">${perdues.map(o => `<div class="table-row" style="grid-template-columns:${rhMode ? '1fr 160px' : '1fr 160px 100px 150px'};${rhMode ? '' : 'cursor:pointer'}" ${rhMode ? '' : `onclick="editerOpportunite('${o.id}')"`}>
-        <div style="font-weight:700;font-size:13px;color:var(--text)">${o.titre}</div>
+        <div>
+          <div style="font-weight:700;font-size:13px;color:var(--text)">${o.titre}</div>
+          ${o.motif_perte ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:2px;font-style:italic">Motif : ${o.motif_perte}</div>` : ''}
+        </div>
         <div style="font-size:13px;font-weight:800;color:var(--text)">${nomClient(o)}</div>
         ${rhMode ? '' : `<div style="font-size:12px;font-weight:700;color:var(--text-muted)">CHF ${fmtCHF((o.montant_potentiel||0))}</div>`}
         ${rhMode ? '' : `<div>${selectStadeOpportunite(o, 'Perdu', tousLesStades)}</div>`}
@@ -549,6 +555,8 @@ async function changerStadeOpportuniteRapide(id, nouveauStade) {
   if (!nouveauStade) return;
   const opp = allOpportunites.find(o => o.id === id);
   if (!opp || opp.stade === nouveauStade) return;
+  // "Perdu" demande toujours un motif libre avant de confirmer — voir ouvrirModaleMotifPerte.
+  if (nouveauStade === 'Perdu') { ouvrirModaleMotifPerte(id, 'rapide'); return; }
   const r = await dbPatch('opportunites', id, { stade: nouveauStade });
   if (r && r.error) { showError('Erreur lors du changement de stade : ' + errMsg(r)); return; }
   opp.stade = nouveauStade;
@@ -581,6 +589,8 @@ async function changerStadeOpportunite(id, nouveauStade) {
   if (!nouveauStade) return;
   const opp = allOpportunites.find(o => o.id === id);
   if (!opp) return;
+  // "Perdu" demande toujours un motif libre avant de confirmer — voir ouvrirModaleMotifPerte.
+  if (nouveauStade === 'Perdu') { ouvrirModaleMotifPerte(id, 'kanban'); return; }
   const r = await dbPatch('opportunites', id, { stade: nouveauStade });
   if (r && r.error) { showError('Erreur lors du changement de stade : ' + errMsg(r)); return; }
   opp.stade = nouveauStade;
@@ -596,6 +606,43 @@ async function changerStadeOpportunite(id, nouveauStade) {
       contratClientId = opp.client_id || null;
       navigate('nouveau-contrat');
     }
+  } else {
+    navigate('opportunites');
+  }
+}
+
+// Marquer une opportunité "Perdue" demande toujours un motif libre (demande de Jonathan le
+// 25.08.2026), pour garder une trace exploitable de pourquoi ça n'a pas abouti. mode = 'rapide'
+// (fiche détail, reste sur place) | 'kanban' (Kanban/liste, retourne au pipeline après confirmation).
+function ouvrirModaleMotifPerte(id, mode) {
+  const opp = allOpportunites.find(o => o.id === id);
+  if (!opp) return;
+  creerModale('modal-motif-perte', `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px;width:100%;max-width:440px">
+      <h3 style="margin:0 0 6px;font-size:15px;font-weight:800;color:var(--text)">✕ Marquer "${opp.titre}" comme perdue</h3>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">Motif (texte libre, optionnel)</div>
+      <textarea id="motif-perte-texte" class="form-input" rows="3" placeholder="Ex : parti chez la concurrence, budget annulé, plus de nouvelles…" style="resize:vertical;width:100%">${opp.motif_perte || ''}</textarea>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn-secondary" onclick="document.getElementById('modal-motif-perte').remove()">Annuler</button>
+        <button class="btn-save" style="background:#f87171;border-color:#f87171" onclick="confirmerOpportunitePerdue('${id}', '${mode}')">✕ Confirmer perdue</button>
+      </div>
+    </div>
+  `);
+}
+
+async function confirmerOpportunitePerdue(id, mode) {
+  const motif = document.getElementById('motif-perte-texte') ? document.getElementById('motif-perte-texte').value.trim() || null : null;
+  const opp = allOpportunites.find(o => o.id === id);
+  if (!opp) { document.getElementById('modal-motif-perte')?.remove(); return; }
+  const r = await dbPatch('opportunites', id, { stade: 'Perdu', motif_perte: motif });
+  document.getElementById('modal-motif-perte')?.remove();
+  if (r && r.error) { showError('Erreur lors du passage en Perdu : ' + errMsg(r)); return; }
+  opp.stade = 'Perdu';
+  opp.motif_perte = motif;
+  if (mode === 'rapide') {
+    // Reste sur la fiche, rafraîchie sur place — même garde-fou que ailleurs dans ce fichier
+    // (pas de double entrée dans l'historique de navigation puisqu'on est déjà sur cette vue).
+    if (opportuniteEnEditionId === id && currentView === 'nouvelle-opportunite') navigate('nouvelle-opportunite');
   } else {
     navigate('opportunites');
   }

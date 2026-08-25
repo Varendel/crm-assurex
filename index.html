@@ -234,6 +234,27 @@
   /* LOADING */
   .loader { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--text-muted); font-size: 13px; }
 
+  /* CONSTELLATION FAMILIALE — arbre visuel père/mère → client → enfants (fiche client privé) */
+  .fam-tree { display: flex; flex-direction: column; align-items: center; padding: 24px 10px; gap: 0; }
+  .fam-row { display: flex; justify-content: center; align-items: flex-start; gap: 28px; flex-wrap: wrap; position: relative; }
+  .fam-connector { width: 2px; height: 26px; background: var(--border); }
+  .fam-connector-h { height: 2px; background: var(--border); align-self: center; }
+  .fam-node {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 16px; min-width: 150px; max-width: 210px; text-align: center; cursor: pointer;
+    transition: border-color .15s ease, transform .15s ease;
+  }
+  .fam-node:hover { border-color: var(--accent-border); transform: translateY(-1px); }
+  .fam-node-self { background: var(--accent-dim); border: 2px solid var(--accent-border); cursor: default; }
+  .fam-node-self:hover { transform: none; }
+  .fam-node-vide {
+    background: transparent; border: 1px dashed var(--border); color: var(--text-muted);
+    font-size: 11.5px; padding: 12px 16px; min-width: 150px; text-align: center; cursor: pointer;
+  }
+  .fam-node-icon { font-size: 20px; margin-bottom: 4px; }
+  .fam-node-nom { font-size: 12.5px; font-weight: 800; color: var(--text); }
+  .fam-node-sub { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
+
   /* PRINT */
   @media print {
     #login-screen { display: none !important; }
@@ -407,12 +428,12 @@
 <script src="js/01-prevoyance-immo.js?v=1786530734"></script>
 <script src="js/02-catalogue-session.js?v=1787308928"></script>
 <script src="js/03-auth-navigation.js?v=1786531405"></script>
-<script src="js/04-dashboard-finma.js?v=1787563169"></script>
-<script src="js/05-contrats-clients.js?v=1787563169"></script>
-<script src="js/06-signature-opportunites.js?v=1787566654"></script>
-<script src="js/07-fichepaie-bordereaux.js?v=1787560015"></script>
-<script src="js/08-nouveaux-formulaires.js?v=1787566654"></script>
-<script src="js/09-rappels-vehicules.js?v=1787311898"></script>
+<script src="js/04-dashboard-finma.js?v=1787642929"></script>
+<script src="js/05-contrats-clients.js?v=1787642929"></script>
+<script src="js/06-signature-opportunites.js?v=1787642929"></script>
+<script src="js/07-fichepaie-bordereaux.js?v=1787642929"></script>
+<script src="js/08-nouveaux-formulaires.js?v=1787642929"></script>
+<script src="js/09-rappels-vehicules.js?v=1787642929"></script>
 <script src="js/10-commissions-parametres.js?v=1786531405"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application

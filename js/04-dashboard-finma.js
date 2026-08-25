@@ -171,12 +171,15 @@ function viewDashboard() {
   const today = new Date();
   const nonGerees = allContrats.filter(ct => ct.commissionne === false && !['résilié','annulé','mandat_resilie'].includes(ct.statut));
   function joursRestants(ct) { return ct.date_echeance ? Math.floor((new Date(ct.date_echeance) - today) / 86400000) : null; }
+  // Sans date d'échéance connue, il n'y a aucune raison d'attendre pour agir — classé direct
+  // dans le bucket le plus urgent ("En retard") plutôt que dans un vague "+12 mois / inconnue"
+  // qui laissait ces polices invisibles en bas de la pile. Demande de Jonathan le 25.08.2026.
   const horizons = [
-    { label: 'En retard', test: j => j !== null && j < 0, color: '#f87171' },
+    { label: 'En retard / sans échéance', test: j => j === null || j < 0, color: '#f87171' },
     { label: '0-3 mois', test: j => j !== null && j >= 0 && j <= 90, color: '#fb923c' },
     { label: '3-6 mois', test: j => j !== null && j > 90 && j <= 180, color: '#f59e0b' },
     { label: '6-12 mois', test: j => j !== null && j > 180 && j <= 365, color: '#a78bfa' },
-    { label: '+12 mois / inconnue', test: j => j === null || j > 365, color: '#64748b' },
+    { label: '+12 mois', test: j => j !== null && j > 365, color: '#64748b' },
   ];
   const horizonsData = horizons.map(h => {
     const liste = nonGerees.filter(ct => h.test(joursRestants(ct)));

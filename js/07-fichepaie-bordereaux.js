@@ -686,6 +686,20 @@ function formPrive() {
           <input type="hidden" id="f-parent-id"/>
         </div>
       </div>
+      <div class="form-field" style="grid-column:span 2;background:var(--surface-alt);border:1px solid var(--border);border-radius:9px;padding:10px 14px">
+        <label class="form-label" style="margin-bottom:6px;display:block">👪 Lien familial (optionnel) — reprend automatiquement adresse et téléphone du parent sélectionné</label>
+        <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:10px">
+          <div>
+            <input class="form-input" id="f-pere-search" list="f-famille-suggestions" autocomplete="off" placeholder="🔎 Rechercher le père…" onchange="selectionnerLienFamilial('pere')"/>
+            <input type="hidden" id="f-pere-id"/>
+          </div>
+          <div>
+            <input class="form-input" id="f-mere-search" list="f-famille-suggestions" autocomplete="off" placeholder="🔎 Rechercher la mère…" onchange="selectionnerLienFamilial('mere')"/>
+            <input type="hidden" id="f-mere-id"/>
+          </div>
+        </div>
+        <datalist id="f-famille-suggestions">${(typeof allClients !== 'undefined' ? allClients : []).map(pc => `<option value="${(pc.prenom||'')} ${(pc.nom||'')}${pc.ville ? ' — ' + pc.ville : ''}">`).join('')}</datalist>
+      </div>
       <div class="form-field"><label class="form-label">Civilité</label><select class="form-select" id="f-civilite"><option value="">—</option><option value="Monsieur">Monsieur</option><option value="Madame">Madame</option></select></div>
       <div class="form-field"><label class="form-label" id="f-prenom-label">Prénom *</label><input class="form-input" id="f-prenom" placeholder="Jean"/></div>
       <div class="form-field"><label class="form-label">Nom *</label><input class="form-input" id="f-nom" placeholder="Dupont"/></div>
@@ -779,6 +793,28 @@ function preremplirPrenatalDepuisParent(parentId) {
   selectionnerParentPrenatal();
 }
 
+// Lien familial (constellation) — distinct du sélecteur "parent prénatal" ci-dessus : ici on ne
+// copie que l'adresse et le téléphone (pas toute l'identité), et le lien pere_id/mere_id est
+// persisté en base pour alimenter la vue "Constellation familiale". Demande de Jonathan.
+function selectionnerLienFamilial(type) {
+  const searchEl = document.getElementById(`f-${type}-search`);
+  const hiddenEl = document.getElementById(`f-${type}-id`);
+  if (!searchEl) return;
+  const val = searchEl.value.trim();
+  if (!val) { if (hiddenEl) hiddenEl.value = ''; return; }
+  const match = (typeof allClients !== 'undefined' ? allClients : []).find(pc => `${(pc.prenom||'')} ${(pc.nom||'')}${pc.ville ? ' — ' + pc.ville : ''}`.trim() === val);
+  if (!match) { if (hiddenEl) hiddenEl.value = ''; showError('Aucun client trouvé avec ce nom — le lien ne sera pas enregistré.'); return; }
+  if (hiddenEl) hiddenEl.value = match.id;
+  const setVal = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+  setVal('f-adresse', match.adresse);
+  setVal('f-co', match.co);
+  setVal('f-npa', match.npa);
+  setVal('f-ville', match.ville);
+  setVal('f-canton', match.canton);
+  setVal('f-tel', match.tel);
+  setVal('f-mobile', match.mobile);
+}
+
 async function saveClient() {
   const prenatal = document.getElementById('f-prenatal') ? document.getElementById('f-prenatal').checked : false;
   let prenom = document.getElementById('f-prenom').value.trim();
@@ -825,6 +861,8 @@ async function saveClient() {
     apporteur_id: document.getElementById('f-agent').value || null,
     apporteur_externe: document.getElementById('f-apporteur-ext').value.trim() || null,
     notes: document.getElementById('f-notes').value || null,
+    pere_id: document.getElementById('f-pere-id') ? (document.getElementById('f-pere-id').value || null) : null,
+    mere_id: document.getElementById('f-mere-id') ? (document.getElementById('f-mere-id').value || null) : null,
   };
   const btn = document.querySelector('.btn-save');
   btn.textContent = 'Enregistrement...'; btn.disabled = true;
@@ -2053,6 +2091,7 @@ function viewNouvelleOpportunite() {
       ${clientFiche ? `<span onclick="showClient('${clientFiche.id}')" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--surface-alt);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11.5px;font-weight:700;color:var(--accent)">👤 Fiche client : ${estEntreprise(clientFiche) ? clientFiche.nom : `${clientFiche.prenom} ${clientFiche.nom}`} →</span>` : ''}
     </div>
     ${blocStadeRapide}
+    ${(opp && opp.stade === 'Perdu' && opp.motif_perte) ? `<div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.3);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--text)"><strong style="color:#f87171">✕ Motif de la perte :</strong> ${opp.motif_perte}</div>` : ''}
     ${opp ? `<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
       <div style="flex:1;min-width:280px">${blocEtatEmails}</div>
       <div style="flex:1;min-width:280px">${blocHistorique}</div>

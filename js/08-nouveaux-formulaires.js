@@ -635,19 +635,26 @@ async function saveEditContrat(contratId, clientId, returnTo) {
     allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
   }
 
-  // Police passée en "Non commissionné" : créer le rappel de transfert 6 mois avant échéance (si pas déjà fait)
-  if (!commissionne && body.date_echeance) {
+  // Police passée en "Non commissionné" : créer le rappel de transfert (si pas déjà fait).
+  // Avec échéance connue : rappel programmé 6 mois avant. Sans échéance connue : pas de raison
+  // d'attendre — rappel créé tout de suite avec échéance = aujourd'hui (urgence immédiate), sinon
+  // ces polices ne remontaient jamais nulle part. Demande de Jonathan le 25.08.2026.
+  if (!commissionne) {
     const dejaCree = allRappels.some(r => r.client_id === clientId && r.type === 'Contrat' && (r.titre||'').includes(body.produit) && (r.titre||'').includes(body.compagnie));
     if (!dejaCree) {
       const client = allClients.find(c => c.id === clientId);
       const nomClient = client ? (estEntreprise(client) ? client.nom : `${client.prenom} ${client.nom}`) : '';
-      const dEch = new Date(body.date_echeance);
-      dEch.setMonth(dEch.getMonth() - 6);
+      const aEcheance = !!body.date_echeance;
+      let dEch;
+      if (aEcheance) { dEch = new Date(body.date_echeance); dEch.setMonth(dEch.getMonth() - 6); }
+      else { dEch = new Date(); }
       const r = await dbPost('rappels', {
         titre: `Reprendre "${body.produit}" de ${nomClient} (actuellement ${body.compagnie}, non partenaire)`,
-        client_id: clientId, type: 'Contrat', urgence: 'moyenne',
+        client_id: clientId, type: 'Contrat', urgence: aEcheance ? 'moyenne' : 'haute',
         date_echeance: dEch.toISOString().split('T')[0],
-        notes: `Police actuellement chez ${body.compagnie} (compagnie non partenaire) — échéance le ${fmtDate(body.date_echeance)}. Objectif : proposer un transfert vers une compagnie partenaire pour générer une commission.`,
+        notes: aEcheance
+          ? `Police actuellement chez ${body.compagnie} (compagnie non partenaire) — échéance le ${fmtDate(body.date_echeance)}. Objectif : proposer un transfert vers une compagnie partenaire pour générer une commission.`
+          : `Police actuellement chez ${body.compagnie} (compagnie non partenaire) — échéance inconnue, donc à traiter sans attendre. Objectif : proposer un transfert vers une compagnie partenaire pour générer une commission.`,
         statut: 'ouvert',
       });
       if (r && r.error) showError('⚠️ Contrat enregistré, mais le rappel de transfert automatique n\u2019a pas pu être créé : ' + errMsg(r));

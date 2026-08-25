@@ -1636,19 +1636,25 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
 
   const client = allClients.find(c => c.id === clientId);
 
-  // Contrat non commissionné OU créé directement en "Annulé" : pas de commission générée
+  // Contrat non commissionné OU créé directement en "Annulé" : pas de commission générée.
+  // Sans date d'échéance, pas de raison d'attendre — rappel créé immédiatement (échéance =
+  // aujourd'hui, urgence haute) plutôt que silencieusement omis. Demande de Jonathan le 25.08.2026.
   if (!commissionne || contratBody.statut === 'annulé') {
-    if (!commissionne && contratBody.date_echeance) {
-      const dEch = new Date(contratBody.date_echeance);
-      dEch.setMonth(dEch.getMonth() - 6);
+    if (!commissionne) {
+      const aEcheance = !!contratBody.date_echeance;
+      let dEch;
+      if (aEcheance) { dEch = new Date(contratBody.date_echeance); dEch.setMonth(dEch.getMonth() - 6); }
+      else { dEch = new Date(); }
       const nomClient = client ? (estEntreprise(client) ? client.nom : `${client.prenom} ${client.nom}`) : '';
       const rRappel = await dbPost('rappels', {
         titre: `Reprendre "${produitLabel}" de ${nomClient} (actuellement ${compagnie}, non partenaire)`,
         client_id: clientId,
         type: 'Contrat',
-        urgence: 'moyenne',
+        urgence: aEcheance ? 'moyenne' : 'haute',
         date_echeance: dEch.toISOString().split('T')[0],
-        notes: `Police actuellement chez ${compagnie} (compagnie non partenaire) — échéance le ${fmtDate(contratBody.date_echeance)}. Objectif : proposer un transfert vers une compagnie partenaire pour générer une commission.`,
+        notes: aEcheance
+          ? `Police actuellement chez ${compagnie} (compagnie non partenaire) — échéance le ${fmtDate(contratBody.date_echeance)}. Objectif : proposer un transfert vers une compagnie partenaire pour générer une commission.`
+          : `Police actuellement chez ${compagnie} (compagnie non partenaire) — échéance inconnue, donc à traiter sans attendre. Objectif : proposer un transfert vers une compagnie partenaire pour générer une commission.`,
         statut: 'ouvert',
       });
       if (rRappel && rRappel.error) console.error('Échec de création du rappel de transfert automatique :', errMsg(rRappel));

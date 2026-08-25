@@ -183,6 +183,69 @@ function renderLigneContratClient(ct, estSousCouverture) {
       </div>`;
 }
 
+// Constellation familiale — schéma visuel père/mère → client → enfants, construit à partir des
+// liens pere_id/mere_id stockés sur la table clients (voir sélecteurs "Lien familial" dans le
+// formulaire de création client privé, js/07). Uniquement pour les clients privés. Demande de
+// Jonathan le 25.08.2026.
+function fermerModaleConstellation() {
+  document.getElementById('modal-constellation')?.remove();
+}
+
+function voirConstellationFamiliale(clientId) {
+  const liste = (typeof allClients !== 'undefined' ? allClients : []);
+  const c = liste.find(x => x.id === clientId);
+  if (!c) return;
+  const pere = c.pere_id ? liste.find(x => x.id === c.pere_id) : null;
+  const mere = c.mere_id ? liste.find(x => x.id === c.mere_id) : null;
+  const enfants = liste.filter(x => x.id !== clientId && (x.pere_id === clientId || x.mere_id === clientId));
+
+  const nodeParent = (p, type) => p
+    ? `<div class="fam-node" onclick="fermerModaleConstellation(); showClient('${p.id}')">
+         <div class="fam-node-icon">${type === 'pere' ? '👨' : '👩'}</div>
+         <div class="fam-node-nom">${p.prenom || ''} ${p.nom || ''}</div>
+         <div class="fam-node-sub">${type === 'pere' ? 'Père' : 'Mère'}${p.ville ? ' · ' + p.ville : ''}</div>
+       </div>`
+    : `<div class="fam-node-vide">${type === 'pere' ? '👨 Père non lié' : '👩 Mère non liée'}</div>`;
+
+  const nodeEnfant = (e) => `<div class="fam-node" onclick="fermerModaleConstellation(); showClient('${e.id}')">
+      <div class="fam-node-icon">${e.prenatal ? '🍼' : (e.civilite === 'Madame' ? '👧' : e.civilite === 'Monsieur' ? '👦' : '🧒')}</div>
+      <div class="fam-node-nom">${e.prenom || ''} ${e.nom || ''}</div>
+      <div class="fam-node-sub">${e.date_naissance ? 'Né(e) le ' + fmtDate(e.date_naissance) : (e.ville || '')}</div>
+    </div>`;
+
+  const aDesParents = !!(pere || mere);
+  const aDesEnfants = enfants.length > 0;
+
+  creerModale('modal-constellation', `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;max-width:720px;width:100%;max-height:85vh;overflow-y:auto">
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--border)">
+        <h3 style="margin:0;font-size:16px;font-weight:800;color:var(--text)">🌳 Constellation familiale — ${c.prenom || ''} ${c.nom || ''}</h3>
+        <button onclick="fermerModaleConstellation()" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;line-height:1">✕</button>
+      </div>
+      <div class="fam-tree">
+        <div class="fam-row">
+          ${nodeParent(pere, 'pere')}
+          ${nodeParent(mere, 'mere')}
+        </div>
+        ${aDesParents ? '<div class="fam-connector"></div>' : ''}
+        <div class="fam-row">
+          <div class="fam-node fam-node-self">
+            <div class="fam-node-icon">${c.prenatal ? '🍼' : (c.civilite === 'Madame' ? '👩' : c.civilite === 'Monsieur' ? '👨' : '🙂')}</div>
+            <div class="fam-node-nom">${c.prenom || ''} ${c.nom || ''}</div>
+            <div class="fam-node-sub">Cette fiche</div>
+          </div>
+        </div>
+        ${aDesEnfants ? '<div class="fam-connector"></div>' : ''}
+        ${aDesEnfants ? `<div class="fam-row">${enfants.map(nodeEnfant).join('')}</div>` : ''}
+        ${!aDesParents && !aDesEnfants ? `<div style="color:var(--text-muted);font-size:12.5px;text-align:center;margin-top:14px">Aucun lien familial enregistré pour l'instant. Ajoute un père/mère depuis la fiche, ou lie un enfant en le créant avec ce client comme parent.</div>` : ''}
+      </div>
+      <div style="padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
+        <button onclick="fermerModaleConstellation()" class="btn-secondary">Fermer</button>
+      </div>
+    </div>
+  `);
+}
+
 async function showClient(id) {
   // Empile où on était avant d'ouvrir cette fiche, pour que la flèche retour y ramène précisément
   const etatPrecedent = capturerEtatActuel();
@@ -240,6 +303,7 @@ async function showClient(id) {
         <button onclick="ouvrirSignatureMandat('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📄 Mandat de courtage</button>
         <button onclick="ouvrirEnvoiMandatCompagnies('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">✉️ Envoyer le mandat</button>
         ${!c.prenatal && c.segment !== 'Entreprise' ? `<button onclick="creerPrenataleDepuisParent('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🍼 Créer une prénatale</button>` : ''}
+        ${!isEntreprise ? `<button onclick="voirConstellationFamiliale('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🌳 Constellation familiale</button>` : ''}
         <button onclick="ouvrirUploadContratSignature('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📎 Faire signer un contrat</button>
         <button onclick="ouvrirModaleResiliation('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📝 Feuille de résiliation</button>
         <button onclick="prefillOpportuniteClientId='${c.id}'; opportuniteEnEditionId=null; navigate('nouvelle-opportunite')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:7px 16px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">🎯 Créer une opportunité</button>
@@ -255,7 +319,7 @@ async function showClient(id) {
         <div style="display:flex;gap:14px;align-items:center">
           ${headerIcon}
           <div>
-            <h2 style="margin:0;font-size:20px;font-weight:900;color:var(--text)">${displayName}</h2>
+            <h2 style="margin:0;font-size:20px;font-weight:900;color:var(--text)">${displayName}${getClientMiniLogos(c)}</h2>
             <div style="color:var(--text-muted);font-size:12px;margin-top:2px">${displaySub}</div>
             <div style="color:var(--text-muted);font-size:12px">${c.adresse || ''} ${c.npa || ''} ${c.ville || ''}</div>
           </div>

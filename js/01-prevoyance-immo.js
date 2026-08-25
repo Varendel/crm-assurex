@@ -244,13 +244,32 @@ function statutCommissionColor(statut) {
 // ═══ MARQUAGE CLIENT EX GROUPE / COFIDEX ═══
 // Logo EX Groupe officiel (logo officiel EX Groupe)
 
+// Facteur produit (FP) LPP Swiss Life — PAR PRODUIT EXACT, vérifié contre l'Annexe A à la
+// convention d'indemnisation Prévoyance professionnelle (PP), valable dès 01.01.2024 (PDF fourni
+// par Jonathan le 25.08.2026). Remplace l'ancien FP fixe à 1.20 qui surestimait la commission pour
+// tout produit autre que Business Invest/Premium/Select(Fondation SL)/Prime Solution.
+const SWISS_LIFE_LPP_FP = {
+  'Business Invest': 1.20,
+  'Business Premium': 1.20,
+  'Business Select (réserve à la Fondation de placement SL)': 1.20,
+  'Business Select (réserve gérée par un tiers)': 1.00,
+  'Prime Solution': 1.20,
+  'Business Protect (Super/Suplessa)': 0.85,
+  'Company Protect (Super/Suplessa)': 0.85,
+  'Company Risk (Super/Suplessa)': 0.60,
+  'Company Fixed Rate Risk (primes forfaitaires)': 0.60,
+  'Company Flatrate (avec commission)': 1.00,
+  'Company Flatrate (net, sans commission)': 0.00,
+  'Business Direct': 0.00,
+  'Contrats à tarification pluriannuelle': 0.00,
+};
+
 const TAUX_COMMISSION = {
   sante_facteur_mensuel: 16,   // santé complémentaire : prime mensuelle x 16 (acquisition unique)
   vie_taux_capital: 4,         // vie 3a : 4% du capital de production (prime mensuelle x12 x nb années)
-  lpp_fp: 1.20,                // LPP Swiss Life : facteur produit 1.20 (Business Invest/Premium/Select)
-  lpp_taux: 6.3,               // LPP Swiss Life : taux 6.3% (Annexe B convention SL1102)
+  lpp_taux: 6.3,               // LPP Swiss Life : taux 6.3% (Annexe B convention SL1102, vérifié 25.08.2026)
   lamal_forfait: 70,           // LAMal : forfait unique CHF 70.- par contrat à la signature
-  // COG annuelle LPP = prime_annuelle × 1.20 × 6.3% (versée trimestriellement)
+  // COG annuelle LPP = base risque+frais × FP (par produit exact, voir SWISS_LIFE_LPP_FP) × 6.3% (versée trimestriellement)
   // LAMal : CHF 70 une seule fois, à la signature, indépendant de la prime
   // Convention de collaboration HOTELA (entrée en vigueur 01.05.2026) — taux sur prime effectivement payée
   hotela: {

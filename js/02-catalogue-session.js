@@ -671,7 +671,16 @@ const CATALOGUE_PRODUITS = {
     { id: 'pj_pro', label: 'Protection juridique professionnelle / entreprise', segment: 'entreprise', modules: [] },
     { id: 'pj_contractuelle', label: 'Protection juridique contractuelle (véhicules)', segment: 'tous', modules: [] },
   ],
+  // Scindée en deux catégories le 25.08.2026 (demande de Jonathan) : "Prévoyance" = 2e pilier
+  // collectif/entreprise (LPP), "Prévoyance privée" = 3a/3b individuel. Sert notamment à
+  // restreindre le catalogue Swiss Life à ces deux seules catégories (voir
+  // compagnieEstAssureurViePur ci-dessous) — Swiss Life ne vend rien d'autre.
   'Prévoyance': [
+    // ── LPP 2e pilier entreprise ─────────────────────────────────────────
+    { id: 'lpp_entreprise', label: 'LPP collective (2e pilier entreprise)', segment: 'tous', modules: ['Business Invest', 'Business Premium', 'Business Select', 'Prime Solution', 'Business Protect', 'Company Protect'] },
+    { id: 'lpp_individuelle', label: 'LPP rachat / versement volontaire', segment: 'tous', modules: [] },
+  ],
+  'Prévoyance privée': [
     // ── Pilier 3a ────────────────────────────────────────────────────────
     { id: 'vie_3a', label: 'Assurance vie liée 3a (pilier 3a)', segment: 'prive', modules: ['Risque pur (décès/invalidité)', 'Mixte (épargne + risque)', 'Fonds de placement 3a'] },
     { id: 'compte_3a', label: 'Compte de prévoyance 3a (bancaire)', segment: 'prive', modules: [] },
@@ -682,9 +691,6 @@ const CATALOGUE_PRODUITS = {
     // ── Libre passage / autres ───────────────────────────────────────────
     { id: 'libre_passage', label: 'Police de libre passage (LPP sortie)', segment: 'prive', modules: [] },
     { id: 'prevoyance_enfant', label: 'Prévoyance enfant', segment: 'prive', modules: [] },
-    // ── LPP 2e pilier entreprise ─────────────────────────────────────────
-    { id: 'lpp_entreprise', label: 'LPP collective (2e pilier entreprise)', segment: 'tous', modules: ['Business Invest', 'Business Premium', 'Business Select', 'Prime Solution', 'Business Protect', 'Company Protect'] },
-    { id: 'lpp_individuelle', label: 'LPP rachat / versement volontaire', segment: 'tous', modules: [] },
   ],
   'Santé': [
     { id: 'lamal', label: 'LAMal (assurance de base)', segment: 'prive', modules: [], combinables: ['lca_autre_compagnie'] },
@@ -778,6 +784,18 @@ function compagnieEstAssureurSantePur(compagnieTexte) {
   const s = (compagnieTexte || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
   if (!s) return false;
   return COMPAGNIES_SANTE_PURE.some(c => s.includes(c));
+}
+
+// Assureurs-vie purs (Swiss Life, PAX...) — pas de licence non-vie en Suisse, ne vendent que de
+// la prévoyance (LPP collective/entreprise) et de la prévoyance privée (3a/3b). Sert à restreindre
+// "Catégorie" à ces deux-là dès que l'une de ces compagnies est renseignée, sur le même principe
+// que compagnieEstAssureurSantePur ci-dessus (demande de Jonathan le 25.08.2026). Dérivé de
+// COMPAGNIE_BRANCHES plutôt que d'une liste séparée, pour ne maintenir qu'une seule source de
+// vérité sur le périmètre de ces compagnies.
+function compagnieEstAssureurViePur(compagnieTexte) {
+  const nomNormalise = normaliserCompagnie(compagnieTexte);
+  const branches = COMPAGNIE_BRANCHES[nomNormalise];
+  return !!branches && branches.length === 2 && branches.includes('vie') && branches.includes('lpp');
 }
 
 // ─── Sélecteur "produits envisagés" sur l'opportunité — vue simplifiée ───────────────────────────────────────────────────────────────

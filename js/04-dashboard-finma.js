@@ -1389,7 +1389,8 @@ const ICONES_CATEGORIE_COUVERTURE = {
   'Bâtiment': '🏢',
   'Véhicule': '🚗',
   'Protection juridique': '⚖️',
-  'Prévoyance': '🌱',
+  'Prévoyance': '🏛️',
+  'Prévoyance privée': '🌱',
   'Santé': '➕',
   'Assurances de personnes (entreprise)': '👥',
   'Entreprise — risques spécifiques': '🏭',
@@ -1434,7 +1435,12 @@ const REGLES_CATEGORIE_PRODUIT_LIBRE = [
   ['Caution de loyer', p => /caution/i.test(p)],
   ['Bâtiment', p => /bâtiment/i.test(p)],
   ['Protection juridique', p => /protection juridique/i.test(p)],
-  ['Prévoyance', p => /\b3a\b|\b3b\b|pilier|assurance vie|vie liée|\blpp\b|libre passage|prévoyance/i.test(p)],
+  // Scindé en deux le 25.08.2026 (demande de Jonathan, catalogue Swiss Life restructuré) :
+  // "Prévoyance privée" (3a/3b individuel) est vérifié EN PREMIER — son vocabulaire (3a/3b/vie
+  // liée/libre passage) doit gagner avant la règle générique "Prévoyance" (LPP collectif),
+  // sinon "Police de libre passage (LPP sortie)" matcherait à tort sur \blpp\b.
+  ['Prévoyance privée', p => /\b3a\b|\b3b\b|assurance vie|vie liée|libre passage/i.test(p)],
+  ['Prévoyance', p => /pilier|\blpp\b|prévoyance/i.test(p)],
   ['Santé', p => /lamal|maladie|complémentaire|\blca\b|santé/i.test(p)],
   ["Entreprise — risques spécifiques", p => /perte d'exploitation|cyber|inventaire commercial|choses/i.test(p)],
 ];
@@ -1460,6 +1466,7 @@ const COULEUR_CATEGORIE_PRODUIT = {
   'Bâtiment': '#f97316',
   'Protection juridique': '#94a3b8',
   'Prévoyance': '#6366f1',
+  'Prévoyance privée': '#818cf8',
   'Santé': '#22c55e',
   'Assurances de personnes (entreprise)': '#ec4899',
   "Entreprise — risques spécifiques": '#ef4444',

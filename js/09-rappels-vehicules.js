@@ -459,6 +459,14 @@ function viewNouveauContrat() {
         <div id="ct-prime-taxes-note" style="font-size:10px;color:var(--text-muted);margin-top:3px;text-align:right"></div>
         <input type="hidden" id="ct-prime-mensuelle" value=""/>
       </div>
+      <div class="form-field" id="ct-produit-swisslife-lpp-field" style="display:none">
+        <label class="form-label">Produit Swiss Life exact — détermine le facteur produit (FP)</label>
+        <select class="form-select" id="ct-produit-swisslife-lpp" onchange="updateCommissionPreview()">
+          <option value="">— Sélectionner —</option>
+          ${Object.keys(SWISS_LIFE_LPP_FP).map(nom => `<option value="${nom}">${nom} (FP ${SWISS_LIFE_LPP_FP[nom].toFixed(2)})</option>`).join('')}
+        </select>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:3px">Annexe A à la convention d'indemnisation Prévoyance professionnelle (PP), valable dès 01.01.2024 — le FP varie selon le produit exact, jamais 1.20 partout.</div>
+      </div>
       <div class="form-field" id="ct-prime-risque-frais-field" style="display:none">
         <label class="form-label">Dont prime risque + frais (CHF/an) — base de calcul COG</label>
         <input class="form-input" id="ct-prime-risque-frais" type="number" placeholder="Hors part épargne" oninput="updateCommissionPreview()"/>
@@ -554,6 +562,9 @@ function updateCategorieOptions() {
   if (compagnieEstAssureurSantePur(compagnieTexte) && categoriesDisponibles.includes('Santé')) {
     categoriesDisponibles = ['Santé'];
   }
+  if (compagnieEstAssureurViePur(compagnieTexte)) {
+    categoriesDisponibles = categoriesDisponibles.filter(c => c === 'Prévoyance' || c === 'Prévoyance privée');
+  }
   const categoriePrecedente = catSelect.value;
   catSelect.innerHTML = categoriesDisponibles.map(cat => `<option value="${cat}">${cat}</option>`).join('');
   if (categoriesDisponibles.includes(categoriePrecedente)) catSelect.value = categoriePrecedente;
@@ -572,6 +583,9 @@ function appliquerRestrictionCategorieCompagnie() {
   let categoriesDisponibles = getCategoriesPourSegment(segment);
   if (compagnieEstAssureurSantePur(compagnieTexte) && categoriesDisponibles.includes('Santé')) {
     categoriesDisponibles = ['Santé'];
+  }
+  if (compagnieEstAssureurViePur(compagnieTexte)) {
+    categoriesDisponibles = categoriesDisponibles.filter(c => c === 'Prévoyance' || c === 'Prévoyance privée');
   }
   const optionsActuelles = Array.from(catSelect.options).map(o => o.value);
   const inchange = optionsActuelles.length === categoriesDisponibles.length && optionsActuelles.every((v, i) => v === categoriesDisponibles[i]);
@@ -1540,21 +1554,26 @@ function calculerCommissionEstimee() {
   }
 
   // ── LPP (prévoyance professionnelle 2e pilier) ─────────────────────────
-  // Formule COG Swiss Life : (prime risque + frais, HORS part épargne) × FP 1.20 × taux 6.3%
-  // Source : Annexe B convention SL1102, valable dès 01.01.2024
+  // Formule COG Swiss Life : (prime risque + frais, HORS part épargne) × FP (par produit exact,
+  // voir SWISS_LIFE_LPP_FP) × taux 6.3%. Source : Annexe A + Annexe B à la convention
+  // d'indemnisation Prévoyance professionnelle (PP), valables dès 01.01.2024 — vérifiées contre
+  // les PDF fournis par Jonathan le 25.08.2026. Le seuil "CHF 2'000 minimum" précédemment codé ici
+  // était introuvable dans ces annexes et a été retiré à sa demande (25.08.2026) — plus de
+  // commission à CHF 0 forcée en dessous d'un montant.
   // Swiss Life ne rémunère que sur risque + frais — jamais sur la part épargne de la prime totale.
   if (produitId === 'lpp_entreprise') {
     const primeRisqueFrais = parseFloat(document.getElementById('ct-prime-risque-frais')?.value) || 0;
     const baseCalcul = primeRisqueFrais > 0 ? primeRisqueFrais : primeAnnuelle;
-    if (baseCalcul < 2000) {
-      return { montant: 0, detail: `Base de calcul CHF ${fmtCHF(baseCalcul)} < CHF 2\u2019000 minimum — aucune COG Swiss Life` };
-    }
-    const cogAnnuelle = Math.round(baseCalcul * TAUX_COMMISSION.lpp_fp * (TAUX_COMMISSION.lpp_taux / 100));
+    const produitSwissLife = document.getElementById('ct-produit-swisslife-lpp')?.value || '';
+    const fpConnu = produitSwissLife && SWISS_LIFE_LPP_FP[produitSwissLife] !== undefined;
+    const fp = fpConnu ? SWISS_LIFE_LPP_FP[produitSwissLife] : 1.20;
+    const cogAnnuelle = Math.round(baseCalcul * fp * (TAUX_COMMISSION.lpp_taux / 100));
     const cogTrimestrielle = Math.round(cogAnnuelle / 4);
-    const avertissement = primeRisqueFrais > 0 ? '' : ' ⚠️ Prime risque+frais non renseignée ci-dessus — calcul sur la prime TOTALE, probablement surestimé (inclut la part épargne).';
+    const avertissementPrime = primeRisqueFrais > 0 ? '' : ' ⚠️ Prime risque+frais non renseignée ci-dessus — calcul sur la prime TOTALE, probablement surestimé (inclut la part épargne).';
+    const avertissementFp = fpConnu ? '' : ' ⚠️ Produit Swiss Life exact non précisé ci-dessus — FP 1.20 utilisé par défaut, à vérifier (varie de 0.00 à 1.20 selon le produit réel).';
     return {
       montant: cogAnnuelle,
-      detail: `COG Swiss Life : CHF ${fmtCHF(baseCalcul)} (risque+frais) × ${TAUX_COMMISSION.lpp_fp} (FP) × ${TAUX_COMMISSION.lpp_taux}% = CHF ${fmtCHF(cogAnnuelle)}/an (CHF ${fmtCHF(cogTrimestrielle)}/trimestre, versée en mars/juin/sept/déc)${avertissement}`,
+      detail: `COG Swiss Life : CHF ${fmtCHF(baseCalcul)} (risque+frais) × ${fp.toFixed(2)} (FP${produitSwissLife ? ' — ' + produitSwissLife : ''}) × ${TAUX_COMMISSION.lpp_taux}% = CHF ${fmtCHF(cogAnnuelle)}/an (CHF ${fmtCHF(cogTrimestrielle)}/trimestre, versée en mars/juin/sept/déc)${avertissementPrime}${avertissementFp}`,
     };
   }
 
@@ -1586,7 +1605,10 @@ function updateCommissionPreview() {
   document.getElementById('ct-manuel-field').style.display = 'block';
   const compagnieChoisie = (document.getElementById('ct-compagnie')?.value || '').trim().toLowerCase();
   const champRisqueFrais = document.getElementById('ct-prime-risque-frais-field');
-  if (champRisqueFrais) champRisqueFrais.style.display = (produitId === 'lpp_entreprise' && compagnieChoisie.includes('swiss life')) ? 'block' : 'none';
+  const estLppSwissLife = produitId === 'lpp_entreprise' && compagnieChoisie.includes('swiss life');
+  if (champRisqueFrais) champRisqueFrais.style.display = estLppSwissLife ? 'block' : 'none';
+  const champProduitSwissLife = document.getElementById('ct-produit-swisslife-lpp-field');
+  if (champProduitSwissLife) champProduitSwissLife.style.display = estLppSwissLife ? 'block' : 'none';
   const { montant, detail } = calculerCommissionEstimee();
   // LAMal + LCA = plusieurs contrats distincts (même n° de police, compagnies parfois différentes)
   // → plusieurs commissions distinctes seront créées à l'enregistrement. L'aperçu doit le montrer,

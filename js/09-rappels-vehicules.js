@@ -745,6 +745,22 @@ function calculerPrimeTotaleLignes() {
   }
   updateCommissionPreview();
 }
+// Capture le détail ligne par ligne tel que saisi (libellé + montant + catégorie de commission
+// si applicable) pour le PERSISTER sur le contrat (colonne detail_lignes, jsonb) — jusqu'ici ce
+// détail n'existait qu'en mémoire le temps du calcul puis disparaissait après enregistrement
+// (demande de Jonathan le 25.08.2026 : "rien ne s'est enregistré dans les lignes de primes...
+// ça serait bien de le retrouver"). Vaut aussi bien pour une saisie manuelle que pour un futur
+// pré-remplissage automatique (import PDF) : les deux passent par les mêmes champs .ct-prime-ligne.
+function collecterLignesPrimeSaisies() {
+  return Array.from(document.querySelectorAll('.ct-prime-ligne')).map(ligne => {
+    const libelle = (ligne.querySelector('.ct-prime-ligne-libelle')?.value || '').trim();
+    const montant = parseFloat(ligne.querySelector('.ct-prime-ligne-montant')?.value) || 0;
+    const catSelect = ligne.querySelector('.ct-prime-ligne-categorie');
+    const categorie = (catSelect && catSelect.style.display !== 'none' && catSelect.value) ? catSelect.value : null;
+    return { libelle, montant, categorie };
+  }).filter(l => l.libelle || l.montant > 0);
+}
+
 // Met à jour la ligne portant ce libellé si elle existe déjà (ex: reportée par la calculette
 // RC+Casco), sinon en crée une nouvelle — pour ne jamais écraser les autres lignes déjà saisies.
 function setOuAjouterLignePrime(libelle, montant) {
@@ -1634,7 +1650,7 @@ function updateCommissionPreview() {
   if (natureEl && labelEl) labelEl.textContent = natureEl.value === 'gestion' ? 'Commission de gestion estimée' : 'Commission d\u2019acquisition estimée';
 }
 
-async function creerContratEtCommission(clientId, compagnie, produitLabel, primeMensuelle, modules, montantCommission, detailCommission, plaques, dejaAnnuelle) {
+async function creerContratEtCommission(clientId, compagnie, produitLabel, primeMensuelle, modules, montantCommission, detailCommission, plaques, dejaAnnuelle, detailLignes) {
   const commissionne = document.getElementById('ct-commissionne').value !== 'non';
   const contratBody = {
     client_id: clientId,
@@ -1651,6 +1667,7 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
     date_echeance: document.getElementById('ct-echeance').value || null,
     statut: document.getElementById('ct-statut').value,
     commissionne,
+    detail_lignes: detailLignes && detailLignes.length > 0 ? detailLignes : null,
   };
   const rContrat = await dbPost('contrats', contratBody);
   if (rContrat && rContrat.error) return { error: true, detail: rContrat.detail || rContrat.status };
@@ -1766,7 +1783,7 @@ async function saveContrat() {
     marque: ligne.querySelector('.ct-plaque-marque-input')?.value.trim() || '',
   })).filter(l => l.plaque);
   const plaquesValeurs = lignesPlaques.map(l => l.plaque);
-  const resultPrincipal = await creerContratEtCommission(clientId, compagnie, produitLabel, primeMensuelle, modulesChoisis, commissionEstimee, detail, plaquesValeurs);
+  const resultPrincipal = await creerContratEtCommission(clientId, compagnie, produitLabel, primeMensuelle, modulesChoisis, commissionEstimee, detail, plaquesValeurs, false, collecterLignesPrimeSaisies());
   if (resultPrincipal.error) { showError('Erreur lors de la création du contrat: ' + resultPrincipal.detail); btn.textContent = '✓ Enregistrer le contrat'; btn.disabled = false; return; }
 
   // Peuple la table vehicules à partir des plaques saisies, pour que ce(s) véhicule(s) ressorte(nt)

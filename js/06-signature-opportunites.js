@@ -1145,6 +1145,63 @@ async function rouvrirRappelRapide(id) {
   showRappel(id);
 }
 
+// Report rapide de l'échéance d'un rappel/tâche — bouton demandé par Jonathan le 25.08.2026
+// ("repousser la tâche avec des dates préremplies, 1 semaine, 2 semaines, 1 mois... ou spécifique").
+// Le report part toujours d'AUJOURD'HUI (comme un "snooze" e-mail), pas de l'ancienne échéance —
+// c'est le sens naturel de "repousser" quand on reporte une tâche qu'on n'a pas eu le temps de
+// traiter. Reste sur la fiche (pas de navigate), même principe que traiterRappelRapide.
+function repousserRappelRapide(id, valeur) {
+  const select = document.getElementById('rd-repousser-select');
+  if (!valeur) return;
+  if (valeur === 'specifique') {
+    ouvrirModaleDateSpecifiqueRappel(id);
+    if (select) select.value = '';
+    return;
+  }
+  const jours = parseInt(valeur, 10);
+  if (!jours) { if (select) select.value = ''; return; }
+  const nouvelleDate = new Date();
+  nouvelleDate.setDate(nouvelleDate.getDate() + jours);
+  appliquerReportRappel(id, nouvelleDate.toISOString().split('T')[0]);
+  if (select) select.value = '';
+}
+
+function ouvrirModaleDateSpecifiqueRappel(id) {
+  creerModale('modal-date-specifique-rappel', `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px;width:100%;max-width:360px">
+      <h3 style="margin:0 0 14px;font-size:15px;font-weight:800;color:var(--text)">📅 Repousser à une date précise</h3>
+      <input class="form-input" id="date-report-specifique-rappel" type="date"/>
+      <div style="display:flex;gap:10px;margin-top:18px">
+        <button class="btn-secondary" onclick="document.getElementById('modal-date-specifique-rappel').remove()">Annuler</button>
+        <button class="btn-save" onclick="confirmerDateSpecifiqueRappel('${id}')">✓ Confirmer</button>
+      </div>
+    </div>
+  `);
+}
+
+async function confirmerDateSpecifiqueRappel(id) {
+  const val = document.getElementById('date-report-specifique-rappel')?.value;
+  if (!val) return;
+  document.getElementById('modal-date-specifique-rappel')?.remove();
+  await appliquerReportRappel(id, val);
+}
+
+async function appliquerReportRappel(id, nouvelleDateStr) {
+  const r = allRappels.find(x => x.id === id);
+  if (!r) return;
+  const ancienEventId = r.outlook_event_id;
+  const resultat = await dbPatch('rappels', id, { date_echeance: nouvelleDateStr, outlook_event_id: null });
+  if (resultat && resultat.error) { showError('Erreur lors du report : ' + errMsg(resultat)); return; }
+  r.date_echeance = nouvelleDateStr;
+  r.outlook_event_id = null;
+  if (ancienEventId) { try { await deleteOutlookEvent(ancienEventId); } catch(e) {} }
+  try {
+    const eventId = await createOutlookEventFromRappel(r);
+    if (eventId) { await dbPatch('rappels', id, { outlook_event_id: eventId }); r.outlook_event_id = eventId; }
+  } catch(e) {}
+  showRappel(id);
+}
+
 async function traiterRappel(id) {
   const r = allRappels.find(x => x.id === id);
   let resultat;

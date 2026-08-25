@@ -1206,6 +1206,14 @@ function showRappel(id) {
       <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">${isTache ? '📋' : '🔔'} ${r.titre}</h2>
       <div style="display:flex;align-items:center;gap:8px">
         ${(!r.outlook_event_id && (r.date_echeance || r.date_planifiee)) ? `<button onclick="synchroniserRappelOutlook('${r.id}')" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;border-radius:8px;padding:5px 12px;font-size:11.5px;font-weight:700;cursor:pointer">📅 Absent d'Outlook — synchroniser</button>` : ''}
+        <select id="rd-repousser-select" onchange="repousserRappelRapide('${r.id}', this.value)" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:8px;padding:6px 10px;font-size:11.5px;font-weight:700;cursor:pointer">
+          <option value="">⏰ Repousser…</option>
+          <option value="7">+ 1 semaine</option>
+          <option value="14">+ 2 semaines</option>
+          <option value="30">+ 1 mois</option>
+          <option value="90">+ 3 mois</option>
+          <option value="specifique">📅 Date spécifique…</option>
+        </select>
         <div style="display:flex;gap:6px">
           <button type="button" onclick="${r.statut === 'ouvert' ? '' : `rouvrirRappelRapide('${r.id}')`}" style="background:${r.statut === 'ouvert' ? '#f59e0b' : 'var(--surface-alt)'};color:${r.statut === 'ouvert' ? '#0a0e1a' : 'var(--text-muted)'};border:1px solid ${r.statut === 'ouvert' ? '#f59e0b' : 'var(--border)'};border-radius:20px;padding:6px 14px;font-size:11.5px;font-weight:800;cursor:pointer">🔓 Ouvert</button>
           <button type="button" onclick="${r.statut === 'ouvert' ? `traiterRappelRapide('${r.id}')` : ''}" style="background:${r.statut !== 'ouvert' ? '#4ade80' : 'var(--surface-alt)'};color:${r.statut !== 'ouvert' ? '#0a0e1a' : 'var(--text-muted)'};border:1px solid ${r.statut !== 'ouvert' ? '#4ade80' : 'var(--border)'};border-radius:20px;padding:6px 14px;font-size:11.5px;font-weight:800;cursor:pointer">✓ Traité</button>
@@ -1232,7 +1240,7 @@ function showRappel(id) {
     ${tacheParente ? `<div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:12.5px;color:var(--accent);cursor:pointer" onclick="showRappel('${tacheParente.id}')">🔗 Rappel automatique lié à la tâche : <strong>${tacheParente.titre}</strong></div>` : ''}
     ${rappelIntelligentLie ? `<div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:9px;padding:10px 14px;margin-bottom:14px;font-size:12.5px;color:var(--accent);cursor:pointer" onclick="showRappel('${rappelIntelligentLie.id}')">🔔 Rappel intelligent programmé le ${fmtDate(rappelIntelligentLie.date_echeance)} — <strong>${rappelIntelligentLie.statut === 'ouvert' ? 'ouvert' : 'traité'}</strong></div>` : ''}
 
-    ${isTache ? `<div id="rd-checklist-zone">${renderChecklistLoading()}</div>` : ''}
+    <div id="rd-checklist-zone">${renderChecklistLoading()}</div>
 
     ${sectionCard('Notes', '#a78bfa', `
       <textarea id="rd-notes" placeholder="Ajouter des informations, un contexte, un suivi..." style="width:100%;background:var(--surface-alt);border:1px solid var(--border);border-radius:9px;padding:12px 14px;color:var(--text);font-size:13px;outline:none;resize:vertical;min-height:120px;font-family:inherit;box-sizing:border-box">${r.notes || ''}</textarea>
@@ -1260,7 +1268,7 @@ function showRappel(id) {
     </div>`;
 
   insertBackBar({ homeId: 'rappels', homeLabel: 'Tâches & Rappels', itemLabel: r.titre });
-  if (isTache) loadAndRenderChecklist(id);
+  loadAndRenderChecklist(id);
 }
 
 function renderChecklistLoading() {
@@ -1272,7 +1280,7 @@ async function loadAndRenderChecklist(rappelId) {
   const zone = document.getElementById('rd-checklist-zone');
   if (!zone) return;
   const faites = etapes.filter(e => e.fait).length;
-  zone.innerHTML = sectionCard(`Étapes de la tâche (${faites}/${etapes.length})`, '#f59e0b', `
+  zone.innerHTML = sectionCard(`Étapes (${faites}/${etapes.length})`, '#f59e0b', `
     <div>
       ${etapes.map(e => `
         <div style="display:flex;align-items:center;gap:10px;padding:6px 0;${e.fait ? 'opacity:.6' : ''}">

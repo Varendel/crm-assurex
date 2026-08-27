@@ -478,11 +478,11 @@ function viewNouveauContrat() {
         <option value="2">Semestrielle</option>
         <option value="1">Annuelle</option>
       </select></div>
-      <div class="form-field" id="ct-duree-field" style="display:none"><label class="form-label">Durée du contrat (années)</label><input class="form-input" id="ct-duree" type="number" placeholder="10" value="1" oninput="updateCommissionPreview()"/></div>
+      <div class="form-field" id="ct-duree-field" style="display:none"><label class="form-label">Durée du contrat (années)</label><input class="form-input" id="ct-duree" type="number" placeholder="10" value="1" oninput="this.dataset.manuel='1';updateCommissionPreview()"/><div style="font-size:10px;color:var(--text-muted);margin-top:3px">Calculée automatiquement depuis les dates d'entrée en vigueur et d'échéance — modifiable manuellement.</div></div>
       <div class="form-field" id="ct-manuel-field"><label class="form-label">Montant manuel (CHF) — remplace le calcul automatique si rempli</label><input class="form-input" id="ct-manuel" type="number" placeholder="0 = laisser le calcul automatique" oninput="updateCommissionPreview()"/></div>
-      <div class="form-field"><label class="form-label">Date d'entrée en vigueur</label><input class="form-input" id="ct-date" type="date"/></div>
+      <div class="form-field"><label class="form-label">Date d'entrée en vigueur</label><input class="form-input" id="ct-date" type="date" onchange="updateCommissionPreview()"/></div>
       <div class="form-field"><label class="form-label">Date de signature</label><input class="form-input" id="ct-date-signature" type="date"/></div>
-      <div class="form-field"><label class="form-label">Date d'échéance</label><input class="form-input" id="ct-echeance" type="date"/></div>
+      <div class="form-field"><label class="form-label">Date d'échéance</label><input class="form-input" id="ct-echeance" type="date" onchange="updateCommissionPreview()"/></div>
       <div class="form-field"><label class="form-label">Agent / Apporteur</label><select class="form-select" id="ct-apporteur">
         <option value="">— Aucun / pas de partage —</option>
         ${allAgents.map(a => `<option value="${a.id}" ${contratClientId && allClients.find(c=>c.id===contratClientId)?.apporteur_id===a.id ? 'selected' : ''}>${a.prenom} ${a.nom}${a.role==='signataire'?' (moi-même)':''}</option>`).join('')}
@@ -1614,10 +1614,23 @@ function calculerLignesLCASaisies() {
   }).filter(l => l.nom && l.primeMensuelle > 0);
 }
 
+function syncDureeDepuisDates() {
+  const dureeEl = document.getElementById('ct-duree');
+  if (!dureeEl || dureeEl.dataset.manuel === '1') return;
+  const dEntree = document.getElementById('ct-date')?.value;
+  const dEcheance = document.getElementById('ct-echeance')?.value;
+  if (!dEntree || !dEcheance) return;
+  const jours = (new Date(dEcheance) - new Date(dEntree)) / 86400000;
+  if (jours <= 0) return;
+  dureeEl.value = Math.round((jours / 365.25) * 10) / 10;
+}
+
 function updateCommissionPreview() {
   const produit = getProduitSelectionne();
   const produitId = produit ? produit.id : null;
-  document.getElementById('ct-duree-field').style.display = produitId === 'vie_3a' ? 'block' : 'none';
+  const estVie3aOu3b = produitId === 'vie_3a' || produitId === 'vie_3b_mixte';
+  if (estVie3aOu3b) syncDureeDepuisDates();
+  document.getElementById('ct-duree-field').style.display = estVie3aOu3b ? 'block' : 'none';
   document.getElementById('ct-manuel-field').style.display = 'block';
   const compagnieChoisie = (document.getElementById('ct-compagnie')?.value || '').trim().toLowerCase();
   const champRisqueFrais = document.getElementById('ct-prime-risque-frais-field');

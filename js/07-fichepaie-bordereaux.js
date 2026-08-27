@@ -687,7 +687,7 @@ function formPrive() {
         </div>
       </div>
       <div class="form-field" style="grid-column:span 2;background:var(--surface-alt);border:1px solid var(--border);border-radius:9px;padding:10px 14px">
-        <label class="form-label" style="margin-bottom:6px;display:block">👪 Lien familial (optionnel) — reprend automatiquement adresse et téléphone du parent sélectionné</label>
+        <label class="form-label" style="margin-bottom:6px;display:block">👪 Lien familial (optionnel) — reprend automatiquement adresse, téléphone et email du parent sélectionné (corrigeable ensuite)</label>
         <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:10px">
           <div>
             <input class="form-input" id="f-pere-search" list="f-famille-suggestions" autocomplete="off" placeholder="🔎 Rechercher le père…" onchange="selectionnerLienFamilial('pere')"/>
@@ -806,6 +806,10 @@ function selectionnerLienFamilial(type) {
   if (!match) { if (hiddenEl) hiddenEl.value = ''; showError('Aucun client trouvé avec ce nom — le lien ne sera pas enregistré.'); return; }
   if (hiddenEl) hiddenEl.value = match.id;
   const setVal = (id, v) => { const el = document.getElementById(id); if (el && v) el.value = v; };
+  // Reprend aussi l'email désormais (en plus de l'adresse et du téléphone) — reste librement
+  // corrigeable à la main ensuite, ça ne fait qu'accélérer la saisie initiale (demande de
+  // Jonathan le 25.08.2026).
+  setVal('f-email', match.email);
   setVal('f-adresse', match.adresse);
   setVal('f-co', match.co);
   setVal('f-npa', match.npa);

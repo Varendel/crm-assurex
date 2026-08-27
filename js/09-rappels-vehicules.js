@@ -1415,6 +1415,12 @@ function estimerCommissionProduit(produitId, compagnieNom, primeSaisie, dureeAnn
   }
 }
 
+// Toute la gamme "Prévoyance privée" 3a/3b (assurance liée, compte bancaire, mixte, risque pur,
+// placement) partage la même règle de commission : 4% du capital de production. Élargi le
+// 27.08.2026 après que Jonathan a signalé qu'un 3b risque pur retombait à CHF 0 (seuls vie_3a et
+// vie_3b_mixte étaient couverts jusque-là).
+const PRODUITS_VIE_PRIVEE_CAPITAL = ['vie_3a', 'compte_3a', 'vie_3b_mixte', 'vie_3b_risque', 'vie_3b_placement'];
+
 function calculerCommissionEstimee() {
   const produit = getProduitSelectionne();
   const produitId = produit ? produit.id : null;
@@ -1561,8 +1567,9 @@ function calculerCommissionEstimee() {
     return { montant, detail: `CHF ${fmtCHF(primeMensuelle)}/mois × ${TAUX_COMMISSION.sante_facteur_mensuel} (taux santé) = CHF ${fmtCHF(montant)}` };
   }
 
-  // ── Vie / 3a et 3B mixte — même taux (à ajuster si Jonathan donne un taux différent pour le 3B) ──
-  if (produitId === 'vie_3a' || produitId === 'vie_3b_mixte') {
+  // ── Vie privée 3a et 3b (toutes variantes) — 4% du capital de production, même taux pour
+  // toute la gamme 3a/3b (règle confirmée par Jonathan le 27.08.2026) ──
+  if (PRODUITS_VIE_PRIVEE_CAPITAL.includes(produitId)) {
     const duree = parseFloat(document.getElementById('ct-duree')?.value) || 1;
     const capitalProduction = primeMensuelle * 12 * duree;
     const montant = Math.round(capitalProduction * (TAUX_COMMISSION.vie_taux_capital / 100));
@@ -1628,7 +1635,7 @@ function syncDureeDepuisDates() {
 function updateCommissionPreview() {
   const produit = getProduitSelectionne();
   const produitId = produit ? produit.id : null;
-  const estVie3aOu3b = produitId === 'vie_3a' || produitId === 'vie_3b_mixte';
+  const estVie3aOu3b = PRODUITS_VIE_PRIVEE_CAPITAL.includes(produitId);
   if (estVie3aOu3b) syncDureeDepuisDates();
   document.getElementById('ct-duree-field').style.display = estVie3aOu3b ? 'block' : 'none';
   document.getElementById('ct-manuel-field').style.display = 'block';

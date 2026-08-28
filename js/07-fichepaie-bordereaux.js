@@ -1995,6 +1995,19 @@ function viewNouvelleOpportunite() {
   const clientPrefillId = (!opp && prefillOpportuniteClientId) ? prefillOpportuniteClientId : null;
   const clientPrefille = clientPrefillId ? allClients.find(c => c.id === clientPrefillId) : null;
   prefillOpportuniteClientId = null;
+  // Filet de sécurité : si allAgents n'a pas encore été chargé (course de chargement au login,
+  // token expiré au moment du premier fetch, etc.), la liste "Agent responsable" apparaissait
+  // vide avec pour seule option "— Sélectionner —" (repéré par Jonathan le 28.08.2026). On
+  // recharge silencieusement en arrière-plan et on repeuple le <select> une fois les agents reçus.
+  if (allAgents.length === 0) {
+    dbGet('agents', 'select=*').then(rows => {
+      if (rows.length > 0) {
+        allAgents = rows;
+        const sel = document.getElementById('o-agent');
+        if (sel) sel.innerHTML = '<option value="">— Sélectionner —</option>' + allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
+      }
+    });
+  }
   const agentOptions = allAgents.map(a => `<option value="${a.id}" ${opp && opp.apporteur_id === a.id ? 'selected' : ''}>${a.prenom} ${a.nom}</option>`).join('');
   const stadesOptions = ['Contact','Analyse','Proposition','Négociation','Gagné','Perdu'];
   const qa = (s) => (s || '').toString().replace(/"/g, '&quot;');

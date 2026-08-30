@@ -1489,14 +1489,27 @@ async function envoyerSignatureAutonome(token) {
   const aDessine = pixels.some((v, i) => i % 4 === 3 && v > 0);
   if (!aDessine) { alert('Merci de signer avant d\u2019envoyer.'); return; }
   const signatureDataUrl = canvas.toDataURL('image/png');
-  try {
-    await fetch(`${SUPABASE_URL}/rest/v1/signature_requests?token=eq.${encodeURIComponent(token)}`, {
-      method: 'PATCH',
-      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
-      body: JSON.stringify({ signature_data: signatureDataUrl, statut: 'signe' }),
-    });
-  } catch (e) { /* affichage de confirmation optimiste malgré tout — la page est fermée juste après par le client */ }
   const zone = document.getElementById('contenu-signature-autonome');
+  const boutonEnvoi = document.querySelector('#contenu-signature-autonome button[onclick*="envoyerSignatureAutonome"]');
+  if (boutonEnvoi) { boutonEnvoi.textContent = 'Envoi en cours...'; boutonEnvoi.disabled = true; }
+  // Corrige un bug du 30.08.2026 repéré par Jonathan : le PATCH direct sur signature_requests
+  // avec la clé publique anonyme ne modifiait JAMAIS la ligne (0 ligne affectée, silencieusement,
+  // sans erreur HTTP) car Postgres/PostgREST exige une policy SELECT pour localiser la ligne à
+  // mettre à jour lors d'un UPDATE — or elle avait été retirée pour le rôle anonyme lors du
+  // durcissement sécurité du 07.08.2026 (elle exposait toutes les signatures/documents à qui
+  // connaît la clé publique). Le code affichait quand même "signature transmise" dans tous les
+  // cas (succès optimiste, sans vérifier le résultat) — d'où "le lien fonctionne, la signature ne
+  // se récupère pas" : le client voyait une confirmation, mais rien n'était enregistré. Corrigé en
+  // passant par une fonction RPC SECURITY DEFINER (submit_signature_request, même principe que
+  // get_signature_request pour la lecture) qui contourne la RLS sans rouvrir l'accès en lecture
+  // anonyme, et en vérifiant réellement le résultat avant d'afficher un message de succès.
+  const resultats = await dbRpc('submit_signature_request', { p_token: token, p_signature_data: signatureDataUrl });
+  const succes = resultats && resultats[0] === true;
+  if (!succes) {
+    if (boutonEnvoi) { boutonEnvoi.textContent = '✓ Envoyer ma signature'; boutonEnvoi.disabled = false; }
+    zone.insertAdjacentHTML('beforeend', `<p style="color:#c0392b;font-size:11.5px;margin-top:10px">Erreur lors de l'envoi — vérifie ta connexion et réessaie. Si ça persiste, contacte la personne qui t'a envoyé ce lien.</p>`);
+    return;
+  }
   zone.innerHTML = `<div style="font-size:40px;margin-bottom:10px">✅</div><p style="color:#333;font-weight:700">Merci, votre signature a été transmise !</p><p style="color:#888;font-size:12.5px">Vous pouvez fermer cette page.</p>`;
 }
 
@@ -1745,19 +1758,23 @@ function genererMandatCourtage(clientId, signatureDataUrl) {
     .print-btn{margin-top:25px;padding:10px 20px;background:#113679;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px}
     @media print {
       .print-btn { display: none !important; }
-      body { padding: 15px 25px; font-size: 11px; }
-      h1 { font-size: 17px; margin: 6px 0 2px; }
-      .sous-titre { margin-bottom: 12px; }
-      h2 { margin: 10px 0 5px; font-size: 12px; }
+      body { padding: 10px 20px; font-size: 10px; line-height: 1.32; }
+      h1 { font-size: 16px; margin: 4px 0 2px; }
+      .sous-titre { margin-bottom: 10px; }
+      h2 { margin: 8px 0 4px; font-size: 11.5px; }
       table { margin-bottom: 2px; }
-      td { padding: 5px 8px; font-size: 10.5px; }
-      ol li { margin-bottom: 5px; font-size: 10.5px; }
-      p { margin: 5px 0; }
-      .signatures { margin-top: 22px; }
-      .ligne-signature { margin-top: 30px; }
-      .footer { margin-top: 14px; padding-top: 6px; }
+      td { padding: 4px 7px; font-size: 10px; }
+      ol { padding-left: 16px; }
+      ol li { margin-bottom: 3px; font-size: 10px; }
+      p { margin: 4px 0; }
+      .art45-intro { font-size: 9.5px !important; line-height: 1.28; }
+      .art45-table td, .art45-table th { padding: 5px 7px !important; font-size: 9px !important; }
+      .donnees-texte { font-size: 8.7px !important; line-height: 1.22; }
+      .signatures { margin-top: 16px; }
+      .ligne-signature { margin-top: 22px; }
+      .footer { margin-top: 10px; padding-top: 5px; font-size: 8.5px; }
       .page-break { page-break-before: always; }
-      @page { margin: 12mm; }
+      @page { margin: 9mm; }
     }
   </style></head><body>
 
@@ -1813,7 +1830,7 @@ function genererMandatCourtage(clientId, signatureDataUrl) {
     <div class="page-break"></div>
 
     <h2 style="margin-top:0">INFORMATIONS RELATIVES AU MANDATAIRE – ART. 45 LSA</h2>
-    <p style="font-size:11px">Votre conseiller ou son employeur agit comme courtier non lié, et travaille sur mandat de ses clients selon prestations convenues dans le mandat de courtage. Une rémunération forfaitaire est octroyée pour l'acquisition de contrats d'assurance, et se monte à septante francs maximum pour l'assurance de base, et seize primes pour la complémentaire. Il collabore avec les assureurs indiqués qui lui versent des courtages prévalant sur le marché. Le courtier est lui-même responsable en cas de faute, de négligence, d'information erronée qu'il peut commettre dans le cadre de son activité d'intermédiaire. Votre conseiller est autorisé à négocier les produits d'assurance des assureurs pour les branches et les assureurs porteurs des risques suivants :</p>
+    <p class="art45-intro" style="font-size:11px">Votre conseiller ou son employeur agit comme courtier non lié, et travaille sur mandat de ses clients selon prestations convenues dans le mandat de courtage. Une rémunération forfaitaire est octroyée pour l'acquisition de contrats d'assurance, et se monte à septante francs maximum pour l'assurance de base, et seize primes pour la complémentaire. Il collabore avec les assureurs indiqués qui lui versent des courtages prévalant sur le marché. Le courtier est lui-même responsable en cas de faute, de négligence, d'information erronée qu'il peut commettre dans le cadre de son activité d'intermédiaire. Votre conseiller est autorisé à négocier les produits d'assurance des assureurs pour les branches et les assureurs porteurs des risques suivants :</p>
 
     <table class="art45-table">
       <tr><th>Type d'assurance</th><th>Assureur(s) porteur(s) du risque</th></tr>
@@ -1827,7 +1844,7 @@ function genererMandatCourtage(clientId, signatureDataUrl) {
     </table>
 
     <h2>UTILISATION DES DONNÉES À DES FINS PROFESSIONNELLES</h2>
-    <p style="font-size:10.5px;text-align:justify">L'intermédiaire saisit et utilise vos données personnelles et administratives pour définir vos besoins actuels et futurs en matière d'assurance, afin d'établir une offre et/ou pour les transmettre avec vos données médicales aux assureurs concernés en vue de traiter votre/vos proposition(s) d'assurance(s) et le contrat qui s'en suit. Il/Elle peut conserver une copie des documents contractuels dans son dossier et recevoir de l'assureur des données clients, notamment en ce qui concerne l'acceptation de la proposition, l'exécution du contrat d'assurance, l'encaissement ou la résiliation. Les assureurs utiliseront vos données dans le respect de la Loi sur la protection des données, pour évaluer le risque à assurer, pour le traitement des sinistres, ainsi que pour le suivi administratif, statistique et financier de(s) l'assurance(s) contractée(s), de même que pour le suivi administratif et financier entre l'intermédiaire et l'assureur porteur du risque. Vos données personnelles et administratives peuvent être utilisées par l'intermédiaire et/ou par les assureurs porteurs du risque et/ou par d'autres partenaires des assureurs dans le contexte d'actions de marketing, notamment la transmission par poste, e-mail, téléphone ou SMS d'informations et de publicités concernant leurs offres et produits. Les données personnelles sont généralement conservées sous la forme électronique et/ou papier. Elles sont conservées aussi longtemps que la loi, la gestion du contrat d'assurance, des sinistres, des droits de recours, du recouvrement, de la rémunération de l'intermédiaire et/ou d'éventuels litiges entre l'assureur, l'assuré, l'intermédiaire ou de tiers l'exigent.</p>
+    <p class="donnees-texte" style="font-size:10.5px;text-align:justify">L'intermédiaire saisit et utilise vos données personnelles et administratives pour définir vos besoins actuels et futurs en matière d'assurance, afin d'établir une offre et/ou pour les transmettre avec vos données médicales aux assureurs concernés en vue de traiter votre/vos proposition(s) d'assurance(s) et le contrat qui s'en suit. Il/Elle peut conserver une copie des documents contractuels dans son dossier et recevoir de l'assureur des données clients, notamment en ce qui concerne l'acceptation de la proposition, l'exécution du contrat d'assurance, l'encaissement ou la résiliation. Les assureurs utiliseront vos données dans le respect de la Loi sur la protection des données, pour évaluer le risque à assurer, pour le traitement des sinistres, ainsi que pour le suivi administratif, statistique et financier de(s) l'assurance(s) contractée(s), de même que pour le suivi administratif et financier entre l'intermédiaire et l'assureur porteur du risque. Vos données personnelles et administratives peuvent être utilisées par l'intermédiaire et/ou par les assureurs porteurs du risque et/ou par d'autres partenaires des assureurs dans le contexte d'actions de marketing, notamment la transmission par poste, e-mail, téléphone ou SMS d'informations et de publicités concernant leurs offres et produits. Les données personnelles sont généralement conservées sous la forme électronique et/ou papier. Elles sont conservées aussi longtemps que la loi, la gestion du contrat d'assurance, des sinistres, des droits de recours, du recouvrement, de la rémunération de l'intermédiaire et/ou d'éventuels litiges entre l'assureur, l'assuré, l'intermédiaire ou de tiers l'exigent.</p>
 
     <h2>AUTORISATION DE PRISE DE CONTACT</h2>
     <p style="font-size:11px">Adresse recommandée avec autorisation : _________________________ – par : _________________________</p>

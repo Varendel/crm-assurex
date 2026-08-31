@@ -624,7 +624,7 @@ async function showClient(id) {
             <td style="padding:10px 12px;font-weight:700;color:var(--text)">${col.nom || '—'}</td>
             <td style="padding:10px 12px;color:var(--text)">${col.prenom || '—'}</td>
             <td style="padding:10px 12px;color:var(--text-muted)">${fmtDate(col.date_naissance)}</td>
-            <td style="padding:10px 12px;color:var(--text-muted)">${col.telephone || '—'}</td>
+            <td style="padding:10px 12px;color:var(--text-muted)">${col.mobile || '—'}</td>
             <td style="padding:10px 12px;color:var(--text-muted)">${col.adresse || '—'}</td>
             <td style="padding:10px 12px;color:var(--text-muted);font-family:monospace">${col.avs || '—'}</td>
             <td style="padding:10px 12px;text-align:right">

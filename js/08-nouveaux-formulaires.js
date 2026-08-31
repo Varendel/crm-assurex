@@ -709,7 +709,7 @@ async function saveCollaborateur(clientId) {
     nom,
     prenom,
     date_naissance: document.getElementById('col-naissance').value || null,
-    telephone: document.getElementById('col-tel').value.trim() || null,
+    mobile: document.getElementById('col-tel').value.trim() || null,
     adresse: document.getElementById('col-adresse').value.trim() || null,
     avs: document.getElementById('col-avs').value.trim() || null,
   };

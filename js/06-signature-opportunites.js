@@ -561,16 +561,7 @@ async function changerStadeOpportuniteRapide(id, nouveauStade) {
   if (r && r.error) { showError('Erreur lors du changement de stade : ' + errMsg(r)); return; }
   opp.stade = nouveauStade;
   if (nouveauStade === 'Gagné') {
-    const produits = Array.isArray(opp.produits) ? opp.produits : [];
-    if (produits.length > 1) {
-      proposerConversionMultiContrats(opp);
-    } else {
-      prefillOpportunite = opp;
-      prefillOpportuniteProduitId = produits[0] || null;
-      oppFileAttenteProduits = [];
-      contratClientId = opp.client_id || null;
-      navigate('nouveau-contrat');
-    }
+    proposerActionApresGain(opp);
     return;
   }
   // Synchronise le <select> #o-stade (caché dans le formulaire "Contrat" plus bas) pour qu'un
@@ -596,19 +587,76 @@ async function changerStadeOpportunite(id, nouveauStade) {
   opp.stade = nouveauStade;
 
   if (nouveauStade === 'Gagné') {
-    const produits = Array.isArray(opp.produits) ? opp.produits : [];
-    if (produits.length > 1) {
-      proposerConversionMultiContrats(opp);
-    } else {
-      prefillOpportunite = opp;
-      prefillOpportuniteProduitId = produits[0] || null;
-      oppFileAttenteProduits = [];
-      contratClientId = opp.client_id || null;
-      navigate('nouveau-contrat');
-    }
+    proposerActionApresGain(opp);
   } else {
     navigate('opportunites');
   }
+}
+
+// Opportunité passée en "Gagné" : propose de créer le contrat maintenant (cas normal) OU de
+// relier directement un contrat déjà existant si celui-ci a été saisi séparément avant que
+// l'opportunité ne soit mise à jour (demande de Jonathan le 31.08.2026). Sans ça, on était
+// systématiquement forcé dans le formulaire de création, quitte à créer un doublon.
+function proposerActionApresGain(opp) {
+  const contratsClient = opp.client_id ? allContrats.filter(ct => ct.client_id === opp.client_id) : [];
+  creerModale('modal-action-opp-gagnee', `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
+      <h3 style="margin:0 0 8px;font-size:16px;font-weight:800;color:var(--text)">🎉 Opportunité gagnée</h3>
+      <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:18px">"<strong>${opp.titre}</strong>" — le contrat correspondant a-t-il déjà été créé, ou faut-il le créer maintenant ?</div>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <button class="btn-save" onclick="document.getElementById('modal-action-opp-gagnee').remove(); demarrerCreationContratDepuisOpp('${opp.id}')">📝 Créer le contrat maintenant</button>
+        <button class="btn-secondary" ${contratsClient.length === 0 ? 'disabled style="opacity:0.5;cursor:not-allowed"' : ''} onclick="${contratsClient.length ? `ouvrirSelectionContratExistant('${opp.id}')` : ''}">🔗 Relier un contrat déjà créé${contratsClient.length ? ` (${contratsClient.length})` : ''}</button>
+        <button class="btn-secondary" style="opacity:0.7" onclick="document.getElementById('modal-action-opp-gagnee').remove(); navigate('opportunites')">Plus tard</button>
+      </div>
+      ${!opp.client_id ? `<div style="font-size:10.5px;color:#f59e0b;margin-top:12px">⚠️ Cette opportunité n'a pas de fiche client rattachée — impossible de proposer un contrat existant à relier.</div>` : (contratsClient.length === 0 ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:12px">Aucun contrat existant trouvé pour ce client.</div>` : '')}
+    </div>`);
+}
+
+function demarrerCreationContratDepuisOpp(oppId) {
+  const opp = allOpportunites.find(o => o.id === oppId);
+  if (!opp) return;
+  const produits = Array.isArray(opp.produits) ? opp.produits : [];
+  if (produits.length > 1) {
+    proposerConversionMultiContrats(opp);
+  } else {
+    prefillOpportunite = opp;
+    prefillOpportuniteProduitId = produits[0] || null;
+    oppFileAttenteProduits = [];
+    contratClientId = opp.client_id || null;
+    navigate('nouveau-contrat');
+  }
+}
+
+function ouvrirSelectionContratExistant(oppId) {
+  const opp = allOpportunites.find(o => o.id === oppId);
+  if (!opp) return;
+  const contratsClient = allContrats.filter(ct => ct.client_id === opp.client_id);
+  document.getElementById('modal-action-opp-gagnee')?.remove();
+  creerModale('modal-lier-contrat-existant', `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:26px;width:100%;max-width:480px">
+      <h3 style="margin:0 0 6px;font-size:15px;font-weight:800;color:var(--text)">🔗 Relier "${opp.titre}" à un contrat existant</h3>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">Sélectionne le contrat déjà créé pour ce client :</div>
+      <select class="form-select" id="select-contrat-existant" style="width:100%;margin-bottom:16px">
+        <option value="">— Sélectionner —</option>
+        ${contratsClient.map(ct => `<option value="${ct.id}">${ct.produit || 'Contrat'} — ${ct.compagnie || '—'}${ct.numero_police ? ' (' + ct.numero_police + ')' : ''} — ${ct.date_debut ? fmtDate(ct.date_debut) : 'date inconnue'}</option>`).join('')}
+      </select>
+      <div style="display:flex;gap:10px">
+        <button class="btn-secondary" onclick="document.getElementById('modal-lier-contrat-existant').remove(); navigate('opportunites')">Annuler</button>
+        <button class="btn-save" onclick="confirmerLienContratExistant('${oppId}')">✓ Relier</button>
+      </div>
+    </div>`);
+}
+
+async function confirmerLienContratExistant(oppId) {
+  const contratId = document.getElementById('select-contrat-existant')?.value;
+  if (!contratId) { showError('Sélectionne un contrat dans la liste.'); return; }
+  const r = await dbPatch('opportunites', oppId, { contrat_id: contratId });
+  if (r && r.error) { showError('Erreur lors de la liaison : ' + errMsg(r)); return; }
+  document.getElementById('modal-lier-contrat-existant')?.remove();
+  const opp = allOpportunites.find(o => o.id === oppId);
+  if (opp) opp.contrat_id = contratId;
+  showError('✓ Opportunité reliée au contrat existant.');
+  navigate('opportunites');
 }
 
 // Marquer une opportunité "Perdue" demande toujours un motif libre (demande de Jonathan le

@@ -1093,7 +1093,7 @@ const TYPES_RAPPEL = ['Suivi', 'Contrat', 'Opportunité', 'Admin', 'Commande fic
 
 // Types de RDV proposés côté client sur la page de réservation en autonomie — liste de départ,
 // ajustable comme TYPES_RAPPEL (demande de Jonathan le 10.08.2026 : prise de RDV reliée aux clients).
-const TYPES_RDV = ['Premier contact', 'Bilan besoins', 'Signature de contrat', 'Suivi annuel', 'Suivi sinistre', 'Autre'];
+const TYPES_RDV = ['Premier contact', 'Bilan besoins', 'Signature de contrat', 'Suivi annuel', 'Suivi sinistre', 'Cofidex — Économie fiscale (10 min)', 'Cofidex — Analyse prévoyance (20 min)', 'Cofidex — Point assurance entreprise (15-20 min)', 'Autre'];
 
 function estRoleRH() {
   return !!(currentUser && currentUser.role === 'rh');

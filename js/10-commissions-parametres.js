@@ -699,10 +699,17 @@ function segmentParDefautCampagne(t) {
 
 function reglagesCampagne(t) {
   if (!campagneReglages[t.id]) {
-    campagneReglages[t.id] = { segment: segmentParDefautCampagne(t), sansSante: false, emailUniquement: false, sujet: null, corps: null, exclusions: [] };
+    campagneReglages[t.id] = { segment: segmentParDefautCampagne(t), sansSante: false, emailUniquement: false, cofidexUniquement: cofidexParDefautCampagne(t), sujet: null, corps: null, exclusions: [] };
   }
   if (!campagneReglages[t.id].exclusions) campagneReglages[t.id].exclusions = [];
   return campagneReglages[t.id];
+}
+
+// Coche "Clients EX (Cofidex) uniquement" par défaut pour les campagnes dont le titre mentionne
+// Cofidex — évite d'avoir à y penser à chaque ouverture pour les 2 campagnes du plan Assurex x
+// Cofidex, sans figer ce comportement pour les autres campagnes (case toujours modifiable ensuite).
+function cofidexParDefautCampagne(t) {
+  return /cofidex/i.test(t.titre || '');
 }
 
 // Clients qui correspondent aux critères automatiques (segment + filtres intelligents), AVANT
@@ -716,6 +723,7 @@ function ciblesEligiblesCampagne(t) {
     if (r.segment === 'entreprise' && !estEntreprise(c)) return false;
     if (r.sansSante && clientAComplementaireSanteActive(c.id)) return false;
     if (r.emailUniquement && !c.email) return false;
+    if (r.cofidexUniquement && !c.source_cofidex) return false;
     return t.filtre(c);
   });
 }
@@ -927,6 +935,10 @@ function showCampagne(themeId) {
         <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);cursor:pointer">
           <input type="checkbox" ${r.emailUniquement ? 'checked' : ''} onchange="appliquerReglageCampagne('${t.id}','emailUniquement',this.checked)"/>
           Email renseigné uniquement (nécessaire pour un envoi)
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);cursor:pointer">
+          <input type="checkbox" ${r.cofidexUniquement ? 'checked' : ''} onchange="appliquerReglageCampagne('${t.id}','cofidexUniquement',this.checked)"/>
+          Clients EX (Cofidex) uniquement
         </label>
       </div>
       <div style="font-size:11px;color:var(--text-muted);margin-top:10px">${ciblesEligibles.length} client${ciblesEligibles.length !== 1 ? 's' : ''} correspond${ciblesEligibles.length !== 1 ? 'ent' : ''} à ces critères sur ${allClients.length} au total — ${cibles.length} effectivement ciblé${cibles.length !== 1 ? 's' : ''} après retraits manuels ci-dessous.</div>

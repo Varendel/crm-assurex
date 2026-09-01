@@ -451,7 +451,7 @@ async function showEditContrat(contratId, returnTo) {
   const nbVehiculesLies = estContratVehicule ? (allVehicules || []).filter(v => v.contrat_id === ct.id).length : 0;
 
   creerModale('modal-edit-contrat', `
-    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:520px">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto">
       <h3 style="margin:0 0 20px;font-size:16px;font-weight:800;color:var(--text)">Modifier le contrat</h3>
       <div class="form-grid">
         <div class="form-field"><label class="form-label">Produit</label><input class="form-input" id="ect-produit" value="${ct.produit || ''}"/></div>

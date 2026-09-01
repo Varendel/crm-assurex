@@ -1104,7 +1104,29 @@ async function creerRdvInterne(agentId) {
   if (res && res.error) { showError('Erreur : ' + errMsg(res)); return; }
   if (res && res[0]) allRendezVous.push(res[0]);
   document.getElementById('modal-nouveau-rdv')?.remove();
-  showError('✓ Rendez-vous créé.');
+  // Synchro Outlook immédiate — auparavant absente ici (contrairement aux rappels/tâches), le RDV
+  // ne remontait dans l'agenda Outlook qu'à la prochaine connexion via synchroniserRdvEtDispoOutlook
+  // (js/03), en silence. Repéré par Jonathan le 31.08.2026 : "j'ai créé le rdv mais il n'apparaît
+  // pas dans mon outlook". Comme pour les rappels : on tente tout de suite, on prévient clairement
+  // en cas d'échec (session Outlook expirée ou non connectée), le bouton 📅 sur la fiche RDV reste
+  // le rattrapage manuel.
+  let messageOutlook = '';
+  if (res && res[0] && res[0].id) {
+    try {
+      const eventId = await createOutlookEventFromRdv(res[0]);
+      if (eventId) {
+        await dbPatch('rendez_vous', res[0].id, { outlook_event_id: eventId });
+        res[0].outlook_event_id = eventId;
+        const idx = allRendezVous.findIndex(r => r.id === res[0].id);
+        if (idx >= 0) allRendezVous[idx].outlook_event_id = eventId;
+      } else {
+        messageOutlook = !msalAccessToken
+          ? " ⚠️ Pas dans l'agenda Outlook — tu n'es pas connecté à Outlook (ou la connexion a expiré). Reconnecte-toi puis utilise le bouton 📅 sur la fiche du RDV."
+          : " ⚠️ L'ajout à l'agenda Outlook a échoué — réessaie via le bouton 📅 sur la fiche du RDV.";
+      }
+    } catch (e) { messageOutlook = " ⚠️ L'ajout à l'agenda Outlook a échoué — réessaie via le bouton 📅 sur la fiche du RDV."; }
+  }
+  showError('✓ Rendez-vous créé.' + messageOutlook);
   // Revient sur la fiche client si le RDV a été créé depuis là (onglet RDV) — sinon retour à la
   // vue liste "Rendez-vous" comme avant.
   if (vueDetailActive && vueDetailActive.type === 'client' && clientId && vueDetailActive.id === clientId) showClient(clientId);

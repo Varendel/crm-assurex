@@ -907,8 +907,20 @@ function fmtDate(d) {
 // Extrait un message d'erreur lisible depuis une réponse {error, detail, status} de dbPost/dbPatch
 function errMsg(r) {
   if (!r) return 'Erreur inconnue';
-  if (r.detail && typeof r.detail === 'object') return r.detail.message || r.detail.hint || JSON.stringify(r.detail);
-  return r.detail || r.status || 'Erreur inconnue';
+  const message = (r.detail && typeof r.detail === 'object') ? (r.detail.message || r.detail.hint || JSON.stringify(r.detail)) : (r.detail || r.status || 'Erreur inconnue');
+  // Code Postgres 42501 = violation de policy RLS (accès refusé). Dans ce CRM ça n'arrive
+  // quasiment jamais pour un vrai refus métier — presque toujours parce que la session a expiré
+  // en cours d'usage et que l'appel est silencieusement retombé sur la clé publique anonyme, qui
+  // n'a le droit d'écrire nulle part dans l'app (sauf sur les quelques pages publiques dédiées :
+  // signature à distance, prise de RDV). Repéré par Jonathan le 31.08.2026 : "impossible de créer
+  // un nouveau client" avec ce code alors qu'il était bien connecté au départ — le message d'erreur
+  // brut de Postgres ne disait rien de tout ça. Détecté ici une bonne fois pour toutes plutôt que
+  // dans chaque écran séparément.
+  const code = (r.detail && typeof r.detail === 'object') ? r.detail.code : null;
+  if (code === '42501' || r.status === 401) {
+    return 'Session expirée — recharge la page et reconnecte-toi, puis réessaie. (' + message + ')';
+  }
+  return message;
 }
 
 // Crée une fenêtre modale standard (fond sombre + boîte centrée) et l'ajoute au document.

@@ -464,7 +464,15 @@ async function showEditContrat(contratId, returnTo) {
         <div class="form-field"><label class="form-label">Date d'entrée en vigueur</label><input class="form-input" id="ect-date-debut" type="date" value="${ct.date_debut || ''}"/></div>
         <div class="form-field"><label class="form-label">Date de signature</label><input class="form-input" id="ect-date-signature" type="date" value="${ct.date_signature || ''}"/></div>
         <div class="form-field"><label class="form-label">Date d'échéance</label><input class="form-input" id="ect-echeance" type="date" value="${ct.date_echeance || ''}"/></div>
-        <div class="form-field"><label class="form-label">Prime par échéance (CHF)</label><input class="form-input" id="ect-prime" type="number" value="${primeAff}" oninput="updateApercuPrimeAnnuelle()"/></div>
+        <div class="form-field" style="grid-column:span 2" id="ect-prime-lignes-field">
+          <label class="form-label">Lignes de prime <span style="font-weight:400;color:var(--text-muted);font-size:10px">(une ligne par poste de la police — corrige, ajoute ou supprime librement)</span></label>
+          <div id="ect-prime-lignes-list" style="display:flex;flex-direction:column;gap:6px;margin-top:6px"></div>
+          <button type="button" onclick="ajouterLignePrimeEdit()" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;margin-top:8px">+ Ajouter une ligne</button>
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
+            <span style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Total par échéance</span>
+            <span id="ect-prime-total-affiche" style="font-size:17px;font-weight:900;color:var(--accent)">CHF 0</span>
+          </div>
+        </div>
         <div class="form-field"><label class="form-label">Périodicité</label>
           <select class="form-select" id="ect-periodicite" onchange="updateApercuPrimeAnnuelle()">
             ${perioOpts.map(o => `<option value="${o.value}" ${String(o.value)===String(perioActuelle)?'selected':''}>${o.label}</option>`).join('')}
@@ -524,6 +532,51 @@ async function showEditContrat(contratId, returnTo) {
         <button class="btn-save" onclick="saveEditContrat('${ct.id}','${ct.client_id}', window._editContratReturnTo)">✓ Enregistrer</button>
       </div>
     </div>`);
+  // Pré-remplit les lignes de prime : reprend le détail sauvegardé à la création (detail_lignes)
+  // s'il existe, sinon retombe sur une seule ligne "Prime totale" avec le montant par échéance
+  // déjà connu — garantit que même les contrats créés avant l'existence de detail_lignes restent
+  // éditables ligne par ligne dès maintenant.
+  setTimeout(() => {
+    if (Array.isArray(ct.detail_lignes) && ct.detail_lignes.length > 0) {
+      ct.detail_lignes.forEach(l => ajouterLignePrimeEdit(l.libelle || '', l.montant || ''));
+    } else {
+      ajouterLignePrimeEdit('Prime totale', primeAff || '');
+    }
+  }, 0);
+}
+
+function ajouterLignePrimeEdit(libelle = '', montant = '') {
+  const list = document.getElementById('ect-prime-lignes-list');
+  if (!list) return;
+  const ligne = document.createElement('div');
+  ligne.className = 'ect-prime-ligne';
+  ligne.style.cssText = 'display:flex;gap:8px;align-items:center';
+  const libelleEch = (libelle || '').toString().replace(/"/g, '&quot;');
+  ligne.innerHTML = `
+    <input class="form-input ect-prime-ligne-libelle" placeholder="Ex: Responsabilité civile privée" value="${libelleEch}" style="flex:1" oninput="calculerPrimeTotaleLignesEdit()"/>
+    <input class="form-input ect-prime-ligne-montant" type="number" step="0.01" placeholder="CHF" value="${montant}" style="width:120px" oninput="calculerPrimeTotaleLignesEdit()"/>
+    <button type="button" onclick="this.parentElement.remove(); calculerPrimeTotaleLignesEdit()" style="background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;flex-shrink:0">✕</button>
+  `;
+  list.appendChild(ligne);
+  calculerPrimeTotaleLignesEdit();
+}
+
+function calculerPrimeTotaleLignesEdit() {
+  const lignes = Array.from(document.querySelectorAll('.ect-prime-ligne'));
+  let total = 0;
+  lignes.forEach(ligne => { total += parseFloat(ligne.querySelector('.ect-prime-ligne-montant')?.value) || 0; });
+  total = Math.round(total * 100) / 100;
+  const decimales = lignes.some(l => (parseFloat(l.querySelector('.ect-prime-ligne-montant')?.value) || 0) % 1 !== 0);
+  const affiche = document.getElementById('ect-prime-total-affiche');
+  if (affiche) affiche.textContent = 'CHF ' + total.toLocaleString('fr-CH', { minimumFractionDigits: decimales ? 2 : 0 });
+  updateApercuPrimeAnnuelle();
+}
+
+function collecterLignesPrimeEditSaisies() {
+  return Array.from(document.querySelectorAll('.ect-prime-ligne')).map(ligne => ({
+    libelle: (ligne.querySelector('.ect-prime-ligne-libelle')?.value || '').trim(),
+    montant: parseFloat(ligne.querySelector('.ect-prime-ligne-montant')?.value) || 0,
+  })).filter(l => l.libelle || l.montant > 0);
 }
 
 async function deleteContrat(contratId, clientId, returnTo) {
@@ -552,7 +605,8 @@ async function deleteContrat(contratId, clientId, returnTo) {
 }
 
 function updateApercuPrimeAnnuelle() {
-  const prime = parseFloat(document.getElementById('ect-prime')?.value) || 0;
+  const lignes = Array.from(document.querySelectorAll('.ect-prime-ligne'));
+  const prime = lignes.reduce((s, l) => s + (parseFloat(l.querySelector('.ect-prime-ligne-montant')?.value) || 0), 0);
   const perio = parseInt(document.getElementById('ect-periodicite')?.value) || 1;
   const annuelle = Math.round(prime * perio * 100) / 100;
   const el = document.getElementById('ect-apercu-annuel');
@@ -561,7 +615,8 @@ function updateApercuPrimeAnnuelle() {
 
 async function saveEditContrat(contratId, clientId, returnTo) {
   const periodicite = parseInt(document.getElementById('ect-periodicite').value) || 1;
-  const primeParEcheance = parseFloat(document.getElementById('ect-prime').value) || 0;
+  const lignesPrimeEdit = collecterLignesPrimeEditSaisies();
+  const primeParEcheance = lignesPrimeEdit.reduce((s, l) => s + (l.montant || 0), 0);
   const primeAnnuelle = Math.round(primeParEcheance * periodicite * 100) / 100;
   const commissionne = document.getElementById('ect-commissionne').value !== 'non';
   const ancienContrat = allContrats.find(c => c.id === contratId);
@@ -575,6 +630,7 @@ async function saveEditContrat(contratId, clientId, returnTo) {
     date_echeance: document.getElementById('ect-echeance').value || null,
     prime_annuelle: primeAnnuelle,
     periodicite: periodicite,
+    detail_lignes: lignesPrimeEdit.length > 0 ? lignesPrimeEdit : null,
     statut: document.getElementById('ect-statut').value,
     commissionne,
     apporteur_id: document.getElementById('ect-apporteur').value || null,

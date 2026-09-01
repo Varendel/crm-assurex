@@ -67,7 +67,7 @@ function viewOpportunites() {
   ].map(v => `<button class="tab-btn ${vueModePipeline === v.id ? 'active' : ''}" onclick="vueModePipeline='${v.id}';navigate('opportunites')">${v.label}</button>`).join('');
 
   let corps;
-  if (vueModePipeline === 'liste') corps = renderListeOpportunites(allOpportunites, nomClient, tousLesStades, stadeColor, rhMode);
+  if (vueModePipeline === 'liste') corps = renderListeOpportunites(OPPS, nomClient, tousLesStades, stadeColor, rhMode);
   else if (vueModePipeline === 'echeances') corps = renderEcheancesOpportunites(OPPS, nomClient, stadeColor, rhMode);
   else if (vueModePipeline === 'priorites') corps = renderPrioritesOpportunites(OPPS, nomClient, stadeColor, rhMode);
   else corps = renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, tousLesStades, nomClient, rhMode);

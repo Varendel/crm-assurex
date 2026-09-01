@@ -1840,7 +1840,7 @@ function genererMandatCourtage(clientId, signatureDataUrl) {
       <tr><td>Assurances choses – Véhicules à moteur</td><td>Groupe Mutuel, 1920 Martigny · AXA Winterthur, 1003 Lausanne · Allianz, 1023 Crissier · La Mobilière Riviera · Vaudoise Riviera</td></tr>
       <tr><td>Assurances choses – Inventaire du ménage</td><td>Groupe Mutuel, 1920 Martigny · AXA Winterthur, 1003 Lausanne · Allianz, 1023 Crissier · La Mobilière Riviera · Vaudoise Riviera</td></tr>
       <tr><td>Protection juridique – Privée / Entreprise</td><td>Groupe Mutuel, 1920 Martigny · AXA Winterthur, 1003 Lausanne · Allianz, 1023 Crissier · La Mobilière Riviera · Orion, Bâle</td></tr>
-      <tr><td>Assurances d'entreprises – LAA / LAAC / LPP / IJM / RC Prof / PEE</td><td>Groupe Mutuel, 1920 Martigny · AXA Winterthur, 1003 Lausanne · Allianz, 1023 Crissier · La Mobilière Riviera · Vaudoise Riviera</td></tr>
+      <tr><td>Assurances d'entreprises – LAA / LAAC / LPP / IJM / RC Prof / PEE</td><td>Groupe Mutuel, 1920 Martigny · AXA Winterthur, 1003 Lausanne · Allianz, 1023 Crissier · La Mobilière Riviera · Vaudoise Riviera · Swiss Life, Lausanne</td></tr>
     </table>
 
     <h2>UTILISATION DES DONNÉES À DES FINS PROFESSIONNELLES</h2>

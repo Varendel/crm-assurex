@@ -690,6 +690,52 @@ function clientAComplementaireSanteActive(clientId) {
 // uniquement (remis à zéro au rechargement), pour rester simple et rapide à utiliser.
 let campagneReglages = {};
 
+// Filtre année sélectionné pour le tableau "Gestion & acquisition par client" de l'onglet
+// OZ Assure (null = par défaut la dernière année complète disponible) — en mémoire uniquement.
+let ozAnneeGestionClient = null;
+function changerAnneeOzGestionClient(valeur) {
+  ozAnneeGestionClient = valeur || null;
+  navigate('oz-assure');
+}
+
+// Classe un libellé de mouvement (commissions_oz.type_mouvement, texte libre et peu homogène
+// dans la source historique) en Acquisition / Gestion / Autre — sert à distinguer le
+// commissionnement ponctuel (signature) du commissionnement récurrent (gestion du portefeuille),
+// utile notamment pour chiffrer la contribution de gestion apportée à la fusion Assurex/Cofidex.
+function classerTypeMouvementOz(t) {
+  const s = (t || '').toLowerCase();
+  if (s.includes('acquisition')) return 'Acquisition';
+  if (s.includes('gestion')) return 'Gestion';
+  return 'Autre';
+}
+
+// Export CSV du tableau "Gestion & acquisition par client" tel qu'affiché à l'écran (dépend du
+// filtre année en cours) — mis en cache par viewOzAssure() juste avant son rendu, sur le même
+// principe que window._contactsCompagnies.
+function exporterOzGestionClientCsv() {
+  const rows = window._ozGestionClientRows || [];
+  if (!rows.length) { showError('Aucune donnée à exporter pour cette période.'); return; }
+  const label = window._ozGestionAnneeLabel || 'Toutes années';
+  const entetes = ['Client', 'Gestion (CHF)', 'Acquisition (CHF)', 'Autre (CHF)', 'Total (CHF)'];
+  const echapper = (v) => {
+    const s = String(v == null ? '' : v).replace(/"/g, '""');
+    return /[;"\n]/.test(s) ? `"${s}"` : s;
+  };
+  const lignes = rows.map(l => [l.client, Math.round(l.ges), Math.round(l.acq), Math.round(l.autre), Math.round(l.total)].map(echapper).join(';'));
+  const csv = '\uFEFF' + entetes.join(';') + '\n' + lignes.join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `oz-assure_gestion-acquisition_${label.replace(/[^a-z0-9]+/gi, '-')}_${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  showError(`✓ Fichier téléchargé — ${rows.length} client(s), ${label}.`);
+}
+
+
 function segmentParDefautCampagne(t) {
   const s = (t.segment || '').trim().toLowerCase();
   if (s === 'entreprise') return 'entreprise';
@@ -1309,6 +1355,11 @@ async function viewOzAssure() {
   let totalVieComm = 0, totalNonVieComm = 0;
   let totalDebit = 0, totalCredit = 0;
 
+  // ── Acquisition vs Gestion (par année et par client) — voir classerTypeMouvementOz() ──
+  const parType = { Acquisition: 0, Gestion: 0, Autre: 0 };
+  const parAnneeType = {};
+  const parClientAnneeType = {};
+
   data.forEach(r => {
     const date = r.date_mouvement || '';
     const annee = date.slice(0, 4);
@@ -1324,11 +1375,44 @@ async function viewOzAssure() {
     if (isVie) totalVieComm += net; else totalNonVieComm += net;
     totalDebit += Number(r.debit || 0);
     totalCredit += Number(r.credit || 0);
+
+    const typeClasse = classerTypeMouvementOz(r.type_mouvement);
+    parType[typeClasse] += net;
+    if (!parAnneeType[annee]) parAnneeType[annee] = { Acquisition: 0, Gestion: 0, Autre: 0 };
+    parAnneeType[annee][typeClasse] += net;
+    if (r.client_nom && r.client_nom !== '-') {
+      if (!parClientAnneeType[r.client_nom]) parClientAnneeType[r.client_nom] = {};
+      if (!parClientAnneeType[r.client_nom][annee]) parClientAnneeType[r.client_nom][annee] = { Acquisition: 0, Gestion: 0, Autre: 0 };
+      parClientAnneeType[r.client_nom][annee][typeClasse] += net;
+    }
   });
 
   const totalNet = totalCredit - totalDebit;
   const annees = Object.keys(parAnnee).sort();
   const compagnies = Object.entries(parCompagnie).sort((a,b) => b[1]-a[1]);
+
+  // ── Acquisition vs Gestion : totaux, année par défaut (dernière ANNÉE COMPLÈTE si dispo,
+  // sinon la plus récente), et tableau par client pour l'année sélectionnée ──
+  const totalGestion = parType.Gestion;
+  const totalAcquisition = parType.Acquisition;
+  const totalAutreType = parType.Autre;
+  const totalTypeSum = (totalGestion + totalAcquisition + totalAutreType) || 1;
+  const anneeActuelle = today.getFullYear();
+  const anneesCompletes = annees.filter(a => Number(a) < anneeActuelle);
+  const anneeParDefaut = anneesCompletes.length ? anneesCompletes[anneesCompletes.length - 1] : (annees[annees.length - 1] || null);
+  const anneeFiltreEffective = (ozAnneeGestionClient === 'tous' || (ozAnneeGestionClient && annees.includes(ozAnneeGestionClient))) ? ozAnneeGestionClient : (anneeParDefaut || 'tous');
+  const lignesClientGestion = Object.entries(parClientAnneeType).map(([client, parAn]) => {
+    let acq = 0, ges = 0, autre = 0;
+    if (anneeFiltreEffective === 'tous') {
+      Object.values(parAn).forEach(v => { acq += v.Acquisition; ges += v.Gestion; autre += v.Autre; });
+    } else {
+      const v = parAn[anneeFiltreEffective] || { Acquisition: 0, Gestion: 0, Autre: 0 };
+      acq = v.Acquisition; ges = v.Gestion; autre = v.Autre;
+    }
+    return { client, acq, ges, autre, total: acq + ges + autre };
+  }).filter(l => l.total !== 0).sort((a, b) => b.ges - a.ges);
+  window._ozGestionClientRows = lignesClientGestion;
+  window._ozGestionAnneeLabel = anneeFiltreEffective === 'tous' ? 'Toutes années' : anneeFiltreEffective;
   const produitsComm = Object.entries(parProduitComm).sort((a,b) => b[1]-a[1]);
   const mois = Object.keys(parMois).sort();
   const nbClientsComm = Object.keys(parClientComm).length;
@@ -1491,6 +1575,88 @@ async function viewOzAssure() {
         </div>`).join('') || '<div class="table-empty">Aucune donnée.</div>'}
     </div>
 
+    <!-- Acquisition vs Gestion -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">Acquisition vs Gestion</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px">Toutes années confondues — distingue le commissionnement ponctuel (signature) du commissionnement récurrent (gestion du portefeuille), utile pour chiffrer la contribution apportée à la fusion Assurex / Cofidex.</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
+        <div style="background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.3);border-radius:12px;padding:14px 16px">
+          <div style="font-size:10.5px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:.5px">Gestion (récurrent)</div>
+          <div style="font-size:19px;font-weight:900;color:#4ade80;margin-top:4px">${chf(totalGestion)}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${Math.round(totalGestion/totalTypeSum*100)}% du total</div>
+        </div>
+        <div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.3);border-radius:12px;padding:14px 16px">
+          <div style="font-size:10.5px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.5px">Acquisition (ponctuel)</div>
+          <div style="font-size:19px;font-weight:900;color:var(--accent);margin-top:4px">${chf(totalAcquisition)}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${Math.round(totalAcquisition/totalTypeSum*100)}% du total</div>
+        </div>
+        <div style="background:var(--surface-alt);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
+          <div style="font-size:10.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Autre (ristournes, régularisations)</div>
+          <div style="font-size:19px;font-weight:900;color:var(--text-muted);margin-top:4px">${chf(totalAutreType)}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${Math.round(totalAutreType/totalTypeSum*100)}% du total</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Gestion par année -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">Gestion par année</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px">Pour un calcul de contribution à la fusion, préférer une année <strong>complète</strong> plutôt qu'une année en cours (partielle).</div>
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <thead><tr style="color:var(--text-muted);font-size:10.5px;text-transform:uppercase">
+          <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">Année</th>
+          <th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border)">Gestion</th>
+          <th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border)">Acquisition</th>
+          <th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border)">Total</th>
+          <th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border)"></th>
+        </tr></thead>
+        <tbody>${annees.map(a => {
+          const v = parAnneeType[a] || { Acquisition: 0, Gestion: 0, Autre: 0 };
+          const complete = Number(a) < anneeActuelle;
+          return `<tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:8px 10px;font-weight:700;color:var(--text)">${a}</td>
+            <td style="padding:8px 10px;text-align:right;font-weight:800;color:#4ade80">${chf(v.Gestion)}</td>
+            <td style="padding:8px 10px;text-align:right;color:var(--accent)">${chf(v.Acquisition)}</td>
+            <td style="padding:8px 10px;text-align:right;color:var(--text-muted)">${chf(v.Gestion + v.Acquisition + v.Autre)}</td>
+            <td style="padding:8px 10px;text-align:right">${complete ? '<span style="font-size:10px;font-weight:700;color:#4ade80;background:rgba(74,222,128,0.12);border-radius:6px;padding:2px 8px">✓ Année complète</span>' : '<span style="font-size:10px;font-weight:700;color:#f59e0b;background:rgba(245,158,11,0.12);border-radius:6px;padding:2px 8px">En cours</span>'}</td>
+          </tr>`;
+        }).join('') || '<tr><td colspan="5" class="table-empty">Aucune donnée.</td></tr>'}</tbody>
+      </table>
+    </div>
+
+    <!-- Gestion & acquisition par client -->
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:4px">
+        <div style="font-size:13px;font-weight:800;color:var(--text)">Gestion & acquisition par client</div>
+        <div style="display:flex;gap:8px;align-items:center">
+          <select class="form-select" style="font-size:12px;padding:6px 10px" onchange="changerAnneeOzGestionClient(this.value)">
+            <option value="tous" ${anneeFiltreEffective === 'tous' ? 'selected' : ''}>Toutes années</option>
+            ${annees.map(a => `<option value="${a}" ${anneeFiltreEffective === a ? 'selected' : ''}>${a}${Number(a) < anneeActuelle ? ' (complète)' : ' (en cours)'}</option>`).join('')}
+          </select>
+          <button class="btn-secondary" style="padding:6px 12px;font-size:11.5px" onclick="exporterOzGestionClientCsv()">📊 Exporter CSV</button>
+        </div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px">Trié par gestion décroissante — c'est ce montant qui représente le mieux la valeur récurrente que chaque client apporte au portefeuille.</div>
+      <div style="max-height:420px;overflow-y:auto">
+      <table style="width:100%;border-collapse:collapse;font-size:12.5px">
+        <thead><tr style="color:var(--text-muted);font-size:10.5px;text-transform:uppercase;position:sticky;top:0;background:var(--surface)">
+          <th style="padding:8px 10px;text-align:left;border-bottom:1px solid var(--border)">Client</th>
+          <th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border)">Gestion</th>
+          <th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border)">Acquisition</th>
+          <th style="padding:8px 10px;text-align:right;border-bottom:1px solid var(--border)">Total</th>
+        </tr></thead>
+        <tbody>${lignesClientGestion.map(l => `
+          <tr style="border-bottom:1px solid var(--border)">
+            <td style="padding:8px 10px;font-weight:700;color:var(--text)">${l.client}</td>
+            <td style="padding:8px 10px;text-align:right;font-weight:800;color:#4ade80">${l.ges ? chf(l.ges) : '—'}</td>
+            <td style="padding:8px 10px;text-align:right;color:var(--accent)">${l.acq ? chf(l.acq) : '—'}</td>
+            <td style="padding:8px 10px;text-align:right;color:var(--text-muted)">${chf(l.total)}</td>
+          </tr>`).join('') || '<tr><td colspan="4" class="table-empty">Aucune donnée pour cette période.</td></tr>'}
+        </tbody>
+      </table>
+      </div>
+    </div>
+
     <div style="display:grid;grid-template-columns:repeat(${Math.min(annees.length,4) || 1},1fr);gap:12px;margin-bottom:24px">
       ${annees.map(a => `
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px">
@@ -1585,6 +1751,18 @@ async function viewOzAssure() {
       <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
         <thead><tr style="background:#f0f0f0"><th style="border:1px solid #ccc;padding:6px 10px;text-align:left;font-size:11px">Année</th><th style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-size:11px">Total net</th></tr></thead>
         <tbody>${annees.map(a => `<tr><td style="border:1px solid #ccc;padding:6px 10px">${a}</td><td style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-weight:700">${chf(parAnnee[a])}</td></tr>`).join('')}</tbody>
+      </table>
+
+      <div style="font-size:13px;font-weight:800;margin-bottom:8px">Gestion vs Acquisition par année</div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
+        <thead><tr style="background:#f0f0f0"><th style="border:1px solid #ccc;padding:6px 10px;text-align:left;font-size:11px">Année</th><th style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-size:11px">Gestion</th><th style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-size:11px">Acquisition</th><th style="border:1px solid #ccc;padding:6px 10px;text-align:center;font-size:11px">Statut</th></tr></thead>
+        <tbody>${annees.map(a => { const v = parAnneeType[a] || {Acquisition:0,Gestion:0,Autre:0}; return `<tr><td style="border:1px solid #ccc;padding:6px 10px">${a}</td><td style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-weight:700">${chf(v.Gestion)}</td><td style="border:1px solid #ccc;padding:6px 10px;text-align:right">${chf(v.Acquisition)}</td><td style="border:1px solid #ccc;padding:6px 10px;text-align:center;font-size:10px">${Number(a) < anneeActuelle ? 'Complète' : 'En cours'}</td></tr>`; }).join('')}</tbody>
+      </table>
+
+      <div style="font-size:13px;font-weight:800;margin-bottom:8px">Gestion & acquisition par client — ${window._ozGestionAnneeLabel || 'Toutes années'}</div>
+      <table style="width:100%;border-collapse:collapse;margin-bottom:20px;font-size:10.5px">
+        <thead><tr style="background:#f0f0f0"><th style="border:1px solid #ccc;padding:5px 8px;text-align:left">Client</th><th style="border:1px solid #ccc;padding:5px 8px;text-align:right">Gestion</th><th style="border:1px solid #ccc;padding:5px 8px;text-align:right">Acquisition</th><th style="border:1px solid #ccc;padding:5px 8px;text-align:right">Total</th></tr></thead>
+        <tbody>${lignesClientGestion.map(l => `<tr><td style="border:1px solid #ccc;padding:5px 8px">${l.client}</td><td style="border:1px solid #ccc;padding:5px 8px;text-align:right;font-weight:700">${l.ges ? chf(l.ges) : '—'}</td><td style="border:1px solid #ccc;padding:5px 8px;text-align:right">${l.acq ? chf(l.acq) : '—'}</td><td style="border:1px solid #ccc;padding:5px 8px;text-align:right">${chf(l.total)}</td></tr>`).join('')}</tbody>
       </table>
 
       <div style="font-size:13px;font-weight:800;margin-bottom:8px">Répartition par compagnie</div>

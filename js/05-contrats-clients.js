@@ -1504,13 +1504,55 @@ async function envoyerSignatureAutonome(token) {
   // get_signature_request pour la lecture) qui contourne la RLS sans rouvrir l'accès en lecture
   // anonyme, et en vérifiant réellement le résultat avant d'afficher un message de succès.
   const resultats = await dbRpc('submit_signature_request', { p_token: token, p_signature_data: signatureDataUrl });
-  const succes = resultats && resultats[0] === true;
+  // Depuis le 02.09.2026, cette RPC renvoie aussi les données nécessaires pour proposer au client
+  // une copie du document tout juste signé (demande de Jonathan : "proposer au client une fois le
+  // mandat créé de l'enregistrer pour copie pour lui") — soit le PDF déjà uploadé (document_data,
+  // cas contrat/résiliation), soit les champs client permettant de reconstruire le même mandat de
+  // courtage HTML que celui généré côté CRM (cas mandat, voir construireHtmlMandat plus haut).
+  const r = resultats && resultats[0];
+  const succes = r && r.succes === true;
   if (!succes) {
     if (boutonEnvoi) { boutonEnvoi.textContent = '✓ Envoyer ma signature'; boutonEnvoi.disabled = false; }
     zone.insertAdjacentHTML('beforeend', `<p style="color:#c0392b;font-size:11.5px;margin-top:10px">Erreur lors de l'envoi — vérifie ta connexion et réessaie. Si ça persiste, contacte la personne qui t'a envoyé ce lien.</p>`);
     return;
   }
-  zone.innerHTML = `<div style="font-size:40px;margin-bottom:10px">✅</div><p style="color:#333;font-weight:700">Merci, votre signature a été transmise !</p><p style="color:#888;font-size:12.5px">Vous pouvez fermer cette page.</p>`;
+
+  let boutonCopie = '';
+  if ((r.type === 'contrat' || r.type === 'resiliation') && r.document_data) {
+    // Document déjà uploadé (contrat/proposition/résiliation) : le PDF original est directement
+    // téléchargeable, pas besoin de le reconstruire.
+    boutonCopie = `<a href="${r.document_data}" download="${(r.document_nom || 'document-signe').replace(/[^a-z0-9._-]+/gi, '-')}.pdf" style="display:block;margin-top:16px;padding:10px;border-radius:8px;border:1.5px solid #0f2244;color:#0f2244;font-weight:700;font-size:12.5px;text-decoration:none">📄 Enregistrer ma copie (PDF)</a>`;
+  } else if (!r.type) {
+    // Mandat de courtage à texte fixe : reconstruit le même document que celui généré côté CRM,
+    // avec la signature qui vient d'être apposée, à partir des champs renvoyés par la RPC.
+    window._copieMandatAutonome = {
+      champs: {
+        nom: r.client_nom || '', prenom: r.client_prenom || '', societe: r.client_societe || '',
+        naissanceOuIde: r.client_naissance_ide || '', adresse: r.client_adresse || '', co: r.client_co || '',
+        npaLocalite: r.client_npa_localite || '', tel: r.client_tel || '', email: r.client_email || '',
+        contactEntreprise: r.client_contact_entreprise || '',
+      },
+      signatureDataUrl,
+      signatureMandataire: r.agent_signature || null,
+    };
+    boutonCopie = `<button onclick="ouvrirCopieMandatAutonome()" style="display:block;width:100%;margin-top:16px;padding:10px;border-radius:8px;border:1.5px solid #0f2244;background:#fff;color:#0f2244;font-weight:700;font-size:12.5px;cursor:pointer">📄 Enregistrer ma copie (PDF)</button>`;
+  }
+
+  zone.innerHTML = `<div style="font-size:40px;margin-bottom:10px">✅</div><p style="color:#333;font-weight:700">Merci, votre signature a été transmise !</p>${boutonCopie}<p style="color:#888;font-size:12.5px;margin-top:10px">Vous pouvez fermer cette page.</p>`;
+}
+
+// Ouvre, dans un nouvel onglet sur l'appareil du client, la copie du mandat de courtage tout
+// juste signé — mêmes données que window._copieMandatAutonome stocké par envoyerSignatureAutonome()
+// ci-dessus. Un onglet séparé (plutôt qu'un data: URI) pour un rendu fiable multi-navigateurs, avec
+// le même bouton "Imprimer / Enregistrer en PDF" que partout ailleurs dans le CRM.
+function ouvrirCopieMandatAutonome() {
+  const d = window._copieMandatAutonome;
+  if (!d) return;
+  const html = construireHtmlMandat(d.champs, d.signatureDataUrl, d.signatureMandataire);
+  const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  window.open(url, '_blank');
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 // ═══ RÉSERVATION DE RDV EN AUTONOMIE — page publique liée à un agent (?rdv=TOKEN) ═══
@@ -1707,36 +1749,13 @@ function genererIcsRdv(etat, dureeMin, nomInvite) {
   return 'data:text/calendar;charset=utf-8,' + encodeURIComponent(ics);
 }
 
-function genererMandatCourtage(clientId, signatureDataUrl) {
-  const c = allClients.find(x => x.id === clientId);
-  if (!c) { showError('Client introuvable.'); return; }
-  const isEnt = estEntreprise(c);
-
-  // Découpage adresse : "adresse" seul + "ville" contient déjà "NPA Localité" (convention existante du CRM)
-  const npaLocalite = c.ville || '';
-
-  const champs = {
-    nom: isEnt ? '' : (c.nom || ''),
-    prenom: isEnt ? '' : (c.prenom || ''),
-    societe: isEnt ? (c.nom || '') : '',
-    naissanceOuIde: isEnt ? (c.ide || '') : (c.date_naissance ? fmtDate(c.date_naissance) : ''),
-    adresse: c.adresse || '',
-    co: c.co || '',
-    npaLocalite,
-    tel: c.tel || c.mobile || c.telephone || '',
-    email: c.email || '',
-    contactEntreprise: isEnt ? (c.prenom || '') : '',
-  };
-
-  // Signature du mandataire (Jonathan/Assurex) enregistrée une fois dans Paramètres → Agents
-  // (voir enregistrerMaSignature, js/10) et reprise automatiquement sur tous les mandats générés,
-  // avec la date du jour — demande de Jonathan le 07.08.2026 : ne plus avoir à signer à la main
-  // à chaque mandat.
-  const agentSignataire = allAgents.find(a => a.role === 'signataire');
-  const signatureMandataire = agentSignataire ? agentSignataire.signature_image : null;
-
-  const win = window.open('', '_blank');
-  const contenuMandatHtml = `<html><head><meta charset="utf-8"><title>Mandat de courtage — ${isEnt ? champs.societe : champs.prenom + ' ' + champs.nom}</title><style>
+// Construit le HTML complet du mandat de courtage (2 pages : mandat + info Art.45 LSA) à partir de
+// données déjà résolues (`champs`) plutôt que de relire allClients — permet de réutiliser exactement
+// le même document depuis un contexte authentifié (genererMandatCourtage) ET depuis la page de
+// signature autonome publique (envoyerSignatureAutonome), qui reçoit ses données via une fonction RPC
+// plutôt que par accès direct à allClients (non disponible pour un visiteur non connecté).
+function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire) {
+  return `<html><head><meta charset="utf-8"><title>Mandat de courtage — ${champs.societe ? champs.societe : champs.prenom + ' ' + champs.nom}</title><style>
     body{font-family:Arial,sans-serif;padding:35px;color:#1a1a1a;font-size:12.5px;line-height:1.5}
     .entete{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #113679;padding-bottom:14px;margin-bottom:20px}
     h1{font-size:19px;color:#113679;text-align:center;margin:10px 0 2px}
@@ -1790,7 +1809,7 @@ function genererMandatCourtage(clientId, signatureDataUrl) {
     <h2>LE MANDANT</h2>
     <table>
       <tr><td class="label">Nom</td><td class="valeur">${champs.nom}${champs.co ? `<div style="font-size:9.5px;color:#666;margin-top:2px">${champs.co}</div>` : ''}</td><td class="label">Prénom</td><td class="valeur">${champs.prenom}</td></tr>
-      <tr><td class="label">Société / raison sociale</td><td class="valeur">${champs.societe}${isEnt && champs.contactEntreprise ? `<div style="font-size:9.5px;color:#666;margin-top:2px">Contact : ${champs.contactEntreprise}</div>` : ''}</td><td class="label">Date de naissance / IDE</td><td class="valeur">${champs.naissanceOuIde}</td></tr>
+      <tr><td class="label">Société / raison sociale</td><td class="valeur">${champs.societe}${champs.societe && champs.contactEntreprise ? `<div style="font-size:9.5px;color:#666;margin-top:2px">Contact : ${champs.contactEntreprise}</div>` : ''}</td><td class="label">Date de naissance / IDE</td><td class="valeur">${champs.naissanceOuIde}</td></tr>
       <tr><td class="label">Adresse</td><td class="valeur">${champs.adresse}</td><td class="label">NPA / Localité</td><td class="valeur">${champs.npaLocalite}</td></tr>
       <tr><td class="label">Téléphone</td><td class="valeur">${champs.tel}</td><td class="label">E-mail</td><td class="valeur">${champs.email}</td></tr>
     </table>
@@ -1859,6 +1878,38 @@ function genererMandatCourtage(clientId, signatureDataUrl) {
 
     <button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
   </body></html>`;
+}
+
+function genererMandatCourtage(clientId, signatureDataUrl) {
+  const c = allClients.find(x => x.id === clientId);
+  if (!c) { showError('Client introuvable.'); return; }
+  const isEnt = estEntreprise(c);
+
+  // Découpage adresse : "adresse" seul + "ville" contient déjà "NPA Localité" (convention existante du CRM)
+  const npaLocalite = c.ville || '';
+
+  const champs = {
+    nom: isEnt ? '' : (c.nom || ''),
+    prenom: isEnt ? '' : (c.prenom || ''),
+    societe: isEnt ? (c.nom || '') : '',
+    naissanceOuIde: isEnt ? (c.ide || '') : (c.date_naissance ? fmtDate(c.date_naissance) : ''),
+    adresse: c.adresse || '',
+    co: c.co || '',
+    npaLocalite,
+    tel: c.tel || c.mobile || c.telephone || '',
+    email: c.email || '',
+    contactEntreprise: isEnt ? (c.prenom || '') : '',
+  };
+
+  // Signature du mandataire (Jonathan/Assurex) enregistrée une fois dans Paramètres → Agents
+  // (voir enregistrerMaSignature, js/10) et reprise automatiquement sur tous les mandats générés,
+  // avec la date du jour — demande de Jonathan le 07.08.2026 : ne plus avoir à signer à la main
+  // à chaque mandat.
+  const agentSignataire = allAgents.find(a => a.role === 'signataire');
+  const signatureMandataire = agentSignataire ? agentSignataire.signature_image : null;
+
+  const contenuMandatHtml = construireHtmlMandat(champs, signatureDataUrl, signatureMandataire);
+  const win = window.open('', '_blank');
   win.document.write(contenuMandatHtml);
   win.document.close();
 

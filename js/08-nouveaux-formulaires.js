@@ -450,6 +450,16 @@ async function showEditContrat(contratId, returnTo) {
   const vehiculeLie = estContratVehicule ? (allVehicules || []).find(v => v.contrat_id === ct.id) : null;
   const nbVehiculesLies = estContratVehicule ? (allVehicules || []).filter(v => v.contrat_id === ct.id).length : 0;
 
+  // Nature de la commission (Acquisition/Gestion) : vit normalement sur la commission liée
+  // (commissions_attente.nature, renseignée au même titre que "Nature de la commission" à la
+  // création du contrat) plutôt que sur le contrat lui-même — mais rien ne permettait de la
+  // revoir/corriger après coup (demande de Jonathan le 02.09.2026, exemple Favre Jessica /
+  // Vaudoise Perte de Gain). On la préremplit ici depuis la commission si elle existe, sinon
+  // depuis contrats.type_commission (repli pour les contrats sans commission liée, ex. non
+  // commissionnés) — et on garde les deux synchronisés à l'enregistrement (voir saveEditContrat).
+  const commissionsLieesPourNature = (allCommissionsAttente || []).filter(c => c.contrat_id === ct.id);
+  const natureActuelle = commissionsLieesPourNature.length ? commissionsLieesPourNature[0].nature : (ct.type_commission || '');
+
   creerModale('modal-edit-contrat', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto">
       <h3 style="margin:0 0 20px;font-size:16px;font-weight:800;color:var(--text)">Modifier le contrat</h3>
@@ -503,6 +513,14 @@ async function showEditContrat(contratId, returnTo) {
             <option value="non" ${ct.commissionne === false ?'selected':''}>Non (pas de convention de collaboration)</option>
           </select>
           <div id="ect-rappel-note" style="display:${ct.commissionne === false ?'':'none'};font-size:10.5px;color:var(--text-muted);margin-top:4px">ℹ️ Un rappel sera créé 6 mois avant la date d'échéance ci-dessous, pour proposer un transfert vers une compagnie partenaire.</div>
+        </div>
+        <div class="form-field"><label class="form-label">Nature de la commission</label>
+          <select class="form-select" id="ect-nature-commission">
+            <option value="" ${!natureActuelle ? 'selected' : ''}>— Non précisé —</option>
+            <option value="acquisition" ${natureActuelle==='acquisition'?'selected':''}>Acquisition (nouvelle affaire)</option>
+            <option value="gestion" ${natureActuelle==='gestion'?'selected':''}>Gestion (portefeuille existant)</option>
+          </select>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:3px">${commissionsLieesPourNature.length ? 'Repris de la commission liée à ce contrat — modifier ici met aussi à jour la commission.' : 'Aucune commission liée à ce contrat — utilisé uniquement pour les statistiques Acquisition vs Gestion.'}</div>
         </div>
         <div class="form-field"><label class="form-label">Modules complémentaires</label><input class="form-input" id="ect-modules" value="${ct.modules || ''}"/></div>
         ${(ct.produit || '').includes('LPP') && (ct.compagnie || '').toLowerCase().includes('swiss life') ? `
@@ -641,6 +659,7 @@ async function saveEditContrat(contratId, clientId, returnTo) {
       const v = el ? parseFloat(el.value) : NaN;
       return Number.isFinite(v) && v > 0 ? v : null;
     })(),
+    type_commission: document.getElementById('ect-nature-commission').value || null,
   };
   const btn = document.querySelector('#modal-edit-contrat .btn-save');
   if (btn) { btn.textContent = 'Enregistrement...'; btn.disabled = true; }
@@ -659,6 +678,9 @@ async function saveEditContrat(contratId, clientId, returnTo) {
       numero_police: body.numero_police,
       compagnie: body.compagnie,
       produit: body.produit,
+      // Garde la nature (Acquisition/Gestion) de la commission alignée sur ce qui vient d'être
+      // choisi dans "Modifier le contrat" — jusqu'ici modifiable seulement à la création.
+      nature: body.type_commission || c.nature,
     })));
     allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
   }

@@ -94,17 +94,17 @@ function _showAddrDropdown(results, input, onSelect) {
   const rect = input.getBoundingClientRect();
   const dd = document.createElement('div');
   dd.id = 'addr-autocomplete-dd';
-  dd.style.cssText = `position:fixed;top:${rect.bottom + 2}px;left:${rect.left}px;width:${Math.max(rect.width, 320)}px;background:#1e293b;border:1px solid #334155;border-radius:10px;z-index:99999;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.5);max-height:260px;overflow-y:auto`;
+  dd.style.cssText = `position:fixed;top:${rect.bottom + 2}px;left:${rect.left}px;width:${Math.max(rect.width, 320)}px;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:99999;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.5);max-height:260px;overflow-y:auto`;
   results.forEach(res => {
     const attrs = res.attrs || {};
     const parsed = _parseGeoDetail(attrs.detail);
     const label = attrs.label ? attrs.label.replace(/<[^>]+>/g, '') : '';
     if (!label) return;
     const item = document.createElement('div');
-    item.style.cssText = 'padding:10px 14px;cursor:pointer;font-size:13px;color:#e2e8f0;border-bottom:1px solid #1e293b;line-height:1.4;transition:background 0.1s';
-    item.innerHTML = `<div style="font-weight:700">${label}</div>${parsed.canton ? `<div style="font-size:11px;color:#94a3b8">Canton ${parsed.canton}</div>` : ''}`;
+    item.style.cssText = 'padding:10px 14px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid var(--border);line-height:1.4;transition:background 0.1s';
+    item.innerHTML = `<div style="font-weight:700">${label}</div>${parsed.canton ? `<div style="font-size:11px;color:var(--text-muted)">Canton ${parsed.canton}</div>` : ''}`;
     item.addEventListener('mousedown', () => { onSelect(parsed); _closeAddrDropdown(); });
-    item.addEventListener('mouseover', () => item.style.background = '#0f172a');
+    item.addEventListener('mouseover', () => item.style.background = 'var(--surface-hover)');
     item.addEventListener('mouseout', () => item.style.background = 'transparent');
     dd.appendChild(item);
   });

@@ -432,7 +432,14 @@ async function importPolicePdfAI(input) {
     // Conserver le fichier pour l'archiver après création du contrat
     window._policePdfFileFromImport = file;
 
-    statusEl.innerHTML = `<span style="color:#4ade80;font-weight:700">✓ Formulaire pré-rempli depuis le PDF</span> — vérifie les données, précise si le contrat sera commissionné ou non, puis enregistre.`;
+    // Lien "Voir le PDF importé" à côté du message de succès — pratique pour comparer visuellement
+    // ce que l'IA a extrait avec le document source avant d'enregistrer. On libère l'URL blob
+    // précédente (si un import antérieur non enregistré traîne) pour éviter une fuite mémoire.
+    if (window._policePdfPreviewUrl) URL.revokeObjectURL(window._policePdfPreviewUrl);
+    window._policePdfPreviewUrl = URL.createObjectURL(file);
+
+    statusEl.innerHTML = `<span style="color:#4ade80;font-weight:700">✓ Formulaire pré-rempli depuis le PDF</span> — vérifie les données, précise si le contrat sera commissionné ou non, puis enregistre.
+      <a href="${window._policePdfPreviewUrl}" target="_blank" rel="noopener" style="margin-left:8px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px;vertical-align:middle">👁 Voir le PDF importé</a>`;
 
   } catch(e) {
     statusEl.textContent = '✗ ' + e.message + ' — remplis manuellement le formulaire ci-dessous.';

@@ -996,6 +996,27 @@ function statCard(label, value, color, sub = '') {
   </div>`;
 }
 
+// Export CSV générique — utilisé par "Tous les contrats" et "Toutes les commissions" (et
+// réutilisable ailleurs). Séparateur point-virgule + BOM UTF-8 : ouverture directe dans Excel
+// (locale FR/CH) sans casser les accents ni éclater les colonnes sur les virgules des montants.
+function exporterCsv(nomFichier, entetes, lignes) {
+  function echapper(v) {
+    const s = (v === null || v === undefined) ? '' : String(v);
+    if (/[;"\n]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+  const contenu = [entetes, ...lignes].map(l => l.map(echapper).join(';')).join(String.fromCharCode(13,10));
+  const blob = new Blob(['﻿' + contenu], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nomFichier.endsWith('.csv') ? nomFichier : nomFichier + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
 function infoBlock(label, value) {
   return `<div class="info-block"><div class="info-label">${label}</div><div class="info-value">${value || '—'}</div></div>`;
 }

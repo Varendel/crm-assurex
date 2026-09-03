@@ -261,14 +261,38 @@ function viewCommissionsAttente(prefiltreStatut) {
         <option value="assurex">${COFIDEX_MINI_LOGO} Clients Assurex / EX Groupe</option>
         <option value="aucun">— Non marqués</option>
       </select>
+      <input type="date" class="form-input" id="tc-date-debut" title="Date de création — du" style="max-width:150px" onchange="renderToutesCommissions()"/>
+      <input type="date" class="form-input" id="tc-date-fin" title="Date de création — au" style="max-width:150px" onchange="renderToutesCommissions()"/>
       <select class="form-select" id="tc-tri" style="max-width:190px" onchange="renderToutesCommissions()">
         <option value="date">Plus récent d'abord</option>
         <option value="montant_desc" selected>Montant décroissant</option>
       </select>
     </div>
+    <div class="no-print" style="display:flex;gap:8px;margin-bottom:18px">
+      <button onclick="exporterCommissionsCsv()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer">⬇️ Export CSV</button>
+      <button onclick="window.print()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer">🖨️ Imprimer / PDF</button>
+    </div>
 
     <div id="tc-stats" class="stat-grid" style="margin-bottom:20px"></div>
     <div id="tc-table"></div>`;
+}
+
+let _tcCommissionsFiltrees = [];
+
+function exporterCommissionsCsv() {
+  function numeroBordereauDe2(c) {
+    if (!c.bordereau_id) return '';
+    const b = allBordereaux.find(bd => bd.id === c.bordereau_id);
+    return b ? (b.numero || '') : '';
+  }
+  const entetes = ['Client', 'Produit', 'Compagnie', 'Statut', 'Nature', 'Montant (CHF)', 'N° bordereau', 'Date création', 'Entité'];
+  const lignes = _tcCommissionsFiltrees.map(c => {
+    const cl = c.client_id ? allClients.find(x => x.id === c.client_id) : null;
+    const entite = cl && cl.source_oz ? 'OZ Assure' : cl && cl.source_cofidex ? 'Assurex/EX' : '—';
+    const montant = c.montant_final != null ? c.montant_final : (c.montant_estime || 0);
+    return [c.client_nom || '', c.produit || '', c.compagnie || '', c.statut || '', c.nature || 'acquisition', Number(montant), numeroBordereauDe2(c), c.date_creation || '', entite];
+  });
+  exporterCsv('toutes_les_commissions_' + new Date().toISOString().slice(0,10), entetes, lignes);
 }
 
 function renderToutesCommissions() {
@@ -278,6 +302,8 @@ function renderToutesCommissions() {
   const natureFilter = document.getElementById('tc-nature')?.value || '';
   const typeClientFilter = document.getElementById('tc-typeclient')?.value || '';
   const entiteFilter = document.getElementById('tc-entite')?.value || '';
+  const dateDebutFilter = document.getElementById('tc-date-debut')?.value || '';
+  const dateFinFilter = document.getElementById('tc-date-fin')?.value || '';
   const tri = document.getElementById('tc-tri')?.value || 'montant_desc';
 
   // Client privé vs entreprise — déduit du client lié (allClients). Une commission sans client_id
@@ -320,6 +346,8 @@ function renderToutesCommissions() {
       if (entiteFilter === 'assurex' && !(clEnt && clEnt.source_cofidex)) return false;
       if (entiteFilter === 'aucun' && (clEnt && (clEnt.source_oz || clEnt.source_cofidex))) return false;
     }
+    if (dateDebutFilter && (!c.date_creation || c.date_creation < dateDebutFilter)) return false;
+    if (dateFinFilter && (!c.date_creation || c.date_creation > dateFinFilter)) return false;
     if (search) {
       const haystack = `${c.client_nom||''} ${c.compagnie||''} ${c.produit||''} ${numeroBordereauDe(c)}`.toLowerCase();
       if (!haystack.includes(search)) return false;
@@ -329,6 +357,8 @@ function renderToutesCommissions() {
     if (tri === 'montant_desc') return montantC(b) - montantC(a);
     return new Date(b.date_creation||0) - new Date(a.date_creation||0);
   });
+
+  _tcCommissionsFiltrees = filtered;
 
   const totalAttente = filtered.filter(c => c.statut === 'en_attente').reduce((s,c) => s + montantC(c), 0);
   const totalRecuBrut = filtered.filter(c => c.statut === 'reçue').reduce((s,c) => s + montantC(c), 0);

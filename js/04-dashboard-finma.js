@@ -1128,7 +1128,22 @@ async function creerCommissionManquante(contratId) {
   navigate('contrats-orphelins-commission');
 }
 
-let tcFiltres = { search: '', agent: '', compagnie: '', produit: '', statut: '', comm: '', entite: '' };
+let tcFiltres = { search: '', agent: '', compagnie: '', produit: '', statut: '', comm: '', entite: '', dateDebut: '', dateFin: '' };
+let _tcContratsFiltres = [];
+
+function exporterContratsCsv() {
+  const entetes = ['Client', 'Produit', 'Compagnie', 'N° police', 'Date signature', 'Prime annuelle (CHF)', 'Statut', 'Nature', 'Apporteur', 'Entité'];
+  const lignes = _tcContratsFiltres.map(ct => {
+    const cl = allClients.find(c => c.id === ct.client_id);
+    const nom = cl ? (estEntreprise(cl) ? cl.nom : `${cl.prenom} ${cl.nom}`) : '';
+    const agent = allAgents.find(a => a.id === ct.apporteur_id);
+    const commLiees = allCommissionsAttente.filter(c => c.contrat_id === ct.id);
+    const nature = commLiees.length ? commLiees[0].nature : (ct.type_commission || '');
+    const entite = cl && cl.source_oz ? 'OZ Assure' : cl && cl.source_cofidex ? 'Assurex/EX' : '—';
+    return [nom, normaliserProduit(ct.produit) || '', ct.compagnie || '', ct.numero_police || '', ct.date_debut || '', Number(ct.prime_annuelle || 0), ct.statut || '', nature, agent ? `${agent.prenom} ${agent.nom}` : '', entite];
+  });
+  exporterCsv('tous_les_contrats_' + new Date().toISOString().slice(0,10), entetes, lignes);
+}
 
 // Regroupe les variantes d'orthographe d'un même produit sous un seul libellé affiché — même
 // principe que normaliserCompagnie() (js/09), en purement cosmétique : la valeur brute en base
@@ -1148,7 +1163,7 @@ function normaliserProduit(nom) {
 }
 
 function reinitialiserFiltresTousContrats() {
-  tcFiltres = { search: '', agent: '', compagnie: '', produit: '', statut: '', comm: '', entite: '' };
+  tcFiltres = { search: '', agent: '', compagnie: '', produit: '', statut: '', comm: '', entite: '', dateDebut: '', dateFin: '' };
   navigate('tous-contrats');
 }
 
@@ -1195,7 +1210,13 @@ function viewTousContrats() {
         <option value="assurex" ${tcFiltres.entite==='assurex'?'selected':''}>${COFIDEX_MINI_LOGO} Clients Assurex / EX Groupe</option>
         <option value="aucun" ${tcFiltres.entite==='aucun'?'selected':''}>— Non marqués</option>
       </select>
+      <input type="date" class="form-input" id="tc-date-debut" title="Date de signature — du" style="max-width:150px" value="${tcFiltres.dateDebut}" onchange="renderTousContrats()"/>
+      <input type="date" class="form-input" id="tc-date-fin" title="Date de signature — au" style="max-width:150px" value="${tcFiltres.dateFin}" onchange="renderTousContrats()"/>
       <button onclick="reinitialiserFiltresTousContrats()" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:8px;padding:0 12px;font-size:12px;font-weight:700;cursor:pointer">✕ Réinitialiser les filtres</button>
+    </div>
+    <div class="no-print" style="display:flex;gap:8px;margin-bottom:16px">
+      <button onclick="exporterContratsCsv()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer">⬇️ Export CSV</button>
+      <button onclick="window.print()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer">🖨️ Imprimer / PDF</button>
     </div>
     <div id="tc-stats" class="stat-grid" style="margin-bottom:16px"></div>
     <div id="tc-body"></div>`;
@@ -1211,6 +1232,8 @@ function renderTousContrats() {
   tcFiltres.statut = document.getElementById('tc-statut')?.value || '';
   tcFiltres.comm = document.getElementById('tc-comm')?.value || '';
   tcFiltres.entite = document.getElementById('tc-entite')?.value || '';
+  tcFiltres.dateDebut = document.getElementById('tc-date-debut')?.value || '';
+  tcFiltres.dateFin = document.getElementById('tc-date-fin')?.value || '';
 
   const search = tcFiltres.search.toLowerCase().trim();
   const agentF = tcFiltres.agent;
@@ -1219,6 +1242,8 @@ function renderTousContrats() {
   const statutF = tcFiltres.statut;
   const commF = tcFiltres.comm;
   const entiteF = tcFiltres.entite;
+  const dateDebutF = tcFiltres.dateDebut;
+  const dateFinF = tcFiltres.dateFin;
 
   const filtered = allContrats.filter(ct => {
     if (agentF === '__sans__' && ct.apporteur_id) return false;
@@ -1234,6 +1259,8 @@ function renderTousContrats() {
       if (entiteF === 'assurex' && !(clEnt && clEnt.source_cofidex)) return false;
       if (entiteF === 'aucun' && (clEnt && (clEnt.source_oz || clEnt.source_cofidex))) return false;
     }
+    if (dateDebutF && (!ct.date_debut || ct.date_debut < dateDebutF)) return false;
+    if (dateFinF && (!ct.date_debut || ct.date_debut > dateFinF)) return false;
     if (search) {
       const cl = allClients.find(c => c.id === ct.client_id);
       const nom = cl ? (estEntreprise(cl) ? cl.nom : `${cl.prenom} ${cl.nom}`) : '';
@@ -1242,6 +1269,8 @@ function renderTousContrats() {
     }
     return true;
   }).sort((a,b) => new Date(b.date_debut||0) - new Date(a.date_debut||0));
+
+  _tcContratsFiltres = filtered;
 
   const totalPrimes = filtered.reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0);
   const sanAgent = filtered.filter(ct => !ct.apporteur_id).length;

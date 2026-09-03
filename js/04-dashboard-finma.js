@@ -1246,11 +1246,46 @@ function renderTousContrats() {
   const totalPrimes = filtered.reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0);
   const sanAgent = filtered.filter(ct => !ct.apporteur_id).length;
 
+  // Répartition "qui rapporte quoi" par entité : calculée sur les contrats filtrés par TOUS les
+  // critères sauf l'entité elle-même (pour pouvoir comparer OZ / Assurex / non-marqués côte à
+  // côte même quand aucun filtre entité n'est actif). Le montant de commission retenu par contrat
+  // est la somme des commissions_attente liées (montant_final si payé, sinon montant_estime) —
+  // même logique que le reste du CRM (ex. ligne 129).
+  const filteredSansEntite = allContrats.filter(ct => {
+    if (agentF === '__sans__' && ct.apporteur_id) return false;
+    if (agentF && agentF !== '__sans__' && ct.apporteur_id !== agentF) return false;
+    if (compagnieF && ct.compagnie !== compagnieF) return false;
+    if (produitF && normaliserProduit(ct.produit) !== produitF) return false;
+    if (statutF && ct.statut !== statutF) return false;
+    if (commF === 'oui' && ct.commissionne === false) return false;
+    if (commF === 'non' && ct.commissionne !== false) return false;
+    if (search) {
+      const cl = allClients.find(c => c.id === ct.client_id);
+      const nom = cl ? (estEntreprise(cl) ? cl.nom : `${cl.prenom} ${cl.nom}`) : '';
+      const hay = `${nom} ${ct.compagnie||''} ${ct.produit||''} ${normaliserProduit(ct.produit)||''} ${ct.numero_police||''}`.toLowerCase();
+      if (!hay.includes(search)) return false;
+    }
+    return true;
+  });
+  function totauxEntiteTc(testFn) {
+    const cts = filteredSansEntite.filter(ct => testFn(allClients.find(c => c.id === ct.client_id)));
+    const ids = new Set(cts.map(ct => ct.id));
+    const comm = allCommissionsAttente.filter(c => ids.has(c.contrat_id))
+      .reduce((s,c) => s + Number(c.montant_final != null ? c.montant_final : (c.montant_estime||0)), 0);
+    return { count: cts.length, comm };
+  }
+  const totOz = totauxEntiteTc(cl => cl && cl.source_oz);
+  const totAssurex = totauxEntiteTc(cl => cl && cl.source_cofidex);
+  const totAucun = totauxEntiteTc(cl => !(cl && (cl.source_oz || cl.source_cofidex)));
+
   document.getElementById('tc-count').textContent = `${filtered.length} contrat(s)`;
   document.getElementById('tc-stats').innerHTML = `
     ${statCard('Contrats', filtered.length, '#38bdf8')}
     ${statCard('Primes/an', 'CHF ' + Math.round(totalPrimes).toLocaleString(), '#f59e0b')}
-    ${sanAgent > 0 ? statCard('Sans apporteur', sanAgent, '#64748b', 'toi seul') : ''}`;
+    ${sanAgent > 0 ? statCard('Sans apporteur', sanAgent, '#64748b', 'toi seul') : ''}
+    ${statCard(OZ_MINI_LOGO + ' OZ — commissions', 'CHF ' + Math.round(totOz.comm).toLocaleString(), '#38bdf8', totOz.count + ' contrat(s)')}
+    ${statCard(COFIDEX_MINI_LOGO + ' Assurex/EX — commissions', 'CHF ' + Math.round(totAssurex.comm).toLocaleString(), '#a78bfa', totAssurex.count + ' contrat(s)')}
+    ${totAucun.count > 0 ? statCard('Non marqués — commissions', 'CHF ' + Math.round(totAucun.comm).toLocaleString(), '#64748b', totAucun.count + ' contrat(s)') : ''}`;
 
   const cols = '1fr 110px 110px 100px 90px 90px 70px 36px';
   const rows = filtered.map(ct => {

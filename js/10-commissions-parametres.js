@@ -228,9 +228,9 @@ function viewCommissionsAttente(prefiltreStatut) {
   const compagniesPresentes = [...new Set(allCommissionsAttente.map(c => normaliserCompagnie(c.compagnie)).filter(Boolean))].sort();
   return `
     <h2 style="margin:0 0 6px;font-size:18px;font-weight:800;color:var(--text)">Toutes les commissions</h2>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Estimées à la signature, puis liées à un bordereau une fois reçues. Pour faire passer une commission "en attente" en "reçue", utilise "+ Rapprocher une commission" sur le bordereau concerné — ça garantit le montant net exact et le numéro de police. Par défaut, seules les commissions en attente sont affichées — choisis "Tous statuts" ou un autre statut ci-dessous pour voir le reste.</div>
+    <div class="no-print" style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Estimées à la signature, puis liées à un bordereau une fois reçues. Pour faire passer une commission "en attente" en "reçue", utilise "+ Rapprocher une commission" sur le bordereau concerné — ça garantit le montant net exact et le numéro de police. Par défaut, seules les commissions en attente sont affichées — choisis "Tous statuts" ou un autre statut ci-dessous pour voir le reste.</div>
 
-    <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
+    <div class="no-print" style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
       <input class="form-input" id="tc-search" placeholder="🔍 Client, compagnie, produit, n° bordereau..." style="flex:1;min-width:200px" oninput="renderToutesCommissions()"/>
       <select class="form-select" id="tc-compagnie" style="max-width:200px" onchange="renderToutesCommissions()">
         <option value="">Toutes compagnies</option>

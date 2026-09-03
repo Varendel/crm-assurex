@@ -1179,7 +1179,7 @@ function viewTousContrats() {
       <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Tous les contrats</h2>
       <div id="tc-count" style="font-size:12px;color:var(--text-muted)"></div>
     </div>
-    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+    <div class="no-print" style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
       <input class="form-input" id="tc-search" placeholder="🔍 Client, compagnie, produit, n° police..." style="flex:1;min-width:180px" value="${tcFiltres.search.replace(/"/g,'&quot;')}" oninput="renderTousContrats()"/>
       <select class="form-select" id="tc-agent" style="max-width:180px" onchange="renderTousContrats()">
         <option value="" ${tcFiltres.agent===''?'selected':''}>Tous les agents</option>

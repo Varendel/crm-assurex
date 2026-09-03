@@ -292,9 +292,22 @@
 
   /* PRINT */
   @media print {
+    /* Thème clair forcé à l'impression, quel que soit le thème choisi à l'écran (sombre par
+       défaut) — sinon les cartes/tableaux gardent leurs couleurs var(--surface)/var(--text)
+       sombres alors que le fond de page passe au blanc, illisible (fond blanc, texte clair sur
+       cartes sombres). Le !important sur des custom properties est valide et prime sur les blocs
+       html[data-theme=...] qui n'en ont pas. Corrige le rendu "immonde" signalé le 03.09.2026. */
+    html {
+      --bg: #ffffff !important; --surface: #ffffff !important; --surface-alt: #f7f7f8 !important;
+      --surface-hover: #f2f2f3 !important; --border: #d4d4d8 !important; --text: #18181b !important;
+      --text-muted: #52525b !important; --text-dim: #71717a !important;
+    }
     #login-screen { display: none !important; }
     .sidebar { display: none !important; }
     .no-print { display: none !important; }
+    .mobile-topbar { display: none !important; }
+    #sidebar-overlay { display: none !important; }
+    #nav-back-bar { display: none !important; }
     .btn-save, .btn-secondary, button[onclick*="print"], button[onclick*="navigate"] { display: none !important; }
     .main { padding: 0 !important; }
     body { background: white !important; color: black !important; }
@@ -312,6 +325,32 @@
     .fiche-commission-print { background: white !important; border: 1px solid #ccc !important; }
     .fiche-commission-print * { color: black !important; }
     .fiche-commission-print button { display: none !important; }
+
+    /* Cartes de stats : compactes, plusieurs par ligne, fond clair */
+    .stat-grid { gap: 8px !important; margin-bottom: 12px !important; }
+    .stat-card { padding: 8px 10px !important; min-width: 100px !important; border: 1px solid #d4d4d8 !important; background: #fff !important; break-inside: avoid; }
+    .stat-label { font-size: 8.5px !important; margin-bottom: 3px !important; }
+    .stat-value { font-size: 15px !important; }
+    .stat-sub { font-size: 9px !important; margin-top: 2px !important; }
+
+    /* Tableaux "Tous les contrats" (#tc-body) et "Toutes les commissions" (#tc-table) : on
+       resélectionne explicitement, avec ID + classe (spécificité plus forte que la règle mobile
+       @media (max-width:768px) .table-row{grid-template-columns:1fr !important}), pour retrouver
+       la vraie grille en colonnes au lieu de l'empilement 1 colonne — sinon l'impression depuis un
+       écran étroit (téléphone) hérite du layout mobile empilé, illisible en export. */
+    #tc-body .table-header, #tc-body .table-row {
+      display: grid !important;
+      grid-template-columns: 1fr 100px 85px 80px 70px 70px 90px !important;
+      padding: 6px 8px !important; gap: 4px !important; font-size: 10.5px !important;
+    }
+    #tc-body .table-row > div:last-child { display: none !important; }
+    #tc-table .table-header, #tc-table .table-row {
+      display: grid !important;
+      grid-template-columns: 1fr 100px 90px 75px 80px 85px !important;
+      padding: 6px 8px !important; gap: 4px !important; font-size: 10.5px !important;
+    }
+    .table-row { break-inside: avoid; }
+    .table-wrap { border: 1px solid #d4d4d8 !important; }
   }
   .oz-print-report { display: none; }
   /* RESPONSIVE */
@@ -464,13 +503,13 @@
 <script src="js/01-prevoyance-immo.js?v=1788453165"></script>
 <script src="js/02-catalogue-session.js?v=1788271319"></script>
 <script src="js/03-auth-navigation.js?v=1788455466"></script>
-<script src="js/04-dashboard-finma.js?v=1788455466"></script>
+<script src="js/04-dashboard-finma.js?v=1788455844"></script>
 <script src="js/05-contrats-clients.js?v=1788450907"></script>
 <script src="js/06-signature-opportunites.js?v=1788263312"></script>
 <script src="js/07-fichepaie-bordereaux.js?v=1787910113"></script>
 <script src="js/08-nouveaux-formulaires.js?v=1788452540"></script>
 <script src="js/09-rappels-vehicules.js?v=1787828395"></script>
-<script src="js/10-commissions-parametres.js?v=1788455466"></script>
+<script src="js/10-commissions-parametres.js?v=1788455844"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

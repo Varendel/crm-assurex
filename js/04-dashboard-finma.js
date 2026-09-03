@@ -1128,7 +1128,7 @@ async function creerCommissionManquante(contratId) {
   navigate('contrats-orphelins-commission');
 }
 
-let tcFiltres = { search: '', agent: '', compagnie: '', produit: '', statut: '', comm: '' };
+let tcFiltres = { search: '', agent: '', compagnie: '', produit: '', statut: '', comm: '', entite: '' };
 
 // Regroupe les variantes d'orthographe d'un même produit sous un seul libellé affiché — même
 // principe que normaliserCompagnie() (js/09), en purement cosmétique : la valeur brute en base
@@ -1148,7 +1148,7 @@ function normaliserProduit(nom) {
 }
 
 function reinitialiserFiltresTousContrats() {
-  tcFiltres = { search: '', agent: '', compagnie: '', produit: '', statut: '', comm: '' };
+  tcFiltres = { search: '', agent: '', compagnie: '', produit: '', statut: '', comm: '', entite: '' };
   navigate('tous-contrats');
 }
 
@@ -1189,6 +1189,12 @@ function viewTousContrats() {
         <option value="oui" ${tcFiltres.comm==='oui'?'selected':''}>Commissionné</option>
         <option value="non" ${tcFiltres.comm==='non'?'selected':''}>Non commissionné</option>
       </select>`}
+      <select class="form-select" id="tc-entite" style="max-width:190px" onchange="renderTousContrats()">
+        <option value="" ${tcFiltres.entite===''?'selected':''}>Toutes entités</option>
+        <option value="oz" ${tcFiltres.entite==='oz'?'selected':''}>${OZ_MINI_LOGO} Clients OZ Assure</option>
+        <option value="assurex" ${tcFiltres.entite==='assurex'?'selected':''}>${COFIDEX_MINI_LOGO} Clients Assurex / EX Groupe</option>
+        <option value="aucun" ${tcFiltres.entite==='aucun'?'selected':''}>— Non marqués</option>
+      </select>
       <button onclick="reinitialiserFiltresTousContrats()" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:8px;padding:0 12px;font-size:12px;font-weight:700;cursor:pointer">✕ Réinitialiser les filtres</button>
     </div>
     <div id="tc-stats" class="stat-grid" style="margin-bottom:16px"></div>
@@ -1204,6 +1210,7 @@ function renderTousContrats() {
   tcFiltres.produit = document.getElementById('tc-produit')?.value || '';
   tcFiltres.statut = document.getElementById('tc-statut')?.value || '';
   tcFiltres.comm = document.getElementById('tc-comm')?.value || '';
+  tcFiltres.entite = document.getElementById('tc-entite')?.value || '';
 
   const search = tcFiltres.search.toLowerCase().trim();
   const agentF = tcFiltres.agent;
@@ -1211,6 +1218,7 @@ function renderTousContrats() {
   const produitF = tcFiltres.produit;
   const statutF = tcFiltres.statut;
   const commF = tcFiltres.comm;
+  const entiteF = tcFiltres.entite;
 
   const filtered = allContrats.filter(ct => {
     if (agentF === '__sans__' && ct.apporteur_id) return false;
@@ -1220,6 +1228,12 @@ function renderTousContrats() {
     if (statutF && ct.statut !== statutF) return false;
     if (commF === 'oui' && ct.commissionne === false) return false;
     if (commF === 'non' && ct.commissionne !== false) return false;
+    if (entiteF) {
+      const clEnt = allClients.find(c => c.id === ct.client_id);
+      if (entiteF === 'oz' && !(clEnt && clEnt.source_oz)) return false;
+      if (entiteF === 'assurex' && !(clEnt && clEnt.source_cofidex)) return false;
+      if (entiteF === 'aucun' && (clEnt && (clEnt.source_oz || clEnt.source_cofidex))) return false;
+    }
     if (search) {
       const cl = allClients.find(c => c.id === ct.client_id);
       const nom = cl ? (estEntreprise(cl) ? cl.nom : `${cl.prenom} ${cl.nom}`) : '';

@@ -1128,6 +1128,8 @@ async function creerCommissionManquante(contratId) {
   navigate('contrats-orphelins-commission');
 }
 
+let tcFiltres = { search: '', agent: '', compagnie: '', produit: '', statut: '', comm: '' };
+
 function viewTousContrats() {
   const agentOptions = allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
   const compagnies = [...new Set(allContrats.map(c => c.compagnie).filter(Boolean))].sort();
@@ -1141,29 +1143,29 @@ function viewTousContrats() {
       <div id="tc-count" style="font-size:12px;color:var(--text-muted)"></div>
     </div>
     <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
-      <input class="form-input" id="tc-search" placeholder="🔍 Client, compagnie, produit, n° police..." style="flex:1;min-width:180px" oninput="renderTousContrats()"/>
+      <input class="form-input" id="tc-search" placeholder="🔍 Client, compagnie, produit, n° police..." style="flex:1;min-width:180px" value="${tcFiltres.search.replace(/"/g,'&quot;')}" oninput="renderTousContrats()"/>
       <select class="form-select" id="tc-agent" style="max-width:180px" onchange="renderTousContrats()">
-        <option value="">Tous les agents</option>
-        <option value="__sans__">— Sans apporteur (moi seul)</option>
-        ${agentOptions}
+        <option value="" ${tcFiltres.agent===''?'selected':''}>Tous les agents</option>
+        <option value="__sans__" ${tcFiltres.agent==='__sans__'?'selected':''}>— Sans apporteur (moi seul)</option>
+        ${allAgents.map(a => `<option value="${a.id}" ${tcFiltres.agent===a.id?'selected':''}>${a.prenom} ${a.nom}</option>`).join('')}
       </select>
       <select class="form-select" id="tc-compagnie" style="max-width:160px" onchange="renderTousContrats()">
-        <option value="">Toutes compagnies</option>${compagnieOptions}
+        <option value="" ${tcFiltres.compagnie===''?'selected':''}>Toutes compagnies</option>${compagnies.map(c => `<option value="${c}" ${tcFiltres.compagnie===c?'selected':''}>${c}</option>`).join('')}
       </select>
       <select class="form-select" id="tc-produit" style="max-width:200px" onchange="renderTousContrats()">
-        <option value="">Tous produits</option>${produitOptions}
+        <option value="" ${tcFiltres.produit===''?'selected':''}>Tous produits</option>${produits.map(p => `<option value="${p}" ${tcFiltres.produit===p?'selected':''}>${p}</option>`).join('')}
       </select>
       <select class="form-select" id="tc-statut" style="max-width:140px" onchange="renderTousContrats()">
-        <option value="">Tous statuts</option>
-        <option value="actif">Actif</option>
-        <option value="en_cours">En cours</option>
-        <option value="résilié">Résilié</option>
-        <option value="renouveler">À renouveler</option>
+        <option value="" ${tcFiltres.statut===''?'selected':''}>Tous statuts</option>
+        <option value="actif" ${tcFiltres.statut==='actif'?'selected':''}>Actif</option>
+        <option value="en_cours" ${tcFiltres.statut==='en_cours'?'selected':''}>En cours</option>
+        <option value="résilié" ${tcFiltres.statut==='résilié'?'selected':''}>Résilié</option>
+        <option value="renouveler" ${tcFiltres.statut==='renouveler'?'selected':''}>À renouveler</option>
       </select>
       ${estRoleRH() ? '' : `<select class="form-select" id="tc-comm" style="max-width:160px" onchange="renderTousContrats()">
-        <option value="">Commissionné/Non</option>
-        <option value="oui">Commissionné</option>
-        <option value="non">Non commissionné</option>
+        <option value="" ${tcFiltres.comm===''?'selected':''}>Commissionné/Non</option>
+        <option value="oui" ${tcFiltres.comm==='oui'?'selected':''}>Commissionné</option>
+        <option value="non" ${tcFiltres.comm==='non'?'selected':''}>Non commissionné</option>
       </select>`}
     </div>
     <div id="tc-stats" class="stat-grid" style="margin-bottom:16px"></div>
@@ -1171,12 +1173,21 @@ function viewTousContrats() {
 }
 
 function renderTousContrats() {
-  const search = (document.getElementById('tc-search')?.value || '').toLowerCase().trim();
-  const agentF = document.getElementById('tc-agent')?.value || '';
-  const compagnieF = document.getElementById('tc-compagnie')?.value || '';
-  const produitF = document.getElementById('tc-produit')?.value || '';
-  const statutF = document.getElementById('tc-statut')?.value || '';
-  const commF = document.getElementById('tc-comm')?.value || '';
+  // On mémorise les filtres dans tcFiltres à chaque rendu, pour qu'ils survivent à un
+  // aller-retour vers une fiche contrat (édition) puis un navigate('tous-contrats').
+  tcFiltres.search = document.getElementById('tc-search')?.value || '';
+  tcFiltres.agent = document.getElementById('tc-agent')?.value || '';
+  tcFiltres.compagnie = document.getElementById('tc-compagnie')?.value || '';
+  tcFiltres.produit = document.getElementById('tc-produit')?.value || '';
+  tcFiltres.statut = document.getElementById('tc-statut')?.value || '';
+  tcFiltres.comm = document.getElementById('tc-comm')?.value || '';
+
+  const search = tcFiltres.search.toLowerCase().trim();
+  const agentF = tcFiltres.agent;
+  const compagnieF = tcFiltres.compagnie;
+  const produitF = tcFiltres.produit;
+  const statutF = tcFiltres.statut;
+  const commF = tcFiltres.comm;
 
   const filtered = allContrats.filter(ct => {
     if (agentF === '__sans__' && ct.apporteur_id) return false;

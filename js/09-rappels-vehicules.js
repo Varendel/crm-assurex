@@ -347,7 +347,19 @@ async function importPolicePdfAI(input) {
       }
     }
 
-    if (data.produit) {
+    // Police véhicule à moteur (RC véhicule, casco...) : on force le produit de base "RC véhicule
+    // (obligatoire)" plutôt que le libellé libre extrait par l'IA (qui confondait parfois avec "RC
+    // privée") — la RC est la couverture obligatoire, les branches casco sont gérées séparément
+    // juste plus bas via les cases "Produits souvent combinés" existantes, chacune avec sa propre
+    // prime, pour que la commission de chaque branche se calcule au bon taux (ex. Vaudoise Tabelle
+    // A1 : RC 4%, Casco vol 15%, Casco collision 12% — cf. correction AGV Toni SA du 03.09.2026)
+    // au lieu d'un taux unique appliqué à un montant global mélangé.
+    if (data.est_police_vehicule) {
+      const catSel = document.getElementById('ct-categorie');
+      if (catSel) catSel.value = 'Véhicule';
+      const produitVehiculeRc = getProduitParId('vehicule_rc');
+      if (produitVehiculeRc) appliquerProduitTrouve({ categorie: 'Véhicule', produit: produitVehiculeRc });
+    } else if (data.produit) {
       document.getElementById('ct-produit').value = data.produit;
       const segmentConnu = document.getElementById('ct-segment')?.value;
       appliquerProduitTrouve(trouverProduitCatalogue(data.produit, segmentConnu));
@@ -370,7 +382,36 @@ async function importPolicePdfAI(input) {
     if (data.numero_police) document.getElementById('ct-police').value = data.numero_police;
     if (data.date_debut) document.getElementById('ct-date').value = data.date_debut;
     if (data.date_echeance) document.getElementById('ct-echeance').value = data.date_echeance;
-    if (Array.isArray(data.lignes_prime) && data.lignes_prime.length > 0) {
+    if (data.est_police_vehicule) {
+      // Lignes de prime du produit de base "RC véhicule" : la RC elle-même, plus les postes qui
+      // n'ont pas leur propre case à cocher dans le catalogue (accidents des occupants, couvertures
+      // complémentaires, timbre fédéral). La Casco partielle/complète, elles, ne vont PAS ici — leur
+      // prime part dans la case combinable correspondante juste en dessous.
+      const lignesBase = [];
+      if (data.vehicule_prime_rc) lignesBase.push({ libelle: 'Responsabilité civile', montant: Number(data.vehicule_prime_rc) });
+      if (data.vehicule_prime_accidents_occupants) lignesBase.push({ libelle: 'Accidents des occupants', montant: Number(data.vehicule_prime_accidents_occupants) });
+      if (data.vehicule_prime_autres_couvertures) lignesBase.push({ libelle: 'Couvertures complémentaires', montant: Number(data.vehicule_prime_autres_couvertures) });
+      if (data.timbre_federal) lignesBase.push({ libelle: 'Timbre fédéral et contributions légales', montant: Number(data.timbre_federal) });
+      if (lignesBase.length > 0) {
+        initLignesPrimeDepuisLignes(lignesBase);
+        document.getElementById('ct-periodicite').value = '1';
+      }
+
+      // Coche automatiquement "Casco partielle" / "Casco complète" (cases "Produits souvent
+      // combinés", révélées par appliquerProduitTrouve() ci-dessus via updateModulesOptions()) si
+      // l'IA a détecté une prime pour cette branche, et pré-remplit son propre montant annuel —
+      // réutilise le mécanisme existant toggleCombinablePrime() plutôt que d'en recréer un.
+      const cocherCombinable = (produitId, montant) => {
+        if (!montant || Number(montant) <= 0) return;
+        const cb = document.querySelector(`.ct-combinable-checkbox[value="${produitId}"]`);
+        if (!cb) return;
+        if (!cb.checked) { cb.checked = true; toggleCombinablePrime(produitId); }
+        const inputPrime = document.querySelector(`.ct-combinable-prime-input[data-produit-id="${produitId}"]`);
+        if (inputPrime) inputPrime.value = Number(montant);
+      };
+      cocherCombinable('casco_partielle', data.vehicule_prime_casco_partielle);
+      cocherCombinable('casco_complete', data.vehicule_prime_casco_complete);
+    } else if (Array.isArray(data.lignes_prime) && data.lignes_prime.length > 0) {
       // La police détaille la prime poste par poste (ex: RC privée, inventaire du ménage, modules
       // complémentaires, taxes légales) — on reporte chaque ligne telle quelle, le total se
       // recalcule automatiquement en sommant ces lignes (jamais resaisi/dupliqué à la main).

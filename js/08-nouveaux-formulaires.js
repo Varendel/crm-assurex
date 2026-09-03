@@ -426,11 +426,50 @@ async function uploadMandatSigne(clientId, input) {
 }
 
 // ═══ ÉDITION CONTRAT ═══
+// Cherche la catégorie du catalogue (CATALOGUE_PRODUITS, js/02) contenant un libellé de produit
+// donné (comparaison exacte) — utilisé pour présélectionner la catégorie dans le formulaire
+// d'édition d'un contrat existant.
+function categorieParLabelProduit(label) {
+  if (!label) return null;
+  for (const cat in CATALOGUE_PRODUITS) {
+    if (CATALOGUE_PRODUITS[cat].some(p => p.label === label)) return cat;
+  }
+  return null;
+}
+
+// Construit les <option> du sélecteur Produit pour une catégorie+segment donnés. Si la valeur
+// actuelle du contrat ne correspond à aucun libellé du catalogue (texte libre historique, import,
+// etc.), elle est quand même proposée en tête de liste pour ne rien perdre au premier affichage.
+function optionsProduitPourCategorie(categorie, segment, valeurActuelle) {
+  const produits = (CATALOGUE_PRODUITS[categorie] || []).filter(p => p.segment === segment || p.segment === 'tous');
+  const labels = produits.map(p => p.label);
+  let opts = labels.map(l => `<option value="${l}" ${l === valeurActuelle ? 'selected' : ''}>${l}</option>`).join('');
+  if (valeurActuelle && !labels.includes(valeurActuelle)) {
+    opts = `<option value="${valeurActuelle.replace(/"/g, '&quot;')}" selected>${valeurActuelle} (existant, hors catalogue)</option>` + opts;
+  }
+  return opts;
+}
+
+// Rappelée quand on change la catégorie dans le formulaire d'édition d'un contrat — repeuple le
+// sélecteur Produit en conséquence (segment du client mémorisé au chargement de la modale).
+function miseAJourProduitEditContrat() {
+  const catSelect = document.getElementById('ect-categorie');
+  const prodSelect = document.getElementById('ect-produit');
+  if (!catSelect || !prodSelect) return;
+  prodSelect.innerHTML = optionsProduitPourCategorie(catSelect.value, window._editContratSegment || 'tous', '');
+}
+
 async function showEditContrat(contratId, returnTo) {
   window._editContratReturnTo = returnTo || null;
   const contrats = await dbGet('contrats', `id=eq.${contratId}&select=*`);
   const ct = contrats && contrats[0];
   if (!ct) return;
+
+  const clientDuContrat = (allClients || []).find(c => c.id === ct.client_id);
+  const segmentContrat = clientDuContrat && estEntreprise(clientDuContrat) ? 'entreprise' : 'prive';
+  window._editContratSegment = segmentContrat;
+  const categorieActuelleContrat = categorieParLabelProduit(ct.produit) || getCategoriesPourSegment(segmentContrat)[0];
+  const categoriesDispoContrat = getCategoriesPourSegment(segmentContrat);
 
   // Déduire périodicité depuis prime_annuelle si on peut
   const perioOpts = [
@@ -464,7 +503,16 @@ async function showEditContrat(contratId, returnTo) {
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto">
       <h3 style="margin:0 0 20px;font-size:16px;font-weight:800;color:var(--text)">Modifier le contrat</h3>
       <div class="form-grid">
-        <div class="form-field"><label class="form-label">Produit</label><input class="form-input" id="ect-produit" value="${ct.produit || ''}"/></div>
+        <div class="form-field"><label class="form-label">Catégorie</label>
+          <select class="form-select" id="ect-categorie" onchange="miseAJourProduitEditContrat()">
+            ${categoriesDispoContrat.map(cat => `<option value="${cat}" ${cat === categorieActuelleContrat ? 'selected' : ''}>${cat}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-field"><label class="form-label">Produit</label>
+          <select class="form-select" id="ect-produit">
+            ${optionsProduitPourCategorie(categorieActuelleContrat, segmentContrat, ct.produit)}
+          </select>
+        </div>
         <div class="form-field"><label class="form-label">Compagnie</label><input class="form-input" id="ect-compagnie" value="${ct.compagnie || ''}"/></div>
         <div class="form-field"><label class="form-label">N° de police</label><input class="form-input" id="ect-police" value="${ct.numero_police || ''}"/></div>
         ${estContratVehicule && nbVehiculesLies <= 1 ? `

@@ -1175,7 +1175,8 @@ function viewTousContrats() {
   const produitOptions = produits.map(p => `<option value="${p}">${p}</option>`).join('');
   setTimeout(() => renderTousContrats(), 0);
   return `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+    ${printHeaderCorporate('Tous les contrats', 'Rapport du portefeuille de contrats')}
+    <div class="no-print" style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
       <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Tous les contrats</h2>
       <div id="tc-count" style="font-size:12px;color:var(--text-muted)"></div>
     </div>

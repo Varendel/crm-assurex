@@ -227,7 +227,8 @@ function viewCommissionsAttente(prefiltreStatut) {
   setTimeout(() => renderToutesCommissions(), 0);
   const compagniesPresentes = [...new Set(allCommissionsAttente.map(c => normaliserCompagnie(c.compagnie)).filter(Boolean))].sort();
   return `
-    <h2 style="margin:0 0 6px;font-size:18px;font-weight:800;color:var(--text)">Toutes les commissions</h2>
+    ${printHeaderCorporate('Toutes les commissions', 'Rapport des commissions dues et reçues')}
+    <h2 class="no-print" style="margin:0 0 6px;font-size:18px;font-weight:800;color:var(--text)">Toutes les commissions</h2>
     <div class="no-print" style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Estimées à la signature, puis liées à un bordereau une fois reçues. Pour faire passer une commission "en attente" en "reçue", utilise "+ Rapprocher une commission" sur le bordereau concerné — ça garantit le montant net exact et le numéro de police. Par défaut, seules les commissions en attente sont affichées — choisis "Tous statuts" ou un autre statut ci-dessous pour voir le reste.</div>
 
     <div class="no-print" style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">

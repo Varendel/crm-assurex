@@ -13,9 +13,18 @@
 <link rel="apple-touch-icon" href="icon-180.png"/>
 <script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+  // Applique le thème enregistré AVANT le premier rendu (évite le flash de couleurs).
+  (function() {
+    var mode = localStorage.getItem('crm_theme_mode') || 'sombre';
+    var accent = localStorage.getItem('crm_theme_accent') || 'bleu';
+    document.documentElement.setAttribute('data-theme', mode);
+    document.documentElement.setAttribute('data-accent', accent);
+  })();
+</script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: #111827; color: #e2e8f0; min-height: 100vh; font-weight: 700; }
+  body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-weight: 700; }
   :root {
     --bg: #111827; --surface: #1a2235; --surface-alt: #1f2a40;
     --surface-hover: #243050; --border: #2a3550;
@@ -26,6 +35,21 @@
     --green: #4ade80; --green-dim: rgba(74,222,128,0.1);
     --purple: #a78bfa; --navy: #0f172a;
   }
+  /* ── Mode Clair ── */
+  html[data-theme="clair"] {
+    --bg: #f1f5f9; --surface: #ffffff; --surface-alt: #f8fafc;
+    --surface-hover: #eef2f7; --border: #dde3ea;
+    --text: #0f172a; --text-muted: #64748b; --text-dim: #94a3b8;
+  }
+  /* ── Couleurs d'accent ── */
+  html[data-accent="vert"] { --accent: #4ade80; --accent-dim: rgba(74,222,128,0.12); --accent-border: rgba(74,222,128,0.35); }
+  html[data-accent="or"] { --accent: #f59e0b; --accent-dim: rgba(245,158,11,0.12); --accent-border: rgba(245,158,11,0.35); }
+  html[data-accent="violet"] { --accent: #a78bfa; --accent-dim: rgba(167,139,250,0.12); --accent-border: rgba(167,139,250,0.35); }
+  .theme-swatch { width: 34px; height: 34px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: transform 0.12s, border-color 0.12s; }
+  .theme-swatch:hover { transform: scale(1.08); }
+  .theme-swatch.active { border-color: var(--text); }
+  .theme-mode-card { cursor: pointer; border: 2px solid var(--border); border-radius: 12px; padding: 14px; transition: border-color 0.12s; }
+  .theme-mode-card.active { border-color: var(--accent); }
   input, select, textarea, button { font-family: inherit; }
   .hidden { display: none !important; }
 
@@ -427,7 +451,7 @@
 
 <script src="js/01-prevoyance-immo.js?v=1787645792"></script>
 <script src="js/02-catalogue-session.js?v=1788271319"></script>
-<script src="js/03-auth-navigation.js?v=1788251103"></script>
+<script src="js/03-auth-navigation.js?v=1788448862"></script>
 <script src="js/04-dashboard-finma.js?v=1788448453"></script>
 <script src="js/05-contrats-clients.js?v=1788336348"></script>
 <script src="js/06-signature-opportunites.js?v=1788263312"></script>

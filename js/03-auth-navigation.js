@@ -729,6 +729,7 @@ const SECTIONS = [
     { id: 'agents', label: 'Agents' },
     { id: 'audit-log', label: 'Journal d\'audit' },
     { id: 'contacts-compagnies', label: 'Contacts compagnies' },
+    { id: 'apparence', label: 'Apparence (thème)', rhAllowed: true },
   ]},
 ];
 
@@ -1143,6 +1144,7 @@ async function renderView() {
     case 'agents': main.innerHTML = viewAgents(); break;
     case 'audit-log': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewAuditLog(); break;
     case 'contacts-compagnies': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewContactsCompagnies(); break;
+    case 'apparence': main.innerHTML = viewApparence(); break;
     case 'oz-assure': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewOzAssure(); break;
     case 'oz-commissions-assurex': main.innerHTML = viewOzCommissionsAssurex(); break;
     case 'contrats-orphelins-commission': main.innerHTML = viewContratsOrphelinsCommission(); break;
@@ -1223,3 +1225,63 @@ async function basculerContratsEchus() {
   console.log(`${echus.length - echecs} contrat(s) échu(s) basculé(s) en "à renouveler"${echecs ? ` — ${echecs} échec(s)` : ''}`);
 }
 
+
+// ═══ APPARENCE (thème) ═══
+function appliquerThemeMode(mode) {
+  document.documentElement.setAttribute('data-theme', mode);
+  localStorage.setItem('crm_theme_mode', mode);
+  navigate('apparence');
+}
+
+function appliquerThemeAccent(accent) {
+  document.documentElement.setAttribute('data-accent', accent);
+  localStorage.setItem('crm_theme_accent', accent);
+  navigate('apparence');
+}
+
+function viewApparence() {
+  const modeActuel = localStorage.getItem('crm_theme_mode') || 'sombre';
+  const accentActuel = localStorage.getItem('crm_theme_accent') || 'bleu';
+
+  const modes = [
+    { id: 'sombre', label: 'Sombre', desc: 'Thème par défaut du CRM', bg: '#111827', surface: '#1a2235', text: '#e2e8f0' },
+    { id: 'clair', label: 'Clair', desc: 'Fond blanc, texte foncé', bg: '#f1f5f9', surface: '#ffffff', text: '#0f172a' },
+  ];
+  const accents = [
+    { id: 'bleu', label: 'Bleu', couleur: '#38bdf8' },
+    { id: 'vert', label: 'Vert', couleur: '#4ade80' },
+    { id: 'or', label: 'Or', couleur: '#f59e0b' },
+    { id: 'violet', label: 'Violet', couleur: '#a78bfa' },
+  ];
+
+  const modesHtml = modes.map(m => `
+    <div class="theme-mode-card ${modeActuel === m.id ? 'active' : ''}" onclick="appliquerThemeMode('${m.id}')" style="flex:1;min-width:160px">
+      <div style="display:flex;gap:6px;margin-bottom:10px">
+        <div style="flex:1;height:44px;border-radius:8px;background:${m.bg};border:1px solid ${m.surface}"></div>
+        <div style="flex:1;height:44px;border-radius:8px;background:${m.surface};border:1px solid var(--border)"></div>
+      </div>
+      <div style="font-size:13px;font-weight:800;color:var(--text)">${m.label} ${modeActuel === m.id ? '✓' : ''}</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${m.desc}</div>
+    </div>`).join('');
+
+  const accentsHtml = accents.map(a => `
+    <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
+      <div class="theme-swatch ${accentActuel === a.id ? 'active' : ''}" style="background:${a.couleur}" onclick="appliquerThemeAccent('${a.id}')" title="${a.label}"></div>
+      <div style="font-size:10.5px;color:var(--text-muted);font-weight:700">${a.label}</div>
+    </div>`).join('');
+
+  return `
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Apparence</h2>
+    </div>
+    <div style="max-width:640px;margin-bottom:18px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
+      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">Mode</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px">Le choix est enregistré sur cet appareil et s'applique immédiatement.</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap">${modesHtml}</div>
+    </div>
+    <div style="max-width:640px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
+      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">Couleur d'accent</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px">Boutons, liens et éléments actifs du CRM.</div>
+      <div style="display:flex;gap:18px">${accentsHtml}</div>
+    </div>`;
+}

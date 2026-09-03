@@ -1130,11 +1130,33 @@ async function creerCommissionManquante(contratId) {
 
 let tcFiltres = { search: '', agent: '', compagnie: '', produit: '', statut: '', comm: '' };
 
+// Regroupe les variantes d'orthographe d'un même produit sous un seul libellé affiché — même
+// principe que normaliserCompagnie() (js/09), en purement cosmétique : la valeur brute en base
+// n'est jamais modifiée, seuls la liste déroulante "Produit", le filtrage et l'affichage dans
+// "Tous les contrats" utilisent la version normalisée. Volontairement une liste courte et sûre :
+// seuls les cas sans ambiguïté sont fusionnés. En particulier, les différentes formes de "Perte
+// de gain" (maladie collective / maladie LCA / maladie-accident LCA / accident collective) NE
+// SONT PAS fusionnées entre elles : ce sont des produits distincts (demande explicite de Jonathan).
+const ALIAS_PRODUITS = {
+  'lamal (assurance de base)': 'Assurance maladie (LAMal)',
+  'rc véhicule à moteur (obligatoire)': 'RC véhicule (obligatoire)',
+};
+function normaliserProduit(nom) {
+  if (!nom) return nom;
+  const cle = nom.trim().toLowerCase();
+  return ALIAS_PRODUITS[cle] || nom.trim();
+}
+
+function reinitialiserFiltresTousContrats() {
+  tcFiltres = { search: '', agent: '', compagnie: '', produit: '', statut: '', comm: '' };
+  navigate('tous-contrats');
+}
+
 function viewTousContrats() {
   const agentOptions = allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
   const compagnies = [...new Set(allContrats.map(c => c.compagnie).filter(Boolean))].sort();
   const compagnieOptions = compagnies.map(c => `<option value="${c}">${c}</option>`).join('');
-  const produits = [...new Set(allContrats.map(c => c.produit).filter(Boolean))].sort();
+  const produits = [...new Set(allContrats.map(c => normaliserProduit(c.produit)).filter(Boolean))].sort();
   const produitOptions = produits.map(p => `<option value="${p}">${p}</option>`).join('');
   setTimeout(() => renderTousContrats(), 0);
   return `
@@ -1167,6 +1189,7 @@ function viewTousContrats() {
         <option value="oui" ${tcFiltres.comm==='oui'?'selected':''}>Commissionné</option>
         <option value="non" ${tcFiltres.comm==='non'?'selected':''}>Non commissionné</option>
       </select>`}
+      <button onclick="reinitialiserFiltresTousContrats()" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:8px;padding:0 12px;font-size:12px;font-weight:700;cursor:pointer">✕ Réinitialiser les filtres</button>
     </div>
     <div id="tc-stats" class="stat-grid" style="margin-bottom:16px"></div>
     <div id="tc-body"></div>`;
@@ -1193,14 +1216,14 @@ function renderTousContrats() {
     if (agentF === '__sans__' && ct.apporteur_id) return false;
     if (agentF && agentF !== '__sans__' && ct.apporteur_id !== agentF) return false;
     if (compagnieF && ct.compagnie !== compagnieF) return false;
-    if (produitF && ct.produit !== produitF) return false;
+    if (produitF && normaliserProduit(ct.produit) !== produitF) return false;
     if (statutF && ct.statut !== statutF) return false;
     if (commF === 'oui' && ct.commissionne === false) return false;
     if (commF === 'non' && ct.commissionne !== false) return false;
     if (search) {
       const cl = allClients.find(c => c.id === ct.client_id);
       const nom = cl ? (estEntreprise(cl) ? cl.nom : `${cl.prenom} ${cl.nom}`) : '';
-      const hay = `${nom} ${ct.compagnie||''} ${ct.produit||''} ${ct.numero_police||''}`.toLowerCase();
+      const hay = `${nom} ${ct.compagnie||''} ${ct.produit||''} ${normaliserProduit(ct.produit)||''} ${ct.numero_police||''}`.toLowerCase();
       if (!hay.includes(search)) return false;
     }
     return true;
@@ -1225,7 +1248,7 @@ function renderTousContrats() {
     return `<div class="table-row" style="grid-template-columns:${cols};cursor:pointer" onclick="showDetailContrat('${ct.id}')">
       <div>
         <div style="font-size:13px;font-weight:700;color:var(--text)">${nom}${getClientMiniLogos(cl)}</div>
-        <div style="font-size:11px;color:var(--text-muted)">${ct.produit||''} · ${ct.numero_police ? '№ '+ct.numero_police : 'sans n° police'}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${normaliserProduit(ct.produit)||''} · ${ct.numero_police ? '№ '+ct.numero_police : 'sans n° police'}</div>
       </div>
       <div style="font-size:12px;color:var(--text-muted)">${ct.compagnie||'—'}</div>
       <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ct.date_debut)}</div>

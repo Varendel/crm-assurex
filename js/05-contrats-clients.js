@@ -201,21 +201,28 @@ function voirConstellationFamiliale(clientId) {
   const enfants = liste.filter(x => x.id !== clientId && (x.pere_id === clientId || x.mere_id === clientId));
 
   const nodeParent = (p, type) => p
-    ? `<div class="fam-node" onclick="fermerModaleConstellation(); showClient('${p.id}')">
-         <div class="fam-node-icon">${type === 'pere' ? '👨' : '👩'}</div>
-         <div class="fam-node-nom">${p.prenom || ''} ${p.nom || ''}</div>
-         <div class="fam-node-sub">${type === 'pere' ? 'Père' : 'Mère'}${p.ville ? ' · ' + p.ville : ''}</div>
+    ? `<div class="fam-node" style="position:relative">
+         <div onclick="fermerModaleConstellation(); showClient('${p.id}')">
+           <div class="fam-node-icon">${type === 'pere' ? '👨' : '👩'}</div>
+           <div class="fam-node-nom">${p.prenom || ''} ${p.nom || ''}</div>
+           <div class="fam-node-sub">${type === 'pere' ? 'Père' : 'Mère'}${p.ville ? ' · ' + p.ville : ''}</div>
+         </div>
+         <button onclick="event.stopPropagation(); delierFamille('${clientId}','${type}')" title="Retirer ce lien" style="position:absolute;top:2px;right:4px;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px">✕</button>
        </div>`
-    : `<div class="fam-node-vide">${type === 'pere' ? '👨 Père non lié' : '👩 Mère non liée'}</div>`;
+    : `<div class="fam-node-vide" onclick="ouvrirLienFamilial('${clientId}','${type}')" title="Cliquer pour relier">${type === 'pere' ? '👨 + Lier un père' : '👩 + Lier une mère'}</div>`;
 
-  const nodeEnfant = (e) => `<div class="fam-node" onclick="fermerModaleConstellation(); showClient('${e.id}')">
-      <div class="fam-node-icon">${e.prenatal ? '🍼' : (e.civilite === 'Madame' ? '👧' : e.civilite === 'Monsieur' ? '👦' : '🧒')}</div>
-      <div class="fam-node-nom">${e.prenom || ''} ${e.nom || ''}</div>
-      <div class="fam-node-sub">${e.date_naissance ? 'Né(e) le ' + fmtDate(e.date_naissance) : (e.ville || '')}</div>
+  const nodeEnfant = (e) => `<div class="fam-node" style="position:relative">
+      <div onclick="fermerModaleConstellation(); showClient('${e.id}')">
+        <div class="fam-node-icon">${e.prenatal ? '🍼' : (e.civilite === 'Madame' ? '👧' : e.civilite === 'Monsieur' ? '👦' : '🧒')}</div>
+        <div class="fam-node-nom">${e.prenom || ''} ${e.nom || ''}</div>
+        <div class="fam-node-sub">${e.date_naissance ? 'Né(e) le ' + fmtDate(e.date_naissance) : (e.ville || '')}</div>
+      </div>
+      <button onclick="event.stopPropagation(); delierFamille('${clientId}','enfant:${e.id}')" title="Retirer ce lien" style="position:absolute;top:2px;right:4px;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px">✕</button>
     </div>`;
 
+  const nodeAjouterEnfant = `<div class="fam-node-vide" onclick="ouvrirLienFamilial('${clientId}','enfant')" title="Relier un enfant déjà présent dans le CRM">🧒 + Ajouter un enfant</div>`;
+
   const aDesParents = !!(pere || mere);
-  const aDesEnfants = enfants.length > 0;
 
   creerModale('modal-constellation', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;max-width:720px;width:100%;max-height:85vh;overflow-y:auto">
@@ -236,15 +243,104 @@ function voirConstellationFamiliale(clientId) {
             <div class="fam-node-sub">Cette fiche</div>
           </div>
         </div>
-        ${aDesEnfants ? '<div class="fam-connector"></div>' : ''}
-        ${aDesEnfants ? `<div class="fam-row">${enfants.map(nodeEnfant).join('')}</div>` : ''}
-        ${!aDesParents && !aDesEnfants ? `<div style="color:var(--text-muted);font-size:12.5px;text-align:center;margin-top:14px">Aucun lien familial enregistré pour l'instant. Ajoute un père/mère depuis la fiche, ou lie un enfant en le créant avec ce client comme parent.</div>` : ''}
+        <div class="fam-connector"></div>
+        <div class="fam-row">${enfants.map(nodeEnfant).join('')}${nodeAjouterEnfant}</div>
       </div>
       <div style="padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end">
         <button onclick="fermerModaleConstellation()" class="btn-secondary">Fermer</button>
       </div>
     </div>
   `);
+}
+
+// Recherche + relie un client déjà existant du CRM comme père/mère/enfant du client courant.
+// Purement additif par rapport au sélecteur "Lien familial" du formulaire de création (js/07,
+// selectionnerLienFamilial) : celui-ci ne s'applique qu'à la création, ceci permet de relier
+// après coup deux fiches déjà existantes. Demande de Jonathan.
+function ouvrirLienFamilial(clientId, role) {
+  const liste = (typeof allClients !== 'undefined' ? allClients : []);
+  const c = liste.find(x => x.id === clientId);
+  if (!c) return;
+  const titre = role === 'pere' ? '👨 Lier un père' : role === 'mere' ? '👩 Lier une mère' : '🧒 Ajouter un enfant';
+  const candidats = liste.filter(x => x.id !== clientId && !estEntreprise(x));
+  const suggestions = candidats.map(x => `<option value="${(x.prenom||'')} ${(x.nom||'')}${x.ville ? ' — ' + x.ville : ''}">`).join('');
+  creerModale('modal-lien-famille', `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;max-width:420px;width:100%">
+      <div style="padding:18px 22px;border-bottom:1px solid var(--border)">
+        <h3 style="margin:0;font-size:15px;font-weight:800;color:var(--text)">${titre}</h3>
+        <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Recherche un client déjà présent dans le CRM à relier à ${c.prenom || ''} ${c.nom || ''}.</div>
+      </div>
+      <div style="padding:18px 22px">
+        <input class="form-input" id="lf-search" list="lf-suggestions" autocomplete="off" placeholder="🔎 Rechercher un client…" style="width:100%"/>
+        <datalist id="lf-suggestions">${suggestions}</datalist>
+        <div id="lf-erreur" style="font-size:11px;color:var(--red);margin-top:6px"></div>
+      </div>
+      <div style="padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px">
+        <button onclick="document.getElementById('modal-lien-famille').remove()" class="btn-secondary">Annuler</button>
+        <button onclick="confirmerLienFamilial('${clientId}','${role}')" style="background:var(--accent);border:none;color:#fff;border-radius:8px;padding:8px 18px;font-size:12px;font-weight:700;cursor:pointer">Relier</button>
+      </div>
+    </div>
+  `);
+}
+
+async function confirmerLienFamilial(clientId, role) {
+  const liste = (typeof allClients !== 'undefined' ? allClients : []);
+  const c = liste.find(x => x.id === clientId);
+  const erreurEl = document.getElementById('lf-erreur');
+  const val = (document.getElementById('lf-search')?.value || '').trim();
+  if (!val) { if (erreurEl) erreurEl.textContent = 'Choisis un client dans la liste.'; return; }
+  const match = liste.find(x => x.id !== clientId && `${(x.prenom||'')} ${(x.nom||'')}${x.ville ? ' — ' + x.ville : ''}`.trim() === val);
+  if (!match) { if (erreurEl) erreurEl.textContent = 'Aucun client trouvé avec ce nom — sélectionne une suggestion de la liste.'; return; }
+
+  let r;
+  if (role === 'pere') {
+    r = await dbPatch('clients', clientId, { pere_id: match.id });
+    if (!r || !r.error) c.pere_id = match.id;
+  } else if (role === 'mere') {
+    r = await dbPatch('clients', clientId, { mere_id: match.id });
+    if (!r || !r.error) c.mere_id = match.id;
+  } else {
+    // "Ajouter un enfant" : c devient le père ou la mère du client sélectionné, selon sa civilité.
+    const champ = c.civilite === 'Madame' ? 'mere_id' : 'pere_id';
+    r = await dbPatch('clients', match.id, { [champ]: clientId });
+    if (!r || !r.error) match[champ] = clientId;
+  }
+  if (r && r.error) { if (erreurEl) erreurEl.textContent = 'Erreur : ' + errMsg(r); return; }
+  logAction('lier_famille', 'clients', clientId, `${c.prenom || ''} ${c.nom || ''}`);
+  document.getElementById('modal-lien-famille').remove();
+  fermerModaleConstellation();
+  voirConstellationFamiliale(clientId);
+}
+
+// role : 'pere' | 'mere' | 'enfant:<id de l'enfant>'
+function delierFamille(clientId, role) {
+  if (!confirm('Retirer ce lien familial ?')) return;
+  (async () => {
+    const liste = (typeof allClients !== 'undefined' ? allClients : []);
+    const c = liste.find(x => x.id === clientId);
+    if (!c) return;
+    let r;
+    if (role === 'pere') { r = await dbPatch('clients', clientId, { pere_id: null }); if (!r || !r.error) c.pere_id = null; }
+    else if (role === 'mere') { r = await dbPatch('clients', clientId, { mere_id: null }); if (!r || !r.error) c.mere_id = null; }
+    else if (role.startsWith('enfant:')) {
+      const enfantId = role.slice('enfant:'.length);
+      const enfant = liste.find(x => x.id === enfantId);
+      if (!enfant) return;
+      const champ = enfant.pere_id === clientId ? 'pere_id' : 'mere_id';
+      r = await dbPatch('clients', enfantId, { [champ]: null });
+      if (!r || !r.error) enfant[champ] = null;
+    }
+    if (r && r.error) { showError('Erreur : ' + errMsg(r)); return; }
+    fermerModaleConstellation();
+    voirConstellationFamiliale(clientId);
+  })();
+}
+
+// Utilisé pour faire "briller" le bouton 🌳 Constellation familiale dès que ce client a au moins
+// un lien (père, mère, ou enfant) — demande de Jonathan.
+function aConstellationFamiliale(c) {
+  const liste = (typeof allClients !== 'undefined' ? allClients : []);
+  return !!(c.pere_id || c.mere_id || liste.some(x => x.id !== c.id && (x.pere_id === c.id || x.mere_id === c.id)));
 }
 
 async function showClient(id) {
@@ -302,7 +398,7 @@ async function showClient(id) {
         <button onclick="ouvrirSignatureMandat('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📄 Mandat de courtage</button>
         <button onclick="ouvrirEnvoiMandatCompagnies('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">✉️ Envoyer le mandat</button>
         ${!c.prenatal && c.segment !== 'Entreprise' ? `<button onclick="creerPrenataleDepuisParent('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🍼 Créer une prénatale</button>` : ''}
-        ${!isEntreprise ? `<button onclick="voirConstellationFamiliale('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🌳 Constellation familiale</button>` : ''}
+        ${!isEntreprise ? `<button onclick="voirConstellationFamiliale('${c.id}')" class="${aConstellationFamiliale(c) ? 'fam-glow' : ''}" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🌳 Constellation familiale</button>` : ''}
         <button onclick="ouvrirUploadContratSignature('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📎 Faire signer un contrat</button>
         <button onclick="ouvrirModaleResiliation('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📝 Feuille de résiliation</button>
         <button onclick="prefillOpportuniteClientId='${c.id}'; opportuniteEnEditionId=null; navigate('nouvelle-opportunite')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:7px 16px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">🎯 Créer une opportunité</button>
@@ -872,16 +968,43 @@ function afficherNoteResiliation(typeId) {
   if (el) el.textContent = t ? t.note : '';
 }
 
+// Membres de la constellation familiale d'un client (lui-même + père + mère + enfants liés),
+// utilisé pour la feuille de résiliation quand plusieurs personnes du foyer sont concernées par
+// la même résiliation (ex: changement de LAMal pour toute la famille). Demande de Jonathan.
+function membresConstellation(clientId) {
+  const c = allClients.find(x => x.id === clientId);
+  if (!c) return [];
+  const pere = c.pere_id ? allClients.find(x => x.id === c.pere_id) : null;
+  const mere = c.mere_id ? allClients.find(x => x.id === c.mere_id) : null;
+  const enfants = allClients.filter(x => x.id !== clientId && (x.pere_id === clientId || x.mere_id === clientId));
+  const roles = [{ p: c, role: 'Cette fiche' }, { p: pere, role: 'Père' }, { p: mere, role: 'Mère' }]
+    .concat(enfants.map(e => ({ p: e, role: 'Enfant' })))
+    .filter(x => x.p);
+  return roles;
+}
+
 function ouvrirModaleResiliation(clientId) {
   const c = allClients.find(x => x.id === clientId);
   if (!c) return;
   const contratsClient = allContrats.filter(ct => ct.client_id === clientId);
   const contratOptions = contratsClient.map(ct => `<option value="${ct.id}" data-compagnie="${(ct.compagnie || '').replace(/"/g, '&quot;')}" data-police="${(ct.numero_police || '').replace(/"/g, '&quot;')}">${ct.produit || 'Contrat'} — ${ct.compagnie || ''}${ct.numero_police ? ' (' + ct.numero_police + ')' : ''}</option>`).join('');
+  const membres = membresConstellation(clientId);
+  const membresHtml = membres.length > 1 ? `<div class="form-field" style="grid-column:span 2">
+    <label class="form-label">Personnes concernées par cette résiliation</label>
+    <div style="display:flex;flex-direction:column;gap:6px;background:var(--surface-alt);border:1px solid var(--border);border-radius:8px;padding:10px 12px">
+      ${membres.map(m => `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;color:var(--text)">
+        <input type="checkbox" class="res-membre-chk" value="${m.p.id}" ${m.p.id === clientId ? 'checked' : ''} style="width:15px;height:15px;cursor:pointer"/>
+        ${m.p.prenom || ''} ${m.p.nom || ''} <span style="color:var(--text-muted);font-weight:400">(${m.role})</span>
+      </label>`).join('')}
+    </div>
+    <div style="font-size:10.5px;color:var(--text-muted);margin-top:5px">Ce client a une constellation familiale — coche tous ceux concernés par cette résiliation (ex: changement de LAMal pour toute la famille).</div>
+  </div>` : '';
   creerModale('modal-resiliation', `
     <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:480px;width:100%">
       <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">📝 Générer une feuille de résiliation</div>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:16px">Sélectionne le type d'assurance à résilier — les coordonnées du client sont reprises automatiquement dans la lettre.</div>
       <div class="form-grid">
+        ${membresHtml}
         <div class="form-field" style="grid-column:span 2">
           <label class="form-label">Type d'assurance *</label>
           <select class="form-select" id="res-type" onchange="afficherNoteResiliation(this.value)">
@@ -959,14 +1082,24 @@ function confirmerResiliation(clientId) {
   if (!dateEffet) { erreurEl.textContent = "Indique la date d'effet souhaitée."; erreurEl.style.display = 'block'; return; }
 
   const isEnt = estEntreprise(c);
-  const nomClient = isEnt ? c.nom : `${c.civilite ? c.civilite + ' ' : ''}${c.prenom} ${c.nom}`;
+  // Membres cochés dans la constellation familiale (si affichée) — par défaut juste le client
+  // de la fiche si la case n'existe pas (pas de constellation).
+  const membresCoches = Array.from(document.querySelectorAll('.res-membre-chk:checked')).map(el => el.value);
+  const personnes = membresCoches.length
+    ? membresCoches.map(id => allClients.find(x => x.id === id)).filter(Boolean)
+    : [c];
+  const nomPersonne = (p) => estEntreprise(p) ? p.nom : `${p.civilite ? p.civilite + ' ' : ''}${p.prenom} ${p.nom}`;
+  const plusieursPersonnes = personnes.length > 1;
+  const nomClient = plusieursPersonnes
+    ? personnes.map(nomPersonne).join(', ').replace(/,([^,]*)$/, ' et$1')
+    : nomPersonne(personnes[0]);
   const adresseClient = `${c.adresse || ''}${c.adresse ? ', ' : ''}${c.npa || ''} ${c.ville || ''}`.trim();
   const dateEffetFr = fmtDate(dateEffet);
   const aujourdhui = fmtDate(new Date().toISOString());
   const echapper = s => (s || '').replace(/</g, '&lt;');
 
   const noteLamal = typeId === 'lamal'
-    ? `<p>Pour la LAMal, le nouvel assureur vous adressera prochainement une attestation d'assurance.</p>`
+    ? `<p>Pour la LAMal, le nouvel assureur vous adressera prochainement une attestation d'assurance${plusieursPersonnes ? ' pour chaque personne concernée' : ''}.</p>`
     : '';
   // Lieu de la date = localité du client (expéditeur réel de la lettre), pas St-Sulpice —
   // ce document n'a plus aucune mention Assurex, donc plus de raison d'utiliser l'adresse du
@@ -982,9 +1115,10 @@ function confirmerResiliation(clientId) {
     <div class="destinataire">
       <strong>${echapper(compagnie)}</strong>${compagnieAdresse ? `<br/>${echapper(compagnieAdresse)}` : ''}
     </div>
-    <div class="objet">Résiliation du contrat d'assurance${police ? ' n° ' + echapper(police) : ''}</div>
+    <div class="objet">Résiliation du contrat d'assurance${police ? ' n° ' + echapper(police) : ''}${plusieursPersonnes ? ' — ' + personnes.length + ' personnes concernées' : ''}</div>
     <p style="margin-top:18px">Madame, Monsieur,</p>
-    <p>Par la présente lettre, je vous notifie de la résiliation de mon contrat d'assurance cité en référence :</p>
+    <p>Par la présente lettre, je vous notifie de la résiliation de ${plusieursPersonnes ? 'nos contrats d\'assurance' : 'mon contrat d\'assurance'} cité${plusieursPersonnes ? 's' : ''} en référence, pour ${plusieursPersonnes ? 'les personnes suivantes' : 'la personne suivante'} :</p>
+    ${plusieursPersonnes ? `<p>${personnes.map(p => '☑ ' + echapper(nomPersonne(p))).join('<br/>')}</p>` : ''}
     <p>☑ ${typeInfo.label} avec effet au <strong>${dateEffetFr}</strong></p>
     ${noteLamal}
     <p>Je vous remercie de bien vouloir me faire parvenir une confirmation par courrier, et dans cette attente, de bien vouloir croire en l'expression de mes meilleures salutations.</p>

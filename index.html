@@ -278,6 +278,15 @@
   .fam-node-icon { font-size: 20px; margin-bottom: 4px; }
   .fam-node-nom { font-size: 12.5px; font-weight: 800; color: var(--text); }
   .fam-node-sub { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
+  /* Le bouton "Constellation familiale" brille dès qu'au moins un lien (père/mère/enfant) existe */
+  @keyframes fam-glow-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.45); }
+    50% { box-shadow: 0 0 10px 3px rgba(245,158,11,0.55); }
+  }
+  .fam-glow {
+    background: var(--gold-dim) !important; border-color: rgba(245,158,11,0.5) !important;
+    color: var(--gold) !important; animation: fam-glow-pulse 2.2s ease-in-out infinite;
+  }
 
   /* PRINT */
   @media print {
@@ -453,7 +462,7 @@
 <script src="js/02-catalogue-session.js?v=1788271319"></script>
 <script src="js/03-auth-navigation.js?v=1788448862"></script>
 <script src="js/04-dashboard-finma.js?v=1788450406"></script>
-<script src="js/05-contrats-clients.js?v=1788336348"></script>
+<script src="js/05-contrats-clients.js?v=1788450907"></script>
 <script src="js/06-signature-opportunites.js?v=1788263312"></script>
 <script src="js/07-fichepaie-bordereaux.js?v=1787910113"></script>
 <script src="js/08-nouveaux-formulaires.js?v=1788336348"></script>

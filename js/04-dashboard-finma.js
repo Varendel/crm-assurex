@@ -1132,6 +1132,8 @@ function viewTousContrats() {
   const agentOptions = allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
   const compagnies = [...new Set(allContrats.map(c => c.compagnie).filter(Boolean))].sort();
   const compagnieOptions = compagnies.map(c => `<option value="${c}">${c}</option>`).join('');
+  const produits = [...new Set(allContrats.map(c => c.produit).filter(Boolean))].sort();
+  const produitOptions = produits.map(p => `<option value="${p}">${p}</option>`).join('');
   setTimeout(() => renderTousContrats(), 0);
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
@@ -1147,6 +1149,9 @@ function viewTousContrats() {
       </select>
       <select class="form-select" id="tc-compagnie" style="max-width:160px" onchange="renderTousContrats()">
         <option value="">Toutes compagnies</option>${compagnieOptions}
+      </select>
+      <select class="form-select" id="tc-produit" style="max-width:200px" onchange="renderTousContrats()">
+        <option value="">Tous produits</option>${produitOptions}
       </select>
       <select class="form-select" id="tc-statut" style="max-width:140px" onchange="renderTousContrats()">
         <option value="">Tous statuts</option>
@@ -1169,6 +1174,7 @@ function renderTousContrats() {
   const search = (document.getElementById('tc-search')?.value || '').toLowerCase().trim();
   const agentF = document.getElementById('tc-agent')?.value || '';
   const compagnieF = document.getElementById('tc-compagnie')?.value || '';
+  const produitF = document.getElementById('tc-produit')?.value || '';
   const statutF = document.getElementById('tc-statut')?.value || '';
   const commF = document.getElementById('tc-comm')?.value || '';
 
@@ -1176,6 +1182,7 @@ function renderTousContrats() {
     if (agentF === '__sans__' && ct.apporteur_id) return false;
     if (agentF && agentF !== '__sans__' && ct.apporteur_id !== agentF) return false;
     if (compagnieF && ct.compagnie !== compagnieF) return false;
+    if (produitF && ct.produit !== produitF) return false;
     if (statutF && ct.statut !== statutF) return false;
     if (commF === 'oui' && ct.commissionne === false) return false;
     if (commF === 'non' && ct.commissionne !== false) return false;
@@ -1197,11 +1204,13 @@ function renderTousContrats() {
     ${statCard('Primes/an', 'CHF ' + Math.round(totalPrimes).toLocaleString(), '#f59e0b')}
     ${sanAgent > 0 ? statCard('Sans apporteur', sanAgent, '#64748b', 'toi seul') : ''}`;
 
-  const cols = '1fr 110px 110px 100px 90px 70px 36px';
+  const cols = '1fr 110px 110px 100px 90px 90px 70px 36px';
   const rows = filtered.map(ct => {
     const cl = allClients.find(c => c.id === ct.client_id);
     const nom = cl ? (estEntreprise(cl) ? cl.nom : `${cl.prenom} ${cl.nom}`) : '—';
     const agent = allAgents.find(a => a.id === ct.apporteur_id);
+    const commLieesTc = allCommissionsAttente.filter(c => c.contrat_id === ct.id);
+    const natureTc = commLieesTc.length ? commLieesTc[0].nature : (ct.type_commission || '');
     return `<div class="table-row" style="grid-template-columns:${cols};cursor:pointer" onclick="showDetailContrat('${ct.id}')">
       <div>
         <div style="font-size:13px;font-weight:700;color:var(--text)">${nom}${getClientMiniLogos(cl)}</div>
@@ -1211,6 +1220,7 @@ function renderTousContrats() {
       <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ct.date_debut)}</div>
       <div style="font-weight:800;color:#f59e0b;text-align:right">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}</div>
       <div>${badge(ct.statut==='annulé'?'❌ Annulé':ct.statut==='mandat_resilie'?'🚫 Mandat résilié':ct.statut, ct.statut==='actif'?'#4ade80':ct.statut==='mandat_resilie'?'#f87171':ct.statut==='résilié'?'#94a3b8':ct.statut==='annulé'?'#f87171':'#f59e0b')}</div>
+      <div>${natureTc === 'gestion' ? badge('Gestion', '#38bdf8') : natureTc === 'acquisition' ? badge('Acquisition', '#f59e0b') : '<span style="font-size:11px;color:var(--text-muted)">—</span>'}</div>
       <div style="font-size:11px;color:var(--text-muted)">${(() => {
         if (agent) return agent.prenom + ' ' + agent.nom;
         const sig = allAgents.find(a => a.role === 'signataire');
@@ -1223,7 +1233,7 @@ function renderTousContrats() {
   document.getElementById('tc-body').innerHTML = `
     <div class="table-wrap">
       <div class="table-header" style="grid-template-columns:${cols}">
-        <div>Client / Produit</div><div>Compagnie</div><div>Date signature</div><div>Prime/an</div><div>Statut</div><div>Signataire / Apporteur</div><div></div>
+        <div>Client / Produit</div><div>Compagnie</div><div>Date signature</div><div>Prime/an</div><div>Statut</div><div>Nature</div><div>Signataire / Apporteur</div><div></div>
       </div>
       ${rows || '<div class="table-empty">Aucun contrat ne correspond aux filtres.</div>'}
     </div>`;

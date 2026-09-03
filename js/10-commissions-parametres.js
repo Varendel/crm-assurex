@@ -255,6 +255,12 @@ function viewCommissionsAttente(prefiltreStatut) {
         <option value="prive">Client privé</option>
         <option value="entreprise">Entreprise</option>
       </select>
+      <select class="form-select" id="tc-entite" style="max-width:190px" onchange="renderToutesCommissions()">
+        <option value="">Toutes entités</option>
+        <option value="oz">${OZ_MINI_LOGO} Clients OZ Assure</option>
+        <option value="assurex">${COFIDEX_MINI_LOGO} Clients Assurex / EX Groupe</option>
+        <option value="aucun">— Non marqués</option>
+      </select>
       <select class="form-select" id="tc-tri" style="max-width:190px" onchange="renderToutesCommissions()">
         <option value="date">Plus récent d'abord</option>
         <option value="montant_desc" selected>Montant décroissant</option>
@@ -271,6 +277,7 @@ function renderToutesCommissions() {
   const statutFilter = document.getElementById('tc-statut')?.value || '';
   const natureFilter = document.getElementById('tc-nature')?.value || '';
   const typeClientFilter = document.getElementById('tc-typeclient')?.value || '';
+  const entiteFilter = document.getElementById('tc-entite')?.value || '';
   const tri = document.getElementById('tc-tri')?.value || 'montant_desc';
 
   // Client privé vs entreprise — déduit du client lié (allClients). Une commission sans client_id
@@ -307,6 +314,12 @@ function renderToutesCommissions() {
     } else if (statutFilter && c.statut !== statutFilter) return false;
     if (natureFilter && (c.nature || 'acquisition') !== natureFilter) return false;
     if (typeClientFilter && typeClientDe(c) !== typeClientFilter) return false;
+    if (entiteFilter) {
+      const clEnt = c.client_id ? allClients.find(x => x.id === c.client_id) : null;
+      if (entiteFilter === 'oz' && !(clEnt && clEnt.source_oz)) return false;
+      if (entiteFilter === 'assurex' && !(clEnt && clEnt.source_cofidex)) return false;
+      if (entiteFilter === 'aucun' && (clEnt && (clEnt.source_oz || clEnt.source_cofidex))) return false;
+    }
     if (search) {
       const haystack = `${c.client_nom||''} ${c.compagnie||''} ${c.produit||''} ${numeroBordereauDe(c)}`.toLowerCase();
       if (!haystack.includes(search)) return false;
@@ -324,6 +337,18 @@ function renderToutesCommissions() {
   const totalAcquisition = filtered.filter(c => (c.nature||'acquisition') === 'acquisition' && c.statut !== 'extourné').reduce((s,c) => s + montantC(c), 0);
   const totalGestion = filtered.filter(c => c.nature === 'gestion' && c.statut !== 'extourné').reduce((s,c) => s + montantC(c), 0);
 
+  // Répartition "qui rapporte quoi" par entité — même principe que dans "Tous les contrats" :
+  // calculée sur les lignes filtrées par tous les autres critères (compagnie/statut/nature/...)
+  // mais SANS le filtre entité lui-même, pour pouvoir comparer OZ / Assurex / non-marqués côte
+  // à côte même quand "Toutes entités" est sélectionné. Extournées exclues (comme totalGestion).
+  function totauxEntiteComm(testFn) {
+    const lignes = filtered.filter(c => c.statut !== 'extourné' && testFn(c.client_id ? allClients.find(x => x.id === c.client_id) : null));
+    return { count: lignes.length, montant: lignes.reduce((s,c) => s + montantC(c), 0) };
+  }
+  const totOzC = totauxEntiteComm(cl => cl && cl.source_oz);
+  const totAssurexC = totauxEntiteComm(cl => cl && cl.source_cofidex);
+  const totAucunC = totauxEntiteComm(cl => !(cl && (cl.source_oz || cl.source_cofidex)));
+
   document.getElementById('tc-stats').innerHTML = `
     ${statCard('En attente', 'CHF ' + totalAttente.toLocaleString(), '#f59e0b')}
     ${statCard('Reçues (brut)', 'CHF ' + totalRecuBrut.toLocaleString(), '#4ade80')}
@@ -331,7 +356,10 @@ function renderToutesCommissions() {
     ${statCard('Net Assurex encaissé', 'CHF ' + totalRecuNet.toLocaleString(), '#38bdf8')}
     ${statCard('Dont Acquisition', 'CHF ' + totalAcquisition.toLocaleString(), '#a78bfa')}
     ${statCard('Dont Gestion', 'CHF ' + totalGestion.toLocaleString(), '#60a5fa')}
-    ${statCard('Total dossiers', filtered.length, '#a78bfa')}`;
+    ${statCard('Total dossiers', filtered.length, '#a78bfa')}
+    ${statCard(OZ_MINI_LOGO + ' OZ', 'CHF ' + Math.round(totOzC.montant).toLocaleString(), '#38bdf8', totOzC.count + ' dossier(s)')}
+    ${statCard(COFIDEX_MINI_LOGO + ' Assurex/EX', 'CHF ' + Math.round(totAssurexC.montant).toLocaleString(), '#a78bfa', totAssurexC.count + ' dossier(s)')}
+    ${totAucunC.count > 0 ? statCard('Non marqués', 'CHF ' + Math.round(totAucunC.montant).toLocaleString(), '#64748b', totAucunC.count + ' dossier(s)') : ''}`;
 
   const cols = '1fr 120px 110px 110px 100px 90px';
   const rows = filtered.map(c => {

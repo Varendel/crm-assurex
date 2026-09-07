@@ -533,9 +533,16 @@ async function ajouterTacheOpportunite(oppId) {
 }
 
 async function toggleTacheOpportunite(id, fait) {
+  const tache = allRappels.find(r => r.id === id);
   const r = await dbPatch('rappels', id, { statut: fait ? 'traité' : 'ouvert' });
   if (r && r.error) { showError('Erreur : ' + errMsg(r)); return; }
   allRappels = await dbGet('rappels', 'select=*');
+  // Demande de Jonathan le 07.09.2026 : une tâche validée depuis la fiche opportunité doit
+  // laisser une trace dans l'historique de l'opp (nom de la tâche + date), sans étape manuelle —
+  // réutilise ajouterLigneHistoriqueOpportunite() qui horodate et signe déjà avec l'auteur connecté.
+  if (fait && tache && tache.opportunite_id) {
+    await ajouterLigneHistoriqueOpportunite(tache.opportunite_id, `✓ Tâche terminée : ${tache.titre}`);
+  }
   navigate('nouvelle-opportunite');
 }
 

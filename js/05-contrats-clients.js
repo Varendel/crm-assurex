@@ -393,13 +393,11 @@ async function showClient(id) {
       </div>
     </div>
     <div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:16px">
-      <div style="display:flex;gap:10px">
-        <button onclick="toggleEditClient()" style="background:${editingClient ? 'var(--red-dim)' : 'var(--surface)'};border:1px solid ${editingClient ? 'rgba(248,113,113,0.3)' : 'var(--border)'};border-radius:8px;padding:7px 16px;color:${editingClient ? 'var(--red)' : 'var(--text-muted)'};font-size:12px;font-weight:700;cursor:pointer">${editingClient ? '✕ Annuler' : '✏️ Modifier'}</button>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button onclick="ouvrirSignatureMandat('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📄 Mandat de courtage</button>
         <button onclick="ouvrirEnvoiMandatCompagnies('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">✉️ Envoyer le mandat</button>
         ${!c.prenatal && c.segment !== 'Entreprise' ? `<button onclick="creerPrenataleDepuisParent('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🍼 Créer une prénatale</button>` : ''}
         ${!isEntreprise ? `<button onclick="voirConstellationFamiliale('${c.id}')" class="${aConstellationFamiliale(c) ? 'fam-glow' : ''}" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🌳 Constellation familiale</button>` : ''}
-        <button onclick="ouvrirUploadContratSignature('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📎 Faire signer un contrat</button>
         <button onclick="ouvrirModaleResiliation('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📝 Feuille de résiliation</button>
         <button onclick="prefillOpportuniteClientId='${c.id}'; opportuniteEnEditionId=null; navigate('nouvelle-opportunite')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:7px 16px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">🎯 Créer une opportunité</button>
         <button onclick="ouvrirModaleNouveauRdv('${c.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:7px 16px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">📅 Prendre un RDV</button>
@@ -407,6 +405,7 @@ async function showClient(id) {
         ${estEntreprise(c) ? `<button onclick="genererFicheDemandeOffre('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🖨️ Fiche papier (demande d'offre)</button>` : ''}
         ${estEntreprise(c) ? `<button onclick="showCompleterDetailsEntreprise('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📋 Détails entreprise (masse salariale, assurances, LPP...)</button>` : ''}
         <button onclick="window.print()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🖨️ Imprimer la fiche</button>
+        <button onclick="toggleEditClient()" style="background:${editingClient ? 'var(--red-dim)' : 'var(--surface)'};border:1px solid ${editingClient ? 'rgba(248,113,113,0.3)' : 'var(--border)'};border-radius:8px;padding:7px 16px;color:${editingClient ? 'var(--red)' : 'var(--text-muted)'};font-size:12px;font-weight:700;cursor:pointer">${editingClient ? '✕ Annuler' : '✏️ Modifier'}</button>
       </div>
     </div>
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:18px">
@@ -620,7 +619,7 @@ async function showClient(id) {
               <button onclick="supprimerMandatSauvegarde('${m.id}','${c.id}')" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:16px;padding:0 4px" title="Supprimer">✕</button>
             </div>`).join('')}
         </div>
-        ` : `<div style="font-size:12px;color:var(--text-muted)">Rien d'enregistré pour l'instant — utilise "📄 Mandat de courtage" ou "📎 Faire signer un contrat" en haut de la fiche, ou uploade un document déjà signé à la main.</div>`}
+        ` : `<div style="font-size:12px;color:var(--text-muted)">Rien d'enregistré pour l'instant — utilise "📄 Mandat de courtage" en haut de la fiche, ou uploade un document déjà signé à la main ci-dessus.</div>`}
       `)}
     </div>
 

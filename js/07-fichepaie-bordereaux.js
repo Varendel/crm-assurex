@@ -1885,6 +1885,7 @@ function ouvrirCreationClientDepuisOpportunite() {
           <div class="form-field"><label class="form-label">Ville *</label><input class="form-input" id="occ-e-ville" placeholder="Lausanne"/></div>
           <div class="form-field"><label class="form-label">Contact — Prénom</label><input class="form-input" id="occ-e-contact-prenom" placeholder="Jean"/></div>
           <div class="form-field"><label class="form-label">Contact — Nom</label><input class="form-input" id="occ-e-contact-nom" placeholder="Dupont"/></div>
+          <div class="form-field"><label class="form-label">Domaine SUVA (monopole accident) ?</label><select class="form-select" id="occ-e-suva"><option value="non" selected>Non</option><option value="oui">Oui</option></select></div>
         </div>
       </div>
       <div id="occ-erreur" style="display:none;color:#f87171;font-size:11.5px;margin-top:10px"></div>
@@ -1940,6 +1941,10 @@ async function creerClientDepuisOpportunite() {
       taux_activite: 0,
       statut: 'prospect',
       segment: 'Entreprise',
+      // Coché ici, ce champ fait apparaître automatiquement le logo SUVA à côté du nom sur la
+      // fiche client (voir getClientMiniLogos(), js/01) — sans lui ce formulaire rapide créait
+      // des clients entreprise sans jamais pouvoir afficher ce logo avant un premier contrat LAA.
+      domaine_suva: document.getElementById('occ-e-suva')?.value === 'oui',
     };
   } else {
     const prenom = document.getElementById('occ-prenom')?.value.trim() || '';

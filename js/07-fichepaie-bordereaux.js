@@ -1886,6 +1886,7 @@ function ouvrirCreationClientDepuisOpportunite() {
           <div class="form-field"><label class="form-label">Contact — Prénom</label><input class="form-input" id="occ-e-contact-prenom" placeholder="Jean"/></div>
           <div class="form-field"><label class="form-label">Contact — Nom</label><input class="form-input" id="occ-e-contact-nom" placeholder="Dupont"/></div>
           <div class="form-field"><label class="form-label">Domaine SUVA (monopole accident) ?</label><select class="form-select" id="occ-e-suva"><option value="non" selected>Non</option><option value="oui">Oui</option></select></div>
+          <div class="form-field" style="grid-column:span 2"><label class="form-label">Lieu du risque (si différent de l'adresse)</label><input class="form-input" id="occ-e-risque" placeholder="Laisser vide si identique à l'adresse"/></div>
         </div>
       </div>
       <div id="occ-erreur" style="display:none;color:#f87171;font-size:11.5px;margin-top:10px"></div>
@@ -1945,6 +1946,7 @@ async function creerClientDepuisOpportunite() {
       // fiche client (voir getClientMiniLogos(), js/01) — sans lui ce formulaire rapide créait
       // des clients entreprise sans jamais pouvoir afficher ce logo avant un premier contrat LAA.
       domaine_suva: document.getElementById('occ-e-suva')?.value === 'oui',
+      lieu_risque: document.getElementById('occ-e-risque')?.value.trim() || null,
     };
   } else {
     const prenom = document.getElementById('occ-prenom')?.value.trim() || '';

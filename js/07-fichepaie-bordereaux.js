@@ -1190,6 +1190,12 @@ async function viewNouvelleDemandeOffre() {
   const cpTel = cp ? (cp.tel || cp.mobile || '') : '';
   const cpNomContact = cp ? (estEntreprise(cp) ? (cp.prenom || '') : (cp.prenom || '')) : '';
   if (existante) setTimeout(() => prefillChampsDemandeOffre(existante), 0);
+  // Demande de Jonathan le 08.09.2026 : "j'ai les infos entreprise enregistrées mais quand je
+  // reprends demande d'offre il y a pas les infos, il faut que les deux communiquent" — sans
+  // demande déjà existante à reprendre, si un client entreprise est sélectionné/préfilli et qu'il
+  // a des "Détails entreprise" déjà enregistrés (masse salariale, assurances envisagées, LPP...),
+  // on les reprend ici plutôt que de laisser Jonathan tout ressaisir en clientèle.
+  else if (cp && estEntreprise(cp) && cp.details_entreprise) setTimeout(() => prefillDemandeOffreDepuisDetailsClient(cp), 0);
   return `
     ${existante ? `<input type="hidden" id="do-demande-offre-id" value="${existante.id}"/>
     <div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:10px 16px;margin-bottom:16px;font-size:12px;color:var(--text)">↺ Demande d'offre du ${fmtDate(existante.created_at)} — modifie/complète si besoin, puis génère l'email en bas de page.</div>` : ''}
@@ -1406,6 +1412,70 @@ function basculerTauxLppPersonnalise(sel) {
   const custom = document.getElementById('do-taux-min-legal-custom');
   if (!custom) return;
   custom.style.display = sel.value === 'personnalise' ? '' : 'none';
+}
+
+// Reprend les "Détails entreprise" déjà enregistrés sur la fiche client (saisis via
+// "📋 Détails entreprise" sur la fiche client) pour préremplir une NOUVELLE demande d'offre —
+// jumelle de prefillChampsDemandeOffre() ci-dessous, mais lit clients.details_entreprise (+
+// clients.revenu/taux_activite/cct/domaine_suva) au lieu de demandes_offre.donnees. Les deux
+// formulaires ne partagent pas exactement les mêmes libellés de case à cocher (ex: la section
+// combinée "RC & assurances choses" côté client vs. deux sections séparées côté demande d'offre)
+// — le mapping ci-dessous fait de son mieux, sans jamais inventer une valeur absente.
+function prefillDemandeOffreDepuisDetailsClient(cp) {
+  const d = cp.details_entreprise || {};
+  const setVal = (id, v) => { const el = document.getElementById(id); if (el && v !== undefined && v !== null && v !== '') el.value = v; };
+  const setChk = (id, v) => { const el = document.getElementById(id); if (el && v) el.checked = true; };
+  const ouiNon = (b) => b === true ? 'oui' : (b === false ? 'non' : '');
+
+  setVal('do-avs', cp.avs);
+  setVal('do-activite', d.activite || cp.profession);
+  setVal('do-lieu-risque', d.lieu_risque);
+  setVal('do-suva', ouiNon(cp.domaine_suva));
+  setVal('do-independant', d.independant);
+
+  setVal('do-ca', cp.revenu);
+  setVal('do-nb-collab', cp.taux_activite);
+  setVal('do-ap-h', d.ms_ap_h); setVal('do-ap-f', d.ms_ap_f);
+  setVal('do-anp-h', d.ms_anp_h); setVal('do-anp-f', d.ms_anp_f);
+  setVal('do-exc-avs-h', d.exc_h); setVal('do-exc-avs-f', d.exc_f);
+  setVal('do-masse-chef', d.ms_chef);
+
+  const ap = d.assurances_personnes || {};
+  setChk('do-perte-gain', ap['Perte de gain maladie']);
+  if (d.delai_attente === '14j') setChk('do-pg-14j', true);
+  else if (d.delai_attente === '30j') setChk('do-pg-30j', true);
+  else if (d.delai_attente === '60j') setChk('do-pg-60j', true);
+  setChk('do-laa', ap['LAA']); setChk('do-laaf', ap['LAAF (indépendant)']);
+  setChk('do-laac', ap['LAAC']); setChk('do-semi-privee', ap['Semi-privée']); setChk('do-lpp', ap['LPP']);
+
+  const vie = d.assurances_vie || {};
+  setChk('do-3a', vie['3a']); setChk('do-3a-indep', vie['3a indépendant']); setChk('do-3b', vie['3B']);
+  setChk('do-risque-pure', vie['Risque pur']); setChk('do-versement-unique', vie['Versement unique']);
+  setVal('do-budget-epargne', d.budget_epargne); setVal('do-pa', d.pa);
+
+  setVal('do-cct', ouiNon(cp.cct));
+  if (d.taux_lpp === 'Spécifique') { /* pas de valeur libre équivalente enregistrée côté client — laissé vide, à préciser en clientèle */ }
+  else if (d.taux_lpp) { setVal('do-taux-min-legal', '7/10/15/18'); }
+  setVal('do-ded-coord', d.ded_coord === 'Avec déd. coord.' ? 'avec' : (d.ded_coord === 'Sans déd. coord.' ? 'sans' : ''));
+  setVal('do-cap-invalidite', d.cap_invalidite); setVal('do-cap-deces', d.cap_deces);
+
+  setVal('do-rc-risque', d.rc_risque); setVal('do-rc-lieux', d.lieux_exploitation);
+  const rcc = d.rc_assurances_choses || {};
+  setChk('do-rc-commerce', rcc['RC/Commerce']);
+  setChk('do-cyber', rcc['Cyber']);
+  setChk('do-construction', rcc['Construction/MO']);
+  setChk('do-perte-exploit', rcc['Perte exploitation'] || (d.perte_exploitation > 0));
+  setChk('do-machines', rcc['Machines']); setChk('do-vol', rcc['Vol']); setChk('do-all-risk', rcc['All Risk']);
+  setChk('do-transports', rcc['Transports']);
+  setVal('do-inventaire', d.inventaire_somme); setVal('do-rc-inventaire', d.inventaire_somme);
+
+  (d.vehicules || []).forEach(veh => {
+    ajouterPlaqueDemandeOffre();
+    const numeros = document.querySelectorAll('.do-plaque-numero'), modeles = document.querySelectorAll('.do-plaque-modele');
+    const idx = numeros.length - 1;
+    if (numeros[idx]) numeros[idx].value = veh.plaque || '';
+    if (modeles[idx]) modeles[idx].value = veh.modele || '';
+  });
 }
 
 function prefillChampsDemandeOffre(existante) {
@@ -1946,7 +2016,13 @@ async function creerClientDepuisOpportunite() {
       // fiche client (voir getClientMiniLogos(), js/01) — sans lui ce formulaire rapide créait
       // des clients entreprise sans jamais pouvoir afficher ce logo avant un premier contrat LAA.
       domaine_suva: document.getElementById('occ-e-suva')?.value === 'oui',
-      lieu_risque: document.getElementById('occ-e-risque')?.value.trim() || null,
+      // "lieu_risque" vit dans details_entreprise (JSON), pas en colonne top-level — voir
+      // collecterDetailsEntreprise(). L'envoyer comme clé directe ferait échouer toute la
+      // création (colonne inconnue pour PostgREST).
+      details_entreprise: (() => {
+        const lr = document.getElementById('occ-e-risque')?.value.trim();
+        return lr ? { lieu_risque: lr } : undefined;
+      })(),
     };
   } else {
     const prenom = document.getElementById('occ-prenom')?.value.trim() || '';

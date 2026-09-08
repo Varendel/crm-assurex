@@ -1149,7 +1149,12 @@ async function creerRdvInterne(agentId) {
     client_id: clientId,
     prospect_nom: clientId ? null : prospectNom,
     type: document.getElementById('rdv-modal-type')?.value || null,
-    date_heure: `${date}T${heure}:00`,
+    // isoZurich() (js/05) explicite le décalage Europe/Zurich dans l'horodatage — sans lui la
+    // session Postgres (UTC) prenait "15:15" tapé ici pour de l'UTC, donc le RDV se retrouvait
+    // 1-2h plus tard partout (fiche client, agenda, Outlook). Même bug déjà corrigé sur la page
+    // de réservation publique (confirmerReservationRdv) mais pas ici — repéré par Jonathan le
+    // 08.09.2026 ("j'ai créé le rdv pour 15h, je le vois pas dans mon outlook").
+    date_heure: isoZurich(date, heure),
     duree_min: Number(document.getElementById('rdv-modal-duree')?.value) || 45,
     notes: (document.getElementById('rdv-modal-notes')?.value || '').trim() || null,
     statut: 'confirme',

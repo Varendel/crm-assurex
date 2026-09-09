@@ -262,11 +262,21 @@ const MOTS_GENERIQUES_CATALOGUE = new Set([
   'prime', 'primes', 'contrat', 'contrats', 'risque', 'risques',
 ]);
 
+// Découpe un texte en mots significatifs : toute ponctuation (parenthèses, tirets, apostrophes,
+// virgules...) est neutralisée en un coup via \p{L}/\p{N} plutôt qu'énumérée caractère par
+// caractère — la 1ère version de ce correctif (09.09.2026) énumérait juste "espace/slash/apostrophe/
+// virgule/tiret" et ratait "(obligatoire)" : le mot restait collé à ses parenthèses, donc jamais
+// reconnu comme identique au "obligatoire" nu de MOTS_GENERIQUES_CATALOGUE — le bug qu'on croyait
+// corrigé (police LAA Hotela importée en RC véhicule) reproduisait donc à l'identique.
+function motsSignificatifs(texteNorm) {
+  return texteNorm.replace(/[^\p{L}\p{N}\s]+/gu, ' ').split(/\s+/).filter(m => m.length > 3 && !MOTS_GENERIQUES_CATALOGUE.has(m));
+}
+
 function trouverProduitCatalogue(texteLibre, segmentPrefere) {
   if (!texteLibre) return null;
   const texte = _cleRechercheSansAccents(texteLibre);
   if (!texte) return null;
-  const mots = texte.split(/[\s\/',-]+/).filter(m => m.length > 3 && !MOTS_GENERIQUES_CATALOGUE.has(m));
+  const mots = motsSignificatifs(texte);
 
   // Retourne le MEILLEUR candidat (le plus de mots significatifs en commun), pas le premier trouvé
   // par ordre d'itération — un score de 0 (aucun mot significatif partagé, ou un catalogue mono-mot
@@ -285,7 +295,7 @@ function trouverProduitCatalogue(texteLibre, segmentPrefere) {
         if (labelNorm === texte) score = 100;
         else if (labelNorm.includes(texte) || texte.includes(labelNorm)) score = 50;
         else {
-          const motsLabel = labelNorm.split(/[\s\/',-]+/).filter(m => m.length > 3 && !MOTS_GENERIQUES_CATALOGUE.has(m));
+          const motsLabel = motsSignificatifs(labelNorm);
           score = mots.filter(m => motsLabel.includes(m)).length;
         }
         if (score > meilleurScore) { meilleurScore = score; meilleur = { categorie: cat, produit: p }; }

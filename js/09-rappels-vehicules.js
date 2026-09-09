@@ -249,27 +249,49 @@ async function saveBordereau() {
 // Recherche floue d'un produit du catalogue à partir d'un texte libre (titre d'opportunité, extraction IA...).
 // Retourne {categorie, produit} ou null. Tolère les formulations proches (mots-clés partagés)
 // sans exiger une correspondance mot pour mot au libellé exact.
+// Mots trop génériques pour départager deux produits différents (ex: "obligatoire" apparaît aussi
+// bien dans "RC véhicule (obligatoire)" que dans "LAA (assurance-accidents obligatoire)") — sans ce
+// filtre, le premier produit du catalogue partageant un mot aussi banal gagnait par pur hasard
+// d'ordre d'itération, quel que soit son domaine réel. Bugs repérés par Jonathan : police véhicule
+// Vaudoise importée avec Casco non détectée le 03.09.2026, puis police LAA Hotela importée comme
+// "RC véhicule à moteur" le 09.09.2026 — même cause dans les deux cas.
+const MOTS_GENERIQUES_CATALOGUE = new Set([
+  'assurance', 'assurances', 'obligatoire', 'obligatoires', 'complementaire', 'complementaires',
+  'generale', 'generales', 'collective', 'collectives', 'entreprise', 'entreprises',
+  'prive', 'privee', 'privees', 'couverture', 'couvertures', 'police', 'polices',
+  'prime', 'primes', 'contrat', 'contrats', 'risque', 'risques',
+]);
+
 function trouverProduitCatalogue(texteLibre, segmentPrefere) {
   if (!texteLibre) return null;
-  const texte = texteLibre.trim().toLowerCase();
+  const texte = _cleRechercheSansAccents(texteLibre);
   if (!texte) return null;
-  const mots = texte.split(/[\s\/'’,-]+/).filter(m => m.length > 3);
+  const mots = texte.split(/[\s\/',-]+/).filter(m => m.length > 3 && !MOTS_GENERIQUES_CATALOGUE.has(m));
 
+  // Retourne le MEILLEUR candidat (le plus de mots significatifs en commun), pas le premier trouvé
+  // par ordre d'itération — un score de 0 (aucun mot significatif partagé, ou un catalogue mono-mot
+  // trop générique) n'est jamais retenu, même s'il n'y a pas d'autre candidat.
   function chercher(exigerSegment) {
+    let meilleur = null;
+    let meilleurScore = 0;
     for (const cat in CATALOGUE_PRODUITS) {
       for (const p of CATALOGUE_PRODUITS[cat]) {
         // Ignore les produits d'un autre segment quand on connaît déjà le segment du client
         // (évite par ex. qu'un mot générique comme "prévoyance" ne matche un produit privé
         // pour un client entreprise, ou l'inverse) — sauf en 2e passe si rien n'est trouvé.
         if (exigerSegment && segmentPrefere && p.segment !== 'tous' && p.segment !== segmentPrefere) continue;
-        const labelLower = p.label.toLowerCase();
-        const motsLabel = labelLower.split(/[\s\/'’,-]+/).filter(m => m.length > 3);
-        if (labelLower === texte || labelLower.includes(texte) || texte.includes(labelLower) || mots.some(m => motsLabel.includes(m))) {
-          return { categorie: cat, produit: p };
+        const labelNorm = _cleRechercheSansAccents(p.label);
+        let score = 0;
+        if (labelNorm === texte) score = 100;
+        else if (labelNorm.includes(texte) || texte.includes(labelNorm)) score = 50;
+        else {
+          const motsLabel = labelNorm.split(/[\s\/',-]+/).filter(m => m.length > 3 && !MOTS_GENERIQUES_CATALOGUE.has(m));
+          score = mots.filter(m => motsLabel.includes(m)).length;
         }
+        if (score > meilleurScore) { meilleurScore = score; meilleur = { categorie: cat, produit: p }; }
       }
     }
-    return null;
+    return meilleurScore > 0 ? meilleur : null;
   }
 
   // Si le segment est connu, on ne cherche QUE dans ce segment (+ "tous") — mieux vaut ne rien

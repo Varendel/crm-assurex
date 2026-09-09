@@ -1604,14 +1604,23 @@ function renderVueEnsembleCouvertures(client, contrats, isEntreprise) {
   const categories = getCategoriesPourSegment(segment).filter(cat => cat !== 'Autre');
   const contratsActifs = contrats.filter(ct => !['résilié','annulé','mandat_resilie'].includes(ct.statut));
 
-  const contratPourCategorie = (cat) => contratsActifs.find(ct => categoriePourProduitLibre(ct.produit) === cat);
+  // Une catégorie peut avoir PLUSIEURS contrats actifs en même temps côté entreprise — ex: LAA et
+  // Perte de gain maladie sont tous deux classés "Assurances de personnes (entreprise)" (voir
+  // REGLES_CATEGORIE_PRODUIT_LIBRE ci-dessus). L'ancien .find() ne gardait que le premier trouvé et
+  // masquait silencieusement les autres contrats de la même catégorie sur cette vue — repéré par
+  // Jonathan le 09.09.2026 (ex. Kisann SA : LAA + Perte de gain maladie, un seul des deux visible).
+  // On liste maintenant TOUS les contrats actifs de chaque catégorie, une carte par contrat.
+  const contratsPourCategorie = (cat) => contratsActifs.filter(ct => categoriePourProduitLibre(ct.produit) === cat);
 
-  const items = categories.map(cat => {
-    const trouve = contratPourCategorie(cat);
-    return { label: cat, ok: !!trouve, detail: trouve ? trouve.produit : null, police: trouve ? trouve.numero_police : null };
+  const items = categories.flatMap(cat => {
+    const trouves = contratsPourCategorie(cat);
+    if (!trouves.length) return [{ label: cat, ok: false, detail: null, police: null }];
+    return trouves.map(ct => ({ label: cat, ok: true, detail: ct.produit, police: ct.numero_police }));
   });
-  const nbCouvertes = items.filter(i => i.ok).length;
-  const ratioColor = nbCouvertes === 0 ? 'var(--text-muted)' : nbCouvertes === items.length ? '#4ade80' : '#f59e0b';
+  // Le ratio reste "catégories couvertes / catégories possibles" (pas "cartes / cartes") pour ne
+  // pas gonfler artificiellement le dénominateur quand une catégorie a plusieurs contrats.
+  const nbCategoriesCouvertes = categories.filter(cat => contratsPourCategorie(cat).length > 0).length;
+  const ratioColor = nbCategoriesCouvertes === 0 ? 'var(--text-muted)' : nbCategoriesCouvertes === categories.length ? '#4ade80' : '#f59e0b';
 
   const cctBadge = isEntreprise ? `
     <div style="display:inline-flex;align-items:center;gap:7px;background:${client.cct ? 'rgba(74,222,128,0.1)' : 'var(--surface)'};border:1px solid ${client.cct ? 'rgba(74,222,128,0.3)' : 'var(--border)'};border-radius:20px;padding:5px 12px;margin-top:12px;font-size:11.5px;font-weight:700;color:${client.cct ? '#4ade80' : 'var(--text-muted)'}">
@@ -1624,7 +1633,7 @@ function renderVueEnsembleCouvertures(client, contrats, isEntreprise) {
         <div style="font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;display:flex;align-items:center;gap:7px">
           <span style="font-size:14px">🧭</span> Couvertures — vue d'ensemble
         </div>
-        <div style="font-size:11px;font-weight:800;color:${ratioColor};background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:3px 11px">${nbCouvertes}/${items.length} actives</div>
+        <div style="font-size:11px;font-weight:800;color:${ratioColor};background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:3px 11px">${nbCategoriesCouvertes}/${categories.length} actives</div>
       </div>
       <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px">
         ${items.map(i => carteCouverture(i.label, i.ok, i.detail, i.police)).join('')}

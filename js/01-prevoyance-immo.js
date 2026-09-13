@@ -459,6 +459,73 @@ function calculerPrixMaximalFinancable({ fondsPropresDisponibles, fondsPropresLP
   return { prixMax, contrainteLimitante, capFPTotale, capFPDurs };
 }
 
+// ═══ SCHÉMA "MAISON" DU FINANCEMENT — représentation visuelle pour présentation client ═══
+// Empile trois bandes proportionnelles au prix d'achat, dans le contour d'une maison :
+// fonds propres (fondation), hypothèque 1er rang (corps), hypothèque 2e rang à amortir (toit).
+// Carte blanche autonome (lisible en thème clair ou sombre de l'app, et à l'impression PDF).
+function schemaMaisonFinancement(fondsPropres, premierRang, deuxiemeRang, prix, dureeAmortissement) {
+  const W = 620, H = 400;
+  const wallsX = 90, wallsW = 210;
+  const groundY = 340, colTop = 118; // hauteur totale disponible pour la colonne de financement
+  const colH = groundY - colTop;
+  const total = Math.max(fondsPropres + premierRang + deuxiemeRang, 1);
+
+  // Hauteurs proportionnelles, avec un plancher de lisibilité pour les bandes non nulles,
+  // puis remise à l'échelle pour que la somme tienne exactement dans la hauteur disponible.
+  const planch = (v) => v > 0 ? Math.max(colH * (v / total), 20) : 0;
+  let hFP = planch(fondsPropres), hP1 = planch(premierRang), hP2 = planch(deuxiemeRang);
+  const sum = (hFP + hP1 + hP2) || 1;
+  const scale = colH / sum;
+  hFP *= scale; hP1 *= scale; hP2 *= scale;
+
+  const yFPtop = groundY - hFP;       // haut de la bande fonds propres (fondation)
+  const yP1top = yFPtop - hP1;        // haut de la bande 1er rang = base du toit
+  const roofApexY = deuxiemeRang > 0 ? (yP1top - hP2) : (yP1top - 34); // toit décoratif si pas de 2e rang
+
+  const pct = (v) => Math.round(v / total * 100);
+  const chf = (v) => 'CHF ' + Math.round(v).toLocaleString('fr-CH').replace(/,/g, "'");
+
+  const etiquette = (yCenter, color, titre, montant, montrer, sousTitre) => !montrer ? '' : `
+    <line x1="${wallsX + wallsW}" y1="${yCenter.toFixed(1)}" x2="${wallsX + wallsW + 22}" y2="${yCenter.toFixed(1)}" stroke="${color}" stroke-width="1.5"/>
+    <circle cx="${wallsX + wallsW + 22}" cy="${yCenter.toFixed(1)}" r="3" fill="${color}"/>
+    <text x="${wallsX + wallsW + 30}" y="${(yCenter - 7).toFixed(1)}" font-size="12.5" font-weight="800" fill="#0f2244" font-family="Arial,sans-serif">${titre}</text>
+    <text x="${wallsX + wallsW + 30}" y="${(yCenter + 9).toFixed(1)}" font-size="12" font-weight="700" fill="${color}" font-family="Arial,sans-serif">${chf(montant)} (${pct(montant)}%)</text>
+    ${sousTitre ? `<text x="${wallsX + wallsW + 30}" y="${(yCenter + 23).toFixed(1)}" font-size="10" fill="#6b7280" font-family="Arial,sans-serif">${sousTitre}</text>` : ''}
+  `;
+
+  return `
+  <div style="background:#ffffff;border:1px solid #e4e4e7;border-radius:14px;padding:14px 8px 8px">
+    <svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:520px;display:block;margin:0 auto;font-family:Arial,sans-serif" xmlns="http://www.w3.org/2000/svg">
+      <text x="${W/2}" y="30" text-anchor="middle" font-size="15" font-weight="900" fill="#0f2244">Structure du financement</text>
+      <text x="${W/2}" y="48" text-anchor="middle" font-size="11" fill="#6b7280">Prix d'achat : ${chf(prix)}</text>
+
+      <!-- Toit = hypothèque 2e rang (à amortir), ou toit neutre si aucun 2e rang -->
+      <polygon points="${wallsX - 16},${yP1top.toFixed(1)} ${wallsX + wallsW/2},${roofApexY.toFixed(1)} ${wallsX + wallsW + 16},${yP1top.toFixed(1)}"
+        fill="${deuxiemeRang > 0 ? '#38bdf8' : '#c7ccd6'}" stroke="#0f2244" stroke-width="1.5"/>
+
+      <!-- Corps de la maison : 1er rang au-dessus des fonds propres -->
+      <rect x="${wallsX}" y="${yP1top.toFixed(1)}" width="${wallsW}" height="${hP1.toFixed(1)}" fill="#113679"/>
+      <rect x="${wallsX}" y="${yFPtop.toFixed(1)}" width="${wallsW}" height="${hFP.toFixed(1)}" fill="#f59e0b"/>
+      <rect x="${wallsX}" y="${yP1top.toFixed(1)}" width="${wallsW}" height="${(groundY - yP1top).toFixed(1)}" fill="none" stroke="#0f2244" stroke-width="2"/>
+
+      <!-- Porte -->
+      <rect x="${(wallsX + wallsW/2 - 19).toFixed(1)}" y="${(groundY - 44).toFixed(1)}" width="38" height="44" fill="#0f2244" opacity="0.88"/>
+      <circle cx="${(wallsX + wallsW/2 + 12).toFixed(1)}" cy="${(groundY - 22).toFixed(1)}" r="1.6" fill="#f59e0b"/>
+
+      <!-- Sol -->
+      <line x1="${wallsX - 34}" y1="${groundY}" x2="${wallsX + wallsW + 34}" y2="${groundY}" stroke="#0f2244" stroke-width="2"/>
+
+      <!-- Étiquettes -->
+      ${etiquette(roofApexY + (yP1top - roofApexY) * 0.62, '#38bdf8', 'Hypothèque 2e rang', deuxiemeRang, deuxiemeRang > 0, `à amortir sur ${dureeAmortissement} ans`)}
+      ${etiquette((yP1top + yFPtop) / 2, '#113679', 'Hypothèque 1er rang', premierRang, premierRang > 0, '')}
+      ${etiquette((yFPtop + groundY) / 2, '#f59e0b', 'Fonds propres', fondsPropres, fondsPropres > 0, '')}
+      ${deuxiemeRang <= 0 ? `<text x="${W/2}" y="${(roofApexY - 8).toFixed(1)}" text-anchor="middle" font-size="9.5" fill="#9ca3af">pas de 2e rang nécessaire</text>` : ''}
+
+      <text x="${W - 14}" y="${H - 12}" text-anchor="end" font-size="9" fill="#9ca3af">Assurex Sàrl · Courtier FINMA</text>
+    </svg>
+  </div>`;
+}
+
 // Taux de bonification de vieillesse par tranche d'âge (art. 16 LPP, minimum légal)
 function tauxBonificationLPP(age) {
   if (age < 25) return 0;
@@ -705,6 +772,10 @@ function renderResultatsImmo(p) {
       </table>
     `)}
 
+    ${sectionCard('🏠 Schéma de financement — à présenter au client', '#f59e0b', `
+      ${schemaMaisonFinancement(p.fondsPropresDisponibles, r.premierRang, r.deuxiemeRang, p.prix, p.dureeAmortissement)}
+    `)}
+
     ${sectionCard('Charge annuelle (capacité financière)', '#f59e0b', `
       <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:12px">
         <tr><td style="padding:5px 0;color:var(--text-muted)">Intérêts théoriques (${(p.tauxInteret*100).toFixed(1)}%)</td><td style="padding:5px 0;text-align:right;font-weight:700">CHF ${Math.round(r.interetsAnnuels).toLocaleString()}/an</td></tr>
@@ -851,6 +922,9 @@ function imprimerResultatImmo() {
       <tr><td>1er rang</td><td>CHF ${Math.round(r.premierRang).toLocaleString()}</td></tr>
       <tr><td>2ème rang (à amortir sur ${r.dureeAmortissement} ans)</td><td>CHF ${Math.round(r.deuxiemeRang).toLocaleString()}</td></tr>
     </table>
+
+    <h2>Schéma de financement</h2>
+    ${schemaMaisonFinancement(r.fondsPropresDisponibles, r.premierRang, r.deuxiemeRang, r.prix, r.dureeAmortissement)}
 
     <h2>Charge annuelle</h2>
     <table>

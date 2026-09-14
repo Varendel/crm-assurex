@@ -888,8 +888,7 @@ function imprimerResultatImmo() {
   const r = window._immoDernierResultat;
   if (!r) return;
   const nom = document.getElementById('fi-nom').value || 'Client';
-  const win = window.open('', '_blank');
-  win.document.write(`<html><head><title>Financement immobilier — ${nom}</title><style>
+  const contenuFinancementImmo = `<html><head><title>Financement immobilier — ${nom}</title><style>
     body{font-family:Arial,sans-serif;padding:30px;color:#0f2244;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .entete{display:flex;align-items:center;gap:14px;border-bottom:3px solid #0f2244;padding-bottom:14px;margin-bottom:20px}
     h1{font-size:16px;color:#0f2244;margin:14px 0 4px}
@@ -951,8 +950,11 @@ function imprimerResultatImmo() {
 
     <p style="font-size:10px;color:#888;margin-top:20px">Simulation indicative selon les règles standards de branche — ne remplace pas une étude de faisabilité bancaire formelle.</p>
     <button onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#0f2244;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Imprimer / Enregistrer en PDF</button>
-  </body></html>`);
-  win.document.close();
+  </body></html>`;
+  // Blob/ObjectURL au lieu de document.write sur about:blank : un F5 dans l'onglet recharge la
+  // même simulation au lieu d'une page blanche (voir genererMandatCourtage, js/05).
+  const blobFinancementImmo = new Blob([contenuFinancementImmo], { type: 'text/html;charset=utf-8' });
+  window.open(URL.createObjectURL(blobFinancementImmo), '_blank');
 }
 
 // des rentes d'une situation (AVS + LPP + ...) empilées jusqu'au total, avec ligne de besoin en référence.

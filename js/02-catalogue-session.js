@@ -453,7 +453,6 @@ function imprimerResultatLPP() {
   const r = window._lppDernierResultat;
   if (!r) return;
   const nom = document.getElementById('clpp-nom').value || 'Client';
-  const win = window.open('', '_blank');
 
   const anneeActuelleImpr = new Date().getFullYear();
   const anneeRetraiteImpr = anneeActuelleImpr + (r.ageRetraite - r.ageActuel);
@@ -479,7 +478,7 @@ function imprimerResultatLPP() {
 
   const rows = r.lignesReel.map(l => `
     <tr><td>${l.age}</td><td style="text-align:right">CHF ${Math.round(l.etatDebut).toLocaleString()}</td><td style="text-align:right">CHF ${Math.round(l.interet).toLocaleString()}</td><td style="text-align:right">CHF ${Math.round(l.bonification).toLocaleString()}</td><td style="text-align:right;font-weight:700">CHF ${Math.round(l.etatFin).toLocaleString()}</td></tr>`).join('');
-  win.document.write(`<html><head><title>Bilan de prévoyance — ${nom}</title><style>
+  const contenuBilanPrevoyance = `<html><head><title>Bilan de prévoyance — ${nom}</title><style>
     body{font-family:Arial,sans-serif;padding:30px;color:#0f2244;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .entete{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #0f2244;padding-bottom:14px;margin-bottom:20px}
     .logo-assurex{font-size:22px;font-weight:900;color:#0f2244;letter-spacing:0.5px}
@@ -582,8 +581,11 @@ function imprimerResultatLPP() {
 
     <p style="font-size:10px;color:#888;margin-top:20px">Rentes AVS estimées par interpolation linéaire (approximation) — ne remplace pas l'extrait de compte individuel AVS officiel.</p>
     <button onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#0f2244;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Imprimer / Enregistrer en PDF</button>
-  </body></html>`);
-  win.document.close();
+  </body></html>`;
+  // Blob/ObjectURL au lieu de document.write sur about:blank : un F5 dans l'onglet recharge le
+  // même bilan au lieu d'une page blanche (voir genererMandatCourtage, js/05, pour l'explication).
+  const blobBilanPrevoyance = new Blob([contenuBilanPrevoyance], { type: 'text/html;charset=utf-8' });
+  window.open(URL.createObjectURL(blobBilanPrevoyance), '_blank');
 }
 
 // ═══ ENREGISTREMENT DU BILAN SUR LA FICHE CLIENT ═══

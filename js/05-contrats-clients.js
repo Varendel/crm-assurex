@@ -589,7 +589,7 @@ async function showClient(id) {
       </div>`)}
       ${sectionCard('Contact', '#f59e0b', `<div class="info-grid">
         ${infoBlock('Adresse', c.adresse)} ${infoBlock('NPA / Ville', (c.npa || '') + ' ' + (c.ville || ''))}
-        ${infoBlock('Canton', c.canton)} ${infoBlock('Email', c.email)}
+        ${infoBlock('Canton', c.canton)} ${infoBlock('Email', c.email, c.email ? ` <a href="mailto:${c.email}" title="Écrire un e-mail (Outlook)" style="text-decoration:none;margin-left:4px">✉️</a>` : '')}
         ${infoBlock('Téléphone fixe', c.tel)} ${infoBlock('Mobile', c.mobile)}
       </div>`)}
       ${sectionCard('Coordonnées bancaires', '#a78bfa', `<div class="info-grid">

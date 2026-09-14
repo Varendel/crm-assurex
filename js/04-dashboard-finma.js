@@ -252,7 +252,17 @@ function viewDashboard() {
         <button onclick="navigate('dashboard')" title="Recharger les données depuis Supabase" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:9px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">🔄 Actualiser</button>
       </div>
     </div>
-    <div style="color:var(--text-muted);font-size:13px;margin-bottom:24px">Assurex Sàrl · EX Groupe · Commissions actives depuis le 01.06.2026</div>
+    <div style="color:var(--text-muted);font-size:13px;margin-bottom:16px">Assurex Sàrl · EX Groupe · Commissions actives depuis le 01.06.2026</div>
+
+    <div style="position:relative;margin-bottom:24px">
+      <input id="recherche-globale-input" type="text" placeholder="🔍 Rechercher un client, contrat, opportunité, rappel..." class="form-input" autocomplete="off"
+        style="width:100%;padding-right:64px"
+        oninput="renderResultatsRechercheGlobale()"
+        onkeydown="onKeydownRechercheGlobale(event)"
+        onblur="setTimeout(fermerRechercheGlobale, 150)"/>
+      <span style="position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:10.5px;color:var(--text-dim);background:var(--surface-alt);border:1px solid var(--border);border-radius:5px;padding:2px 6px;pointer-events:none">${(navigator.platform || '').toLowerCase().includes('mac') ? '⌘K' : 'Ctrl+K'}</span>
+      <div id="recherche-globale-resultats" style="display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,0.35);max-height:420px;overflow-y:auto;z-index:200"></div>
+    </div>
     ${blocNotifsEquipe}
     <div class="stat-grid" style="grid-template-columns:repeat(5,1fr)">
       ${statCard('Clients', allClients.length, '#38bdf8', `${actifs} actifs`)}

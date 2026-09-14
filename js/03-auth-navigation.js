@@ -1039,9 +1039,147 @@ function exporterCsv(nomFichier, entetes, lignes) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function infoBlock(label, value) {
-  return `<div class="info-block"><div class="info-label">${label}</div><div class="info-value">${value || '—'}</div></div>`;
+function infoBlock(label, value, extra) {
+  return `<div class="info-block"><div class="info-label">${label}</div><div class="info-value">${value || '—'}${extra || ''}</div></div>`;
 }
+
+// ═══ RECHERCHE GLOBALE (raccourci général depuis le dashboard) ═══
+// Un seul champ pour retrouver n'importe quel client, contrat, opportunité ou rappel sans passer
+// par les listes/filtres dédiés — demande de Jonathan du 14.09.2026. Le raccourci clavier
+// Ctrl/Cmd+K (voir listener tout en bas de ce fichier) ramène sur le dashboard et place le focus
+// dans ce champ depuis n'importe quel écran du CRM.
+function rechercheGlobale(q) {
+  const search = (q || '').toLowerCase().trim();
+  const vide = { clients: [], contrats: [], opportunites: [], rappels: [] };
+  if (search.length < 2) return vide;
+
+  const nomClient = (c) => c ? (estEntreprise(c) ? c.nom : `${c.prenom || ''} ${c.nom || ''}`.trim()) : '';
+
+  const clients = (allClients || []).filter(c => {
+    const hay = `${nomClient(c)} ${c.email||''} ${c.tel||''} ${c.mobile||''} ${c.telephone||''} ${c.ville||''} ${c.adresse||''}`.toLowerCase();
+    return hay.includes(search);
+  }).slice(0, 6);
+
+  const contrats = (allContrats || []).filter(ct => {
+    const cl = allClients.find(c => c.id === ct.client_id);
+    const hay = `${nomClient(cl)} ${ct.compagnie||''} ${ct.produit||''} ${ct.numero_police||''}`.toLowerCase();
+    return hay.includes(search);
+  }).slice(0, 6);
+
+  const opportunites = (typeof allOpportunites !== 'undefined' ? allOpportunites : []).filter(o => {
+    const cl = o.client_id ? allClients.find(c => c.id === o.client_id) : null;
+    const nom = cl ? nomClient(cl) : (o.prospect_nom || '');
+    const hay = `${o.titre||''} ${nom}`.toLowerCase();
+    return hay.includes(search);
+  }).slice(0, 6);
+
+  const rappels = (typeof allRappels !== 'undefined' ? allRappels : []).filter(r => {
+    return (r.titre || '').toLowerCase().includes(search);
+  }).slice(0, 6);
+
+  return { clients, contrats, opportunites, rappels };
+}
+
+// Ferme et vide le champ de recherche globale — appelé après un clic sur un résultat, sur Échap,
+// ou (avec un léger délai) quand le champ perd le focus.
+function fermerRechercheGlobale() {
+  const zone = document.getElementById('recherche-globale-resultats');
+  const input = document.getElementById('recherche-globale-input');
+  if (zone) { zone.style.display = 'none'; zone.innerHTML = ''; }
+  if (input) input.value = '';
+  window._rechercheGlobalePremiereAction = null;
+}
+
+function onKeydownRechercheGlobale(e) {
+  if (e.key === 'Escape') { e.target.blur(); fermerRechercheGlobale(); }
+  else if (e.key === 'Enter') {
+    e.preventDefault();
+    if (typeof window._rechercheGlobalePremiereAction === 'function') window._rechercheGlobalePremiereAction();
+  }
+}
+
+function renderResultatsRechercheGlobale() {
+  const input = document.getElementById('recherche-globale-input');
+  const zone = document.getElementById('recherche-globale-resultats');
+  if (!input || !zone) return;
+  const q = input.value;
+  if (!q || q.trim().length < 2) { zone.style.display = 'none'; zone.innerHTML = ''; window._rechercheGlobalePremiereAction = null; return; }
+
+  const { clients, contrats, opportunites, rappels } = rechercheGlobale(q);
+  const total = clients.length + contrats.length + opportunites.length + rappels.length;
+  const nomClient = (c) => c ? (estEntreprise(c) ? c.nom : `${c.prenom || ''} ${c.nom || ''}`.trim()) : '';
+
+  if (!total) {
+    zone.innerHTML = `<div style="padding:14px 16px;color:var(--text-muted);font-size:12.5px">Aucun résultat pour « ${q.replace(/</g,'&lt;')} »</div>`;
+    zone.style.display = 'block';
+    window._rechercheGlobalePremiereAction = null;
+    return;
+  }
+
+  window._rechercheGlobaleActions = window._rechercheGlobaleActions || {};
+  window._rechercheGlobaleActions = {};
+  let compteur = 0;
+  window._rechercheGlobalePremiereAction = null;
+
+  const ligne = (icone, titre, sousTitre, action) => {
+    const cle = 'r' + (compteur++);
+    window._rechercheGlobaleActions[cle] = action;
+    if (!window._rechercheGlobalePremiereAction) window._rechercheGlobalePremiereAction = action;
+    return `<div onmousedown="window._rechercheGlobaleActions['${cle}']()" style="display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;border-bottom:1px solid var(--border)" onmouseover="this.style.background='rgba(56,189,248,0.06)'" onmouseout="this.style.background='transparent'">
+      <span style="font-size:15px;flex-shrink:0">${icone}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12.5px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${titre}</div>
+        ${sousTitre ? `<div style="font-size:10.5px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sousTitre}</div>` : ''}
+      </div>
+    </div>`;
+  };
+  const entete = (txt) => `<div style="padding:7px 16px 4px;font-size:10px;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">${txt}</div>`;
+
+  let html = '';
+  if (clients.length) {
+    html += entete('👤 Clients');
+    html += clients.map(c => ligne('👤', nomClient(c) || '—', c.email || c.ville || '', () => { fermerRechercheGlobale(); showClient(c.id); })).join('');
+  }
+  if (contrats.length) {
+    html += entete('📄 Contrats');
+    html += contrats.map(ct => {
+      const cl = allClients.find(c => c.id === ct.client_id);
+      return ligne('📄', `${ct.compagnie || '—'}${ct.produit ? ' — ' + ct.produit : ''}`, nomClient(cl), () => { fermerRechercheGlobale(); showDetailContrat(ct.id); });
+    }).join('');
+  }
+  if (opportunites.length) {
+    html += entete('🎯 Opportunités');
+    html += opportunites.map(o => {
+      const cl = o.client_id ? allClients.find(c => c.id === o.client_id) : null;
+      const nom = cl ? nomClient(cl) : (o.prospect_nom ? `${o.prospect_nom} 🆕` : '—');
+      return ligne('🎯', o.titre || '—', nom, () => { fermerRechercheGlobale(); opportuniteEnEditionId = o.id; navigate('nouvelle-opportunite'); });
+    }).join('');
+  }
+  if (rappels.length) {
+    html += entete('🔔 Rappels');
+    html += rappels.map(r => {
+      const cl = r.client_id ? allClients.find(c => c.id === r.client_id) : null;
+      return ligne('🔔', r.titre || '—', nomClient(cl), () => { fermerRechercheGlobale(); showRappel(r.id); });
+    }).join('');
+  }
+
+  zone.innerHTML = html;
+  zone.style.display = 'block';
+}
+
+// Raccourci clavier général Ctrl/Cmd+K : ramène sur le dashboard si besoin puis place le focus
+// dans le champ de recherche globale, depuis n'importe quel écran du CRM.
+document.addEventListener('keydown', (e) => {
+  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+    e.preventDefault();
+    const focusChamp = () => {
+      const el = document.getElementById('recherche-globale-input');
+      if (el) { el.focus(); el.select(); }
+    };
+    if (typeof currentView !== 'undefined' && currentView === 'dashboard') focusChamp();
+    else if (typeof navigate === 'function') navigate('dashboard').then(focusChamp);
+  }
+});
 
 // Cadre "État des dossiers" — réutilisé sur la fiche client ET la fiche opportunité (même liste
 // de demandes d'offre, filtrée différemment en amont selon client_id ou opportunite_id).

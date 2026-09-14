@@ -1891,13 +1891,13 @@ function genererIcsRdv(etat, dureeMin, nomInvite) {
 function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire) {
   return `<html><head><meta charset="utf-8"><title>Mandat de courtage — ${champs.societe ? champs.societe : champs.prenom + ' ' + champs.nom}</title><style>
     body{font-family:Arial,sans-serif;padding:35px;color:#1a1a1a;font-size:12.5px;line-height:1.5;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    .entete{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #113679;padding-bottom:14px;margin-bottom:20px}
-    h1{font-size:19px;color:#113679;text-align:center;margin:10px 0 2px}
+    .entete{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #000;padding-bottom:14px;margin-bottom:20px}
+    h1{font-size:19px;color:#000;text-align:center;margin:10px 0 2px}
     .sous-titre{text-align:center;font-style:italic;color:#444;margin-bottom:18px;font-size:12px}
-    h2{font-size:13px;color:#113679;margin:18px 0 8px;font-weight:800}
+    h2{font-size:13px;color:#000;margin:18px 0 8px;font-weight:800}
     table{width:100%;border-collapse:collapse;margin-bottom:4px}
     td{border:1px solid #ccc;padding:7px 10px;font-size:11.5px;vertical-align:middle}
-    td.label{background:#f2f5fa;font-weight:700;width:22%;color:#113679}
+    td.label{background:#f2f5fa;font-weight:700;width:22%;color:#000}
     td.valeur{width:28%}
     ol{padding-left:20px}
     ol li{margin-bottom:9px;font-size:11.5px}
@@ -1906,9 +1906,9 @@ function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire) {
     .ligne-signature{border-top:1px solid #333;margin-top:50px;padding-top:5px;font-style:italic;font-size:11px;color:#555}
     .footer{text-align:center;font-size:9.5px;color:#888;margin-top:30px;border-top:1px solid #ddd;padding-top:10px}
     .page-break{page-break-before:always}
-    .art45-table th{background:#113679;color:#fff;padding:8px 10px;font-size:11px;text-align:left}
+    .art45-table th{background:#000;color:#fff;padding:8px 10px;font-size:11px;text-align:left}
     .art45-table td{font-size:10.5px;padding:8px 10px}
-    .print-btn{margin-top:25px;padding:10px 20px;background:#113679;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px}
+    .print-btn{margin-top:25px;padding:10px 20px;background:#000;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px}
     @media print {
       .print-btn { display: none !important; }
       body { padding: 10px 20px; font-size: 10px; line-height: 1.32; }
@@ -1933,6 +1933,7 @@ function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire) {
 
     <div class="entete">
       ${genererBadgeLogoAssurex(28, '10px 16px', 'inline-block')}
+      ${genererBadgeExGroup(28, '10px 16px', 'inline-block')}
     </div>
     <div style="text-align:center;font-size:7px;color:#ccc;margin:2px 0 0">En partenariat avec OZ Assure</div>
 

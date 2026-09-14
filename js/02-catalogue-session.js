@@ -497,27 +497,8 @@ function imprimerResultatLPP() {
     .stat b{display:block;font-size:16px}
     .lacune{color:#c0392b;font-weight:700}
   </style></head><body>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script>
       (function(){var t=${JSON.stringify(titreBilanPrevoyance)};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();
-      function telechargerPdfAuto() {
-        if (typeof html2pdf !== 'function') { alert('La génération automatique du PDF n\\'a pas pu se charger (pas de connexion internet ?). Utilise le bouton "Imprimer" à la place.'); return; }
-        var nom = (${JSON.stringify(titreBilanPrevoyance)} || 'Document').replace(/[<>:"/\\\\|?*\\x00-\\x1F]/g, '').trim() + '.pdf';
-        var boutons = document.querySelectorAll('button');
-        boutons.forEach(function(b){ b.style.visibility = 'hidden'; });
-        html2pdf().set({
-          filename: nom, margin: 0,
-          image: { type: 'jpeg', quality: 0.98 },
-          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-          pagebreak: { mode: ['css', 'legacy'] }
-        }).from(document.body).save().then(function() {
-          boutons.forEach(function(b){ b.style.visibility = ''; });
-        }).catch(function(err) {
-          boutons.forEach(function(b){ b.style.visibility = ''; });
-          alert('Erreur lors de la génération du PDF : ' + (err && err.message ? err.message : err));
-        });
-      }
     </script>
     <div class="entete">
       <div style="display:flex;align-items:center;gap:14px">
@@ -604,7 +585,6 @@ function imprimerResultatLPP() {
 
     <p style="font-size:10px;color:#888;margin-top:20px">Rentes AVS estimées par interpolation linéaire (approximation) — ne remplace pas l'extrait de compte individuel AVS officiel.</p>
     <button onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#0f2244;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Imprimer</button>
-    <button onclick="telechargerPdfAuto()" style="margin-top:20px;margin-left:10px;padding:10px 20px;background:#16a34a;color:#fff;border:none;border-radius:6px;cursor:pointer">💾 Enregistrer le PDF (nom automatique)</button>
   </body></html>`;
   // Blob/ObjectURL au lieu de document.write sur about:blank : un F5 dans l'onglet recharge le
   // même bilan au lieu d'une page blanche (voir genererMandatCourtage, js/05, pour l'explication).

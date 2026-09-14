@@ -1075,7 +1075,7 @@ function construireHtmlResiliation(corps, titre, signatureDataUrl) {
     .print-btn{margin-top:30px;padding:9px 18px;background:#000;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px}
     @media print { .print-btn { display: none !important; } body { padding: 15px 20px; } }
   </style></head><body>
-    <script>window.addEventListener('beforeprint', function() { document.title = ${JSON.stringify(titreResiliationSafe)}; });</script>
+    <script>(function(){var t=${JSON.stringify(titreResiliationSafe)};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();</script>
     ${corps}
     <button class="print-btn" onclick="window.print()">🖨️ Imprimer</button>
   </body></html>`;
@@ -1958,13 +1958,17 @@ function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire) {
     }
   </style></head><body>
     <script>
-      document.title = ${JSON.stringify(titreDoc)};
-      // Réaffirme le titre juste avant l'impression : certains pilotes d'imprimante PDF (ex.
-      // "Microsoft Print to PDF" sous Windows, par opposition à la destination native "Enregistrer
-      // au format PDF" de Chrome) lisent le nom de document auprès de Windows au moment précis de
-      // l'impression plutôt que via document.title au chargement — cette reprise juste avant
-      // window.print() maximise les chances que Windows recopie le bon nom de fichier.
-      window.addEventListener('beforeprint', function() { document.title = ${JSON.stringify(titreDoc)}; });
+      // "Microsoft Print to PDF" (Windows) lit parfois le nom du document de façon asynchrone,
+      // après le chargement de la page — un simple document.title au chargement peut donc ne pas
+      // suffire. Un MutationObserver réimpose le titre en continu (au lieu d'un réglage ponctuel à
+      // 'beforeprint') pour couvrir ce cas, quel que soit le moment exact où Windows le lit.
+      (function() {
+        var t = ${JSON.stringify(titreDoc)};
+        document.title = t;
+        var e = document.querySelector('title');
+        if (e) new MutationObserver(function() { if (document.title !== t) document.title = t; })
+          .observe(e, { childList: true, characterData: true, subtree: true });
+      })();
     </script>
 
     <div class="entete">
@@ -2128,7 +2132,7 @@ function genererDocumentSigne(clientId, signatureDataUrl, contexte) {
     .footer{text-align:center;font-size:9.5px;color:#888;margin-top:30px;border-top:1px solid #ddd;padding-top:10px}
     @media print { .print-btn, .voir-btn { display: none !important; } }
   </style></head><body>
-    <script>window.addEventListener('beforeprint', function() { document.title = ${JSON.stringify(titreDocSigne)}; });</script>
+    <script>(function(){var t=${JSON.stringify(titreDocSigne)};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();</script>
     <div class="entete"><h1>Confirmation de signature électronique</h1><div class="sous-titre">ASSUREX Sàrl — Autorisation FINMA F01492173</div></div>
     <div class="bloc">
       <div><strong>Client :</strong> ${nomClient.replace(/</g,'&lt;')}</div>
@@ -2441,7 +2445,7 @@ function genererFicheDemandeOffre(clientId) {
     table.plaques input { border: none; width: 100%; font: inherit; background: transparent }
     .footer { margin-top: 22px; font-size: 9px; color: #888; border-top: 1px solid #ddd; padding-top: 8px }
   </style></head><body>
-    <script>window.addEventListener('beforeprint', function() { document.title = ${JSON.stringify(titreFicheOffre)}; });</script>
+    <script>(function(){var t=${JSON.stringify(titreFicheOffre)};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();</script>
 
     <div class="entete">
       ${genererBadgeLogoAssurex(28, '10px 16px', 'inline-block')}

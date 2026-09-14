@@ -899,7 +899,7 @@ function imprimerResultatImmo() {
     th{background:#f2f5fa;text-align:left}
     @media print{ button{display:none !important} }
   </style></head><body>
-    <script>window.addEventListener('beforeprint', function() { document.title = ${JSON.stringify(titreFinancementImmo)}; });</script>
+    <script>(function(){var t=${JSON.stringify(titreFinancementImmo)};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();</script>
     <div class="entete">
       ${genererBadgeLogoAssurex()}
       <div style="font-size:10.5px;color:#666">c/o COFIDEX SA · Rue du Centre 142 · 1025 St-Sulpice<br/>Courtier en assurances FINMA F01492173</div>

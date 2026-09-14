@@ -497,7 +497,7 @@ function imprimerResultatLPP() {
     .stat b{display:block;font-size:16px}
     .lacune{color:#c0392b;font-weight:700}
   </style></head><body>
-    <script>window.addEventListener('beforeprint', function() { document.title = ${JSON.stringify(titreBilanPrevoyance)}; });</script>
+    <script>(function(){var t=${JSON.stringify(titreBilanPrevoyance)};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();</script>
     <div class="entete">
       <div style="display:flex;align-items:center;gap:14px">
         ${genererBadgeLogoAssurex()}

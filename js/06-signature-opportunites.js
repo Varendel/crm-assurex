@@ -1525,7 +1525,7 @@ function imprimerBordereau(bordereauId) {
       .total{font-size:15px;font-weight:800;margin-top:16px;text-align:right}
       @media print{ button{display:none} }
     </style></head><body>
-    <script>window.addEventListener('beforeprint', function() { document.title = ${JSON.stringify(titreBordereau)}; });</script>
+    <script>(function(){var t=${JSON.stringify(titreBordereau)};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();</script>
     <h1>Bordereau ${b.numero || ''} — ${b.compagnie}</h1>
     <div class="sub">${b.mois}${contact ? ` · Contact : ${contact.libelle_contact||''} ${contact.email ? '('+contact.email+')' : ''}` : ''}</div>
     <div class="grid">
@@ -1570,7 +1570,7 @@ function imprimerFichePaie(ficheId, lignesCommissions, debut, fin, totalMontant)
       .total{font-size:15px;font-weight:800;margin-top:16px;text-align:right}
       @media print{ button{display:none} }
     </style></head><body>
-    <script>window.addEventListener('beforeprint', function() { document.title = ${JSON.stringify(titreFichePaie)}; });</script>
+    <script>(function(){var t=${JSON.stringify(titreFichePaie)};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();</script>
     <h1>Fiche de paie — Assurex Sàrl</h1>
     <p>Période : ${fmtDate(debut)} au ${fmtDate(fin)}</p>
     <table><thead><tr><th>Client</th><th>Produit</th><th>Compagnie</th><th>Montant</th><th>Part signataire</th><th>Part apporteur</th></tr></thead>

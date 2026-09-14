@@ -1889,7 +1889,16 @@ function genererIcsRdv(etat, dureeMin, nomInvite) {
 // signature autonome publique (envoyerSignatureAutonome), qui reçoit ses données via une fonction RPC
 // plutôt que par accès direct à allClients (non disponible pour un visiteur non connecté).
 function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire) {
-  return `<html><head><meta charset="utf-8"><title>Mandat de courtage — ${champs.societe ? champs.societe : champs.prenom + ' ' + champs.nom}</title><style>
+  // Nom affiché dans le titre de la page (repris par le navigateur comme nom de fichier suggéré à
+  // l'impression/enregistrement en PDF) — calculé ici, une seule fois, avec repli garanti, plutôt
+  // que recalculé dans chaque appelant : évite qu'un champ manquant (raison sociale ou prénom/nom
+  // vides côté RPC de signature autonome, notamment) ne produise un titre vide. Toujours au moins
+  // "Client" si vraiment rien n'est disponible.
+  const nomPourTitre = (champs.societe && champs.societe.trim())
+    || `${champs.prenom || ''} ${champs.nom || ''}`.trim()
+    || 'Client';
+  const titreDoc = `Mandat de courtage — ${nomPourTitre}`.replace(/[<>]/g, '');
+  return `<html><head><meta charset="utf-8"><title>${titreDoc}</title><style>
     body{font-family:Arial,sans-serif;padding:35px;color:#1a1a1a;font-size:12.5px;line-height:1.5;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .entete{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #000;padding-bottom:14px;margin-bottom:20px}
     h1{font-size:19px;color:#000;text-align:center;margin:10px 0 2px}
@@ -1930,6 +1939,7 @@ function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire) {
       @page { margin: 9mm; }
     }
   </style></head><body>
+    <script>document.title = ${JSON.stringify(titreDoc)};</script>
 
     <div class="entete">
       ${genererBadgeLogoAssurex(28, '10px 16px', 'inline-block')}

@@ -1060,6 +1060,7 @@ function ouvrirModaleResiliation(clientId) {
 // simple d'une lettre suisse classique : expéditeur en haut à gauche, date/lieu à droite,
 // destinataire, objet, corps, formule de politesse, signature — rien d'autre.
 function construireHtmlResiliation(corps, titre, signatureDataUrl) {
+  const titreResiliationSafe = (titre || 'Résiliation').replace(/<\/script/gi, '<\\/script');
   return `<html><head><meta charset="utf-8"><title>${(titre || 'Résiliation').replace(/</g, '&lt;')}</title><style>
     body{font-family:Arial,sans-serif;padding:40px 45px;color:#000;font-size:12.5px;line-height:1.7;max-width:700px;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .entete{display:flex;justify-content:space-between;align-items:flex-start}
@@ -1074,6 +1075,7 @@ function construireHtmlResiliation(corps, titre, signatureDataUrl) {
     .print-btn{margin-top:30px;padding:9px 18px;background:#000;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px}
     @media print { .print-btn { display: none !important; } body { padding: 15px 20px; } }
   </style></head><body>
+    <script>window.addEventListener('beforeprint', function() { document.title = ${JSON.stringify(titreResiliationSafe)}; });</script>
     ${corps}
     <button class="print-btn" onclick="window.print()">🖨️ Imprimer</button>
   </body></html>`;
@@ -1163,7 +1165,7 @@ function genererLettreResiliationSignee(clientId, signatureDataUrl, contexte) {
   // recharge le même contenu au lieu de tomber sur une page blanche — voir genererMandatCourtage
   // plus bas pour l'explication complète de ce correctif.
   const blobResil = new Blob([html], { type: 'text/html;charset=utf-8' });
-  const win = window.open(URL.createObjectURL(blobResil), '_blank');
+  const win = window.open(URL.createObjectURL(blobResil), '_blank', 'popup');
   dbPost('mandats_signes', {
     client_id: clientId,
     signe: !!signatureDataUrl,
@@ -1699,8 +1701,10 @@ function ouvrirCopieMandatAutonome() {
   const html = construireHtmlMandat(d.champs, d.signatureDataUrl, d.signatureMandataire);
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
-  window.open(url, '_blank');
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
+  window.open(url, '_blank', 'popup');
+  // Pas de révocation automatique de l'URL (l'ancien setTimeout(...,60000) a été retiré) : elle
+  // videre l'onglet si le client le garde ouvert plus d'une minute et fait F5 — le petit blob HTML
+  // est de toute façon libéré par le navigateur à la fermeture de l'onglet.
 }
 
 // ═══ RÉSERVATION DE RDV EN AUTONOMIE — page publique liée à un agent (?rdv=TOKEN) ═══
@@ -1953,7 +1957,15 @@ function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire) {
       @page { margin: 9mm; }
     }
   </style></head><body>
-    <script>document.title = ${JSON.stringify(titreDoc)};</script>
+    <script>
+      document.title = ${JSON.stringify(titreDoc)};
+      // Réaffirme le titre juste avant l'impression : certains pilotes d'imprimante PDF (ex.
+      // "Microsoft Print to PDF" sous Windows, par opposition à la destination native "Enregistrer
+      // au format PDF" de Chrome) lisent le nom de document auprès de Windows au moment précis de
+      // l'impression plutôt que via document.title au chargement — cette reprise juste avant
+      // window.print() maximise les chances que Windows recopie le bon nom de fichier.
+      window.addEventListener('beforeprint', function() { document.title = ${JSON.stringify(titreDoc)}; });
+    </script>
 
     <div class="entete">
       ${genererBadgeLogoAssurex(28, '10px 16px', 'inline-block')}
@@ -2074,7 +2086,7 @@ function genererMandatCourtage(clientId, signatureDataUrl) {
   // <title> disparaît avec le reste de la page). En passant par un Blob + URL.createObjectURL,
   // l'onglet a une vraie URL qui réaffiche le même contenu (titre inclus) à chaque rechargement.
   const blobMandat = new Blob([contenuMandatHtml], { type: 'text/html;charset=utf-8' });
-  const win = window.open(URL.createObjectURL(blobMandat), '_blank');
+  const win = window.open(URL.createObjectURL(blobMandat), '_blank', 'popup');
 
   // Enregistrement automatique sur la fiche client — toujours disponible ensuite, même si
   // c'est un(e) collègue qui a généré/fait signer ce mandat à ma place.
@@ -2102,7 +2114,8 @@ function genererDocumentSigne(clientId, signatureDataUrl, contexte) {
   const maintenant = new Date();
   const dateFr = fmtDate(maintenant.toISOString());
 
-  const contenuHtml = `<html><head><meta charset="utf-8"><title>Signature — ${(contexte.documentNom || 'Document').replace(/</g,'&lt;')}</title><style>
+  const titreDocSigne = `Signature — ${contexte.documentNom || 'Document'}`;
+  const contenuHtml = `<html><head><meta charset="utf-8"><title>${titreDocSigne.replace(/</g,'&lt;')}</title><style>
     body{font-family:Arial,sans-serif;padding:35px;color:#1a1a1a;font-size:13px;line-height:1.6;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .entete{border-bottom:2px solid #113679;padding-bottom:14px;margin-bottom:20px}
     h1{font-size:18px;color:#113679;margin:0 0 4px}
@@ -2115,6 +2128,7 @@ function genererDocumentSigne(clientId, signatureDataUrl, contexte) {
     .footer{text-align:center;font-size:9.5px;color:#888;margin-top:30px;border-top:1px solid #ddd;padding-top:10px}
     @media print { .print-btn, .voir-btn { display: none !important; } }
   </style></head><body>
+    <script>window.addEventListener('beforeprint', function() { document.title = ${JSON.stringify(titreDocSigne)}; });</script>
     <div class="entete"><h1>Confirmation de signature électronique</h1><div class="sous-titre">ASSUREX Sàrl — Autorisation FINMA F01492173</div></div>
     <div class="bloc">
       <div><strong>Client :</strong> ${nomClient.replace(/</g,'&lt;')}</div>
@@ -2134,7 +2148,7 @@ function genererDocumentSigne(clientId, signatureDataUrl, contexte) {
   // Blob/ObjectURL (voir genererMandatCourtage) au lieu de document.write sur about:blank —
   // pour que F5 dans cet onglet recharge le document au lieu de le vider.
   const blobDocSigne = new Blob([contenuHtml], { type: 'text/html;charset=utf-8' });
-  const win = window.open(URL.createObjectURL(blobDocSigne), '_blank');
+  const win = window.open(URL.createObjectURL(blobDocSigne), '_blank', 'popup');
 
   dbPost('mandats_signes', {
     client_id: clientId,
@@ -2351,7 +2365,7 @@ async function voirMandatSauvegarde(mandatId) {
     // Blob/ObjectURL (voir genererMandatCourtage) : un F5 recharge le même snapshot au lieu
     // d'une page blanche.
     const blobSnapshot = new Blob([m.html_snapshot], { type: 'text/html;charset=utf-8' });
-    window.open(URL.createObjectURL(blobSnapshot), '_blank');
+    window.open(URL.createObjectURL(blobSnapshot), '_blank', 'popup');
     return;
   }
   if (m.fichier_url) { ouvrirPieceJointe(m.fichier_url); return; }
@@ -2405,7 +2419,8 @@ function genererFicheDemandeOffre(clientId) {
   const zoneEditable = (key, lignes = 2) => `<textarea data-champ="${key}" rows="${lignes}" style="border:1px solid #ccc;border-radius:3px;width:100%;font:inherit;background:transparent;padding:4px;resize:vertical">${donnees[key] || ''}</textarea>`;
   const caseEditable = (key, label) => `<span style="display:inline-block;margin-right:14px;white-space:nowrap"><label style="cursor:pointer"><input type="checkbox" data-champ="${key}" ${donnees[key] ? 'checked' : ''} style="width:11px;height:11px;margin-right:4px;vertical-align:middle;cursor:pointer"/>${label}</label></span>`;
 
-  const contenuFicheOffre = `<html><head><title>Fiche demande d'offre — ${c.nom}</title><meta charset="utf-8">
+  const titreFicheOffre = `Fiche demande d'offre — ${c.nom || 'Client'}`;
+  const contenuFicheOffre = `<html><head><title>${titreFicheOffre}</title><meta charset="utf-8">
   <style>
     @media print { .print-btn, .save-btn, .save-note { display:none } @page { margin: 14mm } input, textarea { border-color: #999 !important } }
     body { font-family: Arial, sans-serif; font-size: 11.5px; color: #1a1a1a; max-width: 850px; margin: 20px auto; line-height: 1.45; -webkit-print-color-adjust: exact; print-color-adjust: exact }
@@ -2426,6 +2441,7 @@ function genererFicheDemandeOffre(clientId) {
     table.plaques input { border: none; width: 100%; font: inherit; background: transparent }
     .footer { margin-top: 22px; font-size: 9px; color: #888; border-top: 1px solid #ddd; padding-top: 8px }
   </style></head><body>
+    <script>window.addEventListener('beforeprint', function() { document.title = ${JSON.stringify(titreFicheOffre)}; });</script>
 
     <div class="entete">
       ${genererBadgeLogoAssurex(28, '10px 16px', 'inline-block')}
@@ -2567,7 +2583,7 @@ function genererFicheDemandeOffre(clientId) {
   </body></html>`;
   // Blob/ObjectURL (voir genererMandatCourtage) : un F5 recharge la fiche au lieu d'une page blanche.
   const blobFicheOffre = new Blob([contenuFicheOffre], { type: 'text/html;charset=utf-8' });
-  window.open(URL.createObjectURL(blobFicheOffre), '_blank');
+  window.open(URL.createObjectURL(blobFicheOffre), '_blank', 'popup');
 }
 
 async function saveClientEdit(id, isEntreprise) {

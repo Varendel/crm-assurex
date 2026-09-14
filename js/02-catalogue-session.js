@@ -478,7 +478,8 @@ function imprimerResultatLPP() {
 
   const rows = r.lignesReel.map(l => `
     <tr><td>${l.age}</td><td style="text-align:right">CHF ${Math.round(l.etatDebut).toLocaleString()}</td><td style="text-align:right">CHF ${Math.round(l.interet).toLocaleString()}</td><td style="text-align:right">CHF ${Math.round(l.bonification).toLocaleString()}</td><td style="text-align:right;font-weight:700">CHF ${Math.round(l.etatFin).toLocaleString()}</td></tr>`).join('');
-  const contenuBilanPrevoyance = `<html><head><title>Bilan de prévoyance — ${nom}</title><style>
+  const titreBilanPrevoyance = `Bilan de prévoyance — ${nom}`;
+  const contenuBilanPrevoyance = `<html><head><title>${titreBilanPrevoyance}</title><style>
     body{font-family:Arial,sans-serif;padding:30px;color:#0f2244;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .entete{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #0f2244;padding-bottom:14px;margin-bottom:20px}
     .logo-assurex{font-size:22px;font-weight:900;color:#0f2244;letter-spacing:0.5px}
@@ -496,6 +497,7 @@ function imprimerResultatLPP() {
     .stat b{display:block;font-size:16px}
     .lacune{color:#c0392b;font-weight:700}
   </style></head><body>
+    <script>window.addEventListener('beforeprint', function() { document.title = ${JSON.stringify(titreBilanPrevoyance)}; });</script>
     <div class="entete">
       <div style="display:flex;align-items:center;gap:14px">
         ${genererBadgeLogoAssurex()}
@@ -585,7 +587,7 @@ function imprimerResultatLPP() {
   // Blob/ObjectURL au lieu de document.write sur about:blank : un F5 dans l'onglet recharge le
   // même bilan au lieu d'une page blanche (voir genererMandatCourtage, js/05, pour l'explication).
   const blobBilanPrevoyance = new Blob([contenuBilanPrevoyance], { type: 'text/html;charset=utf-8' });
-  window.open(URL.createObjectURL(blobBilanPrevoyance), '_blank');
+  window.open(URL.createObjectURL(blobBilanPrevoyance), '_blank', 'popup');
 }
 
 // ═══ ENREGISTREMENT DU BILAN SUR LA FICHE CLIENT ═══

@@ -888,7 +888,8 @@ function imprimerResultatImmo() {
   const r = window._immoDernierResultat;
   if (!r) return;
   const nom = document.getElementById('fi-nom').value || 'Client';
-  const contenuFinancementImmo = `<html><head><title>Financement immobilier — ${nom}</title><style>
+  const titreFinancementImmo = `Financement immobilier — ${nom}`;
+  const contenuFinancementImmo = `<html><head><title>${titreFinancementImmo}</title><style>
     body{font-family:Arial,sans-serif;padding:30px;color:#0f2244;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .entete{display:flex;align-items:center;gap:14px;border-bottom:3px solid #0f2244;padding-bottom:14px;margin-bottom:20px}
     h1{font-size:16px;color:#0f2244;margin:14px 0 4px}
@@ -898,6 +899,7 @@ function imprimerResultatImmo() {
     th{background:#f2f5fa;text-align:left}
     @media print{ button{display:none !important} }
   </style></head><body>
+    <script>window.addEventListener('beforeprint', function() { document.title = ${JSON.stringify(titreFinancementImmo)}; });</script>
     <div class="entete">
       ${genererBadgeLogoAssurex()}
       <div style="font-size:10.5px;color:#666">c/o COFIDEX SA · Rue du Centre 142 · 1025 St-Sulpice<br/>Courtier en assurances FINMA F01492173</div>
@@ -954,7 +956,7 @@ function imprimerResultatImmo() {
   // Blob/ObjectURL au lieu de document.write sur about:blank : un F5 dans l'onglet recharge la
   // même simulation au lieu d'une page blanche (voir genererMandatCourtage, js/05).
   const blobFinancementImmo = new Blob([contenuFinancementImmo], { type: 'text/html;charset=utf-8' });
-  window.open(URL.createObjectURL(blobFinancementImmo), '_blank');
+  window.open(URL.createObjectURL(blobFinancementImmo), '_blank', 'popup');
 }
 
 // des rentes d'une situation (AVS + LPP + ...) empilées jusqu'au total, avec ligne de besoin en référence.

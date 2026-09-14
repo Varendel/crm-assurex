@@ -1510,7 +1510,8 @@ function imprimerBordereau(bordereauId) {
     </tr>`;
   }).join('');
 
-  const contenuBordereau = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Bordereau ${b.numero||''} — ${b.compagnie}</title>
+  const titreBordereau = `Bordereau ${b.numero||''} — ${b.compagnie}`;
+  const contenuBordereau = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${titreBordereau}</title>
     <style>
       body{font-family:Arial,sans-serif;padding:30px;color:#0f2244;-webkit-print-color-adjust:exact;print-color-adjust:exact}
       h1{font-size:18px;margin-bottom:2px} .sub{color:#666;font-size:12px;margin-bottom:20px}
@@ -1524,6 +1525,7 @@ function imprimerBordereau(bordereauId) {
       .total{font-size:15px;font-weight:800;margin-top:16px;text-align:right}
       @media print{ button{display:none} }
     </style></head><body>
+    <script>window.addEventListener('beforeprint', function() { document.title = ${JSON.stringify(titreBordereau)}; });</script>
     <h1>Bordereau ${b.numero || ''} — ${b.compagnie}</h1>
     <div class="sub">${b.mois}${contact ? ` · Contact : ${contact.libelle_contact||''} ${contact.email ? '('+contact.email+')' : ''}` : ''}</div>
     <div class="grid">
@@ -1540,7 +1542,7 @@ function imprimerBordereau(bordereauId) {
   // Blob/ObjectURL au lieu de document.write sur about:blank : un F5 dans l'onglet recharge le
   // même bordereau au lieu d'une page blanche (voir genererMandatCourtage, js/05).
   const blobBordereau = new Blob([contenuBordereau], { type: 'text/html;charset=utf-8' });
-  window.open(URL.createObjectURL(blobBordereau), '_blank');
+  window.open(URL.createObjectURL(blobBordereau), '_blank', 'popup');
 }
 
 function imprimerFichePaie(ficheId, lignesCommissions, debut, fin, totalMontant) {
@@ -1558,7 +1560,8 @@ function imprimerFichePaie(ficheId, lignesCommissions, debut, fin, totalMontant)
       <td style="text-align:right">${s.agent ? s.agent.prenom+': CHF '+s.pA : '—'}</td>
     </tr>`;
   }).join('');
-  const contenuFichePaie = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Fiche de paie ${fmtDate(debut)} - ${fmtDate(fin)}</title>
+  const titreFichePaie = `Fiche de paie ${fmtDate(debut)} - ${fmtDate(fin)}`;
+  const contenuFichePaie = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${titreFichePaie}</title>
     <style>
       body{font-family:Arial,sans-serif;padding:30px;color:#0f2244;-webkit-print-color-adjust:exact;print-color-adjust:exact}
       h1{font-size:18px} table{width:100%;border-collapse:collapse;margin-top:16px;font-size:12px}
@@ -1567,6 +1570,7 @@ function imprimerFichePaie(ficheId, lignesCommissions, debut, fin, totalMontant)
       .total{font-size:15px;font-weight:800;margin-top:16px;text-align:right}
       @media print{ button{display:none} }
     </style></head><body>
+    <script>window.addEventListener('beforeprint', function() { document.title = ${JSON.stringify(titreFichePaie)}; });</script>
     <h1>Fiche de paie — Assurex Sàrl</h1>
     <p>Période : ${fmtDate(debut)} au ${fmtDate(fin)}</p>
     <table><thead><tr><th>Client</th><th>Produit</th><th>Compagnie</th><th>Montant</th><th>Part signataire</th><th>Part apporteur</th></tr></thead>
@@ -1577,7 +1581,7 @@ function imprimerFichePaie(ficheId, lignesCommissions, debut, fin, totalMontant)
   // Blob/ObjectURL au lieu de document.write sur about:blank : un F5 dans l'onglet recharge la
   // même fiche de paie au lieu d'une page blanche (voir genererMandatCourtage, js/05).
   const blobFichePaie = new Blob([contenuFichePaie], { type: 'text/html;charset=utf-8' });
-  window.open(URL.createObjectURL(blobFichePaie), '_blank');
+  window.open(URL.createObjectURL(blobFichePaie), '_blank', 'popup');
 }
 
 // ═══ IMPORT DÉCOMPTE COMPAGNIE (Excel norme IG B2B — ex: Vaudoise "Décompte de prime") ═══

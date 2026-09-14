@@ -343,6 +343,16 @@ function aConstellationFamiliale(c) {
   return !!(c.pere_id || c.mere_id || liste.some(x => x.id !== c.id && (x.pere_id === c.id || x.mere_id === c.id)));
 }
 
+// Construit un lien d'appel Microsoft Teams pour un client — priorité à l'e-mail (identifiant
+// Teams le plus fiable, via https://teams.microsoft.com/l/call/0/0?users=), sinon repli sur le
+// numéro de téléphone (préfixe "4:" requis par Teams pour un appel vers un numéro externe/PSTN).
+function lienAppelTeams(c) {
+  if (c.email) return `https://teams.microsoft.com/l/call/0/0?users=${encodeURIComponent(c.email)}`;
+  const tel = c.tel || c.mobile || c.telephone;
+  if (tel) return `https://teams.microsoft.com/l/call/0/0?users=4:${encodeURIComponent(String(tel).replace(/\s+/g, ''))}`;
+  return null;
+}
+
 async function showClient(id) {
   // Empile où on était avant d'ouvrir cette fiche, pour que la flèche retour y ramène précisément
   const etatPrecedent = capturerEtatActuel();
@@ -420,6 +430,8 @@ async function showClient(id) {
           </div>
         </div>
         <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+          ${c.email ? `<a href="mailto:${c.email}" title="Écrire un e-mail" style="cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;background:var(--surface-alt);border:1px solid var(--border);border-radius:8px;color:var(--text-muted);text-decoration:none;font-size:14px">✉️</a>` : ''}
+          ${lienAppelTeams(c) ? `<a href="${lienAppelTeams(c)}" title="Appeler via Teams" style="cursor:pointer;display:inline-flex;align-items:center;justify-content:center;width:30px;height:30px;background:var(--surface-alt);border:1px solid var(--border);border-radius:8px;color:var(--text-muted);text-decoration:none;font-size:14px">📞</a>` : ''}
           ${badge(c.segment || 'Privé', isEntreprise ? '#f59e0b' : '#38bdf8')} ${badge(c.statut || 'prospect', statutColor(c.statut))}
           <span onclick="toggleSourceOz('${c.id}', ${!c.source_oz})" title="${c.source_oz ? 'Client OZ Assure — cliquer pour retirer' : 'Marquer comme client OZ Assure'}" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;background:${c.source_oz ? 'rgba(74,144,226,0.15)' : 'var(--surface-alt)'};border:1px solid ${c.source_oz ? 'rgba(74,144,226,0.4)' : 'var(--border)'};border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:${c.source_oz ? '#4a90e2' : 'var(--text-muted)'}">${c.source_oz ? OZASSURE_LOGO_SVG.replace('class="oz-logo-svg"', 'style="height:12px;width:auto"') + ' OZ' : '+ OZ'}</span>
           <span onclick="toggleSourceCofidex('${c.id}', ${!c.source_cofidex})" title="${c.source_cofidex ? 'Client EX Groupe — cliquer pour retirer' : 'Marquer comme client Cofidex / EX Groupe'}" style="cursor:pointer;display:inline-flex;align-items:center;gap:4px;background:${c.source_cofidex ? 'rgba(0,207,255,0.12)' : 'var(--surface-alt)'};border:1px solid ${c.source_cofidex ? 'rgba(0,207,255,0.4)' : 'var(--border)'};border-radius:20px;padding:3px 10px;font-size:11px;font-weight:700;color:${c.source_cofidex ? '#00cfff' : 'var(--text-muted)'}">${c.source_cofidex ? COFIDEX_MINI_LOGO + ' EX' : '+ EX'}</span>
@@ -1147,9 +1159,11 @@ function genererLettreResiliationSignee(clientId, signatureDataUrl, contexte) {
       ${signatureDataUrl ? `<div style="margin-top:8px"><img src="${signatureDataUrl}" style="max-height:80px;max-width:260px;display:block"/></div>` : `<div class="ligne-signature">Signature</div>`}
     </div>`;
   const html = construireHtmlResiliation(corpsAvecSignature, contexte.documentNom, signatureDataUrl);
-  const win = window.open('', '_blank');
-  win.document.write(html);
-  win.document.close();
+  // Ouvert via Blob/ObjectURL (et non document.write sur about:blank) : un F5 dans cet onglet
+  // recharge le même contenu au lieu de tomber sur une page blanche — voir genererMandatCourtage
+  // plus bas pour l'explication complète de ce correctif.
+  const blobResil = new Blob([html], { type: 'text/html;charset=utf-8' });
+  const win = window.open(URL.createObjectURL(blobResil), '_blank');
   dbPost('mandats_signes', {
     client_id: clientId,
     signe: !!signatureDataUrl,
@@ -2054,9 +2068,13 @@ function genererMandatCourtage(clientId, signatureDataUrl) {
   const signatureMandataire = agentSignataire ? agentSignataire.signature_image : null;
 
   const contenuMandatHtml = construireHtmlMandat(champs, signatureDataUrl, signatureMandataire);
-  const win = window.open('', '_blank');
-  win.document.write(contenuMandatHtml);
-  win.document.close();
+  // Correctif du 14.09.2026 (demande de Jonathan) : un onglet ouvert via window.open('', '_blank')
+  // + document.write() n'a pas de véritable URL (about:blank) — un F5 dans cet onglet recharge
+  // about:blank et efface tout le contenu (d'où le "nom de fichier vide après F5", puisque le
+  // <title> disparaît avec le reste de la page). En passant par un Blob + URL.createObjectURL,
+  // l'onglet a une vraie URL qui réaffiche le même contenu (titre inclus) à chaque rechargement.
+  const blobMandat = new Blob([contenuMandatHtml], { type: 'text/html;charset=utf-8' });
+  const win = window.open(URL.createObjectURL(blobMandat), '_blank');
 
   // Enregistrement automatique sur la fiche client — toujours disponible ensuite, même si
   // c'est un(e) collègue qui a généré/fait signer ce mandat à ma place.
@@ -2113,9 +2131,10 @@ function genererDocumentSigne(clientId, signatureDataUrl, contexte) {
     <div class="footer">ASSUREX Sàrl – Rue du Centre 142, 1025 St-Sulpice</div>
   </body></html>`;
 
-  const win = window.open('', '_blank');
-  win.document.write(contenuHtml);
-  win.document.close();
+  // Blob/ObjectURL (voir genererMandatCourtage) au lieu de document.write sur about:blank —
+  // pour que F5 dans cet onglet recharge le document au lieu de le vider.
+  const blobDocSigne = new Blob([contenuHtml], { type: 'text/html;charset=utf-8' });
+  const win = window.open(URL.createObjectURL(blobDocSigne), '_blank');
 
   dbPost('mandats_signes', {
     client_id: clientId,
@@ -2329,9 +2348,10 @@ async function voirMandatSauvegarde(mandatId) {
   const m = mandats && mandats[0];
   if (!m) { showError('Mandat introuvable.'); return; }
   if (m.html_snapshot) {
-    const win = window.open('', '_blank');
-    win.document.write(m.html_snapshot);
-    win.document.close();
+    // Blob/ObjectURL (voir genererMandatCourtage) : un F5 recharge le même snapshot au lieu
+    // d'une page blanche.
+    const blobSnapshot = new Blob([m.html_snapshot], { type: 'text/html;charset=utf-8' });
+    window.open(URL.createObjectURL(blobSnapshot), '_blank');
     return;
   }
   if (m.fichier_url) { ouvrirPieceJointe(m.fichier_url); return; }
@@ -2385,8 +2405,7 @@ function genererFicheDemandeOffre(clientId) {
   const zoneEditable = (key, lignes = 2) => `<textarea data-champ="${key}" rows="${lignes}" style="border:1px solid #ccc;border-radius:3px;width:100%;font:inherit;background:transparent;padding:4px;resize:vertical">${donnees[key] || ''}</textarea>`;
   const caseEditable = (key, label) => `<span style="display:inline-block;margin-right:14px;white-space:nowrap"><label style="cursor:pointer"><input type="checkbox" data-champ="${key}" ${donnees[key] ? 'checked' : ''} style="width:11px;height:11px;margin-right:4px;vertical-align:middle;cursor:pointer"/>${label}</label></span>`;
 
-  const win = window.open('', '_blank');
-  win.document.write(`<html><head><title>Fiche demande d'offre — ${c.nom}</title><meta charset="utf-8">
+  const contenuFicheOffre = `<html><head><title>Fiche demande d'offre — ${c.nom}</title><meta charset="utf-8">
   <style>
     @media print { .print-btn, .save-btn, .save-note { display:none } @page { margin: 14mm } input, textarea { border-color: #999 !important } }
     body { font-family: Arial, sans-serif; font-size: 11.5px; color: #1a1a1a; max-width: 850px; margin: 20px auto; line-height: 1.45; -webkit-print-color-adjust: exact; print-color-adjust: exact }
@@ -2545,8 +2564,10 @@ function genererFicheDemandeOffre(clientId) {
     })()">💾 Enregistrer les infos</button>
     <div class="save-note">✓ Enregistré — réouvrir la fiche depuis la fiche client pour continuer à la modifier</div>
     <button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
-  </body></html>`);
-  win.document.close();
+  </body></html>`;
+  // Blob/ObjectURL (voir genererMandatCourtage) : un F5 recharge la fiche au lieu d'une page blanche.
+  const blobFicheOffre = new Blob([contenuFicheOffre], { type: 'text/html;charset=utf-8' });
+  window.open(URL.createObjectURL(blobFicheOffre), '_blank');
 }
 
 async function saveClientEdit(id, isEntreprise) {

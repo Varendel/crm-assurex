@@ -1073,11 +1073,34 @@ function construireHtmlResiliation(corps, titre, signatureDataUrl) {
     .signature-zone{margin-top:44px}
     .ligne-signature{border-top:1px solid #000;margin-top:46px;padding-top:5px;font-style:italic;font-size:11px;max-width:220px}
     .print-btn{margin-top:30px;padding:9px 18px;background:#000;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px}
-    @media print { .print-btn { display: none !important; } body { padding: 15px 20px; } }
+    .dl-btn{margin-top:30px;margin-left:10px;padding:9px 18px;background:#16a34a;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px}
+    @media print { .print-btn, .dl-btn { display: none !important; } body { padding: 15px 20px; } }
   </style></head><body>
-    <script>(function(){var t=${JSON.stringify(titreResiliationSafe)};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+      (function(){var t=${JSON.stringify(titreResiliationSafe)};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();
+      function telechargerPdfAuto() {
+        if (typeof html2pdf !== 'function') { alert('La génération automatique du PDF n\\'a pas pu se charger (pas de connexion internet ?). Utilise le bouton "Imprimer" à la place.'); return; }
+        var nom = (${JSON.stringify(titreResiliationSafe)} || 'Document').replace(/[<>:"/\\\\|?*\\x00-\\x1F]/g, '').trim() + '.pdf';
+        var boutons = document.querySelectorAll('.print-btn, .dl-btn');
+        boutons.forEach(function(b){ b.style.visibility = 'hidden'; });
+        html2pdf().set({
+          filename: nom, margin: 0,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['css', 'legacy'] }
+        }).from(document.body).save().then(function() {
+          boutons.forEach(function(b){ b.style.visibility = ''; });
+        }).catch(function(err) {
+          boutons.forEach(function(b){ b.style.visibility = ''; });
+          alert('Erreur lors de la génération du PDF : ' + (err && err.message ? err.message : err));
+        });
+      }
+    </script>
     ${corps}
     <button class="print-btn" onclick="window.print()">🖨️ Imprimer</button>
+    <button class="dl-btn" onclick="telechargerPdfAuto()">💾 Enregistrer le PDF (nom automatique)</button>
   </body></html>`;
 }
 
@@ -1936,8 +1959,9 @@ function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire) {
     .art45-table th{background:#000;color:#fff;padding:8px 10px;font-size:11px;text-align:left}
     .art45-table td{font-size:10.5px;padding:8px 10px}
     .print-btn{margin-top:25px;padding:10px 20px;background:#000;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px}
+    .dl-btn{margin-top:25px;margin-left:10px;padding:10px 20px;background:#16a34a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px}
     @media print {
-      .print-btn { display: none !important; }
+      .print-btn, .dl-btn { display: none !important; }
       body { padding: 10px 20px; font-size: 10px; line-height: 1.32; }
       h1 { font-size: 16px; margin: 4px 0 2px; }
       .sous-titre { margin-bottom: 10px; }
@@ -1957,6 +1981,7 @@ function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire) {
       @page { margin: 9mm; }
     }
   </style></head><body>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script>
       // "Microsoft Print to PDF" (Windows) lit parfois le nom du document de façon asynchrone,
       // après le chargement de la page — un simple document.title au chargement peut donc ne pas
@@ -1969,6 +1994,27 @@ function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire) {
         if (e) new MutationObserver(function() { if (document.title !== t) document.title = t; })
           .observe(e, { childList: true, characterData: true, subtree: true });
       })();
+      // Bouton "Enregistrer le PDF" : contourne entièrement la boîte d'impression système (et ses
+      // pilotes peu fiables pour le nom de fichier, ex. Microsoft Print to PDF) en générant le PDF
+      // directement dans le navigateur et en le téléchargeant avec le bon nom, sans saisie manuelle.
+      function telechargerPdfAuto() {
+        if (typeof html2pdf !== 'function') { alert('La génération automatique du PDF n\\'a pas pu se charger (pas de connexion internet ?). Utilise le bouton "Imprimer" à la place.'); return; }
+        var nom = (${JSON.stringify(titreDoc)} || 'Document').replace(/[<>:"/\\\\|?*\\x00-\\x1F]/g, '').trim() + '.pdf';
+        var boutons = document.querySelectorAll('.print-btn, .dl-btn');
+        boutons.forEach(function(b){ b.style.visibility = 'hidden'; });
+        html2pdf().set({
+          filename: nom, margin: 0,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['css', 'legacy'] }
+        }).from(document.body).save().then(function() {
+          boutons.forEach(function(b){ b.style.visibility = ''; });
+        }).catch(function(err) {
+          boutons.forEach(function(b){ b.style.visibility = ''; });
+          alert('Erreur lors de la génération du PDF : ' + (err && err.message ? err.message : err));
+        });
+      }
     </script>
 
     <div class="entete">
@@ -2051,7 +2097,8 @@ function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire) {
 
     <div class="footer">ASSUREX Sàrl – Rue du Centre 142, 1025 St-Sulpice – Autorisation FINMA F01492173</div>
 
-    <button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
+    <button class="print-btn" onclick="window.print()">🖨️ Imprimer</button>
+    <button class="dl-btn" onclick="telechargerPdfAuto()">💾 Enregistrer le PDF (nom automatique)</button>
   </body></html>`;
 }
 
@@ -2128,11 +2175,33 @@ function genererDocumentSigne(clientId, signatureDataUrl, contexte) {
     .bloc div{margin-bottom:4px}
     .signature-zone{margin-top:30px}
     .print-btn{margin-top:25px;padding:10px 20px;background:#113679;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;margin-right:10px}
+    .dl-btn{margin-top:25px;padding:10px 20px;background:#16a34a;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px;margin-right:10px}
     .voir-btn{margin-top:25px;padding:10px 20px;background:#fff;color:#113679;border:1.5px solid #113679;border-radius:6px;cursor:pointer;font-size:13px}
     .footer{text-align:center;font-size:9.5px;color:#888;margin-top:30px;border-top:1px solid #ddd;padding-top:10px}
-    @media print { .print-btn, .voir-btn { display: none !important; } }
+    @media print { .print-btn, .dl-btn, .voir-btn { display: none !important; } }
   </style></head><body>
-    <script>(function(){var t=${JSON.stringify(titreDocSigne)};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+      (function(){var t=${JSON.stringify(titreDocSigne)};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();
+      function telechargerPdfAuto() {
+        if (typeof html2pdf !== 'function') { alert('La génération automatique du PDF n\\'a pas pu se charger (pas de connexion internet ?). Utilise le bouton "Imprimer" à la place.'); return; }
+        var nom = (${JSON.stringify(titreDocSigne)} || 'Document').replace(/[<>:"/\\\\|?*\\x00-\\x1F]/g, '').trim() + '.pdf';
+        var boutons = document.querySelectorAll('.print-btn, .dl-btn, .voir-btn');
+        boutons.forEach(function(b){ b.style.visibility = 'hidden'; });
+        html2pdf().set({
+          filename: nom, margin: 0,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['css', 'legacy'] }
+        }).from(document.body).save().then(function() {
+          boutons.forEach(function(b){ b.style.visibility = ''; });
+        }).catch(function(err) {
+          boutons.forEach(function(b){ b.style.visibility = ''; });
+          alert('Erreur lors de la génération du PDF : ' + (err && err.message ? err.message : err));
+        });
+      }
+    </script>
     <div class="entete"><h1>Confirmation de signature électronique</h1><div class="sous-titre">ASSUREX Sàrl — Autorisation FINMA F01492173</div></div>
     <div class="bloc">
       <div><strong>Client :</strong> ${nomClient.replace(/</g,'&lt;')}</div>
@@ -2144,7 +2213,8 @@ function genererDocumentSigne(clientId, signatureDataUrl, contexte) {
       <strong>Signature du client</strong>
       ${signatureDataUrl ? `<div style="margin-top:8px"><img src="${signatureDataUrl}" style="max-height:80px;max-width:260px;display:block;border:1px solid #ddd;border-radius:6px;padding:6px"/></div>` : `<div style="color:#888;font-size:11.5px;margin-top:6px">(signature non capturée)</div>`}
     </div>
-    <button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
+    <button class="print-btn" onclick="window.print()">🖨️ Imprimer</button>
+    <button class="dl-btn" onclick="telechargerPdfAuto()">💾 Enregistrer le PDF (nom automatique)</button>
     <button class="voir-btn" onclick="window.opener && window.opener.ouvrirPieceJointe && window.opener.ouvrirPieceJointe('${contexte.documentPath || ''}')">📎 Voir le contrat original</button>
     <div class="footer">ASSUREX Sàrl – Rue du Centre 142, 1025 St-Sulpice</div>
   </body></html>`;
@@ -2426,7 +2496,7 @@ function genererFicheDemandeOffre(clientId) {
   const titreFicheOffre = `Fiche demande d'offre — ${c.nom || 'Client'}`;
   const contenuFicheOffre = `<html><head><title>${titreFicheOffre}</title><meta charset="utf-8">
   <style>
-    @media print { .print-btn, .save-btn, .save-note { display:none } @page { margin: 14mm } input, textarea { border-color: #999 !important } }
+    @media print { .print-btn, .dl-btn, .save-btn, .save-note { display:none } @page { margin: 14mm } input, textarea { border-color: #999 !important } }
     body { font-family: Arial, sans-serif; font-size: 11.5px; color: #1a1a1a; max-width: 850px; margin: 20px auto; line-height: 1.45; -webkit-print-color-adjust: exact; print-color-adjust: exact }
     input, textarea { color: #1a1a1a }
     .raison-sociale { font-size: 25px; font-weight: 900; color: #113679; letter-spacing: 0.3px; margin: 10px 0 2px; text-transform: uppercase }
@@ -2437,7 +2507,8 @@ function genererFicheDemandeOffre(clientId) {
     .champ label { display: block; font-size: 9.5px; color: #555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 1px }
     .rappel-legal { background: #f3f4f6; border-left: 3px solid #113679; padding: 6px 10px; font-size: 9.5px; color: #444; margin: 6px 0 10px }
     .print-btn { position: fixed; top: 16px; right: 16px; background: #113679; color: #fff; border: none; border-radius: 8px; padding: 10px 18px; font-weight: 700; cursor: pointer; font-size: 13px }
-    .save-btn { position: fixed; top: 16px; right: 168px; background: #16a34a; color: #fff; border: none; border-radius: 8px; padding: 10px 18px; font-weight: 700; cursor: pointer; font-size: 13px }
+    .dl-btn { position: fixed; top: 16px; right: 168px; background: #0f766e; color: #fff; border: none; border-radius: 8px; padding: 10px 18px; font-weight: 700; cursor: pointer; font-size: 13px }
+    .save-btn { position: fixed; top: 16px; right: 340px; background: #16a34a; color: #fff; border: none; border-radius: 8px; padding: 10px 18px; font-weight: 700; cursor: pointer; font-size: 13px }
     .save-btn:disabled { opacity: 0.6; cursor: wait }
     .save-note { position: fixed; top: 62px; right: 16px; background: #16a34a; color: #fff; border-radius: 6px; padding: 6px 12px; font-size: 11px; font-weight: 700; display: none }
     table.plaques { width: 100%; border-collapse: collapse; font-size: 10.5px; margin-top: 6px }
@@ -2445,7 +2516,28 @@ function genererFicheDemandeOffre(clientId) {
     table.plaques input { border: none; width: 100%; font: inherit; background: transparent }
     .footer { margin-top: 22px; font-size: 9px; color: #888; border-top: 1px solid #ddd; padding-top: 8px }
   </style></head><body>
-    <script>(function(){var t=${JSON.stringify(titreFicheOffre)};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+      (function(){var t=${JSON.stringify(titreFicheOffre)};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();
+      function telechargerPdfAuto() {
+        if (typeof html2pdf !== 'function') { alert('La génération automatique du PDF n\\'a pas pu se charger (pas de connexion internet ?). Utilise le bouton "Imprimer" à la place.'); return; }
+        var nom = (${JSON.stringify(titreFicheOffre)} || 'Document').replace(/[<>:"/\\\\|?*\\x00-\\x1F]/g, '').trim() + '.pdf';
+        var boutons = document.querySelectorAll('.print-btn, .dl-btn, .save-btn, .save-note');
+        boutons.forEach(function(b){ b.style.visibility = 'hidden'; });
+        html2pdf().set({
+          filename: nom, margin: 0,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['css', 'legacy'] }
+        }).from(document.body).save().then(function() {
+          boutons.forEach(function(b){ b.style.visibility = ''; });
+        }).catch(function(err) {
+          boutons.forEach(function(b){ b.style.visibility = ''; });
+          alert('Erreur lors de la génération du PDF : ' + (err && err.message ? err.message : err));
+        });
+      }
+    </script>
 
     <div class="entete">
       ${genererBadgeLogoAssurex(28, '10px 16px', 'inline-block')}
@@ -2583,7 +2675,8 @@ function genererFicheDemandeOffre(clientId) {
       }
     })()">💾 Enregistrer les infos</button>
     <div class="save-note">✓ Enregistré — réouvrir la fiche depuis la fiche client pour continuer à la modifier</div>
-    <button class="print-btn" onclick="window.print()">🖨️ Imprimer / Enregistrer en PDF</button>
+    <button class="print-btn" onclick="window.print()">🖨️ Imprimer</button>
+    <button class="dl-btn" onclick="telechargerPdfAuto()">💾 Enregistrer le PDF</button>
   </body></html>`;
   // Blob/ObjectURL (voir genererMandatCourtage) : un F5 recharge la fiche au lieu d'une page blanche.
   const blobFicheOffre = new Blob([contenuFicheOffre], { type: 'text/html;charset=utf-8' });

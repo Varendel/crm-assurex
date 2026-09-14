@@ -1525,7 +1525,28 @@ function imprimerBordereau(bordereauId) {
       .total{font-size:15px;font-weight:800;margin-top:16px;text-align:right}
       @media print{ button{display:none} }
     </style></head><body>
-    <script>(function(){var t=${JSON.stringify(titreBordereau)};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+      (function(){var t=${JSON.stringify(titreBordereau)};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();
+      function telechargerPdfAuto() {
+        if (typeof html2pdf !== 'function') { alert('La génération automatique du PDF n\\'a pas pu se charger (pas de connexion internet ?). Utilise le bouton "Imprimer" à la place.'); return; }
+        var nom = (${JSON.stringify(titreBordereau)} || 'Document').replace(/[<>:"/\\\\|?*\\x00-\\x1F]/g, '').trim() + '.pdf';
+        var boutons = document.querySelectorAll('button');
+        boutons.forEach(function(b){ b.style.visibility = 'hidden'; });
+        html2pdf().set({
+          filename: nom, margin: 0,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['css', 'legacy'] }
+        }).from(document.body).save().then(function() {
+          boutons.forEach(function(b){ b.style.visibility = ''; });
+        }).catch(function(err) {
+          boutons.forEach(function(b){ b.style.visibility = ''; });
+          alert('Erreur lors de la génération du PDF : ' + (err && err.message ? err.message : err));
+        });
+      }
+    </script>
     <h1>Bordereau ${b.numero || ''} — ${b.compagnie}</h1>
     <div class="sub">${b.mois}${contact ? ` · Contact : ${contact.libelle_contact||''} ${contact.email ? '('+contact.email+')' : ''}` : ''}</div>
     <div class="grid">
@@ -1537,7 +1558,8 @@ function imprimerBordereau(bordereauId) {
     <table><thead><tr><th>Client</th><th>Produit</th><th>N° police</th><th>Montant</th><th>Statut</th></tr></thead>
     <tbody>${lignesHtml || '<tr><td colspan="5">Aucune commission rapprochée</td></tr>'}</tbody></table>
     <div class="total">Part Jonathan : CHF ${fmtCHF(pJ)} · Part apporteurs : CHF ${fmtCHF(pA)}</div>
-    <button onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#0f2244;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Imprimer / Enregistrer en PDF</button>
+    <button onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#0f2244;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Imprimer</button>
+    <button onclick="telechargerPdfAuto()" style="margin-top:20px;margin-left:10px;padding:10px 20px;background:#16a34a;color:#fff;border:none;border-radius:6px;cursor:pointer">💾 Enregistrer le PDF (nom automatique)</button>
     </body></html>`;
   // Blob/ObjectURL au lieu de document.write sur about:blank : un F5 dans l'onglet recharge le
   // même bordereau au lieu d'une page blanche (voir genererMandatCourtage, js/05).
@@ -1570,13 +1592,35 @@ function imprimerFichePaie(ficheId, lignesCommissions, debut, fin, totalMontant)
       .total{font-size:15px;font-weight:800;margin-top:16px;text-align:right}
       @media print{ button{display:none} }
     </style></head><body>
-    <script>(function(){var t=${JSON.stringify(titreFichePaie)};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();</script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script>
+      (function(){var t=${JSON.stringify(titreFichePaie)};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();
+      function telechargerPdfAuto() {
+        if (typeof html2pdf !== 'function') { alert('La génération automatique du PDF n\\'a pas pu se charger (pas de connexion internet ?). Utilise le bouton "Imprimer" à la place.'); return; }
+        var nom = (${JSON.stringify(titreFichePaie)} || 'Document').replace(/[<>:"/\\\\|?*\\x00-\\x1F]/g, '').trim() + '.pdf';
+        var boutons = document.querySelectorAll('button');
+        boutons.forEach(function(b){ b.style.visibility = 'hidden'; });
+        html2pdf().set({
+          filename: nom, margin: 0,
+          image: { type: 'jpeg', quality: 0.98 },
+          html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['css', 'legacy'] }
+        }).from(document.body).save().then(function() {
+          boutons.forEach(function(b){ b.style.visibility = ''; });
+        }).catch(function(err) {
+          boutons.forEach(function(b){ b.style.visibility = ''; });
+          alert('Erreur lors de la génération du PDF : ' + (err && err.message ? err.message : err));
+        });
+      }
+    </script>
     <h1>Fiche de paie — Assurex Sàrl</h1>
     <p>Période : ${fmtDate(debut)} au ${fmtDate(fin)}</p>
     <table><thead><tr><th>Client</th><th>Produit</th><th>Compagnie</th><th>Montant</th><th>Part signataire</th><th>Part apporteur</th></tr></thead>
     <tbody>${lignesHtml}</tbody></table>
     <div class="total">Total : CHF ${fmtCHF(Math.round(totalMontant))}</div>
-    <button onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#0f2244;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Imprimer / Enregistrer en PDF</button>
+    <button onclick="window.print()" style="margin-top:20px;padding:10px 20px;background:#0f2244;color:#fff;border:none;border-radius:6px;cursor:pointer">🖨️ Imprimer</button>
+    <button onclick="telechargerPdfAuto()" style="margin-top:20px;margin-left:10px;padding:10px 20px;background:#16a34a;color:#fff;border:none;border-radius:6px;cursor:pointer">💾 Enregistrer le PDF (nom automatique)</button>
     </body></html>`;
   // Blob/ObjectURL au lieu de document.write sur about:blank : un F5 dans l'onglet recharge la
   // même fiche de paie au lieu d'une page blanche (voir genererMandatCourtage, js/05).

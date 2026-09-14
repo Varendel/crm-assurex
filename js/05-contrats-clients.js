@@ -394,6 +394,7 @@ async function showClient(id) {
     </div>
     <div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:16px">
       <div style="display:flex;gap:10px;flex-wrap:wrap">
+        ${c.email ? `<a href="mailto:${c.email}" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px">✉️ Écrire un e-mail</a>` : ''}
         <button onclick="ouvrirSignatureMandat('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📄 Mandat de courtage</button>
         <button onclick="ouvrirEnvoiMandatCompagnies('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">✉️ Envoyer le mandat</button>
         ${!c.prenatal && c.segment !== 'Entreprise' ? `<button onclick="creerPrenataleDepuisParent('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🍼 Créer une prénatale</button>` : ''}
@@ -1048,7 +1049,7 @@ function ouvrirModaleResiliation(clientId) {
 // destinataire, objet, corps, formule de politesse, signature — rien d'autre.
 function construireHtmlResiliation(corps, titre, signatureDataUrl) {
   return `<html><head><meta charset="utf-8"><title>${(titre || 'Résiliation').replace(/</g, '&lt;')}</title><style>
-    body{font-family:Arial,sans-serif;padding:40px 45px;color:#000;font-size:12.5px;line-height:1.7;max-width:700px;margin:0 auto}
+    body{font-family:Arial,sans-serif;padding:40px 45px;color:#000;font-size:12.5px;line-height:1.7;max-width:700px;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .entete{display:flex;justify-content:space-between;align-items:flex-start}
     .expediteur{font-size:12px}
     .recommandee{font-weight:700;font-size:12px}
@@ -1889,7 +1890,7 @@ function genererIcsRdv(etat, dureeMin, nomInvite) {
 // plutôt que par accès direct à allClients (non disponible pour un visiteur non connecté).
 function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire) {
   return `<html><head><meta charset="utf-8"><title>Mandat de courtage — ${champs.societe ? champs.societe : champs.prenom + ' ' + champs.nom}</title><style>
-    body{font-family:Arial,sans-serif;padding:35px;color:#1a1a1a;font-size:12.5px;line-height:1.5}
+    body{font-family:Arial,sans-serif;padding:35px;color:#1a1a1a;font-size:12.5px;line-height:1.5;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .entete{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #113679;padding-bottom:14px;margin-bottom:20px}
     h1{font-size:19px;color:#113679;text-align:center;margin:10px 0 2px}
     .sous-titre{text-align:center;font-style:italic;color:#444;margin-bottom:18px;font-size:12px}
@@ -2073,7 +2074,7 @@ function genererDocumentSigne(clientId, signatureDataUrl, contexte) {
   const dateFr = fmtDate(maintenant.toISOString());
 
   const contenuHtml = `<html><head><meta charset="utf-8"><title>Signature — ${(contexte.documentNom || 'Document').replace(/</g,'&lt;')}</title><style>
-    body{font-family:Arial,sans-serif;padding:35px;color:#1a1a1a;font-size:13px;line-height:1.6}
+    body{font-family:Arial,sans-serif;padding:35px;color:#1a1a1a;font-size:13px;line-height:1.6;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .entete{border-bottom:2px solid #113679;padding-bottom:14px;margin-bottom:20px}
     h1{font-size:18px;color:#113679;margin:0 0 4px}
     .sous-titre{color:#555;font-size:12px}
@@ -2377,7 +2378,7 @@ function genererFicheDemandeOffre(clientId) {
   win.document.write(`<html><head><title>Fiche demande d'offre — ${c.nom}</title><meta charset="utf-8">
   <style>
     @media print { .print-btn, .save-btn, .save-note { display:none } @page { margin: 14mm } input, textarea { border-color: #999 !important } }
-    body { font-family: Arial, sans-serif; font-size: 11.5px; color: #1a1a1a; max-width: 850px; margin: 20px auto; line-height: 1.45 }
+    body { font-family: Arial, sans-serif; font-size: 11.5px; color: #1a1a1a; max-width: 850px; margin: 20px auto; line-height: 1.45; -webkit-print-color-adjust: exact; print-color-adjust: exact }
     input, textarea { color: #1a1a1a }
     .raison-sociale { font-size: 25px; font-weight: 900; color: #113679; letter-spacing: 0.3px; margin: 10px 0 2px; text-transform: uppercase }
     .sous-titre { color: #555; font-size: 10.5px; margin-bottom: 14px }

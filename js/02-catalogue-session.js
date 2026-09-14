@@ -480,7 +480,7 @@ function imprimerResultatLPP() {
   const rows = r.lignesReel.map(l => `
     <tr><td>${l.age}</td><td style="text-align:right">CHF ${Math.round(l.etatDebut).toLocaleString()}</td><td style="text-align:right">CHF ${Math.round(l.interet).toLocaleString()}</td><td style="text-align:right">CHF ${Math.round(l.bonification).toLocaleString()}</td><td style="text-align:right;font-weight:700">CHF ${Math.round(l.etatFin).toLocaleString()}</td></tr>`).join('');
   win.document.write(`<html><head><title>Bilan de prévoyance — ${nom}</title><style>
-    body{font-family:Arial,sans-serif;padding:30px;color:#0f2244}
+    body{font-family:Arial,sans-serif;padding:30px;color:#0f2244;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .entete{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:3px solid #0f2244;padding-bottom:14px;margin-bottom:20px}
     .logo-assurex{font-size:22px;font-weight:900;color:#0f2244;letter-spacing:0.5px}
     .logo-assurex span{color:#c9a24b}

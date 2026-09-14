@@ -890,7 +890,7 @@ function imprimerResultatImmo() {
   const nom = document.getElementById('fi-nom').value || 'Client';
   const win = window.open('', '_blank');
   win.document.write(`<html><head><title>Financement immobilier — ${nom}</title><style>
-    body{font-family:Arial,sans-serif;padding:30px;color:#0f2244}
+    body{font-family:Arial,sans-serif;padding:30px;color:#0f2244;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .entete{display:flex;align-items:center;gap:14px;border-bottom:3px solid #0f2244;padding-bottom:14px;margin-bottom:20px}
     h1{font-size:16px;color:#0f2244;margin:14px 0 4px}
     h2{font-size:14px;color:#0f2244;margin-top:22px;border-bottom:1px solid #ddd;padding-bottom:4px}

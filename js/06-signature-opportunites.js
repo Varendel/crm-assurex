@@ -1513,7 +1513,7 @@ function imprimerBordereau(bordereauId) {
   const win = window.open('', '_blank');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Bordereau ${b.numero||''} — ${b.compagnie}</title>
     <style>
-      body{font-family:Arial,sans-serif;padding:30px;color:#0f2244}
+      body{font-family:Arial,sans-serif;padding:30px;color:#0f2244;-webkit-print-color-adjust:exact;print-color-adjust:exact}
       h1{font-size:18px;margin-bottom:2px} .sub{color:#666;font-size:12px;margin-bottom:20px}
       .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
       .box{border:1px solid #ddd;border-radius:8px;padding:10px 14px}
@@ -1559,7 +1559,7 @@ function imprimerFichePaie(ficheId, lignesCommissions, debut, fin, totalMontant)
   }).join('');
   win.document.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Fiche de paie ${fmtDate(debut)} - ${fmtDate(fin)}</title>
     <style>
-      body{font-family:Arial,sans-serif;padding:30px;color:#0f2244}
+      body{font-family:Arial,sans-serif;padding:30px;color:#0f2244;-webkit-print-color-adjust:exact;print-color-adjust:exact}
       h1{font-size:18px} table{width:100%;border-collapse:collapse;margin-top:16px;font-size:12px}
       th,td{padding:8px;border-bottom:1px solid #ddd;text-align:left}
       th{background:#0f2244;color:#fff;text-transform:uppercase;font-size:10px}

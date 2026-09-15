@@ -418,6 +418,7 @@ async function showClient(id) {
         ${!isEntreprise ? `<button onclick="voirConstellationFamiliale('${c.id}')" class="${aConstellationFamiliale(c) ? 'fam-glow' : ''}" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🌳 Constellation familiale</button>` : ''}
         <button onclick="ouvrirModaleResiliation('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📝 Feuille de résiliation</button>
         <button onclick="genererPageGardeTransmission('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📤 Page de garde (transmission polices)</button>
+        <button onclick="genererEnvoiPolice('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">✉️ Envoi de police (lettre)</button>
         <button onclick="prefillOpportuniteClientId='${c.id}'; opportuniteEnEditionId=null; navigate('nouvelle-opportunite')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:7px 16px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">🎯 Créer une opportunité</button>
         <button onclick="ouvrirModaleNouveauRdv('${c.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:7px 16px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">📅 Prendre un RDV</button>
         <button onclick="prefillDemandeOffreClientId='${c.id}'; navigate('nouvelle-demande-offre')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📝 Demande d'offre</button>
@@ -2691,6 +2692,77 @@ function genererPageGardeTransmission(clientId) {
   // Blob/ObjectURL (voir genererMandatCourtage) : un F5 recharge le document au lieu d'une page blanche.
   const blobPageGarde = new Blob([contenuPageGarde], { type: 'text/html;charset=utf-8' });
   window.open(URL.createObjectURL(blobPageGarde), '_blank', 'popup');
+}
+
+// ═══ ENVOI DE POLICE — lettre d'accompagnement à l'entrée en vigueur d'une nouvelle police ═══
+// Même principe que la page de garde de transmission : coordonnées du client pré-remplies,
+// texte modifiable à l'écran avant impression (voir fiche demande d'offre pour le pattern).
+function genererEnvoiPolice(clientId) {
+  const c = allClients.find(x => x.id === clientId);
+  if (!c) return;
+  const isEntreprise = estEntreprise(c);
+  const nomComplet = isEntreprise ? (c.nom || 'Client') : `${c.prenom || ''} ${c.nom || ''}`.trim();
+  const adresseComplete = [c.adresse, c.co].filter(Boolean).join(', ');
+  const npaVille = [c.npa, c.ville].filter(Boolean).join(' ');
+  const salutation = c.civilite === 'Madame' ? 'Madame,' : c.civilite === 'Monsieur' ? 'Monsieur,' : 'Madame, Monsieur,';
+
+  const zoneEditableEnvoi = (contenu, lignes = 3) => `<textarea data-champ="corps" rows="${lignes}" style="border:1px solid #ccc;border-radius:3px;width:100%;font:inherit;background:transparent;padding:6px;resize:vertical;line-height:1.6">${contenu}</textarea>`;
+
+  const titreEnvoiPolice = `Votre nouvelle police prévoyance — ${nomComplet || 'Client'}`;
+  const titreEnvoiPoliceSafe = titreEnvoiPolice.replace(/<\/script/gi, '<\\/script');
+  const contenuEnvoiPolice = `<html><head><meta charset="utf-8"><title>${titreEnvoiPolice.replace(/</g, '&lt;')}</title><style>
+    body{font-family:Arial,sans-serif;padding:40px 45px;color:#000;font-size:12.5px;line-height:1.65;max-width:700px;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .entete{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+    .date-ligne{text-align:right;margin-top:10px;font-size:12px}
+    .destinataire{margin-top:38px;font-size:12.5px}
+    .objet{margin-top:34px;font-weight:700;font-size:13px}
+    p{margin:12px 0}
+    textarea{color:#000}
+    .rappel{font-style:italic}
+    .signature-zone{margin-top:40px}
+    .footer{text-align:center;font-size:9.5px;color:#888;margin-top:36px;border-top:1px solid #ddd;padding-top:10px}
+    .print-btn{margin-top:30px;padding:9px 18px;background:#000;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px}
+    @media print { .print-btn { display: none !important; } body { padding: 15px 20px } textarea{border:none !important;padding:0 !important;resize:none} }
+  </style></head><body>
+    <script>
+      (function(){var t=${JSON.stringify(titreEnvoiPoliceSafe)};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();
+    </script>
+    <div class="entete">
+      ${genererBadgeLogoAssurex(28, '0', 'inline-block')}
+    </div>
+
+    <div class="date-ligne">St-Sulpice, le ${fmtDate(new Date().toISOString())}</div>
+
+    <div class="destinataire">
+      ${nomComplet.replace(/</g, '&lt;')}${adresseComplete ? `<br/>${adresseComplete.replace(/</g, '&lt;')}` : ''}${npaVille ? `<br/>${npaVille.replace(/</g, '&lt;')}` : ''}
+    </div>
+
+    <div class="objet">Objet : Votre nouvelle police prévoyance</div>
+
+    <p>${salutation}</p>
+
+    <p>Nous vous prions de trouver ci-joint votre nouvelle police ainsi que vos premiers bulletins de versement.</p>
+
+    ${zoneEditableEnvoi(`Afin d'optimiser le rendement sur les marchés, nous vous conseillons d'enregistrer deux virements permanents depuis votre espace bancaire en ligne, à la même date. L'achat des parts de fonds se fera ensuite périodiquement à cette même date, et vous profiterez ainsi des intérêts composés sur le long terme.`, 4)}
+
+    <p class="rappel">N'hésitez pas à contacter Jonathan Ozkan pour toutes vos questions d'assurance.</p>
+
+    <p>Je vous prie d'agréer, ${salutation.replace(',', '')}, nos salutations distinguées.</p>
+
+    <div class="signature-zone">
+      <strong>Jonathan Ozkan</strong><br/>
+      Assurex Sàrl – Autorisation FINMA F01492173<br/>
+      Rue du Centre 142, 1025 St-Sulpice<br/>
+      079 101 99 26 · jo@cofidex.ch
+    </div>
+
+    <div class="footer">ASSUREX Sàrl – Rue du Centre 142, 1025 St-Sulpice – Autorisation FINMA F01492173</div>
+
+    <button class="print-btn" onclick="window.print()">🖨️ Imprimer</button>
+  </body></html>`;
+  // Blob/ObjectURL (voir genererMandatCourtage) : un F5 recharge le document au lieu d'une page blanche.
+  const blobEnvoiPolice = new Blob([contenuEnvoiPolice], { type: 'text/html;charset=utf-8' });
+  window.open(URL.createObjectURL(blobEnvoiPolice), '_blank', 'popup');
 }
 
 async function saveClientEdit(id, isEntreprise) {

@@ -1109,10 +1109,10 @@ function construireHtmlResiliation(corps, titre, signatureDataUrl) {
     body{font-family:Arial,sans-serif;padding:40px 45px;color:#000;font-size:12.5px;line-height:1.7;max-width:700px;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}
     .entete{display:flex;justify-content:space-between;align-items:flex-start}
     .expediteur{font-size:12px}
-    .recommandee{font-weight:700;font-size:12px}
-    .date-ligne{text-align:right;margin-top:10px;font-size:12px}
-    .destinataire{margin-top:42px;font-size:12.5px}
-    .objet{margin-top:36px;font-weight:700;font-size:13px}
+    .date-ligne{text-align:right;font-size:12px}
+    .destinataire{margin-top:60px;font-size:12.5px;text-align:right}
+    .recommandee{font-weight:700;font-size:12px;margin-bottom:2px}
+    .objet{margin-top:50px;font-weight:700;font-size:13px}
     p{margin:12px 0}
     .signature-zone{margin-top:44px}
     .ligne-signature{border-top:1px solid #000;margin-top:46px;padding-top:5px;font-style:italic;font-size:11px;max-width:220px}
@@ -1165,7 +1165,9 @@ function confirmerResiliation(clientId) {
   const nomClient = plusieursPersonnes
     ? personnes.map(nomPersonne).join(', ').replace(/,([^,]*)$/, ' et$1')
     : nomPersonne(personnes[0]);
-  const adresseClient = `${c.adresse || ''}${c.adresse ? ', ' : ''}${c.npa || ''} ${c.ville || ''}`.trim();
+  // Modèle Jonathan (16.09.2026) : expéditeur sur 3 lignes distinctes (nom / rue / NPA localité),
+  // pas de virgule tout sur une ligne.
+  const npaVilleClient = `${c.npa || ''} ${c.ville || ''}`.trim();
   const dateEffetFr = fmtDate(dateEffet);
   const aujourdhui = fmtDate(new Date().toISOString());
   const echapper = s => (s || '').replace(/</g, '&lt;');
@@ -1194,11 +1196,11 @@ function confirmerResiliation(clientId) {
 
   const corps = `
     <div class="entete">
-      <div class="expediteur"><strong>${echapper(nomClient)}</strong>${adresseClient ? `<br/>${echapper(adresseClient)}` : ''}</div>
-      ${recommandee ? `<div class="recommandee">Recommandée</div>` : ''}
+      <div class="expediteur">${echapper(nomClient)}${c.adresse ? `<br/>${echapper(c.adresse)}` : ''}${npaVilleClient ? `<br/>${echapper(npaVilleClient)}` : ''}</div>
+      <div class="date-ligne">${localiteClient ? echapper(localiteClient) + ', ' : ''}le ${aujourdhui}</div>
     </div>
-    <div class="date-ligne">${localiteClient ? echapper(localiteClient) + ', ' : ''}le ${aujourdhui}</div>
     <div class="destinataire">
+      ${recommandee ? `<div class="recommandee">Recommandée</div>` : ''}
       <strong>${echapper(compagnie)}</strong>${compagnieAdresse ? `<br/>${echapper(compagnieAdresse)}` : ''}
     </div>
     <div class="objet">Résiliation ${(typesInfo.length > 1 || contratsCoches.length > 1) ? 'des contrats d\'assurance' : 'du contrat d\'assurance'}${objetPoliceTxt}${plusieursPersonnes ? ' — ' + personnes.length + ' personnes concernées' : ''}</div>

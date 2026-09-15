@@ -1158,7 +1158,11 @@ function ouvrirModaleResiliation(clientId) {
         </div>` : ''}
         <div class="form-field" style="grid-column:span 2">
           <label class="form-label">Compagnie destinataire</label>
-          <input class="form-input" id="res-compagnie" placeholder="Ex: CSS Assurance" list="res-compagnies-suggestions" autocomplete="off"/>
+          <select class="form-select" id="res-compagnie-select" onchange="if(this.value){ document.getElementById('res-compagnie').value = this.value; } this.selectedIndex = 0;" style="margin-bottom:6px">
+            <option value="">— Sélecteur rapide : choisir une compagnie —</option>
+            ${[...new Set((allCompagniesContacts || []).map(cc => normaliserCompagnie(cc.compagnie)).filter(Boolean))].sort().map(nom => `<option value="${nom.replace(/"/g, '&quot;')}">${nom}</option>`).join('')}
+          </select>
+          <input class="form-input" id="res-compagnie" placeholder="Ex: CSS Assurance (ou saisis directement si absente de la liste)" list="res-compagnies-suggestions" autocomplete="off"/>
           <datalist id="res-compagnies-suggestions">${[...new Set((allCompagniesContacts || []).map(cc => normaliserCompagnie(cc.compagnie)).filter(Boolean))].sort().map(nom => `<option value="${nom.replace(/"/g, '&quot;')}">`).join('')}</datalist>
         </div>
         <div class="form-field" style="grid-column:span 2" id="res-police-zone"></div>
@@ -1175,7 +1179,7 @@ function ouvrirModaleResiliation(clientId) {
         <button class="btn-secondary" onclick="document.getElementById('modal-resiliation').remove()">Annuler</button>
         <button class="btn-save" onclick="confirmerResiliation('${clientId}')" style="margin-left:auto">Continuer →</button>
       </div>
-    </div>`, { opacite: 0.8, padding: '16px', overflowY: false });
+    </div>`, { opacite: 0.8, padding: '16px' });
   window._resPoliceValeurs = {};
   renderChampsPoliceResiliation();
 }

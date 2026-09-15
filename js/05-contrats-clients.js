@@ -983,10 +983,39 @@ const RESILIATION_TYPES = [
   { id: 'vie3b', label: 'Assurance vie libre — pilier 3B', note: "Vérifie la valeur de rachat et d'éventuelles pénalités avant d'envoyer." },
 ];
 
-function afficherNoteResiliation(typeId) {
-  const t = RESILIATION_TYPES.find(x => x.id === typeId);
+// Depuis l'ajout de la résiliation multi-types (ex: LAMal + LCA chez le même assureur en une
+// seule lettre), res-type n'est plus un <select> mais un groupe de cases à cocher — on agrège
+// les notes de tous les types cochés.
+function afficherNoteResiliation() {
+  const cochees = Array.from(document.querySelectorAll('.res-type-chk:checked')).map(el => el.value);
+  const notes = RESILIATION_TYPES.filter(t => cochees.includes(t.id)).map(t => t.note);
   const el = document.getElementById('res-note');
-  if (el) el.textContent = t ? t.note : '';
+  if (el) el.textContent = notes.join('  •  ');
+}
+
+// Pré-remplit compagnie + n° de police quand un ou plusieurs contrats sont cochés dans la liste
+// "Contrat(s) concerné(s)" — permet par exemple de cocher à la fois le contrat LAMal et le
+// contrat LCA du même client chez le même assureur pour les résilier en une seule lettre.
+function appliquerContratsResiliationCoches() {
+  const coches = Array.from(document.querySelectorAll('.res-contrat-chk:checked'));
+  const compagnieEl = document.getElementById('res-compagnie');
+  const policeEl = document.getElementById('res-police');
+  const erreurEl = document.getElementById('erreur-resiliation');
+  if (!coches.length) return;
+  const compagnies = [...new Set(coches.map(el => (el.dataset.compagnie || '').trim().toLowerCase()).filter(Boolean))];
+  const compagniesAffichage = [...new Set(coches.map(el => el.dataset.compagnie).filter(Boolean))];
+  if (compagniesAffichage.length && compagnieEl) compagnieEl.value = compagniesAffichage[0];
+  if (erreurEl) {
+    if (compagnies.length > 1) {
+      erreurEl.textContent = '⚠️ Les contrats cochés ne sont pas tous chez la même compagnie (' + compagniesAffichage.join(', ') + '). Une lettre ne peut avoir qu\'un seul destinataire.';
+      erreurEl.style.display = 'block';
+    } else {
+      erreurEl.style.display = 'none';
+    }
+  }
+  if (policeEl) {
+    policeEl.value = coches.length === 1 ? (coches[0].dataset.police || '') : coches.map(el => el.dataset.police).filter(Boolean).join(' / ');
+  }
 }
 
 // Membres de la constellation familiale d'un client (lui-même + père + mère + enfants liés),
@@ -1008,7 +1037,6 @@ function ouvrirModaleResiliation(clientId) {
   const c = allClients.find(x => x.id === clientId);
   if (!c) return;
   const contratsClient = allContrats.filter(ct => ct.client_id === clientId);
-  const contratOptions = contratsClient.map(ct => `<option value="${ct.id}" data-compagnie="${(ct.compagnie || '').replace(/"/g, '&quot;')}" data-police="${(ct.numero_police || '').replace(/"/g, '&quot;')}">${ct.produit || 'Contrat'} — ${ct.compagnie || ''}${ct.numero_police ? ' (' + ct.numero_police + ')' : ''}</option>`).join('');
   const membres = membresConstellation(clientId);
   const membresHtml = membres.length > 1 ? `<div class="form-field" style="grid-column:span 2">
     <label class="form-label">Personnes concernées par cette résiliation</label>
@@ -1027,18 +1055,25 @@ function ouvrirModaleResiliation(clientId) {
       <div class="form-grid">
         ${membresHtml}
         <div class="form-field" style="grid-column:span 2">
-          <label class="form-label">Type d'assurance *</label>
-          <select class="form-select" id="res-type" onchange="afficherNoteResiliation(this.value)">
-            ${RESILIATION_TYPES.map(t => `<option value="${t.id}">${t.label}</option>`).join('')}
-          </select>
+          <label class="form-label">Type(s) d'assurance à résilier *</label>
+          <div style="display:flex;flex-direction:column;gap:6px;background:var(--surface-alt);border:1px solid var(--border);border-radius:8px;padding:10px 12px">
+            ${RESILIATION_TYPES.map((t, i) => `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;color:var(--text)">
+              <input type="checkbox" class="res-type-chk" value="${t.id}" ${i === 0 ? 'checked' : ''} onchange="afficherNoteResiliation()" style="width:15px;height:15px;cursor:pointer"/>
+              ${t.label}
+            </label>`).join('')}
+          </div>
+          <div style="font-size:10.5px;color:var(--text-muted);margin-top:6px">Coche plusieurs types pour les résilier en une seule lettre (ex : LAMal + LCA chez le même assureur).</div>
           <div id="res-note" style="font-size:10.5px;color:var(--text-muted);margin-top:6px">${RESILIATION_TYPES[0].note}</div>
         </div>
         ${contratsClient.length ? `<div class="form-field" style="grid-column:span 2">
-          <label class="form-label">Contrat concerné (optionnel — pré-remplit compagnie et n° de police)</label>
-          <select class="form-select" id="res-contrat" onchange="const o=this.selectedOptions[0];document.getElementById('res-compagnie').value=o?o.dataset.compagnie||'':'';document.getElementById('res-police').value=o?o.dataset.police||'':''">
-            <option value="">— Aucun / saisie manuelle —</option>
-            ${contratOptions}
-          </select>
+          <label class="form-label">Contrat(s) concerné(s) (optionnel — coche-en plusieurs pour pré-remplir compagnie et n° de police de chacun)</label>
+          <div style="display:flex;flex-direction:column;gap:6px;background:var(--surface-alt);border:1px solid var(--border);border-radius:8px;padding:10px 12px;max-height:170px;overflow-y:auto">
+            ${contratsClient.map(ct => `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;color:var(--text)">
+              <input type="checkbox" class="res-contrat-chk" value="${ct.id}" data-compagnie="${(ct.compagnie || '').replace(/"/g, '&quot;')}" data-police="${(ct.numero_police || '').replace(/"/g, '&quot;')}" data-produit="${(ct.produit || 'Contrat').replace(/"/g, '&quot;')}" onchange="appliquerContratsResiliationCoches()" style="width:15px;height:15px;cursor:pointer"/>
+              ${ct.produit || 'Contrat'} — ${ct.compagnie || ''}${ct.numero_police ? ' (' + ct.numero_police + ')' : ''}
+            </label>`).join('')}
+          </div>
+          <div style="font-size:10.5px;color:var(--text-muted);margin-top:5px">Ex : coche le contrat LAMal et le contrat LCA du même client chez le même assureur pour les résilier ensemble.</div>
         </div>` : ''}
         <div class="form-field"><label class="form-label">Compagnie destinataire</label><input class="form-input" id="res-compagnie" placeholder="Ex: CSS Assurance"/></div>
         <div class="form-field"><label class="form-label">N° de police</label><input class="form-input" id="res-police" placeholder="Ex: 123.456.789"/></div>
@@ -1095,16 +1130,28 @@ function construireHtmlResiliation(corps, titre, signatureDataUrl) {
 function confirmerResiliation(clientId) {
   const c = allClients.find(x => x.id === clientId);
   if (!c) return;
-  const typeId = document.getElementById('res-type').value;
-  const typeInfo = RESILIATION_TYPES.find(t => t.id === typeId);
+  // Types cochés (une lettre peut désormais résilier plusieurs types à la fois, ex: LAMal + LCA
+  // chez le même assureur) et contrats cochés dans la liste "Contrat(s) concerné(s)".
+  const typesCoches = Array.from(document.querySelectorAll('.res-type-chk:checked')).map(el => el.value);
+  const typesInfo = RESILIATION_TYPES.filter(t => typesCoches.includes(t.id));
+  const contratsCoches = Array.from(document.querySelectorAll('.res-contrat-chk:checked'));
   const compagnie = document.getElementById('res-compagnie').value.trim();
   const compagnieAdresse = document.getElementById('res-compagnie-adresse').value.trim();
   const police = document.getElementById('res-police').value.trim();
   const dateEffet = document.getElementById('res-date-effet').value;
   const recommandee = document.getElementById('res-recommandee').checked;
   const erreurEl = document.getElementById('erreur-resiliation');
+  if (!typesInfo.length) { erreurEl.textContent = "Coche au moins un type d'assurance à résilier."; erreurEl.style.display = 'block'; return; }
   if (!compagnie) { erreurEl.textContent = 'Indique la compagnie destinataire.'; erreurEl.style.display = 'block'; return; }
   if (!dateEffet) { erreurEl.textContent = "Indique la date d'effet souhaitée."; erreurEl.style.display = 'block'; return; }
+  if (contratsCoches.length > 1) {
+    const compagniesDistinctes = new Set(contratsCoches.map(el => (el.dataset.compagnie || '').trim().toLowerCase()).filter(Boolean));
+    if (compagniesDistinctes.size > 1) {
+      erreurEl.textContent = 'Les contrats cochés ne sont pas tous chez la même compagnie — décoche ceux qui ne concernent pas ' + compagnie + ', ou génère une lettre séparée pour l\'autre compagnie.';
+      erreurEl.style.display = 'block';
+      return;
+    }
+  }
 
   const isEnt = estEntreprise(c);
   // Membres cochés dans la constellation familiale (si affichée) — par défaut juste le client
@@ -1123,13 +1170,27 @@ function confirmerResiliation(clientId) {
   const aujourdhui = fmtDate(new Date().toISOString());
   const echapper = s => (s || '').replace(/</g, '&lt;');
 
-  const noteLamal = typeId === 'lamal'
+  // Plusieurs "éléments" résiliés (plusieurs personnes, plusieurs types, ou plusieurs contrats
+  // cochés) impose l'accord grammatical au pluriel ("contrats", "cités") dans le corps de lettre.
+  const plusieursElements = plusieursPersonnes || typesInfo.length > 1 || contratsCoches.length > 1;
+
+  const noteLamal = typesCoches.includes('lamal')
     ? `<p>Pour la LAMal, le nouvel assureur vous adressera prochainement une attestation d'assurance${plusieursPersonnes ? ' pour chaque personne concernée' : ''}.</p>`
     : '';
   // Lieu de la date = localité du client (expéditeur réel de la lettre), pas St-Sulpice —
   // ce document n'a plus aucune mention Assurex, donc plus de raison d'utiliser l'adresse du
   // courtier ici. c.ville contient déjà "NPA Localité" (convention du CRM) : on retire le NPA.
   const localiteClient = (c.ville || '').replace(/^\d{4}\s*/, '').trim();
+
+  // Une ligne "☑" par élément résilié : si des contrats précis sont cochés on affiche le produit
+  // et son propre n° de police (ex: LAMal n° 111 + LCA n° 222 chez le même assureur), sinon on
+  // retombe sur les types cochés (saisie manuelle, sans contrat lié dans le CRM).
+  const lignesResiliation = contratsCoches.length
+    ? contratsCoches.map(el => `☑ ${echapper(el.dataset.produit || 'Contrat')}${el.dataset.police ? ' n° ' + echapper(el.dataset.police) : ''} avec effet au <strong>${dateEffetFr}</strong>`).join('<br/>')
+    : typesInfo.map(t => `☑ ${echapper(t.label)} avec effet au <strong>${dateEffetFr}</strong>`).join('<br/>');
+  // Le n° de police dans l'objet n'a de sens que s'il n'y a qu'un seul élément résilié — sinon
+  // les numéros sont déjà listés séparément dans le corps de la lettre.
+  const objetPoliceTxt = (!plusieursElements && police) ? ' n° ' + echapper(police) : '';
 
   const corps = `
     <div class="entete">
@@ -1140,11 +1201,11 @@ function confirmerResiliation(clientId) {
     <div class="destinataire">
       <strong>${echapper(compagnie)}</strong>${compagnieAdresse ? `<br/>${echapper(compagnieAdresse)}` : ''}
     </div>
-    <div class="objet">Résiliation du contrat d'assurance${police ? ' n° ' + echapper(police) : ''}${plusieursPersonnes ? ' — ' + personnes.length + ' personnes concernées' : ''}</div>
+    <div class="objet">Résiliation ${(typesInfo.length > 1 || contratsCoches.length > 1) ? 'des contrats d\'assurance' : 'du contrat d\'assurance'}${objetPoliceTxt}${plusieursPersonnes ? ' — ' + personnes.length + ' personnes concernées' : ''}</div>
     <p style="margin-top:18px">Madame, Monsieur,</p>
-    <p>Par la présente lettre, je vous notifie de la résiliation de ${plusieursPersonnes ? 'nos contrats d\'assurance' : 'mon contrat d\'assurance'} cité${plusieursPersonnes ? 's' : ''} en référence, pour ${plusieursPersonnes ? 'les personnes suivantes' : 'la personne suivante'} :</p>
+    <p>Par la présente lettre, je vous notifie de la résiliation de ${plusieursPersonnes ? 'nos' : (typesInfo.length > 1 || contratsCoches.length > 1) ? 'mes' : 'mon'} contrat${plusieursElements ? 's' : ''} d'assurance cité${plusieursElements ? 's' : ''} en référence, pour ${plusieursPersonnes ? 'les personnes suivantes' : 'la personne suivante'} :</p>
     ${plusieursPersonnes ? `<p>${personnes.map(p => '☑ ' + echapper(nomPersonne(p))).join('<br/>')}</p>` : ''}
-    <p>☑ ${typeInfo.label} avec effet au <strong>${dateEffetFr}</strong></p>
+    <p>${lignesResiliation}</p>
     ${noteLamal}
     <p>Je vous remercie de bien vouloir me faire parvenir une confirmation par courrier, et dans cette attente, de bien vouloir croire en l'expression de mes meilleures salutations.</p>
     <div class="signature-zone">
@@ -1153,7 +1214,7 @@ function confirmerResiliation(clientId) {
   `;
 
   document.getElementById('modal-resiliation').remove();
-  const titreDoc = `Résiliation ${typeInfo.label}${compagnie ? ' — ' + compagnie : ''}`;
+  const titreDoc = `Résiliation ${typesInfo.map(t => t.label).join(' + ')}${compagnie ? ' — ' + compagnie : ''}`;
   const previewHtml = construireHtmlResiliation(corps, titreDoc, null);
   ouvrirSignatureMandat(clientId, {
     type: 'resiliation',

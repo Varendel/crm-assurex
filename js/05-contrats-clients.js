@@ -410,22 +410,15 @@ async function showClient(id) {
       </div>
     </div>
     <div style="display:flex;justify-content:flex-end;align-items:center;margin-bottom:16px">
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        ${c.email ? `<a href="mailto:${c.email}" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:6px">✉️ Écrire un e-mail</a>` : ''}
-        <button onclick="ouvrirSignatureMandat('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📄 Mandat de courtage</button>
-        <button onclick="ouvrirEnvoiMandatCompagnies('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">✉️ Envoyer le mandat</button>
-        ${!c.prenatal && c.segment !== 'Entreprise' ? `<button onclick="creerPrenataleDepuisParent('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🍼 Créer une prénatale</button>` : ''}
+      <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
         ${!isEntreprise ? `<button onclick="voirConstellationFamiliale('${c.id}')" class="${aConstellationFamiliale(c) ? 'fam-glow' : ''}" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🌳 Constellation familiale</button>` : ''}
-        <button onclick="ouvrirModaleResiliation('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📝 Feuille de résiliation</button>
-        <button onclick="genererPageGardeTransmission('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📤 Page de garde (transmission polices)</button>
-        <button onclick="genererEnvoiPolice('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">✉️ Envoi de police (lettre)</button>
         <button onclick="prefillOpportuniteClientId='${c.id}'; opportuniteEnEditionId=null; navigate('nouvelle-opportunite')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:7px 16px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">🎯 Créer une opportunité</button>
         <button onclick="ouvrirModaleNouveauRdv('${c.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:7px 16px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">📅 Prendre un RDV</button>
-        <button onclick="prefillDemandeOffreClientId='${c.id}'; navigate('nouvelle-demande-offre')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📝 Demande d'offre</button>
-        ${estEntreprise(c) ? `<button onclick="genererFicheDemandeOffre('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🖨️ Fiche papier (demande d'offre)</button>` : ''}
-        ${estEntreprise(c) ? `<button onclick="showCompleterDetailsEntreprise('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📋 Détails entreprise (masse salariale, assurances, LPP...)</button>` : ''}
-        <button onclick="window.print()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🖨️ Imprimer la fiche</button>
-        <button onclick="toggleEditClient()" style="background:${editingClient ? 'var(--red-dim)' : 'var(--surface)'};border:1px solid ${editingClient ? 'rgba(248,113,113,0.3)' : 'var(--border)'};border-radius:8px;padding:7px 16px;color:${editingClient ? 'var(--red)' : 'var(--text-muted)'};font-size:12px;font-weight:700;cursor:pointer">${editingClient ? '✕ Annuler' : '✏️ Modifier'}</button>
+        <span style="width:1px;align-self:stretch;background:var(--border);margin:2px 2px"></span>
+        <button onclick="ouvrirOngletDocumentsClient('${c.id}')" style="background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.35);border-radius:8px;padding:7px 16px;color:#38bdf8;font-size:12px;font-weight:700;cursor:pointer">📄 Documents ▾</button>
+        ${isEntreprise ? `<button onclick="ouvrirOngletEntrepriseClient('${c.id}')" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);border-radius:8px;padding:7px 16px;color:#f59e0b;font-size:12px;font-weight:700;cursor:pointer">🏢 Entreprise ▾</button>` : ''}
+        ${!isEntreprise && !c.prenatal ? `<button onclick="ouvrirOngletSuiviClient('${c.id}')" style="background:rgba(244,114,182,0.12);border:1px solid rgba(244,114,182,0.35);border-radius:8px;padding:7px 16px;color:#f472b6;font-size:12px;font-weight:700;cursor:pointer">👪 Suivi ▾</button>` : ''}
+        <button onclick="ouvrirOngletFicheClient('${c.id}')" style="background:var(--surface-alt);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">⚙️ Fiche ▾</button>
       </div>
     </div>
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:22px;margin-bottom:18px">
@@ -813,6 +806,68 @@ async function showClient(id) {
     </div>`;
   bindAdresseAutocomplete({ adresseId: 'ec-adresse', npaId: 'ec-npa', villeId: 'ec-ville', cantonId: 'ec-canton' });
   insertBackBar({ homeId: 'clients', homeLabel: 'Clients', itemLabel: displayName });
+}
+
+// ═══ ONGLETS DE CATÉGORIES (fiche client) ═══
+// Le 15.09.2026, réorganisation demandée par Jonathan : la rangée d'actions en haut de la fiche
+// client ne garde que 3 boutons "principaux" (Constellation familiale, Créer une opportunité,
+// Prendre un RDV). Tous les autres boutons sont regroupés dans des onglets de couleur — chaque
+// onglet ouvre une modale listant les actions de sa catégorie.
+
+// Génère un bouton d'action à l'intérieur d'une modale d'onglet : il ferme la modale d'onglet
+// puis exécute l'action demandée (souvent l'ouverture d'une autre modale/vue).
+function boutonOngletAction(idModal, onclickInterieur, label) {
+  return `<button onclick="document.getElementById('${idModal}').remove(); ${onclickInterieur}" style="width:100%;text-align:left;background:var(--surface-alt);border:1px solid var(--border);border-radius:9px;padding:12px 14px;color:var(--text);font-size:13px;font-weight:600;cursor:pointer">${label}</button>`;
+}
+
+// Construit et affiche la modale d'un onglet de catégorie.
+function ouvrirModaleOnglet(idModal, titre, couleur, boutonsHtml) {
+  creerModale(idModal, `
+    <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:420px;width:100%">
+      <div style="font-size:16px;font-weight:800;color:${couleur};margin-bottom:16px">${titre}</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${boutonsHtml}
+      </div>
+      <button class="btn-secondary" style="margin-top:16px;width:100%" onclick="document.getElementById('${idModal}').remove()">Fermer</button>
+    </div>
+  `, { opacite: 0.8, padding: '16px', overflowY: false });
+}
+
+// 📄 Documents — tout ce qui produit ou envoie un document lié au client.
+function ouvrirOngletDocumentsClient(clientId) {
+  const c = allClients.find(x => x.id === clientId);
+  if (!c) return;
+  const boutons = [
+    boutonOngletAction('modal-onglet-documents', `ouvrirSignatureMandat('${clientId}')`, '📄 Mandat de courtage'),
+    boutonOngletAction('modal-onglet-documents', `ouvrirEnvoiMandatCompagnies('${clientId}')`, '✉️ Envoyer le mandat'),
+    boutonOngletAction('modal-onglet-documents', `ouvrirModaleResiliation('${clientId}')`, '📝 Feuille de résiliation'),
+    boutonOngletAction('modal-onglet-documents', `genererPageGardeTransmission('${clientId}')`, '📤 Page de garde (transmission polices)'),
+    boutonOngletAction('modal-onglet-documents', `genererEnvoiPolice('${clientId}')`, '✉️ Envoi de police (lettre)'),
+    boutonOngletAction('modal-onglet-documents', `prefillDemandeOffreClientId='${clientId}'; navigate('nouvelle-demande-offre')`, '📝 Demande d\'offre'),
+    estEntreprise(c) ? boutonOngletAction('modal-onglet-documents', `genererFicheDemandeOffre('${clientId}')`, '🖨️ Fiche papier (demande d\'offre)') : '',
+  ].filter(Boolean).join('');
+  ouvrirModaleOnglet('modal-onglet-documents', '📄 Documents', '#38bdf8', boutons);
+}
+
+// 🏢 Entreprise — actions spécifiques aux clients entreprise.
+function ouvrirOngletEntrepriseClient(clientId) {
+  const boutons = boutonOngletAction('modal-onglet-entreprise', `showCompleterDetailsEntreprise('${clientId}')`, '📋 Détails entreprise');
+  ouvrirModaleOnglet('modal-onglet-entreprise', '🏢 Entreprise', '#f59e0b', boutons);
+}
+
+// 👪 Suivi — suivi familial (prénatale, etc.).
+function ouvrirOngletSuiviClient(clientId) {
+  const boutons = boutonOngletAction('modal-onglet-suivi', `creerPrenataleDepuisParent('${clientId}')`, '🍼 Créer une prénatale');
+  ouvrirModaleOnglet('modal-onglet-suivi', '👪 Suivi', '#f472b6', boutons);
+}
+
+// ⚙️ Fiche — actions génériques sur la fiche elle-même (impression, édition).
+function ouvrirOngletFicheClient(clientId) {
+  const boutons = [
+    boutonOngletAction('modal-onglet-fiche', `window.print()`, '🖨️ Imprimer la fiche'),
+    boutonOngletAction('modal-onglet-fiche', `toggleEditClient()`, editingClient ? '✕ Annuler' : '✏️ Modifier'),
+  ].join('');
+  ouvrirModaleOnglet('modal-onglet-fiche', '⚙️ Fiche', '#64748b', boutons);
 }
 
 // Suppression d'un client — demande une double confirmation explicite (irréversible),

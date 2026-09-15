@@ -43,6 +43,13 @@ function estProduitSante(produitLabel) {
   return (CATALOGUE_PRODUITS['Santé'] || []).some(p => p.label === produitLabel);
 }
 
+// Un contrat compte comme "prévoyance privée" (3a/3b, libre passage, etc. — hors LPP collective
+// d'entreprise) s'il correspond à un produit du catalogue "Prévoyance privée".
+function estProduitPrevoyancePrivee(produitLabel) {
+  if (!produitLabel) return false;
+  return (CATALOGUE_PRODUITS['Prévoyance privée'] || []).some(p => p.label === produitLabel);
+}
+
 // ═══ ASSURANCE PRÉNATALE — annonce de la naissance ═══
 async function ouvrirAnnonceNaissance(clientId) {
   const c = allClients.find(x => x.id === clientId);
@@ -410,6 +417,7 @@ async function showClient(id) {
         ${!c.prenatal && c.segment !== 'Entreprise' ? `<button onclick="creerPrenataleDepuisParent('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🍼 Créer une prénatale</button>` : ''}
         ${!isEntreprise ? `<button onclick="voirConstellationFamiliale('${c.id}')" class="${aConstellationFamiliale(c) ? 'fam-glow' : ''}" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🌳 Constellation familiale</button>` : ''}
         <button onclick="ouvrirModaleResiliation('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📝 Feuille de résiliation</button>
+        <button onclick="genererPageGardeTransmission('${c.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📤 Page de garde (transmission polices)</button>
         <button onclick="prefillOpportuniteClientId='${c.id}'; opportuniteEnEditionId=null; navigate('nouvelle-opportunite')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:7px 16px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">🎯 Créer une opportunité</button>
         <button onclick="ouvrirModaleNouveauRdv('${c.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:7px 16px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">📅 Prendre un RDV</button>
         <button onclick="prefillDemandeOffreClientId='${c.id}'; navigate('nouvelle-demande-offre')" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">📝 Demande d'offre</button>
@@ -2594,6 +2602,95 @@ function genererFicheDemandeOffre(clientId) {
   // Blob/ObjectURL (voir genererMandatCourtage) : un F5 recharge la fiche au lieu d'une page blanche.
   const blobFicheOffre = new Blob([contenuFicheOffre], { type: 'text/html;charset=utf-8' });
   window.open(URL.createObjectURL(blobFicheOffre), '_blank', 'popup');
+}
+
+// ═══ PAGE DE GARDE — TRANSMISSION DE POLICES DE PRÉVOYANCE PRIVÉE ═══
+// Courrier d'accompagnement pour la remise de polices (et du bulletin de versement associé) à un
+// client — les lignes du tableau sont pré-remplies avec les contrats "Prévoyance privée" déjà
+// enregistrés sur le client (modifiables à l'écran avant impression, comme la fiche demande d'offre).
+function genererPageGardeTransmission(clientId) {
+  const c = allClients.find(x => x.id === clientId);
+  if (!c) return;
+  const isEntreprise = estEntreprise(c);
+  const nomComplet = isEntreprise ? (c.nom || 'Client') : `${c.prenom || ''} ${c.nom || ''}`.trim();
+  const adresseComplete = [c.adresse, c.co].filter(Boolean).join(', ');
+  const npaVille = [c.npa, c.ville].filter(Boolean).join(' ');
+  const salutation = c.civilite === 'Madame' ? 'Madame,' : c.civilite === 'Monsieur' ? 'Monsieur,' : 'Madame, Monsieur,';
+
+  // Polices de prévoyance privée déjà enregistrées sur le client — pré-remplissage des lignes du
+  // tableau (modifiable ensuite à l'écran avant impression, comme pour la fiche demande d'offre).
+  const contratsPrevoyancePrivee = allContrats.filter(ct => ct.client_id === clientId && estProduitPrevoyancePrivee(ct.produit) && !['résilié', 'annulé', 'mandat_resilie'].includes(ct.statut));
+  const nbLignes = Math.max(4, contratsPrevoyancePrivee.length);
+  const ligneInput = (valeur) => `<input type="text" value="${(valeur || '').toString().replace(/"/g, '&quot;')}" style="border:none;border-bottom:1px solid #999;width:100%;font:inherit;background:transparent;padding:2px 0"/>`;
+  const lignesPolices = Array.from({ length: nbLignes }).map((_, i) => {
+    const ct = contratsPrevoyancePrivee[i];
+    return `<tr><td>${ligneInput(ct && ct.compagnie)}</td><td>${ligneInput(ct && ct.produit)}</td><td>${ligneInput(ct && ct.numero_police)}</td></tr>`;
+  }).join('');
+
+  const titrePageGarde = `Transmission de documents — ${nomComplet || 'Client'}`;
+  const titrePageGardeSafe = titrePageGarde.replace(/<\/script/gi, '<\\/script');
+  const contenuPageGarde = `<html><head><meta charset="utf-8"><title>${titrePageGarde.replace(/</g, '&lt;')}</title><style>
+    body{font-family:Arial,sans-serif;padding:40px 45px;color:#000;font-size:12.5px;line-height:1.65;max-width:700px;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .entete{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+    .date-ligne{text-align:right;margin-top:10px;font-size:12px}
+    .destinataire{margin-top:38px;font-size:12.5px}
+    .objet{margin-top:34px;font-weight:700;font-size:13px}
+    p{margin:12px 0}
+    table.polices{width:100%;border-collapse:collapse;margin:14px 0 6px;font-size:12px}
+    table.polices th{background:#000;color:#fff;padding:6px 8px;text-align:left;font-size:10.5px;text-transform:uppercase}
+    table.polices td{padding:6px 8px;border-bottom:1px solid #ddd}
+    .rappel{margin-top:26px;font-style:italic}
+    .signature-zone{margin-top:40px}
+    .footer{text-align:center;font-size:9.5px;color:#888;margin-top:36px;border-top:1px solid #ddd;padding-top:10px}
+    .print-btn{margin-top:30px;padding:9px 18px;background:#000;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px}
+    @media print { .print-btn { display: none !important; } body { padding: 15px 20px } input{border-color:#999 !important} }
+  </style></head><body>
+    <script>
+      (function(){var t=${JSON.stringify(titrePageGardeSafe)};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();
+    </script>
+    <div class="entete">
+      ${genererBadgeLogoAssurex(28, '0', 'inline-block')}
+    </div>
+
+    <div class="date-ligne">St-Sulpice, le ${fmtDate(new Date().toISOString())}</div>
+
+    <div class="destinataire">
+      ${nomComplet.replace(/</g, '&lt;')}${adresseComplete ? `<br/>${adresseComplete.replace(/</g, '&lt;')}` : ''}${npaVille ? `<br/>${npaVille.replace(/</g, '&lt;')}` : ''}
+    </div>
+
+    <div class="objet">Transmission de vos documents de prévoyance privée</div>
+
+    <p>${salutation}</p>
+
+    <p>Suite à notre entretien, vous trouverez ci-joint les documents suivants concernant votre prévoyance privée :</p>
+
+    <table class="polices">
+      <tr><th>Compagnie</th><th>Produit</th><th>N° de police</th></tr>
+      ${lignesPolices}
+    </table>
+
+    <p>ainsi que le bulletin de versement s'y rapportant.</p>
+
+    <p>Je reste à votre entière disposition pour toute question relative à ces documents.</p>
+
+    <p class="rappel">N'oubliez pas que pour vos questions d'assurance Jonathan Ozkan est à votre disposition.</p>
+
+    <p>Je vous prie d'agréer, ${salutation.replace(',', '')}, mes salutations distinguées.</p>
+
+    <div class="signature-zone">
+      <strong>Jonathan Ozkan</strong><br/>
+      Assurex Sàrl – Autorisation FINMA F01492173<br/>
+      Rue du Centre 142, 1025 St-Sulpice<br/>
+      079 101 99 26 · jo@cofidex.ch
+    </div>
+
+    <div class="footer">ASSUREX Sàrl – Rue du Centre 142, 1025 St-Sulpice – Autorisation FINMA F01492173</div>
+
+    <button class="print-btn" onclick="window.print()">🖨️ Imprimer</button>
+  </body></html>`;
+  // Blob/ObjectURL (voir genererMandatCourtage) : un F5 recharge le document au lieu d'une page blanche.
+  const blobPageGarde = new Blob([contenuPageGarde], { type: 'text/html;charset=utf-8' });
+  window.open(URL.createObjectURL(blobPageGarde), '_blank', 'popup');
 }
 
 async function saveClientEdit(id, isEntreprise) {

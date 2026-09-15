@@ -1982,7 +1982,7 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
       </div>
       <div style="font-size:10.5px;color:var(--text-muted);margin-top:10px">Taux et montant sont repris directement du décompte compagnie (modifiable si besoin). Une ligne sans contrat CRM reconnu ne peut pas être importée automatiquement — crée le contrat manquant (ou corrige son n° de police) puis réimporte le fichier.${_decompteLignes.some(l => l.montant < 0) ? ' Un montant négatif n\'est pas une erreur : la compagnie a émis 2 factures pour la même police (voir le n° de facture sous chaque ligne) — la 2e corrige/ajuste une branche de la 1ère, d\'où une ligne en négatif compensée par une autre en positif.' : ''}</div>
       <div style="display:flex;gap:10px;margin-top:14px">
-        <button class="btn-save" onclick="importerCommissionsDecompte('${(nomAssureur || '').replace(/'/g, "\\'")}')">✓ Créer les commissions sélectionnées</button>
+        <button class="btn-save" id="imp-btn-creer" onclick="importerCommissionsDecompte('${(nomAssureur || '').replace(/'/g, "\\'")}')">✓ Créer les commissions sélectionnées</button>
       </div>
     `)}
   `;
@@ -1996,16 +1996,34 @@ function recalculerTotalImport() {
 }
 
 async function importerCommissionsDecompte(nomAssureur) {
+  // Garde-fou anti-doublon n°1 : sans ce verrou, un double-clic sur le bouton (le clic reste actif
+  // pendant toute la boucle await ci-dessous) relançait deux fois la création des mêmes lignes —
+  // c'est la cause la plus probable d'un doublon signalé par Jonathan le 16.09.2026.
+  const btn = document.getElementById('imp-btn-creer');
+  if (btn && btn.disabled) return;
+  if (btn) { btn.disabled = true; btn.textContent = 'Import en cours...'; }
+
   const aTraiter = _decompteLignes.filter(l => l.selectionne && l.contratId);
-  if (!aTraiter.length) { showError('Aucune ligne sélectionnée avec un contrat reconnu.'); return; }
+  if (!aTraiter.length) {
+    showError('Aucune ligne sélectionnée avec un contrat reconnu.');
+    if (btn) { btn.disabled = false; btn.textContent = '✓ Créer les commissions sélectionnées'; }
+    return;
+  }
   const nature = document.getElementById('imp-nature-commission')?.value || 'gestion';
-  let nbCrees = 0, nbEchecs = 0;
+  const aujourdhui = new Date().toISOString().split('T')[0];
+  let nbCrees = 0, nbEchecs = 0, nbIgnores = 0;
   for (const l of aTraiter) {
     const montant = Math.round(l.montant);
     // Un montant négatif est une vraie correction de la compagnie (2e facture ajustant une branche
     // de la 1ère) — il doit être importé comme les autres, sinon la correction disparaît silencieusement
     // et le montant en attente reste surestimé du montant qu'elle était censée compenser.
     if (montant !== 0) {
+      // Garde-fou anti-doublon n°2 : si une commission en attente identique (même contrat, même
+      // montant) a déjà été créée aujourd'hui, c'est presque certainement un doublon (fichier
+      // réimporté par erreur, ou double-clic malgré le verrou ci-dessus) plutôt qu'une nouvelle
+      // commission légitime — on ne la recrée pas.
+      const dejaExistante = allCommissionsAttente.some(c => c.contrat_id === l.contratId && Math.round(c.montant_estime || 0) === montant && c.date_creation === aujourdhui && c.statut === 'en_attente');
+      if (dejaExistante) { nbIgnores++; continue; }
       const r = await dbPost('commissions_attente', {
         client_id: l.clientId,
         contrat_id: l.contratId,
@@ -2016,14 +2034,15 @@ async function importerCommissionsDecompte(nomAssureur) {
         detail_calcul: `Décompte compagnie importé (Excel IG B2B) — ${l.brancheInterne || ''}${montant < 0 ? ' (correction' + (l.noFacture ? ' facture n°' + l.noFacture : '') + ')' : ''} : base CHF ${fmtCHF(l.commissionProduction)} × ${l.taux}% — contrat ${l.numeroContrat}`,
         statut: 'en_attente',
         nature,
-        date_creation: new Date().toISOString().split('T')[0],
+        date_creation: aujourdhui,
       });
       if (r && r.error) { nbEchecs++; continue; }
       nbCrees++;
     }
   }
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
-  showError(`✓ ${nbCrees} commission(s) créée(s).${nbEchecs ? ' ⚠️ ' + nbEchecs + ' échec(s) d’écriture — vérifie manuellement.' : ''}`);
+  showError(`✓ ${nbCrees} commission(s) créée(s).${nbIgnores ? ' ' + nbIgnores + ' ligne(s) ignorée(s) car déjà importée(s) aujourd\'hui (doublon évité).' : ''}${nbEchecs ? ' ⚠️ ' + nbEchecs + ' échec(s) d’écriture — vérifie manuellement.' : ''}`);
+  if (btn) { btn.disabled = false; btn.textContent = '✓ Créer les commissions sélectionnées'; }
   navigate('import-decompte');
 }
 

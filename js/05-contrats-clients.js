@@ -415,6 +415,7 @@ async function showClient(id) {
         <button onclick="prefillOpportuniteClientId='${c.id}'; opportuniteEnEditionId=null; navigate('nouvelle-opportunite')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:7px 16px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">🎯 Créer une opportunité</button>
         <button onclick="ouvrirModaleNouveauRdv('${c.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:7px 16px;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer">📅 Prendre un RDV</button>
         <span style="width:1px;align-self:stretch;background:var(--border);margin:2px 2px"></span>
+        <button onclick="ouvrirOngletAdminClient('${c.id}')" style="background:rgba(167,139,250,0.12);border:1px solid rgba(167,139,250,0.35);border-radius:8px;padding:7px 16px;color:#a78bfa;font-size:12px;font-weight:700;cursor:pointer">🗂️ Admin ▾</button>
         <button onclick="ouvrirOngletDocumentsClient('${c.id}')" style="background:rgba(56,189,248,0.12);border:1px solid rgba(56,189,248,0.35);border-radius:8px;padding:7px 16px;color:#38bdf8;font-size:12px;font-weight:700;cursor:pointer">📄 Documents ▾</button>
         ${isEntreprise ? `<button onclick="ouvrirOngletEntrepriseClient('${c.id}')" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.35);border-radius:8px;padding:7px 16px;color:#f59e0b;font-size:12px;font-weight:700;cursor:pointer">🏢 Entreprise ▾</button>` : ''}
         ${!isEntreprise && !c.prenatal ? `<button onclick="ouvrirOngletSuiviClient('${c.id}')" style="background:rgba(244,114,182,0.12);border:1px solid rgba(244,114,182,0.35);border-radius:8px;padding:7px 16px;color:#f472b6;font-size:12px;font-weight:700;cursor:pointer">👪 Suivi ▾</button>` : ''}
@@ -868,6 +869,217 @@ function ouvrirOngletFicheClient(clientId) {
     boutonOngletAction('modal-onglet-fiche', `toggleEditClient()`, editingClient ? '✕ Annuler' : '✏️ Modifier'),
   ].join('');
   ouvrirModaleOnglet('modal-onglet-fiche', '⚙️ Fiche', '#64748b', boutons);
+}
+
+// 🗂️ Admin — courriers sortants génériques (relance, courrier libre), en complément des documents
+// déjà couverts par l'onglet Documents. Ajouté le 15.09.2026 à la demande de Jonathan — placé en
+// premier des onglets colorés (à gauche des autres) pour plus de visibilité, avec son propre
+// pictogramme 🗂️ et sa propre couleur (violet) pour le distinguer du reste.
+function ouvrirOngletAdminClient(clientId) {
+  const boutons = [
+    boutonOngletAction('modal-onglet-admin', `ouvrirModaleRelanceClient('${clientId}')`, '📨 Courrier de relance (document manquant)'),
+    boutonOngletAction('modal-onglet-admin', `ouvrirModaleCourrierLibre('${clientId}')`, '📝 Courrier libre'),
+  ].join('');
+  ouvrirModaleOnglet('modal-onglet-admin', '🗂️ Admin', '#a78bfa', boutons);
+}
+
+// Catégories pré-existantes de documents manquants les plus fréquentes (demande de Jonathan,
+// 15.09.2026) — coche celles concernées, + case "Autre" en texte libre. Liste volontairement
+// courte pour commencer ("on enrichira" — Jonathan) : facile à compléter plus tard.
+const RELANCE_DOCUMENTS_TYPES = [
+  { id: 'piece-identite', label: "Pièce d'identité (carte d'identité ou passeport)" },
+  { id: 'justificatif-domicile', label: 'Justificatif de domicile' },
+  { id: 'rib-iban', label: 'Coordonnées bancaires (IBAN)' },
+  { id: 'questionnaire-sante', label: 'Questionnaire de santé complété' },
+  { id: 'copie-contrat-actuel', label: "Copie du contrat d'assurance actuel" },
+  { id: 'signature-manquante', label: 'Document signé manquant' },
+];
+
+function ouvrirModaleRelanceClient(clientId) {
+  const c = allClients.find(x => x.id === clientId);
+  if (!c) return;
+  document.getElementById('modal-onglet-admin')?.remove();
+  creerModale('modal-relance', `
+    <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:480px;width:100%">
+      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">📨 Courrier de relance — document manquant</div>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:16px">Coche le(s) document(s) manquant(s) — le courrier reprend automatiquement les coordonnées du client.</div>
+      <div class="form-grid">
+        <div class="form-field" style="grid-column:span 2">
+          <label class="form-label">Document(s) manquant(s) *</label>
+          <div style="display:flex;flex-direction:column;gap:6px;background:var(--surface-alt);border:1px solid var(--border);border-radius:8px;padding:10px 12px">
+            ${RELANCE_DOCUMENTS_TYPES.map((t, i) => `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;color:var(--text)">
+              <input type="checkbox" class="relance-doc-chk" value="${t.id}" data-label="${t.label.replace(/"/g, '&quot;')}" ${i === 0 ? 'checked' : ''} style="width:15px;height:15px;cursor:pointer"/>
+              ${t.label}
+            </label>`).join('')}
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;color:var(--text)">
+              <input type="checkbox" id="relance-doc-autre-chk" onchange="document.getElementById('relance-doc-autre-zone').style.display = this.checked ? 'block' : 'none'" style="width:15px;height:15px;cursor:pointer"/>
+              Autre (préciser)
+            </label>
+          </div>
+          <div id="relance-doc-autre-zone" style="display:none;margin-top:8px">
+            <input class="form-input" id="relance-doc-autre-texte" placeholder="Ex: Attestation d'assurance de l'employeur précédent"/>
+          </div>
+        </div>
+        <div class="form-field" style="grid-column:span 2">
+          <label class="form-label">Délai souhaité (optionnel)</label>
+          <input class="form-input" id="relance-delai" placeholder="Ex: d'ici au 30 septembre 2026"/>
+        </div>
+      </div>
+      <div id="erreur-relance" style="color:#f87171;font-size:11.5px;margin-top:8px;display:none"></div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn-secondary" onclick="document.getElementById('modal-relance').remove()">Annuler</button>
+        <button class="btn-save" onclick="genererCourrierRelance('${clientId}')" style="margin-left:auto">Générer le courrier</button>
+      </div>
+    </div>
+  `, { opacite: 0.8, padding: '16px' });
+}
+
+function genererCourrierRelance(clientId) {
+  const c = allClients.find(x => x.id === clientId);
+  if (!c) return;
+  const docsCoches = Array.from(document.querySelectorAll('.relance-doc-chk:checked')).map(el => el.dataset.label);
+  const autreCoche = document.getElementById('relance-doc-autre-chk').checked;
+  const autreTexte = document.getElementById('relance-doc-autre-texte').value.trim();
+  if (autreCoche && autreTexte) docsCoches.push(autreTexte);
+  const delai = document.getElementById('relance-delai').value.trim();
+  const erreurEl = document.getElementById('erreur-relance');
+  if (!docsCoches.length) { erreurEl.textContent = 'Coche au moins un document manquant.'; erreurEl.style.display = 'block'; return; }
+
+  const isEntreprise = estEntreprise(c);
+  const nomComplet = isEntreprise ? (c.nom || 'Client') : `${c.prenom || ''} ${c.nom || ''}`.trim();
+  const adresseComplete = [c.adresse, c.co].filter(Boolean).join(', ');
+  const npaVille = [c.npa, c.ville].filter(Boolean).join(' ');
+  const salutation = c.civilite === 'Madame' ? 'Madame,' : c.civilite === 'Monsieur' ? 'Monsieur,' : 'Madame, Monsieur,';
+  const echapper = s => (s || '').replace(/</g, '&lt;');
+  const listeDocuments = docsCoches.map(d => `<li>${echapper(d)}</li>`).join('');
+
+  document.getElementById('modal-relance').remove();
+
+  const titre = `Relance — ${nomComplet || 'Client'}`;
+  const contenu = construireHtmlCourrierAssurex({
+    titre,
+    destinataireNom: nomComplet,
+    destinataireAdresse: adresseComplete,
+    destinataireNpaVille: npaVille,
+    objet: 'Documents en attente de votre part',
+    corps: `
+      <p>${salutation}</p>
+      <p>Afin de finaliser votre dossier, il me manque encore le${docsCoches.length > 1 ? 's' : ''} document${docsCoches.length > 1 ? 's' : ''} suivant${docsCoches.length > 1 ? 's' : ''} :</p>
+      <ul>${listeDocuments}</ul>
+      ${delai ? `<p>Merci de me les faire parvenir ${echapper(delai)}.</p>` : `<p>Merci de me les faire parvenir dans les meilleurs délais.</p>`}
+      <p>Je reste à votre entière disposition pour toute question.</p>
+      <p>Je vous prie d'agréer, ${salutation.replace(',', '')}, mes salutations distinguées.</p>
+    `,
+  });
+  const blob = new Blob([contenu], { type: 'text/html;charset=utf-8' });
+  window.open(URL.createObjectURL(blob), '_blank', 'popup');
+}
+
+function ouvrirModaleCourrierLibre(clientId) {
+  const c = allClients.find(x => x.id === clientId);
+  if (!c) return;
+  document.getElementById('modal-onglet-admin')?.remove();
+  creerModale('modal-courrier-libre', `
+    <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:520px;width:100%">
+      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">📝 Courrier libre</div>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:16px">Rédige un courrier sur mesure — l'en-tête Assurex et les coordonnées du client sont ajoutés automatiquement.</div>
+      <div class="form-grid">
+        <div class="form-field" style="grid-column:span 2">
+          <label class="form-label">Objet *</label>
+          <input class="form-input" id="cl-objet" placeholder="Ex: Confirmation de votre rendez-vous"/>
+        </div>
+        <div class="form-field" style="grid-column:span 2">
+          <label class="form-label">Corps du courrier *</label>
+          <textarea class="form-input" id="cl-corps" placeholder="Rédige le texte du courrier ici — chaque ligne devient un paragraphe." style="min-height:180px;resize:vertical;font-family:inherit"></textarea>
+        </div>
+      </div>
+      <div id="erreur-courrier-libre" style="color:#f87171;font-size:11.5px;margin-top:8px;display:none"></div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn-secondary" onclick="document.getElementById('modal-courrier-libre').remove()">Annuler</button>
+        <button class="btn-save" onclick="genererCourrierLibre('${clientId}')" style="margin-left:auto">Générer le courrier</button>
+      </div>
+    </div>
+  `, { opacite: 0.8, padding: '16px' });
+}
+
+function genererCourrierLibre(clientId) {
+  const c = allClients.find(x => x.id === clientId);
+  if (!c) return;
+  const objet = document.getElementById('cl-objet').value.trim();
+  const texte = document.getElementById('cl-corps').value.trim();
+  const erreurEl = document.getElementById('erreur-courrier-libre');
+  if (!objet || !texte) { erreurEl.textContent = "Renseigne l'objet et le corps du courrier."; erreurEl.style.display = 'block'; return; }
+
+  const isEntreprise = estEntreprise(c);
+  const nomComplet = isEntreprise ? (c.nom || 'Client') : `${c.prenom || ''} ${c.nom || ''}`.trim();
+  const adresseComplete = [c.adresse, c.co].filter(Boolean).join(', ');
+  const npaVille = [c.npa, c.ville].filter(Boolean).join(' ');
+  const salutation = c.civilite === 'Madame' ? 'Madame,' : c.civilite === 'Monsieur' ? 'Monsieur,' : 'Madame, Monsieur,';
+  const echapper = s => (s || '').replace(/</g, '&lt;');
+  const paragraphes = texte.split('\n').filter(l => l.trim()).map(l => `<p>${echapper(l)}</p>`).join('');
+
+  document.getElementById('modal-courrier-libre').remove();
+
+  const titre = `${objet} — ${nomComplet || 'Client'}`;
+  const contenu = construireHtmlCourrierAssurex({
+    titre,
+    destinataireNom: nomComplet,
+    destinataireAdresse: adresseComplete,
+    destinataireNpaVille: npaVille,
+    objet,
+    corps: `<p>${salutation}</p>${paragraphes}<p>Je vous prie d'agréer, ${salutation.replace(',', '')}, mes salutations distinguées.</p>`,
+  });
+  const blob = new Blob([contenu], { type: 'text/html;charset=utf-8' });
+  window.open(URL.createObjectURL(blob), '_blank', 'popup');
+}
+
+// Gabarit commun aux courriers sortants "Jonathan/Assurex → client" (relance, courrier libre) —
+// reprend l'entête, le bandeau logo et le bloc signature déjà utilisés dans
+// genererPageGardeTransmission, pour rester visuellement cohérent avec les autres documents Assurex.
+function construireHtmlCourrierAssurex({ titre, destinataireNom, destinataireAdresse, destinataireNpaVille, objet, corps }) {
+  const titreSafe = (titre || 'Courrier').replace(/<\/script/gi, '<\\/script');
+  return `<html><head><meta charset="utf-8"><title>${(titre || 'Courrier').replace(/</g, '&lt;')}</title><style>
+    body{font-family:Arial,sans-serif;padding:40px 45px;color:#000;font-size:12.5px;line-height:1.65;max-width:700px;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .entete{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+    .date-ligne{text-align:right;margin-top:10px;font-size:12px}
+    .destinataire{margin-top:38px;font-size:12.5px}
+    .objet{margin-top:34px;font-weight:700;font-size:13px}
+    p{margin:12px 0}
+    ul{margin:12px 0;padding-left:22px}
+    li{margin:4px 0}
+    .signature-zone{margin-top:40px}
+    .footer{text-align:center;font-size:9.5px;color:#888;margin-top:36px;border-top:1px solid #ddd;padding-top:10px}
+    .print-btn{margin-top:30px;padding:9px 18px;background:#000;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px}
+    @media print { .print-btn { display: none !important; } body { padding: 15px 20px } }
+  </style></head><body>
+    <script>
+      (function(){var t=${JSON.stringify(titreSafe)};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();
+    </script>
+    <div class="entete">
+      ${genererBadgeLogoAssurex(28, '0', 'inline-block')}
+    </div>
+
+    <div class="date-ligne">St-Sulpice, le ${fmtDate(new Date().toISOString())}</div>
+
+    <div class="destinataire">
+      ${(destinataireNom || '').replace(/</g, '&lt;')}${destinataireAdresse ? `<br/>${destinataireAdresse.replace(/</g, '&lt;')}` : ''}${destinataireNpaVille ? `<br/>${destinataireNpaVille.replace(/</g, '&lt;')}` : ''}
+    </div>
+
+    <div class="objet">${(objet || '').replace(/</g, '&lt;')}</div>
+
+    ${corps}
+
+    <div class="signature-zone">
+      <strong>Jonathan Ozkan</strong><br/>
+      Assurex Sàrl – Autorisation FINMA F01492173<br/>
+      Rue du Centre 142, 1025 St-Sulpice<br/>
+      079 101 99 26 · jo@cofidex.ch
+    </div>
+
+    <div class="footer">ASSUREX Sàrl – Rue du Centre 142, 1025 St-Sulpice – Autorisation FINMA F01492173</div>
+
+    <button class="print-btn" onclick="window.print()">🖨️ Imprimer</button>
+  </body></html>`;
 }
 
 // Suppression d'un client — demande une double confirmation explicite (irréversible),

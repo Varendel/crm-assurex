@@ -1106,18 +1106,24 @@ function ouvrirModaleResiliation(clientId) {
 function construireHtmlResiliation(corps, titre, signatureDataUrl) {
   const titreResiliationSafe = (titre || 'Résiliation').replace(/<\/script/gi, '<\\/script');
   return `<html><head><meta charset="utf-8"><title>${(titre || 'Résiliation').replace(/</g, '&lt;')}</title><style>
-    body{font-family:Arial,sans-serif;padding:40px 45px;color:#000;font-size:12.5px;line-height:1.7;max-width:700px;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    .entete{display:flex;justify-content:space-between;align-items:flex-start}
+    /* Marge de 3,5 cm sur toute la page (demande de Jonathan, 16.09.2026) — gérée par @page pour
+       l'impression, et reprise en padding pour l'aperçu à l'écran. Les blocs date/destinataire/
+       signature sont calés à 9,5 cm de la marge gauche (repère "règle" façon Word), plutôt qu'un
+       simple alignement à droite qui dépendait de la largeur du conteneur. */
+    @page { size: A4; margin: 3.5cm; }
+    body{font-family:Arial,sans-serif;color:#000;font-size:12.5px;line-height:1.7;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    @media screen { body{max-width:700px;margin:0 auto;padding:3.5cm 3.5cm} }
+    .entete{position:relative;min-height:70px}
     .expediteur{font-size:12px}
-    .date-ligne{text-align:right;font-size:12px}
-    .destinataire{margin-top:60px;font-size:12.5px;text-align:right}
+    .date-ligne{position:absolute;top:0;left:9.5cm;font-size:12px;white-space:nowrap}
+    .destinataire{margin-top:70px;margin-left:9.5cm;font-size:12.5px}
     .recommandee{font-weight:700;font-size:12px;margin-bottom:2px}
-    .objet{margin-top:50px;font-weight:700;font-size:13px}
+    .objet{margin-top:55px;font-weight:700;font-size:13px}
     p{margin:12px 0}
-    .signature-zone{margin-top:44px}
+    .signature-zone{margin-top:50px;margin-left:9.5cm}
     .ligne-signature{border-top:1px solid #000;margin-top:46px;padding-top:5px;font-style:italic;font-size:11px;max-width:220px}
     .print-btn{margin-top:30px;padding:9px 18px;background:#000;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px}
-    @media print { .print-btn { display: none !important; } body { padding: 15px 20px; } }
+    @media print { .print-btn { display: none !important; } }
   </style></head><body>
     <script>
       (function(){var t=${JSON.stringify(titreResiliationSafe)};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();

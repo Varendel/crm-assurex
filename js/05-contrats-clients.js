@@ -2694,9 +2694,39 @@ function genererPageGardeTransmission(clientId) {
   window.open(URL.createObjectURL(blobPageGarde), '_blank', 'popup');
 }
 
-// ═══ ENVOI DE POLICE — lettre d'accompagnement à l'entrée en vigueur d'une nouvelle police ═══
-// Même principe que la page de garde de transmission : coordonnées du client pré-remplies,
-// texte modifiable à l'écran avant impression (voir fiche demande d'offre pour le pattern).
+// ═══ GÉNÉRATION DE DOCUMENTS WORD À PARTIR D'UN MODÈLE (fusion façon publipostage) ═══
+// Charge un modèle .docx (dans templates/, contenant des balises {champ}), remplace les balises
+// par les données fournies via docxtemplater (+ PizZip pour lire/écrire le .docx, qui est un zip),
+// puis déclenche le téléchargement du document rempli — ça ouvre directement dans Word, avec la
+// mise en page exacte du modèle, sans passer par une boîte d'impression système ni par un rendu
+// image (contrairement à l'ancien bouton html2pdf, retiré). Base commune pour tous les futurs
+// boutons de génération de documents (prochain : rappel de paiement, confirmation de résiliation...).
+async function telechargerDocxDepuisModele(cheminModele, donnees, nomFichier) {
+  if (typeof window.PizZip === 'undefined' || typeof window.docxtemplater === 'undefined') {
+    alert('La génération de documents Word n’a pas pu se charger (pas de connexion internet ?).');
+    return;
+  }
+  try {
+    const reponse = await fetch(cheminModele);
+    if (!reponse.ok) throw new Error(`Modèle introuvable (${reponse.status})`);
+    const contenu = await reponse.arrayBuffer();
+    const zip = new window.PizZip(contenu);
+    const doc = new window.docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
+    doc.render(donnees);
+    const blob = doc.getZip().generate({ type: 'blob', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+    const nom = (nomFichier || 'Document').replace(/[<>:"/\\|?*\x00-\x1F]/g, '').trim() + '.docx';
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = nom;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+  } catch (err) {
+    alert('Erreur lors de la génération du document Word : ' + (err && err.message ? err.message : err));
+  }
+}
+
+// ═══ ENVOI DE POLICE — lettre Word d'accompagnement à l'entrée en vigueur d'une nouvelle police ═══
 function genererEnvoiPolice(clientId) {
   const c = allClients.find(x => x.id === clientId);
   if (!c) return;
@@ -2705,64 +2735,18 @@ function genererEnvoiPolice(clientId) {
   const adresseComplete = [c.adresse, c.co].filter(Boolean).join(', ');
   const npaVille = [c.npa, c.ville].filter(Boolean).join(' ');
   const salutation = c.civilite === 'Madame' ? 'Madame,' : c.civilite === 'Monsieur' ? 'Monsieur,' : 'Madame, Monsieur,';
+  const salutationFinale = c.civilite === 'Madame' ? 'Madame' : c.civilite === 'Monsieur' ? 'Monsieur' : 'Madame, Monsieur';
 
-  const zoneEditableEnvoi = (contenu, lignes = 3) => `<textarea data-champ="corps" rows="${lignes}" style="border:1px solid #ccc;border-radius:3px;width:100%;font:inherit;background:transparent;padding:6px;resize:vertical;line-height:1.6">${contenu}</textarea>`;
-
-  const titreEnvoiPolice = `Votre nouvelle police prévoyance — ${nomComplet || 'Client'}`;
-  const titreEnvoiPoliceSafe = titreEnvoiPolice.replace(/<\/script/gi, '<\\/script');
-  const contenuEnvoiPolice = `<html><head><meta charset="utf-8"><title>${titreEnvoiPolice.replace(/</g, '&lt;')}</title><style>
-    body{font-family:Arial,sans-serif;padding:40px 45px;color:#000;font-size:12.5px;line-height:1.65;max-width:700px;margin:0 auto;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    .entete{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
-    .date-ligne{text-align:right;margin-top:10px;font-size:12px}
-    .destinataire{margin-top:38px;font-size:12.5px}
-    .objet{margin-top:34px;font-weight:700;font-size:13px}
-    p{margin:12px 0}
-    textarea{color:#000}
-    .rappel{font-style:italic}
-    .signature-zone{margin-top:40px}
-    .footer{text-align:center;font-size:9.5px;color:#888;margin-top:36px;border-top:1px solid #ddd;padding-top:10px}
-    .print-btn{margin-top:30px;padding:9px 18px;background:#000;color:#fff;border:none;border-radius:4px;cursor:pointer;font-size:13px}
-    @media print { .print-btn { display: none !important; } body { padding: 15px 20px } textarea{border:none !important;padding:0 !important;resize:none} }
-  </style></head><body>
-    <script>
-      (function(){var t=${JSON.stringify(titreEnvoiPoliceSafe)};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();
-    </script>
-    <div class="entete">
-      ${genererBadgeLogoAssurex(28, '0', 'inline-block')}
-    </div>
-
-    <div class="date-ligne">St-Sulpice, le ${fmtDate(new Date().toISOString())}</div>
-
-    <div class="destinataire">
-      ${nomComplet.replace(/</g, '&lt;')}${adresseComplete ? `<br/>${adresseComplete.replace(/</g, '&lt;')}` : ''}${npaVille ? `<br/>${npaVille.replace(/</g, '&lt;')}` : ''}
-    </div>
-
-    <div class="objet">Objet : Votre nouvelle police prévoyance</div>
-
-    <p>${salutation}</p>
-
-    <p>Nous vous prions de trouver ci-joint votre nouvelle police ainsi que vos premiers bulletins de versement.</p>
-
-    ${zoneEditableEnvoi(`Afin d'optimiser le rendement sur les marchés, nous vous conseillons d'enregistrer deux virements permanents depuis votre espace bancaire en ligne, à la même date. L'achat des parts de fonds se fera ensuite périodiquement à cette même date, et vous profiterez ainsi des intérêts composés sur le long terme.`, 4)}
-
-    <p class="rappel">N'hésitez pas à contacter Jonathan Ozkan pour toutes vos questions d'assurance.</p>
-
-    <p>Je vous prie d'agréer, ${salutation.replace(',', '')}, nos salutations distinguées.</p>
-
-    <div class="signature-zone">
-      <strong>Jonathan Ozkan</strong><br/>
-      Assurex Sàrl – Autorisation FINMA F01492173<br/>
-      Rue du Centre 142, 1025 St-Sulpice<br/>
-      079 101 99 26 · jo@cofidex.ch
-    </div>
-
-    <div class="footer">ASSUREX Sàrl – Rue du Centre 142, 1025 St-Sulpice – Autorisation FINMA F01492173</div>
-
-    <button class="print-btn" onclick="window.print()">🖨️ Imprimer</button>
-  </body></html>`;
-  // Blob/ObjectURL (voir genererMandatCourtage) : un F5 recharge le document au lieu d'une page blanche.
-  const blobEnvoiPolice = new Blob([contenuEnvoiPolice], { type: 'text/html;charset=utf-8' });
-  window.open(URL.createObjectURL(blobEnvoiPolice), '_blank', 'popup');
+  telechargerDocxDepuisModele('templates/lettre-envoi-police.docx', {
+    date: fmtDate(new Date().toISOString()),
+    nom_client: nomComplet || 'Client',
+    adresse: adresseComplete,
+    npa_ville: npaVille,
+    objet: 'Votre nouvelle police prévoyance',
+    salutation,
+    salutation_finale: salutationFinale,
+    corps_conseil: "Afin d'optimiser le rendement sur les marchés, nous vous conseillons d'enregistrer deux virements permanents depuis votre espace bancaire en ligne, à la même date. L'achat des parts de fonds se fera ensuite périodiquement à cette même date, et vous profiterez ainsi des intérêts composés sur le long terme.",
+  }, `Envoi de police - ${nomComplet || 'Client'}`);
 }
 
 async function saveClientEdit(id, isEntreprise) {

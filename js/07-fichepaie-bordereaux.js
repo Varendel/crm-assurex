@@ -4,7 +4,10 @@ function viewBordereaux() {
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
       <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Bordereaux — décomptes reçus des compagnies</h2>
-      <button class="btn-add" onclick="navigate('nouveau-bordereau')">+ Saisir bordereau</button>
+      <div style="display:flex;gap:8px">
+        <button class="btn-secondary" onclick="navigate('importer-bordereau')">📊 Importer bordereau (IG B2B)</button>
+        <button class="btn-add" onclick="navigate('nouveau-bordereau')">+ Saisir bordereau</button>
+      </div>
     </div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Argent qui entre dans Assurex (commissions de gestion + d'acquisition). Pour répartir ces montants entre les collaborateurs, utilise <span onclick="navigate('fiche-paie')" style="color:var(--accent);cursor:pointer;text-decoration:underline">Fiche de paie</span>.</div>
     <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
@@ -450,6 +453,265 @@ async function saveValidationCommission(bordereauId) {
 
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
   document.getElementById('modal-validation').remove();
+  navigate('bordereaux');
+}
+
+// ═══ IMPORTER BORDEREAU (IG B2B) DEPUIS LES COMMISSIONS EN ATTENTE ═══
+// Demande de Jonathan (16.09.2026) : au lieu de saisir le bordereau à la main PUIS rapprocher
+// chaque commission une par une (showModalValidationCommission ci-dessus), ce flux part
+// directement des commissions déjà "en attente" pour une compagnie (créées via Import décompte
+// ou saisies manuellement — les contrats eux sont toujours créés à la main par Jonathan une fois
+// la police signée, jamais automatiquement depuis cet écran) : on coche celles à inclure, on
+// vérifie/complète les infos du bordereau, puis un écran d'aperçu récapitule tout — RIEN n'est
+// créé en base avant le clic explicite sur "Confirmer et créer le bordereau" sur cet aperçu.
+// V1 volontairement simple (Jonathan a prévenu qu'on l'améliorera ensuite) : une compagnie à la
+// fois, pas d'import de fichier ici (ça reste le rôle d'Import décompte) — juste la sélection +
+// la création groupée.
+const MOIS_LISTE_IB = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
+
+async function viewImporterBordereauIGB2B() {
+  const tousLesBordereaux = await dbGet('bordereaux', 'select=numero');
+  let maxNum = 0;
+  (tousLesBordereaux || []).forEach(b => {
+    if (b.numero) { const m = b.numero.match(/(\d+)$/); if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10)); }
+  });
+  window._ibNumero = 'BRD-' + String(maxNum + 1).padStart(4, '0');
+  window._ibLignes = [];
+  window._ibCompagnie = '';
+  window._ibPrefill = null;
+
+  const parCompagnie = {};
+  (allCommissionsAttente || []).filter(c => c.statut === 'en_attente').forEach(c => {
+    const cle = (c.compagnie || '').trim() || 'Compagnie inconnue';
+    if (!parCompagnie[cle]) parCompagnie[cle] = { nb: 0, total: 0 };
+    parCompagnie[cle].nb++;
+    parCompagnie[cle].total += (c.montant_estime || 0);
+  });
+  const compagnies = Object.keys(parCompagnie).sort();
+
+  return `
+    <button onclick="navigate('bordereaux')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">📊 Importer un bordereau depuis les commissions en attente</h2>
+      <span style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:800;font-family:monospace">${window._ibNumero}</span>
+    </div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Reprend directement les commissions déjà "en attente" pour une compagnie (créées via <span onclick="navigate('import-decompte')" style="color:var(--accent);cursor:pointer;text-decoration:underline">Import décompte</span> ou saisies manuellement) pour construire le bordereau, au lieu de le saisir puis rapprocher chaque commission une par une.</div>
+
+    ${compagnies.length === 0 ? `<div class="table-empty">Aucune commission en attente pour l'instant — importe d'abord un décompte compagnie, ou <span onclick="navigate('nouveau-bordereau')" style="color:var(--accent);cursor:pointer;text-decoration:underline">saisis le bordereau manuellement</span>.</div>` : sectionCard('1. Choisir la compagnie', '#38bdf8', `
+      <div class="form-grid">
+        <div class="form-field" style="grid-column:span 2">
+          <label class="form-label">Compagnie *</label>
+          <select class="form-select" id="ib-compagnie" onchange="chargerLignesImportBordereau()">
+            <option value="">— Sélectionner —</option>
+            ${compagnies.map(c => `<option value="${c.replace(/"/g, '&quot;')}">${c} — ${parCompagnie[c].nb} commission(s) en attente, CHF ${fmtCHF(Math.round(parCompagnie[c].total))}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+    `)}
+
+    <div id="ib-zone" style="margin-top:18px"></div>
+  `;
+}
+
+function chargerLignesImportBordereau() {
+  const compagnie = document.getElementById('ib-compagnie').value;
+  window._ibCompagnie = compagnie;
+  window._ibPrefill = null; // nouvelle compagnie choisie : on oublie les valeurs d'un éventuel aperçu précédent
+  window._ibLignes = allCommissionsAttente
+    .filter(c => c.statut === 'en_attente' && ((c.compagnie || '').trim() || 'Compagnie inconnue') === compagnie)
+    .map(c => ({ id: c.id, client_id: c.client_id, contrat_id: c.contrat_id, client_nom: c.client_nom, produit: c.produit, date_creation: c.date_creation, selectionne: true, montantEdite: c.montant_estime || 0 }));
+  renderImportBordereauSelection();
+}
+
+// Ne reconstruit QUE le total en pied de tableau (pas tout le formulaire) quand une ligne est
+// cochée/décochée ou son montant modifié — sinon les champs mois/année/montant brut/caution déjà
+// remplis par Jonathan seraient effacés à chaque clic (même piège que recalculerTotalImport dans
+// l'import décompte, corrigé ici dès le départ).
+function recalculerTotalImportBordereau() {
+  const total = window._ibLignes.filter(l => l.selectionne).reduce((s, l) => s + (l.montantEdite || 0), 0);
+  const cell = document.getElementById('ib-total-cell');
+  if (cell) cell.textContent = 'CHF ' + fmtCHF(Math.round(total));
+}
+
+function renderImportBordereauSelection() {
+  const zone = document.getElementById('ib-zone');
+  if (!zone) return;
+  if (!window._ibCompagnie || !window._ibLignes.length) { zone.innerHTML = ''; return; }
+
+  const totalSelectionne = window._ibLignes.filter(l => l.selectionne).reduce((s, l) => s + (l.montantEdite || 0), 0);
+  const now = new Date();
+  const pre = window._ibPrefill || {
+    mois: MOIS_LISTE_IB[now.getMonth()],
+    annee: now.getFullYear(),
+    montant: Math.round(totalSelectionne),
+    caution: 0,
+    statut: 'attendu',
+    date: '',
+  };
+
+  zone.innerHTML = `
+    ${sectionCard(`2. Commissions en attente — ${window._ibCompagnie}`, '#4ade80', `
+      <div style="overflow-x:auto">
+      <table style="width:100%;min-width:640px;border-collapse:collapse;font-size:12px">
+        <thead><tr style="color:var(--text-muted);font-size:10px;text-transform:uppercase">
+          <th style="padding:6px 8px"></th>
+          <th style="padding:6px 8px;text-align:left">Client</th>
+          <th style="padding:6px 8px;text-align:left">Produit</th>
+          <th style="padding:6px 8px;text-align:left">Créée le</th>
+          <th style="padding:6px 8px;text-align:right">Montant</th>
+        </tr></thead>
+        <tbody>${window._ibLignes.map((l, i) => `
+          <tr style="border-top:1px solid var(--border)">
+            <td style="padding:5px 8px"><input type="checkbox" ${l.selectionne ? 'checked' : ''} onchange="window._ibLignes[${i}].selectionne = this.checked; recalculerTotalImportBordereau();"/></td>
+            <td style="padding:5px 8px">${l.client_nom || '—'}</td>
+            <td style="padding:5px 8px;color:var(--text-muted)">${l.produit || '—'}</td>
+            <td style="padding:5px 8px;color:var(--text-muted);white-space:nowrap">${l.date_creation ? fmtDate(l.date_creation) : '—'}</td>
+            <td style="padding:5px 8px;text-align:right;white-space:nowrap"><input type="number" step="0.01" value="${l.montantEdite}" style="width:85px;background:var(--surface-alt);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 5px;text-align:right" onchange="window._ibLignes[${i}].montantEdite = parseFloat(this.value)||0; recalculerTotalImportBordereau();"/></td>
+          </tr>`).join('')}</tbody>
+        <tfoot><tr style="border-top:2px solid var(--border)">
+          <td colspan="4" style="padding:8px;text-align:right;font-weight:700;color:var(--text)">Total sélectionné</td>
+          <td id="ib-total-cell" style="padding:8px;text-align:right;font-weight:800;color:#4ade80;white-space:nowrap">CHF ${fmtCHF(Math.round(totalSelectionne))}</td>
+        </tr></tfoot>
+      </table>
+      </div>
+      <div style="font-size:10.5px;color:var(--text-muted);margin-top:10px">Montant repris de la commission en attente — modifiable ici si le décompte final diffère.</div>
+    `)}
+
+    ${sectionCard('3. Informations du bordereau', '#a78bfa', `<div class="form-grid">
+      <div class="form-field"><label class="form-label">Mois *</label>
+        <select class="form-select" id="ib-mois-select">
+          ${MOIS_LISTE_IB.map(m => `<option value="${m}" ${m === pre.mois ? 'selected' : ''}>${m}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label class="form-label">Année *</label>
+        <select class="form-select" id="ib-annee-select">
+          ${[2024, 2025, 2026, 2027].map(y => `<option value="${y}" ${y === pre.annee ? 'selected' : ''}>${y}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label class="form-label">Montant brut (CHF) *</label>
+        <input class="form-input" id="ib-montant" type="number" value="${pre.montant}"/>
+        <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Prérempli avec le total des lignes cochées — corrige si le montant officiel du bordereau compagnie diffère.</div>
+      </div>
+      <div class="form-field"><label class="form-label">Taux de caution (%)</label><input class="form-input" id="ib-caution" type="number" step="0.1" placeholder="5 à 10" min="0" max="100" value="${pre.caution || ''}"/></div>
+      <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="ib-statut">
+        <option value="attendu" ${pre.statut === 'attendu' ? 'selected' : ''}>Attendu</option>
+        <option value="reçu" ${pre.statut === 'reçu' ? 'selected' : ''}>Reçu</option>
+      </select></div>
+      <div class="form-field"><label class="form-label">Date de réception</label><input class="form-input" id="ib-date" type="date" value="${pre.date || ''}"/></div>
+    </div>`)}
+
+    <div style="display:flex;gap:10px;margin-top:8px">
+      <button class="btn-secondary" onclick="navigate('bordereaux')">Annuler</button>
+      <button class="btn-save" onclick="apercuImportBordereau()">→ Aperçu avant création</button>
+    </div>
+  `;
+}
+
+// Étape d'aperçu explicitement demandée par Jonathan : même une fois les commissions "importées et
+// validées" (cochées), RIEN n'est créé en base tant qu'il n'a pas cliqué sur "Confirmer et créer"
+// ci-dessous — ceci ne fait que lire les champs et construire un récapitulatif en lecture seule.
+function apercuImportBordereau() {
+  const lignesCochees = window._ibLignes.filter(l => l.selectionne);
+  if (!lignesCochees.length) { showError('Coche au moins une commission à inclure dans le bordereau.'); return; }
+  const compagnie = normaliserCompagnie(window._ibCompagnie);
+  const mois = document.getElementById('ib-mois-select').value;
+  const annee = Number(document.getElementById('ib-annee-select').value);
+  const montantBrut = Math.round(Number(document.getElementById('ib-montant').value) || 0);
+  const caution = Number(document.getElementById('ib-caution').value) || 0;
+  const statut = document.getElementById('ib-statut').value;
+  const date = document.getElementById('ib-date').value || '';
+  if (!montantBrut) { showError('Indique le montant brut du bordereau.'); return; }
+
+  // On mémorise les champs saisis pour que "← Modifier la sélection" les retrouve tels quels.
+  window._ibPrefill = { mois, annee, montant: montantBrut, caution, statut, date };
+
+  const totalLignes = lignesCochees.reduce((s, l) => s + (l.montantEdite || 0), 0);
+  const ecart = Math.round((montantBrut - totalLignes) * 100) / 100;
+
+  const zone = document.getElementById('ib-zone');
+  zone.innerHTML = `
+    ${sectionCard(`Aperçu — ${window._ibNumero}`, '#f59e0b', `
+      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">${compagnie} — ${mois} ${annee}</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">${badge(statut, statut === 'reçu' ? '#4ade80' : '#f59e0b')}${date ? ' · Reçu le ' + fmtDate(date) : ''}${caution > 0 ? ' · Caution ' + caution + '%' : ''}</div>
+      <div style="display:flex;gap:10px;margin-bottom:16px">
+        <div style="flex:1;background:var(--surface-alt);border-radius:8px;padding:10px 14px">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Montant brut du bordereau</div>
+          <div style="font-size:16px;font-weight:900;color:#f59e0b">CHF ${fmtCHF(montantBrut)}</div>
+        </div>
+        <div style="flex:1;background:var(--surface-alt);border-radius:8px;padding:10px 14px">
+          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Total des ${lignesCochees.length} commission(s) cochée(s)</div>
+          <div style="font-size:16px;font-weight:900;color:var(--text)">CHF ${fmtCHF(Math.round(totalLignes))}</div>
+        </div>
+      </div>
+      ${Math.abs(ecart) > 1 ? `<div style="font-size:11.5px;margin-bottom:14px;padding:8px 12px;border-radius:8px;background:var(--surface-alt);color:#f87171">⚠️ Écart de CHF ${fmtCHF(ecart)} entre le montant brut saisi et le total des commissions cochées — vérifie avant de confirmer.</div>` : ''}
+      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Commissions qui seront rapprochées à ce bordereau</div>
+      ${lignesCochees.map((l, i) => `<div style="display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:${i < lignesCochees.length - 1 ? '1px solid var(--border)' : 'none'}">
+        <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--text)">${l.client_nom || '—'}</div><div style="font-size:11px;color:var(--text-muted)">${l.produit || ''}</div></div>
+        <div style="font-weight:800;color:var(--text);font-size:13px">CHF ${fmtCHF(l.montantEdite)}</div>
+      </div>`).join('')}
+      <div style="font-size:11px;color:var(--text-muted);margin-top:14px">Rien n'est encore créé — vérifie ce récapitulatif puis confirme, ou reviens en arrière pour ajuster la sélection.</div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn-secondary" onclick="renderImportBordereauSelection()">← Modifier la sélection</button>
+        <button class="btn-save" id="ib-btn-confirmer" onclick="confirmerImportBordereau()">✓ Confirmer et créer le bordereau</button>
+      </div>
+    `)}
+  `;
+}
+
+async function confirmerImportBordereau() {
+  const btn = document.getElementById('ib-btn-confirmer');
+  if (btn && btn.disabled) return; // anti-doublon double-clic, même logique que l'import décompte
+  if (btn) { btn.disabled = true; btn.textContent = 'Création...'; }
+
+  const lignesCochees = window._ibLignes.filter(l => l.selectionne);
+  const pre = window._ibPrefill;
+  const compagnie = normaliserCompagnie(window._ibCompagnie);
+  const body = {
+    numero: window._ibNumero || null,
+    compagnie,
+    mois: `${pre.mois} ${pre.annee}`,
+    montant_brut: pre.montant,
+    taux_caution: pre.caution,
+    statut: pre.statut,
+    date_reception: pre.date || null,
+  };
+  const r = await dbPost('bordereaux', body);
+  if (r && r.error) {
+    showError("Erreur lors de la création du bordereau : " + errMsg(r));
+    if (btn) { btn.disabled = false; btn.textContent = '✓ Confirmer et créer le bordereau'; }
+    return;
+  }
+  const nouveauBordereau = r && r[0] ? r[0] : null;
+  if (!nouveauBordereau) {
+    showError('Le bordereau semble créé mais sa réponse est vide — vérifie dans la liste des bordereaux avant de réessayer.');
+    if (btn) { btn.disabled = false; btn.textContent = '✓ Confirmer et créer le bordereau'; }
+    return;
+  }
+
+  // Rapproche chaque commission cochée à ce bordereau — même logique que le rapprochement manuel
+  // (saveValidationCommission ci-dessus) : statut "reçue" dès le rapprochement, et date de
+  // réception = celle du bordereau si cohérente avec la bascule Assurex, sinon aujourd'hui.
+  const dateBordereauValide = pre.date && pre.date >= DATE_BASCULE_ASSUREX;
+  const dateReceptionFinale = dateBordereauValide ? pre.date : new Date().toISOString().split('T')[0];
+  let nbLiees = 0, nbEchecs = 0;
+  for (const l of lignesCochees) {
+    const rc = await dbPatch('commissions_attente', l.id, {
+      statut: 'reçue',
+      bordereau_id: nouveauBordereau.id,
+      montant_final: l.montantEdite,
+      date_reception: dateReceptionFinale,
+    });
+    if (rc && rc.error) { nbEchecs++; continue; }
+    nbLiees++;
+  }
+
+  logAction('import_bordereau_ig_b2b', 'bordereaux', nouveauBordereau.id, `${body.numero || ''} — ${compagnie} — ${nbLiees} commission(s) rapprochée(s)`);
+  allBordereaux = await dbGet('bordereaux', 'select=*');
+  allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
+  if (nbEchecs > 0) {
+    showError(`✓ Bordereau ${body.numero} créé, mais ${nbEchecs} commission(s) sur ${lignesCochees.length} n'ont pas pu être rapprochée(s) — vérifie-les manuellement depuis le bordereau.`);
+  }
+  window._ibLignes = []; window._ibCompagnie = ''; window._ibPrefill = null;
   navigate('bordereaux');
 }
 

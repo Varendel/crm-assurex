@@ -1315,7 +1315,11 @@ const ALIAS_COMPAGNIES = {
   'axa winterthur': 'AXA', 'axa assurances': 'AXA', 'axa': 'AXA',
   'zurich assurances': 'Zurich', 'zurich': 'Zurich',
   'generali assurances': 'Generali', 'generali': 'Generali', 'generali assurances générales sa': 'Generali',
-  'baloise assurances': 'Baloise', 'bâloise': 'Baloise', 'baloise': 'Baloise', 'bâloise assurances sa': 'Baloise', 'baloise assurances sa': 'Baloise',
+  // Baloise a fusionné avec Helvetia (2026) : toutes les anciennes variantes "Baloise" (y compris
+  // sur des documents plus anciens) se normalisent désormais directement vers "Helvetia".
+  'baloise assurances': 'Helvetia', 'bâloise': 'Helvetia', 'baloise': 'Helvetia', 'bâloise assurances sa': 'Helvetia', 'baloise assurances sa': 'Helvetia',
+  'helvetia assurances': 'Helvetia', 'helvetia': 'Helvetia', 'helvetia suisse': 'Helvetia',
+  'helvetia compagnie suisse d’assurances sa': 'Helvetia', 'helvetia compagnie suisse d’assurances': 'Helvetia',
   'helsana assurances': 'Helsana', 'helsana': 'Helsana',
   'sanitas assurances': 'Sanitas', 'sanitas': 'Sanitas',
   'allianz suisse': 'Allianz', 'allianz': 'Allianz',
@@ -1377,7 +1381,7 @@ function normaliserCompagnie(nom) {
 // COMPAGNIE_BRANCHES / compagniePertinentePourProduit dans 02-catalogue-session.js). Sans
 // produitId, retourne toutes les compagnies connues (comportement inchangé).
 function getCompagniesConnues(produitId) {
-  const base = ['Swiss Life', 'AXA', 'Helsana', 'Sanitas', 'Allianz', 'Zurich', 'Generali', 'Baloise', 'CSS', 'Groupe Mutuel', 'Visana', 'SWICA', 'SwissCaution', 'FirstCaution', 'goCaution', 'SmartCaution'];
+  const base = ['Swiss Life', 'AXA', 'Helsana', 'Sanitas', 'Allianz', 'Zurich', 'Generali', 'Helvetia', 'CSS', 'Groupe Mutuel', 'Visana', 'SWICA', 'SwissCaution', 'FirstCaution', 'goCaution', 'SmartCaution'];
   // Source prioritaire : Paramètres → Contacts compagnies (Supabase, synchronisé pour toute l'équipe)
   const depuisParametres = (allCompagniesContacts || []).map(c => c.compagnie).filter(Boolean);
   let memorisees = [];

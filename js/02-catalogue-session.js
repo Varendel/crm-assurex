@@ -916,7 +916,7 @@ const PRODUIT_BRANCHES = {
 
 // compagnie normalisée (cf. normaliserCompagnie) -> branches qu'elle couvre EFFECTIVEMENT.
 // N'y figurent que les compagnies dont le périmètre est structurellement limité et bien connu ;
-// les compagnies multi-branches "généralistes" (AXA, Zurich, Baloise, La Vaudoise, La Mobilière,
+// les compagnies multi-branches "généralistes" (AXA, Zurich, Helvetia, La Vaudoise, La Mobilière,
 // Allianz, Generali...) sont volontairement ABSENTES de cette table (donc jamais masquées) à
 // l'exception du LAMal/complémentaire santé, qu'aucune d'elles ne peut légalement vendre.
 const COMPAGNIE_BRANCHES = {
@@ -951,7 +951,9 @@ const COMPAGNIE_BRANCHES = {
 // ni de complémentaire santé chez eux. Volontairement PAS dans COMPAGNIE_BRANCHES (allowlist
 // stricte) pour ne pas leur inventer un périmètre exhaustif qu'on ne maîtrise pas branche par
 // branche : cette liste sert uniquement à exclure lamal/sante_complementaire, rien d'autre.
-const COMPAGNIES_GENERALISTES_SANS_LAMAL = ['AXA', 'Zurich', 'Baloise', 'La Vaudoise', 'La Mobilière', 'Allianz', 'Generali'];
+// Baloise a fusionné avec Helvetia (2026) — "Baloise" n'est plus un choix valide, remplacé par
+// "Helvetia" (les anciens contrats/commissions déjà en base ont été migrés vers Helvetia).
+const COMPAGNIES_GENERALISTES_SANS_LAMAL = ['AXA', 'Zurich', 'Helvetia', 'La Vaudoise', 'La Mobilière', 'Allianz', 'Generali'];
 
 // Une compagnie est pertinente pour un produit si :
 //  1. le produit n'a pas d'étiquette de branche connue -> pas de filtre, toujours pertinente ;

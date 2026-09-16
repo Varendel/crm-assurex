@@ -1475,7 +1475,11 @@ function confirmerResiliation(clientId) {
   const personnes = membresCoches.length
     ? membresCoches.map(id => allClients.find(x => x.id === id)).filter(Boolean)
     : [c];
-  const nomPersonne = (p) => estEntreprise(p) ? p.nom : `${p.civilite ? p.civilite + ' ' : ''}${p.prenom} ${p.nom}`;
+  // Pas de titre de civilité (Madame/Monsieur) devant le nom du client à l'expéditeur ni à la
+  // signature (demande de Jonathan, 16.09.2026) : la lettre est censée être envoyée par le client
+  // lui-même en son nom propre, pas par Assurex en son nom — se donner un titre de civilité à
+  // soi-même n'aurait pas de sens dans ce contexte.
+  const nomPersonne = (p) => estEntreprise(p) ? p.nom : `${p.prenom} ${p.nom}`;
   const plusieursPersonnes = personnes.length > 1;
   const nomClient = plusieursPersonnes
     ? personnes.map(nomPersonne).join(', ').replace(/,([^,]*)$/, ' et$1')
@@ -1506,13 +1510,15 @@ function confirmerResiliation(clientId) {
     ? contratsCoches.map(el => ({ label: el.dataset.produit || 'Contrat', police: el.dataset.police || '' }))
     : typesInfo.map(t => ({ label: t.label.split(' (')[0], police: policeParType[t.id] || '' }));
   const lignesResiliation = (contratsCoches.length ? contratsCoches.map(el => el.dataset.produit || 'Contrat') : typesInfo.map(t => t.label))
-    .map((label, i) => `☑ ${echapper(label)}${elementsResiliation[i].police ? ' n° ' + echapper(elementsResiliation[i].police) : ''} avec effet au <strong>${dateEffetFr}</strong>`)
+    .map((label, i) => `☑ ${echapper(label)}${elementsResiliation[i].police ? ' n° <strong>' + echapper(elementsResiliation[i].police) + '</strong>' : ''} avec effet au <strong>${dateEffetFr}</strong>`)
     .join('<br/>');
   // Petit rappel des polices concernées juste au-dessus de l'objet (demande de Jonathan,
   // 16.09.2026) — reprend les numéros saisis pour chaque type/contrat, affiché seulement si au
   // moins un numéro a été renseigné (sinon la ligne serait vide et inutile).
+  // Un numéro par ligne, en gras (demande de Jonathan, 16.09.2026) — auparavant tous les numéros
+  // étaient sur une seule ligne séparés par un point médian, peu lisible dès qu'il y en a plusieurs.
   const referencePolices = elementsResiliation.some(e => e.police)
-    ? `<div style="font-size:11.5px;color:#000;margin-top:16px">${elementsResiliation.map(e => `${echapper(e.label)}${e.police ? ' n° ' + echapper(e.police) : ''}`).join(' &nbsp;·&nbsp; ')}</div>`
+    ? `<div style="font-size:11.5px;color:#000;margin-top:16px">${elementsResiliation.filter(e => e.police).map(e => `${echapper(e.label)} n° <strong>${echapper(e.police)}</strong>`).join('<br/>')}</div>`
     : '';
   // Le n° de police dans l'objet n'a de sens que s'il n'y a qu'un seul élément résilié — sinon
   // les numéros sont déjà listés dans le rappel ci-dessus et dans le corps de la lettre.
@@ -1530,7 +1536,7 @@ function confirmerResiliation(clientId) {
     ${referencePolices}
     <div class="objet">Résiliation ${(typesInfo.length > 1 || contratsCoches.length > 1) ? 'des contrats d\'assurance' : 'du contrat d\'assurance'}${objetPoliceTxt}${plusieursPersonnes ? ' — ' + personnes.length + ' personnes concernées' : ''}</div>
     <p style="margin-top:18px">Madame, Monsieur,</p>
-    <p>Par la présente lettre, je vous notifie de la résiliation de ${plusieursPersonnes ? 'nos' : (typesInfo.length > 1 || contratsCoches.length > 1) ? 'mes' : 'mon'} contrat${plusieursElements ? 's' : ''} d'assurance cité${plusieursElements ? 's' : ''} en référence, pour ${plusieursPersonnes ? 'les personnes suivantes' : 'la personne suivante'} :</p>
+    <p>Par la présente lettre, je vous notifie de la résiliation de ${plusieursPersonnes ? 'nos' : (typesInfo.length > 1 || contratsCoches.length > 1) ? 'mes' : 'mon'} contrat${plusieursElements ? 's' : ''} d'assurance cité${plusieursElements ? 's' : ''} en référence${plusieursPersonnes ? ', pour les personnes suivantes' : ''} :</p>
     ${plusieursPersonnes ? `<p>${personnes.map(p => '☑ ' + echapper(nomPersonne(p))).join('<br/>')}</p>` : ''}
     <p>${lignesResiliation}</p>
     ${noteLamal}
@@ -1913,15 +1919,11 @@ async function envoyerVersAutreAppareil(clientId, mode) {
       </div>`;
   }
 
-  // Sondage de la base toutes les 3 secondes — s'arrête après 10 minutes si personne ne signe
-  const debut = Date.now();
+  // Sondage de la base toutes les 3 secondes, sans limite de durée (demande de Jonathan, 16.09.2026 :
+  // l'ancien timeout de 10 min coupait l'attente alors que la signature pouvait arriver plus tard —
+  // par exemple le temps que le client ouvre le lien sur son téléphone). Le sondage s'arrête
+  // seulement quand la signature arrive, ou quand on change d'onglet/mode (clearInterval ligne 1734).
   window._pollingSignatureInterval = setInterval(async () => {
-    if (Date.now() - debut > 10 * 60 * 1000) {
-      clearInterval(window._pollingSignatureInterval);
-      const statutEl = document.getElementById('statut-attente-signature');
-      if (statutEl) statutEl.innerHTML = '⏱️ Délai dépassé — régénère un nouveau lien si besoin.';
-      return;
-    }
     const resultats = await dbRpc('get_signature_request', { p_token: token });
     const demande = resultats && resultats[0];
     if (demande && demande.signature_data) {
@@ -2418,7 +2420,7 @@ function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire) {
       <div><strong>Signature du mandataire (ASSUREX Sàrl)</strong>${signatureMandataire ? `<div style="margin-top:8px"><img src="${signatureMandataire}" style="max-height:60px;max-width:220px;display:block"/></div><div class="ligne-signature" style="margin-top:6px">Le mandataire</div>` : `<div class="ligne-signature">Le mandataire</div>`}</div>
     </div>
 
-    <div class="footer">ASSUREX Sàrl – Rue du Centre 142, 1025 St-Sulpice – Autorisation FINMA F01492173</div>
+    <div class="footer">ASSUREX Sàrl – Rue du Centre 142, 1025 St-Sulpice – Autorisation FINMA F01565757</div>
 
     <div class="page-break"></div>
 
@@ -2429,11 +2431,11 @@ function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire) {
       <tr><th>Type d'assurance</th><th>Assureur(s) porteur(s) du risque</th></tr>
       <tr><td>Assurance maladie et accident – LAMal</td><td>CSS Assurances, 6002 Lucerne · Groupe Mutuel, 1920 Martigny · Helsana, 1003 Lausanne · Swica, 1006 Lausanne</td></tr>
       <tr><td>Assurances complémentaires – LCA</td><td>CSS Assurances, 6002 Lucerne · Groupe Mutuel, 1920 Martigny · Helsana, 1003 Lausanne · Swica, 1006 Lausanne</td></tr>
-      <tr><td>Assurances de prévoyance</td><td>GMV SA, 1920 Martigny · AXA Winterthur, 1003 Lausanne · Allianz, 1023 Crissier · La Mobilière Riviera · Vaudoise Riviera · Swiss Life, Lausanne</td></tr>
+      <tr><td>Assurances de prévoyance</td><td>GMV SA, 1920 Martigny · AXA Winterthur, 1003 Lausanne · Allianz, 1023 Crissier · La Mobilière Riviera · Vaudoise Riviera · Swiss Life, Lausanne · Hotela, 1800 Vevey · Gastrosocial, 5001 Aarau</td></tr>
       <tr><td>Assurances choses – Véhicules à moteur</td><td>Groupe Mutuel, 1920 Martigny · AXA Winterthur, 1003 Lausanne · Allianz, 1023 Crissier · La Mobilière Riviera · Vaudoise Riviera</td></tr>
       <tr><td>Assurances choses – Inventaire du ménage</td><td>Groupe Mutuel, 1920 Martigny · AXA Winterthur, 1003 Lausanne · Allianz, 1023 Crissier · La Mobilière Riviera · Vaudoise Riviera</td></tr>
       <tr><td>Protection juridique – Privée / Entreprise</td><td>Groupe Mutuel, 1920 Martigny · AXA Winterthur, 1003 Lausanne · Allianz, 1023 Crissier · La Mobilière Riviera · Orion, Bâle</td></tr>
-      <tr><td>Assurances d'entreprises – LAA / LAAC / LPP / IJM / RC Prof / PEE</td><td>Groupe Mutuel, 1920 Martigny · AXA Winterthur, 1003 Lausanne · Allianz, 1023 Crissier · La Mobilière Riviera · Vaudoise Riviera · Swiss Life, Lausanne</td></tr>
+      <tr><td>Assurances d'entreprises – LAA / LAAC / LPP / IJM / RC Prof / PEE</td><td>Groupe Mutuel, 1920 Martigny · AXA Winterthur, 1003 Lausanne · Allianz, 1023 Crissier · La Mobilière Riviera · Vaudoise Riviera · Swiss Life, Lausanne · Hotela, 1800 Vevey · Gastrosocial, 5001 Aarau</td></tr>
     </table>
 
     <h2>UTILISATION DES DONNÉES À DES FINS PROFESSIONNELLES</h2>
@@ -2448,7 +2450,7 @@ function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire) {
       <div><strong>Signature du mandataire (ASSUREX Sàrl)</strong>${signatureMandataire ? `<div style="margin-top:8px"><img src="${signatureMandataire}" style="max-height:60px;max-width:220px;display:block"/></div><div class="ligne-signature" style="margin-top:6px">Le mandataire</div>` : `<div class="ligne-signature">Le mandataire</div>`}</div>
     </div>
 
-    <div class="footer">ASSUREX Sàrl – Rue du Centre 142, 1025 St-Sulpice – Autorisation FINMA F01492173</div>
+    <div class="footer">ASSUREX Sàrl – Rue du Centre 142, 1025 St-Sulpice – Autorisation FINMA F01565757</div>
 
     <button class="print-btn" onclick="window.print()">🖨️ Imprimer</button>
   </body></html>`;

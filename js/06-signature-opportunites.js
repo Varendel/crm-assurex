@@ -1592,9 +1592,9 @@ function imprimerFichePaie(ficheId, lignesCommissions, debut, fin, totalMontant)
 function viewImportDecompte() {
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">📊 Import décompte compagnie (Excel, norme IG B2B)</h2>
+      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">📥 Importer un décompte compagnie (PDF ou Excel)</h2>
     </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Lit directement le fichier envoyé par une compagnie — Excel norme IG B2B (testé avec La Vaudoise) ou PDF lu automatiquement par l'IA (pour les compagnies comme AXA qui n'envoient que du PDF). Réconcilie automatiquement les contrats par n° de police, propose un client probable par le nom quand le contrat n'est pas trouvé, et reprend directement le taux et le montant déjà calculés par la compagnie dans le fichier.</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Lit directement le fichier envoyé par une compagnie — Excel norme IG B2B (testé avec La Vaudoise) ou PDF lu automatiquement par l'IA (pour les compagnies comme AXA qui n'envoient que du PDF). Réconcilie automatiquement les contrats par n° de police, propose un client probable par le nom quand le contrat n'est pas trouvé, reprend directement le taux et le montant déjà calculés par la compagnie dans le fichier, puis crée en un clic le bordereau numéroté (BRD 001, 002…) avec les commissions déjà rapprochées dessus.</div>
 
     ${sectionCard('Fichier', '#38bdf8', `
       <input type="file" id="imp-file-input" accept=".xlsx,.xls" style="display:none" onchange="analyserDecompteExcel()"/>
@@ -1961,7 +1961,7 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
         </tr></thead>
         <tbody>${_decompteLignes.map(l => `
           <tr style="border-top:1px solid var(--border)">
-            <td style="padding:5px 8px"><input type="checkbox" id="imp-check-${l.idx}" ${l.selectionne ? 'checked' : ''} ${!l.contratId ? 'disabled' : ''} onchange="_decompteLignes[${l.idx}].selectionne = this.checked"/></td>
+            <td style="padding:5px 8px"><input type="checkbox" id="imp-check-${l.idx}" ${l.selectionne ? 'checked' : ''} ${!l.contratId ? 'disabled' : ''} onchange="_decompteLignes[${l.idx}].selectionne = this.checked; recalculerEcartBordereauImport();"/></td>
             <td style="padding:5px 8px;font-family:monospace;white-space:nowrap">${l.numeroContrat}${l.ambigu ? ' <span title="Plusieurs contrats CRM partagent ce n° de police — vérifie que le bon a été choisi" style="color:#f59e0b">⚠</span>' : ''}</td>
             <td style="padding:5px 8px;white-space:nowrap;color:var(--text-muted)">${l.noFacture || '—'}</td>
             <td style="padding:5px 8px;white-space:nowrap;color:var(--text-muted)">${l.dateFacture || '—'}</td>
@@ -1972,7 +1972,7 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
             <td style="padding:5px 8px;color:var(--text-muted);white-space:nowrap">${l.brancheInterne}</td>
             <td style="padding:5px 8px;text-align:right;white-space:nowrap;color:var(--text-muted)">CHF ${fmtCHF(l.commissionProduction)}</td>
             <td style="padding:5px 8px;text-align:right;white-space:nowrap">${l.taux}%</td>
-            <td style="padding:5px 8px;text-align:right;white-space:nowrap"><input type="number" step="0.01" value="${l.montant}" class="imp-montant-input" data-idx="${l.idx}" style="width:75px;background:var(--surface-alt);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 5px;text-align:right" onchange="_decompteLignes[${l.idx}].montant = parseFloat(this.value)||0; recalculerTotalImport();"/></td>
+            <td style="padding:5px 8px;text-align:right;white-space:nowrap"><input type="number" step="0.01" value="${l.montant}" class="imp-montant-input" data-idx="${l.idx}" style="width:75px;background:var(--surface-alt);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 5px;text-align:right" onchange="_decompteLignes[${l.idx}].montant = parseFloat(this.value)||0; recalculerTotalImport(); recalculerEcartBordereauImport();"/></td>
           </tr>`).join('')}</tbody>
         <tfoot><tr style="border-top:2px solid var(--border)">
           <td colspan="11" style="padding:8px;text-align:right;font-weight:700;color:var(--text)">Total des lignes ci-dessus</td>
@@ -1981,11 +1981,67 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
       </table>
       </div>
       <div style="font-size:10.5px;color:var(--text-muted);margin-top:10px">Taux et montant sont repris directement du décompte compagnie (modifiable si besoin). Une ligne sans contrat CRM reconnu ne peut pas être importée automatiquement — crée le contrat manquant (ou corrige son n° de police) puis réimporte le fichier.${_decompteLignes.some(l => l.montant < 0) ? ' Un montant négatif n\'est pas une erreur : la compagnie a émis 2 factures pour la même police (voir le n° de facture sous chaque ligne) — la 2e corrige/ajuste une branche de la 1ère, d\'où une ligne en négatif compensée par une autre en positif.' : ''}</div>
-      <div style="display:flex;gap:10px;margin-top:14px">
-        <button class="btn-save" id="imp-btn-creer" onclick="importerCommissionsDecompte('${(nomAssureur || '').replace(/'/g, "\\'")}')">✓ Créer les commissions sélectionnées</button>
-      </div>
     `)}
+
+    ${sectionCard('Bordereau créé pour ce lot', '#a78bfa', renderBlocBordereauImportDecompte())}
+
+    <div style="display:flex;gap:10px;margin-top:14px">
+      <button class="btn-save" id="imp-btn-creer" onclick="importerCommissionsEtBordereau('${(nomAssureur || '').replace(/'/g, "\\'")}')">✓ Créer les commissions et le bordereau</button>
+    </div>
   `;
+}
+
+// Bloc "Bordereau" affiché sous le tableau de lignes — le numéro (BRD 001 - Mois Année - Compagnie)
+// est généré à l'affichage à partir des bordereaux existants ; le montant brut est préempli avec le
+// total des lignes actuellement cochées mais reste modifiable si le montant officiel du décompte
+// diffère (ex. arrondi compagnie, ligne exclue volontairement du bordereau mais gardée en commission).
+function renderBlocBordereauImportDecompte() {
+  const now = new Date();
+  const totalCoche = _decompteLignes.filter(l => l.selectionne && l.contratId).reduce((s, l) => s + l.montant, 0);
+  const numeroApercu = genererNumeroBordereau(_decompteNomAssureur || '', MOIS_LISTE_IB[now.getMonth()], now.getFullYear(), allBordereaux);
+  return `
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">Numéro attribué automatiquement à la création — actuellement <span style="font-family:monospace;font-weight:700;color:var(--accent)">${numeroApercu}</span> (peut changer d'une unité si un autre bordereau est créé entretemps).</div>
+    <div class="form-grid">
+      <div class="form-field"><label class="form-label">Mois *</label>
+        <select class="form-select" id="imp-bd-mois">
+          ${MOIS_LISTE_IB.map(m => `<option value="${m}" ${m === MOIS_LISTE_IB[now.getMonth()] ? 'selected' : ''}>${m}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label class="form-label">Année *</label>
+        <select class="form-select" id="imp-bd-annee">
+          ${[2024, 2025, 2026, 2027].map(y => `<option value="${y}" ${y === now.getFullYear() ? 'selected' : ''}>${y}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-field"><label class="form-label">Montant brut (CHF) *</label>
+        <input class="form-input" id="imp-bd-montant" type="number" value="${Math.round(totalCoche)}" oninput="recalculerEcartBordereauImport()"/>
+        <div id="imp-bd-ecart" style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Préempli avec le total des lignes cochées ci-dessus — corrige si le montant officiel du bordereau compagnie diffère.</div>
+      </div>
+      <div class="form-field"><label class="form-label">Taux de caution (%)</label><input class="form-input" id="imp-bd-caution" type="number" step="0.1" placeholder="5 à 10" min="0" max="100"/></div>
+      <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="imp-bd-statut">
+        <option value="reçu" selected>Reçu</option>
+        <option value="attendu">Attendu</option>
+      </select></div>
+      <div class="form-field"><label class="form-label">Date de réception</label><input class="form-input" id="imp-bd-date" type="date" value="${now.toISOString().split('T')[0]}"/></div>
+    </div>
+  `;
+}
+
+// Recalcule juste le message d'écart sous "Montant brut" quand Jonathan le modifie à la main — ne
+// touche à rien d'autre (même prudence que recalculerTotalImportBordereau : ne pas effacer les
+// champs déjà remplis en régénérant tout le formulaire).
+function recalculerEcartBordereauImport() {
+  const el = document.getElementById('imp-bd-ecart');
+  if (!el) return;
+  const montantBrut = Number(document.getElementById('imp-bd-montant').value) || 0;
+  const totalCoche = _decompteLignes.filter(l => l.selectionne && l.contratId).reduce((s, l) => s + l.montant, 0);
+  const ecart = Math.round((montantBrut - totalCoche) * 100) / 100;
+  if (Math.abs(ecart) > 1) {
+    el.innerHTML = `⚠️ Écart de CHF ${fmtCHF(ecart)} avec le total des lignes cochées (CHF ${fmtCHF(Math.round(totalCoche))}) — vérifie avant de créer.`;
+    el.style.color = '#f87171';
+  } else {
+    el.innerHTML = 'Correspond au total des lignes cochées ci-dessus.';
+    el.style.color = 'var(--text-muted)';
+  }
 }
 
 // Recalcule et réaffiche le total en pied de tableau après modification manuelle d'un montant.
@@ -1995,22 +2051,63 @@ function recalculerTotalImport() {
   if (cell) cell.textContent = 'CHF ' + Math.round(total).toLocaleString();
 }
 
-async function importerCommissionsDecompte(nomAssureur) {
+// Flux fusionné (demande de Jonathan, 16.09.2026) : un seul bouton fait upload PDF/Excel → lecture
+// IA → validation des lignes → création DIRECTE du bordereau numéroté (BRD 001 - Mois Année -
+// Compagnie) avec les commissions déjà rapprochées dessus (statut "reçue" d'emblée, pas "en attente"
+// puis un second import séparé) — le PDF/Excel importé EST le décompte de la compagnie, donc les
+// commissions qu'il contient sont par définition déjà validées par elle.
+async function importerCommissionsEtBordereau(nomAssureur) {
   // Garde-fou anti-doublon n°1 : sans ce verrou, un double-clic sur le bouton (le clic reste actif
   // pendant toute la boucle await ci-dessous) relançait deux fois la création des mêmes lignes —
   // c'est la cause la plus probable d'un doublon signalé par Jonathan le 16.09.2026.
   const btn = document.getElementById('imp-btn-creer');
   if (btn && btn.disabled) return;
-  if (btn) { btn.disabled = true; btn.textContent = 'Import en cours...'; }
 
   const aTraiter = _decompteLignes.filter(l => l.selectionne && l.contratId);
   if (!aTraiter.length) {
     showError('Aucune ligne sélectionnée avec un contrat reconnu.');
-    if (btn) { btn.disabled = false; btn.textContent = '✓ Créer les commissions sélectionnées'; }
     return;
   }
+  const mois = document.getElementById('imp-bd-mois')?.value;
+  const annee = Number(document.getElementById('imp-bd-annee')?.value);
+  const montantBrut = Math.round(Number(document.getElementById('imp-bd-montant')?.value) || 0);
+  const caution = Number(document.getElementById('imp-bd-caution')?.value) || 0;
+  const statutBordereau = document.getElementById('imp-bd-statut')?.value || 'reçu';
+  const dateReception = document.getElementById('imp-bd-date')?.value || '';
+  if (!mois || !annee) { showError('Choisis le mois et l\'année du bordereau.'); return; }
+  if (!montantBrut) { showError('Indique le montant brut du bordereau.'); return; }
+
+  if (btn) { btn.disabled = true; btn.textContent = 'Création en cours...'; }
+
   const nature = document.getElementById('imp-nature-commission')?.value || 'gestion';
   const aujourdhui = new Date().toISOString().split('T')[0];
+  const compagnie = normaliserCompagnie(nomAssureur || '');
+
+  // Le bordereau est créé EN PREMIER : chaque commission créée ensuite se rattache directement à
+  // son id (bordereau_id), pas de rapprochement séparé à faire après coup.
+  const numero = genererNumeroBordereau(compagnie, mois, annee, allBordereaux);
+  const rBordereau = await dbPost('bordereaux', {
+    numero,
+    compagnie,
+    mois: `${mois} ${annee}`,
+    montant_brut: montantBrut,
+    taux_caution: caution,
+    statut: statutBordereau,
+    date_reception: dateReception || null,
+  });
+  if (rBordereau && rBordereau.error) {
+    showError('Erreur lors de la création du bordereau : ' + errMsg(rBordereau));
+    if (btn) { btn.disabled = false; btn.textContent = '✓ Créer les commissions et le bordereau'; }
+    return;
+  }
+  const nouveauBordereau = rBordereau && rBordereau[0] ? rBordereau[0] : null;
+  if (!nouveauBordereau) {
+    showError('Le bordereau semble créé mais sa réponse est vide — vérifie dans la liste des bordereaux avant de réessayer.');
+    if (btn) { btn.disabled = false; btn.textContent = '✓ Créer les commissions et le bordereau'; }
+    return;
+  }
+  const dateReceptionCommission = (dateReception && dateReception >= DATE_BASCULE_ASSUREX) ? dateReception : aujourdhui;
+
   let nbCrees = 0, nbEchecs = 0, nbIgnores = 0;
   for (const l of aTraiter) {
     const montant = Math.round(l.montant);
@@ -2018,11 +2115,11 @@ async function importerCommissionsDecompte(nomAssureur) {
     // de la 1ère) — il doit être importé comme les autres, sinon la correction disparaît silencieusement
     // et le montant en attente reste surestimé du montant qu'elle était censée compenser.
     if (montant !== 0) {
-      // Garde-fou anti-doublon n°2 : si une commission en attente identique (même contrat, même
-      // montant) a déjà été créée aujourd'hui, c'est presque certainement un doublon (fichier
-      // réimporté par erreur, ou double-clic malgré le verrou ci-dessus) plutôt qu'une nouvelle
-      // commission légitime — on ne la recrée pas.
-      const dejaExistante = allCommissionsAttente.some(c => c.contrat_id === l.contratId && Math.round(c.montant_estime || 0) === montant && c.date_creation === aujourdhui && c.statut === 'en_attente');
+      // Garde-fou anti-doublon n°2 : si une commission identique (même contrat, même montant, créée
+      // aujourd'hui) existe déjà — en attente ou déjà reçue — c'est presque certainement un doublon
+      // (fichier réimporté par erreur, ou double-clic malgré le verrou ci-dessus) plutôt qu'une
+      // nouvelle commission légitime — on ne la recrée pas.
+      const dejaExistante = allCommissionsAttente.some(c => c.contrat_id === l.contratId && Math.round(c.montant_estime || 0) === montant && c.date_creation === aujourdhui);
       if (dejaExistante) { nbIgnores++; continue; }
       const r = await dbPost('commissions_attente', {
         client_id: l.clientId,
@@ -2031,18 +2128,24 @@ async function importerCommissionsDecompte(nomAssureur) {
         compagnie: nomAssureur || null,
         produit: l.brancheInterne || null,
         montant_estime: montant,
-        detail_calcul: `Décompte compagnie importé (Excel IG B2B) — ${l.brancheInterne || ''}${montant < 0 ? ' (correction' + (l.noFacture ? ' facture n°' + l.noFacture : '') + ')' : ''} : base CHF ${fmtCHF(l.commissionProduction)} × ${l.taux}% — contrat ${l.numeroContrat}`,
-        statut: 'en_attente',
+        montant_final: montant,
+        detail_calcul: `Décompte compagnie importé — ${l.brancheInterne || ''}${montant < 0 ? ' (correction' + (l.noFacture ? ' facture n°' + l.noFacture : '') + ')' : ''} : base CHF ${fmtCHF(l.commissionProduction)} × ${l.taux}% — contrat ${l.numeroContrat}`,
+        statut: 'reçue',
+        bordereau_id: nouveauBordereau.id,
         nature,
         date_creation: aujourdhui,
+        date_reception: dateReceptionCommission,
       });
       if (r && r.error) { nbEchecs++; continue; }
       nbCrees++;
     }
   }
+  logAction('import_decompte_et_bordereau', 'bordereaux', nouveauBordereau.id, `${numero} — ${compagnie} — ${nbCrees} commission(s) créée(s) et rapprochée(s)`);
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
-  showError(`✓ ${nbCrees} commission(s) créée(s).${nbIgnores ? ' ' + nbIgnores + ' ligne(s) ignorée(s) car déjà importée(s) aujourd\'hui (doublon évité).' : ''}${nbEchecs ? ' ⚠️ ' + nbEchecs + ' échec(s) d’écriture — vérifie manuellement.' : ''}`);
-  if (btn) { btn.disabled = false; btn.textContent = '✓ Créer les commissions sélectionnées'; }
-  navigate('import-decompte');
+  allBordereaux = await dbGet('bordereaux', 'select=*');
+  showError(`✓ Bordereau ${numero} créé avec ${nbCrees} commission(s) rapprochée(s).${nbIgnores ? ' ' + nbIgnores + ' ligne(s) ignorée(s) car déjà importée(s) aujourd\'hui (doublon évité).' : ''}${nbEchecs ? ' ⚠️ ' + nbEchecs + ' échec(s) d’écriture — vérifie manuellement depuis le bordereau.' : ''}`);
+  if (btn) { btn.disabled = false; btn.textContent = '✓ Créer les commissions et le bordereau'; }
+  _decompteLignes = []; _decompteNomAssureur = ''; _decompteCommissionTotaleAnnoncee = null;
+  navigate('bordereaux');
 }
 

@@ -5,11 +5,12 @@ function viewBordereaux() {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
       <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Bordereaux — décomptes reçus des compagnies</h2>
       <div style="display:flex;gap:8px">
-        <button class="btn-secondary" onclick="navigate('importer-bordereau')">📊 Importer bordereau (IG B2B)</button>
-        <button class="btn-add" onclick="navigate('nouveau-bordereau')">+ Saisir bordereau</button>
+        <button class="btn-add" onclick="navigate('import-decompte')">📥 Importer (PDF/Excel)</button>
+        <button class="btn-secondary" onclick="navigate('nouveau-bordereau')">+ Saisir bordereau</button>
       </div>
     </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Argent qui entre dans Assurex (commissions de gestion + d'acquisition). Pour répartir ces montants entre les collaborateurs, utilise <span onclick="navigate('fiche-paie')" style="color:var(--accent);cursor:pointer;text-decoration:underline">Fiche de paie</span>.</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">Argent qui entre dans Assurex (commissions de gestion + d'acquisition). Pour répartir ces montants entre les collaborateurs, utilise <span onclick="navigate('fiche-paie')" style="color:var(--accent);cursor:pointer;text-decoration:underline">Fiche de paie</span>.</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:18px">« 📥 Importer » lit le décompte PDF ou Excel envoyé par la compagnie et crée le bordereau numéroté (BRD 001, 002…) avec les commissions déjà rapprochées, en un seul écran. Tu as des commissions en attente déjà saisies ailleurs (pas via un import) à regrouper dans un bordereau ? <span onclick="navigate('importer-bordereau')" style="color:var(--accent);cursor:pointer;text-decoration:underline">Regrouper des commissions en attente</span>.</div>
     <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
       <input class="form-input" id="bd-search" placeholder="🔍 N° bordereau, client, compagnie..." style="flex:1;min-width:180px" oninput="renderBordereauxList()"/>
       <select class="form-select" id="bd-compagnie" style="max-width:180px" onchange="renderBordereauxList()">
@@ -469,13 +470,22 @@ async function saveValidationCommission(bordereauId) {
 // la création groupée.
 const MOIS_LISTE_IB = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet','Août','Septembre','Octobre','Novembre','Décembre'];
 
-async function viewImporterBordereauIGB2B() {
-  const tousLesBordereaux = await dbGet('bordereaux', 'select=numero');
+// Numéro de bordereau — format "BRD 001 - Mois Année - Compagnie" (demande de Jonathan, 16.09.2026).
+// Le compteur est un seul compteur continu tous compagnies confondues (jamais remis à zéro par
+// compagnie) : on relit le numéro de TOUS les bordereaux existants et on prend le plus grand
+// compteur trouvé juste après "BRD", peu importe ce qui suit (date/compagnie ont pu changer de
+// format entre-temps, donc on n'ancre pas la regex sur la fin de la chaîne).
+function genererNumeroBordereau(compagnie, mois, annee, tousLesBordereaux) {
   let maxNum = 0;
   (tousLesBordereaux || []).forEach(b => {
-    if (b.numero) { const m = b.numero.match(/(\d+)$/); if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10)); }
+    if (b.numero) { const m = b.numero.match(/^BRD\s+(\d+)/); if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10)); }
   });
-  window._ibNumero = 'BRD-' + String(maxNum + 1).padStart(4, '0');
+  const compagnieAffichee = (compagnie || '').trim() || 'Compagnie';
+  return `BRD ${String(maxNum + 1).padStart(3, '0')} - ${mois} ${annee} - ${compagnieAffichee}`;
+}
+
+async function viewImporterBordereauIGB2B() {
+  window._ibNumero = null; // généré à l'étape "Aperçu" une fois compagnie/mois/année connus
   window._ibLignes = [];
   window._ibCompagnie = '';
   window._ibPrefill = null;
@@ -493,7 +503,6 @@ async function viewImporterBordereauIGB2B() {
     <button onclick="navigate('bordereaux')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
       <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">📊 Importer un bordereau depuis les commissions en attente</h2>
-      <span style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:800;font-family:monospace">${window._ibNumero}</span>
     </div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Reprend directement les commissions déjà "en attente" pour une compagnie (créées via <span onclick="navigate('import-decompte')" style="color:var(--accent);cursor:pointer;text-decoration:underline">Import décompte</span> ou saisies manuellement) pour construire le bordereau, au lieu de le saisir puis rapprocher chaque commission une par une.</div>
 
@@ -624,6 +633,10 @@ function apercuImportBordereau() {
 
   // On mémorise les champs saisis pour que "← Modifier la sélection" les retrouve tels quels.
   window._ibPrefill = { mois, annee, montant: montantBrut, caution, statut, date };
+  // Numéro (re)généré ici à chaque aperçu (pas avant) : compagnie/mois/année ne sont connus qu'à ce
+  // stade, et recalculer à chaque passage reflète le choix courant et le compteur à jour tant que
+  // rien n'est encore créé en base.
+  window._ibNumero = genererNumeroBordereau(compagnie, mois, annee, allBordereaux);
 
   const totalLignes = lignesCochees.reduce((s, l) => s + (l.montantEdite || 0), 0);
   const ecart = Math.round((montantBrut - totalLignes) * 100) / 100;

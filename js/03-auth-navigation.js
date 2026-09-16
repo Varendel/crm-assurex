@@ -717,7 +717,7 @@ const SECTIONS = [
   ]},
   { id: 'compta', label: 'Comptabilité', icon: '◎', sub: [
     { id: 'bordereaux', label: 'Bordereaux (reçus des compagnies)' },
-    { id: 'import-decompte', label: '📊 Import décompte (Excel IG B2B)' },
+    { id: 'import-decompte', label: '📥 Importer un décompte (PDF/Excel)' },
     { id: 'commissions', label: 'Commissions', staff: true },
     { id: 'commissions-attente', label: 'Toutes les commissions' },
     { id: 'suivi-financier', label: '💰 Suivi financier' },

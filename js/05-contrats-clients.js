@@ -1344,25 +1344,48 @@ function renderChampsPoliceResiliation() {
     </div>`;
 }
 
-// Enregistre le n° tapé dans le champ "N° de police" (par type) directement sur la fiche du
-// contrat concerné, sans passer par la liste de contrats du dessus — pour un contrat que Jonathan
-// ne gère pas lui-même ou dont le numéro en base est absent/faux (demande du 17.09.2026). On ne
-// peut viser qu'un seul contrat à la fois : s'il n'y en a aucun ou plusieurs coché(s) ci-dessus,
-// on prévient plutôt que de deviner lequel corriger — la lettre utilise de toute façon ce numéro
-// via window._resPoliceValeurs (oninput), avec ou sans contrat associé.
+// Enregistre le n° tapé dans le champ "N° de police" (par type) sur une fiche contrat, sans
+// jamais bloquer (demande du 17.09.2026, suite à un premier essai trop restrictif le même jour
+// qui exigeait de cocher un contrat existant — inutilisable pour un contrat que Jonathan ne gère
+// pas lui-même et qui n'est donc même pas dans sa liste de contrats) :
+// - un seul contrat coché ci-dessus → on met à jour SA fiche (patcherNumeroPoliceContrat) ;
+// - aucun contrat coché → on CRÉE directement un nouveau contrat pour ce client (compagnie reprise
+//   du champ "Compagnie destinataire", produit = le type coché), pour que ce contrat qui n'existait
+//   pas encore dans le CRM y soit désormais, avec son n° de police ;
+// - plusieurs cochés → ambigu, on prévient plutôt que de deviner lequel modifier.
+// Dans tous les cas la lettre utilise déjà ce numéro via window._resPoliceValeurs (oninput),
+// contrat en base ou non.
 async function enregistrerPoliceDepuisChampType(typeId) {
   const inp = document.getElementById('res-police-' + typeId);
   const valeur = inp ? inp.value.trim() : '';
   if (!valeur) { inp?.focus(); return; }
   const coches = Array.from(document.querySelectorAll('.res-contrat-chk:checked'));
-  if (coches.length !== 1) {
-    showError(coches.length === 0
-      ? "Coche le contrat concerné dans la liste ci-dessus pour enregistrer ce numéro sur sa fiche (la lettre utilisera quand même ce numéro)."
-      : "Plusieurs contrats sont cochés — décoche pour n'en garder qu'un, afin d'enregistrer ce numéro sur le bon contrat.");
+  if (coches.length > 1) {
+    showError("Plusieurs contrats sont cochés — décoche pour n'en garder qu'un, afin d'enregistrer ce numéro sur le bon contrat.");
     return;
   }
-  const ok = await patcherNumeroPoliceContrat(coches[0].value, valeur);
-  if (ok) showError('✓ N° de police enregistré sur le contrat.');
+  if (coches.length === 1) {
+    const ok = await patcherNumeroPoliceContrat(coches[0].value, valeur);
+    if (ok) showError('✓ N° de police enregistré sur le contrat.');
+    return;
+  }
+  // Aucun contrat coché : on en crée un nouveau plutôt que de bloquer.
+  const clientId = window._resClientId;
+  if (!clientId) { showError('Erreur : client introuvable pour créer le contrat.'); return; }
+  const t = RESILIATION_TYPES.find(x => x.id === typeId);
+  const compagnie = (document.getElementById('res-compagnie')?.value || '').trim();
+  const body = {
+    client_id: clientId,
+    compagnie: compagnie || null,
+    produit: (t ? t.label.split(' (')[0] : 'Contrat'),
+    numero_police: valeur,
+    statut: 'actif',
+  };
+  const r = await dbPost('contrats', body);
+  if (r && r.error) { showError('Erreur lors de la création du contrat : ' + errMsg(r)); return; }
+  const nouveauContrat = r && r[0];
+  if (nouveauContrat) allContrats.push(nouveauContrat);
+  showError(`✓ Contrat créé (${body.produit}${compagnie ? ' — ' + compagnie : ''}, police ${valeur}).`);
 }
 
 // Membres de la constellation familiale d'un client (lui-même + père + mère + enfants liés),
@@ -1383,6 +1406,7 @@ function membresConstellation(clientId) {
 function ouvrirModaleResiliation(clientId) {
   const c = allClients.find(x => x.id === clientId);
   if (!c) return;
+  window._resClientId = clientId;
   const contratsClient = allContrats.filter(ct => ct.client_id === clientId);
   const membres = membresConstellation(clientId);
   const membresHtml = membres.length > 1 ? `<div class="form-field" style="grid-column:span 2">
@@ -1417,7 +1441,7 @@ function ouvrirModaleResiliation(clientId) {
           <div style="display:flex;flex-direction:column;gap:6px;background:var(--surface-alt);border:1px solid var(--border);border-radius:8px;padding:10px 12px;max-height:170px;overflow-y:auto">
             ${contratsClient.map(ct => renderLigneContratResiliation(ct)).join('')}
           </div>
-          <div style="font-size:10.5px;color:var(--text-muted);margin-top:5px">Ex : coche le contrat LAMal et le contrat LCA du même client chez le même assureur pour les résilier ensemble. Un contrat sans n° de police affiche un bouton + pour l'ajouter directement ici.</div>
+          <div style="font-size:10.5px;color:var(--text-muted);margin-top:5px">Ex : coche le contrat LAMal et le contrat LCA du même client chez le même assureur pour les résilier ensemble.</div>
         </div>` : ''}
         <div class="form-field" style="grid-column:span 2">
           <label class="form-label">Compagnie destinataire</label>

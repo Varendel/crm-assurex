@@ -1373,10 +1373,20 @@ async function enregistrerPoliceDepuisChampType(typeId) {
   const clientId = window._resClientId;
   if (!clientId) { showError('Erreur : client introuvable pour créer le contrat.'); return; }
   const t = RESILIATION_TYPES.find(x => x.id === typeId);
-  const compagnie = (document.getElementById('res-compagnie')?.value || '').trim();
+  const compagnieEl = document.getElementById('res-compagnie');
+  const compagnie = (compagnieEl?.value || '').trim();
+  // "compagnie" est une colonne obligatoire en base (et de toute façon indispensable pour la
+  // lettre de résiliation elle-même) — donc ce n'est pas la même restriction artificielle que le
+  // "coche un contrat d'abord" retiré le 17.09.2026 : on ne peut juste pas créer de contrat sans
+  // savoir chez qui le résilier. On guide plutôt que de laisser Postgres renvoyer une erreur brute.
+  if (!compagnie) {
+    showError("Indique d'abord la compagnie destinataire ci-dessus (obligatoire pour créer le contrat et pour la lettre de résiliation).");
+    compagnieEl?.focus();
+    return;
+  }
   const body = {
     client_id: clientId,
-    compagnie: compagnie || null,
+    compagnie: compagnie,
     produit: (t ? t.label.split(' (')[0] : 'Contrat'),
     numero_police: valeur,
     statut: 'actif',
@@ -1385,7 +1395,7 @@ async function enregistrerPoliceDepuisChampType(typeId) {
   if (r && r.error) { showError('Erreur lors de la création du contrat : ' + errMsg(r)); return; }
   const nouveauContrat = r && r[0];
   if (nouveauContrat) allContrats.push(nouveauContrat);
-  showError(`✓ Contrat créé (${body.produit}${compagnie ? ' — ' + compagnie : ''}, police ${valeur}).`);
+  showError(`✓ Contrat créé (${body.produit} — ${compagnie}, police ${valeur}).`);
 }
 
 // Membres de la constellation familiale d'un client (lui-même + père + mère + enfants liés),

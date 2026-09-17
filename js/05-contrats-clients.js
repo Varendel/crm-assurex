@@ -1267,32 +1267,39 @@ function afficherNoteResiliation() {
 // (voir confirmerResiliation) — les champs "N° de police" manuels (renderChampsPoliceResiliation)
 // ne servent que quand aucun contrat n'est coché (client sans contrat enregistré dans le CRM).
 // Une ligne "contrat à cocher" dans la fenêtre de résiliation. Séparée en fonction pour pouvoir
-// la re-générer après ajout d'un n° de police (bouton +, demande de Jonathan le 17.09.2026),
-// sans dupliquer le HTML entre le rendu initial et le re-rendu post-enregistrement.
+// la re-générer après ajout/modif d'un n° de police (bouton +, demande de Jonathan le 17.09.2026 ;
+// rendu toujours visible — pas seulement quand le n° est vide — le 17.09.2026 aussi, pour un
+// contrat mal renseigné qu'il ne gère pas lui-même : il doit pouvoir corriger le n° affiché, pas
+// seulement en ajouter un quand il n'y en a aucun), sans dupliquer le HTML entre le rendu initial
+// et le re-rendu post-enregistrement.
 function renderLigneContratResiliation(ct) {
   return `<div id="res-ligne-contrat-${ct.id}" style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text)">
     <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;min-width:0">
       <input type="checkbox" class="res-contrat-chk" value="${ct.id}" data-compagnie="${(ct.compagnie || '').replace(/"/g, '&quot;')}" data-police="${(ct.numero_police || '').replace(/"/g, '&quot;')}" data-produit="${(ct.produit || 'Contrat').replace(/"/g, '&quot;')}" onchange="appliquerContratsResiliationCoches()" style="width:15px;height:15px;cursor:pointer;flex-shrink:0"/>
       <span>${ct.produit || 'Contrat'} — ${ct.compagnie || ''}${ct.numero_police ? ' (' + ct.numero_police + ')' : ''}</span>
     </label>
-    ${!ct.numero_police ? `<button type="button" onclick="event.preventDefault();ajouterPoliceContratResiliation('${ct.id}')" title="Ajouter le n° de police de ce contrat" style="flex-shrink:0;width:20px;height:20px;border-radius:50%;border:1px solid var(--accent);background:transparent;color:var(--accent);font-weight:700;font-size:13px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;padding:0">+</button>` : ''}
+    <button type="button" onclick="event.preventDefault();ajouterPoliceContratResiliation('${ct.id}')" title="${ct.numero_police ? 'Modifier' : 'Ajouter'} le n° de police de ce contrat" style="flex-shrink:0;width:20px;height:20px;border-radius:50%;border:1px solid var(--accent);background:transparent;color:var(--accent);font-weight:700;font-size:13px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;padding:0">+</button>
   </div>`;
 }
 
-// Bascule la ligne d'un contrat sans n° de police vers un petit champ de saisie inline, pour
-// pouvoir l'ajouter sans quitter la fenêtre de résiliation (jusqu'ici il fallait annuler et aller
-// éditer le contrat ailleurs). Le clic sur + ne coche pas la case (preventDefault ci-dessus,
-// le bouton étant hors du <label>).
+// Bascule la ligne d'un contrat vers un petit champ de saisie inline (préremplie avec le n° déjà
+// enregistré s'il y en a un, pour corriger plutôt que retaper), pour ajouter/modifier le n° de
+// police sans quitter la fenêtre de résiliation — utile notamment pour un contrat qu'il ne gère
+// pas lui-même et dont le n° en base est absent ou faux. Le clic sur + ne coche pas la case
+// (preventDefault ci-dessus, le bouton étant hors du <label>).
 function ajouterPoliceContratResiliation(contratId) {
   const zone = document.getElementById('res-ligne-contrat-' + contratId);
   if (!zone) return;
+  const ct = allContrats.find(c => c.id === contratId);
+  const valeurActuelle = (ct && ct.numero_police) || '';
   zone.innerHTML = `
-    <input type="text" id="res-police-inline-${contratId}" class="form-input" placeholder="N° de police" style="font-size:11.5px;padding:4px 8px;height:auto;flex:1;min-width:0"/>
+    <input type="text" id="res-police-inline-${contratId}" class="form-input" placeholder="N° de police" value="${valeurActuelle.replace(/"/g, '&quot;')}" style="font-size:11.5px;padding:4px 8px;height:auto;flex:1;min-width:0"/>
     <button type="button" onclick="enregistrerPoliceContratResiliation('${contratId}')" class="btn-save" style="padding:4px 10px;font-size:11px;flex-shrink:0">OK</button>
     <button type="button" onclick="annulerPoliceContratResiliation('${contratId}')" class="btn-secondary" style="padding:4px 10px;font-size:11px;flex-shrink:0">✕</button>`;
   const inp = document.getElementById('res-police-inline-' + contratId);
   if (inp) {
     inp.focus();
+    inp.select();
     inp.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); enregistrerPoliceContratResiliation(contratId); } };
   }
 }

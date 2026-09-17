@@ -1266,6 +1266,59 @@ function afficherNoteResiliation() {
 // chaque contrat coché est lui repris directement depuis le contrat au moment de la génération
 // (voir confirmerResiliation) — les champs "N° de police" manuels (renderChampsPoliceResiliation)
 // ne servent que quand aucun contrat n'est coché (client sans contrat enregistré dans le CRM).
+// Une ligne "contrat à cocher" dans la fenêtre de résiliation. Séparée en fonction pour pouvoir
+// la re-générer après ajout d'un n° de police (bouton +, demande de Jonathan le 17.09.2026),
+// sans dupliquer le HTML entre le rendu initial et le re-rendu post-enregistrement.
+function renderLigneContratResiliation(ct) {
+  return `<div id="res-ligne-contrat-${ct.id}" style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text)">
+    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;min-width:0">
+      <input type="checkbox" class="res-contrat-chk" value="${ct.id}" data-compagnie="${(ct.compagnie || '').replace(/"/g, '&quot;')}" data-police="${(ct.numero_police || '').replace(/"/g, '&quot;')}" data-produit="${(ct.produit || 'Contrat').replace(/"/g, '&quot;')}" onchange="appliquerContratsResiliationCoches()" style="width:15px;height:15px;cursor:pointer;flex-shrink:0"/>
+      <span>${ct.produit || 'Contrat'} — ${ct.compagnie || ''}${ct.numero_police ? ' (' + ct.numero_police + ')' : ''}</span>
+    </label>
+    ${!ct.numero_police ? `<button type="button" onclick="event.preventDefault();ajouterPoliceContratResiliation('${ct.id}')" title="Ajouter le n° de police de ce contrat" style="flex-shrink:0;width:20px;height:20px;border-radius:50%;border:1px solid var(--accent);background:transparent;color:var(--accent);font-weight:700;font-size:13px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;padding:0">+</button>` : ''}
+  </div>`;
+}
+
+// Bascule la ligne d'un contrat sans n° de police vers un petit champ de saisie inline, pour
+// pouvoir l'ajouter sans quitter la fenêtre de résiliation (jusqu'ici il fallait annuler et aller
+// éditer le contrat ailleurs). Le clic sur + ne coche pas la case (preventDefault ci-dessus,
+// le bouton étant hors du <label>).
+function ajouterPoliceContratResiliation(contratId) {
+  const zone = document.getElementById('res-ligne-contrat-' + contratId);
+  if (!zone) return;
+  zone.innerHTML = `
+    <input type="text" id="res-police-inline-${contratId}" class="form-input" placeholder="N° de police" style="font-size:11.5px;padding:4px 8px;height:auto;flex:1;min-width:0"/>
+    <button type="button" onclick="enregistrerPoliceContratResiliation('${contratId}')" class="btn-save" style="padding:4px 10px;font-size:11px;flex-shrink:0">OK</button>
+    <button type="button" onclick="annulerPoliceContratResiliation('${contratId}')" class="btn-secondary" style="padding:4px 10px;font-size:11px;flex-shrink:0">✕</button>`;
+  const inp = document.getElementById('res-police-inline-' + contratId);
+  if (inp) {
+    inp.focus();
+    inp.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); enregistrerPoliceContratResiliation(contratId); } };
+  }
+}
+
+// Referme le champ inline sans rien enregistrer, en revenant à l'affichage normal de la ligne.
+function annulerPoliceContratResiliation(contratId) {
+  const ct = allContrats.find(c => c.id === contratId);
+  const zone = document.getElementById('res-ligne-contrat-' + contratId);
+  if (zone && ct) zone.outerHTML = renderLigneContratResiliation(ct);
+}
+
+// Enregistre le n° de police saisi depuis la fenêtre de résiliation directement sur le contrat
+// (dbPatch), met à jour la liste en mémoire (allContrats) et réaffiche la ligne normale — le
+// contrat garde son n° de police même si l'utilisateur ferme la fenêtre sans cocher la case.
+async function enregistrerPoliceContratResiliation(contratId) {
+  const inp = document.getElementById('res-police-inline-' + contratId);
+  const valeur = inp ? inp.value.trim() : '';
+  if (!valeur) { inp?.focus(); return; }
+  const r = await dbPatch('contrats', contratId, { numero_police: valeur });
+  if (r.error) { showError('Erreur lors de l\'enregistrement du n° de police.'); return; }
+  const ct = allContrats.find(c => c.id === contratId);
+  if (ct) ct.numero_police = valeur;
+  const zone = document.getElementById('res-ligne-contrat-' + contratId);
+  if (zone && ct) zone.outerHTML = renderLigneContratResiliation(ct);
+}
+
 function appliquerContratsResiliationCoches() {
   const coches = Array.from(document.querySelectorAll('.res-contrat-chk:checked'));
   const compagnieEl = document.getElementById('res-compagnie');
@@ -1361,12 +1414,9 @@ function ouvrirModaleResiliation(clientId) {
         ${contratsClient.length ? `<div class="form-field" style="grid-column:span 2">
           <label class="form-label">Contrat(s) concerné(s) (optionnel — coche-en plusieurs pour pré-remplir compagnie et n° de police de chacun)</label>
           <div style="display:flex;flex-direction:column;gap:6px;background:var(--surface-alt);border:1px solid var(--border);border-radius:8px;padding:10px 12px;max-height:170px;overflow-y:auto">
-            ${contratsClient.map(ct => `<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;color:var(--text)">
-              <input type="checkbox" class="res-contrat-chk" value="${ct.id}" data-compagnie="${(ct.compagnie || '').replace(/"/g, '&quot;')}" data-police="${(ct.numero_police || '').replace(/"/g, '&quot;')}" data-produit="${(ct.produit || 'Contrat').replace(/"/g, '&quot;')}" onchange="appliquerContratsResiliationCoches()" style="width:15px;height:15px;cursor:pointer"/>
-              ${ct.produit || 'Contrat'} — ${ct.compagnie || ''}${ct.numero_police ? ' (' + ct.numero_police + ')' : ''}
-            </label>`).join('')}
+            ${contratsClient.map(ct => renderLigneContratResiliation(ct)).join('')}
           </div>
-          <div style="font-size:10.5px;color:var(--text-muted);margin-top:5px">Ex : coche le contrat LAMal et le contrat LCA du même client chez le même assureur pour les résilier ensemble.</div>
+          <div style="font-size:10.5px;color:var(--text-muted);margin-top:5px">Ex : coche le contrat LAMal et le contrat LCA du même client chez le même assureur pour les résilier ensemble. Un contrat sans n° de police affiche un bouton + pour l'ajouter directement ici.</div>
         </div>` : ''}
         <div class="form-field" style="grid-column:span 2">
           <label class="form-label">Compagnie destinataire</label>

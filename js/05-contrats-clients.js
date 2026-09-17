@@ -1368,7 +1368,8 @@ function ouvrirModaleResiliation(clientId) {
       <div id="erreur-resiliation" style="color:#f87171;font-size:11.5px;margin-top:8px;display:none"></div>
       <div style="display:flex;gap:10px;margin-top:16px">
         <button class="btn-secondary" onclick="document.getElementById('modal-resiliation').remove()">Annuler</button>
-        <button class="btn-save" onclick="confirmerResiliation('${clientId}')" style="margin-left:auto">Continuer →</button>
+        <button class="btn-secondary" onclick="previsualiserResiliation('${clientId}')" style="margin-left:auto">👁️ Prévisualiser</button>
+        <button class="btn-save" onclick="confirmerResiliation('${clientId}')">Continuer →</button>
       </div>
     </div>`, { opacite: 0.8, padding: '16px' });
   renderLignesPolice();
@@ -1414,9 +1415,14 @@ function construireHtmlResiliation(corps, titre, signatureDataUrl) {
   </body></html>`;
 }
 
-function confirmerResiliation(clientId) {
+// Construit le corps HTML de la lettre de résiliation à partir de l'état actuel du formulaire,
+// avec validation (message dans #erreur-resiliation si incomplet). Ne touche PAS au modal —
+// utilisé à la fois par la prévisualisation (previsualiserResiliation, qui laisse le formulaire
+// ouvert) et par la génération finale (confirmerResiliation, qui ferme le formulaire et enchaîne
+// sur la signature). Retourne null si le formulaire est invalide.
+function construireCorpsResiliation(clientId) {
   const c = allClients.find(x => x.id === clientId);
-  if (!c) return;
+  if (!c) return null;
   capturerLignesPoliceResiliation();
   // Une ligne = un numéro de police à résilier (bouton + = une ligne de plus). Les lignes sans
   // numéro saisi ne comptent pas — le numéro de police est l'info essentielle de chaque ligne.
@@ -1426,9 +1432,9 @@ function confirmerResiliation(clientId) {
   const dateEffet = document.getElementById('res-date-effet').value;
   const recommandee = document.getElementById('res-recommandee').checked;
   const erreurEl = document.getElementById('erreur-resiliation');
-  if (!compagnie) { erreurEl.textContent = 'Indique la compagnie destinataire.'; erreurEl.style.display = 'block'; return; }
-  if (!lignes.length) { erreurEl.textContent = 'Indique au moins un numéro de police à résilier.'; erreurEl.style.display = 'block'; return; }
-  if (!dateEffet) { erreurEl.textContent = "Indique la date d'effet souhaitée (délai de résiliation)."; erreurEl.style.display = 'block'; return; }
+  if (!compagnie) { erreurEl.textContent = 'Indique la compagnie destinataire.'; erreurEl.style.display = 'block'; return null; }
+  if (!lignes.length) { erreurEl.textContent = 'Indique au moins un numéro de police à résilier.'; erreurEl.style.display = 'block'; return null; }
+  if (!dateEffet) { erreurEl.textContent = "Indique la date d'effet souhaitée (délai de résiliation)."; erreurEl.style.display = 'block'; return null; }
   erreurEl.style.display = 'none';
 
   const isEnt = estEntreprise(c);
@@ -1504,15 +1510,31 @@ function confirmerResiliation(clientId) {
     </div>
   `;
 
-  document.getElementById('modal-resiliation').remove();
   const titresUniques = [...new Set(elementsResiliation.map(e => e.label))];
   const titreDoc = `Résiliation ${titresUniques.join(' + ')}${compagnie ? ' — ' + compagnie : ''}`;
   const previewHtml = construireHtmlResiliation(corps, titreDoc, null);
+  return { corps, titreDoc, previewHtml };
+}
+
+// Bouton "👁️ Prévisualiser" — ouvre la lettre dans un nouvel onglet SANS fermer le formulaire ni
+// avancer à l'étape de signature, pour que Jonathan puisse relire puis encore corriger un champ
+// avant de générer pour de bon (demande du 17.09.2026).
+function previsualiserResiliation(clientId) {
+  const res = construireCorpsResiliation(clientId);
+  if (!res) return;
+  const blob = new Blob([res.previewHtml], { type: 'text/html;charset=utf-8' });
+  window.open(URL.createObjectURL(blob), '_blank', 'popup');
+}
+
+function confirmerResiliation(clientId) {
+  const res = construireCorpsResiliation(clientId);
+  if (!res) return;
+  document.getElementById('modal-resiliation').remove();
   ouvrirSignatureMandat(clientId, {
     type: 'resiliation',
-    documentNom: titreDoc,
-    contenuCorps: corps,
-    documentData: 'data:text/html;charset=utf-8,' + encodeURIComponent(previewHtml),
+    documentNom: res.titreDoc,
+    contenuCorps: res.corps,
+    documentData: 'data:text/html;charset=utf-8,' + encodeURIComponent(res.previewHtml),
   });
 }
 

@@ -1267,63 +1267,31 @@ function afficherNoteResiliation() {
 // (voir confirmerResiliation) — les champs "N° de police" manuels (renderChampsPoliceResiliation)
 // ne servent que quand aucun contrat n'est coché (client sans contrat enregistré dans le CRM).
 // Une ligne "contrat à cocher" dans la fenêtre de résiliation. Séparée en fonction pour pouvoir
-// la re-générer après ajout/modif d'un n° de police (bouton +, demande de Jonathan le 17.09.2026 ;
-// rendu toujours visible — pas seulement quand le n° est vide — le 17.09.2026 aussi, pour un
-// contrat mal renseigné qu'il ne gère pas lui-même : il doit pouvoir corriger le n° affiché, pas
-// seulement en ajouter un quand il n'y en a aucun), sans dupliquer le HTML entre le rendu initial
-// et le re-rendu post-enregistrement.
+// la re-générer (id sur la racine) après enregistrement d'un n° de police depuis le champ du bas
+// (voir enregistrerPoliceDepuisChampType) sans dupliquer le HTML entre le rendu initial et le
+// re-rendu. Pas de bouton + ici (retiré le 17.09.2026 : Jonathan doit parfois résilier un contrat
+// mal listé/pas à jour dans cette liste — le + a été déplacé sur le champ "N° de police" en bas,
+// qui fonctionne même quand le contrat coché ici n'a pas le bon numéro ou n'est pas coché).
 function renderLigneContratResiliation(ct) {
-  return `<div id="res-ligne-contrat-${ct.id}" style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text)">
-    <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex:1;min-width:0">
-      <input type="checkbox" class="res-contrat-chk" value="${ct.id}" data-compagnie="${(ct.compagnie || '').replace(/"/g, '&quot;')}" data-police="${(ct.numero_police || '').replace(/"/g, '&quot;')}" data-produit="${(ct.produit || 'Contrat').replace(/"/g, '&quot;')}" onchange="appliquerContratsResiliationCoches()" style="width:15px;height:15px;cursor:pointer;flex-shrink:0"/>
-      <span>${ct.produit || 'Contrat'} — ${ct.compagnie || ''}${ct.numero_police ? ' (' + ct.numero_police + ')' : ''}</span>
-    </label>
-    <button type="button" onclick="event.preventDefault();ajouterPoliceContratResiliation('${ct.id}')" title="${ct.numero_police ? 'Modifier' : 'Ajouter'} le n° de police de ce contrat" style="flex-shrink:0;width:20px;height:20px;border-radius:50%;border:1px solid var(--accent);background:transparent;color:var(--accent);font-weight:700;font-size:13px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;padding:0">+</button>
-  </div>`;
+  return `<label id="res-ligne-contrat-${ct.id}" style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12.5px;color:var(--text)">
+    <input type="checkbox" class="res-contrat-chk" value="${ct.id}" data-compagnie="${(ct.compagnie || '').replace(/"/g, '&quot;')}" data-police="${(ct.numero_police || '').replace(/"/g, '&quot;')}" data-produit="${(ct.produit || 'Contrat').replace(/"/g, '&quot;')}" onchange="appliquerContratsResiliationCoches()" style="width:15px;height:15px;cursor:pointer"/>
+    <span>${ct.produit || 'Contrat'} — ${ct.compagnie || ''}${ct.numero_police ? ' (' + ct.numero_police + ')' : ''}</span>
+  </label>`;
 }
 
-// Bascule la ligne d'un contrat vers un petit champ de saisie inline (préremplie avec le n° déjà
-// enregistré s'il y en a un, pour corriger plutôt que retaper), pour ajouter/modifier le n° de
-// police sans quitter la fenêtre de résiliation — utile notamment pour un contrat qu'il ne gère
-// pas lui-même et dont le n° en base est absent ou faux. Le clic sur + ne coche pas la case
-// (preventDefault ci-dessus, le bouton étant hors du <label>).
-function ajouterPoliceContratResiliation(contratId) {
-  const zone = document.getElementById('res-ligne-contrat-' + contratId);
-  if (!zone) return;
-  const ct = allContrats.find(c => c.id === contratId);
-  const valeurActuelle = (ct && ct.numero_police) || '';
-  zone.innerHTML = `
-    <input type="text" id="res-police-inline-${contratId}" class="form-input" placeholder="N° de police" value="${valeurActuelle.replace(/"/g, '&quot;')}" style="font-size:11.5px;padding:4px 8px;height:auto;flex:1;min-width:0"/>
-    <button type="button" onclick="enregistrerPoliceContratResiliation('${contratId}')" class="btn-save" style="padding:4px 10px;font-size:11px;flex-shrink:0">OK</button>
-    <button type="button" onclick="annulerPoliceContratResiliation('${contratId}')" class="btn-secondary" style="padding:4px 10px;font-size:11px;flex-shrink:0">✕</button>`;
-  const inp = document.getElementById('res-police-inline-' + contratId);
-  if (inp) {
-    inp.focus();
-    inp.select();
-    inp.onkeydown = (e) => { if (e.key === 'Enter') { e.preventDefault(); enregistrerPoliceContratResiliation(contratId); } };
-  }
-}
-
-// Referme le champ inline sans rien enregistrer, en revenant à l'affichage normal de la ligne.
-function annulerPoliceContratResiliation(contratId) {
-  const ct = allContrats.find(c => c.id === contratId);
-  const zone = document.getElementById('res-ligne-contrat-' + contratId);
-  if (zone && ct) zone.outerHTML = renderLigneContratResiliation(ct);
-}
-
-// Enregistre le n° de police saisi depuis la fenêtre de résiliation directement sur le contrat
-// (dbPatch), met à jour la liste en mémoire (allContrats) et réaffiche la ligne normale — le
-// contrat garde son n° de police même si l'utilisateur ferme la fenêtre sans cocher la case.
-async function enregistrerPoliceContratResiliation(contratId) {
-  const inp = document.getElementById('res-police-inline-' + contratId);
-  const valeur = inp ? inp.value.trim() : '';
-  if (!valeur) { inp?.focus(); return; }
+// Enregistre un n° de police directement sur un contrat en base (dbPatch), met à jour la liste en
+// mémoire (allContrats) et réaffiche sa ligne dans la liste "Contrat(s) concerné(s)" si elle est
+// visible. Retourne true/false pour que l'appelant sache s'il peut afficher une confirmation.
+async function patcherNumeroPoliceContrat(contratId, valeur) {
   const r = await dbPatch('contrats', contratId, { numero_police: valeur });
-  if (r.error) { showError('Erreur lors de l\'enregistrement du n° de police.'); return; }
+  if (r.error) { showError('Erreur lors de l\'enregistrement du n° de police.'); return false; }
   const ct = allContrats.find(c => c.id === contratId);
-  if (ct) ct.numero_police = valeur;
-  const zone = document.getElementById('res-ligne-contrat-' + contratId);
-  if (zone && ct) zone.outerHTML = renderLigneContratResiliation(ct);
+  if (ct) {
+    ct.numero_police = valeur;
+    const ligne = document.getElementById('res-ligne-contrat-' + contratId);
+    if (ligne) ligne.outerHTML = renderLigneContratResiliation(ct);
+  }
+  return true;
 }
 
 function appliquerContratsResiliationCoches() {
@@ -1348,6 +1316,10 @@ function appliquerContratsResiliationCoches() {
 // pas encore de contrat enregistré dans le CRM (donc pas de liste "Contrat(s) concerné(s)" à
 // cocher) mais qu'on connaît déjà les numéros de police à résilier. Reconstruit à chaque coche/
 // décoche d'un type, en conservant les valeurs déjà saisies (window._resPoliceValeurs).
+// Bouton + à côté de chaque champ (déplacé ici depuis la liste de contrats le 17.09.2026, à la
+// demande de Jonathan : cas d'un contrat à résilier qu'il ne gère pas/mal renseigné dans la liste
+// du dessus — ce champ-ci marche même sans cocher un contrat) : enregistre le n° tapé sur le
+// contrat actuellement coché, voir enregistrerPoliceDepuisChampType.
 function renderChampsPoliceResiliation() {
   const zone = document.getElementById('res-police-zone');
   if (!zone) return;
@@ -1366,9 +1338,31 @@ function renderChampsPoliceResiliation() {
         return `<div style="display:flex;align-items:center;gap:8px">
           <span style="font-size:11.5px;color:var(--text-muted);min-width:64px">${(t ? t.label : '').split(' (')[0]}</span>
           <input class="form-input" id="res-police-${id}" data-type-id="${id}" placeholder="Ex: 123.456.789" value="${val.replace(/"/g, '&quot;')}" oninput="window._resPoliceValeurs['${id}'] = this.value"/>
+          <button type="button" onclick="enregistrerPoliceDepuisChampType('${id}')" title="Enregistrer ce n° sur le contrat coché ci-dessus" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--accent);background:transparent;color:var(--accent);font-weight:700;font-size:15px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;padding:0">+</button>
         </div>`;
       }).join('')}
     </div>`;
+}
+
+// Enregistre le n° tapé dans le champ "N° de police" (par type) directement sur la fiche du
+// contrat concerné, sans passer par la liste de contrats du dessus — pour un contrat que Jonathan
+// ne gère pas lui-même ou dont le numéro en base est absent/faux (demande du 17.09.2026). On ne
+// peut viser qu'un seul contrat à la fois : s'il n'y en a aucun ou plusieurs coché(s) ci-dessus,
+// on prévient plutôt que de deviner lequel corriger — la lettre utilise de toute façon ce numéro
+// via window._resPoliceValeurs (oninput), avec ou sans contrat associé.
+async function enregistrerPoliceDepuisChampType(typeId) {
+  const inp = document.getElementById('res-police-' + typeId);
+  const valeur = inp ? inp.value.trim() : '';
+  if (!valeur) { inp?.focus(); return; }
+  const coches = Array.from(document.querySelectorAll('.res-contrat-chk:checked'));
+  if (coches.length !== 1) {
+    showError(coches.length === 0
+      ? "Coche le contrat concerné dans la liste ci-dessus pour enregistrer ce numéro sur sa fiche (la lettre utilisera quand même ce numéro)."
+      : "Plusieurs contrats sont cochés — décoche pour n'en garder qu'un, afin d'enregistrer ce numéro sur le bon contrat.");
+    return;
+  }
+  const ok = await patcherNumeroPoliceContrat(coches[0].value, valeur);
+  if (ok) showError('✓ N° de police enregistré sur le contrat.');
 }
 
 // Membres de la constellation familiale d'un client (lui-même + père + mère + enfants liés),

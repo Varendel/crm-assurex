@@ -659,6 +659,17 @@ async function enterApp(user) {
 
   renderSidebar();
   synchroniserRdvEtDispoOutlook(); // arrière-plan, non bloquant — voir sa doc plus haut
+
+  // Rattrapage des mandats/résiliations signés pendant que personne ne regardait l'écran (voir
+  // recupererSignaturesEnAttente, js/05) — corrige le bug du 17.09.2026 où une signature reçue
+  // sur le téléphone du client pouvait ne jamais s'enregistrer si l'onglet du PC s'était mis en
+  // veille entre-temps. Un premier passage au login/chargement, puis un passage toutes les 2
+  // minutes tant que le CRM reste ouvert, pour rattraper rapidement même sans recharger la page.
+  recupererSignaturesEnAttente().catch(e => console.error('Rattrapage signatures (initial) :', e));
+  clearInterval(window._pollingSignaturesEnAttente);
+  window._pollingSignaturesEnAttente = setInterval(() => {
+    recupererSignaturesEnAttente().catch(e => console.error('Rattrapage signatures (périodique) :', e));
+  }, 120000);
   // Ouverture directe d'une fiche client si l'onglet a été ouvert via Ctrl/Cmd+clic (deep-link ?client=ID)
   const paramsUrl = new URLSearchParams(window.location.search);
   const clientDeepLink = paramsUrl.get('client');

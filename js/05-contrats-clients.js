@@ -1538,7 +1538,12 @@ function confirmerResiliation(clientId) {
   });
 }
 
-function genererLettreResiliationSignee(clientId, signatureDataUrl, contexte) {
+// opts.silencieux (ajouté le 17.09.2026, voir recupererSignaturesEnAttente) : n'ouvre pas
+// l'onglet ni ne navigue vers la fiche — utilisé pour rattraper en arrière-plan une signature
+// reçue alors que personne ne regardait l'écran. Retourne le résultat du dbPost pour que
+// l'appelant sache si l'enregistrement a réussi.
+async function genererLettreResiliationSignee(clientId, signatureDataUrl, contexte, opts) {
+  const silencieux = !!(opts && opts.silencieux);
   // La zone de signature est injectée ici (et non dans contenuCorps) car elle dépend de
   // signatureDataUrl, connu seulement au moment de la signature — contenuCorps reste identique
   // entre l'aperçu (avant signature) et le document final.
@@ -1547,21 +1552,23 @@ function genererLettreResiliationSignee(clientId, signatureDataUrl, contexte) {
       ${signatureDataUrl ? `<div style="margin-top:8px"><img src="${signatureDataUrl}" style="max-height:80px;max-width:260px;display:block"/></div>` : `<div class="ligne-signature">Signature</div>`}
     </div>`;
   const html = construireHtmlResiliation(corpsAvecSignature, contexte.documentNom, signatureDataUrl);
-  // Ouvert via Blob/ObjectURL (et non document.write sur about:blank) : un F5 dans cet onglet
-  // recharge le même contenu au lieu de tomber sur une page blanche — voir genererMandatCourtage
-  // plus bas pour l'explication complète de ce correctif.
-  const blobResil = new Blob([html], { type: 'text/html;charset=utf-8' });
-  const win = window.open(URL.createObjectURL(blobResil), '_blank', 'popup');
-  dbPost('mandats_signes', {
+  if (!silencieux) {
+    // Ouvert via Blob/ObjectURL (et non document.write sur about:blank) : un F5 dans cet onglet
+    // recharge le même contenu au lieu de tomber sur une page blanche — voir genererMandatCourtage
+    // plus bas pour l'explication complète de ce correctif.
+    const blobResil = new Blob([html], { type: 'text/html;charset=utf-8' });
+    window.open(URL.createObjectURL(blobResil), '_blank', 'popup');
+  }
+  const r = await dbPost('mandats_signes', {
     client_id: clientId,
     signe: !!signatureDataUrl,
     cree_par: (typeof supaSession !== 'undefined' && supaSession && supaSession.email) || null,
     html_snapshot: html,
     fichier_nom: contexte.documentNom || null,
-  }).then(r => {
-    if (r && r.error) console.error("Échec de l'enregistrement de la résiliation sur la fiche :", errMsg(r));
-    showClient(clientId);
   });
+  if (r && r.error) console.error("Échec de l'enregistrement de la résiliation sur la fiche :", errMsg(r));
+  else if (!silencieux) showClient(clientId);
+  return r;
 }
 
 // ── Envoi du mandat à une/plusieurs compagnie(s) — sélection des destinataires puis aperçu
@@ -1831,6 +1838,15 @@ async function envoyerVersAutreAppareil(clientId, mode) {
         type: contexteFige ? contexteFige.type : null,
         document_nom: contexteFige ? contexteFige.documentNom : null,
         document_data: contexteFige ? (contexteFige.documentData || null) : null,
+        // Ajoutés le 17.09.2026 (voir recupererSignaturesEnAttente plus bas) : contenuCorps est
+        // ce dont genererLettreResiliationSignee/genererDocumentSigne ont réellement besoin pour
+        // finaliser le document — document_data seul (déjà "mis en page" sans doublon possible du
+        // bloc signature) ne suffit pas à reproduire fidèlement le document final. Sans cette
+        // info, une signature reçue pendant que l'onglet du PC est en veille/déchargé (mise en
+        // veille de l'onglet par Chrome, navigation ailleurs...) restait signée en base sans que
+        // le mandat ne soit jamais enregistré sur la fiche client.
+        contenu_corps: contexteFige ? (contexteFige.contenuCorps || null) : null,
+        document_path: contexteFige ? (contexteFige.documentPath || null) : null,
       }),
     });
     insertOk = resInsert.ok;
@@ -1916,6 +1932,57 @@ async function envoyerVersAutreAppareil(clientId, mode) {
       else genererMandatCourtage(clientId, demande.signature_data);
     }
   }, 3000);
+}
+
+// ── Rattrapage des signatures reçues alors que personne ne regardait l'écran ──────────────────
+// Bug corrigé le 17.09.2026 : le sondage ci-dessus (setInterval côté PC) est la SEULE chose qui
+// enregistre le mandat sur la fiche client une fois signé sur le téléphone — si l'onglet du PC
+// est mis en veille/déchargé par Chrome, fermé, ou si Jonathan change d'onglet de signature
+// (clearInterval) avant que la signature n'arrive, la ligne signature_requests passe bien à
+// statut='signe' en base (rien n'est perdu côté client) mais mandats_signes ne se remplit
+// jamais — "le mandat ne s'enregistre plus". Cette fonction tourne au chargement du CRM et en
+// tâche de fond ensuite (voir enterApp, js/03) : elle rattrape toute demande signée mais jamais
+// traitée, indépendamment de ce qui se passait sur l'écran au moment de la signature.
+async function recupererSignaturesEnAttente() {
+  let demandes;
+  try {
+    demandes = await dbGet('signature_requests', 'statut=eq.signe&traite=eq.false&select=*');
+  } catch (e) { console.error('recupererSignaturesEnAttente — lecture impossible :', e); return; }
+  if (!demandes || !demandes.length) return;
+
+  let recuperes = 0;
+  for (const d of demandes) {
+    try {
+      const contexte = { type: d.type, documentNom: d.document_nom, contenuCorps: d.contenu_corps, documentPath: d.document_path };
+      let r;
+      if (d.type === 'contrat') {
+        r = await genererDocumentSigne(d.client_id, d.signature_data, contexte, { silencieux: true });
+      } else if (d.type === 'resiliation') {
+        if (!contexte.contenuCorps) {
+          // Demande antérieure au 17.09.2026 (contenu_corps pas encore enregistré à l'époque) —
+          // on ne peut pas reconstruire fidèlement le document, mais on ne veut pas non plus la
+          // perdre silencieusement : on prévient Jonathan pour qu'il vérifie/relance à la main.
+          showError(`⚠️ Signature reçue pour "${d.document_nom || 'un document'}" (${d.client_nom || ''}) mais impossible à finaliser automatiquement (ancienne demande) — vérifie sur la fiche client et relance la résiliation si besoin.`);
+          await dbPatch('signature_requests', d.id, { traite: true }).catch(() => {});
+          continue;
+        }
+        r = await genererLettreResiliationSignee(d.client_id, d.signature_data, contexte, { silencieux: true });
+      } else {
+        r = await genererMandatCourtage(d.client_id, d.signature_data, { silencieux: true });
+      }
+      if (r && r.error) {
+        console.error('recupererSignaturesEnAttente — échec enregistrement pour', d.id, r);
+        continue; // on retentera au prochain passage plutôt que de marquer traité à tort
+      }
+      await dbPatch('signature_requests', d.id, { traite: true });
+      recuperes++;
+    } catch (e) {
+      console.error('recupererSignaturesEnAttente — erreur sur', d.id, e);
+    }
+  }
+  if (recuperes > 0) {
+    showError(`✓ ${recuperes} mandat${recuperes > 1 ? 's' : ''} signé${recuperes > 1 ? 's' : ''} pendant ton absence ${recuperes > 1 ? 'ont' : 'a'} été récupéré${recuperes > 1 ? 's' : ''} et enregistré${recuperes > 1 ? 's' : ''}.`);
+  }
 }
 
 // Envoie le lien de signature par e-mail via Microsoft Graph (même mécanisme que les
@@ -2437,9 +2504,12 @@ function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire) {
   </body></html>`;
 }
 
-function genererMandatCourtage(clientId, signatureDataUrl) {
+// opts.silencieux : voir genererLettreResiliationSignee — même logique de rattrapage en
+// arrière-plan. Retourne le résultat du dbPost.
+async function genererMandatCourtage(clientId, signatureDataUrl, opts) {
+  const silencieux = !!(opts && opts.silencieux);
   const c = allClients.find(x => x.id === clientId);
-  if (!c) { showError('Client introuvable.'); return; }
+  if (!c) { if (!silencieux) showError('Client introuvable.'); return { error: true, detail: 'client introuvable' }; }
   const isEnt = estEntreprise(c);
 
   // Découpage adresse : "adresse" seul + "ville" contient déjà "NPA Localité" (convention existante du CRM)
@@ -2471,19 +2541,21 @@ function genererMandatCourtage(clientId, signatureDataUrl) {
   // about:blank et efface tout le contenu (d'où le "nom de fichier vide après F5", puisque le
   // <title> disparaît avec le reste de la page). En passant par un Blob + URL.createObjectURL,
   // l'onglet a une vraie URL qui réaffiche le même contenu (titre inclus) à chaque rechargement.
-  const blobMandat = new Blob([contenuMandatHtml], { type: 'text/html;charset=utf-8' });
-  const win = window.open(URL.createObjectURL(blobMandat), '_blank', 'popup');
+  if (!silencieux) {
+    const blobMandat = new Blob([contenuMandatHtml], { type: 'text/html;charset=utf-8' });
+    window.open(URL.createObjectURL(blobMandat), '_blank', 'popup');
+  }
 
   // Enregistrement automatique sur la fiche client — toujours disponible ensuite, même si
   // c'est un(e) collègue qui a généré/fait signer ce mandat à ma place.
-  dbPost('mandats_signes', {
+  const r = await dbPost('mandats_signes', {
     client_id: clientId,
     signe: !!signatureDataUrl,
     cree_par: (typeof supaSession !== 'undefined' && supaSession && supaSession.email) || null,
     html_snapshot: contenuMandatHtml,
-  }).then(r => {
-    if (r && r.error) console.error('Échec de l\u2019enregistrement du mandat sur la fiche :', errMsg(r));
   });
+  if (r && r.error) console.error('Échec de l\u2019enregistrement du mandat sur la fiche :', errMsg(r));
+  return r;
 }
 
 // ═══ SIGNATURE D'UN CONTRAT UPLOADÉ (générique, pas le mandat de courtage à texte fixe) ═══
@@ -2493,9 +2565,10 @@ function genererMandatCourtage(clientId, signatureDataUrl) {
 // de la liste, lien signé généré à la volée comme pour tout autre document du CRM), tandis que
 // html_snapshot garde la preuve de signature elle-même (voir voirMandatSauvegarde plus bas,
 // qui préfère désormais html_snapshot quand les deux sont présents).
-function genererDocumentSigne(clientId, signatureDataUrl, contexte) {
+async function genererDocumentSigne(clientId, signatureDataUrl, contexte, opts) {
+  const silencieux = !!(opts && opts.silencieux);
   const c = allClients.find(x => x.id === clientId);
-  if (!c) { showError('Client introuvable.'); return; }
+  if (!c) { if (!silencieux) showError('Client introuvable.'); return { error: true, detail: 'client introuvable' }; }
   const nomClient = estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`;
   const maintenant = new Date();
   const dateFr = fmtDate(maintenant.toISOString());
@@ -2533,22 +2606,24 @@ function genererDocumentSigne(clientId, signatureDataUrl, contexte) {
     <div class="footer">ASSUREX Sàrl – Rue du Centre 142, 1025 St-Sulpice</div>
   </body></html>`;
 
-  // Blob/ObjectURL (voir genererMandatCourtage) au lieu de document.write sur about:blank —
-  // pour que F5 dans cet onglet recharge le document au lieu de le vider.
-  const blobDocSigne = new Blob([contenuHtml], { type: 'text/html;charset=utf-8' });
-  const win = window.open(URL.createObjectURL(blobDocSigne), '_blank', 'popup');
+  if (!silencieux) {
+    // Blob/ObjectURL (voir genererMandatCourtage) au lieu de document.write sur about:blank —
+    // pour que F5 dans cet onglet recharge le document au lieu de le vider.
+    const blobDocSigne = new Blob([contenuHtml], { type: 'text/html;charset=utf-8' });
+    window.open(URL.createObjectURL(blobDocSigne), '_blank', 'popup');
+  }
 
-  dbPost('mandats_signes', {
+  const r = await dbPost('mandats_signes', {
     client_id: clientId,
     signe: !!signatureDataUrl,
     cree_par: (typeof supaSession !== 'undefined' && supaSession && supaSession.email) || null,
     html_snapshot: contenuHtml,
     fichier_url: contexte.documentPath || null,
     fichier_nom: contexte.documentNom || null,
-  }).then(r => {
-    if (r && r.error) console.error('Échec de l\u2019enregistrement du document signé sur la fiche :', errMsg(r));
-    showClient(clientId);
   });
+  if (r && r.error) console.error('Échec de l\u2019enregistrement du document signé sur la fiche :', errMsg(r));
+  else if (!silencieux) showClient(clientId);
+  return r;
 }
 
 // Ouvre une petite modale de sélection de fichier PDF, uploade le contrat vers le stockage, puis

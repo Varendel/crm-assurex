@@ -386,7 +386,7 @@ async function marquerOffreSoumiseClient(demandeOffreId, idx, refreshType, refre
 // déjà rattaché au dossier (pas juste un prospect) puisque le mandat se génère au nom du client.
 function preparerEnvoiSignatureOffre(clientId) {
   if (!clientId) { showError("Ce dossier n'est pas encore rattaché à une fiche client — crée ou lie d'abord la fiche client avant de préparer la signature du mandat."); return; }
-  ouvrirSignatureMandat(clientId);
+  ouvrirOptionsMandatCourtage(clientId);
 }
 
 // Upload d'un mandat signé à la main (papier scanné ou photographié) — vient compléter

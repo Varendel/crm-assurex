@@ -839,7 +839,7 @@ function ouvrirOngletDocumentsClient(clientId) {
   const c = allClients.find(x => x.id === clientId);
   if (!c) return;
   const boutons = [
-    boutonOngletAction('modal-onglet-documents', `ouvrirSignatureMandat('${clientId}')`, '📄 Mandat de courtage'),
+    boutonOngletAction('modal-onglet-documents', `ouvrirOptionsMandatCourtage('${clientId}')`, '📄 Mandat de courtage'),
     boutonOngletAction('modal-onglet-documents', `ouvrirEnvoiMandatCompagnies('${clientId}')`, '✉️ Envoyer le mandat'),
     boutonOngletAction('modal-onglet-documents', `ouvrirModaleResiliation('${clientId}')`, '📝 Feuille de résiliation'),
     boutonOngletAction('modal-onglet-documents', `genererPageGardeTransmission('${clientId}')`, '📤 Page de garde (transmission polices)'),
@@ -1692,6 +1692,40 @@ async function envoyerApercuEmailMandatViaOutlook() {
   showError(`✓ Courriel envoyé à ${ctx.emails.join(', ')}. Pense à transmettre le mandat signé séparément si ce n'est pas déjà fait.`);
 }
 
+// Étape ajoutée le 18.09.2026 (demande de Jonathan) avant la signature du mandat de courtage :
+// permet d'ajouter une ou plusieurs clauses spéciales propres à ce mandat (ex : une condition
+// particulière négociée avec ce client) sans toucher au texte standard du mandat pour tout le
+// monde. Champ facultatif — laissé vide, le mandat part inchangé comme avant. Le texte est repris
+// tel quel (voir construireHtmlMandat), donc à rédiger déjà proprement.
+function ouvrirOptionsMandatCourtage(clientId) {
+  const c = allClients.find(x => x.id === clientId);
+  if (!c) return;
+  creerModale('modal-options-mandat', `
+    <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:480px;width:100%">
+      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">📄 Mandat de courtage</div>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">Le mandat standard s'applique par défaut. Ajoute ici une clause spéciale seulement si ce mandat en a besoin — c'est l'exception, pas la règle.</div>
+      <div class="form-field">
+        <label class="form-label">Clause(s) spéciale(s) pour ce mandat (optionnel)</label>
+        <textarea class="form-input" id="mandat-clauses-speciales" rows="4" placeholder="Ex : Le mandataire s'engage à..." style="resize:vertical"></textarea>
+        <div style="font-size:10.5px;color:var(--text-muted);margin-top:5px">Ajoutée telle quelle comme clause supplémentaire, après les clauses standards du mandat. Laisse vide s'il n'y en a pas.</div>
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn-secondary" onclick="document.getElementById('modal-options-mandat').remove()">Annuler</button>
+        <button class="btn-save" onclick="validerOptionsMandatCourtage('${clientId}')" style="margin-left:auto">Continuer →</button>
+      </div>
+    </div>`, { opacite: 0.8, padding: '16px' });
+}
+
+function validerOptionsMandatCourtage(clientId) {
+  const valeur = (document.getElementById('mandat-clauses-speciales')?.value || '').trim();
+  document.getElementById('modal-options-mandat')?.remove();
+  ouvrirSignatureMandat(clientId, {
+    type: 'mandat_courtage',
+    documentNom: 'Mandat de courtage',
+    clausesSpeciales: valeur || null,
+  });
+}
+
 function ouvrirSignatureMandat(clientId, contexte) {
   signatureContexteActuel = contexte || null;
   const titreModale = signatureContexteActuel ? `✍️ Signature — ${signatureContexteActuel.documentNom}` : '✍️ Signature du mandant';
@@ -1789,7 +1823,7 @@ function genererSansSignature(clientId) {
   signatureContexteActuel = null;
   if (contexte && contexte.type === 'contrat') genererDocumentSigne(clientId, null, contexte);
   else if (contexte && contexte.type === 'resiliation') genererLettreResiliationSignee(clientId, null, contexte);
-  else genererMandatCourtage(clientId, null);
+  else genererMandatCourtage(clientId, null, { clausesSpeciales: contexte ? contexte.clausesSpeciales : null });
 }
 
 function validerSignatureEtGenerer(clientId) {
@@ -1807,7 +1841,7 @@ function validerSignatureEtGenerer(clientId) {
   signatureContexteActuel = null;
   if (contexte && contexte.type === 'contrat') genererDocumentSigne(clientId, signatureDataUrl, contexte);
   else if (contexte && contexte.type === 'resiliation') genererLettreResiliationSignee(clientId, signatureDataUrl, contexte);
-  else genererMandatCourtage(clientId, signatureDataUrl);
+  else genererMandatCourtage(clientId, signatureDataUrl, { clausesSpeciales: contexte ? contexte.clausesSpeciales : null });
 }
 
 // Génère un lien de signature à distance (QR code + lien copiable) et attend que le client
@@ -1847,6 +1881,10 @@ async function envoyerVersAutreAppareil(clientId, mode) {
         // le mandat ne soit jamais enregistré sur la fiche client.
         contenu_corps: contexteFige ? (contexteFige.contenuCorps || null) : null,
         document_path: contexteFige ? (contexteFige.documentPath || null) : null,
+        // Ajouté le 18.09.2026 : clause(s) spéciale(s) saisies dans ouvrirOptionsMandatCourtage,
+        // à reprendre telles quelles si la signature est finalement rattrapée en arrière-plan
+        // (recupererSignaturesEnAttente) plutôt que via le sondage en direct.
+        clauses_speciales: contexteFige ? (contexteFige.clausesSpeciales || null) : null,
       }),
     });
     insertOk = resInsert.ok;
@@ -1929,7 +1967,7 @@ async function envoyerVersAutreAppareil(clientId, mode) {
       signatureContexteActuel = null;
       if (contexteFige && contexteFige.type === 'contrat') genererDocumentSigne(clientId, demande.signature_data, contexteFige);
       else if (contexteFige && contexteFige.type === 'resiliation') genererLettreResiliationSignee(clientId, demande.signature_data, contexteFige);
-      else genererMandatCourtage(clientId, demande.signature_data);
+      else genererMandatCourtage(clientId, demande.signature_data, { clausesSpeciales: contexteFige ? contexteFige.clausesSpeciales : null });
     }
   }, 3000);
 }
@@ -1968,7 +2006,7 @@ async function recupererSignaturesEnAttente() {
         }
         r = await genererLettreResiliationSignee(d.client_id, d.signature_data, contexte, { silencieux: true });
       } else {
-        r = await genererMandatCourtage(d.client_id, d.signature_data, { silencieux: true });
+        r = await genererMandatCourtage(d.client_id, d.signature_data, { silencieux: true, clausesSpeciales: d.clauses_speciales || null });
       }
       if (r && r.error) {
         console.error('recupererSignaturesEnAttente — échec enregistrement pour', d.id, r);
@@ -2121,9 +2159,11 @@ async function envoyerSignatureAutonome(token) {
     // Document déjà uploadé (contrat/proposition/résiliation) : le PDF original est directement
     // téléchargeable, pas besoin de le reconstruire.
     boutonCopie = `<a href="${r.document_data}" download="${(r.document_nom || 'document-signe').replace(/[^a-z0-9._-]+/gi, '-')}.pdf" style="display:block;margin-top:16px;padding:10px;border-radius:8px;border:1.5px solid #0f2244;color:#0f2244;font-weight:700;font-size:12.5px;text-decoration:none">📄 Enregistrer ma copie (PDF)</a>`;
-  } else if (!r.type) {
+  } else if (!r.type || r.type === 'mandat_courtage') {
     // Mandat de courtage à texte fixe : reconstruit le même document que celui généré côté CRM,
     // avec la signature qui vient d'être apposée, à partir des champs renvoyés par la RPC.
+    // !r.type couvre les demandes créées avant le 18.09.2026 (type pas encore renseigné pour un
+    // mandat) — depuis, type vaut explicitement 'mandat_courtage' (voir ouvrirOptionsMandatCourtage).
     window._copieMandatAutonome = {
       champs: {
         nom: r.client_nom || '', prenom: r.client_prenom || '', societe: r.client_societe || '',
@@ -2133,6 +2173,7 @@ async function envoyerSignatureAutonome(token) {
       },
       signatureDataUrl,
       signatureMandataire: r.agent_signature || null,
+      clausesSpeciales: r.clauses_speciales || null,
     };
     boutonCopie = `<button onclick="ouvrirCopieMandatAutonome()" style="display:block;width:100%;margin-top:16px;padding:10px;border-radius:8px;border:1.5px solid #0f2244;background:#fff;color:#0f2244;font-weight:700;font-size:12.5px;cursor:pointer">📄 Enregistrer ma copie (PDF)</button>`;
   }
@@ -2147,7 +2188,7 @@ async function envoyerSignatureAutonome(token) {
 function ouvrirCopieMandatAutonome() {
   const d = window._copieMandatAutonome;
   if (!d) return;
-  const html = construireHtmlMandat(d.champs, d.signatureDataUrl, d.signatureMandataire);
+  const html = construireHtmlMandat(d.champs, d.signatureDataUrl, d.signatureMandataire, d.clausesSpeciales || null);
   const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
   window.open(url, '_blank', 'popup');
@@ -2355,7 +2396,7 @@ function genererIcsRdv(etat, dureeMin, nomInvite) {
 // le même document depuis un contexte authentifié (genererMandatCourtage) ET depuis la page de
 // signature autonome publique (envoyerSignatureAutonome), qui reçoit ses données via une fonction RPC
 // plutôt que par accès direct à allClients (non disponible pour un visiteur non connecté).
-function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire) {
+function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire, clausesSpeciales) {
   // Nom affiché dans le titre de la page (repris par le navigateur comme nom de fichier suggéré à
   // l'impression/enregistrement en PDF) — calculé ici, une seule fois, avec repli garanti, plutôt
   // que recalculé dans chaque appelant : évite qu'un champ manquant (raison sociale ou prénom/nom
@@ -2461,6 +2502,11 @@ function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire) {
       <li>Entrée en vigueur du mandat : à la date de signature.</li>
     </ol>
 
+    ${clausesSpeciales && clausesSpeciales.trim() ? `
+    <h2>CLAUSE(S) SPÉCIALE(S)</h2>
+    <p style="background:#f2f5fa;border-radius:8px;padding:10px 14px;font-size:11.5px;white-space:pre-line">${clausesSpeciales.trim().replace(/</g, '&lt;')}</p>
+    ` : ''}
+
     <p>Fait en deux exemplaires, à St-Sulpice, le ${fmtDate(new Date().toISOString())}.</p>
 
     <div class="signatures">
@@ -2508,6 +2554,7 @@ function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire) {
 // arrière-plan. Retourne le résultat du dbPost.
 async function genererMandatCourtage(clientId, signatureDataUrl, opts) {
   const silencieux = !!(opts && opts.silencieux);
+  const clausesSpeciales = (opts && opts.clausesSpeciales) || null;
   const c = allClients.find(x => x.id === clientId);
   if (!c) { if (!silencieux) showError('Client introuvable.'); return { error: true, detail: 'client introuvable' }; }
   const isEnt = estEntreprise(c);
@@ -2535,7 +2582,7 @@ async function genererMandatCourtage(clientId, signatureDataUrl, opts) {
   const agentSignataire = allAgents.find(a => a.role === 'signataire');
   const signatureMandataire = agentSignataire ? agentSignataire.signature_image : null;
 
-  const contenuMandatHtml = construireHtmlMandat(champs, signatureDataUrl, signatureMandataire);
+  const contenuMandatHtml = construireHtmlMandat(champs, signatureDataUrl, signatureMandataire, clausesSpeciales);
   // Correctif du 14.09.2026 (demande de Jonathan) : un onglet ouvert via window.open('', '_blank')
   // + document.write() n'a pas de véritable URL (about:blank) — un F5 dans cet onglet recharge
   // about:blank et efface tout le contenu (d'où le "nom de fichier vide après F5", puisque le

@@ -593,25 +593,25 @@ async function showClient(id) {
         </div>
       ` : `
       ${isEntreprise ? sectionCard('Identification entreprise', '#f59e0b', `<div class="info-grid">
-        ${infoBlock('Raison sociale', c.nom)} ${infoBlock('Secteur d\'activité', c.profession)}
-        ${infoBlock('Contact principal', c.prenom)} ${infoBlock('Nb collaborateurs', c.taux_activite || '—')}
-        ${infoBlock('Chiffre d\'affaires', c.revenu ? 'CHF ' + Number(c.revenu).toLocaleString() : '—')} ${infoBlock('N° AVS (LPP)', c.avs)}
+        ${infoBlock('Raison sociale', c.nom, '', true)} ${infoBlock('Secteur d\'activité', c.profession)}
+        ${infoBlock('Contact principal', c.prenom, '', true)} ${infoBlock('Nb collaborateurs', c.taux_activite || '—')}
+        ${infoBlock('Chiffre d\'affaires', c.revenu ? 'CHF ' + Number(c.revenu).toLocaleString() : '—')} ${infoBlock('N° AVS (LPP)', c.avs, '', true)}
       </div>`) : sectionCard('Coordonnées personnelles', '#38bdf8', `<div class="info-grid">
-        ${infoBlock('Prénom', c.prenom)} ${infoBlock('Nom', c.nom)}
-        ${infoBlock('Date de naissance', c.date_naissance ? fmtDate(c.date_naissance) : '—')} ${infoBlock('Nationalité', c.nationalite)}
+        ${infoBlock('Prénom', c.prenom, '', true)} ${infoBlock('Nom', c.nom, '', true)}
+        ${infoBlock('Date de naissance', c.date_naissance ? fmtDate(c.date_naissance) : '—', '', true)} ${infoBlock('Nationalité', c.nationalite, '', true)}
         ${infoBlock('État civil', c.etat_civil)} ${infoBlock('Enfants', c.enfants > 0 ? c.enfants : 'Aucun')}
-        ${infoBlock('N° AVS', c.avs)} ${infoBlock('Langue', c.langue === 'FR' ? 'Français' : c.langue === 'DE' ? 'Allemand' : 'Italien')}
+        ${infoBlock('N° AVS', c.avs, '', true)} ${infoBlock('Langue', c.langue === 'FR' ? 'Français' : c.langue === 'DE' ? 'Allemand' : 'Italien')}
       </div>`)}
       ${sectionCard('Contact', '#f59e0b', `<div class="info-grid">
-        ${infoBlock('Adresse', c.adresse)} ${infoBlock('NPA / Ville', (c.npa || '') + ' ' + (c.ville || ''))}
-        ${infoBlock('Canton', c.canton)} ${infoBlock('Email', c.email, c.email ? ` <a href="mailto:${c.email}" title="Écrire un e-mail (Outlook)" style="text-decoration:none;margin-left:4px">✉️</a>` : '')}
-        ${infoBlock('Téléphone fixe', c.tel)} ${infoBlock('Mobile', c.mobile)}
+        ${infoBlock('Adresse', c.adresse, '', true)} ${infoBlock('NPA / Ville', (c.npa || '') + ' ' + (c.ville || ''), '', true)}
+        ${infoBlock('Canton', c.canton)} ${infoBlock('Email', c.email, c.email ? ` <a href="mailto:${c.email}" title="Écrire un e-mail (Outlook)" style="text-decoration:none;margin-left:4px">✉️</a>` : '', true)}
+        ${infoBlock('Téléphone fixe', c.tel, '', true)} ${infoBlock('Mobile', c.mobile, '', true)}
       </div>`)}
       ${sectionCard('Coordonnées bancaires', '#a78bfa', `<div class="info-grid">
-        ${infoBlock('Banque', c.banque)} ${infoBlock('IBAN', c.iban)}
+        ${infoBlock('Banque', c.banque, '', true)} ${infoBlock('IBAN', c.iban, '', true)}
       </div>`)}
       ${!isEntreprise ? sectionCard('Situation professionnelle', '#4ade80', `<div class="info-grid">
-        ${infoBlock('Profession', c.profession)} ${infoBlock('Employeur', c.employeur)}
+        ${infoBlock('Profession', c.profession, '', true)} ${infoBlock('Employeur', c.employeur, '', true)}
         ${infoBlock('Revenu annuel brut', c.revenu ? 'CHF ' + Number(c.revenu).toLocaleString() : '—')}
         ${infoBlock("Taux d'activité", c.taux_activite ? c.taux_activite + '%' : '—')}
       </div>`) : ''}

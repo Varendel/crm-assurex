@@ -1050,8 +1050,26 @@ function exporterCsv(nomFichier, entetes, lignes) {
   setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function infoBlock(label, value, extra) {
-  return `<div class="info-block"><div class="info-label">${label}</div><div class="info-value">${value || '—'}${extra || ''}</div></div>`;
+function infoBlock(label, value, extra, copiable) {
+  const texte = (value === undefined || value === null || value === '') ? '' : String(value);
+  const copyBtn = (copiable && texte) ? `<button type="button" onclick="copierValeurBouton(this)" title="Copier" style="background:none;border:none;cursor:pointer;color:var(--text-dim);font-size:11px;margin-left:6px;padding:1px 4px;border-radius:4px;vertical-align:middle" onmouseover="this.style.color='var(--accent)';this.style.background='var(--surface-alt)'" onmouseout="this.style.color='var(--text-dim)';this.style.background='none'">📋</button>` : '';
+  return `<div class="info-block"><div class="info-label">${label}</div><div class="info-value"><span class="info-value-text">${texte || '—'}</span>${extra || ''}${copyBtn}</div></div>`;
+}
+
+// Bouton "copier" à côté d'un champ de fiche client (adresse, date de naissance, IBAN, etc.) —
+// demande de Jonathan du 18.09.2026. Lit le texte depuis le <span> frère plutôt que de le passer
+// en argument JS, pour éviter tout souci d'échappement avec les apostrophes des noms/adresses.
+function copierValeurBouton(btn) {
+  const conteneur = btn.closest('.info-value');
+  const span = conteneur ? conteneur.querySelector('.info-value-text') : null;
+  const texte = (span ? span.textContent : '').trim();
+  if (!texte || texte === '—') return;
+  navigator.clipboard.writeText(texte).then(() => {
+    const original = btn.textContent;
+    btn.textContent = '✓';
+    btn.disabled = true;
+    setTimeout(() => { btn.textContent = original; btn.disabled = false; }, 1200);
+  }).catch(() => {});
 }
 
 // ═══ RECHERCHE GLOBALE (raccourci général depuis le dashboard) ═══

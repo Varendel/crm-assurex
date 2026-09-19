@@ -900,7 +900,9 @@ async function reporterRenouvellementContrat(id) {
   ct.statut = 'actif';
   logAction('reporter_renouvellement', 'contrats', id, `Échéance reportée au ${fmtDate(nouvelleDate)}`);
   showError(`✓ Échéance reportée au ${fmtDate(nouvelleDate)} — le contrat repasse "actif" d'ici là.`);
-  renderSuiviTables();
+  // Appelée depuis « Suivi des affaires » et depuis « Renouvellements » : on ne rafraîchit que la page affichée
+  if (document.getElementById('su-stats')) renderSuiviTables();
+  if (document.getElementById('rn-liste')) renderRenouvellements();
 }
 
 // RAPPELS

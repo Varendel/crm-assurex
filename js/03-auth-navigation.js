@@ -708,6 +708,7 @@ const SECTIONS = [
   { id: 'oz-assure-solo', label: 'OZ Assure', solo: true, logo: true, target: 'oz-assure', signataireOnly: true },
   { id: 'vente', label: 'Vente', icon: '◈', sub: [
     { id: 'suivi', label: 'Suivi des affaires' },
+    { id: 'renouvellements', label: '🔁 Renouvellements' },
     { id: 'nouveau-contrat-direct', label: 'Nouveau contrat' },
     { id: 'nouvelle-demande-offre', label: 'Demande d\'offre' },
     { id: 'calc-lpp', label: '🧮 Bilan de prévoyance' },
@@ -1336,6 +1337,7 @@ async function renderView() {
     case 'production': main.innerHTML = viewProduction(); break;
     case 'opportunites': main.innerHTML = viewOpportunites(); break;
     case 'suivi': main.innerHTML = viewSuivi(); break;
+    case 'renouvellements': main.innerHTML = viewRenouvellements(); break;
     case 'rappels': main.innerHTML = viewRappels(); break;
     case 'calc-lpp': main.innerHTML = viewCalculateurLPP(); bindAdresseAutocomplete({ adresseId: 'clpp-adresse', npaVilleId: 'clpp-npa-ville' }); break;
     case 'calc-immo': main.innerHTML = viewFinancementImmo(); break;

@@ -43,8 +43,9 @@ sont en bas de ce fichier.
 
 ## 🟢 Priorité 2 — Suivi commercial
 
-- [ ] **Échéancier des renouvellements** + relance automatique (contrats qui arrivent à échéance
-      dans 3 / 6 / 12 mois) — urgent avant la saison des échéances du 1er janvier
+- [x] **Échéancier des renouvellements** (19.09) — page Vente › Renouvellements + carte dashboard :
+      classement par date limite de résiliation, suivi de revue, tâche de revue en un clic
+- [ ] Échéancier, suite : préavis modifiable par contrat dans la fiche contrat, note de revue
 - [ ] **Taux d'équipement / ventes croisées** (clients sans contrat, clients mono-équipés)
 - [ ] **Prochaine action obligatoire** sur chaque opportunité
 - [ ] **Source des clients** (remplacer `source_oz`, `source_cofidex`, `apporteur_externe`)

@@ -291,6 +291,8 @@ function viewDashboard() {
 
     <div id="calendar-widget-container" style="margin-bottom:20px"></div>
 
+    ${typeof carteRenouvellementsDashboard === 'function' ? carteRenouvellementsDashboard() : ''}
+
     ${oppsOuvertes.length > 0 ? `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">

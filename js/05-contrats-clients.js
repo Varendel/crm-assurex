@@ -743,6 +743,7 @@ function ouvrirOngletDocumentsClient(clientId) {
     boutonOngletAction('modal-onglet-documents', `ouvrirModaleResiliation('${clientId}')`, '📝 Feuille de résiliation'),
     boutonOngletAction('modal-onglet-documents', `genererPageGardeTransmission('${clientId}')`, '📤 Page de garde (transmission polices)'),
     typeof ouvrirCourrierClient === 'function' ? boutonOngletAction('modal-onglet-documents', `ouvrirCourrierClient('${clientId}')`, '📨 Courrier avec en-tête') : '',
+    typeof ouvrirDossierFinancement === 'function' ? boutonOngletAction('modal-onglet-documents', `ouvrirDossierFinancement('${clientId}')`, '🏦 Préparer un dossier de financement') : '',
     boutonOngletAction('modal-onglet-documents', `genererEnvoiPolice('${clientId}')`, '✉️ Envoi de police (lettre)'),
     boutonOngletAction('modal-onglet-documents', `prefillDemandeOffreClientId='${clientId}'; navigate('nouvelle-demande-offre')`, '📝 Demande d\'offre'),
     estEntreprise(c) ? boutonOngletAction('modal-onglet-documents', `genererFicheDemandeOffre('${clientId}')`, '🖨️ Fiche papier (demande d\'offre)') : '',

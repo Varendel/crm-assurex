@@ -608,7 +608,14 @@ async function doLogin() {
   if (ecranLogin) ecranLogin.classList.add('lp-go'); // Rex s'élance dans le paysage pendant la connexion
   const res = await supabaseAuthLogin(email, pwd);
   if (btn) { btn.textContent = 'Se connecter'; btn.disabled = false; }
-  if (res.error) { if (ecranLogin) ecranLogin.classList.remove('lp-go'); showError('Email ou mot de passe incorrect.'); return; }
+  if (res.error) {
+    if (ecranLogin) ecranLogin.classList.remove('lp-go');
+    // Côté client (REX CLOUD), on explique quoi faire plutôt que de laisser dans le flou
+    showError(document.body.classList.contains('mode-cloud')
+      ? 'Identifiant ou mot de passe incorrect. Le mot de passe vous a été transmis par votre conseiller : copiez-collez-le (il contient des caractères spéciaux). Sinon, demandez-lui un nouveau mot de passe.'
+      : 'Email ou mot de passe incorrect.');
+    return;
+  }
   document.getElementById('login-error').classList.add('hidden');
 
   // Propose au navigateur d'enregistrer les identifiants (SPA = pas de rechargement de page,
@@ -744,6 +751,7 @@ const SECTIONS = [
     { id: 'clients-oz', icon: '🔹', label: 'Clients OZ Assure', staff: true, groupe: 'Clients' },
     { id: 'marquage-entites', icon: '🏷️', label: 'Marquage des entités', staff: true, groupe: 'Clients' },
     { id: 'courriers', icon: '📨', label: 'Courriers clients', staff: true, groupe: 'Clients' },
+    { id: 'dossier-financement', icon: '🏦', label: 'Dossiers financement', staff: true, groupe: 'Clients' },
     { id: 'tous-contrats', icon: '📄', label: 'Tous les contrats', rhAllowed: true, groupe: 'Contrats' },
     { id: 'volume-primes', icon: '📦', label: 'Volume de primes', staff: true, rhAllowed: true, groupe: 'Contrats' },
     { id: 'recherche-vehicules', icon: '🚗', label: 'Recherche véhicules', rhAllowed: true, groupe: 'Contrats' },
@@ -1422,6 +1430,8 @@ async function renderView() {
     // Marquage OZ / Assurex-EX des clients sans entité (js/39)
     // Courriers clients avec en-tête Assurex / EX.GROUP (js/45)
     case 'courriers': main.innerHTML = typeof viewCourriers === 'function' ? viewCourriers() : ''; break;
+    // Préparation d'un dossier de prêt hypothécaire, check-list Assurex (js/50)
+    case 'dossier-financement': main.innerHTML = typeof viewDossierFinancement === 'function' ? viewDossierFinancement() : ''; break;
     case 'marquage-entites': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); main.innerHTML = typeof viewMarquageEntites === 'function' ? viewMarquageEntites() : ''; break;
     // Factures QR suisses (js/33)
     case 'factures': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = typeof viewFacturesQR === 'function' ? await viewFacturesQR() : '<div class="table-empty">Module factures non chargé.</div>'; break;

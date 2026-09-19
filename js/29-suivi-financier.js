@@ -227,6 +227,7 @@ function viewSuiviFinancierV2() {
     ['pilotage', '📊 Commissions'],
     ['compagnies', '🏢 Par compagnie'],
     ...(typeof htmlPrevisions12Mois === 'function' ? [['previsions', '📅 Prévisions 12 mois']] : []),
+    ...(typeof htmlObjectifs === 'function' ? [['objectifs', '🎯 Objectifs']] : []),
     ...(typeof htmlCockpitRentabilite === 'function' ? [['rentabilite', '💎 Rentabilité']] : []),
     ['precision', '🎯 Précision des estimations'],
     ['retards', `⏳ Retards${D.retards.length ? ' <span class="dbx-pastille">' + D.retards.length + '</span>' : ''}`],
@@ -241,6 +242,7 @@ function viewSuiviFinancierV2() {
   else if (window._sfxOnglet === 'precision') corps = htmlSfxPrecision();
   else if (window._sfxOnglet === 'compagnies') corps = htmlSfxCompagnies();
   else if (window._sfxOnglet === 'previsions' && typeof htmlPrevisions12Mois === 'function') corps = htmlPrevisions12Mois();
+  else if (window._sfxOnglet === 'objectifs' && typeof htmlObjectifs === 'function') corps = htmlObjectifs();
   else if (window._sfxOnglet === 'retards') corps = htmlSfxRetards(D);
   else corps = htmlSfxPilotage(D);
   return `<div class="dbx sfx">

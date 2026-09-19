@@ -2564,6 +2564,24 @@
 .pv-tag.proj{background:rgba(143,180,255,.2);color:#3B5BDB}.pv-tag.ozt{background:rgba(34,197,94,.15);color:#15803D}
 .pv-montant{font-weight:800;font-size:13px;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums}
 @media (max-width:768px){.pv-ligne{grid-template-columns:64px 26px minmax(0,1fr) auto}.pv-tags{grid-column:3/5;justify-content:flex-start}}
+/* ═══ OBJECTIFS (obj-, js/42) — 19.09.2026 ═══ */
+.obj-ligne{padding:10px 0;border-bottom:1px solid var(--border)}.obj-ligne:last-child{border-bottom:0}
+.obj-tete{display:flex;justify-content:space-between;gap:10px;align-items:baseline;font-size:13px}
+.obj-tete span{font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}.obj-tete small{font-weight:500;color:var(--text-muted)}
+.obj-piste{position:relative;height:10px;border-radius:99px;background:var(--surface-alt,rgba(148,163,184,.18));margin:8px 0 5px;overflow:visible}
+.obj-piste i{display:block;height:100%;border-radius:99px;transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.obj-piste em{position:absolute;top:-4px;width:2px;height:18px;background:var(--text);opacity:.55;border-radius:2px}
+.obj-pied{font-size:11.5px;color:var(--text-muted)}
+.obj-plan>div{display:flex;justify-content:space-between;padding:6px 0;font-size:13px;border-bottom:1px dashed var(--border)}
+.obj-plan>div.total{border-bottom:0;border-top:2px solid var(--text);margin-top:4px;padding-top:8px;font-size:14px}
+.obj-plan span{color:var(--text-muted)}.obj-plan .total span{color:var(--text);font-weight:700}.obj-plan b{font-variant-numeric:tabular-nums}
+.obj-plan p{font-size:12.5px;margin:10px 0 0}
+.obj-cies{margin-top:16px;font-size:12.5px}.obj-cies>b{display:block;margin-bottom:6px}
+.obj-cies>div{display:flex;justify-content:space-between;align-items:center;padding:4px 0}.obj-cies span{display:inline-flex;align-items:center;gap:6px}
+.obj-mois{display:flex;align-items:flex-end;gap:6px;height:130px}
+.obj-mois>div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%}
+.obj-mois em{width:60%;max-width:28px;border-radius:5px 5px 2px 2px;min-height:2px}
+.obj-mois small{font-size:10.5px;color:var(--text-muted);margin-top:3px}.obj-mois span{font-size:10.5px;color:var(--text-muted)}
 @media (prefers-reduced-motion: reduce) {
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
@@ -2683,7 +2701,7 @@
 <script src="js/26-demande-offre.js?v=1790200000"></script>
 <script src="js/27-suivi-affaires.js?v=1790200000"></script>
 <script src="js/28-mobile.js?v=1790200000"></script>
-<script src="js/29-suivi-financier.js?v=1790470000"></script>
+<script src="js/29-suivi-financier.js?v=1790540000"></script>
 <script src="js/30-volume-primes.js?v=1790520000"></script>
 <script src="js/31-analyses-recentes.js?v=1790210000"></script>
 <script src="js/32-campagnes.js?v=1790240000"></script>
@@ -2696,6 +2714,7 @@
 <script src="js/39-marquage-entites.js?v=1790360000"></script>
 <script src="js/40-dashboard-horloge-agenda.js?v=1790450000"></script>
 <script src="js/41-previsions-12-mois.js?v=1790470000"></script>
+<script src="js/42-objectifs.js?v=1790540000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

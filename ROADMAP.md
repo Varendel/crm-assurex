@@ -62,6 +62,8 @@ sont en bas de ce fichier.
       « prévisionnel » à l'impression (19.09)
 - [ ] Remplacer les estimations génériques à 10 % dès le premier décompte de chaque compagnie
 - [ ] Profils de versement Helsana / Groupe Mutuel / CSS / Mobilière dès que la gestion sera versée
+- [x] **Objectifs financiers & ventes** (19.09, js/42) : revenu, acquisitions, affaires, primes ; socle
+      récurrent séparé (récurrence sourcée OZ / Assurex-EX), reste à vendre et rythme mensuel
 - [ ] Fiscalité (plus tard)
 
 ## 🔴 Priorité 1 — Sécurité & fondations

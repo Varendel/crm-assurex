@@ -2169,6 +2169,41 @@
     .mdx-btn-voir { flex: 1; }
   }
 
+/* ═══ MARQUAGE DES ENTITÉS (me-, js/39) — 19.09.2026 ═══ */
+.me-progres{padding:18px 20px}
+.me-progres-haut{display:flex;align-items:baseline;gap:12px;margin-bottom:10px}
+.me-progres-haut b{font-size:28px;font-weight:800;color:var(--accent)}
+.me-progres-haut span{color:var(--text-muted);font-size:13px}
+.me-barre{height:10px;border-radius:99px;background:var(--surface-alt,rgba(148,163,184,.18));overflow:hidden}
+.me-barre i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--accent),#22d3ee);transition:width .5s cubic-bezier(.2,.8,.2,1)}
+.me-compteurs{display:flex;flex-wrap:wrap;gap:18px;margin-top:12px;font-size:13px;color:var(--text-muted)}
+.me-compteurs span{display:inline-flex;align-items:center;gap:8px}
+.me-compteurs b{color:var(--text);font-size:15px}
+.me-logo-oz{display:inline-flex;align-items:center;height:22px;color:var(--text)}
+.me-logo-oz svg{height:100%;width:auto}
+.me-logo-ex{height:22px;width:auto;display:block}
+.me-outils{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:16px 0 12px}
+.me-onglets{display:inline-flex;background:var(--surface-alt,rgba(148,163,184,.14));border-radius:12px;padding:3px}
+.me-onglets button{border:0;background:none;padding:8px 14px;border-radius:9px;font-weight:700;font-size:13px;color:var(--text-muted);cursor:pointer}
+.me-onglets button.actif{background:var(--surface);color:var(--text);box-shadow:0 2px 8px rgba(15,23,42,.08)}
+.me-recherche{flex:1;min-width:180px}
+.me-segment{max-width:200px}
+.me-liste{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:12px}
+.me-carte{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:14px 14px 14px 16px;transition:transform .3s ease,opacity .3s ease,box-shadow .2s ease}
+.me-carte:hover{box-shadow:0 8px 24px rgba(15,23,42,.08)}
+.me-carte.sortie{opacity:0;transform:translateX(24px) scale(.97)}
+.me-corps{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.me-nom{font-size:14.5px;cursor:pointer;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.me-nom:hover{color:var(--accent)}
+.me-corps small{color:var(--text-muted);font-size:12px}
+.me-comps{display:flex;gap:4px;flex-wrap:wrap;margin-top:2px}
+.me-indice{font-size:11.5px;color:var(--accent);font-weight:600}
+.me-actions{display:flex;flex-direction:column;gap:6px;flex:0 0 auto}
+.me-btn{width:118px;height:40px;display:flex;align-items:center;justify-content:center;border:1.5px solid var(--border);border-radius:11px;background:var(--surface);cursor:pointer;transition:border-color .15s,background .15s,transform .15s}
+.me-btn:hover{border-color:var(--accent);transform:translateY(-1px)}
+.me-btn.suggere{border-style:dashed;border-color:var(--accent)}
+.me-btn.choisi{border-color:var(--accent);background:var(--accent-dim,rgba(37,99,235,.1))}
+@media (max-width:768px){.me-liste{grid-template-columns:1fr}.me-segment{max-width:none;flex:1}.me-btn{width:104px}}
 @media (prefers-reduced-motion: reduce) {
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
@@ -2262,7 +2297,7 @@
 
 <script src="js/01-prevoyance-immo.js?v=1790350000"></script>
 <script src="js/02-catalogue-session.js?v=1790060000"></script>
-<script src="js/03-auth-navigation.js?v=1790260000"></script>
+<script src="js/03-auth-navigation.js?v=1790360000"></script>
 <script src="js/04-dashboard-finma.js?v=1790000000"></script>
 <script src="js/05-contrats-clients.js?v=1790350000"></script>
 <script src="js/06-signature-opportunites.js?v=1790320000"></script>
@@ -2297,6 +2332,7 @@
 <script src="js/35-comptes-caution.js?v=1790260000"></script>
 <script src="js/36-rentabilite.js?v=1790320000"></script>
 <script src="js/37-citations-rex.js?v=1790340000"></script>
+<script src="js/39-marquage-entites.js?v=1790360000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

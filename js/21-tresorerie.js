@@ -81,8 +81,12 @@ function trCalculer() {
     }
     // Gestion d'un client OZ attendue avant le 01.01.2027 : encaissée par OZ, hors trésorerie Assurex
     if (typeof commissionGestionEncaisseeParOZ === 'function' && commissionGestionEncaisseeParOZ(ca, date)) { res.oz.total += montant; res.oz.nb++; return; }
-    if (date < aujIso) { res.retard.total += montant; res.retard.nb++; }
-    placer(gestion ? res.gestion : res.acquisition, date, montant);
+    // Gestion d'une prime fractionnée (semestre, trimestre, mois) : un versement par paiement du client
+    const parts = gestion && typeof commissionEcheancier === 'function' ? commissionEcheancier(ca, montant) : [{ date, montant }];
+    parts.forEach(pt => {
+      if (pt.date < aujIso) { res.retard.total += pt.montant; res.retard.nb++; }
+      placer(gestion ? res.gestion : res.acquisition, pt.date, pt.montant);
+    });
   });
 
   // 1b. Gestion récurrente des années suivantes (projection, rien n'est enregistré) — js/19

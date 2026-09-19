@@ -57,8 +57,8 @@ function htmlCockpitEnsemble(D) {
   // Prochains encaissements (60 jours) : commissions datées, projections, factures
   const prochains = [];
   allCommissionsAttente.filter(ca => ca.statut === 'en_attente' && sfxCompte(ca)).forEach(ca => {
-    const p = typeof commissionDatePrevue === 'function' ? commissionDatePrevue(ca) : null;
-    if (p && p >= auj && p <= dans(60)) prochains.push({ date: p, montant: D.reste(ca), titre: ca.client_nom || '—', sous: `${ca.produit || ''} · gestion`, cie: ca.compagnie });
+    const parts = typeof commissionEcheancier === 'function' ? commissionEcheancier(ca, D.reste(ca)) : [];
+    parts.forEach((pt, i) => { if (pt.date >= auj && pt.date <= dans(60)) prochains.push({ date: pt.date, montant: pt.montant, titre: ca.client_nom || '—', sous: `${ca.produit || ''} · gestion${parts.length > 1 ? ` (versement ${i + 1}/${parts.length})` : ''}`, cie: ca.compagnie }); });
   });
   if (typeof projectionGestionRecurrente === 'function') projectionGestionRecurrente(dans(60)).forEach(p => {
     const cl = allClients.find(c => c.id === p.contrat.client_id);
@@ -213,22 +213,33 @@ function htmlCockpitControle() {
 // ═══ OZ ↔ ASSUREX : REFACTURATION 2026 ══════════════════════════════════════════════════════
 // Jusqu'à la fusion complète (01.01.2027), certaines commissions sont encore versées sur le compte
 // OZ Assure alors qu'elles reviennent à Assurex. Règle (Jonathan, 19.09.2026) :
-//   - reste à OZ : la gestion des clients marqués OZ encaissée avant 2027, et les acquisitions de
-//     clients OZ sur des contrats antérieurs à la bascule (01.06.2026) ;
-//   - revient à Assurex (à refacturer à OZ) : tout le reste — clients Assurex / EX, et production
-//     OZ signée depuis la bascule.
+//   - à refacturer à OZ (jamais la santé : LAMal, complémentaire) :
+//       · la GESTION des clients Assurex / EX versée à OZ, et celle des clients OZ dès le 01.01.2027 ;
+//       · l'ACQUISITION quand un apporteur est renseigné sur le contrat (sa part lui est due) ;
+//   - reste à OZ : la santé, les acquisitions sans apporteur, la gestion des clients OZ avant 2027.
 // Les commissions qui reviennent à Assurex suivent le partage des apporteurs comme une commission
 // reçue normalement (fiche de commission incluse).
-function ozPartAssurex(ca) {
-  if (!ca || ca.statut !== 'versé_oz') return false;
-  const cl = ca.client_id ? allClients.find(x => x.id === ca.client_id) : null;
-  const clientOZ = !!(cl && cl.source_oz);
-  if (!clientOZ) return true;
-  const date = (ca.date_reception || ca.date_creation || '').slice(0, 10);
-  if (ca.nature === 'gestion') return !!date && date >= (typeof DATE_GESTION_ASSUREX !== 'undefined' ? DATE_GESTION_ASSUREX : '2027-01-01');
+// Précision de Jonathan (19.09.2026) : on ne refacture à OZ QUE des commissions de GESTION, et
+// jamais la santé (LAMal / complémentaire santé) — les acquisitions et la santé restent chez OZ.
+function ozEstSante(ca) {
+  const cat = typeof categoriePourProduitLibre === 'function' ? categoriePourProduitLibre(ca.produit) : null;
+  return cat === 'Santé' || /lamal|lca|compl[ée]mentaire sant[ée]|assurance maladie \(|soins|hospitalisation/i.test(ca.produit || '');
+}
+// Apporteur renseigné sur le contrat (autre que le signataire) : sa part doit lui être versée par
+// Assurex, donc l'acquisition encaissée par OZ est aussi à refacturer (précision de Jonathan).
+function ozApporteurRenseigne(ca) {
   const ct = ca.contrat_id ? allContrats.find(x => x.id === ca.contrat_id) : null;
-  const depart = ct ? (ct.date_signature || ct.date_debut || '').slice(0, 10) : '';
-  return !!depart && depart >= (typeof DATE_BASCULE_ASSUREX !== 'undefined' ? DATE_BASCULE_ASSUREX : '2026-06-01');
+  if (!ct || !ct.apporteur_id) return false;
+  const ag = (typeof allAgents !== 'undefined' ? allAgents : []).find(a => a.id === ct.apporteur_id);
+  return !ag || ag.role !== 'signataire';
+}
+function ozPartAssurex(ca) {
+  if (!ca || ca.statut !== 'versé_oz' || ozEstSante(ca)) return false;
+  if (ca.nature !== 'gestion') return ozApporteurRenseigne(ca); // acquisition : seulement avec apporteur
+  const cl = ca.client_id ? allClients.find(x => x.id === ca.client_id) : null;
+  if (!(cl && cl.source_oz)) return true; // client Assurex / EX dont la gestion a été versée à OZ
+  const date = (ca.date_reception || ca.date_creation || '').slice(0, 10);
+  return !!date && date >= (typeof DATE_GESTION_ASSUREX !== 'undefined' ? DATE_GESTION_ASSUREX : '2027-01-01');
 }
 
 function ozLignesRefacturation(annee) {
@@ -247,12 +258,12 @@ function htmlCockpitOZ() {
   const restentOZ = allCommissionsAttente.filter(ca => ca.statut === 'versé_oz' && !ozPartAssurex(ca) && String(ca.date_reception || ca.date_creation || '').startsWith(annee));
   window._ozSelection = new Set(ouvertes.map(l => l.ca.id));
   return `
-    <div class="sfx-intro">Commissions ${annee} versées sur le compte OZ Assure mais qui reviennent à Assurex : elles sont à <strong>refacturer à OZ</strong> pour équilibrer les comptes avant la fusion complète du 01.01.2027. Les parts des apporteurs s’appliquent comme pour une commission reçue.</div>
+    <div class="sfx-intro">Commissions ${annee} versées sur le compte OZ Assure qui reviennent à Assurex — la <strong>gestion</strong>, et l’<strong>acquisition</strong> quand un apporteur est renseigné (hors santé) : elles sont à <strong>refacturer à OZ</strong> pour équilibrer les comptes avant la fusion complète du 01.01.2027. Les parts des apporteurs s’appliquent comme pour une commission reçue.</div>
     <div class="dbx-kpis">
       ${dbxKpi({ label: 'À refacturer à OZ', valeur: somme(ouvertes, 'm'), prefixe: 'CHF ', sous: `${ouvertes.length} commission${ouvertes.length > 1 ? 's' : ''}`, i: 0 })}
       ${dbxKpi({ label: 'dont parts apporteurs', valeur: somme(ouvertes, 'pA'), prefixe: 'CHF ', sous: 'à verser via la fiche de commission', i: 1 })}
       ${dbxKpi({ label: 'Déjà refacturé', valeur: somme(lignes.filter(l => l.ca.refacture_le), 'm'), prefixe: 'CHF ', sous: annee, i: 2 })}
-      ${dbxKpi({ label: 'Reste chez OZ', valeur: restentOZ.reduce((s, ca) => s + Number(ca.montant_final ?? ca.montant_estime ?? 0), 0), prefixe: 'CHF ', sous: 'gestion OZ avant 2027, production OZ antérieure', i: 3 })}
+      ${dbxKpi({ label: 'Reste chez OZ', valeur: restentOZ.reduce((s, ca) => s + Number(ca.montant_final ?? ca.montant_estime ?? 0), 0), prefixe: 'CHF ', sous: 'santé, acquisitions sans apporteur, gestion OZ avant 2027', i: 3 })}
     </div>
     <section class="dbx-carte"><header class="dbx-carte-tete"><h2>À refacturer</h2>
       <span class="dx-tete-actions">

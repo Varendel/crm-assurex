@@ -4,6 +4,26 @@
 // Les commissions d'acquisition n'ont pas (encore) de règle.
 
 const PREVISION_GESTION_DELAI_MOIS = 3;
+// Renouvellement : commission sur le décompte de fin du 2e mois après l'échéance (01.01 → fin février)
+const PREVISION_GESTION_RENOUVELLEMENT_MOIS = 1;
+
+// Prime fractionnée (contrats.periodicite = nombre de paiements par an : 1, 2, 4, 12) : la commission
+// d'encaissement suit chaque paiement du client → la commission annuelle est répartie en autant de
+// versements, espacés de 12 / périodicité mois à partir de la première date prévue.
+function commissionEcheancier(ca, montant) {
+  const p = commissionDatePrevue(ca);
+  if (!p) return [];
+  const ct = ca.contrat_id && typeof allContrats !== 'undefined' ? allContrats.find(x => x.id === ca.contrat_id) : null;
+  const n = ct && [2, 4, 12].includes(Number(ct.periodicite)) && !_prevDateAnnuelle(ca) ? Number(ct.periodicite) : 1;
+  if (n === 1) return [{ date: p, montant }];
+  const [y, m, d] = p.split('-').map(Number);
+  const part = Math.round(montant / n * 100) / 100;
+  const finDeMois = d === new Date(y, m, 0).getDate(); // renouvellement : fin de mois → reste en fin de mois
+  return Array.from({ length: n }, (_, i) => {
+    const dernier = new Date(y, m - 1 + i * (12 / n) + 1, 0).getDate();
+    return { date: _prevIso(new Date(y, m - 1 + i * (12 / n), finDeMois ? dernier : Math.min(d, dernier))), montant: i === n - 1 ? Math.round((montant - part * (n - 1)) * 100) / 100 : part };
+  });
+}
 // Compagnies qui versent la gestion 1× par an (clé = nom renvoyé par normaliserCompagnie), avec
 // la date de versement habituelle — indication de Jonathan du 19.09.2026, à confirmer :
 // HOTELA vers fin novembre, Gastrosocial vers fin avril. Prochaine échéance après la signature.
@@ -67,6 +87,11 @@ function commissionDatePrevue(ca) {
     if (cible() < depart) annee++;
     return cible();
   }
+  // Renouvellement (échéance de facturation) : la prime part en novembre-décembre, le client paie au
+  // plus tard à la fin du mois qui suit l'échéance, la commission arrive sur le décompte suivant →
+  // fin du 2e mois après l'échéance (01.01 → fin février). Règle de Jonathan, 19.09.2026.
+  if (/\[gestion annuelle\]/.test(ca.detail_calcul || '')) return _prevIso(new Date(y, m - 1 + PREVISION_GESTION_RENOUVELLEMENT_MOIS + 1, 0));
+  // Nouvelle signature : facture dans les semaines qui suivent, paiement à 1-2 mois, puis décompte →
   // + 3 mois en restant sur le dernier jour du mois si besoin (30.11 + 3 mois = 28/29.02)
   const dernier = new Date(y, m - 1 + PREVISION_GESTION_DELAI_MOIS + 1, 0).getDate();
   return _prevIso(new Date(y, m - 1 + PREVISION_GESTION_DELAI_MOIS, Math.min(d, dernier)));
@@ -104,9 +129,11 @@ function previsionGestionParMois(nbMois) {
     if (!p) return;
     if (commissionGestionEncaisseeParOZ(ca, p)) return; // encaissée par OZ jusqu'au 31.12.2026
     const montant = typeof commissionResteAttendu === 'function' ? commissionResteAttendu(ca) : Number(ca.montant_estime || 0); // reste après versements partiels
-    if (p < _prevIso(auj)) { res.retard.total += montant; res.retard.nb++; return; }
-    const cible = res.mois.find(x => x.cle === p.slice(0, 7));
-    if (cible) { cible.total += montant; cible.nb++; }
+    commissionEcheancier(ca, montant).forEach(pt => {
+      if (pt.date < _prevIso(auj)) { res.retard.total += pt.montant; res.retard.nb++; return; }
+      const cible = res.mois.find(x => x.cle === pt.date.slice(0, 7));
+      if (cible) { cible.total += pt.montant; cible.nb++; }
+    });
   });
   return res;
 }
@@ -209,8 +236,11 @@ function projectionGestionRecurrente(jusquA) {
       const fictive = { nature: 'gestion', compagnie: ct.compagnie, client_id: ct.client_id, contrat_id: ct.id, date_creation: ech, detail_calcul: '[gestion annuelle]', statut: 'en_attente' };
       const prevue = commissionDatePrevue(fictive);
       if (!prevue || prevue > jusquA) break;
-      if (prevue >= auj && !commissionGestionEncaisseeParOZ(fictive, prevue)) {
-        res.push({ contrat: ct, echeance: ech, date: prevue, montant: Math.round(prime * taux * 100) / 100, taux });
+      if (!commissionGestionEncaisseeParOZ(fictive, prevue)) {
+        // Prime fractionnée : un versement de commission par paiement du client
+        commissionEcheancier(fictive, Math.round(prime * taux * 100) / 100).forEach(pt => {
+          if (pt.date >= auj && pt.date <= jusquA) res.push({ contrat: ct, echeance: ech, date: pt.date, montant: pt.montant, taux });
+        });
       }
       ech = prochaineEcheanceFacturation(ct, ech);
     }

@@ -91,7 +91,8 @@ function renderBordereauxList() {
 
     return `<div class="bordereau-card">
       <div class="bordereau-header" onclick="toggleBordereau('${b.id}')">
-        <div style="flex:1">
+        ${typeof pictoCompagnie === 'function' ? `<span style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px">${pictoCompagnie(b.compagnie, 40)}</span>` : ''}
+        <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:8px">
             ${b.numero ? `<span style="background:var(--surface-alt);color:var(--text-muted);border-radius:5px;padding:2px 7px;font-size:10.5px;font-weight:800;font-family:monospace">${b.numero}</span>` : ''}
             <div style="font-size:14px;font-weight:800;color:var(--text)">${b.compagnie}</div>

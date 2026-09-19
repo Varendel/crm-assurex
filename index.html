@@ -2879,6 +2879,13 @@ body.mode-cloud .login-marque-cloud { display: flex; flex-direction: column; ali
 .ec-marque b { font-weight: 700; }
 @media (max-width: 1000px) { .cloud-visuel { width: 180px; height: 118px; } .cloud-nuage { width: 180px; } .cloud-rex { width: 84px; left: 48px; bottom: 40px; } .cloud-titre { font-size: 30px; } }
 @media (prefers-reduced-motion: reduce) { .cloud-rex { animation: none; } }
+/* Brouillon de saisie d'un contrat (js/49, 20.09.2026) */
+.nc-brouillon { display: flex; align-items: center; gap: 12px; padding: 12px 16px; margin: 0 0 16px; border-radius: 12px; background: rgba(0,207,255,.08); border: 1px solid rgba(0,207,255,.35); }
+.nc-brouillon > span { font-size: 20px; }
+.nc-brouillon b { display: block; font-size: 13px; color: var(--text); }
+.nc-brouillon small { font-size: 11.5px; color: var(--text-muted); }
+.nc-brouillon div { flex: 1; min-width: 0; }
+.nc-brouillon button { padding: 7px 14px; font-size: 12.5px; }
 @media (prefers-reduced-motion: reduce) {
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
@@ -2993,7 +3000,7 @@ body.mode-cloud .login-marque-cloud { display: flex; flex-direction: column; ali
 <script src="js/06-signature-opportunites.js?v=1790700000"></script>
 <script src="js/07-fichepaie-bordereaux.js?v=1790860000"></script>
 <script src="js/08-nouveaux-formulaires.js?v=1790700000"></script>
-<script src="js/09-rappels-vehicules.js?v=1790700000"></script>
+<script src="js/09-rappels-vehicules.js?v=1790920000"></script>
 <script src="js/10-commissions-parametres.js?v=1790860000"></script>
 <script src="js/11-renouvellements.js?v=1790530000"></script>
 <script src="js/12-equipement.js?v=1790520000"></script>
@@ -3033,6 +3040,7 @@ body.mode-cloud .login-marque-cloud { display: flex; flex-direction: column; ali
 <script src="js/46-offre-vers-contrat.js?v=1790640000"></script>
 <script src="js/47-profil-investisseur.js?v=1790880000"></script>
 <script src="js/48-espace-client.js?v=1790900000"></script>
+<script src="js/49-nouveau-contrat.js?v=1790920000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

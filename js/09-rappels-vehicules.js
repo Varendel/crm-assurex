@@ -585,7 +585,11 @@ function viewNouveauContrat() {
         <option value="">— Aucun —</option>
         ${allAgents.filter(a => a.role !== 'signataire').map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('')}
       </select></div>
-      <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="ct-statut"><option value="actif">Actif</option><option value="en_cours">En cours de signature</option><option value="annulé">Annulé (réserve refusée / non abouti)</option></select></div>
+      <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="ct-statut"><option value="actif">Actif</option><option value="en_cours">En cours de signature</option><option value="renouveler">À renouveler (échéance passée)</option><option value="annulé">Annulé (réserve refusée / non abouti)</option></select></div>
+      <div class="form-field"><label class="form-label">Préavis de résiliation</label><select class="form-select" id="ct-preavis">
+        <option value="">Automatique (1 mois LAMal, 3 mois sinon)</option>
+        <option value="1">1 mois</option><option value="2">2 mois</option><option value="3">3 mois</option><option value="6">6 mois</option><option value="12">12 mois</option>
+      </select><div style="font-size:10px;color:var(--text-muted);margin-top:3px">Sert à calculer la date limite de résiliation dans les renouvellements et l'espace client.</div></div>
       <div class="form-field"><label class="form-label">Commissionné ?</label><select class="form-select" id="ct-commissionne" onchange="document.getElementById('ct-rappel-note').style.display = this.value==='non' ? '' : 'none'"><option value="oui">Oui</option><option value="non">Non (pas de convention de collaboration)</option></select>
         <div id="ct-rappel-note" style="display:none;font-size:10.5px;color:var(--text-muted);margin-top:4px">ℹ️ Pas de commission créée. Un rappel sera généré 6 mois avant la date d'échéance pour proposer un transfert vers une compagnie partenaire.</div>
       </div>
@@ -615,11 +619,11 @@ function initSegmentContrat() {
     const client = allClients.find(c => c.id === contratClientId);
     if (client) segmentSelect.value = estEntreprise(client) ? 'entreprise' : 'prive';
   }
-  // 3 lignes vides par défaut, prêtes à recevoir les tarifs de la police (RC privée, inventaire
-  // du ménage, modules complémentaires, taxes légales, etc.) — le total se calcule automatiquement.
+  // Une seule ligne au départ (20.09.2026) : la plupart des polices n'en ont qu'une, et le bouton
+  // « + Ajouter une ligne » est juste en dessous pour reporter le détail quand il y en a.
   const lignesList = document.getElementById('ct-prime-lignes-list');
   if (lignesList && !lignesList.children.length) {
-    ajouterLignePrime(); ajouterLignePrime(); ajouterLignePrime();
+    ajouterLignePrime();
     calculerPrimeTotaleLignes();
   }
   updateCategorieOptions();
@@ -1184,7 +1188,8 @@ function ajouterPlaqueFlotte() {
   ligne.style.cssText = 'display:flex;gap:8px;align-items:center';
   ligne.innerHTML = `
     <input class="form-input ct-plaque-input" placeholder="VD 123456" style="flex:1"/>
-    <input class="form-input ct-plaque-marque-input" placeholder="Marque / modèle (optionnel)" style="flex:1"/>
+    <input class="form-input ct-plaque-marque-input" placeholder="Marque et modèle (optionnel)" style="flex:1"/>
+    <select class="form-select ct-plaque-type" style="width:200px;font-size:12px">${typeof vehOptionsType === 'function' ? vehOptionsType('') : '<option value="">—</option>'}</select>
     <button type="button" onclick="this.parentElement.remove()" style="background:var(--red-dim);color:var(--red);border:none;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">✕</button>
   `;
   list.appendChild(ligne);
@@ -1831,7 +1836,7 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
     // préavis (LAMal 1 mois, sinon 3 mois par défaut), jusque-là posés seulement à la modification.
     periodicite: dejaAnnuelle ? (/^LCA — /.test(produitLabel) ? 12 : 1) : (parseInt(document.getElementById('ct-periodicite')?.value) || 12),
     type_commission: document.getElementById('ct-nature-commission')?.value || 'acquisition',
-    preavis_mois: /lamal/i.test(produitLabel) ? 1 : 3,
+    preavis_mois: Number(document.getElementById('ct-preavis')?.value) || (/lamal/i.test(produitLabel) ? 1 : 3),
     // "Dont prime risque + frais" (base de calcul COG Swiss Life) n'était utilisée que pour le
     // calcul en direct puis jetée — jamais sauvegardée nulle part, donc invisible/reperdue dès la
     // fiche rechargée. Persistée ici pour de bon (demande de Jonathan le 25.08.2026 : "la prime...
@@ -1968,6 +1973,7 @@ async function saveContrat() {
   const lignesPlaques = Array.from(document.querySelectorAll('#ct-plaques-list > div')).map(ligne => ({
     plaque: ligne.querySelector('.ct-plaque-input')?.value.trim() || '',
     marque: ligne.querySelector('.ct-plaque-marque-input')?.value.trim() || '',
+    type: ligne.querySelector('.ct-plaque-type')?.value || '',
   })).filter(l => l.plaque);
   const plaquesValeurs = lignesPlaques.map(l => l.plaque);
   const resultPrincipal = await creerContratEtCommission(clientId, compagnie, produitLabel, primeMensuelle, modulesChoisis, commissionEstimee, detail, plaquesValeurs, false, collecterLignesPrimeSaisies());
@@ -1980,7 +1986,7 @@ async function saveContrat() {
     const policeContrat = document.getElementById('ct-police').value.trim() || null;
     // Le champ « marque » de la ligne contient souvent « marque + modèle » (saisie ou import IA) :
     // vehNormaliser (js/08) sépare marque / modèle / type et uniformise la plaque (19.09.2026).
-    const norm = l => typeof vehNormaliser === 'function' ? vehNormaliser({ marque: l.marque, numero_plaque: l.plaque }) : { marque: l.marque || null, modele: null, type_vehicule: null, numero_plaque: l.plaque };
+    const norm = l => typeof vehNormaliser === 'function' ? vehNormaliser({ marque: l.marque, type_vehicule: l.type, numero_plaque: l.plaque }) : { marque: l.marque || null, modele: null, type_vehicule: l.type || null, numero_plaque: l.plaque };
     const rVeh = await dbPost('vehicules', lignesPlaques.map(l => { const n = norm(l); return {
       client_id: clientId,
       contrat_id: nouveauContratId,

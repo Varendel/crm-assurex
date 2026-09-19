@@ -108,6 +108,11 @@ sont en bas de ce fichier.
 - [x] **Décomptes reçus par e-mail** (19.09) : recherche des pièces jointes Excel / XML / PDF des compagnies
       dans Outlook et import en un clic (Importer un décompte)
 
+- [x] **Nouveau contrat, formulaire revu** (20.09) : une seule ligne de prime au départ, préavis de
+      résiliation saisissable, statut « à renouveler », type de véhicule sur chaque plaque,
+      avertissement quand le n° de police existe déjà chez le client, et brouillon automatique
+      repris après une fermeture ou une navigation.
+
 ## 🔵 Priorité 3 — Produit
 
 - [x] Nouveau design, étape 1 (19.09) : police Geist sans le « tout en gras », couleurs de la charte REX (cyan #00CFFF / bleu marine #113679), thème clair avec menu blanc, logo REX + mascotte (menu et connexion)

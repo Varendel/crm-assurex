@@ -2736,6 +2736,9 @@ async function saveOpportunite(id) {
   opportuniteEnEditionId = null;
   allOpportunites = await dbGet('opportunites', 'select=*');
   navigate('opportunites');
+  // Opportunité ouverte sans étape prévue : on demande tout de suite la prochaine action
+  const idEnregistre = id || (Array.isArray(r) && r[0] && r[0].id);
+  if (idEnregistre && typeof verifierProchaineAction === 'function') verifierProchaineAction(idEnregistre);
 }
 
 // ── Pièces jointes d'une opportunité (colonne jsonb opportunites.pieces_jointes — tableau de

@@ -299,7 +299,8 @@ function viewDashboard() {
         <div style="font-size:13px;font-weight:800;color:var(--text)">🎯 Opportunités en cours</div>
         <div style="font-size:18px;font-weight:900;color:#f59e0b">CHF ${fmtCHF(Math.round(oppTotalPipeline))}</div>
       </div>
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:18px">${oppsOuvertes.length} opportunité(s) ouverte(s) · CHF ${fmtCHF(Math.round(oppTotalPondere))} pondéré par probabilité${oppsGagneesRecemment.length ? ` · ${oppsGagneesRecemment.length} gagnée(s)` : ''}</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:${typeof nbOppsSansProchaineAction === 'function' && nbOppsSansProchaineAction() ? '8px' : '18px'}">${oppsOuvertes.length} opportunité(s) ouverte(s) · CHF ${fmtCHF(Math.round(oppTotalPondere))} pondéré par probabilité${oppsGagneesRecemment.length ? ` · ${oppsGagneesRecemment.length} gagnée(s)` : ''}</div>
+      ${typeof nbOppsSansProchaineAction === 'function' && nbOppsSansProchaineAction() ? `<button type="button" onclick="navigate('opportunites')" style="display:block;width:100%;text-align:left;margin-bottom:16px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.4);color:#f59e0b;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">➜ ${nbOppsSansProchaineAction()} opportunité(s) sans prochaine action — les planifier</button>` : ''}
       <div style="display:flex;gap:14px;margin-bottom:18px;flex-wrap:wrap">
         ${oppParStade.map(s => `<div style="flex:1;min-width:90px;text-align:center;background:var(--surface-alt);border-radius:10px;padding:10px 8px">
           <div style="width:8px;height:8px;border-radius:50%;background:${s.couleur};margin:0 auto 6px"></div>

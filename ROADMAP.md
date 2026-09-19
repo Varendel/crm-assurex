@@ -53,7 +53,7 @@ sont en bas de ce fichier.
       clic, liste des clients sans contrat actif avec tâche de contact
 - [ ] Équipement, suite : distinguer « assuré ailleurs » de « pas assuré » (saisir les polices
       externes connues comme contrats non commissionnés)
-- [ ] **Prochaine action obligatoire** sur chaque opportunité
+- [x] **Prochaine action obligatoire** (19.09) — demandée à la création, au changement de stade et à la fin de la dernière tâche ; affichée sur chaque carte du pipeline ; bandeau + carte dashboard pour les opportunités sans étape
 - [ ] **Source des clients** (remplacer `source_oz`, `source_cofidex`, `apporteur_externe`)
 - [ ] Synchronisation Outlook + suivi des offres reçues (voir idées détaillées ci-dessous)
 

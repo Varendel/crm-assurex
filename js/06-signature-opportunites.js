@@ -82,6 +82,7 @@ function viewOpportunites() {
     </div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">${rhMode ? "Vue d'ensemble des affaires en cours (stades, clients, tâches liées) — lecture seule, sans montants. Utilise les boutons ci-dessus pour créer une opportunité ou une tâche pour Jonathan." : 'Suivi des affaires en négociation, avant signature. Une fois "Gagnée" depuis le menu de stade, l\'opportunité ouvre directement le formulaire de contrat pré-rempli.'}</div>
     ${renderOppsEchuesBanner(OPPS, nomClient)}
+    ${!rhMode && typeof bandeauSansProchaineAction === 'function' ? bandeauSansProchaineAction(OPPS, nomClient) : ''}
     <div class="stat-grid" style="margin-bottom:20px">
       ${rhMode ? '' : statCard('Pipeline total (prime)', 'CHF ' + total.toLocaleString(), '#f59e0b')}
       ${rhMode ? '' : statCard('Pondéré (prime)', 'CHF ' + pondere.toLocaleString(), '#38bdf8')}
@@ -246,7 +247,8 @@ function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, to
         ${o.cree_par ? `<div title="Créée par ${o.cree_par}" style="position:absolute;top:8px;right:8px;font-size:13px">${PICTO_CREE_EQUIPE}${o.notif_vue ? '' : ' 🔴'}</div>` : ''}
         <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:4px">${o.titre}</div>
         <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:1px">${nomClient(o)}</div>
-        <div style="font-size:10.5px;color:var(--text-muted);margin-bottom:8px">${o.compagnie || '&nbsp;'}${tachesOuvertes > 0 ? ` · ☑ ${tachesOuvertes} tâche${tachesOuvertes > 1 ? 's' : ''}` : ''}</div>
+        <div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px">${o.compagnie || '&nbsp;'}${tachesOuvertes > 0 ? ` · ☑ ${tachesOuvertes} tâche${tachesOuvertes > 1 ? 's' : ''}` : ''}</div>
+        ${typeof htmlProchaineAction === 'function' ? htmlProchaineAction(o) : ''}
         ${o.date_echeance ? `<div style="font-size:10px;font-weight:700;color:${echue ? '#f87171' : 'var(--text-muted)'};margin-bottom:6px">${echue ? '🔴 Échue le ' : 'Échéance '}${fmtDate(o.date_echeance)}</div>` : ''}
         <div style="display:flex;justify-content:space-between;align-items:center">
           ${rhMode ? '<span></span>' : `<span style="font-size:13px;font-weight:800;color:#f59e0b">CHF ${fmtCHF((o.montant_potentiel||0))}</span>`}
@@ -320,7 +322,7 @@ function renderListeOpportunites(toutes, nomClient, tousLesStades, stadeColor, r
     <div class="table-wrap">
       <div class="table-header" style="grid-template-columns:${cols}"><div>Titre</div><div>Client</div><div>Compagnie</div><div>Stade</div><div>Prob.</div>${rhMode ? '' : '<div>Montant</div>'}</div>
       ${liste.length ? liste.map(o => `<div class="table-row" style="grid-template-columns:${cols};cursor:pointer" onclick="editerOpportunite('${o.id}')">
-        <div><div style="font-weight:700;font-size:13px;color:var(--text)">${o.cree_par ? PICTO_CREE_EQUIPE + ' ' : ''}${o.titre}</div>${o.date_echeance ? `<div style="font-size:10.5px;color:var(--text-muted)">Échéance ${fmtDate(o.date_echeance)}</div>` : ''}</div>
+        <div><div style="font-weight:700;font-size:13px;color:var(--text)">${o.cree_par ? PICTO_CREE_EQUIPE + ' ' : ''}${o.titre}</div>${o.date_echeance ? `<div style="font-size:10.5px;color:var(--text-muted)">Échéance ${fmtDate(o.date_echeance)}</div>` : ''}${typeof htmlProchaineAction === 'function' ? htmlProchaineAction(o) : ''}</div>
         <div style="font-size:13px;color:var(--text)">${nomClient(o)}</div>
         <div style="font-size:12.5px;color:var(--text-muted)">${o.compagnie || '—'}</div>
         <div>${badge(o.stade, stadeColor[o.stade] || (o.stade === 'Gagné' ? '#4ade80' : '#f87171'))}</div>
@@ -454,10 +456,13 @@ function renderCartePrioriteOpportunite(s, nomClient, stadeColor, rhMode) {
 }
 
 async function toggleTacheDepuisPriorites(id) {
+  const tache = allRappels.find(r => r.id === id);
   const r = await dbPatch('rappels', id, { statut: 'traité' });
   if (r && r.error) { showError('Erreur : ' + errMsg(r)); return; }
   allRappels = await dbGet('rappels', 'select=*');
   navigate('opportunites');
+  // Dernière tâche terminée : « et maintenant ? »
+  if (tache && tache.opportunite_id && typeof verifierProchaineAction === 'function') verifierProchaineAction(tache.opportunite_id);
 }
 
 async function creerTacheRapideOpportunite(oppId, tier) {
@@ -544,6 +549,8 @@ async function toggleTacheOpportunite(id, fait) {
     await ajouterLigneHistoriqueOpportunite(tache.opportunite_id, `✓ Tâche terminée : ${tache.titre}`);
   }
   navigate('nouvelle-opportunite');
+  // Dernière tâche terminée : « et maintenant ? »
+  if (fait && tache && tache.opportunite_id && typeof verifierProchaineAction === 'function') verifierProchaineAction(tache.opportunite_id);
 }
 
 async function supprimerTacheOpportunite(id) {
@@ -581,6 +588,7 @@ async function changerStadeOpportuniteRapide(id, nouveauStade) {
     btn.style.color = actif ? '#0a0e1a' : 'var(--text-muted)';
     btn.style.borderColor = actif ? btn.dataset.couleur : 'var(--border)';
   });
+  if (typeof verifierProchaineAction === 'function') verifierProchaineAction(id);
 }
 
 async function changerStadeOpportunite(id, nouveauStade) {
@@ -597,6 +605,7 @@ async function changerStadeOpportunite(id, nouveauStade) {
     proposerActionApresGain(opp);
   } else {
     navigate('opportunites');
+    if (typeof verifierProchaineAction === 'function') verifierProchaineAction(id);
   }
 }
 

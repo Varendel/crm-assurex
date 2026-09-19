@@ -971,6 +971,12 @@
   .imp-encaisse span { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; font-size: 12.5px; color: var(--text-muted); transition: all .15s; }
   .imp-encaisse input:checked + span { background: var(--accent); color: var(--on-accent); font-weight: 600; }
   .imp-encaisse input:focus-visible + span { box-shadow: 0 0 0 3px var(--accent-dim); }
+  /* Logo Assurex dans « Encaissé par » : couleurs d'origine au repos, blanc sur le bleu (thème clair)
+     ou foncé sur le cyan (thème sombre) une fois sélectionné */
+  .imp-logo-assurex { height: 16px; width: auto; display: block; transition: filter .15s; }
+  .imp-encaisse input:checked + span .imp-logo-assurex { filter: brightness(0) invert(1); }
+  html:not([data-theme="clair"]) .imp-encaisse span .imp-logo-assurex { filter: brightness(0) invert(1); }
+  html:not([data-theme="clair"]) .imp-encaisse input:checked + span .imp-logo-assurex { filter: brightness(0); }
 
   /* ═══ ANALYSE DE PRÉVOYANCE (js/23-analyse-prevoyance.js, 19.09.2026) ═══ */
   .ap-analyses select { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); color: #fff; border-radius: 9px; padding: 6px 10px; font-size: 12px; }
@@ -2066,7 +2072,7 @@
 <script src="js/03-auth-navigation.js?v=1790260000"></script>
 <script src="js/04-dashboard-finma.js?v=1790000000"></script>
 <script src="js/05-contrats-clients.js?v=1790250000"></script>
-<script src="js/06-signature-opportunites.js?v=1790260000"></script>
+<script src="js/06-signature-opportunites.js?v=1790290000"></script>
 <script src="js/07-fichepaie-bordereaux.js?v=1790260000"></script>
 <script src="js/08-nouveaux-formulaires.js?v=1790250000"></script>
 <script src="js/09-rappels-vehicules.js?v=1790260000"></script>

@@ -2622,11 +2622,14 @@ async function genererMandatCourtage(clientId, signatureDataUrl, opts) {
 
   // Enregistrement automatique sur la fiche client — toujours disponible ensuite, même si
   // c'est un(e) collègue qui a généré/fait signer ce mandat à ma place.
+  // Enregistré au nom du client (demande de Jonathan, 19.09.2026) : « Mandat de courtage — Client — date »
+  const nomClientMandat = isEnt ? (c.nom || '') : `${c.prenom || ''} ${c.nom || ''}`.trim();
   const r = await dbPost('mandats_signes', {
     client_id: clientId,
     signe: !!signatureDataUrl,
     cree_par: (typeof supaSession !== 'undefined' && supaSession && supaSession.email) || null,
     html_snapshot: contenuMandatHtml,
+    fichier_nom: `Mandat de courtage — ${nomClientMandat || 'Client'} — ${fmtDate(new Date().toISOString())}`,
   });
   if (r && r.error) console.error('Échec de l\u2019enregistrement du mandat sur la fiche :', errMsg(r));
   return r;
@@ -2897,10 +2900,13 @@ async function getMandatsSignesClient(clientId) {
 // document signé électroniquement (contrat uploadé ou lettre de résiliation) ou fichier uploadé
 // (mandat signé à la main).
 function mdxNatureDocument(m) {
+  const cl = (typeof allClients !== 'undefined' ? allClients : []).find(x => x.id === m.client_id);
+  const nomCl = cl ? (estEntreprise(cl) ? cl.nom : `${cl.prenom || ''} ${cl.nom || ''}`.trim()) : '';
   if (m.html_snapshot && m.fichier_url) return { icone: '✍️', titre: m.fichier_nom || 'Contrat signé', type: 'Contrat · signature électronique' };
+  if (m.html_snapshot && m.fichier_nom && /^Mandat de courtage/.test(m.fichier_nom)) return { icone: '📄', titre: m.fichier_nom, type: 'Généré dans le CRM' };
   if (m.html_snapshot && m.fichier_nom) return { icone: '📝', titre: m.fichier_nom, type: 'Document généré dans le CRM' };
   if (m.fichier_url) return { icone: '📎', titre: m.fichier_nom || 'Document uploadé', type: 'Fichier uploadé (signé à la main)' };
-  return { icone: '📄', titre: 'Mandat de courtage', type: 'Généré dans le CRM' };
+  return { icone: '📄', titre: `Mandat de courtage${nomCl ? ' — ' + nomCl : ''}`, type: 'Généré dans le CRM' };
 }
 
 // Onglet « Documents » de la fiche client : mandats et documents signés, sous forme de cartes.

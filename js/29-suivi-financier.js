@@ -78,6 +78,21 @@ function sfxDonnees() {
   const netOZ = r => Number(r.credit || 0) - Number(r.debit || 0);
   const parMoisOZ = mois.map(m => (ledger || []).filter(r => String(r.date_mouvement || '').startsWith(m)).reduce((s, r) => s + netOZ(r), 0));
   const recuAnneeOZ = (ledger || []).filter(r => String(r.date_mouvement || '').startsWith(annee)).reduce((s, r) => s + netOZ(r), 0);
+  // Commission mensuelle moyenne (occurrences réelles des 12 derniers mois, Assurex + OZ) :
+  // nombre moyen de versements par mois × montant moyen d'un versement = entrée mensuelle type.
+  const debut12 = mois[0] + '-01';
+  const occ = [
+    ...enc.filter(e => e.date >= debut12 && e.montant > 0).map(e => e.montant),
+    ...(ledger || []).filter(r => String(r.date_mouvement || '') >= debut12 && Number(r.credit) > 0).map(r => Number(r.credit)),
+  ];
+  // Mois « actifs » seulement (au moins un versement) : les mois sans décompte saisi ne tirent pas la moyenne vers le bas
+  const moisActifs = mois.filter((m, i) => Math.max(0, parMois[i]) + Math.max(0, parMoisOZ[i]) > 0).length || 1;
+  const moyenne = {
+    nbParMois: occ.length / moisActifs,
+    montantMoyen: occ.length ? occ.reduce((s, v) => s + v, 0) / occ.length : 0,
+    moisActifs,
+  };
+  moyenne.mensuelle = moyenne.nbParMois * moyenne.montantMoyen;
   // Attente par compagnie
   const cies = {};
   attente.forEach(ca => { const k = sfxCie(ca.compagnie); cies[k] = cies[k] || { total: 0, nb: 0 }; cies[k].total += reste(ca); cies[k].nb++; });
@@ -87,15 +102,20 @@ function sfxDonnees() {
     return { l, c, nb: liste.length, total: liste.reduce((s, ca) => s + reste(ca), 0) };
   });
   const oz = allCommissionsAttente.filter(ca => ca.statut === 'versé_oz');
-  return { auj, annee, recuAnnee, totalReste, attente, retards, delaiMoyen, delais, mois, parMois, parMoisOZ, recuAnneeOZ, ozCharge: !!ledger, cies, tranchesAge, oz, reste };
+  return { auj, annee, recuAnnee, totalReste, attente, retards, delaiMoyen, delais, mois, parMois, parMoisOZ, recuAnneeOZ, ozCharge: !!ledger, moyenne, cies, tranchesAge, oz, reste };
 }
 
 // Barres empilées Assurex (bleu) + OZ Assure (vert) par mois, avec légende
 function sfxBarresEncaisse(D) {
   const tot = D.mois.map((m, i) => Math.max(0, D.parMois[i]) + Math.max(0, D.parMoisOZ[i] || 0));
-  const max = Math.max(1, ...tot);
-  const CA = '#00CFFF', CO = '#22C55E';
-  return `<div style="display:flex;align-items:flex-end;gap:6px;height:190px;padding-top:18px">${D.mois.map((m, i) => {
+  const moy = D.moyenne ? D.moyenne.mensuelle : 0;
+  const max = Math.max(1, ...tot, moy);
+  const CA = '#00CFFF', CO = '#22C55E', CM = '#F59E0B';
+  // Ligne pointillée de la commission mensuelle moyenne (même échelle : 150 px = max, base à 22 px du bas)
+  const yMoy = moy ? Math.round(moy / max * 150) + 22 : 0;
+  return `<div style="position:relative;display:flex;align-items:flex-end;gap:6px;height:190px;padding-top:18px">
+    ${moy ? `<div title="Commission mensuelle moyenne : CHF ${fmtCHF(Math.round(moy))}" style="position:absolute;left:0;right:0;bottom:${yMoy}px;border-top:2px dashed ${CM};pointer-events:none;z-index:1"><span style="position:absolute;right:0;top:-18px;font-size:10.5px;font-weight:700;color:${CM};background:var(--surface);padding:0 4px;border-radius:4px">moy. ${dbxCompact(moy)}/mois</span></div>` : ''}
+    ${D.mois.map((m, i) => {
     const a = Math.max(0, D.parMois[i]), o = Math.max(0, D.parMoisOZ[i] || 0), t = a + o;
     const h = Math.round(t / max * 150);
     return `<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%" title="${dbxLibelleMois(m)} ${m.slice(0, 4)} — Assurex CHF ${fmtCHF(Math.round(a))} · OZ CHF ${fmtCHF(Math.round(o))}">
@@ -109,6 +129,7 @@ function sfxBarresEncaisse(D) {
   <div style="display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:12px;color:var(--text-muted)">
     <span style="display:inline-flex;align-items:center;gap:6px"><i style="width:11px;height:11px;border-radius:3px;background:${CA}"></i>Encaissé par Assurex</span>
     <span style="display:inline-flex;align-items:center;gap:6px"><i style="width:11px;height:11px;border-radius:3px;background:${CO}"></i>Encaissé par OZ Assure (compte courant OZ)</span>
+    ${moy ? `<span style="display:inline-flex;align-items:center;gap:6px"><i style="width:16px;height:0;border-top:2px dashed ${CM}"></i>Commission mensuelle moyenne</span>` : ''}
     ${D.ozCharge ? '' : '<span>· chargement du compte courant OZ…</span>'}
   </div>`;
 }
@@ -162,6 +183,7 @@ function htmlSfxPilotage(D) {
     <div class="dbx-kpis">
       ${dbxKpi({ label: `Reçu en ${D.annee} (Assurex)`, valeur: D.recuAnnee, prefixe: 'CHF ', sous: `depuis le ${fmtDate(sfxBascule())}`, i: 0 })}
       ${dbxKpi({ label: `Encaissé par OZ en ${D.annee}`, valeur: D.recuAnneeOZ || 0, prefixe: 'CHF ', sous: D.ozCharge ? `production du groupe : CHF ${fmtCHF(Math.round((D.recuAnnee || 0) + (D.recuAnneeOZ || 0)))}` : 'chargement…', i: 0 })}
+      ${D.moyenne && D.moyenne.mensuelle ? dbxKpi({ label: 'Commission mensuelle moyenne', valeur: D.moyenne.mensuelle, prefixe: 'CHF ', sous: `≈ ${D.moyenne.nbParMois.toFixed(1).replace('.', ',')} versements/mois × CHF ${fmtCHF(Math.round(D.moyenne.montantMoyen))} (12 mois, Assurex + OZ)`, i: 0 }) : ''}
       ${dbxKpi({ label: 'Reste attendu', valeur: D.totalReste, prefixe: 'CHF ', sous: `${D.attente.length} commission${D.attente.length > 1 ? 's' : ''}`, onclick: "navigate('commissions-attente')", i: 1 })}
       ${dbxKpi({ label: 'En retard', valeur: totalRetard, prefixe: 'CHF ', sous: `${D.retards.length} dossier${D.retards.length > 1 ? 's' : ''}`, onclick: "window._sfxOnglet='retards';navigate('suivi-financier')", i: 2 })}
       ${dbxKpi({ label: 'Délai réel de paiement', valeur: D.delaiMoyen ?? 0, suffixe: D.delaiMoyen === null ? '' : ' j', sous: D.delais.length ? `moyenne sur ${D.delais.length} paiement${D.delais.length > 1 ? 's' : ''}` : 'pas encore de paiement daté', i: 3 })}

@@ -399,7 +399,13 @@ async function uploadMandatSigne(clientId, input) {
   if (file.size > 15 * 1024 * 1024) { showError('Fichier trop lourd — maximum 15 Mo.'); return; }
 
   const extension = file.name.split('.').pop() || 'pdf';
-  const path = `mandats/${clientId}/${Date.now()}.${extension}`;
+  // Enregistré au nom du client (19.09.2026) : fichier « Mandat de courtage — Client — date »
+  const clM = allClients.find(x => x.id === clientId);
+  const nomClM = clM ? (estEntreprise(clM) ? clM.nom : `${clM.prenom || ''} ${clM.nom || ''}`.trim()) : 'Client';
+  const dateM = new Date().toISOString().slice(0, 10);
+  const slugM = nomClM.normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'client';
+  const path = `mandats/${clientId}/Mandat_de_courtage_${slugM}_${dateM}_${Date.now().toString(36)}.${extension}`;
+  const nomFichierMandat = `Mandat de courtage — ${nomClM} — ${fmtDate(dateM)} (signé).${extension}`;
 
   showError('⏳ Envoi en cours...');
   try {
@@ -416,7 +422,7 @@ async function uploadMandatSigne(clientId, input) {
       signe: true,
       cree_par: (typeof supaSession !== 'undefined' && supaSession && supaSession.email) || null,
       fichier_url: path,
-      fichier_nom: file.name,
+      fichier_nom: nomFichierMandat,
     });
     if (r && r.error) { showError("Fichier envoyé, mais impossible de l'ajouter à la liste : " + errMsg(r)); return; }
     showClient(clientId);

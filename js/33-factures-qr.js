@@ -964,7 +964,9 @@ function fqrDocumentHtml(f, P, opt = {}) {
   const filigrane = f.statut === 'brouillon' ? 'BROUILLON' : f.statut === 'annulee' ? 'ANNULÉE' : '';
   const qte = q => { const n = fqrNombre(q); return Number.isInteger(n) ? String(n) : n.toFixed(2).replace(/0$/, ''); };
   const bulletin = fqrBulletinHtml(f, P);
-  const titre = `Facture ${f.numero || ''}`.trim();
+  // Titre = nom de fichier proposé à l'enregistrement en PDF : « Facture n° — Débiteur »
+  const nomDebiteur = String((f.debiteur && (f.debiteur.nom || f.debiteur.raison_sociale)) || '').trim();
+  const titre = [`Facture ${f.numero || ''}`.trim(), nomDebiteur].filter(Boolean).join(' — ').replace(/[<>:"/\\|?*]/g, '');
 
   const page1 = `<section class="page">
     <div class="tete">
@@ -1044,7 +1046,7 @@ function fqrDocumentHtml(f, P, opt = {}) {
     .p-info { position: absolute; top: 5mm; left: 56mm; width: 87mm; height: 95mm; overflow: hidden; }
     .coins { display: block; }
     @media print { html, body { background: #fff; } .page { margin: 0; } }
-  </style></head><body>${page1}${page2}${opt.imprimer ? '<script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script>' : ''}</body></html>`;
+  </style></head><body><script>(function(){var t=${JSON.stringify(titre).replace(/</g, '\\u003c')};document.title=t;var e=document.querySelector('title');if(e)new MutationObserver(function(){if(document.title!==t)document.title=t;}).observe(e,{childList:true,characterData:true,subtree:true});})();<\/script>${page1}${page2}${opt.imprimer ?'<script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script>' : ''}</body></html>`;
 }
 
 async function fqrImprimerFacture(f) {

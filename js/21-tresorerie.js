@@ -70,7 +70,7 @@ function trCalculer() {
   allCommissionsAttente.filter(ca => ca.statut === 'en_attente').forEach(ca => {
     const ct = ca.contrat_id ? allContrats.find(x => x.id === ca.contrat_id) : null;
     if (ct && (ct.commissionne === false || ct.statut === 'annulé')) return;
-    const montant = Number(ca.montant_estime || 0);
+    const montant = typeof commissionResteAttendu === 'function' ? commissionResteAttendu(ca) : Number(ca.montant_estime || 0); // reste après versements partiels
     if (!montant) return;
     let date = typeof commissionDatePrevue === 'function' ? commissionDatePrevue(ca) : null;
     const gestion = ca.nature === 'gestion';

@@ -165,7 +165,17 @@ function renderBordereauxList() {
             <div style="font-weight:800;color:var(--text);font-size:13px;min-width:70px;text-align:right">CHF ${fmtCHF(s.montant)}</div>
           </div>`;
         }).join('')}
-        ${commissions.length === 0 ? '<div class="table-empty">Aucune commission rapprochée pour ce bordereau encore.</div>' : ''}
+        ${(() => {
+          // Versements partiels imputés via ce bordereau (paiements échelonnés, rapprochement automatique)
+          const vp = (typeof allCommissionTranches !== 'undefined' ? allCommissionTranches : []).filter(t => t.bordereau_id === b.id);
+          if (!vp.length) return '';
+          return `<div style="margin-top:10px;font-size:11px;font-weight:600;color:var(--text-muted)">Versements partiels déduits de commissions en attente (${vp.length})</div>
+            ${vp.map(t => { const ca = allCommissionsAttente.find(c => c.id === t.commission_id); const reste = ca && typeof commissionResteAttendu === 'function' ? commissionResteAttendu(ca) : 0;
+              return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
+                <div style="flex:1;font-size:12.5px;color:var(--text)">${ca ? (ca.client_nom || '—') + ' — ' + (ca.produit || '') : 'Commission'}<div style="font-size:10.5px;color:var(--text-muted)">${ca && ca.statut === 'reçue' ? 'commission soldée ✓' : `reste en attente : CHF ${fmtCHF2(reste)}`}</div></div>
+                <div style="font-weight:600;font-size:13px">CHF ${fmtCHF2(t.montant)}</div></div>`; }).join('')}`;
+        })()}
+        ${commissions.length === 0 && !(typeof allCommissionTranches !== 'undefined' && allCommissionTranches.some(t => t.bordereau_id === b.id)) ? '<div class="table-empty">Aucune commission rapprochée pour ce bordereau encore.</div>' : ''}
       </div>` : ''}
     </div>`;
   }).join('');
@@ -353,11 +363,19 @@ function showModalValidationCommission(bordereauId) {
             <label class="form-label">Commission en attente *</label>
             <select class="form-select" id="val-commission" onchange="prefillMontantEstime()">
               <option value="">— Sélectionner —</option>
-              ${enAttente.map(c => `<option value="${c.id}" data-montant="${c.montant_estime||0}" data-client="${c.client_nom}">${c.nature === 'gestion' ? '🔄' : '🆕'} ${c.client_nom} — ${c.produit} (CHF ${fmtCHF((c.montant_estime||0))})</option>`).join('')}
+              ${enAttente.map(c => { const deja = typeof commissionDejaRecu === 'function' ? commissionDejaRecu(c) : 0; const reste = Math.max(0, Number(c.montant_estime || 0) - deja); return `<option value="${c.id}" data-montant="${reste.toFixed(2)}" data-total="${Number(c.montant_estime || 0)}" data-deja="${deja}" data-client="${c.client_nom}">${c.nature === 'gestion' ? '🔄' : '🆕'} ${c.client_nom} — ${c.produit} (CHF ${fmtCHF((c.montant_estime||0))}${deja > 0 ? ` · déjà reçu ${fmtCHF(deja)} · reste ${fmtCHF(reste)}` : ''})</option>`; }).join('')}
             </select>
             ${enAttente.length === 0 ? `<div style="font-size:11px;color:#f59e0b;margin-top:6px">Aucune commission en attente pour ${b.compagnie}.</div>` : ''}
           </div>
 
+          <div class="form-field" style="grid-column:span 2">
+            <label class="form-label">Type de versement</label>
+            <div class="imp-encaisse" role="radiogroup" aria-label="Type de versement">
+              <label><input type="radio" name="val-type" value="complet" checked onchange="updateValidationPreview()"/> <span>Paiement complet — solde la commission</span></label>
+              <label><input type="radio" name="val-type" value="partiel" onchange="updateValidationPreview()"/> <span>Versement partiel — déduit de l’attente</span></label>
+            </div>
+            <div id="val-info-partiel" style="font-size:11px;color:var(--text-muted);margin-top:6px">Versement partiel : pour les conventions de paiement échelonné (ex. commission annuelle payée chaque mois). Le montant est déduit de la commission en attente, qui se solde automatiquement quand le total est atteint.</div>
+          </div>
           <div class="form-field"><label class="form-label">Numéro de police</label><input class="form-input" id="val-police" placeholder="Ex: T302928541"/></div>
           <div class="form-field"><label class="form-label">Mouvement</label><select class="form-select" id="val-mouvement">
             <option value="Commission d'acquisition">Commission d'acquisition</option>
@@ -415,6 +433,16 @@ function updateValidationPreview() {
   let montant = montantBase * (1 - deduction/100);
   if (sens === 'debit') montant = -Math.abs(montant);
   document.getElementById('val-montant').value = montant.toFixed(2);
+  // Rappel du reste attendu en versement partiel
+  const sel = document.getElementById('val-commission');
+  const opt = sel && sel.options[sel.selectedIndex];
+  const info = document.getElementById('val-info-partiel');
+  const partiel = document.querySelector('input[name="val-type"]:checked')?.value === 'partiel';
+  if (info && opt && opt.value && partiel) {
+    const total = Number(opt.dataset.total || 0), deja = Number(opt.dataset.deja || 0);
+    const apres = Math.max(0, total - deja - montant);
+    info.innerHTML = `Commission annuelle CHF ${fmtCHF2(total)} · déjà reçu CHF ${fmtCHF2(deja)} · <b>reste après ce versement : CHF ${fmtCHF2(apres)}</b>${apres <= 0.01 ? ' — la commission sera soldée ✓' : ''}`;
+  }
 }
 
 async function saveValidationCommission(bordereauId) {
@@ -438,6 +466,29 @@ async function saveValidationCommission(bordereauId) {
   const bordereauConcerne = allBordereaux.find(bd => bd.id === bordereauId);
   const dateBordereauValide = bordereauConcerne?.date_reception && bordereauConcerne.date_reception >= DATE_BASCULE_ASSUREX;
   const dateReceptionFinale = dateBordereauValide ? bordereauConcerne.date_reception : new Date().toISOString().split('T')[0];
+
+  // Versement partiel (convention de paiement échelonné) : on enregistre une tranche rattachée au
+  // bordereau et on déduit de l'attente ; la commission n'est soldée que lorsque le total est atteint.
+  if (document.querySelector('input[name="val-type"]:checked')?.value === 'partiel') {
+    const comm = allCommissionsAttente.find(c => c.id === commId);
+    const rT = await dbPost('commission_tranches', { commission_id: commId, montant: montantFinal, date_reception: dateReceptionFinale, bordereau_id: bordereauId, note: `Bordereau ${bordereauConcerne?.numero || ''} ${bordereauConcerne?.mois || ''}`.trim() });
+    if (rT && rT.error) { showError('Versement non enregistré : ' + errMsg(rT)); if (btn) { btn.textContent = '✓ Valider'; btn.disabled = false; } return; }
+    allCommissionTranches = await dbGet('commission_tranches', 'select=*');
+    const deja = typeof commissionDejaRecu === 'function' ? commissionDejaRecu(comm) : montantFinal;
+    const total = Number(comm?.montant_estime || 0);
+    if (comm && deja >= total - 0.01) {
+      await dbPatch('commissions_attente', commId, { statut: 'reçue', bordereau_id: bordereauId, numero_police: numeroPolice || comm.numero_police || null, montant_final: Math.round(deja * 100) / 100, mouvement, date_reception: dateReceptionFinale });
+      showError(`✓ Dernier versement enregistré : commission soldée (CHF ${fmtCHF2(deja)} reçus au total).`);
+    } else {
+      if (numeroPolice && comm && !comm.numero_police) await dbPatch('commissions_attente', commId, { numero_police: numeroPolice });
+      showError(`✓ Versement de CHF ${fmtCHF2(montantFinal)} déduit — reste CHF ${fmtCHF2(Math.max(0, total - deja))} en attente.`);
+    }
+    logAction('versement_partiel_commission', 'commission_tranches', commId, `CHF ${fmtCHF2(montantFinal)} — bordereau ${bordereauConcerne?.numero || bordereauId}`);
+    allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
+    document.getElementById('modal-validation').remove();
+    navigate('bordereaux');
+    return;
+  }
 
   const res = await dbPatch('commissions_attente', commId, {
     statut: 'reçue',

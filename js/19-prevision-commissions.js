@@ -27,6 +27,14 @@ function commissionGestionEncaisseeParOZ(ca, dateEncaissement) {
   return !!(cl && cl.source_oz);
 }
 
+// ── Versements partiels (commission_tranches) — conventions de paiement échelonné (ex. AGV TONI SA,
+//    commission annuelle payée mensuellement) : ce qui est déjà reçu est déduit de l'attendu. ──
+function commissionTranches(ca) {
+  return (typeof allCommissionTranches !== 'undefined' ? allCommissionTranches : []).filter(t => t.commission_id === ca.id);
+}
+function commissionDejaRecu(ca) { return commissionTranches(ca).reduce((s, t) => s + Number(t.montant || 0), 0); }
+function commissionResteAttendu(ca) { return Math.max(0, Math.round((Number(ca.montant_estime || 0) - commissionDejaRecu(ca)) * 100) / 100); }
+
 function _prevIso(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 
 // Point de départ : date de signature du contrat. À défaut, la plus récente entre sa date de début
@@ -93,7 +101,7 @@ function previsionGestionParMois(nbMois) {
     const p = commissionDatePrevue(ca);
     if (!p) return;
     if (commissionGestionEncaisseeParOZ(ca, p)) return; // encaissée par OZ jusqu'au 31.12.2026
-    const montant = Number(ca.montant_estime || 0);
+    const montant = typeof commissionResteAttendu === 'function' ? commissionResteAttendu(ca) : Number(ca.montant_estime || 0); // reste après versements partiels
     if (p < _prevIso(auj)) { res.retard.total += montant; res.retard.nb++; return; }
     const cible = res.mois.find(x => x.cle === p.slice(0, 7));
     if (cible) { cible.total += montant; cible.nb++; }

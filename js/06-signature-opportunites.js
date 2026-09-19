@@ -1686,12 +1686,58 @@ function estStatutResilieOuAnnule(statut) {
 function htmlContratImport(l) {
   if (!l.contratId) return '<span style="color:var(--text-dim)">—</span>';
   const cands = l.candidats || [];
-  if (cands.length > 1) {
-    return `<select aria-label="Contrat CRM pour cette ligne" onchange="choisirContratImport(${l.idx}, this.value)" title="Plusieurs contrats partagent ce n° de police : choisis celui qui correspond à la branche" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.45);border-radius:8px;color:var(--text);padding:4px 6px;font-size:12px;max-width:220px">
+  const contrat = cands.length > 1
+    ? `<select aria-label="Contrat CRM pour cette ligne" onchange="choisirContratImport(${l.idx}, this.value)" title="Plusieurs contrats partagent ce n° de police : choisis celui qui correspond à la branche" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.45);border-radius:8px;color:var(--text);padding:4px 6px;font-size:12px;max-width:220px">
       ${cands.map(c => `<option value="${c.id}" ${c.id === l.contratId ? 'selected' : ''}>${String(c.produit).replace(/</g, '&lt;')}${c.statut && c.statut !== 'actif' ? ` (${c.statut})` : ''}</option>`).join('')}
-    </select>`;
+    </select>`
+    : `<span style="color:var(--text-muted)">${String(l.contratProduit || 'Contrat').replace(/</g, '&lt;')}</span>`;
+  const doublon = l.doublon ? `<div title="${String(l.doublon.detail).replace(/"/g, '&quot;')}" style="margin-top:4px;font-size:11px;font-weight:600;color:#DC2626;white-space:normal;max-width:240px">⛔ ${l.doublon.certain ? 'Déjà importé' : 'Doublon probable'} — ${l.doublon.court}<span style="display:block;font-weight:400;color:var(--text-muted)">ligne décochée ; coche-la si c’est bien un nouveau versement</span></div>` : '';
+  const attente = l.attenteId ? `<label style="display:flex;align-items:center;gap:5px;margin-top:4px;font-size:11px;color:var(--text-muted);cursor:pointer;white-space:normal;max-width:240px"><input type="checkbox" ${l.imputer ? 'checked' : ''} onchange="_decompteLignes[${l.idx}].imputer=this.checked"/> Déduire de la commission en attente (reste CHF ${fmtCHF2(l.attenteReste)})</label>` : '';
+  return contrat + doublon + attente;
+}
+
+// Référence unique d'une ligne de décompte (police, facture, date, branche, montant) : mémorisée dans
+// le détail de la commission ou du versement créé → un réimport du même fichier est reconnu à coup sûr.
+function refLigneImport(l) {
+  return `ref:${normPoliceNumero(l.numeroContrat)}|${l.noFacture || ''}|${l.dateFacture || ''}|${(l.brancheInterne || '').toLowerCase().replace(/\s+/g, ' ').slice(0, 40)}|${Number(l.montant || 0).toFixed(2)}`;
+}
+// Complète une ligne : doublon éventuel (déjà importé / probable) et commission en attente à laquelle
+// imputer le montant (paiements échelonnés, rapprochement automatique). Un doublon est décoché d'office.
+function enrichirLigneImport(l) {
+  l.ref = refLigneImport(l);
+  l.doublon = null; l.attenteId = null; l.attenteReste = 0;
+  if (!l.contratId || !l.montant) return l;
+  const tranches = typeof allCommissionTranches !== 'undefined' ? allCommissionTranches : [];
+  const commsContrat = allCommissionsAttente.filter(c => c.contrat_id === l.contratId);
+  const certain = commsContrat.find(c => (c.detail_calcul || '').includes(`[${l.ref}]`)) || tranches.find(t => (t.note || '').includes(`[${l.ref}]`));
+  if (certain) {
+    l.doublon = { certain: true, court: 'cette ligne de facture existe déjà', detail: `Même police, facture, date, branche et montant — importée le ${fmtDate(certain.date_creation || certain.date_reception || certain.created_at)}` };
+  } else {
+    // Même contrat, même montant (au centime, ou au franc pour les anciens imports arrondis), déjà encaissé —
+    // seulement pour les commissions SANS référence (anciens imports, historique OZ) : une commission
+    // importée depuis REX porte sa référence de facture, une autre facture n'est donc pas un doublon
+    // (mensualités identiques d'une convention de paiement échelonné).
+    const egal = m => Math.abs(Number(m) - l.montant) < 0.01 || Math.round(Number(m)) === Math.round(l.montant);
+    const m = String(l.dateFacture || '').match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+    const isoFacture = m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : String(l.dateFacture || '').slice(0, 10);
+    const jours = (a, b) => Math.abs((new Date(a) - new Date(b)) / 86400000);
+    const proche = commsContrat.find(c => c.statut !== 'en_attente' && !(c.detail_calcul || '').includes('[ref:') && egal(c.montant_final != null ? c.montant_final : c.montant_estime))
+      || tranches.find(t => commsContrat.some(c => c.id === t.commission_id) && !(t.note || '').includes('[ref:') && egal(t.montant)
+        && isoFacture && t.date_reception && jours(t.date_reception, isoFacture) <= 5);
+    if (proche) {
+      const statut = proche.statut ? ({ 'reçue': 'reçue', 'versé_oz': 'versée à OZ', 'extourné': 'extournée' }[proche.statut] || proche.statut) : 'versée (versement partiel)';
+      l.doublon = { certain: false, court: `CHF ${fmtCHF2(l.montant)} déjà ${statut}${proche.date_reception ? ' le ' + fmtDate(proche.date_reception) : ''}`, detail: `Commission existante sur le même contrat avec le même montant (${proche.detail_calcul || proche.note || ''})` };
+    }
   }
-  return `<span style="color:var(--text-muted)">${String(l.contratProduit || 'Contrat').replace(/</g, '&lt;')}</span>`;
+  if (l.doublon) l.selectionne = false;
+  // Commission en attente sur ce contrat (ex. commission annuelle payée par mensualités) : déduire plutôt que créer
+  const attente = commsContrat.find(c => c.statut === 'en_attente' && (typeof commissionResteAttendu === 'function' ? commissionResteAttendu(c) : Number(c.montant_estime || 0)) > 0);
+  if (attente) {
+    l.attenteId = attente.id;
+    l.attenteReste = typeof commissionResteAttendu === 'function' ? commissionResteAttendu(attente) : Number(attente.montant_estime || 0);
+    if (l.imputer === undefined) l.imputer = true;
+  }
+  return l;
 }
 function choisirContratImport(idx, contratId) {
   const l = _decompteLignes[idx];
@@ -1700,6 +1746,11 @@ function choisirContratImport(idx, contratId) {
   l.contratId = ct.id; l.contratProduit = ct.produit;
   const cl = allClients.find(c => c.id === ct.client_id);
   if (cl) { l.clientId = cl.id; l.clientNomCRM = estEntreprise(cl) ? cl.nom : `${cl.prenom} ${cl.nom}`; }
+  enrichirLigneImport(l);
+  const cellule = document.getElementById(`imp-contrat-${idx}`);
+  if (cellule) cellule.innerHTML = htmlContratImport(l);
+  const coche = document.getElementById(`imp-check-${idx}`);
+  if (coche) coche.checked = l.selectionne;
 }
 
 // Familles de couverture reconnues dans un libellé de branche ou de produit (19.09.2026)
@@ -1770,6 +1821,7 @@ function reassocierLignesImport() {
     l.candidats = candidats.map(c => ({ id: c.id, produit: c.produit || 'Contrat', statut: c.statut }));
     l.contratProduit = contratTrouve ? contratTrouve.produit : null;
     if (contratTrouve) l.selectionne = true;
+    enrichirLigneImport(l);
   });
   renderImportDecompte(_decompteNomAssureur, _decompteCommissionTotaleAnnoncee);
 }
@@ -1830,6 +1882,8 @@ async function analyserDecompteExcel() {
   const file = input.files[0];
   if (!file) return;
   _decompteFichier = file;
+  // Versements partiels et commissions à jour : nécessaires à la détection des doublons et à la déduction
+  try { const [tr, co] = await Promise.all([dbGet('commission_tranches', 'select=*'), dbGet('commissions_attente', 'select=*')]); if (Array.isArray(tr)) allCommissionTranches = tr; if (Array.isArray(co)) allCommissionsAttente = co; } catch (e) {}
   document.getElementById('imp-file-nom').textContent = file.name;
 
   const buffer = await file.arrayBuffer();
@@ -1935,7 +1989,7 @@ function construireLigneImport(i, champs) {
   const { numeroContrat, noFacture, dateFacture, nomFichier, npa, localite, brancheInterne, commissionProduction, taux, montant } = champs;
   const { contratTrouve, clientTrouve, clientSuggere } = matcherContratEtClient(numeroContrat, brancheInterne, nomFichier);
   const candidats = allContrats.filter(c => c.numero_police && normPoliceNumero(c.numero_police) === normPoliceNumero(numeroContrat));
-  return {
+  return enrichirLigneImport({
     idx: i,
     numeroContrat,
     noFacture: noFacture || null,
@@ -1955,7 +2009,7 @@ function construireLigneImport(i, champs) {
     candidats: candidats.map(c => ({ id: c.id, produit: c.produit || 'Contrat', statut: c.statut })),
     contratProduit: contratTrouve ? contratTrouve.produit : null,
     selectionne: !!contratTrouve,
-  };
+  });
 }
 
 // ═══ IMPORT DÉCOMPTE PDF (compagnies qui n'envoient pas d'Excel, ex: AXA) — lecture par IA ═══
@@ -1963,6 +2017,8 @@ async function analyserDecomptePdf(input) {
   const file = input.files[0];
   if (!file) return;
   _decompteFichier = file;
+  // Versements partiels et commissions à jour : nécessaires à la détection des doublons et à la déduction
+  try { const [tr, co] = await Promise.all([dbGet('commission_tranches', 'select=*'), dbGet('commissions_attente', 'select=*')]); if (Array.isArray(tr)) allCommissionTranches = tr; if (Array.isArray(co)) allCommissionsAttente = co; } catch (e) {}
   document.getElementById('imp-file-nom').textContent = file.name;
   const statusEl = document.getElementById('imp-pdf-status');
   if (statusEl) { statusEl.textContent = '🤖 Lecture du PDF en cours (peut prendre 30-60 secondes)...'; statusEl.style.color = 'var(--accent)'; }
@@ -2056,7 +2112,7 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
             <td style="padding:5px 8px;white-space:nowrap;color:var(--text-muted)">${l.localite || '—'}</td>
             <td style="padding:5px 8px;white-space:nowrap">${l.clientNomCRM ? l.clientNomCRM : (l.clientSuggereNom ? `<span style="color:#f59e0b">≈ ${l.clientSuggereNom}</span>` : '<span style="color:#f87171">Non trouvé</span>')}${!l.clientNomCRM && l.clientSuggereNom ? `<div style="font-size:9.5px;color:var(--text-muted);white-space:normal;max-width:170px;margin-bottom:4px">nom trouvé, pas de contrat avec cette police — vérifie avant de créer</div><div style="display:flex;gap:6px"><button type="button" onclick="document.getElementById('modal-detail-contrat')?.remove(); showClient('${l.clientId}')" style="background:var(--surface-alt);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:10.5px;cursor:pointer;font-weight:700;white-space:nowrap">👁 Voir la fiche</button><button type="button" id="imp-creer-${l.idx}" onclick="creerContratDepuisImport(${l.idx})" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:3px 8px;font-size:10.5px;cursor:pointer;font-weight:700;white-space:nowrap">📝 Créer</button></div>` : ''}</td>
             <td style="padding:5px 8px;color:var(--text-muted);white-space:nowrap">${l.brancheInterne}</td>
-            <td style="padding:5px 8px;white-space:nowrap">${htmlContratImport(l)}</td>
+            <td id="imp-contrat-${l.idx}" style="padding:5px 8px;white-space:nowrap">${htmlContratImport(l)}</td>
             <td style="padding:5px 8px;text-align:right;white-space:nowrap;color:var(--text-muted)">CHF ${fmtCHF(l.commissionProduction)}</td>
             <td style="padding:5px 8px;text-align:right;white-space:nowrap">${l.taux}%</td>
             <td style="padding:5px 8px;text-align:right;white-space:nowrap"><input type="number" step="0.01" value="${l.montant}" class="imp-montant-input" data-idx="${l.idx}" style="width:75px;background:var(--surface-alt);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 5px;text-align:right" onchange="_decompteLignes[${l.idx}].montant = nombreCH(this.value)||0; recalculerTotalImport(); recalculerEcartBordereauImport();"/></td>
@@ -2209,7 +2265,7 @@ async function importerCommissionsEtBordereau(nomAssureur) {
   const fichierArchive = _decompteFichier && typeof archiverFichierBordereau === 'function' ? await archiverFichierBordereau(nouveauBordereau, _decompteFichier) : false;
   const dateReceptionCommission = surOZ ? (dateReception || aujourdhui) : ((dateReception && dateReception >= DATE_BASCULE_ASSUREX) ? dateReception : aujourdhui);
 
-  let nbCrees = 0, nbEchecs = 0, nbIgnores = 0;
+  let nbCrees = 0, nbEchecs = 0, nbIgnores = 0, nbImputes = 0, nbSoldes = 0;
   for (const l of aTraiter) {
     const montant = Math.round((Number(l.montant) || 0) * 100) / 100; // centimes conservés (19.09.2026)
     // Un montant négatif est une vraie correction de la compagnie (2e facture ajustant une branche
@@ -2222,6 +2278,23 @@ async function importerCommissionsEtBordereau(nomAssureur) {
       // nouvelle commission légitime — on ne la recrée pas.
       const dejaExistante = allCommissionsAttente.some(c => c.contrat_id === l.contratId && Math.round(Number(c.montant_estime || 0) * 100) / 100 === montant && c.date_creation === aujourdhui);
       if (dejaExistante) { nbIgnores++; continue; }
+      // Rapprochement : le contrat a une commission en attente (ex. commission annuelle payée par
+      // mensualités) → le montant est DÉDUIT de l'attente (versement partiel) au lieu de créer une
+      // nouvelle commission ; l'attente est soldée quand le total est atteint. Pas pour un décompte OZ.
+      if (!surOZ && l.imputer && l.attenteId) {
+        const attente = allCommissionsAttente.find(c => c.id === l.attenteId);
+        const rT = await dbPost('commission_tranches', { commission_id: l.attenteId, montant, date_reception: dateReceptionCommission, bordereau_id: nouveauBordereau.id, note: `Décompte ${compagnie} — ${l.brancheInterne || ''} (police ${l.numeroContrat}) [${l.ref}]` });
+        if (rT && rT.error) { nbEchecs++; continue; }
+        if (Array.isArray(rT) && rT[0]) allCommissionTranches.push(rT[0]);
+        nbImputes++;
+        const deja = typeof commissionDejaRecu === 'function' ? commissionDejaRecu(attente) : montant;
+        if (attente && deja >= Number(attente.montant_estime || 0) - 0.01) {
+          await dbPatch('commissions_attente', attente.id, { statut: 'reçue', montant_final: Math.round(deja * 100) / 100, bordereau_id: nouveauBordereau.id, date_reception: dateReceptionCommission });
+          attente.statut = 'reçue';
+          nbSoldes++;
+        }
+        continue;
+      }
       const r = await dbPost('commissions_attente', {
         client_id: l.clientId,
         contrat_id: l.contratId,
@@ -2230,7 +2303,7 @@ async function importerCommissionsEtBordereau(nomAssureur) {
         produit: l.brancheInterne || null,
         montant_estime: montant,
         montant_final: montant,
-        detail_calcul: `Décompte compagnie importé — ${l.brancheInterne || ''}${montant < 0 ? ' (correction' + (l.noFacture ? ' facture n°' + l.noFacture : '') + ')' : ''} : base CHF ${fmtCHF(l.commissionProduction)} × ${l.taux}% — contrat ${l.numeroContrat}`,
+        detail_calcul: `Décompte compagnie importé — ${l.brancheInterne || ''}${montant < 0 ? ' (correction' + (l.noFacture ? ' facture n°' + l.noFacture : '') + ')' : ''} : base CHF ${fmtCHF(l.commissionProduction)} × ${l.taux}% — contrat ${l.numeroContrat}${l.noFacture ? ` — facture n°${l.noFacture}` : ''}${l.dateFacture ? ` du ${l.dateFacture}` : ''} [${l.ref || refLigneImport(l)}]`,
         statut: surOZ ? 'versé_oz' : 'reçue',
         bordereau_id: nouveauBordereau.id,
         nature,
@@ -2243,8 +2316,9 @@ async function importerCommissionsEtBordereau(nomAssureur) {
   }
   logAction('import_decompte_et_bordereau', 'bordereaux', nouveauBordereau.id, `${numero} — ${compagnie} — ${nbCrees} commission(s) créée(s) et rapprochée(s)${surOZ ? ' — encaissé par OZ Assure' : ''}`);
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
+  allCommissionTranches = await dbGet('commission_tranches', 'select=*') || [];
   allBordereaux = await dbGet('bordereaux', 'select=*');
-  showError(`✓ Bordereau ${numero} créé avec ${nbCrees} commission(s) ${surOZ ? 'enregistrée(s) en « Versé OZ » (hors chiffres Assurex)' : 'rapprochée(s)'}${fichierArchive ? ' — fichier archivé 📎' : ''}.${nbIgnores ? ' ' + nbIgnores + ' ligne(s) ignorée(s) car déjà importée(s) aujourd\'hui (doublon évité).' : ''}${nbEchecs ? ' ⚠️ ' + nbEchecs + ' échec(s) d’écriture — vérifie manuellement depuis le bordereau.' : ''}`);
+  showError(`✓ Bordereau ${numero} créé avec ${nbCrees} commission(s) ${surOZ ? 'enregistrée(s) en « Versé OZ » (hors chiffres Assurex)' : 'rapprochée(s)'}${nbImputes ? ` et ${nbImputes} versement(s) déduit(s) de commissions en attente${nbSoldes ? ` (${nbSoldes} soldée(s))` : ''}` : ''}${fichierArchive ? ' — fichier archivé 📎' : ''}.${nbIgnores ? ' ' + nbIgnores + ' ligne(s) ignorée(s) car déjà importée(s) aujourd\'hui (doublon évité).' : ''}${nbEchecs ? ' ⚠️ ' + nbEchecs + ' échec(s) d’écriture — vérifie manuellement depuis le bordereau.' : ''}`);
   if (btn) { btn.disabled = false; btn.textContent = '✓ Créer les commissions et le bordereau'; }
   _decompteLignes = []; _decompteNomAssureur = ''; _decompteCommissionTotaleAnnoncee = null; _decompteFichier = null;
   navigate('bordereaux');

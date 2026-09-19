@@ -363,7 +363,8 @@ function renderToutesCommissions() {
 
   _tcCommissionsFiltrees = filtered;
 
-  const totalAttente = filtered.filter(c => c.statut === 'en_attente').reduce((s,c) => s + montantC(c), 0);
+  // En attente : reste après versements partiels (paiements échelonnés)
+  const totalAttente = filtered.filter(c => c.statut === 'en_attente').reduce((s,c) => s + (typeof commissionResteAttendu === 'function' ? commissionResteAttendu(c) : montantC(c)), 0);
   const totalRecuBrut = filtered.filter(c => c.statut === 'reçue').reduce((s,c) => s + montantC(c), 0);
   const totalExtourne = filtered.filter(c => c.statut === 'extourné').reduce((s,c) => s + montantC(c), 0);
   const totalRecuNet = totalRecuBrut - totalExtourne;

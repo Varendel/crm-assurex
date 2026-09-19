@@ -879,18 +879,20 @@ async function restaurerEtat(etat) {
 // Dashboard reflète TOUJOURS l'état réel de la base, y compris après une
 // modification faite directement en SQL (hors de l'interface du CRM).
 async function refreshCoreData() {
-  const [contrats, commissions, bordereaux, clients, fiches] = await Promise.all([
+  const [contrats, commissions, bordereaux, clients, fiches, tranches] = await Promise.all([
     dbGet('contrats', 'select=*'),
     dbGet('commissions_attente', 'select=*'),
     dbGet('bordereaux', 'select=*'),
     dbGet('clients', 'select=*'),
     dbGet('fiches_paie', 'select=*'),
+    dbGet('commission_tranches', 'select=*'),
   ]);
   allContrats = contrats || allContrats;
   allCommissionsAttente = commissions || allCommissionsAttente;
   allBordereaux = bordereaux || allBordereaux;
   allClients = clients || allClients;
   allFichesPaie = fiches || allFichesPaie;
+  if (Array.isArray(tranches)) allCommissionTranches = tranches; // versements partiels (reste attendu, encaissé)
 }
 
 async function navigate(view, opts) {

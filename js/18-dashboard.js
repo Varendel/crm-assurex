@@ -61,14 +61,22 @@ function dbxDonnees() {
   }).filter(x => !x.d || x.d >= DATE_BASCULE_ASSUREX);
   const commMois = Object.fromEntries(mois.map(m => [m, 0]));
   recues.forEach(x => { if (x.d && commMois[x.d.slice(0, 7)] != null) commMois[x.d.slice(0, 7)] += x.signe * dbxMontant(x.ca); });
-  const totalRecu = recues.reduce((s, x) => s + x.signe * dbxMontant(x.ca), 0);
+  let totalRecu = recues.reduce((s, x) => s + x.signe * dbxMontant(x.ca), 0);
+  // Versements partiels déjà encaissés sur des commissions encore en attente (paiement échelonné)
+  (typeof allCommissionTranches !== 'undefined' ? allCommissionTranches : []).forEach(t => {
+    const ca = allCommissionsAttente.find(c => c.id === t.commission_id);
+    if (!ca || ca.statut !== 'en_attente' || !t.date_reception || t.date_reception < DATE_BASCULE_ASSUREX) return;
+    const m = Number(t.montant || 0);
+    totalRecu += m;
+    if (commMois[t.date_reception.slice(0, 7)] != null) commMois[t.date_reception.slice(0, 7)] += m;
+  });
 
   const commAttente = allCommissionsAttente.filter(ca => {
     if (ca.statut !== 'en_attente') return false;
     const ct = allContrats.find(c => c.id === ca.contrat_id);
     return ct && ct.statut !== 'annulé' && ct.date_debut && ct.date_debut >= DATE_BASCULE_ASSUREX;
   });
-  const totalAttente = commAttente.reduce((s, ca) => s + Number(ca.montant_estime || 0), 0);
+  const totalAttente = commAttente.reduce((s, ca) => s + (typeof commissionResteAttendu === 'function' ? commissionResteAttendu(ca) : Number(ca.montant_estime || 0)), 0);
 
   const actifs = allContrats.filter(ct => !DBX_INACTIFS.includes(ct.statut));
   const portefeuille = actifs.reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);

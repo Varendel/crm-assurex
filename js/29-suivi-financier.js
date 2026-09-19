@@ -68,6 +68,16 @@ function sfxDonnees() {
   const mois = [];
   for (let i = 11; i >= 0; i--) { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i); mois.push(sfxIso(d).slice(0, 7)); }
   const parMois = mois.map(m => enc.filter(e => e.date.startsWith(m)).reduce((s, e) => s + e.montant, 0));
+  // Production encaissée par OZ Assure (compte courant OZ, net crédit − débit) : affichée à côté
+  // d'Assurex, dans une autre couleur, pour voir toute la production du groupe jusqu'à la fusion.
+  const ledger = window._ck && window._ck.ozLedger;
+  if (!ledger && window._ck && !window._ck.ozLedgerEnCours && typeof dbGet === 'function') {
+    window._ck.ozLedgerEnCours = true;
+    dbGet('commissions_oz', 'select=*&order=date_mouvement.asc').then(r => { window._ck.ozLedger = Array.isArray(r) ? r : []; window._ck.ozLedgerEnCours = false; if (typeof ckRerendre === 'function') ckRerendre(); });
+  }
+  const netOZ = r => Number(r.credit || 0) - Number(r.debit || 0);
+  const parMoisOZ = mois.map(m => (ledger || []).filter(r => String(r.date_mouvement || '').startsWith(m)).reduce((s, r) => s + netOZ(r), 0));
+  const recuAnneeOZ = (ledger || []).filter(r => String(r.date_mouvement || '').startsWith(annee)).reduce((s, r) => s + netOZ(r), 0);
   // Attente par compagnie
   const cies = {};
   attente.forEach(ca => { const k = sfxCie(ca.compagnie); cies[k] = cies[k] || { total: 0, nb: 0 }; cies[k].total += reste(ca); cies[k].nb++; });
@@ -77,7 +87,30 @@ function sfxDonnees() {
     return { l, c, nb: liste.length, total: liste.reduce((s, ca) => s + reste(ca), 0) };
   });
   const oz = allCommissionsAttente.filter(ca => ca.statut === 'versé_oz');
-  return { auj, annee, recuAnnee, totalReste, attente, retards, delaiMoyen, delais, mois, parMois, cies, tranchesAge, oz, reste };
+  return { auj, annee, recuAnnee, totalReste, attente, retards, delaiMoyen, delais, mois, parMois, parMoisOZ, recuAnneeOZ, ozCharge: !!ledger, cies, tranchesAge, oz, reste };
+}
+
+// Barres empilées Assurex (bleu) + OZ Assure (vert) par mois, avec légende
+function sfxBarresEncaisse(D) {
+  const tot = D.mois.map((m, i) => Math.max(0, D.parMois[i]) + Math.max(0, D.parMoisOZ[i] || 0));
+  const max = Math.max(1, ...tot);
+  const CA = '#00CFFF', CO = '#22C55E';
+  return `<div style="display:flex;align-items:flex-end;gap:6px;height:190px;padding-top:18px">${D.mois.map((m, i) => {
+    const a = Math.max(0, D.parMois[i]), o = Math.max(0, D.parMoisOZ[i] || 0), t = a + o;
+    const h = Math.round(t / max * 150);
+    return `<div style="flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%" title="${dbxLibelleMois(m)} ${m.slice(0, 4)} — Assurex CHF ${fmtCHF(Math.round(a))} · OZ CHF ${fmtCHF(Math.round(o))}">
+      <span style="font-size:10px;color:var(--text-muted);margin-bottom:3px;white-space:nowrap">${t ? dbxCompact(t) : ''}</span>
+      <span style="width:70%;max-width:34px;height:${Math.max(t ? 3 : 2, h)}px;display:flex;flex-direction:column;border-radius:6px 6px 3px 3px;overflow:hidden;background:var(--surface-alt,rgba(148,163,184,.15))">
+        ${o ? `<i style="flex:${o};background:${CO}"></i>` : ''}${a ? `<i style="flex:${a};background:${CA}"></i>` : ''}
+      </span>
+      <span style="font-size:10.5px;color:var(--text-muted);margin-top:5px">${dbxLibelleMois(m)}</span>
+    </div>`;
+  }).join('')}</div>
+  <div style="display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:12px;color:var(--text-muted)">
+    <span style="display:inline-flex;align-items:center;gap:6px"><i style="width:11px;height:11px;border-radius:3px;background:${CA}"></i>Encaissé par Assurex</span>
+    <span style="display:inline-flex;align-items:center;gap:6px"><i style="width:11px;height:11px;border-radius:3px;background:${CO}"></i>Encaissé par OZ Assure (compte courant OZ)</span>
+    ${D.ozCharge ? '' : '<span>· chargement du compte courant OZ…</span>'}
+  </div>`;
 }
 
 function viewSuiviFinancierV2() {
@@ -128,13 +161,14 @@ function htmlSfxPilotage(D) {
   return `
     <div class="dbx-kpis">
       ${dbxKpi({ label: `Reçu en ${D.annee} (Assurex)`, valeur: D.recuAnnee, prefixe: 'CHF ', sous: `depuis le ${fmtDate(sfxBascule())}`, i: 0 })}
+      ${dbxKpi({ label: `Encaissé par OZ en ${D.annee}`, valeur: D.recuAnneeOZ || 0, prefixe: 'CHF ', sous: D.ozCharge ? `production du groupe : CHF ${fmtCHF(Math.round((D.recuAnnee || 0) + (D.recuAnneeOZ || 0)))}` : 'chargement…', i: 0 })}
       ${dbxKpi({ label: 'Reste attendu', valeur: D.totalReste, prefixe: 'CHF ', sous: `${D.attente.length} commission${D.attente.length > 1 ? 's' : ''}`, onclick: "navigate('commissions-attente')", i: 1 })}
       ${dbxKpi({ label: 'En retard', valeur: totalRetard, prefixe: 'CHF ', sous: `${D.retards.length} dossier${D.retards.length > 1 ? 's' : ''}`, onclick: "window._sfxOnglet='retards';navigate('suivi-financier')", i: 2 })}
       ${dbxKpi({ label: 'Délai réel de paiement', valeur: D.delaiMoyen ?? 0, suffixe: D.delaiMoyen === null ? '' : ' j', sous: D.delais.length ? `moyenne sur ${D.delais.length} paiement${D.delais.length > 1 ? 's' : ''}` : 'pas encore de paiement daté', i: 3 })}
     </div>
     <div class="dbx-grille dbx-grille-egale">
-      <section class="dbx-carte dbx-anim" style="--i:4"><header class="dbx-carte-tete"><h2>Encaissé par mois</h2><span class="dbx-carte-sous">12 derniers mois · Assurex</span></header>
-        ${dbxBarres(D.mois, D.parMois, '#00CFFF', dbxCHF)}</section>
+      <section class="dbx-carte dbx-anim" style="--i:4"><header class="dbx-carte-tete"><h2>Encaissé par mois</h2><span class="dbx-carte-sous">12 derniers mois · Assurex + OZ Assure</span></header>
+        ${sfxBarresEncaisse(D)}</section>
       <section class="dbx-carte dbx-anim" style="--i:5"><header class="dbx-carte-tete"><h2>Attendu — commissions de gestion</h2><span class="dbx-carte-sous">selon la règle de versement</span></header>
         ${pv ? sfxBarres([{ l: 'Retard', v: pv.retard.total, c: '#EF4444' }, ...pv.mois.map(m => ({ l: dbxLibelleMois(m.cle), v: m.total, c: '#5B82C9' }))]) : '<div class="dbx-vide-petit">—</div>'}</section>
       <section class="dbx-carte dbx-anim" style="--i:6"><header class="dbx-carte-tete"><h2>Reste attendu par compagnie</h2><button type="button" class="dbx-lien" onclick="navigate('commissions-attente')">Toutes les commissions →</button></header>

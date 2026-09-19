@@ -253,6 +253,7 @@ function viewDashboard() {
       <div style="display:flex;gap:8px">
         <button id="btn-sync-outlook" onclick="synchroniserOutlook()" title="Vérifie dans Outlook si des compagnies ont répondu aux demandes d'offre envoyées" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:9px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">📧 Synchroniser Outlook</button>
         <button onclick="navigate('dashboard')" title="Recharger les données depuis Supabase" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:9px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">🔄 Actualiser</button>
+        ${typeof dbxBasculer === 'function' ? `<button type="button" onclick="dbxBasculer(false)" style="background:var(--accent);border:none;color:var(--on-accent);border-radius:9px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer">✨ Nouveau tableau de bord</button>` : ''}
       </div>
     </div>
     <div style="margin-bottom:16px"></div>

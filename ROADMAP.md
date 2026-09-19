@@ -64,7 +64,8 @@ sont en bas de ce fichier.
 ## 🔵 Priorité 3 — Produit
 
 - [x] Nouveau design, étape 1 (19.09) : police Geist sans le « tout en gras », couleurs de la charte REX (cyan #00CFFF / bleu marine #113679), thème clair avec menu blanc, logo REX + mascotte (menu et connexion)
-- [ ] Nouveau design, étape 2 : nouveau tableau de bord (maquette validée)
+- [x] Nouveau design, étape 2 (19.09) : kanban du pipeline, fiche client avec journal d'activité, thème clair deux tons
+- [x] **Nouveau tableau de bord** (19.09, js/18-dashboard.js) — onglets « Aujourd'hui » (liste d'actions par urgence, cochables sur place ; nouveautés 7 jours ; signaux à surveiller ; agenda) et « Pilotage » (graphiques 12 mois, portefeuille par compagnie, pipeline par stade). L'ancien reste accessible (« Vue classique »)
 - [ ] **Espace client** (app installable) — prérequis : rôles
 - [ ] Ouverture à 1–2 cabinets pilotes — prérequis : priorité 1 complète + licence
 - [ ] Code : découpage en modules, build (Vite), tests sur commissions et signature

@@ -1311,7 +1311,8 @@ async function renderView() {
     case 'dashboard':
       main.innerHTML = '<div class="loader">Actualisation des données...</div>';
       await refreshCoreData();
-      main.innerHTML = viewDashboard();
+      // Nouveau tableau de bord (js/18) sauf si « Vue classique » a été choisie
+      main.innerHTML = (typeof viewDashboardV2 === 'function' && !dbxClassiqueActive()) ? viewDashboardV2() : viewDashboard();
       mountCalendarWidget();
       break;
     case 'clients': main.innerHTML = viewPortefeuille('tous'); break;

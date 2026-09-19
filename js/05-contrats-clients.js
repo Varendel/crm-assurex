@@ -1965,11 +1965,54 @@ async function envoyerVersAutreAppareil(clientId, mode) {
       clearInterval(window._pollingSignatureInterval);
       document.getElementById('modal-signature-mandat')?.remove();
       signatureContexteActuel = null;
-      if (contexteFige && contexteFige.type === 'contrat') genererDocumentSigne(clientId, demande.signature_data, contexteFige);
-      else if (contexteFige && contexteFige.type === 'resiliation') genererLettreResiliationSignee(clientId, demande.signature_data, contexteFige);
-      else genererMandatCourtage(clientId, demande.signature_data, { clausesSpeciales: contexteFige ? contexteFige.clausesSpeciales : null });
+      // Corrige un bug du 19.09.2026 : ce chemin ne passait jamais traite=true, donc
+      // recupererSignaturesEnAttente re-générait le même mandat au rechargement suivant (doublons
+      // dans mandats_signes). On "réserve" la demande avant de générer — si le rattrapage en tâche
+      // de fond l'a déjà prise, on ne fait rien.
+      const filtre = `token=eq.${encodeURIComponent(token)}`;
+      if (!(await reserverSignatureRequest(filtre))) return;
+      let r;
+      if (contexteFige && contexteFige.type === 'contrat') r = await genererDocumentSigne(clientId, demande.signature_data, contexteFige);
+      else if (contexteFige && contexteFige.type === 'resiliation') r = await genererLettreResiliationSignee(clientId, demande.signature_data, contexteFige);
+      else r = await genererMandatCourtage(clientId, demande.signature_data, { clausesSpeciales: contexteFige ? contexteFige.clausesSpeciales : null });
+      if (r && r.error) {
+        await libererSignatureRequest(filtre); // le rattrapage retentera au prochain passage
+        showError('Signature reçue, mais l’enregistrement sur la fiche client a échoué — il sera retenté automatiquement.');
+        return;
+      }
+      // La modale se ferme et l'aperçu s'ouvre dans un pop-up, souvent bloqué par le navigateur
+      // car déclenché par le sondage et non par un clic : sans ce message, rien n'indiquait que
+      // la signature était bien arrivée.
+      showError('✓ Signature reçue et enregistrée sur la fiche client (onglet Mandats).');
     }
   }, 3000);
+}
+
+// Passe traite=true uniquement si la demande n'est pas déjà traitée, et dit si c'est nous qui
+// l'avons prise — évite que le sondage en direct et le rattrapage enregistrent tous deux le mandat.
+async function reserverSignatureRequest(filtre) {
+  try {
+    const tokenAcces = await getValidAccessToken() || SUPABASE_KEY;
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/signature_requests?${filtre}&traite=eq.false`, {
+      method: 'PATCH',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${tokenAcces}`, 'Content-Type': 'application/json', Prefer: 'return=representation' },
+      body: JSON.stringify({ traite: true }),
+    });
+    if (!r.ok) { console.error('reserverSignatureRequest HTTP', r.status); return false; }
+    const lignes = await r.json();
+    return Array.isArray(lignes) && lignes.length > 0;
+  } catch (e) { console.error('reserverSignatureRequest exception', e); return false; }
+}
+
+async function libererSignatureRequest(filtre) {
+  try {
+    const tokenAcces = await getValidAccessToken() || SUPABASE_KEY;
+    await fetch(`${SUPABASE_URL}/rest/v1/signature_requests?${filtre}`, {
+      method: 'PATCH',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${tokenAcces}`, 'Content-Type': 'application/json', Prefer: 'return=minimal' },
+      body: JSON.stringify({ traite: false }),
+    });
+  } catch (e) { console.error('libererSignatureRequest exception', e); }
 }
 
 // ── Rattrapage des signatures reçues alors que personne ne regardait l'écran ──────────────────
@@ -1990,6 +2033,9 @@ async function recupererSignaturesEnAttente() {
 
   let recuperes = 0;
   for (const d of demandes) {
+    const filtre = `id=eq.${d.id}`;
+    // Déjà prise entre-temps par le sondage en direct (ou un autre onglet) → on ne la refait pas
+    if (!(await reserverSignatureRequest(filtre))) continue;
     try {
       const contexte = { type: d.type, documentNom: d.document_nom, contenuCorps: d.contenu_corps, documentPath: d.document_path };
       let r;
@@ -2001,8 +2047,7 @@ async function recupererSignaturesEnAttente() {
           // on ne peut pas reconstruire fidèlement le document, mais on ne veut pas non plus la
           // perdre silencieusement : on prévient Jonathan pour qu'il vérifie/relance à la main.
           showError(`⚠️ Signature reçue pour "${d.document_nom || 'un document'}" (${d.client_nom || ''}) mais impossible à finaliser automatiquement (ancienne demande) — vérifie sur la fiche client et relance la résiliation si besoin.`);
-          await dbPatch('signature_requests', d.id, { traite: true }).catch(() => {});
-          continue;
+          continue; // déjà marquée traite=true par reserverSignatureRequest
         }
         r = await genererLettreResiliationSignee(d.client_id, d.signature_data, contexte, { silencieux: true });
       } else {
@@ -2010,12 +2055,13 @@ async function recupererSignaturesEnAttente() {
       }
       if (r && r.error) {
         console.error('recupererSignaturesEnAttente — échec enregistrement pour', d.id, r);
-        continue; // on retentera au prochain passage plutôt que de marquer traité à tort
+        await libererSignatureRequest(filtre); // on retentera au prochain passage plutôt que de marquer traité à tort
+        continue;
       }
-      await dbPatch('signature_requests', d.id, { traite: true });
       recuperes++;
     } catch (e) {
       console.error('recupererSignaturesEnAttente — erreur sur', d.id, e);
+      await libererSignatureRequest(filtre);
     }
   }
   if (recuperes > 0) {

@@ -68,10 +68,13 @@ function eqAnalyse(c) {
     if (b.adulteActif && age !== null && (age < 18 || age > 64)) return false;
     return true;
   }).map(b => {
-    let couvert = produits.some(b.match);
+    // « Chez nous » = contrat commissionné ; « ailleurs » = police externe connue (non commissionnée)
+    const nous = contrats.filter(ct => ct.commissionne !== false && b.match((ct.produit || '').toLowerCase()));
+    const externe = contrats.find(ct => ct.commissionne === false && b.match((ct.produit || '').toLowerCase())) || null;
+    let couvert = nous.length > 0 || !!externe;
     let viaFamille = false;
     if (!couvert && b.famille && enfant && produitsParents.some(b.match)) { couvert = true; viaFamille = true; }
-    return { ...b, couvert, viaFamille };
+    return { ...b, couvert, viaFamille, ailleurs: !nous.length && !!externe, externe };
   });
   const couverts = besoins.filter(b => b.couvert).length;
   return {
@@ -128,11 +131,14 @@ function renderEquipement() {
   const mono = equipes.filter(a => a.contrats.length === 1);
   const tauxMoyen = equipes.length ? equipes.reduce((s, a) => s + a.taux, 0) / equipes.length : 0;
   const trous = equipes.reduce((s, a) => s + a.manquants.length, 0);
+  const ailleurs = equipes.flatMap(a => a.besoins.filter(b => b.ailleurs));
+  const bientot = ailleurs.filter(b => b.externe.date_echeance && (new Date(b.externe.date_echeance) - new Date()) / 864e5 < 200).length;
   zoneStats.innerHTML = `
     ${statCard('Clients équipés', equipes.length, '#38bdf8', `${sans.length} sans contrat actif`)}
     ${statCard('Taux d’équipement moyen', Math.round(tauxMoyen * 100) + ' %', '#4ade80', 'des besoins de base couverts')}
     ${statCard('Un seul contrat', mono.length, '#f59e0b', 'clients mono-équipés')}
-    ${statCard('Ventes croisées possibles', trous, '#a78bfa', 'besoins non couverts chez des clients équipés')}`;
+    ${statCard('Ventes croisées possibles', trous, '#a78bfa', 'besoins non couverts chez des clients équipés')}
+    ${statCard('Assurés ailleurs', ailleurs.length, '#8B5CF6', bientot ? `${bientot} échéance${bientot > 1 ? 's' : ''} dans les 6 mois — à transférer` : 'polices externes connues')}`;
 
   // Tableau des besoins : couverture et nombre de clients équipés à qui il manque ce besoin
   const besoinsDefs = EQ_BESOINS[eqFiltres.segment];
@@ -204,10 +210,15 @@ function renderEquipementListe() {
         <div style="font-size:13px;font-weight:800;color:var(--text)">${a.couverts}/${a.besoins.length}</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           ${a.besoins.map(b => {
-            if (b.couvert) return `<span title="${eqEsc(b.label)}${b.viaFamille ? ' (via les parents)' : ''}" style="font-size:11px;padding:3px 8px;border-radius:999px;background:rgba(74,222,128,0.12);color:#4ade80;border:1px solid rgba(74,222,128,0.3)">✓ ${b.court}</span>`;
             const opp = eqOppOuverte(c.id, b.id);
+            if (b.ailleurs) {
+              const x = b.externe, ech = x.date_echeance ? fmtDate(x.date_echeance) : null;
+              const proche = x.date_echeance && (new Date(x.date_echeance) - new Date()) / 864e5 < 200;
+              return `<button type="button" onclick="${opp ? `opportuniteEnEditionId='${opp.id}';navigate('nouvelle-opportunite')` : `eqCreerOpportunite('${c.id}', '${b.id}', true)`}" title="Assuré ailleurs${x.compagnie ? ' : ' + eqEsc(x.compagnie) : ''}${ech ? ' — échéance ' + ech : ''} · clic : ${opp ? 'ouvrir l’opportunité' : 'proposer un transfert'}" style="font-size:11px;padding:3px 8px;border-radius:999px;background:${proche ? 'rgba(167,139,250,0.14)' : 'var(--surface-alt)'};color:${proche ? '#8B5CF6' : 'var(--text-muted)'};border:1px solid ${proche ? 'rgba(139,92,246,0.4)' : 'var(--border)'};cursor:pointer">${opp ? '🎯' : '◌'} ${b.court}${x.compagnie ? ' · ' + eqEsc(x.compagnie.split(' ')[0]) : ''}${proche && ech ? ' · ' + ech : ''}</button>`;
+            }
+            if (b.couvert) return `<span title="${eqEsc(b.label)}${b.viaFamille ? ' (via les parents)' : ''}" style="font-size:11px;padding:3px 8px;border-radius:999px;background:rgba(74,222,128,0.12);color:#4ade80;border:1px solid rgba(74,222,128,0.3)">✓ ${b.court}</span>`;
             if (opp) return `<button type="button" onclick="opportuniteEnEditionId='${opp.id}';navigate('nouvelle-opportunite')" title="Opportunité déjà ouverte" style="font-size:11px;padding:3px 8px;border-radius:999px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);cursor:pointer">🎯 ${b.court}</button>`;
-            return `<button type="button" onclick="eqCreerOpportunite('${c.id}', '${b.id}')" title="Créer une opportunité : ${eqEsc(b.label)}" style="font-size:11px;padding:3px 8px;border-radius:999px;background:transparent;color:#f59e0b;border:1px dashed rgba(245,158,11,0.6);cursor:pointer">+ ${b.court}</button>`;
+            return `<span style="display:inline-flex"><button type="button" onclick="eqCreerOpportunite('${c.id}', '${b.id}')" title="Créer une opportunité : ${eqEsc(b.label)}" style="font-size:11px;padding:3px 8px;border-radius:999px 0 0 999px;background:transparent;color:#f59e0b;border:1px dashed rgba(245,158,11,0.6);cursor:pointer">+ ${b.court}</button><button type="button" onclick="eqMarquerAilleurs('${c.id}', '${b.id}')" title="Déjà assuré ailleurs : saisir la police externe (compagnie, échéance)" style="font-size:11px;padding:3px 7px;border-radius:0 999px 999px 0;background:transparent;color:var(--text-muted);border:1px dashed var(--border);border-left:none;cursor:pointer">ailleurs</button></span>`;
           }).join('')}
         </div>
         <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF(Math.round(a.prime))}</div>
@@ -216,7 +227,58 @@ function renderEquipementListe() {
   </div>`;
 }
 
-async function eqCreerOpportunite(clientId, besoinId) {
+// Produit enregistré pour une police externe (libellé reconnu par le besoin correspondant)
+const EQ_PRODUIT_EXTERNE = {
+  lamal: 'Assurance maladie (LAMal)', complementaire: 'Complémentaire santé', rc_menage: 'RC + inventaire du ménage',
+  prevoyance: 'Assurance vie liée 3a (pilier 3a)', pj: 'Protection juridique privée', rc_ent: 'RC entreprise / exploitation',
+  laa: 'LAA (assurance-accidents obligatoire)', pgm: 'Perte de gain maladie collective', lpp: 'LPP collective (2e pilier entreprise)',
+  choses: 'Choses entreprise (inventaire commercial)', pj_ent: 'Protection juridique professionnelle / entreprise',
+};
+
+// « Assuré ailleurs » : la police externe est saisie comme contrat NON commissionné (compagnie,
+// échéance, prime si connue) — le besoin n'est plus « manquant » mais « chez un concurrent »,
+// avec une piste de transfert à l'échéance (19.09.2026).
+function eqMarquerAilleurs(clientId, besoinId) {
+  const c = allClients.find(x => x.id === clientId);
+  if (!c) return;
+  const besoin = EQ_BESOINS[estEntreprise(c) ? 'entreprise' : 'prive'].find(b => b.id === besoinId);
+  if (!besoin) return;
+  const cies = [...new Set((allContrats || []).map(ct => ct.compagnie).filter(Boolean))].sort();
+  creerModale('modal-eq-ailleurs', `
+    <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:420px;width:100%">
+      <div style="font-size:16px;font-weight:800;margin-bottom:4px">${eqEsc(besoin.label)} — assuré ailleurs</div>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">${eqEsc(estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`)} · la police est enregistrée comme contrat <strong>non commissionné</strong>, pour préparer un transfert à l'échéance.</div>
+      <div class="form-field"><label class="form-label">Compagnie actuelle</label><input class="form-input" id="eqa-cie" list="eqa-cies" placeholder="ex. Helsana, AXA…"/><datalist id="eqa-cies">${cies.map(n => `<option value="${eqEsc(n)}">`).join('')}</datalist></div>
+      <div class="form-field" style="margin-top:10px"><label class="form-label">Échéance (si connue)</label><input class="form-input" id="eqa-ech" type="date"/></div>
+      <div class="form-field" style="margin-top:10px"><label class="form-label">Prime annuelle (si connue)</label><input class="form-input" id="eqa-prime" inputmode="decimal" placeholder="CHF"/></div>
+      <div style="display:flex;gap:10px;margin-top:16px">
+        <button class="btn-secondary" style="flex:1" onclick="document.getElementById('modal-eq-ailleurs').remove()">Annuler</button>
+        <button class="btn-save" style="flex:1" onclick="eqEnregistrerAilleurs('${clientId}','${besoinId}')">Enregistrer</button>
+      </div>
+    </div>`, { opacite: 0.6, padding: '16px', overflowY: false });
+}
+
+async function eqEnregistrerAilleurs(clientId, besoinId) {
+  const cie = (document.getElementById('eqa-cie')?.value || '').trim();
+  const ech = document.getElementById('eqa-ech')?.value || null;
+  const prime = typeof nombreCH === 'function' ? nombreCH(document.getElementById('eqa-prime')?.value || '') : parseFloat(document.getElementById('eqa-prime')?.value);
+  const signataire = allAgents.find(a => a.role === 'signataire');
+  const body = {
+    client_id: clientId, compagnie: cie ? (typeof normaliserCompagnie === 'function' ? normaliserCompagnie(cie) : cie) : 'Autre compagnie',
+    produit: EQ_PRODUIT_EXTERNE[besoinId] || besoinId, statut: 'actif', commissionne: false, date_echeance: ech,
+    prime_annuelle: Number.isFinite(prime) && prime > 0 ? prime : 0, periodicite: 1,
+    modules: 'Police externe — assuré ailleurs (saisie depuis Équipement)', apporteur_id: signataire ? signataire.id : null,
+  };
+  const r = await dbPost('contrats', body);
+  if (r && r.error) { showError('Police externe non enregistrée : ' + errMsg(r)); return; }
+  logAction('create_contrat', 'contrats', r && r[0] ? r[0].id : null, `Police externe (assuré ailleurs) — ${body.produit} — ${body.compagnie}`);
+  allContrats = await dbGet('contrats', 'select=*');
+  document.getElementById('modal-eq-ailleurs')?.remove();
+  showError(`✓ Enregistré : assuré ailleurs (${body.compagnie})${ech ? `, échéance ${fmtDate(ech)}` : ''}.`);
+  renderEquipement();
+}
+
+async function eqCreerOpportunite(clientId, besoinId, transfert) {
   const c = allClients.find(x => x.id === clientId);
   if (!c) return;
   const segment = estEntreprise(c) ? 'entreprise' : 'prive';
@@ -224,9 +286,13 @@ async function eqCreerOpportunite(clientId, besoinId) {
   if (!besoin || eqOppOuverte(clientId, besoinId)) return;
   const signataire = allAgents.find(a => a.role === 'signataire');
   const moi = allAgents.find(a => a.email === (currentUser && currentUser.email));
-  const dans30j = new Date(Date.now() + 30 * 86400000).toISOString().split('T')[0];
+  const externe = transfert ? eqContratsActifs(clientId).find(ct => ct.commissionne === false && besoin.match((ct.produit || '').toLowerCase())) : null;
+  // Transfert : échéance de l'opportunité = 4 mois avant l'échéance de la police externe (préavis)
+  let echeanceOpp = new Date(Date.now() + 30 * 86400000);
+  if (externe && externe.date_echeance) { const d = new Date(externe.date_echeance); d.setMonth(d.getMonth() - 4); if (d > new Date()) echeanceOpp = d; }
+  const dans30j = echeanceOpp.toISOString().split('T')[0];
   const body = {
-    titre: `Vente croisée — ${besoin.label} [${besoin.id}]`,
+    titre: `Vente croisée — ${transfert ? 'Transfert ' : ''}${besoin.label} [${besoin.id}]`,
     client_id: clientId,
     stade: 'Contact',
     probabilite: 30,
@@ -234,7 +300,9 @@ async function eqCreerOpportunite(clientId, besoinId) {
     date_echeance: dans30j,
     apporteur_id: (moi || signataire || {}).id || null,
     produits: [besoin.catalogue],
-    notes: `Créée depuis « Équipement & ventes croisées » : le client n'a pas encore de ${besoin.label.toLowerCase()} chez nous.`,
+    notes: externe
+      ? `Créée depuis « Équipement & ventes croisées » : ${besoin.label.toLowerCase()} actuellement chez ${externe.compagnie || 'une autre compagnie'}${externe.date_echeance ? ` (échéance ${fmtDate(externe.date_echeance)} — résilier avant le préavis)` : ''}. Proposer une comparaison et un transfert.`
+      : `Créée depuis « Équipement & ventes croisées » : le client n'a pas encore de ${besoin.label.toLowerCase()} chez nous.`,
   };
   const r = await dbPost('opportunites', body);
   if (r && r.error) { showError('Opportunité non créée : ' + errMsg(r)); return; }

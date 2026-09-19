@@ -81,12 +81,12 @@ sont en bas de ce fichier.
       classement par date limite de résiliation, suivi de revue, tâche de revue en un clic
 - [x] **Relances LAMal** (19.09) — page Vente › Relances LAMal : la LAMal comme levier de RDV,
       message e-mail / WhatsApp avec lien de réservation personnalisé, suivi relancé → RDV
-- [ ] Échéancier, suite : préavis modifiable par contrat dans la fiche contrat, note de revue
+- [x] Échéancier, suite : préavis modifiable par contrat dans la fiche contrat (19.09) — note de revue à faire
 - [x] **Équipement & ventes croisées** (19.09) — page Vente › Équipement : besoins de base par profil
       (particulier / entreprise), taux de couverture par besoin, opportunité « Vente croisée » en un
       clic, liste des clients sans contrat actif avec tâche de contact
-- [ ] Équipement, suite : distinguer « assuré ailleurs » de « pas assuré » (saisir les polices
-      externes connues comme contrats non commissionnés)
+- [x] Équipement, suite : « assuré ailleurs » vs « pas assuré » — polices externes saisies comme contrats
+      non commissionnés, transfert proposé à l'échéance (19.09)
 - [x] **Prochaine action obligatoire** (19.09) — demandée à la création, au changement de stade et à la fin de la dernière tâche ; affichée sur chaque carte du pipeline ; bandeau + carte dashboard pour les opportunités sans étape
 - [x] **Source des clients** (19.09) — page Vente › Sources : canal d'acquisition par client
       (recommandation, apporteur, RDV en ligne…), indicateurs par source, apporteurs externes,

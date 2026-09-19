@@ -78,7 +78,8 @@ function dbxDonnees() {
   });
   const totalAttente = commAttente.reduce((s, ca) => s + (typeof commissionResteAttendu === 'function' ? commissionResteAttendu(ca) : Number(ca.montant_estime || 0)), 0);
 
-  const actifs = allContrats.filter(ct => !DBX_INACTIFS.includes(ct.statut));
+  // Hors polices externes (« assuré ailleurs », saisies depuis Équipement) : pas notre portefeuille
+  const actifs = allContrats.filter(ct => !DBX_INACTIFS.includes(ct.statut) && !/^Police externe/.test(ct.modules || ''));
   const portefeuille = actifs.reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
   const primesMois = Object.fromEntries(mois.map(m => [m, 0]));
   allContrats.filter(ct => ct.statut !== 'annulé').forEach(ct => {

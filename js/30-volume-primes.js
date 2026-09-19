@@ -35,7 +35,7 @@ async function viewVolumePrimes() {
 function renderVolumePrimesCorps(contrats, clientsMap) {
   const mode = window._vpxPortefeuille || 'tous';
   const estOZ = ct => { const c = clientsMap[ct.client_id]; return !!(c && c.source_oz); };
-  const liste = (contrats || []).filter(ct => Number(ct.prime_annuelle || 0) > 0 && (mode === 'tous' || (mode === 'oz' ? estOZ(ct) : !estOZ(ct))));
+  const liste = (contrats || []).filter(ct => Number(ct.prime_annuelle || 0) > 0 && !/^Police externe/.test(ct.modules || '') && (mode === 'tous' || (mode === 'oz' ? estOZ(ct) : !estOZ(ct))));
   const nbBranches = document.querySelectorAll('.vp-branche-checkbox:checked').length, totBranches = document.querySelectorAll('.vp-branche-checkbox').length;
   const etiquette = document.getElementById('vpx-nb-branches');
   if (etiquette) etiquette.textContent = totBranches && nbBranches < totBranches ? `· ${nbBranches}/${totBranches} branches` : '';

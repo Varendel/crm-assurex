@@ -226,57 +226,61 @@ function viewCommissionsAttente(prefiltreStatut) {
   dbGet('commission_tranches', 'annule=eq.false&select=*').then(t => { allCommissionTranches = t; renderToutesCommissions(); });
   setTimeout(() => renderToutesCommissions(), 0);
   const compagniesPresentes = [...new Set(allCommissionsAttente.map(c => normaliserCompagnie(c.compagnie)).filter(Boolean))].sort();
-  return `
+  // Vue modernisée le 19.09.2026 : en-tête bandeau, statuts en onglets avec compteurs, indicateurs
+  // en cartes, répartition par entité, lignes avec logo compagnie et n° de police. Les filtres et le
+  // calcul sont inchangés (mêmes id), le statut est porté par un champ caché #tc-statut.
+  return `<div class="tcx">
     ${printHeaderCorporate('Toutes les commissions', 'Rapport des commissions dues et reçues')}
-    <h2 class="no-print" style="margin:0 0 6px;font-size:18px;font-weight:800;color:var(--text)">Toutes les commissions</h2>
-    <div class="no-print" style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Estimées à la signature, puis liées à un bordereau une fois reçues. Pour faire passer une commission "en attente" en "reçue", utilise "+ Rapprocher une commission" sur le bordereau concerné — ça garantit le montant net exact et le numéro de police. Par défaut, seules les commissions en attente sont affichées — choisis "Tous statuts" ou un autre statut ci-dessous pour voir le reste.</div>
-
-    <div class="no-print" style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap">
-      <input class="form-input" id="tc-search" placeholder="🔍 Client, compagnie, produit, n° bordereau..." style="flex:1;min-width:200px" oninput="renderToutesCommissions()"/>
-      <select class="form-select" id="tc-compagnie" style="max-width:200px" onchange="renderToutesCommissions()">
+    <header class="dx-tete no-print">
+      <div><div class="dx-surtitre">Finances · Commissions</div><h2>Toutes les commissions</h2>
+        <p class="dx-sous">Estimées à la signature, puis soldées par les décomptes (import ou « Rapprocher une commission » sur le bordereau). Clique une ligne pour la modifier.</p></div>
+      <div class="dx-tete-actions">
+        <button type="button" class="btn-secondary" onclick="exporterCommissionsCsv()">⬇️ Export Excel</button>
+        <button type="button" class="btn-secondary" onclick="window.print()">🖨️ Imprimer / PDF</button>
+      </div>
+    </header>
+    <div id="tc-stats" class="dbx-kpis tcx-kpis"></div>
+    <input type="hidden" id="tc-statut" value="${statutInitial || ''}"/>
+    <div id="tc-onglets" class="dbx-onglets tcx-onglets no-print" role="tablist" aria-label="Statut"></div>
+    <div class="tcx-filtres no-print">
+      <input class="form-input" id="tc-search" placeholder="🔍 Client, compagnie, produit, n° de police, bordereau…" oninput="renderToutesCommissions()"/>
+      <select class="form-select" id="tc-compagnie" onchange="renderToutesCommissions()">
         <option value="">Toutes compagnies</option>
         ${compagniesPresentes.map(comp => `<option value="${comp}">${comp}</option>`).join('')}
       </select>
-      <select class="form-select" id="tc-statut" style="max-width:180px" onchange="renderToutesCommissions()">
-        <option value="" ${statutInitial===''?'selected':''}>Tous statuts</option>
-        <option value="en_attente" ${statutInitial==='en_attente'?'selected':''}>En attente</option>
-        <option value="en_attente_naissance" ${statutInitial==='en_attente_naissance'?'selected':''}>🍼 En attente de naissance</option>
-        <option value="reçue" ${statutInitial==='reçue'?'selected':''}>Reçue (Assurex)</option>
-        <option value="extourné" ${statutInitial==='extourné'?'selected':''}>Extournée</option>
-        <option value="versé_oz" ${statutInitial==='versé_oz'?'selected':''}>Versé OZ (tout)</option>
-        <option value="versé_oz_a_refacturer" ${statutInitial==='versé_oz_a_refacturer'?'selected':''}>Versé OZ — à refacturer</option>
-      </select>
-      <select class="form-select" id="tc-nature" style="max-width:170px" onchange="renderToutesCommissions()">
+      <select class="form-select" id="tc-nature" onchange="renderToutesCommissions()">
         <option value="">Acquisition + Gestion</option>
         <option value="acquisition">Acquisition uniquement</option>
         <option value="gestion">Gestion uniquement</option>
       </select>
-      <select class="form-select" id="tc-typeclient" style="max-width:170px" onchange="renderToutesCommissions()">
+      <select class="form-select" id="tc-typeclient" onchange="renderToutesCommissions()">
         <option value="">Privés + Entreprises</option>
         <option value="prive">Client privé</option>
         <option value="entreprise">Entreprise</option>
       </select>
-      <select class="form-select" id="tc-entite" style="max-width:190px" onchange="renderToutesCommissions()">
+      <select class="form-select" id="tc-entite" onchange="renderToutesCommissions()">
         <option value="">Toutes entités</option>
         <option value="oz">${OZ_MINI_LOGO} Clients OZ Assure</option>
         <option value="assurex">${COFIDEX_MINI_LOGO} Clients Assurex / EX Groupe</option>
         <option value="aucun">— Non marqués</option>
       </select>
-      <input type="date" class="form-input" id="tc-date-debut" title="Date de création — du" style="max-width:150px" onchange="renderToutesCommissions()"/>
-      <input type="date" class="form-input" id="tc-date-fin" title="Date de création — au" style="max-width:150px" onchange="renderToutesCommissions()"/>
-      <select class="form-select" id="tc-tri" style="max-width:190px" onchange="renderToutesCommissions()">
+      <label class="tcx-date"><span>Du</span><input type="date" class="form-input" id="tc-date-debut" title="Date de création — du" onchange="renderToutesCommissions()"/></label>
+      <label class="tcx-date"><span>au</span><input type="date" class="form-input" id="tc-date-fin" title="Date de création — au" onchange="renderToutesCommissions()"/></label>
+      <select class="form-select" id="tc-tri" onchange="renderToutesCommissions()">
         <option value="date">Plus récent d'abord</option>
         <option value="montant_desc" selected>Montant décroissant</option>
         <option value="prevue">Date d'encaissement prévue</option>
       </select>
     </div>
-    <div class="no-print" style="display:flex;gap:8px;margin-bottom:18px">
-      <button onclick="exporterCommissionsCsv()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer">⬇️ Export CSV</button>
-      <button onclick="window.print()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer">🖨️ Imprimer / PDF</button>
-    </div>
+    <div id="tc-entites" class="tcx-entites"></div>
+    <div id="tc-table"></div>
+  </div>`;
+}
 
-    <div id="tc-stats" class="stat-grid" style="margin-bottom:20px"></div>
-    <div id="tc-table"></div>`;
+function tcChoisirStatut(v) {
+  const el = document.getElementById('tc-statut');
+  if (el) el.value = v;
+  renderToutesCommissions();
 }
 
 let _tcCommissionsFiltrees = [];
@@ -323,6 +327,34 @@ function renderToutesCommissions() {
   }
   function montantC(c) { return c.montant_final != null ? c.montant_final : (c.montant_estime || 0); }
 
+  // Cartes de synthèse (19.09.2026) : calculées sur TOUS les statuts (mêmes autres filtres). Avant,
+  // elles suivaient le filtre « Statut » — resté sur « En attente » par défaut, « Reçues (brut) »
+  // affichait donc toujours 0. Les versements partiels encaissés par Assurex sur une commission
+  // encore en attente (conventions échelonnées) comptent aussi dans le reçu.
+  const passeAutresFiltres = c => {
+    if (c.contrat_id) { const ct = allContrats.find(x => x.id === c.contrat_id); if (ct && (ct.commissionne === false || ct.statut === 'annulé')) return false; }
+    if (compagnieFilter && normaliserCompagnie(c.compagnie) !== compagnieFilter) return false;
+    if (natureFilter && (c.nature || 'acquisition') !== natureFilter) return false;
+    if (typeClientFilter && typeClientDe(c) !== typeClientFilter) return false;
+    if (entiteFilter) {
+      const clEnt = c.client_id ? allClients.find(x => x.id === c.client_id) : null;
+      if (entiteFilter === 'oz' && !(clEnt && clEnt.source_oz)) return false;
+      if (entiteFilter === 'assurex' && !(clEnt && clEnt.source_cofidex)) return false;
+      if (entiteFilter === 'aucun' && (clEnt && (clEnt.source_oz || clEnt.source_cofidex))) return false;
+    }
+    if (dateDebutFilter && (!c.date_creation || c.date_creation < dateDebutFilter)) return false;
+    if (dateFinFilter && (!c.date_creation || c.date_creation > dateFinFilter)) return false;
+    if (search) {
+      const haystack = `${c.client_nom||''} ${c.compagnie||''} ${c.produit||''} ${c.numero_police||''} ${numeroBordereauDe(c)}`.toLowerCase();
+      if (!haystack.includes(search)) return false;
+    }
+    return true;
+  };
+  const baseTous = allCommissionsAttente.filter(passeAutresFiltres);
+  const baseStats = baseTous.filter(c => c.statut !== 'versé_oz');
+  const tranchesAssurex = id => (typeof allCommissionTranches !== 'undefined' ? allCommissionTranches : [])
+    .filter(t => t.commission_id === id && !t.annule && t.encaisse_par !== 'oz').reduce((s, t) => s + Number(t.montant || 0), 0);
+
   const filtered = allCommissionsAttente.filter(c => {
     // Par défaut, cette page ne montre QUE les données Assurex — le passé OZ Assure reste
     // masqué tant que personne ne le demande explicitement via le filtre "Versé OZ" ci-dessus.
@@ -351,7 +383,7 @@ function renderToutesCommissions() {
     if (dateDebutFilter && (!c.date_creation || c.date_creation < dateDebutFilter)) return false;
     if (dateFinFilter && (!c.date_creation || c.date_creation > dateFinFilter)) return false;
     if (search) {
-      const haystack = `${c.client_nom||''} ${c.compagnie||''} ${c.produit||''} ${numeroBordereauDe(c)}`.toLowerCase();
+      const haystack = `${c.client_nom||''} ${c.compagnie||''} ${c.produit||''} ${c.numero_police||''} ${numeroBordereauDe(c)}`.toLowerCase();
       if (!haystack.includes(search)) return false;
     }
     return true;
@@ -364,12 +396,16 @@ function renderToutesCommissions() {
   _tcCommissionsFiltrees = filtered;
 
   // En attente : reste après versements partiels (paiements échelonnés)
-  const totalAttente = filtered.filter(c => c.statut === 'en_attente').reduce((s,c) => s + (typeof commissionResteAttendu === 'function' ? commissionResteAttendu(c) : montantC(c)), 0);
-  const totalRecuBrut = filtered.filter(c => c.statut === 'reçue').reduce((s,c) => s + montantC(c), 0);
-  const totalExtourne = filtered.filter(c => c.statut === 'extourné').reduce((s,c) => s + montantC(c), 0);
+  const totalAttente = baseStats.filter(c => c.statut === 'en_attente').reduce((s,c) => s + (typeof commissionResteAttendu === 'function' ? commissionResteAttendu(c) : montantC(c)), 0);
+  const recuDe = c => c.statut === 'reçue' ? montantC(c) : (c.statut === 'en_attente' ? tranchesAssurex(c.id) : 0);
+  const totalRecuBrut = baseStats.reduce((s,c) => s + recuDe(c), 0);
+  const nbRecues = baseStats.filter(c => recuDe(c) !== 0).length;
+  // Les extournes peuvent être saisies en positif ou en négatif selon la source : on compte toujours
+  // leur valeur absolue, pour qu'elles retranchent bien du net encaissé (19.09.2026).
+  const totalExtourne = baseStats.filter(c => c.statut === 'extourné').reduce((s,c) => s + Math.abs(montantC(c)), 0);
   const totalRecuNet = totalRecuBrut - totalExtourne;
-  const totalAcquisition = filtered.filter(c => (c.nature||'acquisition') === 'acquisition' && c.statut !== 'extourné').reduce((s,c) => s + montantC(c), 0);
-  const totalGestion = filtered.filter(c => c.nature === 'gestion' && c.statut !== 'extourné').reduce((s,c) => s + montantC(c), 0);
+  const totalAcquisition = baseStats.filter(c => (c.nature||'acquisition') === 'acquisition' && c.statut !== 'extourné').reduce((s,c) => s + montantC(c), 0);
+  const totalGestion = baseStats.filter(c => c.nature === 'gestion' && c.statut !== 'extourné').reduce((s,c) => s + montantC(c), 0);
 
   // Répartition "qui rapporte quoi" par entité — même principe que dans "Tous les contrats" :
   // calculée sur les lignes filtrées par tous les autres critères (compagnie/statut/nature/...)
@@ -383,36 +419,64 @@ function renderToutesCommissions() {
   const totAssurexC = totauxEntiteComm(cl => cl && cl.source_cofidex);
   const totAucunC = totauxEntiteComm(cl => !(cl && (cl.source_oz || cl.source_cofidex)));
 
-  document.getElementById('tc-stats').innerHTML = `
-    ${statCard('En attente', 'CHF ' + totalAttente.toLocaleString(), '#f59e0b')}
-    ${statCard('Reçues (brut)', 'CHF ' + totalRecuBrut.toLocaleString(), '#4ade80')}
-    ${statCard('Extournées', '– CHF ' + totalExtourne.toLocaleString(), '#f87171', 'contrat policé puis annulé')}
-    ${statCard('Net Assurex encaissé', 'CHF ' + totalRecuNet.toLocaleString(), '#38bdf8')}
-    ${statCard('Dont Acquisition', 'CHF ' + totalAcquisition.toLocaleString(), '#a78bfa')}
-    ${statCard('Dont Gestion', 'CHF ' + totalGestion.toLocaleString(), '#60a5fa')}
-    ${statCard('Total dossiers', filtered.length, '#a78bfa')}
-    ${statCard(OZ_MINI_LOGO + ' OZ', 'CHF ' + Math.round(totOzC.montant).toLocaleString(), '#38bdf8', totOzC.count + ' dossier(s)')}
-    ${statCard(COFIDEX_MINI_LOGO + ' Assurex/EX', 'CHF ' + Math.round(totAssurexC.montant).toLocaleString(), '#a78bfa', totAssurexC.count + ' dossier(s)')}
-    ${totAucunC.count > 0 ? statCard('Non marqués', 'CHF ' + Math.round(totAucunC.montant).toLocaleString(), '#64748b', totAucunC.count + ' dossier(s)') : ''}`;
+  const kpi = (o) => typeof dbxKpi === 'function' ? dbxKpi(o) : statCard(o.label, (o.prefixe || '') + fmtCHF(Math.round(o.valeur)), '#00CFFF', o.sous);
+  const zoneStats = document.getElementById('tc-stats');
+  if (zoneStats) zoneStats.innerHTML = [
+    kpi({ i: 0, label: 'En attente', valeur: totalAttente, prefixe: 'CHF ', sous: `${baseStats.filter(c => c.statut === 'en_attente').length} commission(s) · reste attendu`, onclick: "tcChoisirStatut('en_attente')" }),
+    kpi({ i: 1, label: 'Reçues (brut)', valeur: totalRecuBrut, prefixe: 'CHF ', sous: `${nbRecues} commission(s) · versements partiels inclus`, onclick: "tcChoisirStatut('reçue')" }),
+    kpi({ i: 2, label: 'Net Assurex encaissé', valeur: totalRecuNet, prefixe: 'CHF ', sous: totalExtourne ? `après CHF ${fmtCHF(Math.round(totalExtourne))} d’extournes` : 'aucune extourne' }),
+    kpi({ i: 3, label: 'Acquisition · Gestion', valeur: totalAcquisition + totalGestion, prefixe: 'CHF ', sous: `acquisition CHF ${fmtCHF(Math.round(totalAcquisition))} · gestion CHF ${fmtCHF(Math.round(totalGestion))}` }),
+  ].join('');
 
-  const cols = '1fr 120px 110px 150px 100px 90px';
+  // Onglets de statut avec compteurs (mêmes autres filtres)
+  const nb = f => baseTous.filter(f).length;
+  const onglets = [
+    ['en_attente', 'En attente', nb(c => c.statut === 'en_attente')],
+    ['en_attente_naissance', '🍼 Naissance', nb(c => c.statut === 'en_attente_naissance')],
+    ['reçue', 'Reçues', nb(c => c.statut === 'reçue')],
+    ['extourné', 'Extournées', nb(c => c.statut === 'extourné')],
+    ['versé_oz', 'Versé OZ', nb(c => c.statut === 'versé_oz')],
+    ['versé_oz_a_refacturer', 'OZ à refacturer', nb(c => c.statut === 'versé_oz' && !c.refacture_le)],
+    ['', 'Toutes', baseStats.length],
+  ].filter(([v, , n]) => n > 0 || v === '' || v === statutFilter);
+  const zoneOnglets = document.getElementById('tc-onglets');
+  if (zoneOnglets) zoneOnglets.innerHTML = onglets.map(([v, l, n]) => `<button type="button" role="tab" aria-selected="${statutFilter === v}" class="${statutFilter === v ? 'actif' : ''}" onclick="tcChoisirStatut('${v}')">${l}<small>${n}</small></button>`).join('');
+
+  // Répartition par entité
+  const totE = totOzC.montant + totAssurexC.montant + totAucunC.montant || 1;
+  const zoneEnt = document.getElementById('tc-entites');
+  if (zoneEnt) zoneEnt.innerHTML = filtered.length ? `<div class="tcx-barre" aria-hidden="true">
+      <span style="width:${totOzC.montant / totE * 100}%;background:#1A56DB"></span><span style="width:${totAssurexC.montant / totE * 100}%;background:#00CFFF"></span><span style="width:${totAucunC.montant / totE * 100}%;background:#94A3B8"></span></div>
+    <div class="tcx-legende">
+      <span><i style="background:#1A56DB"></i>${OZ_MINI_LOGO} OZ <b>CHF ${fmtCHF(Math.round(totOzC.montant))}</b> · ${totOzC.count}</span>
+      <span><i style="background:#00CFFF"></i>${COFIDEX_MINI_LOGO} Assurex / EX <b>CHF ${fmtCHF(Math.round(totAssurexC.montant))}</b> · ${totAssurexC.count}</span>
+      ${totAucunC.count ? `<span><i style="background:#94A3B8"></i>Non marqués <b>CHF ${fmtCHF(Math.round(totAucunC.montant))}</b> · ${totAucunC.count}</span>` : ''}
+      <span class="tcx-total">${filtered.length} ligne${filtered.length > 1 ? 's' : ''} · <b>CHF ${fmtCHF(Math.round(filtered.reduce((s, c) => s + montantC(c), 0)))}</b></span>
+    </div>` : '';
+
+  const esc = s => String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   const rows = filtered.map(c => {
     const numBord = numeroBordereauDe(c);
-    return `<div class="table-row" style="grid-template-columns:${cols};cursor:pointer" onclick="showModalEditCommission('${c.id}')">
-      <div><div style="font-size:13px;font-weight:700;color:var(--text)">${c.client_id ? `<span onclick="event.stopPropagation(); showClient('${c.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${c.client_nom || '—'}</span>` : (c.client_nom || '—')}${getClientMiniLogos(allClients.find(x => x.id === c.client_id))}</div><div style="font-size:11px;color:var(--text-muted)">${c.produit || ''}</div>${c.detail_calcul ? `<div style="font-size:10px;color:var(--text-dim);margin-top:2px;font-style:italic">${c.detail_calcul.split('[')[0].trim()}</div>` : `<div style="font-size:10px;color:#f59e0b;margin-top:2px">⚠ Détail du calcul manquant — clique pour préciser</div>`}${totalVersementsCommission(c.id) > 0 ? `<div style="font-size:10px;color:#4ade80;margin-top:2px">💰 Reçu CHF ${fmtCHF(totalVersementsCommission(c.id))} / ${montantC(c).toLocaleString()} (versements partiels)</div>` : ''}</div>
-      <div style="font-size:12px;color:var(--text-muted)">${c.compagnie || ''}</div>
-      <div style="font-size:11px;color:var(--text-muted)">${numBord ? `<span style="font-family:monospace">${numBord}</span>` : '—'}</div>
-      <div style="font-size:12px;color:var(--text-muted)">${c.date_creation || ''}${typeof htmlCommissionPrevue === 'function' ? htmlCommissionPrevue(c) : ''}</div>
-      <div style="font-weight:800;color:#f59e0b;text-align:right">CHF ${fmtCHF(montantC(c))}</div>
-      <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start">${badge(statutCommissionLabel(c.statut), statutCommissionColor(c.statut))}${badgeNatureCommission(c.nature)}</div>
+    const verse = totalVersementsCommission(c.id);
+    const m = montantC(c);
+    const cl = allClients.find(x => x.id === c.client_id);
+    return `<div class="tcx-ligne" role="button" tabindex="0" onclick="showModalEditCommission('${c.id}')" onkeydown="if(event.key==='Enter')showModalEditCommission('${c.id}')">
+      <span class="tcx-logo">${typeof pictoCompagnie === 'function' ? pictoCompagnie(c.compagnie, 34) : ''}</span>
+      <div class="tcx-corps">
+        <div class="tcx-client">${c.client_id ? `<span class="tcx-lien" onclick="event.stopPropagation(); showClient('${c.client_id}')">${esc(c.client_nom || '—')}</span>` : esc(c.client_nom || '—')}${typeof getClientMiniLogos === 'function' ? getClientMiniLogos(cl) : ''}</div>
+        <div class="tcx-produit">${esc(c.compagnie || '')}${c.produit ? ' · ' + esc(c.produit) : ''}${c.numero_police ? ` · <span class="tcx-police">police ${esc(c.numero_police)}</span>` : ' · <span class="tcx-manque">sans n° de police</span>'}</div>
+        ${c.detail_calcul ? `<div class="tcx-detail">${esc(c.detail_calcul.split('[')[0].trim())}</div>` : `<div class="tcx-detail tcx-manque">Détail du calcul manquant — clique pour préciser</div>`}
+        ${verse > 0 && c.statut === 'en_attente' ? `<div class="tcx-partiel"><span style="width:${Math.min(100, verse / (m || 1) * 100)}%"></span></div><div class="tcx-detail" style="color:#16A34A">Reçu CHF ${fmtCHF(verse)} sur ${fmtCHF(m)} (versements partiels)</div>` : ''}
+      </div>
+      <div class="tcx-dates"><span>${c.date_creation ? fmtDate(c.date_creation) : '—'}</span>${typeof htmlCommissionPrevue === 'function' ? htmlCommissionPrevue(c) : ''}${numBord ? `<span class="tcx-bord">${esc(numBord)}</span>` : ''}</div>
+      <div class="tcx-droite">
+        <b class="tcx-montant ${m < 0 ? 'negatif' : ''}">CHF ${fmtCHF(m)}</b>
+        <span class="tcx-badges">${badge(statutCommissionLabel(c.statut), statutCommissionColor(c.statut))}${badgeNatureCommission(c.nature)}</span>
+      </div>
     </div>`;
   }).join('');
 
-  document.getElementById('tc-table').innerHTML = `
-    <div class="table-wrap">
-      <div class="table-header" style="grid-template-columns:${cols}"><div>Client / Produit</div><div>Compagnie</div><div>N° bordereau</div><div>Créée / prévue</div><div>Montant</div><div>Statut</div></div>
-      ${rows || '<div class="table-empty">Aucune commission ne correspond à ces filtres.</div>'}
-    </div>`;
+  document.getElementById('tc-table').innerHTML = `<section class="dbx-carte tcx-liste">${rows || '<div class="dbx-vide-petit">Aucune commission ne correspond à ces filtres.</div>'}</section>`;
 }
 
 // AGENDA

@@ -10,7 +10,7 @@
 // Une commission attendue dont la date est dépassée est comptée dans le mois en cours (à relancer).
 
 let _tr = { lignes: [], horizon: 12, pipeline: false, charge: false, edition: null };
-const TR_CATEGORIES_SORTIE = ['Salaires & charges sociales', 'Parts apporteurs', 'Loyer', 'Assurances', 'Informatique & abonnements', 'Véhicule', 'Impôts & TVA', 'Marketing', 'Autres charges'];
+const TR_CATEGORIES_SORTIE = ['Salaires & charges sociales', 'Parts apporteurs', 'Frais de déplacement & repas', 'Frais de représentation', 'Véhicule', 'Téléphone & internet', 'Informatique & abonnements', 'Loyer', 'Assurances', 'Formation & cotisations', 'Frais bancaires', 'Marketing', 'Impôts & TVA', 'Autres frais'];
 const TR_CATEGORIES_ENTREE = ['Honoraires', 'Commissions hors CRM', 'Apport / prêt', 'Autres encaissements'];
 const TR_FREQUENCES = [['mensuel', 'Chaque mois', 1], ['trimestriel', 'Chaque trimestre', 3], ['semestriel', 'Chaque semestre', 6], ['annuel', 'Chaque année', 12], ['unique', 'Une seule fois', 0]];
 const TR_MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];

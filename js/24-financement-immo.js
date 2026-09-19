@@ -62,7 +62,10 @@ function viewFinancementImmo() {
   const initial = window._fiInitial || null;
   window._fiInitial = null;
   if (initial) { _fi.d = { ...FI_DEFAUT(), ...(initial.d || {}) }; _fi.clientId = initial.clientId || null; }
-  return `<div class="dbx ap fi">
+  // Aucun client choisi : les derniers projets immobiliers enregistrés (js/31)
+  const recentes = !_fi.clientId && typeof anxHtmlZone === 'function';
+  if (recentes) setTimeout(anxChargerImmo, 0);
+  return `<div class="dbx ap fi">${recentes ? anxHtmlZone('fi') : ''}
     <section class="cf-hero">
       <div class="cf-hero-deco" aria-hidden="true"></div>
       <div class="cf-hero-texte">

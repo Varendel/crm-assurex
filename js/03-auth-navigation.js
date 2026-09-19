@@ -1358,7 +1358,10 @@ async function renderView() {
       main.innerHTML = viewCommissionsAttente();
       break;
     case 'rapport-finma': main.innerHTML = viewRapportFinma(); break;
-    case 'suivi-financier': main.innerHTML = viewSuiviFinancier(); break;
+    case 'suivi-financier':
+      if (typeof viewSuiviFinancierV2 === 'function') { main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); main.innerHTML = viewSuiviFinancierV2(); }
+      else main.innerHTML = viewSuiviFinancier();
+      break;
     case 'conseil': main.innerHTML = viewConseil(); break;
     case 'tresorerie': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); main.innerHTML = viewTresorerie(); break;
     case 'production': main.innerHTML = viewProduction(); break;

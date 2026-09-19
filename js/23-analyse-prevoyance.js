@@ -294,7 +294,10 @@ function viewAnalysePrevoyance() {
   const initial = window._apClientInitial || null;
   window._apClientInitial = null;
   if (initial) setTimeout(() => apChoisirClient(initial), 0);
-  return `<div class="dbx ap">
+  // Aucun client choisi : les dernières analyses enregistrées, à rouvrir en un clic (js/31)
+  const recentes = !initial && !_ap.clientId && typeof anxHtmlZone === 'function';
+  if (recentes) setTimeout(anxChargerPrevoyance, 0);
+  return `<div class="dbx ap">${recentes ? anxHtmlZone('ap') : ''}
     <section class="cf-hero ap-hero">
       <div class="cf-hero-deco" aria-hidden="true"></div>
       <div class="cf-hero-texte">

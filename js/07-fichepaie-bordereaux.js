@@ -2468,6 +2468,8 @@ function viewNouvelleOpportunite() {
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
       <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">${opp ? 'Modifier l’opportunité' : (rh ? 'Nouvelle opportunité pour Jonathan' : 'Nouvelle opportunité')}</h2>
       ${clientFiche ? `<span onclick="showClient('${clientFiche.id}')" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--surface-alt);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11.5px;font-weight:700;color:var(--accent)">👤 Fiche client : ${estEntreprise(clientFiche) ? clientFiche.nom : `${clientFiche.prenom} ${clientFiche.nom}`} →</span>` : ''}
+      <!-- Accès rapide (demande de Jonathan, 19.09.2026) : enregistrer sans descendre en bas du formulaire -->
+      <button type="button" onclick="saveOpportunite('${opp ? opp.id : ''}')" title="Enregistrer l’opportunité" aria-label="Enregistrer l’opportunité" style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:var(--on-accent);border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer">💾 Enregistrer</button>
     </div>
     ${blocStadeRapide}
     ${(opp && opp.stade === 'Perdu' && opp.motif_perte) ? `<div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.3);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--text)"><strong style="color:#f87171">✕ Motif de la perte :</strong> ${opp.motif_perte}</div>` : ''}

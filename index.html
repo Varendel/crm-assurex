@@ -2510,6 +2510,30 @@
     .ozx-filtre-barre { display: none !important; }
   }
 
+/* ═══ TABLEAU DE BORD : HORLOGE & AGENDA 2 JOURS (hl-, js/40) — 19.09.2026 ═══ */
+.hl-haut{display:flex;justify-content:center;padding:6px 0 14px}
+.hl-montre{display:flex;flex-direction:column;align-items:center;gap:10px}
+.hl-montre svg{width:min(210px,62vw);height:auto;filter:drop-shadow(0 14px 22px rgba(6,46,30,.35)) drop-shadow(0 3px 6px rgba(0,0,0,.25))}
+.hl-numerique{display:flex;flex-direction:column;align-items:center;line-height:1.15}
+.hl-numerique b{font-size:22px;font-weight:800;letter-spacing:.04em;color:var(--text);font-variant-numeric:tabular-nums}
+.hl-numerique span{font-size:12px;color:var(--text-muted);text-transform:capitalize}
+.hl-agenda{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.hl-jour{display:flex;flex-direction:column;gap:6px;min-width:0}
+.hl-jour-tete{display:flex;align-items:baseline;justify-content:space-between;gap:6px;padding-bottom:4px;border-bottom:1px solid var(--border)}
+.hl-jour-tete b{font-size:13px;color:var(--text)}
+.hl-jour-tete span{font-size:11px;color:var(--text-muted);text-transform:capitalize;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hl-rdv{display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid var(--border);border-left:3px solid var(--accent,#00CFFF);border-radius:10px;background:var(--surface);padding:8px 10px;cursor:pointer;transition:transform .15s,box-shadow .15s}
+.hl-rdv:hover{transform:translateY(-1px);box-shadow:0 6px 16px rgba(15,23,42,.08)}
+.hl-rdv.en-cours{border-left-color:#22C55E;background:rgba(34,197,94,.07)}
+.hl-rdv.passe{opacity:.55}
+.hl-rdv-heure{display:flex;flex-direction:column;font-weight:800;font-size:13px;color:var(--text);font-variant-numeric:tabular-nums;min-width:44px}
+.hl-rdv-heure small{font-weight:500;font-size:10.5px;color:var(--text-muted)}
+.hl-rdv-corps{display:flex;flex-direction:column;min-width:0;flex:1}
+.hl-rdv-corps b{font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hl-rdv-corps small{font-size:11.5px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.hl-rdv-badge{font-size:10px;font-weight:700;color:#16A34A;background:rgba(34,197,94,.14);border-radius:99px;padding:2px 8px;white-space:nowrap}
+.hl-vide{font-size:12px;color:var(--text-muted);padding:10px;border:1px dashed var(--border);border-radius:10px;text-align:center}
+@media (max-width:768px){.hl-agenda{grid-template-columns:1fr}}
 @media (prefers-reduced-motion: reduce) {
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
@@ -2618,7 +2642,7 @@
 <script src="js/15-pictos-compagnies.js?v=1790240000"></script>
 <script src="js/16-pipeline-kanban.js?v=1789930000"></script>
 <script src="js/17-fiche-activite.js?v=1789940000"></script>
-<script src="js/18-dashboard.js?v=1790300000"></script>
+<script src="js/18-dashboard.js?v=1790450000"></script>
 <script src="js/19-prevision-commissions.js?v=1790280000"></script>
 <script src="js/20-fiche-client-entete.js?v=1790020000"></script>
 <script src="js/21-tresorerie.js?v=1790400000"></script>
@@ -2640,6 +2664,7 @@
 <script src="js/37-citations-rex.js?v=1790430000"></script>
 <script src="js/38-oz-assure.js?v=1790370000"></script>
 <script src="js/39-marquage-entites.js?v=1790360000"></script>
+<script src="js/40-dashboard-horloge-agenda.js?v=1790450000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

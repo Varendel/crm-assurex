@@ -233,6 +233,10 @@ function dbxVueAujourdhui(D, actions) {
         </section>
       </div>
       <div class="dbx-col">
+        ${typeof htmlHorlogeLuxe === 'function' ? `<section class="dbx-carte dbx-anim hl-carte" style="--i:4" aria-label="Horloge et agenda">
+          <div class="hl-haut">${htmlHorlogeLuxe()}</div>
+          ${htmlAgenda2Jours()}
+        </section>` : ''}
         <section class="dbx-carte dbx-anim" style="--i:5" aria-labelledby="dbx-titre-signaux">
           <header class="dbx-carte-tete"><h2 id="dbx-titre-signaux">À surveiller</h2></header>
           <div class="dbx-signaux">${dbxSignaux(D)}</div>

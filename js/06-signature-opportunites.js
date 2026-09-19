@@ -1623,10 +1623,11 @@ function viewImportDecompte() {
       <div id="imp-pdf-status" style="margin-top:8px;font-size:12px"></div>
       <div style="margin-top:14px"><label class="form-label">Nature des commissions de ce lot</label>
         <select class="form-select" id="imp-nature-commission" style="max-width:320px">
+          <option value="auto">Automatique, ligne par ligne (recommandé)</option>
           <option value="gestion">Gestion (décompte périodique de portefeuille)</option>
           <option value="acquisition">Acquisition (nouvelles affaires)</option>
         </select>
-        <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Un décompte de prime périodique est généralement de la gestion — change si ce lot contient des affaires nouvelles.</div>
+        <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Automatique : taux ≥ 25 % ou commission ≥ 25 % de la prime annuelle → acquisition ; sinon la nature de la commission en attente du contrat, à défaut gestion.</div>
       </div>
       <div style="margin-top:14px"><label class="form-label">Encaissé par</label>
         <div class="imp-encaisse" role="radiogroup" aria-label="Encaissé par">
@@ -1722,7 +1723,7 @@ function enrichirLigneImport(l) {
     const m = String(l.dateFacture || '').match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
     const isoFacture = m ? `${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}` : String(l.dateFacture || '').slice(0, 10);
     const jours = (a, b) => Math.abs((new Date(a) - new Date(b)) / 86400000);
-    const proche = commsContrat.find(c => c.statut !== 'en_attente' && !(c.detail_calcul || '').includes('[ref:') && egal(c.montant_final != null ? c.montant_final : c.montant_estime))
+    const proche = commsContrat.find(c => c.statut !== 'en_attente' && c.statut !== 'annulée' &&!(c.detail_calcul || '').includes('[ref:') && egal(c.montant_final != null ? c.montant_final : c.montant_estime))
       || tranches.find(t => commsContrat.some(c => c.id === t.commission_id) && !(t.note || '').includes('[ref:') && egal(t.montant)
         && isoFacture && t.date_reception && jours(t.date_reception, isoFacture) <= 5);
     if (proche) {
@@ -2132,6 +2133,40 @@ function repartirImputationsImport() {
   });
 }
 
+// Nature d'une ligne importée quand le lot est en « Automatique » : un taux ou une commission de
+// l'ordre de la prime annuelle est une acquisition (ex. Mobilière 80 %) ; sinon on reprend la nature
+// de la commission en attente du contrat, à défaut gestion. (Swiss Solar, 19.09.2026 : une
+// acquisition à 80 % avait été enregistrée en gestion faute de changer le choix du lot.)
+function natureImportLigne(l, natureLot) {
+  if (natureLot && natureLot !== 'auto') return natureLot;
+  const ct = l.contratId ? allContrats.find(c => c.id === l.contratId) : null;
+  const prime = ct ? Number(ct.prime_annuelle || 0) : 0;
+  if (Number(l.taux) >= 25 || (prime > 0 && Math.abs(Number(l.montant || 0)) / prime >= 0.25)) return 'acquisition';
+  const attente = l.attenteId ? allCommissionsAttente.find(c => c.id === l.attenteId) : null;
+  if (attente && attente.nature) return attente.nature;
+  return 'gestion';
+}
+
+// Journal des écarts estimation / versement réel (table commission_ecarts) — alimente
+// Suivi financier → Précision des estimations, pour affiner les taux au fil des imports.
+async function journaliserEcartsCommission(items, bordereauId) {
+  for (const it of (items || [])) {
+    const a = it.attente;
+    if (!a) continue;
+    const ct = a.contrat_id ? allContrats.find(c => c.id === a.contrat_id) : null;
+    try {
+      await dbPost('commission_ecarts', {
+        commission_id: a.id, contrat_id: a.contrat_id || null, bordereau_id: bordereauId || null,
+        compagnie: a.compagnie || null, produit: a.produit || null, nature: a.nature || null,
+        prime_annuelle: ct ? Number(ct.prime_annuelle || 0) : null,
+        montant_estime: Number(a.montant_estime || 0), montant_recu: Number(a.montant_final || 0),
+        taux_decompte: Number(it.taux) > 0 ? Number(it.taux) : null,
+        source: it.source || 'import',
+      });
+    } catch (e) { /* le journal ne doit jamais bloquer un import */ }
+  }
+}
+
 function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
   repartirImputationsImport();
   const zone = document.getElementById('imp-resultats');
@@ -2287,7 +2322,8 @@ async function importerCommissionsEtBordereau(nomAssureur) {
 
   if (btn) { btn.disabled = true; btn.textContent = 'Création en cours...'; }
 
-  const nature = document.getElementById('imp-nature-commission')?.value || 'gestion';
+  const natureLot = document.getElementById('imp-nature-commission')?.value || 'auto';
+  const nature = natureLot === 'auto' ? 'gestion' : natureLot; // pour la règle 2027 ci-dessous
   // Décompte encaissé par OZ Assure : commissions « versé_oz » (exclues des chiffres Assurex) et bordereau marqué OZ
   let surOZ = (document.querySelector('input[name="imp-encaisse-par"]:checked')?.value || 'assurex') === 'oz';
   // Dès le 01.01.2027, toute la gestion est production Assurex (règle générale) : pas de gestion « OZ » après cette date
@@ -2332,6 +2368,7 @@ async function importerCommissionsEtBordereau(nomAssureur) {
 
   let nbCrees = 0, nbEchecs = 0, nbIgnores = 0, nbImputes = 0, nbSoldes = 0, totalImpute = 0;
   const attentesTouchees = new Set();
+  const ecartsAJournaliser = [];
   for (const l of aTraiter) {
     const montant = Math.round((Number(l.montant) || 0) * 100) / 100; // centimes conservés (19.09.2026)
     // Un montant négatif est une vraie correction de la compagnie (2e facture ajustant une branche
@@ -2342,11 +2379,27 @@ async function importerCommissionsEtBordereau(nomAssureur) {
       // aujourd'hui) existe déjà — en attente ou déjà reçue — c'est presque certainement un doublon
       // (fichier réimporté par erreur, ou double-clic malgré le verrou ci-dessus) plutôt qu'une
       // nouvelle commission légitime — on ne la recrée pas.
-      const dejaExistante = allCommissionsAttente.some(c => c.contrat_id === l.contratId && Math.round(Number(c.montant_estime || 0) * 100) / 100 === montant && c.date_creation === aujourdhui);
+      const dejaExistante = allCommissionsAttente.some(c => c.statut !== 'annulée' && c.contrat_id === l.contratId &&Math.round(Number(c.montant_estime || 0) * 100) / 100 === montant && c.date_creation === aujourdhui);
       if (dejaExistante) { nbIgnores++; continue; }
       // Rapprochement : le contrat a une commission en attente (ex. commission annuelle payée par
       // mensualités) → le montant est DÉDUIT de l'attente (versement partiel) au lieu de créer une
       // nouvelle commission ; l'attente est soldée quand le total est atteint. Pas pour un décompte OZ.
+      const natureLigne = natureImportLigne(l, natureLot);
+      if (surOZ && l.imputer && l.attenteId) {
+        // Décompte encaissé par OZ : la commission attendue a été versée à OZ → elle quitte l'attente
+        // Assurex (statut « versé à OZ ») au lieu d'être recréée à côté (repéré le 19.09.2026, Mobilière)
+        const attente = allCommissionsAttente.find(c => c.id === l.attenteId);
+        if (attente) {
+          const deja = attente.statut === 'versé_oz' ? Number(attente.montant_final || 0) : 0;
+          const total = Math.round((deja + montant) * 100) / 100;
+          const rO = await dbPatch('commissions_attente', attente.id, { statut: 'versé_oz', montant_final: total, bordereau_id: nouveauBordereau.id, date_reception: dateReceptionCommission, detail_calcul: `${attente.detail_calcul || ''} — versée à OZ, décompte ${compagnie} [${l.ref}]` });
+          if (rO && rO.error) { nbEchecs++; continue; }
+          if (attente.statut !== 'versé_oz') ecartsAJournaliser.push({ attente, taux: l.taux, source: 'import OZ' });
+          attente.statut = 'versé_oz'; attente.montant_final = total;
+          nbImputes++; totalImpute += montant;
+          continue;
+        }
+      }
       if (!surOZ && l.imputer && l.attenteId) {
         const attente = allCommissionsAttente.find(c => c.id === l.attenteId);
         const rT = await dbPost('commission_tranches', { commission_id: l.attenteId, montant, date_reception: dateReceptionCommission, bordereau_id: nouveauBordereau.id, note: `Décompte ${compagnie} — ${l.brancheInterne || ''} (police ${l.numeroContrat}) [${l.ref}]` });
@@ -2368,7 +2421,7 @@ async function importerCommissionsEtBordereau(nomAssureur) {
         detail_calcul: `Décompte compagnie importé — ${l.brancheInterne || ''}${montant < 0 ? ' (correction' + (l.noFacture ? ' facture n°' + l.noFacture : '') + ')' : ''} : base CHF ${fmtCHF(l.commissionProduction)} × ${l.taux}% — contrat ${l.numeroContrat}${l.noFacture ? ` — facture n°${l.noFacture}` : ''}${l.dateFacture ? ` du ${l.dateFacture}` : ''} [${l.ref || refLigneImport(l)}]`,
         statut: surOZ ? 'versé_oz' : 'reçue',
         bordereau_id: nouveauBordereau.id,
-        nature,
+        nature: natureLigne,
         date_creation: aujourdhui,
         date_reception: dateReceptionCommission,
       });
@@ -2384,9 +2437,10 @@ async function importerCommissionsEtBordereau(nomAssureur) {
     const deja = typeof commissionDejaRecu === 'function' ? commissionDejaRecu(attente) : 0;
     if (deja > 0 && estime - deja <= Math.max(1, estime * 0.02)) {
       const rS = await dbPatch('commissions_attente', attente.id, { statut: 'reçue', montant_final: Math.round(deja * 100) / 100, bordereau_id: nouveauBordereau.id, date_reception: dateReceptionCommission });
-      if (!(rS && rS.error)) { attente.statut = 'reçue'; nbSoldes++; }
+      if (!(rS && rS.error)) { attente.statut = 'reçue'; attente.montant_final = Math.round(deja * 100) / 100; nbSoldes++; ecartsAJournaliser.push({ attente, source: 'import' }); }
     }
   }
+  await journaliserEcartsCommission(ecartsAJournaliser, nouveauBordereau.id);
   logAction('import_decompte_et_bordereau', 'bordereaux', nouveauBordereau.id, `${numero} — ${compagnie} — ${nbCrees} commission(s) créée(s), ${nbImputes} versement(s) déduit(s) de l'attente${surOZ ? ' — encaissé par OZ Assure' : ''}`);
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
   allCommissionTranches = await dbGet('commission_tranches', 'select=*') || [];

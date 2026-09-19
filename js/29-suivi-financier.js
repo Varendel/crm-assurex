@@ -167,12 +167,13 @@ function sfxComparables() {
   const issuDecompte = ca => /^Décompte compagnie importé/.test(ca.detail_calcul || '');
   const lignes = [];
   allCommissionsAttente.forEach(ca => {
-    if (ca.statut === 'versé_oz' || issuDecompte(ca)) return;
+    // Les commissions versées à OZ comptent aussi : le taux de la compagnie est le même
+    if (ca.statut === 'annulée' || issuDecompte(ca)) return;
     const est = Number(ca.montant_estime || 0);
     if (!est) return;
     const recuTranches = typeof commissionDejaRecu === 'function' ? commissionDejaRecu(ca) : 0;
     let reel = null, etat = null;
-    if (ca.statut === 'reçue') { reel = ca.montant_final != null ? Number(ca.montant_final) : recuTranches || null; etat = 'solde'; }
+    if (ca.statut === 'reçue' || ca.statut === 'versé_oz') { reel = ca.montant_final != null ? Number(ca.montant_final) : recuTranches || null; etat = 'solde'; if (ca.statut === 'versé_oz' && reel === est) return; }
     else if (ca.statut === 'en_attente' && recuTranches > 0) { reel = recuTranches; etat = 'partiel'; }
     if (reel === null) return;
     lignes.push({ ca, est, reel, etat, prime: ctPrime(ca), cie: sfxCie(ca.compagnie), cat: categorie(ca.produit), nature: ca.nature === 'gestion' ? 'gestion' : 'acquisition', generique: /Estimation 10%|générique/i.test(ca.detail_calcul || '') });
@@ -243,7 +244,32 @@ function htmlSfxPrecision() {
         ${taux.length ? `<div class="sfx-mini">${taux.map(t => `<div><span>${typeof pictoCompagnie === 'function' ? pictoCompagnie(t.cie, 20) : ''}<b>${sfxEsc(t.branche)}</b><small>${sfxEsc(t.cie)} · ${t.nb} ligne${t.nb > 1 ? 's' : ''}</small></span><em>${Object.keys(t.taux).map(x => x.replace('.', ',') + ' %').join(' / ')}</em></div>`).join('')}</div>` : '<div class="dbx-vide-petit">Aucun décompte importé avec le détail des taux.</div>'}
       </section>
       <section class="dbx-carte"><header class="dbx-carte-tete"><h2>En cours de paiement</h2><span class="dbx-carte-sous">pas encore concluant (versements partiels)</span></header>
-        ${partiels.length ? `<div class="sfx-mini">${partiels.sort((a, b) => b.reel / b.est - a.reel / a.est).map(l => `<div><span>${typeof pictoCompagnie === 'function' ? pictoCompagnie(l.cie, 20) : ''}<b>${sfxEsc(l.ca.client_nom || '—')}</b><small>${sfxEsc(l.ca.produit || '')} · ${sfxEsc(l.cie)}</small></span><em>${fmtCHF2(l.reel)} / ${fmtCHF2(l.est)} <small>(${Math.round(l.reel / l.est * 100)} %)</small></em></div>`).join('')}</div>` : '<div class="dbx-vide-petit">Aucun versement partiel en cours.</div>'}
+        ${partiels.length ? `<div class="sfx-mini">${partiels.slice().sort((a, b) => b.reel / b.est - a.reel / a.est).map(l => `<div><span>${typeof pictoCompagnie === 'function' ? pictoCompagnie(l.cie, 20) : ''}<b>${sfxEsc(l.ca.client_nom || '—')}</b><small>${sfxEsc(l.ca.produit || '')} · ${sfxEsc(l.cie)}</small></span><em>${fmtCHF2(l.reel)} / ${fmtCHF2(l.est)} <small>(${Math.round(l.reel / l.est * 100)} %)</small></em></div>`).join('')}</div>` : '<div class="dbx-vide-petit">Aucun versement partiel en cours.</div>'}
       </section>
-    </div>`;
+    </div>
+    <section class="dbx-carte" style="margin-top:18px"><header class="dbx-carte-tete"><h2>Journal des écarts</h2><span class="dbx-carte-sous">enregistré à chaque import qui solde une commission</span></header>
+      <div id="sfx-journal"><div class="dbx-chargement"><span></span><span></span><span></span></div></div>
+    </section>${(setTimeout(sfxChargerJournal, 0), '')}`;
+}
+
+async function sfxChargerJournal() {
+  const zone = document.getElementById('sfx-journal');
+  if (!zone) return;
+  const rows = await dbGet('commission_ecarts', 'select=*&order=created_at.desc&limit=60');
+  if (!Array.isArray(rows) || !rows.length) { zone.innerHTML = '<div class="dbx-vide-petit">Le journal se remplira au prochain import de décompte.</div>'; return; }
+  zone.innerHTML = `<div class="sfx-table">
+    <div class="sfx-tr sfx-th"><span>Compagnie · produit</span><span>Nature</span><span>Estimé</span><span>Reçu</span><span>Écart</span><span>Détail</span></div>
+    ${rows.map(r => {
+      const est = Number(r.montant_estime || 0), recu = Number(r.montant_recu || 0);
+      const ratio = est ? recu / est : 1;
+      const cls = Math.abs(ratio - 1) <= 0.05 ? 'ok' : Math.abs(ratio - 1) <= 0.2 ? 'moyen' : 'fort';
+      const tauxReel = r.prime_annuelle ? recu / Number(r.prime_annuelle) : null;
+      return `<div class="sfx-tr">
+        <span class="sfx-nom">${typeof pictoCompagnie === 'function' ? pictoCompagnie(sfxCie(r.compagnie), 22) : ''}<span><b>${sfxEsc(sfxCie(r.compagnie))}</b><small>${sfxEsc(r.produit || '')} · ${fmtDate(r.created_at)}</small></span></span>
+        <span>${sfxEsc(r.nature || '—')}</span><span>CHF ${fmtCHF2(est)}</span><span>CHF ${fmtCHF2(recu)}</span>
+        <span class="sfx-ecart ${cls}">${ratio >= 1 ? '+' : ''}${Math.round((ratio - 1) * 100)} %</span>
+        <span class="sfx-sugg">${r.taux_decompte ? `taux décompte ${String(r.taux_decompte).replace('.', ',')} % · ` : ''}${tauxReel !== null ? `soit ${sfxPct(tauxReel)} de la prime` : ''}${r.note ? ` · ${sfxEsc(r.note)}` : ''}</span>
+      </div>`;
+    }).join('')}
+  </div>`;
 }

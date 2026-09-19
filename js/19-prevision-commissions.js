@@ -41,6 +41,8 @@ function _prevIso(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).pad
 // et la création de la commission — un contrat repris en gestion (début en 2019, commission créée
 // en 07.2026) part de la reprise, pas de 2019.
 function commissionDateDepart(ca) {
+  // Gestion des années suivantes : elle part de l'échéance de facturation (date_creation), pas de la signature
+  if (/\[gestion annuelle\]/.test(ca.detail_calcul || '') && ca.date_creation) return ca.date_creation.slice(0, 10);
   const ct = ca.contrat_id ? allContrats.find(x => x.id === ca.contrat_id) : null;
   if (ct && ct.date_signature) return ct.date_signature.slice(0, 10);
   const dates = [ct && ct.date_debut, ca.date_creation].filter(Boolean).map(d => d.slice(0, 10)).sort();
@@ -107,4 +109,78 @@ function previsionGestionParMois(nbMois) {
     if (cible) { cible.total += montant; cible.nb++; }
   });
   return res;
+}
+
+// ═══ GESTION ANNUELLE (19.09.2026) ══════════════════════════════════════════════════════════
+// La commission de gestion est reversée CHAQUE ANNÉE, sur la prime facturée au client à l'échéance
+// (ex. Vaudoise : prorata la 1re année, puis prime complète dès le 01.01 suivant). Le CRM ne créait
+// qu'une seule commission de gestion par contrat. Désormais, à l'approche de chaque échéance de
+// facturation (45 jours avant), la commission de l'année suivante est créée « en attente » :
+//   - uniquement pour les contrats actifs qui ont déjà eu une commission de gestion ;
+//   - jamais s'il en reste une en attente (pas de doublon) ;
+//   - montant = prime annuelle × taux de gestion constaté (décompte) ou estimé précédemment.
+const GESTION_ANNUELLE_AVANCE_JOURS = 45;
+
+// Échéance de facturation annuelle (MM-JJ) : lendemain de la date d'échéance du contrat
+// (31.12 → 01.01), à défaut l'anniversaire de sa date de début
+function echeanceFacturationMMJJ(ct) {
+  if (ct.date_echeance) {
+    const d = new Date(ct.date_echeance.slice(0, 10) + 'T12:00:00'); d.setDate(d.getDate() + 1);
+    return _prevIso(d).slice(5);
+  }
+  return ct.date_debut ? ct.date_debut.slice(5, 10) : null;
+}
+
+// Première échéance de facturation strictement postérieure à une date (AAAA-MM-JJ)
+function prochaineEcheanceFacturation(ct, apres) {
+  const mmjj = echeanceFacturationMMJJ(ct);
+  if (!mmjj || !apres) return null;
+  let an = Number(apres.slice(0, 4));
+  let d = `${an}-${mmjj}`;
+  if (d <= apres) d = `${an + 1}-${mmjj}`;
+  return d.endsWith('-02-29') && new Date(Number(d.slice(0, 4)), 1, 29).getMonth() !== 1 ? d.slice(0, 5) + '03-01' : d;
+}
+
+function tauxGestionConnu(ca, prime) {
+  const m = String(ca.detail_calcul || '').match(/([\d]+(?:[.,]\d+)?)\s*%/);
+  if (m) { const t = parseFloat(m[1].replace(',', '.')); if (t > 0 && t < 40) return t / 100; }
+  const est = Number(ca.montant_estime || 0);
+  return prime > 0 && est > 0 && est / prime < 0.4 ? est / prime : null;
+}
+
+async function assurerGestionAnnuelle() {
+  if (typeof estRoleRH === 'function' && estRoleRH()) return 0;
+  const auj = _prevIso(new Date());
+  const limite = _prevIso(new Date(Date.now() + GESTION_ANNUELLE_AVANCE_JOURS * 86400000));
+  let crees = 0;
+  for (const ct of allContrats) {
+    if (ct.commissionne === false || !['actif', 'renouveler'].includes(ct.statut)) continue;
+    const prime = Number(ct.prime_annuelle || 0);
+    if (!prime) continue;
+    const gs = allCommissionsAttente.filter(c => c.contrat_id === ct.id && c.nature === 'gestion' && c.statut !== 'annulée');
+    if (!gs.length || gs.some(c => c.statut === 'en_attente' || c.statut === 'en_attente_naissance')) continue;
+    const derniere = gs.slice().sort((a, b) => String(a.date_creation || '').localeCompare(String(b.date_creation || ''))).pop();
+    const depuis = (derniere.date_creation || ct.date_debut || '').slice(0, 10);
+    let echeance = prochaineEcheanceFacturation(ct, depuis);
+    // Échéances anciennes (historique repris) : on ne recrée pas le passé, on part de l'échéance récente
+    const plancher = _prevIso(new Date(Date.now() - 120 * 86400000));
+    let garde = 0;
+    while (echeance && echeance < plancher && garde++ < 30) echeance = prochaineEcheanceFacturation(ct, echeance);
+    if (!echeance || echeance > limite) continue;
+    const taux = gs.map(c => tauxGestionConnu(c, prime)).find(t => t !== null);
+    if (!taux) continue;
+    const montant = Math.round(prime * taux * 100) / 100;
+    const cl = allClients.find(c => c.id === ct.client_id);
+    const body = {
+      client_id: ct.client_id, contrat_id: ct.id,
+      client_nom: cl ? (estEntreprise(cl) ? cl.nom : `${cl.prenom || ''} ${cl.nom || ''}`.trim()) : null,
+      compagnie: ct.compagnie, produit: ct.produit, nature: 'gestion',
+      montant_estime: montant, statut: 'en_attente', date_creation: echeance,
+      detail_calcul: `[gestion annuelle] Échéance de facturation du ${echeance.split('-').reverse().join('.')} — ${(Math.round(taux * 1000) / 10).toString().replace('.', ',')} % × prime annuelle CHF ${prime}`,
+    };
+    const r = await dbPost('commissions_attente', body);
+    if (r && !r.error && r[0]) { allCommissionsAttente.push(r[0]); crees++; }
+  }
+  if (crees && typeof logAction === 'function') logAction('gestion_annuelle', 'commissions_attente', null, `${crees} commission(s) de gestion annuelle créée(s) (échéances jusqu'au ${limite.split('-').reverse().join('.')})`);
+  return crees;
 }

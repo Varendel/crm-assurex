@@ -893,6 +893,11 @@ async function refreshCoreData() {
   allClients = clients || allClients;
   allFichesPaie = fiches || allFichesPaie;
   if (Array.isArray(tranches)) allCommissionTranches = tranches; // versements partiels (reste attendu, encaissé)
+  // Gestion de l'année suivante créée à l'approche de chaque échéance de facturation (js/19) —
+  // seulement sur des données fraîches, pour ne jamais créer de doublon à partir d'un état périmé
+  if (Array.isArray(commissions) && Array.isArray(contrats) && typeof assurerGestionAnnuelle === 'function') {
+    try { await assurerGestionAnnuelle(); } catch (e) { /* jamais bloquant */ }
+  }
 }
 
 async function navigate(view, opts) {

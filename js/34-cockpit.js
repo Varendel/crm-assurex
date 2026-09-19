@@ -274,7 +274,136 @@ function htmlCockpitOZ() {
         <input type="checkbox" checked onchange="this.checked?window._ozSelection.add('${l.ca.id}'):window._ozSelection.delete('${l.ca.id}')"/>
         <span class="sfx-corps"><b>${ckEsc(l.ca.client_nom || '—')}</b><small>${ckEsc(l.ca.compagnie || '')} · ${ckEsc(l.ca.produit || '')} · ${ckEsc(l.ca.nature || '')} · ${fmtDate(l.ca.date_reception || l.ca.date_creation)}${l.pA ? ` · apporteur CHF ${fmtCHF2(l.pA)}` : ''}</small></span>
         <span class="sfx-montant">CHF ${fmtCHF2(l.m)}</span></label>`).join('')}</div>` : '<div class="dbx-vide-petit">✓ Rien à refacturer pour l’instant.</div>'}
-    </section>`;
+    </section>
+    ${htmlRapprochementCompteOZ()}`;
+}
+
+// ═══ COMPTE COURANT OZ → DÉDUCTION DES COMMISSIONS EN ATTENTE ═══════════════════════════════
+// Le compte courant OZ (table commissions_oz) liste ce que les compagnies ont versé à OZ Assure.
+// Tant que ces montants ne sont pas rapprochés, le CRM continue de les attendre (ex. AGV TONI SA :
+// Vaudoise paie la commission d'encaissement au fil des primes, libellée « acquisition » par OZ).
+// Règles de rapprochement (une ligne du compte courant → une commission en attente) :
+//   - même n° de police (sans espaces ni ponctuation, 5 caractères min.) et même compagnie ;
+//   - période : celle écrite dans le libellé (« 01.01.25 - 31.12.25 » → 2025) ; à défaut, une
+//     gestion payée de janvier à avril concerne l'année précédente (Vaudoise paie à terme échu),
+//     sinon l'année du versement. Une GESTION n'est déduite que de la commission de la même année ;
+//   - une ligne « acquisition » va à l'acquisition en attente du contrat ; s'il n'y en a jamais eu
+//     (commission d'encaissement Vaudoise), elle est déduite de la gestion de l'année ;
+//   - une ligne déjà déduite porte sa référence [oz:id] dans la tranche → jamais imputée deux fois ;
+//     une ligne dont le montant correspond déjà à une commission reçue / versée à OZ est ignorée.
+// Chaque déduction crée une tranche « encaissée par OZ » (hors trésorerie Assurex). Quand le total
+// atteint le montant attendu, la commission passe « versée à OZ » et l'écart est journalisé.
+function ozNormPolice(p) { return String(p || '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+function ozPeriodeLigne(r) {
+  const t = String(r.type_mouvement || '');
+  const m = [...t.matchAll(/\d{1,2}\.\d{1,2}\.(\d{2}|\d{4})\b/g)];
+  if (m.length) { const a = m[m.length - 1][1]; return Number(a.length === 2 ? '20' + a : a); }
+  const d = String(r.date_mouvement || '');
+  const an = Number(d.slice(0, 4)), mois = Number(d.slice(5, 7));
+  return (classerTypeMouvementOz(t) === 'Gestion' && mois && mois <= 4) ? an - 1 : an;
+}
+function ozAnneeCommission(ca) { return Number(String(ca.date_creation || '').slice(0, 4)) || new Date().getFullYear(); }
+
+function ozPropositionsCompteCourant() {
+  const ledger = window._ck.ozLedger || [];
+  const dejaImputees = new Set();
+  (allCommissionTranches || []).forEach(t => { const m = String(t.note || '').match(/\[oz:([0-9a-f-]{36})\]/); if (m) dejaImputees.add(m[1]); });
+  const proche = typeof compagnieProcheImport === 'function' ? compagnieProcheImport : () => true;
+  const parPolice = {};
+  allCommissionsAttente.filter(ca => ca.statut !== 'annulée' && ca.contrat_id).forEach(ca => {
+    const ct = allContrats.find(c => c.id === ca.contrat_id);
+    const np = ozNormPolice(ct && ct.numero_police);
+    if (np.length < 5) return;
+    (parPolice[np] = parPolice[np] || []).push({ ca, ct });
+  });
+  const props = {};
+  ledger.forEach(r => {
+    if (!(Number(r.credit) > 0) || dejaImputees.has(r.id)) return;
+    const liees = (parPolice[ozNormPolice(r.police)] || []).filter(x => proche(r.compagnie, x.ct.compagnie || x.ca.compagnie));
+    if (!liees.length) return;
+    const montant = Number(r.credit);
+    // Déjà enregistrée comme commission reçue / versée à OZ du même montant → rien à déduire
+    if (liees.some(x => ['reçue', 'versé_oz'].includes(x.ca.statut) && Math.abs(Number(x.ca.montant_final ?? x.ca.montant_estime ?? 0) - montant) <= 0.05)) return;
+    const type = classerTypeMouvementOz(r.type_mouvement);
+    const periode = ozPeriodeLigne(r);
+    const enAttente = liees.filter(x => x.ca.statut === 'en_attente');
+    let cible = null;
+    if (type !== 'Gestion') {
+      const acq = enAttente.find(x => x.ca.nature === 'acquisition');
+      const debut = acq && acq.ct.date_debut ? new Date(acq.ct.date_debut) : null;
+      if (acq && (!debut || new Date(r.date_mouvement) >= new Date(debut.getTime() - 120 * 864e5))) cible = acq;
+      else if (!acq && !liees.some(x => x.ca.nature === 'acquisition')) cible = enAttente.find(x => x.ca.nature === 'gestion' && ozAnneeCommission(x.ca) === periode);
+    } else {
+      cible = enAttente.find(x => x.ca.nature === 'gestion' && ozAnneeCommission(x.ca) === periode);
+    }
+    if (!cible) return;
+    const p = props[cible.ca.id] = props[cible.ca.id] || { ca: cible.ca, ct: cible.ct, lignes: [] };
+    p.lignes.push(r);
+  });
+  return Object.values(props).map(p => {
+    const attendu = Number(p.ca.montant_estime || 0);
+    const deja = commissionDejaRecu(p.ca);
+    const propose = Math.round(p.lignes.reduce((s, r) => s + Number(r.credit), 0) * 100) / 100;
+    const total = deja + propose;
+    // Cochée d'office si le total reste plausible (≤ 150 % de l'attendu) ; au-delà, à vérifier
+    return { ...p, attendu, deja, propose, reste: Math.max(0, attendu - total), depasse: total - attendu, coche: total <= attendu * 1.5 + 1 };
+  }).sort((a, b) => (a.ca.client_nom || '').localeCompare(b.ca.client_nom || ''));
+}
+
+function htmlRapprochementCompteOZ() {
+  if (!window._ck.ozLedger) {
+    if (!window._ck.ozLedgerEnCours) {
+      window._ck.ozLedgerEnCours = true;
+      dbGet('commissions_oz', 'select=*&order=date_mouvement.asc').then(r => { window._ck.ozLedger = Array.isArray(r) ? r : []; window._ck.ozLedgerEnCours = false; ckRerendre(); });
+    }
+    return `<section class="dbx-carte"><header class="dbx-carte-tete"><h2>Compte courant OZ → montants déjà reçus</h2></header><div class="dbx-vide-petit">Chargement du compte courant OZ…</div></section>`;
+  }
+  const props = ozPropositionsCompteCourant();
+  window._ozRappSel = new Set(props.filter(p => p.coche).map(p => p.ca.id));
+  window._ozRappProps = props;
+  const tot = props.reduce((s, p) => s + p.propose, 0);
+  return `<section class="dbx-carte"><header class="dbx-carte-tete"><h2>Compte courant OZ → montants déjà reçus</h2>
+      <span class="dx-tete-actions"><button type="button" class="btn-save" onclick="ozAppliquerRapprochement()" ${props.length ? '' : 'disabled'}>✓ Déduire des commissions attendues</button></span></header>
+    <p class="ck-explication">Versements du compte courant OZ rapprochés par n° de police des commissions encore attendues : ils sont déduits du montant attendu (versement encaissé par OZ). Les lignes non cochées dépassent nettement l’estimation — à vérifier avant de les déduire.</p>
+    ${props.length ? `<div class="sfx-liste">${props.map(p => `<label class="sfx-ligne oz-ligne">
+      <input type="checkbox" ${p.coche ? 'checked' : ''} onchange="this.checked?window._ozRappSel.add('${p.ca.id}'):window._ozRappSel.delete('${p.ca.id}')"/>
+      <span class="sfx-logo">${typeof pictoCompagnie === 'function' ? pictoCompagnie(p.ca.compagnie, 28) : ''}</span>
+      <span class="sfx-corps"><b>${ckEsc(p.ca.client_nom || '—')}</b><small>${ckEsc(p.ca.produit || '')} · ${ckEsc(p.ca.nature || '')} · police ${ckEsc(p.ct.numero_police || '')} · ${p.lignes.length} versement${p.lignes.length > 1 ? 's' : ''} (${p.lignes.map(r => fmtDate(r.date_mouvement) + ' CHF ' + fmtCHF2(r.credit)).join(', ')})</small>
+        <small>Attendu CHF ${fmtCHF2(p.attendu)}${p.deja ? ` · déjà reçu CHF ${fmtCHF2(p.deja)}` : ''} → ${p.reste > 0.009 ? `reste CHF ${fmtCHF2(p.reste)}` : p.depasse > 0.009 ? `soldée, CHF ${fmtCHF2(p.depasse)} de plus que l’estimation` : 'soldée'}</small></span>
+      <span class="sfx-montant">− CHF ${fmtCHF2(p.propose)}</span></label>`).join('')}</div>
+      <div class="ck-explication" style="text-align:right">Total rapprochable : <b>CHF ${fmtCHF2(tot)}</b></div>` : '<div class="dbx-vide-petit">✓ Tout le compte courant OZ est déjà rapproché.</div>'}
+  </section>`;
+}
+
+async function ozAppliquerRapprochement() {
+  const props = (window._ozRappProps || []).filter(p => window._ozRappSel && window._ozRappSel.has(p.ca.id));
+  if (!props.length) { showError('Coche au moins une commission.'); return; }
+  const total = props.reduce((s, p) => s + p.propose, 0);
+  if (!confirm(`Déduire CHF ${fmtCHF2(total)} reçus par OZ de ${props.length} commission(s) attendue(s) ?`)) return;
+  let nbT = 0, nbSoldees = 0, echecs = 0;
+  const ecarts = [];
+  for (const p of props) {
+    for (const r of p.lignes) {
+      const res = await dbPost('commission_tranches', {
+        commission_id: p.ca.id, montant: Number(r.credit), date_reception: r.date_mouvement, encaisse_par: 'oz',
+        note: `Compte courant OZ — ${r.compagnie || ''} ${r.type_mouvement || ''} du ${fmtDate(r.date_mouvement)} [oz:${r.id}]`,
+      });
+      if (res && res.error) echecs++; else nbT++;
+    }
+  }
+  allCommissionTranches = await dbGet('commission_tranches', 'annule=eq.false&select=*') || [];
+  for (const p of props) {
+    const deja = commissionDejaRecu(p.ca);
+    if (deja > 0 && p.attendu - deja <= Math.max(1, p.attendu * 0.02)) {
+      const derniere = p.lignes.map(r => r.date_mouvement).sort().pop();
+      const r = await dbPatch('commissions_attente', p.ca.id, { statut: 'versé_oz', montant_final: Math.round(deja * 100) / 100, date_reception: derniere });
+      if (!(r && r.error)) { p.ca.statut = 'versé_oz'; p.ca.montant_final = Math.round(deja * 100) / 100; p.ca.date_reception = derniere; nbSoldees++; ecarts.push({ attente: p.ca, source: 'compte courant OZ' }); }
+    }
+  }
+  if (ecarts.length && typeof journaliserEcartsCommission === 'function') await journaliserEcartsCommission(ecarts, null);
+  if (typeof logAction === 'function') logAction('rapprochement_compte_oz', 'commissions_attente', null, `${nbT} versement(s) du compte courant OZ déduit(s) — CHF ${fmtCHF2(total)}, ${nbSoldees} commission(s) soldée(s)`);
+  showError(`✓ CHF ${fmtCHF2(total)} déduits (${nbT} versement(s)), ${nbSoldees} commission(s) soldée(s)${echecs ? ` — ⚠️ ${echecs} échec(s)` : ''}.`);
+  ckRerendre();
 }
 
 async function ozMarquerRefacture() {

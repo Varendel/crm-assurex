@@ -1820,7 +1820,14 @@ function matcherContratEtClient(numeroContrat, brancheInterne, nomFichier) {
 
   // 1. Par numéro de police
   let candidats = [];
-  for (const np of policesCandidates(numeroContrat)) {
+  // Numéros alphanumériques (Swiss Life collectif « F780DD », « CFFDE1 ») : comparés lettres
+  // comprises — réduits aux seuls chiffres, ils devenaient « 780 » / « 1 » et ne correspondaient à rien.
+  const alnum = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const brutAlnum = alnum(numeroContrat);
+  if (/[A-Z]/.test(brutAlnum) && /\d/.test(brutAlnum) && brutAlnum.length >= 4 && brutAlnum.length <= 14 && !/\s/.test(String(numeroContrat || '').trim())) {
+    candidats = allContrats.filter(c => c.numero_police && alnum(c.numero_police) === brutAlnum);
+  }
+  if (!candidats.length) for (const np of policesCandidates(numeroContrat)) {
     candidats = allContrats.filter(c => c.numero_police && normPoliceNumero(c.numero_police) === np);
     if (candidats.length) break;
   }
@@ -1835,7 +1842,9 @@ function matcherContratEtClient(numeroContrat, brancheInterne, nomFichier) {
     const correspond = c => {
       const mc = motsTriesSansAccents(nomClient(c)).split(' ').filter(w => w.length >= 2);
       if (!mc.length || !mf.length) return false;
-      const communs = mf.filter(w => mc.includes(w)).length;
+      // Mots égaux, ou l'un prolonge l'autre pour les mots longs (« bougainvillier » / « bougainvilliers »)
+      const pareil = (a, b) => a === b || (a.length >= 6 && b.length >= 6 && (a.startsWith(b) || b.startsWith(a)));
+      const communs = mf.filter(w => mc.some(x => pareil(w, x))).length;
       return communs >= 2 && (communs === mf.length || communs === mc.length);
     };
     const clients = allClients.filter(correspond);

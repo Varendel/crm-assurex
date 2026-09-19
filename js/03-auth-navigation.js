@@ -656,8 +656,31 @@ function attendreFinAnimationRex(ecran) {
   });
 }
 
+// Écran de chargement du CRM (20.09.2026, demande de Jonathan) : Rex allume sa bougie pendant que
+// les données arrivent, deux secondes au minimum pour que l'app n'apparaisse pas à moitié montée.
+const CRM_CHARGEMENT_MS = 2000;
+function ouvrirEcranChargementCrm() {
+  document.getElementById('ecran-chargement-crm')?.remove();
+  const d = document.createElement('div');
+  d.id = 'ecran-chargement-crm';
+  d.setAttribute('aria-live', 'polite');
+  d.innerHTML = `<div class="ecc-boite"><div class="loader">Préparation de votre espace de travail…</div>
+    <div class="ecc-marque"><b>REX</b> CRM</div></div>`;
+  document.body.appendChild(d);
+  return Date.now();
+}
+async function fermerEcranChargementCrm(t0) {
+  const reste = CRM_CHARGEMENT_MS - (Date.now() - (t0 || 0));
+  if (reste > 0) await new Promise(r => setTimeout(r, reste));
+  const d = document.getElementById('ecran-chargement-crm');
+  if (!d) return;
+  d.classList.add('ecc-sort');
+  setTimeout(() => d.remove(), 320);
+}
+
 async function enterApp(user) {
   currentUser = user;
+  const t0Chargement = ouvrirEcranChargementCrm();
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').classList.add('active');
   logAction('login', null, null, `${user.prenom} ${user.nom}`);
@@ -712,6 +735,7 @@ async function enterApp(user) {
   } else {
     navigate(user.role === 'rh' ? 'portefeuille' : 'dashboard');
   }
+  await fermerEcranChargementCrm(t0Chargement);
 }
 
 async function logout() {
@@ -730,7 +754,16 @@ async function tryRestoreSession() {
   if (!s || !s.email) return false;
   const token = await getValidAccessToken();
   if (!token) return false;
-  const userData = USER_ROLES[s.email] || { prenom: s.email.split('@')[0], nom: '', role: 'apporteur', taux: 50 };
+  // Un compte client doit revenir dans REX CLOUD, jamais dans le CRM (20.09.2026) : avant cette
+  // vérification, une session client restaurée retombait sur le rôle « apporteur » par défaut et
+  // ouvrait l'outil interne. On contrôle donc l'accès client AVANT tout, et on refuse une adresse
+  // inconnue au lieu de lui inventer un rôle.
+  if (typeof ecAccesDeLEmail === 'function') {
+    const acces = await ecAccesDeLEmail(s.email);
+    if (acces) { await ecEntrerEspaceClient(acces, s.email); return true; }
+  }
+  const userData = USER_ROLES[s.email];
+  if (!userData) { await supabaseAuthLogout(); return false; }
   await enterApp({ id: s.email, prenom: userData.prenom, nom: userData.nom, email: s.email, role: userData.role, taux: userData.taux });
   return true;
 }
@@ -752,6 +785,7 @@ const SECTIONS = [
     { id: 'marquage-entites', icon: '🏷️', label: 'Marquage des entités', staff: true, groupe: 'Clients' },
     { id: 'courriers', icon: '📨', label: 'Courriers clients', staff: true, groupe: 'Clients' },
     { id: 'dossier-financement', icon: '🏦', label: 'Dossiers financement', staff: true, groupe: 'Clients' },
+    { id: 'messages-clients', icon: '💬', label: 'Messages clients', staff: true, groupe: 'Clients' },
     { id: 'tous-contrats', icon: '📄', label: 'Tous les contrats', rhAllowed: true, groupe: 'Contrats' },
     { id: 'volume-primes', icon: '📦', label: 'Volume de primes', staff: true, rhAllowed: true, groupe: 'Contrats' },
     { id: 'recherche-vehicules', icon: '🚗', label: 'Recherche véhicules', rhAllowed: true, groupe: 'Contrats' },
@@ -1432,6 +1466,8 @@ async function renderView() {
     case 'courriers': main.innerHTML = typeof viewCourriers === 'function' ? viewCourriers() : ''; break;
     // Préparation d'un dossier de prêt hypothécaire, check-list Assurex (js/50)
     case 'dossier-financement': main.innerHTML = typeof viewDossierFinancement === 'function' ? viewDossierFinancement() : ''; break;
+    // Messages et demandes venus de l'espace client REX CLOUD (js/51)
+    case 'messages-clients': main.innerHTML = typeof viewMessagesClients === 'function' ? viewMessagesClients() : ''; break;
     case 'marquage-entites': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); main.innerHTML = typeof viewMarquageEntites === 'function' ? viewMarquageEntites() : ''; break;
     // Factures QR suisses (js/33)
     case 'factures': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = typeof viewFacturesQR === 'function' ? await viewFacturesQR() : '<div class="table-empty">Module factures non chargé.</div>'; break;

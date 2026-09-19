@@ -14,6 +14,7 @@ const JA_TYPES = {
   email:        { label: 'E-mails',       icone: '✉️', fond: 'rgba(167,139,250,0.16)' },
   appel:        { label: 'Appels',        icone: '📞', fond: 'rgba(56,189,248,0.14)' },
   courrier:     { label: 'Courriers',     icone: '📨', fond: 'rgba(17,54,121,0.12)' },
+  message:      { label: 'Espace client', icone: '💬', fond: 'rgba(0,207,255,0.18)' },
   tache:        { label: 'Tâches',        icone: '☑️', fond: 'rgba(56,189,248,0.14)' },
   rdv:          { label: 'RDV',           icone: '📅', fond: 'rgba(74,222,128,0.14)' },
   signature:    { label: 'Signatures',    icone: '✍️', fond: 'rgba(74,222,128,0.14)' },
@@ -72,9 +73,12 @@ async function chargerJournalActivite() {
   const idsContrats = (ctx.contrats || []).map(ct => ct.id);
   const oppsClient = (typeof allOpportunites !== 'undefined' ? allOpportunites : []).filter(o => o.client_id === clientId);
   const idsAudit = [clientId, ...idsContrats, ...oppsClient.map(o => o.id)];
-  const [activites, audits] = await Promise.all([
+  const [activites, audits, messages, transferts] = await Promise.all([
     dbGet('activites_client', `client_id=eq.${clientId}&select=*&order=created_at.desc&limit=200`),
     dbGet('audit_log', `record_id=in.(${idsAudit.join(',')})&action=not.in.(view_client,login,logout)&select=action,detail,user_email,created_at&order=created_at.desc&limit=150`),
+    // Ce que le client a écrit ou demandé depuis son espace REX CLOUD (js/51)
+    dbGet('messages_clients', `client_id=eq.${clientId}&select=*&order=created_at.desc&limit=50`).catch(() => []),
+    dbGet('demandes_transfert', `client_id=eq.${clientId}&select=*&order=created_at.desc&limit=20`).catch(() => []),
   ]);
   if (_ja.clientId !== clientId) return; // l'utilisateur a changé de fiche entre-temps
 
@@ -89,6 +93,15 @@ async function chargerJournalActivite() {
     titre: m.signe ? 'Document signé' : 'Document enregistré (non signé)', detail: m.fichier_nom || 'Mandat de courtage' }));
   oppsClient.forEach(o => (Array.isArray(o.historique) ? o.historique : []).forEach(h => items.push({ type: 'opportunite', date: h.date, qui: h.auteur || '',
     titre: `Opportunité « ${o.titre || ''} »`, detail: h.texte })));
+  (messages || []).forEach(m => {
+    const ct = (ctx.contrats || []).find(x => x.id === m.contrat_id);
+    items.push({ type: 'message', date: m.created_at, qui: 'Client (REX CLOUD)',
+      titre: `Message du client${m.sujet ? ' : ' + m.sujet : ''}${ct ? ` — ${ct.produit || 'contrat'}${ct.numero_police ? ' (' + ct.numero_police + ')' : ''}` : ''}`,
+      detail: m.message + (m.reponse ? `\n↳ Réponse : ${m.reponse}` : m.statut === 'nouveau' ? '\n↳ Sans réponse pour l’instant.' : '') });
+  });
+  (transferts || []).forEach(t => items.push({ type: 'message', date: t.created_at, qui: 'Client (REX CLOUD)',
+    titre: 'Demande de transfert de gestion',
+    detail: (Array.isArray(t.compagnies) ? t.compagnies : []).map(x => `${x.compagnie}${x.produit ? ' · ' + x.produit : ''}${x.police ? ' · ' + x.police : ''}`).join('\n') + (t.message ? `\n${t.message}` : '') }));
   (audits || []).forEach(a => items.push({ type: 'modification', date: a.created_at, qui: a.user_email || '',
     titre: JA_LIBELLES_AUDIT[a.action] || a.action.replace(/_/g, ' '), detail: a.detail || '' }));
 

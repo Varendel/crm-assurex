@@ -131,8 +131,15 @@ function rexCitationSuivante() {
   return REX_CITATIONS[i];
 }
 
+// Les citations sont un clin d'œil interne : jamais dans l'espace client REX CLOUD (20.09.2026)
+function rexCitationInterdite() {
+  return document.body.classList.contains('mode-espace-client')
+    || (typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'client');
+}
+
 function rexAfficherCitation(changer) {
   if (typeof currentUser === 'undefined' || !currentUser) return;
+  if (rexCitationInterdite()) { document.getElementById('rex-citation')?.remove(); return; }
   rexCitationStyles();
   const c = changer || window._rexCit.index == null ? rexCitationSuivante() : REX_CITATIONS[window._rexCit.index];
   let el = document.getElementById('rex-citation');
@@ -175,6 +182,7 @@ function rexMasquerCitation() {
   try { const i = Number(localStorage.getItem('rex-citation-index')); if (Number.isInteger(i) && i >= 0 && i < REX_CITATIONS.length) window._rexCit.index = i; } catch (e) {}
   const attendre = setInterval(() => {
     if (typeof currentUser === 'undefined' || !currentUser) return;
+    if (rexCitationInterdite()) return; // espace client : on n'affiche jamais de citation
     clearInterval(attendre);
     rexAfficherCitation(true);
     clearInterval(window._rexCit.timer);

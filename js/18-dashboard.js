@@ -222,7 +222,10 @@ function dbxVueAujourdhui(D, actions) {
 
   return `
     <div class="dbx-kpis">${kpis}</div>
-    ${typeof htmlBandeauRecurrenceOZ === 'function' ? htmlBandeauRecurrenceOZ() : ''}
+    <!-- Bandeau « Récurrence sourcée OZ » retiré du tableau de bord le 20.09.2026 (demande de
+         Jonathan) : il reste dans le cockpit (js/34) et dans les objectifs (js/42). -->
+
+
     <div class="dbx-grille">
       <div class="dbx-col">
         <section class="dbx-carte dbx-anim" style="--i:5" aria-labelledby="dbx-titre-actions">

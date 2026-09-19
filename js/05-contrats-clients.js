@@ -781,6 +781,7 @@ function ouvrirOngletAdminClient(clientId) {
     boutonOngletAction('modal-onglet-admin', `ouvrirModaleRelanceClient('${clientId}')`, '📨 Courrier de relance (document manquant)'),
     boutonOngletAction('modal-onglet-admin', `ouvrirModaleCourrierLibre('${clientId}')`, '📝 Courrier libre'),
     typeof ouvrirAccesEspaceClient === 'function' ? boutonOngletAction('modal-onglet-admin', `ouvrirAccesEspaceClient('${clientId}')`, '🔐 Accès espace client') : '',
+    typeof mcEcrireAuClient === 'function' ? boutonOngletAction('modal-onglet-admin', `mcEcrireAuClient('${clientId}')`, '✉️ Écrire au client (motif)') : '',
   ].filter(Boolean).join('');
   ouvrirModaleOnglet('modal-onglet-admin', '🗂️ Admin', '#a78bfa', boutons);
 }

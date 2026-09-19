@@ -53,14 +53,16 @@ async function ecEntrerEspaceClient(acces, email) {
   document.title = `${EC_MARQUE} — Mon espace assurances`;
   const main = document.getElementById('main-content');
   if (main) main.innerHTML = '<div class="loader">Chargement de votre espace…</div>';
-  const [clients, contrats, vehicules, rdv, mandats] = await Promise.all([
+  const [clients, contrats, vehicules, rdv, mandats, messages, transferts] = await Promise.all([
     dbGet('clients', `id=eq.${acces.client_id}&select=*`).catch(() => []),
     dbGet('contrats', `client_id=eq.${acces.client_id}&select=*&order=date_echeance.asc`).catch(() => []),
     dbGet('vehicules', `client_id=eq.${acces.client_id}&select=*`).catch(() => []),
     dbGet('rendez_vous', `client_id=eq.${acces.client_id}&select=*&order=date_heure.asc`).catch(() => []),
     dbGet('mandats_signes', `client_id=eq.${acces.client_id}&select=*`).catch(() => []),
+    dbGet('messages_clients', `client_id=eq.${acces.client_id}&select=*&order=created_at.desc&limit=30`).catch(() => []),
+    dbGet('demandes_transfert', `client_id=eq.${acces.client_id}&select=*&order=created_at.desc&limit=10`).catch(() => []),
   ]);
-  window._ec = { client: (clients || [])[0] || null, contrats: contrats || [], vehicules: vehicules || [], rdv: rdv || [], mandats: mandats || [] };
+  window._ec = { client: (clients || [])[0] || null, contrats: contrats || [], vehicules: vehicules || [], rdv: rdv || [], mandats: mandats || [], messages: messages || [], transferts: transferts || [] };
   try { await dbPatch('acces_clients', acces.id, { dernier_acces: new Date().toISOString() }); } catch (e) { /* sans importance */ }
   if (main) main.innerHTML = ecVueEspaceClient();
 }
@@ -94,7 +96,8 @@ function ecVueEspaceClient() {
       </div>
       <div class="cf-hero-actions">
         <div class="cf-boutons">
-          <a class="fcx-btn-blanc" href="mailto:jo@cofidex.ch?subject=${encodeURIComponent('Mon espace client — ' + (ecNomClient(c) || ''))}">✉️ Écrire à mon conseiller</a>
+          <button type="button" class="fcx-btn-blanc" onclick="ecOuvrirTransfert()">🤝 Transférer la gestion de mes assurances</button>
+          <button type="button" class="fcx-btn-verre" onclick="ecOuvrirMessage()">✉️ Laisser un message</button>
           <button type="button" class="fcx-btn-verre" onclick="ecDeconnexion()">Se déconnecter</button>
         </div>
       </div>
@@ -123,6 +126,7 @@ function ecVueEspaceClient() {
             ${limite ? `<span class="${bientot ? 'ec-alerte' : ''}">Résiliation jusqu’au ${fmtDate(limite)}</span>` : ''}
           </div>
           <div class="ec-prime">${ct.prime_annuelle ? `CHF ${fmtCHF(Math.round(ct.prime_annuelle))}<small>/an</small>` : '—'}</div>
+          <button type="button" class="ec-contacter" onclick="ecOuvrirMessage('${ct.id}')" title="Une question sur ce contrat ?">💬 Contacter mon conseiller</button>
         </article>`;
       }).join('')}</div>` : '<div class="dbx-vide-petit">Aucun contrat en vigueur pour l’instant.</div>'}
     </section>
@@ -135,6 +139,12 @@ function ecVueEspaceClient() {
       <div class="sfx-liste">${prochains.map(r => `<div class="sfx-ligne"><span class="sfx-corps"><b>${ecEsc(r.type || 'Rendez-vous')}</b><small>${ecEsc(r.lieu || r.mode || '')}</small></span><span class="ck-date">${fmtDate(r.date_heure.slice(0, 10))} ${r.date_heure.slice(11, 16)}</span></div>`).join('')}</div>
     </section>` : ''}
 
+    ${ecCarteTransfert()}
+
+    ${(E.messages || []).length ? `<section class="dbx-carte" style="margin-top:18px"><header class="dbx-carte-tete"><h2>Mes messages</h2><span class="dbx-carte-sous">${E.messages.length} envoyé(s)</span></header>
+      <div class="sfx-liste">${E.messages.slice(0, 6).map(m => `<div class="sfx-ligne"><span class="sfx-corps"><b>${ecEsc(m.sujet || 'Message')}</b><small>${ecEsc((m.message || '').slice(0, 120))}${(m.message || '').length > 120 ? '…' : ''}</small>${m.reponse ? `<small class="ec-reponse">Réponse : ${ecEsc(m.reponse.slice(0, 160))}</small>` : ''}</span><span class="ck-date">${m.statut === 'traite' ? '✓ traité' : m.statut === 'lu' ? 'lu' : 'transmis'} · ${fmtDate((m.created_at || '').slice(0, 10))}</span></div>`).join('')}</div>
+    </section>` : ''}
+
     <section class="dbx-carte" style="margin-top:18px"><header class="dbx-carte-tete"><h2>Vos documents</h2></header>
       <div class="dbx-vide-petit">Les polices et attestations sont transmises par votre conseiller. Écrivez-lui pour en recevoir une copie — le téléchargement direct arrivera dans une prochaine version.</div>
     </section>
@@ -143,6 +153,26 @@ function ecVueEspaceClient() {
       <div class="ec-signature sombre"><span style="font-size:11px">by</span><img src="assets/logos/assurex.png" alt="Assurex"/>${typeof LOGO_EXGROUPE_SVG !== 'undefined' ? `<span style="display:inline-flex;height:16px">${LOGO_EXGROUPE_SVG}</span>` : ''}</div>
     </div>
   </div>`;
+}
+
+// Transfert de la gestion des contrats (js/51) : proposé tant qu'aucune demande n'est en cours,
+// puis remplacé par l'état d'avancement de la demande déposée.
+function ecCarteTransfert() {
+  const E = window._ec || {};
+  const dem = (E.transferts || [])[0];
+  const enCours = dem && ['nouveau', 'mandat_genere', 'envoye'].includes(dem.statut);
+  if (enCours) {
+    const etapes = [['nouveau', 'Demande reçue'], ['mandat_genere', 'Mandat établi'], ['envoye', 'Envoyé à vos assureurs']];
+    const idx = etapes.findIndex(e => e[0] === dem.statut);
+    return `<section class="dbx-carte ec-transfert" style="margin-top:18px"><header class="dbx-carte-tete"><h2>Transfert de la gestion</h2><span class="dbx-carte-sous">déposé le ${fmtDate((dem.created_at || '').slice(0, 10))}</span></header>
+      <div class="ec-suivi">${etapes.map((e, i) => `<span class="ec-suivi-etape ${i <= idx ? 'faite' : ''}">${i <= idx ? '●' : '○'} ${e[1]}</span>`).join('')}</div>
+      <p class="ec-suivi-txt">Nous nous occupons de tout : vos assureurs nous transmettent vos polices, vous n’avez rien à faire. Vos couvertures restent inchangées.</p>
+    </section>`;
+  }
+  return `<section class="dbx-carte ec-transfert" style="margin-top:18px"><header class="dbx-carte-tete"><h2>Transférer la gestion de mes contrats</h2></header>
+    <p class="ec-suivi-txt">Confiez-nous le suivi de vos assurances, même celles souscrites ailleurs : nous récupérons vos polices, surveillons vos échéances et comparons pour vous. Vos contrats et vos couvertures ne changent pas, et le mandat est résiliable en tout temps.</p>
+    <button type="button" class="fcx-btn-blanc ec-btn-transfert" onclick="ecOuvrirTransfert()">🤝 Transférer la gestion de mes contrats</button>
+  </section>`;
 }
 
 async function ecDeconnexion() {

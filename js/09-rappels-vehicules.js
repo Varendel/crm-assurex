@@ -1805,6 +1805,7 @@ function contratExisteDeja(clientId, produitLabel, numeroPolice) {
 }
 
 async function creerContratEtCommission(clientId, compagnie, produitLabel, primeMensuelle, modules, montantCommission, detailCommission, plaques, dejaAnnuelle, detailLignes) {
+  if (typeof normaliserProduit === 'function') produitLabel = normaliserProduit(produitLabel); // libellé unique en base (19.09.2026)
   const existant = contratExisteDeja(clientId, produitLabel, document.getElementById('ct-police').value);
   if (existant) return { error: true, detail: `ce client a déjà un contrat « ${produitLabel} » avec la police ${existant.numero_police} — modifie le contrat existant plutôt que d'en créer un second.` };
   const commissionne = document.getElementById('ct-commissionne').value !== 'non';
@@ -1824,6 +1825,13 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
     statut: document.getElementById('ct-statut').value,
     commissionne,
     detail_lignes: detailLignes && detailLignes.length > 0 ? detailLignes : null,
+    // Harmonisation (19.09.2026) : la périodicité n'était pas enregistrée (défaut base = annuelle),
+    // alors que la fiche contrat recalcule la prime = lignes × périodicité → une prime mensuelle
+    // modifiée puis enregistrée était divisée par 12. Même chose pour le type de commission et le
+    // préavis (LAMal 1 mois, sinon 3 mois par défaut), jusque-là posés seulement à la modification.
+    periodicite: dejaAnnuelle ? (/^LCA — /.test(produitLabel) ? 12 : 1) : (parseInt(document.getElementById('ct-periodicite')?.value) || 12),
+    type_commission: document.getElementById('ct-nature-commission')?.value || 'acquisition',
+    preavis_mois: /lamal/i.test(produitLabel) ? 1 : 3,
     // "Dont prime risque + frais" (base de calcul COG Swiss Life) n'était utilisée que pour le
     // calcul en direct puis jetée — jamais sauvegardée nulle part, donc invisible/reperdue dès la
     // fiche rechargée. Persistée ici pour de bon (demande de Jonathan le 25.08.2026 : "la prime...
@@ -1880,6 +1888,7 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
     nature: document.getElementById('ct-nature-commission')?.value || 'acquisition',
     date_creation: new Date().toISOString().split('T')[0],
     contrat_id: rContrat && rContrat[0] ? rContrat[0].id : null,
+    numero_police: contratBody.numero_police, // posé dès la création (avant : seulement après une modification du contrat)
   };
   const rComm = await dbPost('commissions_attente', commissionBody);
   // Commission de paiement sur l'épargne (vie / 3a) : s'ajoute à l'acquisition, annuelle, versée à
@@ -1969,13 +1978,18 @@ async function saveContrat() {
   if (lignesPlaques.length > 0 && resultPrincipal.contrat && resultPrincipal.contrat.id) {
     const nouveauContratId = resultPrincipal.contrat.id;
     const policeContrat = document.getElementById('ct-police').value.trim() || null;
-    const rVeh = await dbPost('vehicules', lignesPlaques.map(l => ({
+    // Le champ « marque » de la ligne contient souvent « marque + modèle » (saisie ou import IA) :
+    // vehNormaliser (js/08) sépare marque / modèle / type et uniformise la plaque (19.09.2026).
+    const norm = l => typeof vehNormaliser === 'function' ? vehNormaliser({ marque: l.marque, numero_plaque: l.plaque }) : { marque: l.marque || null, modele: null, type_vehicule: null, numero_plaque: l.plaque };
+    const rVeh = await dbPost('vehicules', lignesPlaques.map(l => { const n = norm(l); return {
       client_id: clientId,
       contrat_id: nouveauContratId,
-      marque: l.marque || null,
-      numero_plaque: l.plaque,
+      marque: n.marque,
+      modele: n.modele,
+      type_vehicule: n.type_vehicule,
+      numero_plaque: n.numero_plaque || l.plaque,
       numero_police: policeContrat,
-    })));
+    }; }));
     if (rVeh && rVeh.error) console.error('Échec de l\'enregistrement du/des véhicule(s) dans la table vehicules :', rVeh.detail);
     else allVehicules = await dbGet('vehicules', 'select=*');
   }
@@ -2020,8 +2034,12 @@ async function saveContrat() {
     const produitCombinable = getProduitParId(id);
     const input = document.querySelector(`.ct-combinable-prime-input[data-produit-id="${id}"]`);
     const primeCombinableAnnuelle = parseFloat(input.value) || 0;
-    const montantCombinable = Math.round(primeCombinableAnnuelle * 0.1); // estimation par défaut (10% fictif) — ajustable manuellement ensuite
-    await creerContratEtCommission(clientId, compagnie, produitCombinable.label, primeCombinableAnnuelle, [], montantCombinable, 'Produit combiné — commission estimée à ajuster', null, true);
+    // Taux appris des décomptes réels de cette compagnie pour ce produit quand on en a (19.09.2026),
+    // sinon estimation par défaut à 10 % — ajustable ensuite, corrigée au premier décompte.
+    const appris = typeof tauxCommissionAppris === 'function' ? tauxCommissionAppris(compagnie, produitCombinable.label, document.getElementById('ct-nature-commission')?.value || 'acquisition') : null;
+    const tauxComb = appris && appris.taux ? appris.taux : 0.1;
+    const montantCombinable = Math.round(primeCombinableAnnuelle * tauxComb);
+    await creerContratEtCommission(clientId, compagnie, produitCombinable.label, primeCombinableAnnuelle, [], montantCombinable, appris && appris.taux ? `Produit combiné — taux appris ${Math.round(tauxComb * 1000) / 10} % (décomptes ${compagnie})` : 'Produit combiné — commission estimée à 10 %, à ajuster', null, true);
   }
 
   // Produits LCA (santé complémentaire) — un ou plusieurs par client (ex: hospitalisation + ambulatoire),

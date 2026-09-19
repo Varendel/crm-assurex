@@ -82,7 +82,8 @@ async function confirmerNaissance(clientId) {
   // Bascule tous les contrats du client (LAMal/LCA prénatals) en vigueur
   const contratsClient = allContrats.filter(x => x.client_id === clientId);
   for (const ct of contratsClient) {
-    if (ct.statut !== 'actif') await dbPatch('contrats', ct.id, { statut: 'actif' });
+    // Seulement les contrats « en cours » : un contrat annulé ou résilié ne doit jamais être réactivé (19.09.2026)
+    if (ct.statut === 'en_cours') await dbPatch('contrats', ct.id, { statut: 'actif' });
   }
 
   // Les commissions "en attente de naissance" deviennent des commissions normales en attente

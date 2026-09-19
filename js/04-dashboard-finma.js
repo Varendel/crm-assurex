@@ -1178,9 +1178,16 @@ function exporterContratsCsv() {
 // seuls les cas sans ambiguïté sont fusionnés. En particulier, les différentes formes de "Perte
 // de gain" (maladie collective / maladie LCA / maladie-accident LCA / accident collective) NE
 // SONT PAS fusionnées entre elles : ce sont des produits distincts (demande explicite de Jonathan).
+// Depuis le 19.09.2026, appliquée aussi À L'ENREGISTREMENT (saisie, modification, import) pour
+// que la base ne diverge plus selon le formulaire utilisé.
 const ALIAS_PRODUITS = {
   'lamal (assurance de base)': 'Assurance maladie (LAMal)',
+  'lamal': 'Assurance maladie (LAMal)',
   'rc véhicule à moteur (obligatoire)': 'RC véhicule (obligatoire)',
+  'assurance vie liée — pilier 3a': 'Assurance vie liée 3a (pilier 3a)',
+  'assurance vie liee 3a (pilier 3a)': 'Assurance vie liée 3a (pilier 3a)',
+  'complémentaire santé (lca)': 'Complémentaire santé',
+  'garantie de loyer (caution)': 'Caution de loyer — bail privé',
 };
 function normaliserProduit(nom) {
   if (!nom) return nom;

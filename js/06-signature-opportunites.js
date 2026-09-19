@@ -1995,10 +1995,15 @@ async function creerContratDepuisImport(idx) {
   const body = {
     client_id: l.clientId,
     compagnie: normaliserCompagnie(_decompteNomAssureur || ''),
-    produit: l.brancheInterne || 'Contrat (à préciser)',
+    produit: (typeof normaliserProduit === 'function' ? normaliserProduit(l.brancheInterne || '') : l.brancheInterne) || 'Contrat (à préciser)',
     numero_police: l.numeroContrat,
     prime_annuelle: Math.round((l.commissionProduction || 0) * 100) / 100,
     statut: 'actif',
+    // Mêmes champs de base que la saisie manuelle (harmonisation 19.09.2026)
+    commissionne: true,
+    periodicite: 1,
+    preavis_mois: /lamal/i.test(l.brancheInterne || '') ? 1 : 3,
+    apporteur_id: (allClients.find(c => c.id === l.clientId) || {}).apporteur_id || null,
   };
   const r = await dbPost('contrats', body);
   if (r && r.error) {
@@ -2647,8 +2652,12 @@ async function importerCommissionsEtBordereau(nomAssureur) {
         client_id: l.clientId,
         contrat_id: l.contratId,
         client_nom: l.clientNomCRM,
-        compagnie: nomAssureur || null,
-        produit: l.brancheInterne || null,
+        // Harmonisation (19.09.2026) : compagnie normalisée comme partout ailleurs (avant : nom brut du
+        // décompte « Vaudoise Générale », « GMA SA »…) ; produit = celui du contrat quand il est connu,
+        // le libellé du décompte reste dans detail_calcul.
+        compagnie: (typeof normaliserCompagnie === 'function' ? normaliserCompagnie(nomAssureur || '') : nomAssureur) || null,
+        produit: (l.contratId && (allContrats.find(ct => ct.id === l.contratId) || {}).produit) || l.brancheInterne || null,
+        numero_police: (l.contratId && (allContrats.find(ct => ct.id === l.contratId) || {}).numero_police) || l.numeroContrat || null,
         montant_estime: montant,
         montant_final: montant,
         detail_calcul: `Décompte compagnie importé — ${l.brancheInterne || ''}${montant < 0 ? ' (correction' + (l.noFacture ? ' facture n°' + l.noFacture : '') + ')' : ''} : base CHF ${fmtCHF(l.commissionProduction)} × ${l.taux}% — contrat ${l.numeroContrat}${l.noFacture ? ` — facture n°${l.noFacture}` : ''}${l.dateFacture ? ` du ${l.dateFacture}` : ''} [${l.ref || refLigneImport(l)}]`,

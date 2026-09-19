@@ -698,7 +698,7 @@ async function saveEditContrat(contratId, clientId, returnTo) {
   const ancienContrat = allContrats.find(c => c.id === contratId);
   const ancienStatut = ancienContrat ? ancienContrat.statut : null;
   const body = {
-    produit: document.getElementById('ect-produit').value.trim(),
+    produit: normaliserProduit(document.getElementById('ect-produit').value.trim()),
     compagnie: normaliserCompagnie(document.getElementById('ect-compagnie').value.trim()),
     numero_police: document.getElementById('ect-police').value.trim() || null,
     date_debut: document.getElementById('ect-date-debut').value || null,
@@ -986,7 +986,7 @@ function vehNormaliser(v) {
   }
   if (r.numero_plaque) {
     const p = String(r.numero_plaque).toUpperCase().trim();
-    r.numero_plaque = /^[A-Z]{2}\s*[0-9 ]+$/.test(p) ? p.replace(/^([A-Z]{2})\s*/, '$1 ').replace(/(?<=^[A-Z]{2} .*)\s+/g, '') : p;
+    r.numero_plaque = /^[A-Z]{2}\s*[0-9 ]+$/.test(p) ? p.replace(/^([A-Z]{2})\s*(.*)$/, (m, canton, num) => `${canton} ${num.replace(/\s+/g, '')}`) : p;
     if (/^[A-Z]{2} 0+$/.test(r.numero_plaque)) r.numero_plaque = null;
   }
   r.marque = marque || null; r.modele = modele || null; r.type_vehicule = type || null;
@@ -1324,6 +1324,7 @@ function renderRechercheVehicules() {
     vehicules = vehicules.filter(v =>
       (v.marque||'').toLowerCase().includes(search) ||
       (v.modele||'').toLowerCase().includes(search) ||
+      (v.type_vehicule||'').toLowerCase().includes(search) ||
       (v.cylindree||'').toLowerCase().includes(search) ||
       (v.numero_plaque||'').toLowerCase().includes(search) ||
       (v.numero_police||'').toLowerCase().includes(search)
@@ -1335,13 +1336,13 @@ function renderRechercheVehicules() {
     });
   }
   document.getElementById('rv-stats').innerHTML = `${statCard('Véhicules', vehicules.length, '#38bdf8')}${statCard('Total flotte', allVehicules.length, '#64748b')}${statCard('À compléter', manquants.length, manquants.length ? '#f59e0b' : '#64748b')}`;
-  const cols = '130px 1fr 110px 130px 1fr';
+  const cols = '130px 1fr 170px 130px 1fr';
   const lignesDetail = vehicules.map(v => {
     const cl = allClients.find(c => c.id === v.client_id);
     return `<a href="?client=${v.client_id}" class="table-row" style="grid-template-columns:${cols};cursor:pointer;text-decoration:none;color:inherit" onclick="return irVersClient(event, '${v.client_id}')">
       <div style="font-weight:700;color:var(--text)">${v.marque||'—'}</div>
       <div style="color:var(--text-muted)">${v.modele||'—'}</div>
-      <div style="color:var(--text-muted)">${v.cylindree||'—'}</div>
+      <div style="color:var(--text-muted);font-size:12px">${v.type_vehicule || v.cylindree || '—'}</div>
       <div style="font-family:monospace;font-weight:700;color:var(--text)">${v.numero_plaque||'—'}</div>
       <div style="color:var(--accent);text-decoration:underline dotted">${cl ? (estEntreprise(cl) ? cl.nom : `${cl.prenom} ${cl.nom}`) : '—'}</div>
     </a>`;
@@ -1360,7 +1361,7 @@ function renderRechercheVehicules() {
   }).join('');
   document.getElementById('rv-liste').innerHTML = `
     <div class="table-wrap">
-      <div class="table-header" style="grid-template-columns:${cols}"><div>Marque</div><div>Modèle</div><div>Cylindrée</div><div>Plaque / police</div><div>Client</div></div>
+      <div class="table-header" style="grid-template-columns:${cols}"><div>Marque</div><div>Modèle</div><div>Type</div><div>Plaque / police</div><div>Client</div></div>
       ${lignesDetail}${lignesManquantes}
       ${(!lignesDetail && !lignesManquantes) ? '<div class="table-empty">Aucun véhicule ne correspond.</div>' : ''}
     </div>`;

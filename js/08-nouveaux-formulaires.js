@@ -528,6 +528,13 @@ async function showEditContrat(contratId, returnTo) {
         <div class="form-field"><label class="form-label">Date d'entrée en vigueur</label><input class="form-input" id="ect-date-debut" type="date" value="${ct.date_debut || ''}"/></div>
         <div class="form-field"><label class="form-label">Date de signature</label><input class="form-input" id="ect-date-signature" type="date" value="${ct.date_signature || ''}"/></div>
         <div class="form-field"><label class="form-label">Date d'échéance</label><input class="form-input" id="ect-echeance" type="date" value="${ct.date_echeance || ''}"/></div>
+        <div class="form-field"><label class="form-label">Délai de résiliation (préavis)</label>
+          <select class="form-select" id="ect-preavis">
+            ${[['', `Par défaut (${/lamal|maladie \(lamal/i.test(ct.produit || '') ? '1 mois — LAMal' : '3 mois'})`], ['1', '1 mois'], ['2', '2 mois'], ['3', '3 mois'], ['4', '4 mois'], ['6', '6 mois'], ['0', 'Aucun (résiliable en tout temps)']]
+              .map(([v, l]) => `<option value="${v}" ${String(ct.preavis_mois ?? '') === v ? 'selected' : ''}>${l}</option>`).join('')}
+          </select>
+          <div style="font-size:10px;color:var(--text-muted);margin-top:3px">Sert à l'échéancier des renouvellements (date limite de résiliation).</div>
+        </div>
         <div class="form-field" style="grid-column:span 2" id="ect-prime-lignes-field">
           <label class="form-label">Lignes de prime <span style="font-weight:400;color:var(--text-muted);font-size:10px">(une ligne par poste de la police — corrige, ajoute ou supprime librement)</span></label>
           <div id="ect-prime-lignes-list" style="display:flex;flex-direction:column;gap:6px;margin-top:6px"></div>
@@ -599,7 +606,7 @@ async function showEditContrat(contratId, returnTo) {
         </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:20px">
-        <button onclick="deleteContrat('${ct.id}','${ct.client_id}', window._editContratReturnTo)" style="background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>
+        <button onclick="deleteContrat('${ct.id}','${ct.client_id}', window._editContratReturnTo)" title="Passe le contrat en « annulé » — rien n'est effacé" style="background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">⊘ Annuler le contrat</button>
         <button class="btn-secondary" onclick="document.getElementById('modal-edit-contrat').remove()">Annuler</button>
         <button class="btn-save" onclick="saveEditContrat('${ct.id}','${ct.client_id}', window._editContratReturnTo)">✓ Enregistrer</button>
       </div>
@@ -651,24 +658,21 @@ function collecterLignesPrimeEditSaisies() {
   })).filter(l => l.libelle || l.montant > 0);
 }
 
+// Règle de Jonathan : on ne supprime jamais de données. « Retirer » un contrat = le passer en
+// statut « annulé » et annuler ses commissions encore attendues ; les commissions déjà encaissées
+// (reçues / versées à OZ) restent intactes pour l'historique et les chiffres (19.09.2026).
 async function deleteContrat(contratId, clientId, returnTo) {
-  if (!confirm('Supprimer définitivement ce contrat ? Les commissions liées seront également supprimées. Cette action est irréversible.')) return;
+  if (!confirm('Annuler ce contrat ? Il passe en statut « annulé » et ses commissions encore attendues sont annulées. Rien n’est effacé : les commissions déjà encaissées restent dans l’historique.')) return;
 
-  // Supprimer les commissions liées d'abord (contrainte FK) — si l'une échoue, on s'arrête
-  // avant de toucher au contrat, pour ne jamais laisser une commission orpheline en base.
-  const commissionsLiees = allCommissionsAttente.filter(c => c.contrat_id === contratId);
-  for (const c of commissionsLiees) {
-    const rSuppr = await dbDelete('commissions_attente', c.id);
-    if (rSuppr && rSuppr.error) {
-      showError(`Suppression interrompue : impossible de supprimer une commission liée — ${errMsg(rSuppr)}`);
-      return;
-    }
+  const commissionsAttendues = allCommissionsAttente.filter(c => c.contrat_id === contratId && ['en_attente', 'en_attente_naissance'].includes(c.statut));
+  for (const c of commissionsAttendues) {
+    const rA = await dbPatch('commissions_attente', c.id, { statut: 'annulée', detail_calcul: `Annulée le ${new Date().toLocaleDateString('fr-CH')} avec le contrat. ${c.detail_calcul || ''}` });
+    if (rA && rA.error) { showError(`Annulation interrompue : une commission liée n'a pas pu être annulée — ${errMsg(rA)}`); return; }
   }
 
-  // Supprimer le contrat
-  const r = await dbDelete('contrats', contratId);
-  if (r && r.error) { showError('Erreur lors de la suppression du contrat : ' + errMsg(r)); return; }
-  logAction('delete_contrat', 'contrats', contratId, null);
+  const r = await dbPatch('contrats', contratId, { statut: 'annulé' });
+  if (r && r.error) { showError('Erreur lors de l’annulation du contrat : ' + errMsg(r)); return; }
+  logAction('delete_contrat', 'contrats', contratId, `Contrat annulé (non supprimé) — ${commissionsAttendues.length} commission(s) attendue(s) annulée(s)`);
   allContrats = await dbGet('contrats', 'select=*');
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
   const modal = document.getElementById('modal-edit-contrat');
@@ -700,6 +704,7 @@ async function saveEditContrat(contratId, clientId, returnTo) {
     date_debut: document.getElementById('ect-date-debut').value || null,
     date_signature: document.getElementById('ect-date-signature').value || null,
     date_echeance: document.getElementById('ect-echeance').value || null,
+    preavis_mois: (() => { const v = document.getElementById('ect-preavis')?.value; return v === '' || v == null ? null : Number(v); })(),
     prime_annuelle: primeAnnuelle,
     periodicite: periodicite,
     detail_lignes: lignesPrimeEdit.length > 0 ? lignesPrimeEdit : null,
@@ -767,7 +772,7 @@ async function saveEditContrat(contratId, clientId, returnTo) {
     const commissionsEnAttenteLiees = allCommissionsAttente.filter(c => c.contrat_id === contratId && c.statut === 'en_attente');
     let echecsSuppression = 0;
     for (const c of commissionsEnAttenteLiees) {
-      const rSuppr = await dbDelete('commissions_attente', c.id);
+      const rSuppr = await dbPatch('commissions_attente', c.id, { statut: 'annulée' }); // jamais de suppression
       if (rSuppr && rSuppr.error) echecsSuppression++;
     }
     const nbReussies = commissionsEnAttenteLiees.length - echecsSuppression;

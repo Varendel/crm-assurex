@@ -377,7 +377,7 @@ async function dbxChargerNouveautes() {
   if (!zone) return;
   const depuis = new Date(Date.now() - 7 * 86400000).toISOString();
   const [mandats, demandes] = await Promise.all([
-    dbGet('mandats_signes', `created_at=gte.${depuis}&signe=eq.true&select=client_id,created_at&order=created_at.desc&limit=20`),
+    dbGet('mandats_signes', `created_at=gte.${depuis}&signe=eq.true&archive=is.false&select=client_id,created_at&order=created_at.desc&limit=20`),
     dbGet('demandes_offre', 'select=id,client_id,opportunite_id,compagnies_envoi&limit=200'),
   ]);
   const items = [];

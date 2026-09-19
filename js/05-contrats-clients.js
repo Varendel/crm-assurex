@@ -987,21 +987,46 @@ function confirmerSuppressionClient(clientId, nomClient) {
   const commissionsLiees = allCommissionsAttente.filter(c => c.client_id === clientId);
   creerModale('modal-suppression-client', `
     <div style="background:var(--surface);border-radius:14px;padding:24px;max-width:440px;width:100%">
-      <div style="font-size:16px;font-weight:800;color:#f87171;margin-bottom:10px">⚠️ Supprimer ${nomClient} ?</div>
-      <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px">Cette action est <strong>définitive et irréversible</strong>. Elle supprimera aussi :</div>
+      <div style="font-size:16px;font-weight:800;color:#f87171;margin-bottom:10px">⚠️ Archiver ${nomClient} ?</div>
+      <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px">Rien n'est effacé (règle du cabinet) : le client passe en <strong>inactif</strong> et disparaît des listes courantes.</div>
       <ul style="font-size:12.5px;color:var(--text);margin:0 0 16px;padding-left:20px">
-        <li>${contratsLies.length} contrat(s)</li>
-        <li>${commissionsLiees.length} commission(s) liée(s)</li>
-        <li>Rappels, factures, collaborateurs et notes liés à ce client</li>
+        <li>${contratsLies.length} contrat(s) → passés en « annulé » (sauf résiliés)</li>
+        <li>${commissionsLiees.filter(c => ['en_attente', 'en_attente_naissance'].includes(c.statut)).length} commission(s) encore attendue(s) → annulée(s) ; les commissions encaissées restent dans l'historique</li>
+        <li>Rappels, factures, mandats et notes : conservés</li>
       </ul>
       <div style="display:flex;gap:10px">
         <button class="btn-secondary" onclick="document.getElementById('modal-suppression-client').remove()" style="flex:1">Annuler</button>
-        <button onclick="executerSuppressionClient('${clientId}', this)" style="flex:1;background:#f87171;color:#0a0e1a;border:none;border-radius:8px;padding:10px;font-weight:800;cursor:pointer">🗑️ Confirmer la suppression</button>
+        <button onclick="executerSuppressionClient('${clientId}', this)" style="flex:1;background:#f87171;color:#0a0e1a;border:none;border-radius:8px;padding:10px;font-weight:800;cursor:pointer">Confirmer l'archivage</button>
       </div>
     </div>`, { opacite: 0.8, padding: '16px', overflowY: false });
 }
 
+// Règle de Jonathan (19.09.2026) : on ne supprime jamais un client. « Supprimer » = archiver :
+// client inactif, contrats annulés (sauf résiliés), commissions encore attendues annulées ;
+// l'historique encaissé, les factures, rappels, mandats et notes sont conservés.
 async function executerSuppressionClient(clientId, btn) {
+  btn.textContent = 'Archivage...'; btn.disabled = true;
+  const auj = new Date().toLocaleDateString('fr-CH');
+  for (const c of allCommissionsAttente.filter(c => c.client_id === clientId && ['en_attente', 'en_attente_naissance'].includes(c.statut))) {
+    const r = await dbPatch('commissions_attente', c.id, { statut: 'annulée', detail_calcul: `Annulée le ${auj} (client archivé). ${c.detail_calcul || ''}` });
+    if (r && r.error) { showError('Archivage interrompu : ' + errMsg(r)); btn.textContent = 'Confirmer l’archivage'; btn.disabled = false; return; }
+  }
+  for (const ct of allContrats.filter(ct => ct.client_id === clientId && !['résilié', 'annulé', 'mandat_resilie'].includes(ct.statut))) {
+    const r = await dbPatch('contrats', ct.id, { statut: 'annulé' });
+    if (r && r.error) { showError('Archivage interrompu : ' + errMsg(r)); btn.textContent = 'Confirmer l’archivage'; btn.disabled = false; return; }
+  }
+  const cl = allClients.find(c => c.id === clientId);
+  const rc = await dbPatch('clients', clientId, { statut: 'inactif', notes: `${cl && cl.notes ? cl.notes + '\n' : ''}Archivé le ${auj}.` });
+  if (rc && rc.error) { showError('Erreur lors de l’archivage : ' + errMsg(rc)); btn.textContent = 'Confirmer l’archivage'; btn.disabled = false; return; }
+  logAction('delete_client', 'clients', clientId, 'Client archivé (non supprimé)');
+  document.getElementById('modal-suppression-client')?.remove();
+  [allClients, allContrats, allCommissionsAttente] = await Promise.all([dbGet('clients', 'select=*'), dbGet('contrats', 'select=*'), dbGet('commissions_attente', 'select=*')]);
+  showError('✓ Client archivé — rien n’a été effacé.');
+  navigate('clients');
+}
+
+// Ancienne suppression physique — plus appelée (conservée pour mémoire, ne pas réactiver)
+async function _executerSuppressionClientPhysiqueObsolete(clientId, btn) {
   btn.textContent = 'Suppression...'; btn.disabled = true;
 
   // Ordre important : supprimer d'abord ce qui dépend des contrats, puis les contrats,
@@ -2900,7 +2925,7 @@ async function saveDetailsEntrepriseClient(clientId) {
 // couvertures souhaitées, budgets) reste à remplir à la main pendant l'entretien.
 // Récupère les mandats enregistrés pour un client donné
 async function getMandatsSignesClient(clientId) {
-  const r = await dbGet('mandats_signes', `client_id=eq.${clientId}&select=*&order=created_at.desc`).catch(() => []);
+  const r = await dbGet('mandats_signes', `client_id=eq.${clientId}&archive=is.false&select=*&order=created_at.desc`).catch(() => []);
   return Array.isArray(r) ? r : [];
 }
 
@@ -2969,9 +2994,9 @@ async function voirMandatSauvegarde(mandatId) {
 }
 
 async function supprimerMandatSauvegarde(mandatId, clientId) {
-  if (!confirm('Supprimer ce mandat enregistré ? Cette action est irréversible.')) return;
-  const r = await dbDelete('mandats_signes', mandatId);
-  if (r && r.error) { showError('Erreur lors de la suppression : ' + errMsg(r)); return; }
+  if (!confirm('Retirer ce document de la fiche ? Il est archivé (conservé en base), pas effacé.')) return;
+  const r = await dbPatch('mandats_signes', mandatId, { archive: true }); // jamais de suppression
+  if (r && r.error) { showError('Erreur lors de l’archivage : ' + errMsg(r)); return; }
   showClient(clientId);
 }
 

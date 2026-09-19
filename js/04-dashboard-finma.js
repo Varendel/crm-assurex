@@ -1126,8 +1126,14 @@ async function creerCommissionManquante(contratId) {
     montant = Math.round(prime / 12 * 16);
     detail = 'Complémentaire santé : prime mensuelle × 16 — créée depuis le filet de sécurité';
   } else {
-    montant = Math.round(prime * 0.10);
-    detail = 'Estimation 10% (à affiner selon compagnie) — créée depuis le filet de sécurité';
+    const appris = typeof tauxCommissionAppris === 'function' ? tauxCommissionAppris(ct.compagnie, ct.produit, 'acquisition') : null;
+    if (appris) {
+      montant = Math.round(prime * appris.taux);
+      detail = `Taux réel observé ${(Math.round(appris.taux * 1000) / 10).toString().replace('.', ',')} % × prime ${prime} (médiane de ${appris.n} commissions encaissées, ${appris.portee === 'compagnie' ? 'même compagnie et produit' : 'même produit'}) — créée depuis le filet de sécurité`;
+    } else {
+      montant = Math.round(prime * 0.10);
+      detail = 'Estimation 10% (à affiner selon compagnie) — créée depuis le filet de sécurité';
+    }
   }
 
   const r = await dbPost('commissions_attente', {

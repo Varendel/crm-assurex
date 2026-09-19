@@ -205,9 +205,34 @@ function htmlCockpitControle() {
     </div>
     ${groupes.length ? groupes.map(gr => `<details class="dbx-carte ck-groupe ${gr.niveau}" ${gr.niveau === 'erreur' ? 'open' : ''}>
       <summary><span class="ck-niveau ${gr.niveau}">${gr.niveau === 'erreur' ? 'À corriger' : gr.niveau === 'attention' ? 'À vérifier' : 'Info'}</span><b>${gr.titre}</b><em>${gr.items.length}${total(gr.items) ? ` · CHF ${fmtCHF(Math.round(total(gr.items)))}` : ''}</em></summary>
-      <p class="ck-explication">${gr.explication}</p>
+      <p class="ck-explication">${gr.explication}${gr.id === 'generique' && typeof tauxCommissionAppris === 'function' ? ` <button type="button" class="btn-secondary" style="margin-left:8px" onclick="ckAffinerGeneriques()">✨ Affiner avec les taux réels observés</button>` : ''}</p>
       <div class="sfx-liste">${gr.items.slice(0, 60).map(ligne).join('')}</div>
     </details>`).join('') : '<section class="dbx-carte"><div class="dbx-vide"><span style="font-size:26px">✓</span>Aucune anomalie détectée.</div></section>'}`;
+}
+
+// Remplace les estimations génériques à 10 % par le taux réellement observé (js/19,
+// tauxCommissionAppris) quand il existe assez de commissions encaissées comparables. Ancienne
+// estimation conservée dans le détail du calcul ; les autres restent à 10 % jusqu'au 1er décompte.
+async function ckAffinerGeneriques() {
+  const cibles = allCommissionsAttente.filter(ca => ca.statut === 'en_attente' && /Estimation 10%/.test(ca.detail_calcul || '')).map(ca => {
+    const ct = ca.contrat_id ? allContrats.find(x => x.id === ca.contrat_id) : null;
+    const prime = ct ? Number(ct.prime_annuelle || 0) : 0;
+    const a = prime > 0 ? tauxCommissionAppris(ca.compagnie || ct.compagnie, ca.produit || ct.produit, ca.nature) : null;
+    return a ? { ca, prime, a, montant: Math.round(prime * a.taux * 100) / 100 } : null;
+  }).filter(Boolean);
+  if (!cibles.length) { showError('Pas encore assez de commissions encaissées comparables pour affiner ces estimations — elles le seront après les prochains décomptes.'); return; }
+  const liste = cibles.slice(0, 12).map(x => `• ${x.ca.client_nom || ''} — ${x.ca.compagnie || ''} ${x.ca.produit || ''} : ${fmtCHF2(x.ca.montant_estime)} → ${fmtCHF2(x.montant)}`).join('\n');
+  if (!confirm(`Affiner ${cibles.length} estimation(s) avec les taux réels observés ?\n\n${liste}${cibles.length > 12 ? '\n…' : ''}`)) return;
+  let ok = 0;
+  for (const x of cibles) {
+    const pct = (Math.round(x.a.taux * 1000) / 10).toString().replace('.', ',');
+    const detail = `Taux réel observé ${pct} % × prime ${x.prime} (médiane de ${x.a.n} commissions encaissées, ${x.a.portee === 'compagnie' ? 'même compagnie et produit' : 'même produit'}) — affiné le ${new Date().toLocaleDateString('fr-CH')}, ancienne estimation générique CHF ${x.ca.montant_estime}`;
+    const r = await dbPatch('commissions_attente', x.ca.id, { montant_estime: x.montant, detail_calcul: detail });
+    if (!(r && r.error)) { x.ca.montant_estime = x.montant; x.ca.detail_calcul = detail; ok++; }
+  }
+  if (typeof logAction === 'function') logAction('affiner_estimations', 'commissions_attente', null, `${ok} estimation(s) générique(s) remplacée(s) par le taux réel observé`);
+  showError(`✓ ${ok} estimation(s) affinée(s).`);
+  ckRerendre();
 }
 
 // ═══ OZ ↔ ASSUREX : REFACTURATION 2026 ══════════════════════════════════════════════════════

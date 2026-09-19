@@ -49,8 +49,8 @@ async function ajouterVersementCommission(commId) {
 }
 
 async function supprimerVersementCommission(trancheId, commId) {
-  if (!confirm('Supprimer ce versement ?')) return;
-  await dbDelete('commission_tranches', trancheId);
+  if (!confirm('Annuler ce versement ? Il ne sera plus déduit (il reste visible dans l’historique de la base).')) return;
+  await dbPatch('commission_tranches', trancheId, { annule: true }); // jamais de suppression
   allCommissionTranches = await dbGet('commission_tranches', 'annule=eq.false&select=*');
   showModalEditCommission(commId);
   renderToutesCommissions();

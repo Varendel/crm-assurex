@@ -32,6 +32,31 @@ function profilVersementCompagnie(ca) {
   const cle = Object.keys(PREVISION_PROFILS_COMPAGNIE).find(k => n === k.toLowerCase() || n.includes(k.toLowerCase().replace(/^la /, '')));
   return cle ? PREVISION_PROFILS_COMPAGNIE[cle] : null;
 }
+// Taux de commission RÉELS appris sur les commissions encaissées (19.09.2026) : médiane du montant
+// réellement reçu / prime annuelle du contrat, pour la même compagnie et la même famille de produit
+// (≥ 2 observations), à défaut la même famille toutes compagnies (≥ 3). Sert à remplacer les
+// estimations génériques à 10 %. Retourne { taux, n, portee } ou null.
+function tauxCommissionAppris(compagnie, produit, nature) {
+  const fam = p => (typeof categoriePourProduitLibre === 'function' && categoriePourProduitLibre(p)) || String(p || '').toLowerCase().split(/[\s(]/)[0];
+  const cie = c => ((typeof normaliserCompagnie === 'function' ? normaliserCompagnie(c || '') : c) || '').toLowerCase();
+  const f = fam(produit), c0 = cie(compagnie);
+  const obs = (typeof allCommissionsAttente !== 'undefined' ? allCommissionsAttente : []).map(ca => {
+    if (!['reçue', 'versé_oz'].includes(ca.statut) || ca.montant_final == null || Number(ca.montant_final) <= 0) return null;
+    if (nature && ca.nature && ca.nature !== nature) return null;
+    const ct = ca.contrat_id ? allContrats.find(x => x.id === ca.contrat_id) : null;
+    const prime = ct ? Number(ct.prime_annuelle || 0) : 0;
+    if (prime <= 0) return null;
+    const t = Number(ca.montant_final) / prime;
+    return t > 0 && t < 1 ? { t, cie: cie(ca.compagnie || (ct && ct.compagnie)), fam: fam(ca.produit || (ct && ct.produit)) } : null;
+  }).filter(Boolean);
+  const med = a => { const s = a.slice().sort((x, y) => x - y), i = Math.floor(s.length / 2); return s.length % 2 ? s[i] : (s[i - 1] + s[i]) / 2; };
+  const memeCie = obs.filter(o => o.fam === f && o.cie === c0).map(o => o.t);
+  if (memeCie.length >= 2) return { taux: med(memeCie), n: memeCie.length, portee: 'compagnie' };
+  const memeFam = obs.filter(o => o.fam === f).map(o => o.t);
+  if (memeFam.length >= 3) return { taux: med(memeFam), n: memeFam.length, portee: 'produit' };
+  return null;
+}
+
 function _prevAjouterJours(iso, j) { const [y, m, d] = iso.split('-').map(Number); return _prevIso(new Date(y, m - 1, d + j)); }
 
 function commissionEcheancier(ca, montant) {

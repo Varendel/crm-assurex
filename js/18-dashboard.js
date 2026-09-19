@@ -315,11 +315,16 @@ async function dbxReporter(id) {
 function dbxSignaux(D) {
   const s = [];
   const il60 = dbxDecalerIso(-60);
-  const vieilles = D.commAttente.filter(ca => (ca.date_creation || ca.created_at || '').slice(0, 10) && (ca.date_creation || ca.created_at).slice(0, 10) < il60);
+  // En retard : gestion → date prévue dépassée (js/19) ; acquisition → en attente depuis plus de 60 jours
+  const vieilles = D.commAttente.filter(ca => {
+    if (typeof commissionDatePrevue === 'function' && commissionDatePrevue(ca)) return commissionJoursRetard(ca) > 0;
+    const d = (ca.date_creation || ca.created_at || '').slice(0, 10);
+    return d && d < il60;
+  });
   if (vieilles.length) {
     const parCie = {}; vieilles.forEach(ca => { const k = normaliserCompagnie(ca.compagnie || '') || '—'; parCie[k] = (parCie[k] || 0) + 1; });
     const top = Object.entries(parCie).sort((a, b) => b[1] - a[1])[0][0];
-    s.push({ ton: 'rouge', icone: '⏳', texte: `<strong>${vieilles.length} commission${vieilles.length > 1 ? 's' : ''}</strong> attendue${vieilles.length > 1 ? 's' : ''} depuis plus de 60 jours (${dbxCHF(vieilles.reduce((t, ca) => t + Number(ca.montant_estime || 0), 0))}), surtout ${dbxEsc(top)}.`, action: "navigate('commissions-attente')", bouton: 'Voir' });
+    s.push({ ton: 'rouge', icone: '⏳', texte: `<strong>${vieilles.length} commission${vieilles.length > 1 ? 's' : ''}</strong> en retard sur l’encaissement prévu (${dbxCHF(vieilles.reduce((t, ca) => t + Number(ca.montant_estime || 0), 0))}), surtout ${dbxEsc(top)}.`, action: "navigate('commissions-attente').then(() => { const t = document.getElementById('tc-tri'); if (t) { t.value = 'prevue'; renderToutesCommissions(); } })", bouton: 'Relancer' });
   }
   if (typeof rnContratsEcheancier === 'function') {
     const j30 = rnContratsEcheancier().filter(x => x.horizon === 'j30' && !(RN_STATUTS.find(t => t.v === x.revue) || {}).traite);

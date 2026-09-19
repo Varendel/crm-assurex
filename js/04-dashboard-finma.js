@@ -1735,6 +1735,23 @@ function viewSuiviFinancier() {
       ${statCard('En retard (+' + SEUIL_RETARD + 'j)', enRetard.length, enRetard.length > 0 ? '#f87171' : '#64748b', 'CHF ' + Math.round(totalEnRetard).toLocaleString())}
     </div>
 
+    ${typeof previsionGestionParMois === 'function' ? (() => {
+      const pv = previsionGestionParMois(6);
+      const max = Math.max(pv.retard.total, ...pv.mois.map(m => m.total), 1);
+      const barre = (label, x, couleur) => `<div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;gap:4px" title="${x.nb} commission(s)">
+          <div style="font-size:10.5px;font-weight:700;color:${couleur}">${x.total ? 'CHF ' + fmtCHF(Math.round(x.total)) : '—'}</div>
+          <div style="width:100%;max-width:46px;height:${Math.max(Math.round(x.total / max * 100), x.total ? 5 : 2)}px;background:${couleur};border-radius:6px 6px 2px 2px;opacity:${x.nb ? 1 : 0.25}"></div>
+          <div style="font-size:10.5px;color:var(--text-muted)">${label}</div></div>`;
+      return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
+      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">🔮 Prévision d'encaissement — commissions de gestion</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:18px">Règle : versée dans les ${PREVISION_GESTION_DELAI_MOIS} mois après la signature du contrat (à défaut, sa date de début) ; ${PREVISION_GESTION_ANNUELLE.join(' et ')} versent 1× par an (prévu le ${String(PREVISION_ANNUELLE_JOUR).padStart(2, '0')}.${String(PREVISION_ANNUELLE_MOIS).padStart(2, '0')}).</div>
+      <div style="display:flex;align-items:flex-end;gap:10px;height:150px">
+        ${barre('En retard', pv.retard, '#f87171')}
+        ${pv.mois.map(m => { const [y, mm] = m.cle.split('-'); return barre(new Date(+y, +mm - 1, 1).toLocaleDateString('fr-CH', { month: 'short', year: '2-digit' }), m, '#38bdf8'); }).join('')}
+      </div>
+    </div>`;
+    })() : ''}
+
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
       <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">📈 Pipeline créé vs commissions reçues, par mois</div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:18px">Barres claires = montant entré dans le pipeline ce mois-là (prévu). Barres pleines = montant dont la date de réception réelle est connue ce mois-là. La majorité des paiements historiques ("versé_oz") n'ont pas encore de date de réception précise — ce graphique se remplira automatiquement au fil des décomptes compagnie importés et rapprochés.</div>

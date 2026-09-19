@@ -267,6 +267,7 @@ function viewCommissionsAttente(prefiltreStatut) {
       <select class="form-select" id="tc-tri" style="max-width:190px" onchange="renderToutesCommissions()">
         <option value="date">Plus récent d'abord</option>
         <option value="montant_desc" selected>Montant décroissant</option>
+        <option value="prevue">Date d'encaissement prévue</option>
       </select>
     </div>
     <div class="no-print" style="display:flex;gap:8px;margin-bottom:18px">
@@ -356,6 +357,7 @@ function renderToutesCommissions() {
     return true;
   }).sort((a,b) => {
     if (tri === 'montant_desc') return montantC(b) - montantC(a);
+    if (tri === 'prevue') return (commissionDatePrevue(a) || '9999').localeCompare(commissionDatePrevue(b) || '9999');
     return new Date(b.date_creation||0) - new Date(a.date_creation||0);
   });
 
@@ -392,14 +394,14 @@ function renderToutesCommissions() {
     ${statCard(COFIDEX_MINI_LOGO + ' Assurex/EX', 'CHF ' + Math.round(totAssurexC.montant).toLocaleString(), '#a78bfa', totAssurexC.count + ' dossier(s)')}
     ${totAucunC.count > 0 ? statCard('Non marqués', 'CHF ' + Math.round(totAucunC.montant).toLocaleString(), '#64748b', totAucunC.count + ' dossier(s)') : ''}`;
 
-  const cols = '1fr 120px 110px 110px 100px 90px';
+  const cols = '1fr 120px 110px 150px 100px 90px';
   const rows = filtered.map(c => {
     const numBord = numeroBordereauDe(c);
     return `<div class="table-row" style="grid-template-columns:${cols};cursor:pointer" onclick="showModalEditCommission('${c.id}')">
       <div><div style="font-size:13px;font-weight:700;color:var(--text)">${c.client_id ? `<span onclick="event.stopPropagation(); showClient('${c.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${c.client_nom || '—'}</span>` : (c.client_nom || '—')}${getClientMiniLogos(allClients.find(x => x.id === c.client_id))}</div><div style="font-size:11px;color:var(--text-muted)">${c.produit || ''}</div>${c.detail_calcul ? `<div style="font-size:10px;color:var(--text-dim);margin-top:2px;font-style:italic">${c.detail_calcul.split('[')[0].trim()}</div>` : `<div style="font-size:10px;color:#f59e0b;margin-top:2px">⚠ Détail du calcul manquant — clique pour préciser</div>`}${totalVersementsCommission(c.id) > 0 ? `<div style="font-size:10px;color:#4ade80;margin-top:2px">💰 Reçu CHF ${fmtCHF(totalVersementsCommission(c.id))} / ${montantC(c).toLocaleString()} (versements partiels)</div>` : ''}</div>
       <div style="font-size:12px;color:var(--text-muted)">${c.compagnie || ''}</div>
       <div style="font-size:11px;color:var(--text-muted)">${numBord ? `<span style="font-family:monospace">${numBord}</span>` : '—'}</div>
-      <div style="font-size:12px;color:var(--text-muted)">${c.date_creation || ''}</div>
+      <div style="font-size:12px;color:var(--text-muted)">${c.date_creation || ''}${typeof htmlCommissionPrevue === 'function' ? htmlCommissionPrevue(c) : ''}</div>
       <div style="font-weight:800;color:#f59e0b;text-align:right">CHF ${fmtCHF(montantC(c))}</div>
       <div style="display:flex;flex-direction:column;gap:3px;align-items:flex-start">${badge(statutCommissionLabel(c.statut), statutCommissionColor(c.statut))}${badgeNatureCommission(c.nature)}</div>
     </div>`;
@@ -407,7 +409,7 @@ function renderToutesCommissions() {
 
   document.getElementById('tc-table').innerHTML = `
     <div class="table-wrap">
-      <div class="table-header" style="grid-template-columns:${cols}"><div>Client / Produit</div><div>Compagnie</div><div>N° bordereau</div><div>Créée le</div><div>Montant</div><div>Statut</div></div>
+      <div class="table-header" style="grid-template-columns:${cols}"><div>Client / Produit</div><div>Compagnie</div><div>N° bordereau</div><div>Créée / prévue</div><div>Montant</div><div>Statut</div></div>
       ${rows || '<div class="table-empty">Aucune commission ne correspond à ces filtres.</div>'}
     </div>`;
 }

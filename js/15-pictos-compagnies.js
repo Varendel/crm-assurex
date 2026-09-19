@@ -31,7 +31,7 @@ const PICTOS_COMPAGNIES = {
   'La Mobilière': { abr: 'M', fond: '#DA2323' },
   'Helsana': { abr: 'He', fond: '#9A0941' },
   'SWICA': { abr: 'SW', fond: '#01BAA8' },
-  'CSS': { abr: 'CSS' },
+  'CSS': { abr: 'CSS', fond: '#00A0DF' }, // bleu du logo officiel fourni le 19.09.2026
   'Sanitas': { abr: 'SA' },
   'Visana': { abr: 'VI' },
   'Gastrosocial': { abr: 'GS' },

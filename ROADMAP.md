@@ -57,9 +57,9 @@ sont en bas de ce fichier.
 - [ ] Compléter les primes estimées de quelques contrats créés depuis les décomptes (auto AXA,
       LPP Swiss Life) et la police définitive d'un véhicule
 - [ ] Dépenses OZ : trancher les écritures « à vérifier » avant transmission à la fiduciaire
-- [ ] **Import XML IGB2B** (standard des assureurs) dans « Importer un décompte »
-- [ ] Plan de trésorerie : fourchette d'incertitude calculée sur les écarts mesurés + mention
-      « prévisionnel » à l'impression
+- [x] **Import XML IGB2B** (standard des assureurs) dans « Importer un décompte » (19.09)
+- [x] Plan de trésorerie : fourchette d'incertitude calculée sur les écarts mesurés + mention
+      « prévisionnel » à l'impression (19.09)
 - [ ] Remplacer les estimations génériques à 10 % dès le premier décompte de chaque compagnie
 - [ ] Profils de versement Helsana / Groupe Mutuel / CSS / Mobilière dès que la gestion sera versée
 - [ ] Fiscalité (plus tard)

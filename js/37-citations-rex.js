@@ -108,6 +108,8 @@ function rexCitationStyles() {
   .rex-citation-fermer:hover{background:var(--accent-dim,rgba(37,99,235,.08))}
   .rex-citation img{pointer-events:auto;width:46px;height:46px;object-fit:contain;flex:0 0 auto;filter:drop-shadow(0 4px 8px rgba(0,0,0,.15));cursor:pointer}
   .rex-citation.change .rex-citation-bulle{animation:rexCitChange .45s ease}
+  /* Bulle toujours ouverte : on laisse de la marge en bas du contenu pour pouvoir faire défiler au-dessus d'elle */
+  #main-content{padding-bottom:130px}
   .rex-citation.reduite .rex-citation-bulle{display:none}
   .rex-citation.reduite img{width:40px;height:40px;opacity:.85}
   .rex-citation.reduite img:hover{opacity:1;transform:scale(1.06)}  @keyframes rexCitIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
@@ -153,10 +155,8 @@ function rexAfficherCitation(changer) {
   el.classList.remove('reduite');
   el.classList.remove('change'); void el.offsetWidth; if (changer) el.classList.add('change');
   window._rexCit.masquee = false;
-  // La bulle ne doit jamais masquer le travail (imports, formulaires) : après quelques secondes
-  // elle se replie sur Rex seul ; un clic sur Rex la rouvre.
+  // Demande de Jonathan (19.09.2026) : la bulle reste toujours ouverte (plus de repli automatique).
   clearTimeout(window._rexCit.repli);
-  window._rexCit.repli = setTimeout(rexReduireCitation, 14000);
 }
 
 function rexReduireCitation() {

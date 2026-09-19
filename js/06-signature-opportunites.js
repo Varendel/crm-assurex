@@ -234,20 +234,21 @@ function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, to
   let kanban = stades.map(stade => {
     const opps = OPPS.filter(o => o.stade === stade);
     const color = stadeColor[stade];
-    return `<div class="kanban-col">
+    return `<div class="kanban-col" data-stade="${stade}">
       <div class="kanban-col-title">
         <div class="kanban-dot" style="background:${color}"></div>
         <div style="font-size:11px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:0.8px">${stade}</div>
-        <div style="font-size:10px;color:var(--text-muted);margin-left:auto">${opps.length}</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-left:auto">${opps.length}${rhMode ? '' : ` · CHF ${fmtCHF(Math.round(opps.reduce((s, o) => s + Number(o.montant_potentiel || 0), 0)))}`}</div>
       </div>
       ${opps.map(o => {
         const tachesOuvertes = allRappels.filter(r => r.opportunite_id === o.id && r.statut === 'ouvert').length;
         const echue = o.date_echeance && new Date(o.date_echeance) < new Date(new Date().setHours(0,0,0,0));
-        return `<div class="kanban-card" onclick="editerOpportunite('${o.id}')" style="cursor:pointer;position:relative;${echue ? 'border-left:3px solid #f87171' : ''}">
+        return `<div class="kanban-card" data-opp-id="${o.id}" ${rhMode ? '' : 'draggable="true" title="Glisser vers un autre stade"'} onclick="editerOpportunite('${o.id}')" style="cursor:${rhMode ? 'pointer' : 'grab'};position:relative;${echue ? 'border-left:3px solid #f87171' : ''}">
         ${o.cree_par ? `<div title="Créée par ${o.cree_par}" style="position:absolute;top:8px;right:8px;font-size:13px">${PICTO_CREE_EQUIPE}${o.notif_vue ? '' : ' 🔴'}</div>` : ''}
         <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:4px">${o.titre}</div>
         <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:1px">${nomClient(o)}</div>
-        <div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px">${o.compagnie || '&nbsp;'}${tachesOuvertes > 0 ? ` · ☑ ${tachesOuvertes} tâche${tachesOuvertes > 1 ? 's' : ''}` : ''}</div>
+        <div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px">${tachesOuvertes > 0 ? `☑ ${tachesOuvertes} tâche${tachesOuvertes > 1 ? 's' : ''}` : '&nbsp;'}</div>
+        <div class="opp-offres" data-opp="${o.id}" data-compagnie="${(o.compagnie || '').replace(/"/g, '&quot;')}">${o.compagnie && typeof compagnieAvecPicto === 'function' ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">${compagnieAvecPicto(o.compagnie, 20)}</div>` : ''}</div>
         ${typeof htmlProchaineAction === 'function' ? htmlProchaineAction(o) : ''}
         ${o.date_echeance ? `<div style="font-size:10px;font-weight:700;color:${echue ? '#f87171' : 'var(--text-muted)'};margin-bottom:6px">${echue ? '🔴 Échue le ' : 'Échéance '}${fmtDate(o.date_echeance)}</div>` : ''}
         <div style="display:flex;justify-content:space-between;align-items:center">
@@ -268,7 +269,13 @@ function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, to
     </div>`;
   }).join('');
 
-  return `<div class="kanban">${kanban}</div>
+  // Glisser-déposer + offres multi-compagnies : branchés après l'affichage (js/16-pipeline-kanban.js)
+  setTimeout(() => { if (typeof activerKanbanPipeline === 'function') activerKanbanPipeline(rhMode); }, 0);
+  return `${rhMode ? '' : `<div class="kanban-zones-fin" aria-hidden="true">
+      <div class="kanban-zone-fin" data-stade="Gagné">✓ Déposer ici : <strong>Gagné</strong></div>
+      <div class="kanban-zone-fin perdu" data-stade="Perdu">✕ Déposer ici : <strong>Perdu</strong></div>
+    </div>`}
+    <div class="kanban">${kanban}</div>
     ${gagnees.length > 0 ? `<div style="margin-top:24px">
       <div style="font-size:11px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">✓ Gagnées (${gagnees.length})</div>
       <div class="table-wrap">${gagnees.map(o => `<div class="table-row" style="grid-template-columns:${rhMode ? '1fr 160px 150px' : '1fr 160px 100px 150px 110px'};${rhMode ? '' : 'cursor:pointer'}" ${rhMode ? '' : `onclick="editerOpportunite('${o.id}')"`}>

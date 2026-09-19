@@ -305,6 +305,17 @@
   .kanban-dot { width: 8px; height: 8px; border-radius: 50%; }
   .kanban-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 10px; }
   .kanban-empty { font-size: 11px; color: var(--text-dim); padding: 10px 0; text-align: center; }
+  /* Glisser-déposer du pipeline (js/16) */
+  .kanban-col { border-radius: 12px; padding: 6px; margin: -6px; transition: background 0.12s, outline-color 0.12s; outline: 2px dashed transparent; outline-offset: -2px; }
+  .kanban-col.drop-cible { background: var(--accent-dim); outline-color: var(--accent); }
+  .kanban-card[draggable="true"]:active { cursor: grabbing; }
+  .kanban-card.en-deplacement { opacity: 0.4; }
+  .kanban-zones-fin { display: none; gap: 12px; margin-bottom: 12px; }
+  body.kanban-glisse .kanban-zones-fin { display: flex; }
+  .kanban-zone-fin { flex: 1; padding: 14px; border-radius: 12px; border: 2px dashed rgba(74,222,128,0.6); background: rgba(74,222,128,0.08); color: #1F9D6B; font-size: 13px; text-align: center; }
+  .kanban-zone-fin.perdu { border-color: rgba(248,113,113,0.6); background: rgba(248,113,113,0.08); color: #B42318; }
+  .kanban-zone-fin.drop-cible { background: rgba(74,222,128,0.2); }
+  .kanban-zone-fin.perdu.drop-cible { background: rgba(248,113,113,0.2); }
 
   /* RAPPEL */
   .rappel-item { display: flex; align-items: center; gap: 14px; padding: 13px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; }
@@ -568,7 +579,7 @@
 <script src="js/03-auth-navigation.js?v=1789900000"></script>
 <script src="js/04-dashboard-finma.js?v=1789920000"></script>
 <script src="js/05-contrats-clients.js?v=1789880000"></script>
-<script src="js/06-signature-opportunites.js?v=1789880000"></script>
+<script src="js/06-signature-opportunites.js?v=1789930000"></script>
 <script src="js/07-fichepaie-bordereaux.js?v=1789880000"></script>
 <script src="js/08-nouveaux-formulaires.js?v=1788452540"></script>
 <script src="js/09-rappels-vehicules.js?v=1789860000"></script>
@@ -578,6 +589,7 @@
 <script src="js/13-prochaine-action.js?v=1789870000"></script>
 <script src="js/14-sources.js?v=1789880000"></script>
 <script src="js/15-pictos-compagnies.js?v=1789910000"></script>
+<script src="js/16-pipeline-kanban.js?v=1789930000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

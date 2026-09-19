@@ -1693,7 +1693,8 @@ function htmlContratImport(l) {
     : `<span style="color:var(--text-muted)">${String(l.contratProduit || 'Contrat').replace(/</g, '&lt;')}</span>`;
   const doublon = l.doublon ? `<div title="${String(l.doublon.detail).replace(/"/g, '&quot;')}" style="margin-top:4px;font-size:11px;font-weight:600;color:#DC2626;white-space:normal;max-width:240px">⛔ ${l.doublon.certain ? 'Déjà importé' : 'Doublon probable'} — ${l.doublon.court}<span style="display:block;font-weight:400;color:var(--text-muted)">ligne décochée ; coche-la si c’est bien un nouveau versement</span></div>` : '';
   const attente = l.attenteId ? `<label style="display:flex;align-items:center;gap:5px;margin-top:4px;font-size:11px;color:var(--text-muted);cursor:pointer;white-space:normal;max-width:240px"><input type="checkbox" ${l.imputer ? 'checked' : ''} onchange="_decompteLignes[${l.idx}].imputer=this.checked"/> Déduire de la commission en attente (reste CHF ${fmtCHF2(l.attenteReste)})</label>` : '';
-  return contrat + doublon + attente;
+  const parNom = l.parNom ? `<div title="Aucun contrat avec ce n° de police : rattaché d'après le nom de l'assuré et la compagnie" style="margin-top:4px;font-size:11px;font-weight:600;color:#D97706;white-space:normal;max-width:240px">🔎 Rapproché par le nom — vérifie, et complète le n° de police du contrat</div>` : '';
+  return contrat + parNom + doublon + attente;
 }
 
 // Référence unique d'une ligne de décompte (police, facture, date, branche, montant) : mémorisée dans
@@ -1768,51 +1769,90 @@ function marqueursBranche(texte) {
   return m;
 }
 
-function matcherContratEtClient(numeroContrat, brancheInterne, nomFichier) {
-  const npReq = normPoliceNumero(numeroContrat);
-  const candidats = allContrats.filter(c => c.numero_police && normPoliceNumero(c.numero_police) === npReq);
-
-  let contratTrouve = null;
-  if (candidats.length === 1) contratTrouve = candidats[0];
-  else if (candidats.length > 1) {
-    const motsB = (brancheInterne || '').toLowerCase().split(/[^a-zàâäéèêëïîôöùûüç0-9]+/).filter(w => w.length >= 4);
-    const marqB = marqueursBranche(brancheInterne);
-    let meilleur = candidats[0], meilleurScore = -1;
-    candidats.forEach(c => {
-      const p = (c.produit || '').toLowerCase();
-      let score = motsB.reduce((s, m) => s + (p.includes(m) ? 1 : 0), 0);
-      // Familles de couverture (RC, casco partielle/complète, accidents…) : « Ass. RC Avenue » →
-      // « RC véhicule », « Casco segmentée vol » → « Casco partielle », « … collision » → « Casco complète »
-      const marqP = marqueursBranche(c.produit);
-      marqB.forEach(m => { if (marqP.has(m)) score += 2; });
-      if (marqB.has('rc') && marqP.has('casco')) score -= 2;
-      if (marqB.has('casco') && marqP.has('rc') && !marqP.has('casco')) score -= 2;
-      if (!estStatutResilieOuAnnule(c.statut)) score += 0.5;
-      if (score > meilleurScore) { meilleurScore = score; meilleur = c; }
-    });
-    contratTrouve = meilleur;
-  }
-  const clientTrouve = contratTrouve ? allClients.find(c => c.id === contratTrouve.client_id) : null;
-
-  let clientSuggere = null;
-  if (!clientTrouve && nomFichier) {
-    const mf = motsTriesSansAccents(nomFichier);
-    clientSuggere = allClients.find(c => {
-      const nomComplet = estEntreprise(c) ? c.nom : `${c.prenom || ''} ${c.nom || ''}`;
-      return nomComplet.trim() && motsTriesSansAccents(nomComplet) === mf;
-    }) || null;
-  }
-
-  return { contratTrouve, clientTrouve, clientSuggere };
+// Numéros de police candidats lus dans le texte du décompte. Certains PDF (Groupe Mutuel) mêlent nom,
+// numéro d'assuré et date sur une même ligne (« Nom Prénom / GMA SA 7623006 / 23.04.2026 ») : collés
+// ensemble, les chiffres ne correspondaient plus à rien. On essaie le numéro entier, puis chaque
+// groupe de chiffres (dates retirées).
+function policesCandidates(numeroContrat) {
+  const brut = (numeroContrat || '').toString();
+  const res = [normPoliceNumero(brut)];
+  const sansDates = brut.replace(/\b\d{1,2}[./-]\d{1,2}[./-]\d{2,4}\b/g, ' ');
+  res.push(normPoliceNumero(sansDates));
+  (sansDates.match(/\d[\d\s]{3,}\d/g) || []).forEach(g => res.push(normPoliceNumero(g)));
+  (sansDates.match(/\d{5,}/g) || []).forEach(g => res.push(normPoliceNumero(g)));
+  return [...new Set(res.filter(x => x && x.length >= 5))];
 }
 
+// Même compagnie, à la louche (« GMA SA » / « Groupe Mutuel », « Vaudoise Générale » / « La Vaudoise »)
+function compagnieProcheImport(a, b) {
+  const n = s => (typeof normaliserCompagnie === 'function' ? normaliserCompagnie(s || '') : (s || '')).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\b(la|le|les|sa|ag|assurances?|generale|group|groupe)\b/g, ' ').replace(/\s+/g, ' ').trim();
+  const x = n(a), y = n(b);
+  if (!x || !y) return true; // compagnie inconnue : on ne filtre pas
+  if (/mutuel|gma\b/.test(x) && /mutuel|gma\b/.test(y)) return true;
+  return x === y || x.includes(y) || y.includes(x);
+}
+
+function scoreBrancheImport(c, brancheInterne) {
+  const motsB = (brancheInterne || '').toLowerCase().split(/[^a-zàâäéèêëïîôöùûüç0-9]+/).filter(w => w.length >= 4);
+  const marqB = marqueursBranche(brancheInterne);
+  const p = (c.produit || '').toLowerCase();
+  let score = motsB.reduce((s, m) => s + (p.includes(m) ? 1 : 0), 0);
+  // Familles de couverture (RC, casco partielle/complète, accidents…) : « Ass. RC Avenue » →
+  // « RC véhicule », « Casco segmentée vol » → « Casco partielle », « … collision » → « Casco complète »
+  const marqP = marqueursBranche(c.produit);
+  marqB.forEach(m => { if (marqP.has(m)) score += 2; });
+  if (marqB.has('rc') && marqP.has('casco')) score -= 2;
+  if (marqB.has('casco') && marqP.has('rc') && !marqP.has('casco')) score -= 2;
+  if (!estStatutResilieOuAnnule(c.statut)) score += 0.5;
+  return score;
+}
+
+function matcherContratEtClient(numeroContrat, brancheInterne, nomFichier) {
+  const nomClient = c => estEntreprise(c) ? c.nom : `${c.prenom || ''} ${c.nom || ''}`;
+  const meilleur = liste => liste.reduce((m, c) => { const s = scoreBrancheImport(c, brancheInterne); return s > m.s ? { c, s } : m; }, { c: liste[0], s: -Infinity }).c;
+
+  // 1. Par numéro de police
+  let candidats = [];
+  for (const np of policesCandidates(numeroContrat)) {
+    candidats = allContrats.filter(c => c.numero_police && normPoliceNumero(c.numero_police) === np);
+    if (candidats.length) break;
+  }
+  let contratTrouve = candidats.length === 1 ? candidats[0] : candidats.length > 1 ? meilleur(candidats) : null;
+  let parNom = false;
+
+  // 2. À défaut, par le nom de l'assuré : client dont le nom correspond (mots dans le désordre,
+  //    noms composés tolérés, au moins deux mots en commun), puis ses contrats chez la même compagnie
+  let clientSuggere = null;
+  if (!contratTrouve && nomFichier) {
+    const mf = motsTriesSansAccents(nomFichier).split(' ').filter(w => w.length >= 2);
+    const correspond = c => {
+      const mc = motsTriesSansAccents(nomClient(c)).split(' ').filter(w => w.length >= 2);
+      if (!mc.length || !mf.length) return false;
+      const communs = mf.filter(w => mc.includes(w)).length;
+      return communs >= 2 && (communs === mf.length || communs === mc.length);
+    };
+    const clients = allClients.filter(correspond);
+    if (clients.length === 1) {
+      clientSuggere = clients[0];
+      const cieDecompte = typeof _decompteNomAssureur !== 'undefined' ? _decompteNomAssureur : '';
+      const ctsClient = allContrats.filter(ct => ct.client_id === clientSuggere.id && compagnieProcheImport(ct.compagnie, cieDecompte) && !estStatutResilieOuAnnule(ct.statut));
+      if (ctsClient.length) {
+        candidats = ctsClient;
+        contratTrouve = ctsClient.length === 1 ? ctsClient[0] : meilleur(ctsClient);
+        parNom = true;
+      }
+    }
+  }
+  const clientTrouve = contratTrouve ? allClients.find(c => c.id === contratTrouve.client_id) : null;
+  return { contratTrouve, clientTrouve, clientSuggere: clientTrouve ? null : clientSuggere, candidats, parNom };
+}
 // Ré-applique le rapprochement (police -> contrat CRM) sur toutes les lignes déjà analysées, sans
 // redemander le fichier — utilisé après la création d'un contrat manquant depuis l'écran d'import,
 // pour que la ligne (et toute autre ligne partageant la même police) se rattache immédiatement.
 function reassocierLignesImport() {
   _decompteLignes.forEach(l => {
-    const { contratTrouve, clientTrouve, clientSuggere } = matcherContratEtClient(l.numeroContrat, l.brancheInterne, l.nomVaudoise);
-    const candidats = allContrats.filter(c => c.numero_police && normPoliceNumero(c.numero_police) === normPoliceNumero(l.numeroContrat));
+    const { contratTrouve, clientTrouve, clientSuggere, candidats, parNom } = matcherContratEtClient(l.numeroContrat, l.brancheInterne, l.nomVaudoise);
+    l.parNom = parNom;
     l.contratId = contratTrouve ? contratTrouve.id : null;
     l.clientId = contratTrouve ? (clientTrouve ? clientTrouve.id : null) : (clientSuggere ? clientSuggere.id : null);
     l.clientNomCRM = clientTrouve ? (estEntreprise(clientTrouve) ? clientTrouve.nom : `${clientTrouve.prenom} ${clientTrouve.nom}`) : null;
@@ -1950,6 +1990,7 @@ async function analyserDecompteExcel() {
     });
   });
 
+  _decompteNomAssureur = nomAssureur; // avant le rapprochement : sert au repli par nom (même compagnie)
   _decompteLignes = lignesUtiles.map((r, i) => {
     const numeroContrat = (r[iContrat] || '').toString().trim();
     const brancheInterne = iBranche !== -1 ? (r[iBranche] || '') : '';
@@ -1987,8 +2028,7 @@ async function analyserDecompteExcel() {
 // création de contrat manquant se comportent exactement pareil quel que soit le format d'origine.
 function construireLigneImport(i, champs) {
   const { numeroContrat, noFacture, dateFacture, nomFichier, npa, localite, brancheInterne, commissionProduction, taux, montant } = champs;
-  const { contratTrouve, clientTrouve, clientSuggere } = matcherContratEtClient(numeroContrat, brancheInterne, nomFichier);
-  const candidats = allContrats.filter(c => c.numero_police && normPoliceNumero(c.numero_police) === normPoliceNumero(numeroContrat));
+  const { contratTrouve, clientTrouve, clientSuggere, candidats, parNom } = matcherContratEtClient(numeroContrat, brancheInterne, nomFichier);
   return enrichirLigneImport({
     idx: i,
     numeroContrat,
@@ -2009,6 +2049,7 @@ function construireLigneImport(i, champs) {
     candidats: candidats.map(c => ({ id: c.id, produit: c.produit || 'Contrat', statut: c.statut })),
     contratProduit: contratTrouve ? contratTrouve.produit : null,
     selectionne: !!contratTrouve,
+    parNom,
   });
 }
 
@@ -2046,6 +2087,7 @@ async function analyserDecomptePdf(input) {
       return;
     }
 
+    _decompteNomAssureur = data.compagnie || ''; // avant le rapprochement : sert au repli par nom
     _decompteLignes = lignesBrutes.map((l, i) => construireLigneImport(i, {
       numeroContrat: (l.numero_contrat || '').toString().trim(),
       noFacture: l.no_facture,

@@ -36,10 +36,18 @@ function piChoisirProfil(id) {
   cfRendre();
 }
 
-// Réserve de sécurité recommandée : 3 mois de dépenses (6 pour un indépendant)
+// Réserve de sécurité : 3 mois de dépenses par défaut (6 pour un indépendant), réglable par le
+// conseiller dans l'onglet Placements — certains clients veulent 1 mois, d'autres 12 (20.09.2026).
+function piMoisReserveDefaut() { return /ind[ée]pendant/i.test(cfGet(_cf.dossier, 'situation.profession') || '') ? 6 : 3; }
 function piReserveCible(A) {
-  const indep = /ind[ée]pendant/i.test(cfGet(_cf.dossier, 'situation.profession') || '');
-  return { mois: indep ? 6 : 3, montant: A.depenses * (indep ? 6 : 3) };
+  const choisi = cfNum(cfGet(_cf.dossier, 'hypotheses.mois_reserve'));
+  const mois = choisi > 0 ? choisi : piMoisReserveDefaut();
+  return { mois, montant: A.depenses * mois, parDefaut: !(choisi > 0) };
+}
+function piChoisirMoisReserve(v) {
+  cfSet(_cf.dossier, 'hypotheses.mois_reserve', v === '' ? null : Number(v));
+  cfPlanifierSauvegarde();
+  cfRendre();
 }
 
 // Répartition recommandée de la capacité d'épargne mensuelle
@@ -271,6 +279,14 @@ function piOngletPlacements() {
 
     <div class="dbx-grille dbx-grille-egale" style="margin-top:18px">
       <section class="dbx-carte"><header class="dbx-carte-tete"><h2>Où placer l’épargne</h2><span class="dbx-carte-sous">capacité ${cfCHF(alloc.capacite)}/mois</span></header>
+        <div class="pi-reserve">
+          <label for="pi-mois-reserve">Réserve de sécurité :</label>
+          <select class="form-select" id="pi-mois-reserve" onchange="piChoisirMoisReserve(this.value)">
+            <option value="" ${alloc.reserve.parDefaut ? 'selected' : ''}>Automatique (${piMoisReserveDefaut()} mois)</option>
+            ${[1, 2, 3, 4, 6, 9, 12].map(m => `<option value="${m}" ${!alloc.reserve.parDefaut && alloc.reserve.mois === m ? 'selected' : ''}>${m} mois de dépenses</option>`).join('')}
+          </select>
+          <span>= ${cfCHF(alloc.reserve.montant)} · liquidités actuelles ${cfCHF(A.liquidites)}${alloc.manqueReserve > 0 ? ` · <strong>${cfCHF(alloc.manqueReserve)} manquants</strong>` : ' · atteinte ✓'}</span>
+        </div>
         ${alloc.lignes.length ? `<div class="pi-alloc">${alloc.lignes.map(l => `<div class="pi-ligne ${l.cle}">
           <div class="pi-ligne-tete"><b>${cfEsc(l.label)}</b><span>${cfCHF(l.montant)}/mois</span></div>
           <div class="pi-barre"><span style="width:${alloc.capacite ? Math.min(100, l.montant / alloc.capacite * 100) : 0}%"></span></div>

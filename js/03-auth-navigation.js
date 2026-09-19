@@ -645,7 +645,7 @@ function attendreFinAnimationRex(ecran) {
     const terminer = () => { if (fini) return; fini = true; rex.removeEventListener('animationend', surFin); resolve(); };
     const surFin = e => { if (e.animationName === 'lp-sprint') terminer(); };
     rex.addEventListener('animationend', surFin);
-    setTimeout(terminer, 2000); // filet de sécurité : jamais bloqué si l'événement ne vient pas
+    setTimeout(terminer, 1300); // filet de sécurité : la connexion n'attend jamais plus de 1,3 s
   });
 }
 

@@ -21,6 +21,14 @@ function ecModeCloud(actif) { document.body.classList.toggle('mode-cloud', actif
     if (!/[?&]espace=client/.test(location.search)) return;
     ecModeCloud(true);
     document.title = `${EC_MARQUE} — Espace client`;
+    // Logo EX.GROUP : on reprend celui du code (js/15) plutôt qu'une copie du tracé
+    const ex = document.querySelector('.cloud-signature .cloud-ex');
+    if (ex && typeof LOGO_EXGROUPE_SVG !== 'undefined') {
+      const span = document.createElement('span');
+      span.className = 'cloud-ex';
+      span.innerHTML = LOGO_EXGROUPE_SVG;
+      ex.replaceWith(span);
+    }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', appliquer); else appliquer();
 })();
@@ -131,7 +139,9 @@ function ecVueEspaceClient() {
       <div class="dbx-vide-petit">Les polices et attestations sont transmises par votre conseiller. Écrivez-lui pour en recevoir une copie — le téléchargement direct arrivera dans une prochaine version.</div>
     </section>
 
-    <div class="ec-pied">${(E.mandats || []).length ? `Mandat de courtage signé le ${fmtDate((E.mandats[0].created_at || '').slice(0, 10))} · ` : ''}${EC_MARQUE} · Assurex Sàrl — Agrément FINMA F01565757</div>
+    <div class="ec-pied">${(E.mandats || []).length ? `Mandat de courtage signé le ${fmtDate((E.mandats[0].created_at || '').slice(0, 10))} · ` : ''}${EC_MARQUE} — Agrément FINMA F01565757
+      <div class="ec-signature sombre"><span style="font-size:11px">by</span><img src="assets/logos/assurex.png" alt="Assurex"/>${typeof LOGO_EXGROUPE_SVG !== 'undefined' ? `<span style="display:inline-flex;height:16px">${LOGO_EXGROUPE_SVG}</span>` : ''}</div>
+    </div>
   </div>`;
 }
 

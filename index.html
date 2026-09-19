@@ -2792,7 +2792,7 @@
   70% { transform: translateY(-3px) rotate(0deg) scaleY(.97); }
 }
 /* Connexion lancée : Rex accélère et part vers l'horizon */
-#login-screen.lp-go .lp-rex { animation: lp-course .26s ease-in-out infinite, lp-sprint 1.6s ease-in forwards; }
+#login-screen.lp-go .lp-rex { animation: lp-course .24s ease-in-out infinite, lp-sprint 1s ease-in forwards; }
 #login-screen.lp-go .lp-collines { animation-duration: 6s; }
 #login-screen.lp-go .lp-montagnes { animation-duration: 14s; }
 @keyframes lp-sprint { to { left: 108%; width: 70px; opacity: .85; } }
@@ -2908,6 +2908,18 @@ body.mode-cloud .login-marque-cloud { display: flex; flex-direction: column; ali
 .pi-apercu-alerte { font-size: 11.5px; color: #B45309; background: rgba(245,158,11,.10); border-radius: 8px; padding: 8px 10px; }
 .cf-aide-revenus { font-size: 11.5px; color: var(--text-muted); background: var(--surface-alt); border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
 @media (max-width: 900px) { .pi-apercu { grid-template-columns: 1fr; } }
+.cloud-signature { display: flex; align-items: center; gap: 12px; margin-top: 4px; }
+.cloud-signature > span { font-size: 12px; color: #8FA6CE; letter-spacing: .08em; text-transform: uppercase; }
+.cloud-signature img { height: 20px; width: auto; flex: none; filter: brightness(0) invert(1); }
+.cloud-ex { height: 18px; flex: none; display: inline-flex; align-items: center; color: #fff; }
+  .cloud-ex svg { height: 18px; width: auto; }
+.ec-signature { display: flex; align-items: center; gap: 10px; justify-content: center; margin-top: 6px; opacity: .85; }
+.ec-signature img { height: 18px; filter: brightness(0) invert(1); }
+.ec-signature.sombre img { filter: none; }
+.pi-reserve { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-muted); background: var(--surface-alt); border-radius: 10px; padding: 8px 12px; margin-bottom: 12px; }
+.pi-reserve .form-select { max-width: 200px; }
+.pi-reserve strong { color: #B45309; }
+
 @media (prefers-reduced-motion: reduce) {
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
@@ -2938,6 +2950,21 @@ body.mode-cloud .login-marque-cloud { display: flex; flex-direction: column; ali
       </div>
       <div class="cloud-titre"><b>REX</b><span>CLOUD</span><i></i></div>
       <p class="cloud-sous">Votre espace assurances, à jour en permanence.</p>
+      <div class="cloud-signature">
+        <span>by</span>
+        <img src="assets/logos/assurex.png" alt="Assurex"/>
+        <svg viewBox="670 488 580 100" xmlns="http://www.w3.org/2000/svg" class="cloud-ex" aria-label="EX.GROUP">
+          <rect x="829.47" y="551.34" width="18.15" height="18.15" fill="#00cfff"/>
+          <rect x="686.18" y="538.2" width="48.56" height="10.09" fill="#ffffff"/>
+          <rect x="686.18" y="558.47" width="53.17" height="10.09" fill="#ffffff"/>
+          <rect x="686.18" y="518.73" width="53.17" height="10.01" fill="#ffffff"/>
+          <polygon points="829.47 496.06 827.87 506.11 827.61 507.83 825.24 522.76 818.89 517.34 801.9 535.92 787.85 535.92 794.91 543.55 817.93 568.41 803 568.41 787.47 551.6 758.21 583.94 743.55 583.94 780.04 543.54 757.11 518.73 771.94 518.73 787.72 535.76 810.6 510.28 804.33 504.93 829.47 496.06" fill="#ffffff"/>
+          <path d="M1152.37,518.74v32.87c0,9.37-7.59,16.96-16.96,16.96h-22.52c-9.37,0-16.96-7.59-16.96-16.96v-32.87h11.3v32.58c0,3.29,2.67,5.96,5.96,5.96h21.93c3.29,0,5.96-2.67,5.96-5.96v-32.58h11.3Z" fill="#ffffff"/>
+          <path d="M996.21,537.33v-6.44c0-7.31-5.4-12.16-13.19-12.16h-43.31v10.01h41.01c2.54,0,4.45,1.59,4.45,4.13v3.1c0,2.54-1.59,4.21-4.45,4.21h-41.01v28.37h11.2v-18.36h21.86l11.6,18.36h12.64l-11.36-18.52c6.68-.95,10.57-5.8,10.57-12.72" fill="#ffffff"/>
+          <path d="M1062.96,519.69c-1.76-.63-3.66-.97-5.66-.97h-22.53c-1.99,0-3.9.34-5.66.97-6.58,2.33-11.3,8.6-11.3,15.98v15.91c0,7.38,4.72,13.67,11.3,16,1.76.63,3.66.97,5.66.97h22.53c1.99,0,3.9-.34,5.66-.97,6.58-2.33,11.3-8.61,11.3-16v-15.91c0-7.38-4.72-13.65-11.3-15.98ZM1062.96,551.29c0,3.3-2.67,5.96-5.96,5.96h-21.92c-3.3,0-5.96-2.67-5.96-5.96v-15.32c0-3.28,2.67-5.95,5.96-5.95h21.92c3.3,0,5.96,2.67,5.96,5.95v15.32Z" fill="#ffffff"/>
+          <path d="M880.28,530.04h39.18v-11.3h-39.48c-1.99,0-3.9.34-5.66.97-6.58,2.33-11.3,8.6-11.3,15.98v15.91c0,7.38,4.72,13.67,11.3,16,1.76.63,3.66.97,5.66.97h39.48v-11.3h-39.18c-3.29,0-5.96-2.67-5.96-5.96v-15.32c0-3.28,2.67-5.95,5.96-5.95Z" fill="#ffffff"/>
+        </svg>
+      </div>
     </div>    <div class="login-marque">
       <img src="assets/logos/rex-mascotte-hd.png" alt="Rex, la mascotte du CRM" class="login-mascotte"/>
       <img src="assets/logos/rex-logotype.png" alt="REX CRM" class="login-logotype"/>
@@ -3016,7 +3043,7 @@ body.mode-cloud .login-marque-cloud { display: flex; flex-direction: column; ali
 
 <script src="js/01-prevoyance-immo.js?v=1790350000"></script>
 <script src="js/02-catalogue-session.js?v=1790060000"></script>
-<script src="js/03-auth-navigation.js?v=1790860000"></script>
+<script src="js/03-auth-navigation.js?v=1790980000"></script>
 <script src="js/04-dashboard-finma.js?v=1790700000"></script>
 <script src="js/05-contrats-clients.js?v=1790860000"></script>
 <script src="js/06-signature-opportunites.js?v=1790700000"></script>
@@ -3060,8 +3087,8 @@ body.mode-cloud .login-marque-cloud { display: flex; flex-direction: column; ali
 <script src="js/44-bandeau-pages.js?v=1790660000"></script>
 <script src="js/45-courriers.js?v=1790640000"></script>
 <script src="js/46-offre-vers-contrat.js?v=1790640000"></script>
-<script src="js/47-profil-investisseur.js?v=1790940000"></script>
-<script src="js/48-espace-client.js?v=1790960000"></script>
+<script src="js/47-profil-investisseur.js?v=1790980000"></script>
+<script src="js/48-espace-client.js?v=1790980000"></script>
 <script src="js/49-nouveau-contrat.js?v=1790920000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application

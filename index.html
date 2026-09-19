@@ -790,7 +790,66 @@
     .fiche-principale .tab-btn { white-space: nowrap; }
   }
 
+  /* ═══ PLAN DE TRÉSORERIE (js/21-tresorerie.js, 19.09.2026) ═══ */
+  .tr-entete { margin-bottom: 16px; }
+  .tr-titre { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; color: var(--text); }
+  .tr-sous { font-size: 12.5px; color: var(--text-muted); margin-top: 4px; max-width: 760px; line-height: 1.5; }
+  .tr .dbx-carte { margin-bottom: 16px; }
+  .tr-kpi { cursor: default; min-height: 112px; }
+  .tr-kpi:hover { transform: none; }
+  .tr-kpi.alerte { border-color: rgba(239,68,68,0.45); }
+  .tr-kpi.ok .dbx-kpi-valeur { color: #16A34A; }
+  html:not([data-theme="clair"]) .tr-kpi.ok .dbx-kpi-valeur { color: #4ADE80; }
+  .tr-kpi.alerte .dbx-kpi-valeur { color: #EF4444; }
+  .tr-kpi .dbx-kpi-sous { font-size: 11.5px; color: var(--text-dim); }
+  .tr-barre-outils { display: flex; align-items: center; flex-wrap: wrap; gap: 10px; margin-bottom: 16px; }
+  .tr-barre-outils .dbx-onglets { margin-bottom: 0; }
+  .tr-espace { flex: 1; }
+  .tr-interrupteur { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text-muted); cursor: pointer; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 8px 14px; }
+  .tr-btn { background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 12px; padding: 9px 14px; font-size: 12.5px; font-weight: 500; cursor: pointer; transition: all .15s; }
+  .tr-btn:hover { border-color: var(--accent-border); color: var(--accent); transform: translateY(-1px); }
+  .tr-graph svg { width: 100%; height: auto; display: block; }
+  .tr-axe { font-size: 11px; fill: var(--text-dim); font-family: inherit; }
+  .tr-grille { stroke: var(--border); stroke-dasharray: 3 4; }
+  .tr-zero { stroke: var(--text-dim); stroke-width: 1; }
+  .tr-ligne { stroke-dasharray: 2000; stroke-dashoffset: 2000; animation: dbx-trace 1.6s .2s ease-out forwards; }
+  .tr-tableau-wrap { overflow-x: auto; margin: 0 -4px; }
+  .tr-tableau { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+  .tr-tableau th, .tr-tableau td { padding: 7px 10px; text-align: right; white-space: nowrap; border-bottom: 1px solid var(--border); }
+  .tr-tableau thead th { font-size: 11px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.4px; position: sticky; top: 0; background: var(--surface); }
+  .tr-tableau tbody th { text-align: left; font-weight: 500; color: var(--text); position: sticky; left: 0; background: var(--surface); min-width: 210px; z-index: 1; }
+  .tr-tableau tbody th small { color: var(--text-dim); font-weight: 400; font-size: 10.5px; }
+  .tr-tableau td { color: var(--text); }
+  .tr-tableau td.neg { color: #EF4444; }
+  .tr-tableau .tr-vide { color: var(--text-dim); }
+  .tr-tableau .tr-total { font-weight: 600; background: var(--surface-alt); }
+  .tr-tableau tr.entree td:not(.tr-total) { color: #16A34A; }
+  html:not([data-theme="clair"]) .tr-tableau tr.entree td:not(.tr-total) { color: #4ADE80; }
+  .tr-tableau tr.pipeline td, .tr-tableau tr.pipeline th { opacity: .7; font-style: italic; }
+  .tr-tableau tr.solde th, .tr-tableau tr.solde td { background: var(--surface-alt); font-weight: 600; }
+  .tr-tableau tr.fin th, .tr-tableau tr.fin td { border-top: 2px solid var(--accent-border); font-size: 12.5px; }
+  .tr-tableau tr.net th, .tr-tableau tr.net td { font-weight: 600; }
+  .tr-tableau tr.tr-section td { text-align: left; font-size: 10.5px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--text-muted); padding-top: 14px; border-bottom: none; }
+  .tr-tableau .tr-invite { text-align: left; color: var(--text-muted); }
+  .tr-postes { display: flex; flex-direction: column; gap: 6px; }
+  .tr-poste { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 12px; }
+  .tr-poste-signe { width: 28px; height: 28px; border-radius: 8px; display: flex; align-items: center; justify-content: center; font-weight: 600; flex-shrink: 0; }
+  .tr-poste.sortie .tr-poste-signe { background: rgba(239,68,68,0.12); color: #EF4444; }
+  .tr-poste.entree .tr-poste-signe { background: rgba(34,197,94,0.14); color: #16A34A; }
+  .tr-poste-texte { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .tr-poste-texte strong { font-size: 13px; font-weight: 500; color: var(--text); }
+  .tr-poste-texte small { font-size: 11px; color: var(--text-muted); }
+  .tr-poste-montant { font-size: 13px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+  .tr-icone { width: 30px; height: 30px; border-radius: 9px; border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); cursor: pointer; }
+  .tr-icone:hover { color: var(--accent); border-color: var(--accent-border); }
+  .tr-form { border-color: var(--accent-border); animation: dbx-entree .35s ease both; }
+  .tr-form-grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+  .tr-form-grille label { display: flex; flex-direction: column; gap: 5px; font-size: 11.5px; color: var(--text-muted); }
+  .tr-form-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
+  @media (max-width: 768px) { .tr-tableau tbody th { min-width: 150px; } .tr-espace { display: none; } }
+
   @media (prefers-reduced-motion: reduce) {
+    .tr-ligne { animation: none !important; stroke-dashoffset: 0; }
     .fcx-hero, .fcx-kpi { animation: none !important; opacity: 1; }
     .dbx *, .dbx { animation: none !important; transition: none !important; }
     .dbx-anim, .dbx-nouveaute, .dbx-signal, .dbx-hbarre { opacity: 1; transform: none; }
@@ -876,15 +935,15 @@
   <div class="main" id="main-content"></div>
 </div>
 
-<script src="js/01-prevoyance-immo.js?v=1789409777"></script>
+<script src="js/01-prevoyance-immo.js?v=1790000000"></script>
 <script src="js/02-catalogue-session.js?v=1789487348"></script>
-<script src="js/03-auth-navigation.js?v=1789970000"></script>
-<script src="js/04-dashboard-finma.js?v=1789990000"></script>
+<script src="js/03-auth-navigation.js?v=1790000000"></script>
+<script src="js/04-dashboard-finma.js?v=1790000000"></script>
 <script src="js/05-contrats-clients.js?v=1789990000"></script>
-<script src="js/06-signature-opportunites.js?v=1789940000"></script>
-<script src="js/07-fichepaie-bordereaux.js?v=1789950000"></script>
+<script src="js/06-signature-opportunites.js?v=1790000000"></script>
+<script src="js/07-fichepaie-bordereaux.js?v=1790000000"></script>
 <script src="js/08-nouveaux-formulaires.js?v=1788452540"></script>
-<script src="js/09-rappels-vehicules.js?v=1789860000"></script>
+<script src="js/09-rappels-vehicules.js?v=1790000000"></script>
 <script src="js/10-commissions-parametres.js?v=1789980000"></script>
 <script src="js/11-renouvellements.js?v=1789880000"></script>
 <script src="js/12-equipement.js?v=1789850000"></script>
@@ -894,8 +953,9 @@
 <script src="js/16-pipeline-kanban.js?v=1789930000"></script>
 <script src="js/17-fiche-activite.js?v=1789940000"></script>
 <script src="js/18-dashboard.js?v=1789980000"></script>
-<script src="js/19-prevision-commissions.js?v=1789980000"></script>
+<script src="js/19-prevision-commissions.js?v=1790000000"></script>
 <script src="js/20-fiche-client-entete.js?v=1789990000"></script>
+<script src="js/21-tresorerie.js?v=1790000000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

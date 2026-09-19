@@ -99,7 +99,7 @@ async function importBordereauPdf(input) {
 
     document.getElementById('b-compagnie').value = data.compagnie || '';
     document.getElementById('b-mois').value = data.mois || '';
-    document.getElementById('b-montant').value = data.montant_brut || '';
+    document.getElementById('b-montant').value = isNaN(nombreCH(data.montant_brut)) ? '' : nombreCH(data.montant_brut);
 
     window._bordereauLignesExtraites = data.lignes || [];
     const zone = document.getElementById('bord-lignes-extraites');
@@ -164,7 +164,7 @@ async function viewNouveauBordereau() {
           ${[2024,2025,2026,2027].map(y => `<option value="${y}" ${y===2026?'selected':''}>${y}</option>`).join('')}
         </select>
       </div>
-      <div class="form-field"><label class="form-label">Montant brut (CHF) *</label><input class="form-input" id="b-montant" type="number" placeholder="1500"/></div>
+      <div class="form-field"><label class="form-label">Montant brut (CHF) *</label><input class="form-input" id="b-montant" type="number" step="0.01" placeholder="1500"/></div>
       <div class="form-field"><label class="form-label">Taux de caution (%)</label><input class="form-input" id="b-caution" type="number" step="0.1" placeholder="5 à 10" min="0" max="100" oninput="this.dataset.touched='1'"/></div>
       <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="b-statut"><option value="attendu">Attendu</option><option value="reçu">Reçu</option></select></div>
       <div class="form-field"><label class="form-label">Date de réception</label><input class="form-input" id="b-date" type="date"/></div>
@@ -200,10 +200,36 @@ function suggererCautionCompagnie() {
   hint.innerHTML = msgs.join('<br/>');
 }
 
+// Archive le fichier d'un bordereau (PDF, scan, Excel) dans le stockage et le rattache au
+// bordereau — utilisé par la saisie manuelle, l'import de décompte et l'import depuis les
+// commissions en attente (19.09.2026). Avant, un échec d'envoi ou de rattachement passait sous
+// silence : aucun bordereau n'avait son fichier. Nom de fichier nettoyé (accents, espaces), un
+// dossier par bordereau, et un message clair si quelque chose échoue. Renvoie true si archivé.
+async function archiverFichierBordereau(bordereau, file) {
+  if (!bordereau || !bordereau.id || !file) return false;
+  try {
+    const nomPropre = (file.name || 'bordereau').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9._-]+/g, '_').slice(-80);
+    const path = `bordereaux/${bordereau.id}/${Date.now()}-${nomPropre}`;
+    const token = await getValidAccessToken() || SUPABASE_KEY;
+    const res = await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${path}`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, 'Content-Type': file.type || 'application/octet-stream', 'x-upsert': 'true' },
+      body: file,
+    });
+    if (!res.ok) { showError(`⚠️ Bordereau créé, mais le fichier n'a pas pu être archivé (${res.status}) : ${(await res.text()).slice(0, 160)}`); return false; }
+    const r = await dbPatch('bordereaux', bordereau.id, { pdf_url: path, pdf_nom: file.name });
+    if (r && r.error) { showError('⚠️ Fichier archivé, mais pas rattaché au bordereau : ' + errMsg(r)); return false; }
+    return true;
+  } catch (e) {
+    showError('⚠️ Bordereau créé, mais le fichier n’a pas pu être archivé : ' + e.message);
+    return false;
+  }
+}
+
 async function saveBordereau() {
   const compagnie = normaliserCompagnie(document.getElementById('b-compagnie').value.trim());
   const mois = `${document.getElementById('b-mois-select').value} ${document.getElementById('b-annee-select').value}`;
-  const montant = parseInt(document.getElementById('b-montant').value) || 0;
+  const montant = Math.round((nombreCH(document.getElementById('b-montant').value) || 0) * 100) / 100; // centimes conservés (19.09.2026)
   const tauxCaution = parseFloat(document.getElementById('b-caution').value) || 0;
   if (!compagnie) { alert('Compagnie obligatoire.'); return; }
   const body = {
@@ -221,23 +247,8 @@ async function saveBordereau() {
 
   const nouveauBordereau = r && r[0] ? r[0] : null;
 
-  // Si un PDF a été importé, on l'archive en pièce jointe rattachée au numéro du bordereau
-  if (nouveauBordereau && window._bordereauPdfFile) {
-    try {
-      const file = window._bordereauPdfFile;
-      const ext = file.name.split('.').pop();
-      const path = `bordereaux/${body.numero || nouveauBordereau.id}-${Date.now()}.${ext}`;
-      const uploadToken = await getValidAccessToken() || SUPABASE_KEY;
-      const uploadRes = await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${path}`, {
-        method: 'POST',
-        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${uploadToken}`, 'Content-Type': file.type || 'application/pdf' },
-        body: file,
-      });
-      if (uploadRes.ok) {
-        await dbPatch('bordereaux', nouveauBordereau.id, { pdf_url: path, pdf_nom: file.name });
-      }
-    } catch(e) { /* le bordereau reste créé même si l'archivage du PDF échoue */ }
-  }
+  // Si un PDF / scan a été importé, on l'archive en pièce jointe du bordereau
+  if (nouveauBordereau && window._bordereauPdfFile) await archiverFichierBordereau(nouveauBordereau, window._bordereauPdfFile);
 
   window._bordereauPdfFile = null;
   allBordereaux = await dbGet('bordereaux', 'select=*');

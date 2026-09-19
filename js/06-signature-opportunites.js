@@ -1635,6 +1635,7 @@ function viewImportDecompte() {
 }
 
 let _decompteLignes = [];
+let _decompteFichier = null; // fichier du décompte importé (Excel/PDF), archivé avec le bordereau créé
 let _decompteNomAssureur = '';
 let _decompteCommissionTotaleAnnoncee = null;
 
@@ -1775,6 +1776,7 @@ async function analyserDecompteExcel() {
   const input = document.getElementById('imp-file-input');
   const file = input.files[0];
   if (!file) return;
+  _decompteFichier = file;
   document.getElementById('imp-file-nom').textContent = file.name;
 
   const buffer = await file.arrayBuffer();
@@ -1791,7 +1793,7 @@ async function analyserDecompteExcel() {
   let nomAssureur = '', commissionTotaleAnnoncee = null;
   rows.forEach(r => {
     if (r[0] === "Nom de l'assureur:") nomAssureur = r[1] || '';
-    if (r[0] === 'Commission totale:') commissionTotaleAnnoncee = parseFloat(r[1]) || null;
+    if (r[0] === 'Commission totale:') commissionTotaleAnnoncee = isNaN(nombreCH(r[1])) ? null : nombreCH(r[1]);
   });
 
   // Trouve la ligne d'en-tête du tableau (celle qui contient "N° de contrat")
@@ -1843,10 +1845,10 @@ async function analyserDecompteExcel() {
     const numeroContrat = (r[iContrat] || '').toString().trim();
     const brancheInterne = iBranche !== -1 ? (r[iBranche] || '') : '';
     const nomFichier = `${(r[iNom] || '').toString().trim()}${r[iPrenom] ? ' ' + r[iPrenom].toString().trim() : ''}`.trim();
-    const commissionProduction = iCommissionProd !== -1 ? (parseFloat(r[iCommissionProd]) || 0) : 0;
-    const tauxFichier = iTaux !== -1 ? (parseFloat(r[iTaux]) || 0) : 0;
-    const montantDetaille = iMontantDetaille !== -1 ? parseFloat(r[iMontantDetaille]) : null;
-    const montantTotalCol = iMontantTotal !== -1 ? parseFloat(r[iMontantTotal]) : null;
+    const commissionProduction = iCommissionProd !== -1 ? (nombreCH(r[iCommissionProd]) || 0) : 0;
+    const tauxFichier = iTaux !== -1 ? (nombreCH(r[iTaux]) || 0) : 0;
+    const montantDetaille = iMontantDetaille !== -1 ? nombreCH(r[iMontantDetaille]) : null;
+    const montantTotalCol = iMontantTotal !== -1 ? nombreCH(r[iMontantTotal]) : null;
     // Le fichier donne déjà le montant de commission par ligne (détaillé, ou total si pas de détail) —
     // on ne le recalcule depuis le taux que si aucun des deux montants n'est fourni.
     const montantFichier = (montantDetaille != null && !isNaN(montantDetaille)) ? montantDetaille
@@ -1886,9 +1888,9 @@ function construireLigneImport(i, champs) {
     nomVaudoise: nomFichier || '(nom non fourni par le fichier)',
     npa: npa || '', localite: localite || '',
     brancheInterne: brancheInterne || '',
-    commissionProduction: Number(commissionProduction) || 0,
-    taux: Number(taux) || 0,
-    montant: Math.round((Number(montant) || 0) * 100) / 100,
+    commissionProduction: nombreCH(commissionProduction) || 0,
+    taux: nombreCH(taux) || 0,
+    montant: Math.round((nombreCH(montant) || 0) * 100) / 100,
     contratId: contratTrouve ? contratTrouve.id : null,
     clientId: contratTrouve ? (clientTrouve ? clientTrouve.id : null) : (clientSuggere ? clientSuggere.id : null),
     clientNomCRM: clientTrouve ? (estEntreprise(clientTrouve) ? clientTrouve.nom : `${clientTrouve.prenom} ${clientTrouve.nom}`) : null,
@@ -1903,6 +1905,7 @@ function construireLigneImport(i, champs) {
 async function analyserDecomptePdf(input) {
   const file = input.files[0];
   if (!file) return;
+  _decompteFichier = file;
   document.getElementById('imp-file-nom').textContent = file.name;
   const statusEl = document.getElementById('imp-pdf-status');
   if (statusEl) { statusEl.textContent = '🤖 Lecture du PDF en cours (peut prendre 30-60 secondes)...'; statusEl.style.color = 'var(--accent)'; }
@@ -1943,7 +1946,7 @@ async function analyserDecomptePdf(input) {
     }));
 
     _decompteNomAssureur = data.compagnie || '';
-    _decompteCommissionTotaleAnnoncee = data.commission_totale != null ? Number(data.commission_totale) : null;
+    _decompteCommissionTotaleAnnoncee = data.commission_totale != null && !isNaN(nombreCH(data.commission_totale)) ? nombreCH(data.commission_totale) : null;
     if (statusEl) { statusEl.textContent = `✓ ${_decompteLignes.length} ligne(s) lue(s) par l'IA — vérifie le rapprochement ci-dessous avant d'importer.`; statusEl.style.color = '#4ade80'; }
     renderImportDecompte(_decompteNomAssureur, _decompteCommissionTotaleAnnoncee);
   } catch (e) {
@@ -1965,7 +1968,7 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
       <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px">${_decompteLignes.length} ligne(s) de commission — ${nbTrouves} contrat(s) reconnu(s) dans le CRM, ${nbSuggeres} client(s) probable(s) trouvé(s) par le nom (contrat à choisir/créer toi-même), ${nbRienTrouve} totalement non trouvé(s).</div>
       ${commissionTotaleAnnoncee != null ? `
       <div style="font-size:11.5px;margin-bottom:12px;padding:8px 12px;border-radius:8px;background:var(--surface-alt);color:${Math.abs(ecartTotal) > 1 ? '#f87171' : '#4ade80'}">
-        Total annoncé par le fichier : CHF ${fmtCHF(commissionTotaleAnnoncee)} — total des lignes lues : CHF ${fmtCHF(Math.round(totalFichier))}
+        Total annoncé par le fichier : CHF ${fmtCHF(commissionTotaleAnnoncee)} — total des lignes lues : CHF ${fmtCHF2(totalFichier)}
         ${Math.abs(ecartTotal) > 1 ? ` ⚠️ écart de CHF ${fmtCHF(ecartTotal)} — une ligne a probablement été mal lue, vérifie avant d'importer` : ' ✓ les lignes lues correspondent au total du fichier'}
       </div>` : ''}
       <div style="overflow-x:auto">
@@ -2038,7 +2041,7 @@ function renderBlocBordereauImportDecompte() {
         </select>
       </div>
       <div class="form-field"><label class="form-label">Montant brut (CHF) *</label>
-        <input class="form-input" id="imp-bd-montant" type="number" value="${Math.round(totalCoche)}" oninput="recalculerEcartBordereauImport()"/>
+        <input class="form-input" id="imp-bd-montant" type="number" step="0.01" value="${Math.round(totalCoche * 100) / 100}" oninput="recalculerEcartBordereauImport()"/>
         <div id="imp-bd-ecart" style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Préempli avec le total des lignes cochées ci-dessus — corrige si le montant officiel du bordereau compagnie diffère.</div>
       </div>
       <div class="form-field"><label class="form-label">Taux de caution (%)</label><input class="form-input" id="imp-bd-caution" type="number" step="0.1" placeholder="5 à 10" min="0" max="100"/></div>
@@ -2057,11 +2060,11 @@ function renderBlocBordereauImportDecompte() {
 function recalculerEcartBordereauImport() {
   const el = document.getElementById('imp-bd-ecart');
   if (!el) return;
-  const montantBrut = Number(document.getElementById('imp-bd-montant').value) || 0;
+  const montantBrut = nombreCH(document.getElementById('imp-bd-montant').value) || 0;
   const totalCoche = _decompteLignes.filter(l => l.selectionne && l.contratId).reduce((s, l) => s + l.montant, 0);
   const ecart = Math.round((montantBrut - totalCoche) * 100) / 100;
   if (Math.abs(ecart) > 1) {
-    el.innerHTML = `⚠️ Écart de CHF ${fmtCHF(ecart)} avec le total des lignes cochées (CHF ${fmtCHF(Math.round(totalCoche))}) — vérifie avant de créer.`;
+    el.innerHTML = `⚠️ Écart de CHF ${fmtCHF(ecart)} avec le total des lignes cochées (CHF ${fmtCHF2(totalCoche)}) — vérifie avant de créer.`;
     el.style.color = '#f87171';
   } else {
     el.innerHTML = 'Correspond au total des lignes cochées ci-dessus.';
@@ -2095,7 +2098,7 @@ async function importerCommissionsEtBordereau(nomAssureur) {
   }
   const mois = document.getElementById('imp-bd-mois')?.value;
   const annee = Number(document.getElementById('imp-bd-annee')?.value);
-  const montantBrut = Math.round(Number(document.getElementById('imp-bd-montant')?.value) || 0);
+  const montantBrut = Math.round((nombreCH(document.getElementById('imp-bd-montant')?.value) || 0) * 100) / 100; // centimes conservés
   const caution = Number(document.getElementById('imp-bd-caution')?.value) || 0;
   const statutBordereau = document.getElementById('imp-bd-statut')?.value || 'reçu';
   const dateReception = document.getElementById('imp-bd-date')?.value || '';
@@ -2131,11 +2134,13 @@ async function importerCommissionsEtBordereau(nomAssureur) {
     if (btn) { btn.disabled = false; btn.textContent = '✓ Créer les commissions et le bordereau'; }
     return;
   }
+  // Le fichier du décompte (Excel ou PDF scanné) reste archivé avec le bordereau
+  const fichierArchive = _decompteFichier && typeof archiverFichierBordereau === 'function' ? await archiverFichierBordereau(nouveauBordereau, _decompteFichier) : false;
   const dateReceptionCommission = (dateReception && dateReception >= DATE_BASCULE_ASSUREX) ? dateReception : aujourdhui;
 
   let nbCrees = 0, nbEchecs = 0, nbIgnores = 0;
   for (const l of aTraiter) {
-    const montant = Math.round(l.montant);
+    const montant = Math.round((Number(l.montant) || 0) * 100) / 100; // centimes conservés (19.09.2026)
     // Un montant négatif est une vraie correction de la compagnie (2e facture ajustant une branche
     // de la 1ère) — il doit être importé comme les autres, sinon la correction disparaît silencieusement
     // et le montant en attente reste surestimé du montant qu'elle était censée compenser.
@@ -2144,7 +2149,7 @@ async function importerCommissionsEtBordereau(nomAssureur) {
       // aujourd'hui) existe déjà — en attente ou déjà reçue — c'est presque certainement un doublon
       // (fichier réimporté par erreur, ou double-clic malgré le verrou ci-dessus) plutôt qu'une
       // nouvelle commission légitime — on ne la recrée pas.
-      const dejaExistante = allCommissionsAttente.some(c => c.contrat_id === l.contratId && Math.round(c.montant_estime || 0) === montant && c.date_creation === aujourdhui);
+      const dejaExistante = allCommissionsAttente.some(c => c.contrat_id === l.contratId && Math.round(Number(c.montant_estime || 0) * 100) / 100 === montant && c.date_creation === aujourdhui);
       if (dejaExistante) { nbIgnores++; continue; }
       const r = await dbPost('commissions_attente', {
         client_id: l.clientId,
@@ -2168,9 +2173,9 @@ async function importerCommissionsEtBordereau(nomAssureur) {
   logAction('import_decompte_et_bordereau', 'bordereaux', nouveauBordereau.id, `${numero} — ${compagnie} — ${nbCrees} commission(s) créée(s) et rapprochée(s)`);
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
   allBordereaux = await dbGet('bordereaux', 'select=*');
-  showError(`✓ Bordereau ${numero} créé avec ${nbCrees} commission(s) rapprochée(s).${nbIgnores ? ' ' + nbIgnores + ' ligne(s) ignorée(s) car déjà importée(s) aujourd\'hui (doublon évité).' : ''}${nbEchecs ? ' ⚠️ ' + nbEchecs + ' échec(s) d’écriture — vérifie manuellement depuis le bordereau.' : ''}`);
+  showError(`✓ Bordereau ${numero} créé avec ${nbCrees} commission(s) rapprochée(s)${fichierArchive ? ' — fichier archivé 📎' : ''}.${nbIgnores ? ' ' + nbIgnores + ' ligne(s) ignorée(s) car déjà importée(s) aujourd\'hui (doublon évité).' : ''}${nbEchecs ? ' ⚠️ ' + nbEchecs + ' échec(s) d’écriture — vérifie manuellement depuis le bordereau.' : ''}`);
   if (btn) { btn.disabled = false; btn.textContent = '✓ Créer les commissions et le bordereau'; }
-  _decompteLignes = []; _decompteNomAssureur = ''; _decompteCommissionTotaleAnnoncee = null;
+  _decompteLignes = []; _decompteNomAssureur = ''; _decompteCommissionTotaleAnnoncee = null; _decompteFichier = null;
   navigate('bordereaux');
 }
 

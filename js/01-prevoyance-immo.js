@@ -25,6 +25,31 @@ function fmtCHF(n) {
   if (!isFinite(num)) return '0';
   return num.toLocaleString('fr-CH', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
 }
+// Lit un montant tel qu'il apparaît dans les décomptes et bordereaux suisses, centimes compris :
+// 1'234,50 · 1’234.50 · 1 234,50 · CHF 12,50 · -12,50 · 12.50- · (12,50). parseFloat s'arrêtait à la
+// virgule (« 12,50 » → 12) et à l'apostrophe (« 1'234,50 » → 1) — correctif du 19.09.2026.
+function nombreCH(v) {
+  if (v === null || v === undefined || v === '') return NaN;
+  if (typeof v === 'number') return v;
+  let s = String(v).trim().replace(/CHF|Fr\.?|SFr\.?/gi, '').replace(/[\s  '’‘`´]/g, '');
+  let negatif = false;
+  if (/^\(.*\)$/.test(s)) { negatif = true; s = s.slice(1, -1); }
+  if (s.endsWith('-')) { negatif = true; s = s.slice(0, -1); }
+  if (s.startsWith('-')) { negatif = !negatif; s = s.slice(1); }
+  if (s.startsWith('+')) s = s.slice(1);
+  const derVirgule = s.lastIndexOf(','), derPoint = s.lastIndexOf('.');
+  if (derVirgule !== -1 && derPoint !== -1) {
+    // Les deux présents : le dernier des deux est le séparateur décimal
+    s = derVirgule > derPoint ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+  } else if (derVirgule !== -1) {
+    // Virgule seule : décimale (usage suisse romand), sauf si plusieurs virgules (milliers)
+    s = (s.match(/,/g).length > 1) ? s.replace(/,/g, '') : s.replace(',', '.');
+  } else if ((s.match(/\./g) || []).length > 1) {
+    s = s.replace(/\./g, ''); // 1.234.567 → milliers
+  }
+  const n = parseFloat(s);
+  return isNaN(n) ? NaN : (negatif ? -n : n);
+}
 function fmtCHF2(n) {
   const num = Number(n);
   if (!isFinite(num)) return '0.00';

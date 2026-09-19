@@ -251,7 +251,7 @@ function showModalEditBordereau(bordereauId) {
             ${[2024,2025,2026,2027].map(y => `<option value="${y}" ${(b.mois||'').includes(String(y))?'selected':''}>${y}</option>`).join('')}
           </select>
         </div>
-        <div class="form-field"><label class="form-label">Montant brut (CHF)</label><input class="form-input" id="eb-montant" type="number" value="${b.montant_brut || 0}"/></div>
+        <div class="form-field"><label class="form-label">Montant brut (CHF)</label><input class="form-input" id="eb-montant" type="number" step="0.01" value="${b.montant_brut || 0}"/></div>
         <div class="form-field"><label class="form-label">Taux de caution (%)</label><input class="form-input" id="eb-caution" type="number" step="0.1" value="${b.taux_caution || 0}"/></div>
         <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="eb-statut">
           <option value="attendu" ${b.statut==='attendu'?'selected':''}>Attendu</option>
@@ -259,7 +259,13 @@ function showModalEditBordereau(bordereauId) {
         </select></div>
         <div class="form-field"><label class="form-label">Date de réception</label><input class="form-input" id="eb-date" type="date" value="${b.date_reception || ''}"/></div>
       </div>
-      ${b.pdf_url ? `<button type="button" onclick="ouvrirPieceJointe('${b.pdf_url}')" style="margin-top:10px;background:var(--surface-alt);border:1px solid var(--border);border-radius:7px;padding:6px 12px;font-size:11.5px;color:var(--text-muted);cursor:pointer">📎 Voir le PDF joint</button>` : ''}
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px">
+        ${b.pdf_url ? `<button type="button" onclick="ouvrirPieceJointe('${b.pdf_url}')" style="background:var(--surface-alt);border:1px solid var(--border);border-radius:7px;padding:6px 12px;font-size:11.5px;color:var(--text);cursor:pointer">📎 Voir ${b.pdf_nom ? b.pdf_nom.replace(/[<>"']/g, '') : 'le fichier joint'}</button>` : '<span style="font-size:11.5px;color:var(--text-muted)">Aucun fichier joint</span>'}
+        <label style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:7px;padding:6px 12px;font-size:11.5px;color:var(--accent);cursor:pointer;font-weight:600">
+          ${b.pdf_url ? '↻ Remplacer le fichier' : '＋ Joindre le bordereau (PDF / scan)'}
+          <input type="file" accept=".pdf,.png,.jpg,.jpeg,.heic,.xlsx,.xls,.csv" style="display:none" onchange="joindreFichierBordereauExistant('${bordereauId}', this)"/>
+        </label>
+      </div>
       <div style="display:flex;gap:10px;margin-top:20px">
         <button onclick="deleteBordereau('${bordereauId}')" style="background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>
         <button class="btn-secondary" onclick="document.getElementById('modal-edit-bordereau').remove()">Annuler</button>
@@ -598,7 +604,7 @@ function renderImportBordereauSelection() {
         </select>
       </div>
       <div class="form-field"><label class="form-label">Montant brut (CHF) *</label>
-        <input class="form-input" id="ib-montant" type="number" value="${pre.montant}"/>
+        <input class="form-input" id="ib-montant" type="number" step="0.01" value="${pre.montant}"/>
         <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Prérempli avec le total des lignes cochées — corrige si le montant officiel du bordereau compagnie diffère.</div>
       </div>
       <div class="form-field"><label class="form-label">Taux de caution (%)</label><input class="form-input" id="ib-caution" type="number" step="0.1" placeholder="5 à 10" min="0" max="100" value="${pre.caution || ''}"/></div>
@@ -607,6 +613,10 @@ function renderImportBordereauSelection() {
         <option value="reçu" ${pre.statut === 'reçu' ? 'selected' : ''}>Reçu</option>
       </select></div>
       <div class="form-field"><label class="form-label">Date de réception</label><input class="form-input" id="ib-date" type="date" value="${pre.date || ''}"/></div>
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">📎 Bordereau de la compagnie (PDF, scan ou Excel)</label>
+        <input class="form-input" id="ib-fichier" type="file" accept=".pdf,.png,.jpg,.jpeg,.heic,.xlsx,.xls,.csv" onchange="window._ibFichier = this.files[0] || null"/>
+        <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">${window._ibFichier ? `Fichier choisi : ${window._ibFichier.name} — ` : ''}Conservé avec le bordereau, consultable ensuite depuis la liste (📎).</div>
+      </div>
     </div>`)}
 
     <div style="display:flex;gap:10px;margin-top:8px">
@@ -625,7 +635,7 @@ function apercuImportBordereau() {
   const compagnie = normaliserCompagnie(window._ibCompagnie);
   const mois = document.getElementById('ib-mois-select').value;
   const annee = Number(document.getElementById('ib-annee-select').value);
-  const montantBrut = Math.round(Number(document.getElementById('ib-montant').value) || 0);
+  const montantBrut = Math.round((nombreCH(document.getElementById('ib-montant').value) || 0) * 100) / 100; // centimes conservés
   const caution = Number(document.getElementById('ib-caution').value) || 0;
   const statut = document.getElementById('ib-statut').value;
   const date = document.getElementById('ib-date').value || '';
@@ -671,6 +681,19 @@ function apercuImportBordereau() {
   `;
 }
 
+// Joint (ou remplace) le fichier d'un bordereau déjà enregistré, depuis sa fenêtre d'édition
+async function joindreFichierBordereauExistant(bordereauId, input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const ok = await archiverFichierBordereau({ id: bordereauId }, file);
+  if (!ok) return;
+  allBordereaux = await dbGet('bordereaux', 'select=*');
+  const modale = document.getElementById('modal-edit-bordereau');
+  if (modale) modale.remove();
+  showError(`✓ Fichier « ${file.name} » joint au bordereau.`);
+  if (currentView === 'bordereaux') navigate('bordereaux');
+}
+
 async function confirmerImportBordereau() {
   const btn = document.getElementById('ib-btn-confirmer');
   if (btn && btn.disabled) return; // anti-doublon double-clic, même logique que l'import décompte
@@ -701,6 +724,8 @@ async function confirmerImportBordereau() {
     return;
   }
 
+  if (window._ibFichier && typeof archiverFichierBordereau === 'function') await archiverFichierBordereau(nouveauBordereau, window._ibFichier);
+
   // Rapproche chaque commission cochée à ce bordereau — même logique que le rapprochement manuel
   // (saveValidationCommission ci-dessus) : statut "reçue" dès le rapprochement, et date de
   // réception = celle du bordereau si cohérente avec la bascule Assurex, sinon aujourd'hui.
@@ -724,7 +749,7 @@ async function confirmerImportBordereau() {
   if (nbEchecs > 0) {
     showError(`✓ Bordereau ${body.numero} créé, mais ${nbEchecs} commission(s) sur ${lignesCochees.length} n'ont pas pu être rapprochée(s) — vérifie-les manuellement depuis le bordereau.`);
   }
-  window._ibLignes = []; window._ibCompagnie = ''; window._ibPrefill = null;
+  window._ibLignes = []; window._ibCompagnie = ''; window._ibPrefill = null; window._ibFichier = null;
   navigate('bordereaux');
 }
 

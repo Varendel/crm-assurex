@@ -1747,7 +1747,7 @@ function viewSuiviFinancier() {
           <div style="font-size:10.5px;color:var(--text-muted)">${label}</div></div>`;
       return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
       <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">🔮 Prévision d'encaissement — commissions de gestion</div>
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:18px">Règle : versée dans les ${PREVISION_GESTION_DELAI_MOIS} mois après la signature du contrat (à défaut, sa date de début) ; ${PREVISION_GESTION_ANNUELLE.join(' et ')} versent 1× par an (prévu le ${String(PREVISION_ANNUELLE_JOUR).padStart(2, '0')}.${String(PREVISION_ANNUELLE_MOIS).padStart(2, '0')}).</div>
+      <div style="font-size:11px;color:var(--text-muted);margin-bottom:18px">Règle : versée dans les ${PREVISION_GESTION_DELAI_MOIS} mois après la signature du contrat (à défaut, sa date de début) ; versement 1× par an pour ${PREVISION_GESTION_ANNUELLE.map(c => `${c} (fin ${['janvier','février','mars','avril','mai','juin','juillet','août','septembre','octobre','novembre','décembre'][PREVISION_GESTION_ANNUELLE_DATES[c].mois - 1]})`).join(' et ')}.</div>
       <div style="display:flex;align-items:flex-end;gap:10px;height:150px">
         ${barre('En retard', pv.retard, '#f87171')}
         ${pv.mois.map(m => { const [y, mm] = m.cle.split('-'); return barre(new Date(+y, +mm - 1, 1).toLocaleDateString('fr-CH', { month: 'short', year: '2-digit' }), m, '#38bdf8'); }).join('')}

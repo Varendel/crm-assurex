@@ -4,10 +4,16 @@
 // Les commissions d'acquisition n'ont pas (encore) de règle.
 
 const PREVISION_GESTION_DELAI_MOIS = 3;
-// Compagnies qui versent la gestion 1× par an (clé = nom renvoyé par normaliserCompagnie)
-const PREVISION_GESTION_ANNUELLE = ['HOTELA', 'Gastrosocial'];
-// Versement annuel attendu le 31 décembre de l'année de signature (à ajuster si besoin)
-const PREVISION_ANNUELLE_MOIS = 12, PREVISION_ANNUELLE_JOUR = 31;
+// Compagnies qui versent la gestion 1× par an (clé = nom renvoyé par normaliserCompagnie), avec
+// la date de versement habituelle — indication de Jonathan du 19.09.2026, à confirmer :
+// HOTELA vers fin novembre, Gastrosocial vers fin avril. Prochaine échéance après la signature.
+const PREVISION_GESTION_ANNUELLE_DATES = { 'HOTELA': { mois: 11, jour: 30 }, 'Gastrosocial': { mois: 4, jour: 30 } };
+const PREVISION_GESTION_ANNUELLE = Object.keys(PREVISION_GESTION_ANNUELLE_DATES);
+function _prevDateAnnuelle(ca) {
+  const nom = typeof normaliserCompagnie === 'function' ? normaliserCompagnie(ca.compagnie || '') : (ca.compagnie || '');
+  const cle = PREVISION_GESTION_ANNUELLE.find(c => c.toLowerCase() === (nom || '').toLowerCase());
+  return cle ? PREVISION_GESTION_ANNUELLE_DATES[cle] : null;
+}
 
 function _prevIso(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 
@@ -32,9 +38,10 @@ function commissionDatePrevue(ca) {
   const depart = commissionDateDepart(ca);
   if (!depart) return null;
   const [y, m, d] = depart.split('-').map(Number);
-  if (commissionVersementAnnuel(ca)) {
+  const annuel = _prevDateAnnuelle(ca);
+  if (annuel) {
     let annee = y;
-    const cible = () => `${annee}-${String(PREVISION_ANNUELLE_MOIS).padStart(2, '0')}-${String(PREVISION_ANNUELLE_JOUR).padStart(2, '0')}`;
+    const cible = () => `${annee}-${String(annuel.mois).padStart(2, '0')}-${String(annuel.jour).padStart(2, '0')}`;
     if (cible() < depart) annee++;
     return cible();
   }

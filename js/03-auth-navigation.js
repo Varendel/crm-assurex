@@ -736,6 +736,7 @@ const SECTIONS = [
     { id: 'commissions', label: 'Commissions', staff: true },
     { id: 'commissions-attente', label: 'Toutes les commissions' },
     { id: 'suivi-financier', label: '💰 Suivi financier' },
+    { id: 'tresorerie', label: '📈 Plan de trésorerie' },
     { id: 'fiche-paie', label: 'Fiche de paie (agents)' },
     { id: 'rapport-finma', label: 'Rapport FINMA' },
     { id: 'production', label: 'Production (par période)', staff: true },
@@ -1338,6 +1339,7 @@ async function renderView() {
       break;
     case 'rapport-finma': main.innerHTML = viewRapportFinma(); break;
     case 'suivi-financier': main.innerHTML = viewSuiviFinancier(); break;
+    case 'tresorerie': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); main.innerHTML = viewTresorerie(); break;
     case 'production': main.innerHTML = viewProduction(); break;
     case 'opportunites': main.innerHTML = viewOpportunites(); break;
     case 'suivi': main.innerHTML = viewSuivi(); break;

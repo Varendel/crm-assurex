@@ -204,9 +204,12 @@ function rnLigne({ ct, limite, horizon, revue }, cols) {
       <a href="?client=${ct.client_id}" onclick="return irVersClient(event, '${ct.client_id}')" style="font-weight:700;font-size:13px;color:var(--text);text-decoration:none">${rnEsc(rnNomClient(ct))}</a>
       ${ct.commissionne === false ? `<div>${badge('Non commissionné — à reprendre', '#fb923c')}</div>` : ''}
     </div>
-    <div style="cursor:pointer" onclick="showDetailContrat('${ct.id}')">
-      <div style="font-size:13px;color:var(--text)">${rnEsc(ct.produit || '')}</div>
-      <div style="font-size:11px;color:var(--text-muted)">${rnEsc(ct.compagnie || '')}${ct.numero_police ? ' · ' + rnEsc(ct.numero_police) : ''}</div>
+    <div style="cursor:pointer;display:flex;align-items:center;gap:10px" onclick="showDetailContrat('${ct.id}')">
+      ${typeof pictoCompagnie === 'function' ? pictoCompagnie(ct.compagnie, 26) : ''}
+      <div>
+        <div style="font-size:13px;color:var(--text)">${rnEsc(ct.produit || '')}</div>
+        <div style="font-size:11px;color:var(--text-muted)">${rnEsc(ct.compagnie || '')}${ct.numero_police ? ' · ' + rnEsc(ct.numero_police) : ''}</div>
+      </div>
     </div>
     <div style="font-size:12px;color:var(--text-muted)">${fmtDate(rnEcheance(ct))}</div>
     <div style="font-size:12px;color:var(--text)">${limiteTxt}</div>

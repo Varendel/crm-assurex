@@ -1086,7 +1086,7 @@ function renderContratsOrphelins() {
         <a href="?client=${ct.client_id}" style="font-size:13px;font-weight:700;color:var(--accent);cursor:pointer;text-decoration:underline dotted" onclick="return irVersClient(event, '${ct.client_id}')">${nom}</a>
         <div style="font-size:11px;color:var(--text-muted)">${ct.produit||''}</div>
       </div>
-      <div style="font-size:12px;color:var(--text-muted)">${ct.compagnie||''}</div>
+      <div style="font-size:12px;color:var(--text-muted)">${typeof compagnieAvecPicto === 'function' ? compagnieAvecPicto(ct.compagnie) : (ct.compagnie||'')}</div>
       <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}</div>
       <div>${badge(ct.statut, ct.statut==='actif'?'#4ade80':'#f59e0b')}</div>
       <div><button onclick="creerCommissionManquante('${ct.id}')" style="background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);color:#4ade80;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">+ Créer</button></div>
@@ -1342,7 +1342,7 @@ function renderTousContrats() {
         <div style="font-size:13px;font-weight:700;color:var(--text)">${nom}${getClientMiniLogos(cl)}</div>
         <div style="font-size:11px;color:var(--text-muted)">${normaliserProduit(ct.produit)||''} · ${ct.numero_police ? '№ '+ct.numero_police : 'sans n° police'}</div>
       </div>
-      <div style="font-size:12px;color:var(--text-muted)">${ct.compagnie||'—'}</div>
+      <div style="font-size:12px;color:var(--text-muted)">${ct.compagnie && typeof compagnieAvecPicto === 'function' ? compagnieAvecPicto(ct.compagnie) : (ct.compagnie||'—')}</div>
       <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ct.date_debut)}</div>
       <div style="font-weight:800;color:#f59e0b;text-align:right">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}</div>
       <div>${badge(ct.statut==='annulé'?'❌ Annulé':ct.statut==='mandat_resilie'?'🚫 Mandat résilié':ct.statut, ct.statut==='actif'?'#4ade80':ct.statut==='mandat_resilie'?'#f87171':ct.statut==='résilié'?'#94a3b8':ct.statut==='annulé'?'#f87171':'#f59e0b')}</div>

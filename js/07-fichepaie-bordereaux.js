@@ -1009,6 +1009,7 @@ function formPrive() {
       <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="f-statut"><option value="prospect">Prospect</option><option value="actif">Actif</option><option value="inactif">Inactif</option></select></div>
       <div class="form-field"><label class="form-label">Source du lead (apporteur interne)</label><select class="form-select" id="f-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Apporteur / Recommandation externe</label><input class="form-input" id="f-apporteur-ext" placeholder="Ex: Luca Renda, BNI Lavaux, Hôtel Modern Times…"/></div>
+      ${typeof htmlChampSourceClient === 'function' ? htmlChampSourceClient('f', null) : ''}
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Notes</label><textarea class="form-input" id="f-notes" rows="3" style="resize:vertical"></textarea></div>
     </div>`)}
     <div style="display:flex;gap:10px;margin-top:8px">
@@ -1139,6 +1140,7 @@ async function saveClient() {
     segment: 'Privé',
     apporteur_id: document.getElementById('f-agent').value || null,
     apporteur_externe: document.getElementById('f-apporteur-ext').value.trim() || null,
+    ...(typeof lireChampSourceClient === 'function' ? lireChampSourceClient('f') : {}),
     notes: document.getElementById('f-notes').value || null,
     pere_id: document.getElementById('f-pere-id') ? (document.getElementById('f-pere-id').value || null) : null,
     mere_id: document.getElementById('f-mere-id') ? (document.getElementById('f-mere-id').value || null) : null,
@@ -1271,6 +1273,7 @@ function formEntreprise() {
       <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="e-statut"><option value="prospect">Prospect</option><option value="actif">Actif</option></select></div>
       <div class="form-field"><label class="form-label">Source du lead (apporteur interne)</label><select class="form-select" id="e-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Apporteur / Recommandation externe</label><input class="form-input" id="e-apporteur-ext" placeholder="Ex: Luca Renda, BNI Lavaux, Hôtel Modern Times…"/></div>
+      ${typeof htmlChampSourceClient === 'function' ? htmlChampSourceClient('e', null) : ''}
       <div class="form-field" style="grid-column:span 2"><label class="form-label">Notes</label><textarea class="form-input" id="e-notes" rows="3" style="resize:vertical"></textarea></div>
     </div>`)}
     <div style="display:flex;gap:10px;margin-top:8px">
@@ -1412,6 +1415,7 @@ async function saveEntreprise() {
     ide: document.getElementById('e-ide').value.trim() || null,
     apporteur_id: document.getElementById('e-agent').value || null,
     apporteur_externe: document.getElementById('e-apporteur-ext').value.trim() || null,
+    ...(typeof lireChampSourceClient === 'function' ? lireChampSourceClient('e') : {}),
     notes: document.getElementById('e-notes').value || null,
     details_entreprise: collecterDetailsEntreprise(),
   };

@@ -54,7 +54,11 @@ sont en bas de ce fichier.
 - [ ] Équipement, suite : distinguer « assuré ailleurs » de « pas assuré » (saisir les polices
       externes connues comme contrats non commissionnés)
 - [x] **Prochaine action obligatoire** (19.09) — demandée à la création, au changement de stade et à la fin de la dernière tâche ; affichée sur chaque carte du pipeline ; bandeau + carte dashboard pour les opportunités sans étape
-- [ ] **Source des clients** (remplacer `source_oz`, `source_cofidex`, `apporteur_externe`)
+- [x] **Source des clients** (19.09) — page Vente › Sources : canal d'acquisition par client
+      (recommandation, apporteur, RDV en ligne…), indicateurs par source, apporteurs externes,
+      clients qui recommandent, attribution rapide des clients sans source
+- [x] **Pictogrammes des compagnies** (19.09) sur les contrats — logos AXA, Vaudoise, HOTELA,
+      symbole Helvetia ; monogrammes aux couleurs officielles pour les autres
 - [ ] Synchronisation Outlook + suivi des offres reçues (voir idées détaillées ci-dessous)
 
 ## 🔵 Priorité 3 — Produit

@@ -872,7 +872,7 @@ function renderSuiviTables() {
       ${list.map(ct => `<div class="table-row" style="grid-template-columns:${colsActuelles};cursor:pointer" onclick="showDetailContrat('${ct.id}')">
         <div><div style="font-weight:700;font-size:13px;color:var(--text)">${ct.produit}</div><div style="font-size:11px;color:var(--text-muted)">${ct.numero_police || ''}</div></div>
         <div style="font-size:13px;color:var(--text)">${nomClient(ct)}</div>
-        <div style="font-size:13px;color:var(--text)">${ct.compagnie}</div>
+        <div style="font-size:13px;color:var(--text)">${typeof compagnieAvecPicto === 'function' ? compagnieAvecPicto(ct.compagnie) : ct.compagnie}</div>
         <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ct.date_echeance)}</div>
         <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}</div>
         <div>${badge(ct.statut, ct.statut === 'actif' ? '#4ade80' : ct.statut === 'renouveler' ? '#f59e0b' : '#f87171')}${ct.commissionne === false ? ' ' + badge('Non commissionné', '#64748b') : ''}</div>

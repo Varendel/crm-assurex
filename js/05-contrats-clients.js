@@ -177,7 +177,7 @@ function renderLigneContratClient(ct, estSousCouverture) {
           ${ct.modules ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:3px;line-height:1.5">🔗 ${ct.modules.split(', ').join(' · ')}</div>` : ''}
           ${Array.isArray(ct.detail_lignes) && ct.detail_lignes.length > 0 ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:3px;line-height:1.5">🧾 ${ct.detail_lignes.filter(l => l.libelle).map(l => `${l.libelle}${l.montant ? ' : CHF ' + fmtCHF(l.montant) : ''}`).join(' · ')}</div>` : ''}
         </div>
-        <div style="font-size:13px;color:var(--text)">${ct.compagnie}</div>
+        <div style="font-size:13px;color:var(--text)">${typeof compagnieAvecPicto === 'function' ? compagnieAvecPicto(ct.compagnie) : ct.compagnie}</div>
         <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ct.date_echeance)}</div>
         <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF(Number(ct.prime_annuelle || 0))}</div>
         <div>${badge(ct.statut, ct.statut === 'actif' ? '#4ade80' : ct.statut === 'renouveler' ? '#f59e0b' : '#f87171')}${ct.commissionne === false ? ' ' + badge('Non commissionné', '#64748b') : ''}</div>
@@ -499,6 +499,7 @@ async function showClient(id) {
           <div style="font-size:10.5px;color:var(--text-muted)">🤝 Origine du lead — recommandation externe</div>
         </div>
       </div>` : ''}
+      ${typeof htmlSourceFicheClient === 'function' ? htmlSourceFicheClient(c) : ''}
     </div>
 
     <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;padding:6px 2px 14px">
@@ -671,10 +672,13 @@ async function showClient(id) {
           <div style="display:flex;flex-direction:column;gap:10px">
             ${santeContrats.map(ct => `
               <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface-alt);border-radius:9px;border:1px solid var(--border)">
+                <div style="display:flex;align-items:center;gap:12px">
+                ${typeof pictoCompagnie === 'function' ? pictoCompagnie(ct.compagnie, 30) : ''}
                 <div>
                   <div style="font-size:13px;font-weight:700;color:var(--text)">${ct.produit}</div>
                   <div style="font-size:11px;color:var(--text-muted)">${ct.compagnie || ''}${ct.date_debut ? ' · Dès le ' + fmtDate(ct.date_debut) : ''}${ct.date_echeance ? ' → ' + fmtDate(ct.date_echeance) : ''}</div>
                   <div style="font-size:11px;color:var(--text-muted)">${ct.numero_police ? 'Police № ' + ct.numero_police : ''}</div>
+                </div>
                 </div>
                 <div style="text-align:right">
                   <div style="font-weight:800;color:#f59e0b;font-size:13px">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}/an</div>

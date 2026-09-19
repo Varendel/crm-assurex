@@ -64,6 +64,28 @@ sont en bas de ce fichier.
 
 # Idées détaillées
 
+## Diffusion WhatsApp — news marchés, assurance & patrimoine
+
+**Ajouté le 19.09.2026.**
+
+**Objectif** : une diffusion WhatsApp où Jonathan informe clients et contacts des nouveautés
+(marchés financiers suisses, assurance, patrimoine) par des **news périodiques non invasives** —
+tenir informé et rester présent entre deux échéances, sans démarchage.
+
+**Pistes** :
+- Format à sens unique : **Canal WhatsApp** (les abonnés ne voient ni les numéros ni les réponses des
+  autres) plutôt qu'un groupe ; rythme régulier mais espacé (ex. toutes les 2 semaines + actualité forte).
+- **Inscription volontaire** (opt-in) et désinscription simple — nLPD ; mention « information générale,
+  pas un conseil personnalisé » — FIDLEG.
+- Lien avec le CRM : case « abonné aux news » sur la fiche client, invitation à rejoindre le canal
+  dans les Relances LAMal et après un RDV, lien de prise de RDV dans certaines news.
+- Thèmes récurrents possibles : primes LAMal (automne), 3e pilier (fin d'année), taux hypothécaires,
+  changements LPP/AVS, rappels d'échéances saisonnières.
+
+**Statut** : idée notée, non planifiée.
+
+---
+
 ## Agent IA de suivi quotidien des dossiers (check matinal 8h00)
 
 **Ajouté le 06.08.2026.**

@@ -490,68 +490,105 @@ function calculerPrixMaximalFinancable({ fondsPropresDisponibles, fondsPropresLP
 }
 
 // ═══ SCHÉMA "MAISON" DU FINANCEMENT — représentation visuelle pour présentation client ═══
-// Empile trois bandes proportionnelles au prix d'achat, dans le contour d'une maison :
-// fonds propres (fondation), hypothèque 1er rang (corps), hypothèque 2e rang à amortir (toit).
-// Carte blanche autonome (lisible en thème clair ou sombre de l'app, et à l'impression PDF).
+// Refait le 19.09.2026 (même signature — utilisée par js/22 et js/24, écran et rapport imprimé) :
+// maison stylisée dont les bandes sont proportionnelles au financement — fonds propres (socle),
+// hypothèque 1er rang (corps), hypothèque 2e rang à amortir (toit) — avec montants et % du prix.
+// Fond transparent, couleurs en dur prévues pour le blanc (rapport) ; en thème sombre, les textes
+// et le bleu marine s'éclaircissent par CSS (classes fih-t-*, fih-navy…). Animation d'entrée
+// seulement sous un parent .fih-anime (sinon affichage statique, ex. impression).
+let _schemaMaisonId = 0;
 function schemaMaisonFinancement(fondsPropres, premierRang, deuxiemeRang, prix, dureeAmortissement) {
-  const W = 620, H = 400;
-  const wallsX = 90, wallsW = 210;
-  const groundY = 340, colTop = 118; // hauteur totale disponible pour la colonne de financement
-  const colH = groundY - colTop;
-  const total = Math.max(fondsPropres + premierRang + deuxiemeRang, 1);
+  const W = 480, H = 340;
+  const x0 = 62, bw = 184, deb = 16;                 // murs et débord du toit
+  const sol = 300, sommetMin = 74;
+  const fp = Math.max(0, +fondsPropres || 0), r1 = Math.max(0, +premierRang || 0), r2 = Math.max(0, +deuxiemeRang || 0);
+  const total = Math.max(fp + r1 + r2, 1);
+  const base = prix > 0 ? prix : total;               // pourcentages exprimés en % du prix d'achat
+  const toitDeco = 44;                                // toit neutre quand il n'y a pas de 2e rang
+  const dispo = (sol - sommetMin) - (r2 > 0 ? 0 : toitDeco);
 
-  // Hauteurs proportionnelles, avec un plancher de lisibilité pour les bandes non nulles,
-  // puis remise à l'échelle pour que la somme tienne exactement dans la hauteur disponible.
-  const planch = (v) => v > 0 ? Math.max(colH * (v / total), 20) : 0;
-  let hFP = planch(fondsPropres), hP1 = planch(premierRang), hP2 = planch(deuxiemeRang);
-  const sum = (hFP + hP1 + hP2) || 1;
-  const scale = colH / sum;
-  hFP *= scale; hP1 *= scale; hP2 *= scale;
+  // Hauteurs proportionnelles, plancher de lisibilité pour les bandes non nulles, puis remise à
+  // l'échelle pour que la somme tienne exactement dans la hauteur disponible.
+  // (le toit, triangulaire, reçoit un plancher plus haut pour rester lisible et élancé)
+  const planch = (v, min) => v > 0 ? Math.max(dispo * v / total, min) : 0;
+  let hFP = planch(fp, 30), hP1 = planch(r1, 30), hP2 = planch(r2, 56);
+  const k = dispo / ((hFP + hP1 + hP2) || 1);
+  hFP *= k; hP1 *= k; hP2 *= k;
+  const yFP = sol - hFP, yP1 = yFP - hP1, sommet = r2 > 0 ? yP1 - hP2 : yP1 - toitDeco;
+  const cx = x0 + bw / 2, xg = x0 - deb, xd = x0 + bw + deb;
+  const f1 = v => v.toFixed(1);
+  const pct = v => Math.round(v / base * 100) + ' %';
+  const chf = v => 'CHF ' + Math.round(v).toLocaleString('fr-CH').replace(/,/g, "'");
+  const penteY = x => sommet + (Math.abs(x - cx) / (xd - cx)) * (yP1 - sommet);
+  const n = ++_schemaMaisonId;
 
-  const yFPtop = groundY - hFP;       // haut de la bande fonds propres (fondation)
-  const yP1top = yFPtop - hP1;        // haut de la bande 1er rang = base du toit
-  const roofApexY = deuxiemeRang > 0 ? (yP1top - hP2) : (yP1top - 34); // toit décoratif si pas de 2e rang
+  // Sol et ombre
+  const sol_ = `<ellipse cx="${cx}" cy="${sol + 6}" rx="${bw * 0.78}" ry="6" fill="#0E1B33" fill-opacity=".08" class="fih-ombre"/>
+    <line x1="${xg - 28}" x2="${xd + 28}" y1="${sol + 1}" y2="${sol + 1}" stroke="#CBD5E1" stroke-width="2" stroke-linecap="round" class="fih-sol"/>`;
 
-  const pct = (v) => Math.round(v / total * 100);
-  const chf = (v) => 'CHF ' + Math.round(v).toLocaleString('fr-CH').replace(/,/g, "'");
+  // Toit : 2e rang (cyan) ou toit neutre ; cheminée décorative
+  const xChem = cx + bw * 0.22;
+  const cheminee = r2 > 0 && hP2 >= 44 ? `<rect x="${f1(xChem)}" y="${f1(penteY(xChem) - 16)}" width="14" height="${f1(22)}" rx="2" fill="#113679" class="fih-navy"/>` : '';
+  const coulToit = r2 > 0 ? '#00CFFF' : '#CBD5E1';
+  const toit = `<g class="fih-monte" style="animation-delay:260ms">${cheminee}
+      <polygon points="${xg},${f1(yP1)} ${cx},${f1(sommet)} ${xd},${f1(yP1)}" fill="${coulToit}" stroke="${coulToit}" stroke-width="6" stroke-linejoin="round" class="${r2 > 0 ? '' : 'fih-toit-neutre'}"/>
+      <rect x="${xg - 2}" y="${f1(yP1 - 1.5)}" width="${xd - xg + 4}" height="3" rx="1.5" fill="#0B2458" fill-opacity=".28"/>
+      ${r2 > 0 && hP2 >= 30 ? `<text x="${cx}" y="${f1(yP1 - hP2 * 0.3 + 6)}" text-anchor="middle" font-size="${hP2 >= 48 ? 18 : 14}" font-weight="800" fill="#0B2458">${pct(r2)}</text>` : ''}
+      ${r2 <= 0 ? `<text x="${cx}" y="${f1(yP1 - 12)}" text-anchor="middle" font-size="10" class="fih-t-doux" fill="#56627A">pas de 2e rang</text>` : ''}
+    </g>`;
 
-  const etiquette = (yCenter, color, titre, montant, montrer, sousTitre) => !montrer ? '' : `
-    <line x1="${wallsX + wallsW}" y1="${yCenter.toFixed(1)}" x2="${wallsX + wallsW + 22}" y2="${yCenter.toFixed(1)}" stroke="${color}" stroke-width="1.5"/>
-    <circle cx="${wallsX + wallsW + 22}" cy="${yCenter.toFixed(1)}" r="3" fill="${color}"/>
-    <text x="${wallsX + wallsW + 30}" y="${(yCenter - 7).toFixed(1)}" font-size="12.5" font-weight="800" fill="#0f2244" font-family="Arial,sans-serif">${titre}</text>
-    <text x="${wallsX + wallsW + 30}" y="${(yCenter + 9).toFixed(1)}" font-size="12" font-weight="700" fill="${color}" font-family="Arial,sans-serif">${chf(montant)} (${pct(montant)}%)</text>
-    ${sousTitre ? `<text x="${wallsX + wallsW + 30}" y="${(yCenter + 23).toFixed(1)}" font-size="10" fill="#6b7280" font-family="Arial,sans-serif">${sousTitre}</text>` : ''}
-  `;
+  // Corps : 1er rang, avec deux fenêtres si la bande est assez haute
+  const fenetre = x => `<g><rect x="${x}" y="${f1(yP1 + 16)}" width="28" height="24" rx="4" fill="#FFFFFF" fill-opacity=".14"/><line x1="${x + 14}" x2="${x + 14}" y1="${f1(yP1 + 16)}" y2="${f1(yP1 + 40)}" stroke="#FFFFFF" stroke-opacity=".22"/><line x1="${x}" x2="${x + 28}" y1="${f1(yP1 + 28)}" y2="${f1(yP1 + 28)}" stroke="#FFFFFF" stroke-opacity=".22"/></g>`;
+  const legC = hP1 >= 56;
+  const corps = r1 > 0 ? `<g class="fih-monte" style="animation-delay:130ms">
+      <rect x="${x0}" y="${f1(yP1)}" width="${bw}" height="${f1(hP1)}" fill="#113679" class="fih-navy"/>
+      ${hP1 >= 84 ? fenetre(x0 + 16) + fenetre(x0 + bw - 44) : ''}
+      <text x="${cx}" y="${f1(yP1 + hP1 / 2 + (legC ? 2 : 7))}" text-anchor="middle" font-size="${hP1 >= 40 ? 20 : 14}" font-weight="800" fill="#FFFFFF">${pct(r1)}</text>
+      ${legC ? `<text x="${cx}" y="${f1(yP1 + hP1 / 2 + 18)}" text-anchor="middle" font-size="10.5" fill="#FFFFFF" fill-opacity=".75">1er rang</text>` : ''}
+    </g>` : '';
 
-  return `
-  <div style="background:#ffffff;border:1px solid #e4e4e7;border-radius:14px;padding:14px 8px 8px">
-    <svg viewBox="0 0 ${W} ${H}" width="100%" style="max-width:520px;display:block;margin:0 auto;font-family:Arial,sans-serif" xmlns="http://www.w3.org/2000/svg">
-      <text x="${W/2}" y="30" text-anchor="middle" font-size="15" font-weight="900" fill="#0f2244">Structure du financement</text>
-      <text x="${W/2}" y="48" text-anchor="middle" font-size="11" fill="#6b7280">Prix d'achat : ${chf(prix)}</text>
+  // Socle : fonds propres (un peu plus large que les murs, comme une fondation)
+  const legF = hFP >= 52;
+  const socle = fp > 0 ? `<g class="fih-monte">
+      <rect x="${x0 - 8}" y="${f1(yFP)}" width="${bw + 16}" height="${f1(hFP)}" rx="5" fill="#F59E0B"/>
+      <text x="${cx}" y="${f1(yFP + hFP / 2 + (legF ? 2 : 6))}" text-anchor="middle" font-size="${hFP >= 34 ? 17 : 13}" font-weight="800" fill="#3A2600">${pct(fp)}</text>
+      ${legF ? `<text x="${cx}" y="${f1(yFP + hFP / 2 + 17)}" text-anchor="middle" font-size="10.5" fill="#3A2600" fill-opacity=".75">fonds propres</text>` : ''}
+    </g>` : '';
 
-      <!-- Toit = hypothèque 2e rang (à amortir), ou toit neutre si aucun 2e rang -->
-      <polygon points="${wallsX - 16},${yP1top.toFixed(1)} ${wallsX + wallsW/2},${roofApexY.toFixed(1)} ${wallsX + wallsW + 16},${yP1top.toFixed(1)}"
-        fill="${deuxiemeRang > 0 ? '#38bdf8' : '#c7ccd6'}" stroke="#0f2244" stroke-width="1.5"/>
+  // Accolade à gauche : hypothèque totale
+  const hyp = r1 + r2;
+  const accolade = hyp > 0 ? (() => {
+    const xb = xg - 12, top = r2 > 0 ? sommet + 2 : yP1, bot = yFP;
+    return `<path d="M${xb + 6},${f1(top)} H${xb} V${f1(bot)} H${xb + 6}" fill="none" stroke="#94A3B8" stroke-width="1.5" stroke-linejoin="round"/>
+      <text transform="translate(${xb - 6},${f1((top + bot) / 2)}) rotate(-90)" text-anchor="middle" font-size="10.5" font-weight="600" class="fih-t-doux" fill="#56627A">Hypothèque ${chf(hyp)} · ${pct(hyp)}</text>`;
+  })() : '';
 
-      <!-- Corps de la maison : 1er rang au-dessus des fonds propres -->
-      <rect x="${wallsX}" y="${yP1top.toFixed(1)}" width="${wallsW}" height="${hP1.toFixed(1)}" fill="#113679"/>
-      <rect x="${wallsX}" y="${yFPtop.toFixed(1)}" width="${wallsW}" height="${hFP.toFixed(1)}" fill="#f59e0b"/>
-      <rect x="${wallsX}" y="${yP1top.toFixed(1)}" width="${wallsW}" height="${(groundY - yP1top).toFixed(1)}" fill="none" stroke="#0f2244" stroke-width="2"/>
+  // Étiquettes à droite, espacées pour ne jamais se chevaucher
+  const xL = xd + 36;
+  const etiqs = [
+    r2 > 0 && { cy: yP1 - hP2 / 3, ax: cx + (xd - cx) * ((hP2 * 2 / 3) / (yP1 - sommet)) + 3, titre: 'Hypothèque 2e rang', coul: '#0891B2', cls: 'fih-t-cyan', pt: '#00CFFF', v: r2, sous: `à amortir en ${dureeAmortissement} ans` },
+    r1 > 0 && { cy: yP1 + hP1 / 2, ax: x0 + bw, titre: 'Hypothèque 1er rang', coul: '#113679', cls: 'fih-t-navy', pt: '#113679', v: r1, sous: 'jusqu’à 65 % du prix' },
+    fp > 0 && { cy: yFP + hFP / 2, ax: x0 + bw + 8, titre: 'Fonds propres', coul: '#D97706', cls: 'fih-t-ambre', pt: '#F59E0B', v: fp, sous: 'apport du client' },
+  ].filter(Boolean);
+  let prec = 60;
+  etiqs.forEach(e => { e.ly = Math.max(e.cy, prec + 54); prec = e.ly; });
+  const deborde = prec - (H - 34);
+  if (deborde > 0) etiqs.forEach(e => { e.ly -= deborde; });
+  const etiquettes = etiqs.map(e => `
+      <path d="M${f1(e.ax)},${f1(e.cy)} L${xL - 14},${f1(e.ly)} H${xL - 6}" fill="none" stroke="#94A3B8" stroke-width="1.2"/>
+      <circle cx="${f1(e.ax)}" cy="${f1(e.cy)}" r="3.5" fill="${e.pt}" stroke="#FFFFFF" stroke-width="1.5" class="fih-halo ${e.pt === '#113679' ? 'fih-navy' : ''}"/>
+      <text x="${xL}" y="${f1(e.ly - 12)}" font-size="12.5" font-weight="700" class="fih-t-fort" fill="#0E1B33">${e.titre}</text>
+      <text x="${xL}" y="${f1(e.ly + 5)}" font-size="14.5" font-weight="800" class="${e.cls}" fill="${e.coul}">${chf(e.v)} · ${pct(e.v)}</text>
+      <text x="${xL}" y="${f1(e.ly + 19)}" font-size="10.5" class="fih-t-doux" fill="#56627A">${e.sous}</text>`).join('');
 
-      <!-- Porte -->
-      <rect x="${(wallsX + wallsW/2 - 19).toFixed(1)}" y="${(groundY - 44).toFixed(1)}" width="38" height="44" fill="#0f2244" opacity="0.88"/>
-      <circle cx="${(wallsX + wallsW/2 + 12).toFixed(1)}" cy="${(groundY - 22).toFixed(1)}" r="1.6" fill="#f59e0b"/>
-
-      <!-- Sol -->
-      <line x1="${wallsX - 34}" y1="${groundY}" x2="${wallsX + wallsW + 34}" y2="${groundY}" stroke="#0f2244" stroke-width="2"/>
-
-      <!-- Étiquettes -->
-      ${etiquette(roofApexY + (yP1top - roofApexY) * 0.62, '#38bdf8', 'Hypothèque 2e rang', deuxiemeRang, deuxiemeRang > 0, `à amortir sur ${dureeAmortissement} ans`)}
-      ${etiquette((yP1top + yFPtop) / 2, '#113679', 'Hypothèque 1er rang', premierRang, premierRang > 0, '')}
-      ${etiquette((yFPtop + groundY) / 2, '#f59e0b', 'Fonds propres', fondsPropres, fondsPropres > 0, '')}
-      ${deuxiemeRang <= 0 ? `<text x="${W/2}" y="${(roofApexY - 8).toFixed(1)}" text-anchor="middle" font-size="9.5" fill="#9ca3af">pas de 2e rang nécessaire</text>` : ''}
-
-      <text x="${W - 14}" y="${H - 12}" text-anchor="end" font-size="9" fill="#9ca3af">Assurex Sàrl · Courtier FINMA</text>
+  const resume = `Structure du financement pour un prix de ${chf(base)} : fonds propres ${chf(fp)} (${pct(fp)}), hypothèque 1er rang ${chf(r1)} (${pct(r1)}), 2e rang ${chf(r2)} (${pct(r2)})`;
+  return `<div class="fih-maison">
+    <svg viewBox="0 0 ${W} ${H}" width="100%" class="fih-svg" role="img" aria-label="${resume}" style="display:block;max-width:520px;margin:0 auto" font-family="Arial,Helvetica,sans-serif" xmlns="http://www.w3.org/2000/svg" data-schema="${n}">
+      <text x="${xL}" y="22" font-size="11" class="fih-t-doux" fill="#56627A">Prix d’achat</text>
+      <text x="${xL}" y="43" font-size="18" font-weight="800" class="fih-t-fort" fill="#0E1B33">${chf(base)}</text>
+      ${sol_}${accolade}${socle}${corps}${toit}
+      <g class="fih-fondu" style="animation-delay:420ms">${etiquettes}</g>
+      <text x="8" y="${H - 6}" font-size="9" class="fih-t-doux" fill="#8A94A8">Assurex Sàrl · Courtier FINMA</text>
     </svg>
   </div>`;
 }

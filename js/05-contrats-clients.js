@@ -529,27 +529,7 @@ async function showClient(id) {
     </div>
 
     <div id="tab-documents" class="hidden">
-      ${sectionCard('📄 Documents & mandats signés', '#38bdf8', `
-        <div style="margin-bottom:12px">
-          <label style="background:var(--surface-alt);border:1px solid var(--border);border-radius:8px;padding:7px 14px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer;display:inline-block">
-            📤 Uploader un mandat signé à la main (PDF ou photo)
-            <input type="file" accept="application/pdf,image/*" style="display:none" onchange="uploadMandatSigne('${c.id}', this)"/>
-          </label>
-        </div>
-        ${mandatsSignes.length ? `
-        <div style="display:flex;flex-direction:column;gap:8px">
-          ${mandatsSignes.map(m => `
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--surface-alt);border-radius:9px;border:1px solid var(--border)">
-              <div style="flex:1">
-                <div style="font-size:12.5px;font-weight:700;color:var(--text)">${fmtDate(m.created_at)} ${m.signe ? '<span style="color:#4ade80">✓ Signé</span>' : '<span style="color:var(--text-muted)">Non signé</span>'}</div>
-                <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${m.fichier_url ? '📎 ' + (m.fichier_nom || 'Fichier uploadé') : (m.cree_par ? 'Généré par ' + m.cree_par : 'Généré dans le CRM')}</div>
-              </div>
-              <button onclick="voirMandatSauvegarde('${m.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 14px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap">👁️ Voir / Télécharger</button>
-              <button onclick="supprimerMandatSauvegarde('${m.id}','${c.id}')" style="background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:16px;padding:0 4px" title="Supprimer">✕</button>
-            </div>`).join('')}
-        </div>
-        ` : `<div style="font-size:12px;color:var(--text-muted)">Rien d'enregistré pour l'instant — utilise "📄 Mandat de courtage" en haut de la fiche, ou uploade un document déjà signé à la main ci-dessus.</div>`}
-      `)}
+      ${htmlDocumentsMandatsClient(c, mandatsSignes)}
     </div>
 
     <div id="tab-prevoyance" class="hidden">
@@ -1497,23 +1477,52 @@ async function genererLettreResiliationSignee(clientId, signatureDataUrl, contex
 function ouvrirEnvoiMandatCompagnies(clientId) {
   const contacts = [...(allCompagniesContacts || [])].sort((a, b) => (a.compagnie || '').localeCompare(b.compagnie || ''));
   window._doMandatContacts = contacts;
-  creerModale('modal-envoi-mandat', `
-    <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:520px;width:100%;max-height:90vh;display:flex;flex-direction:column">
-      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">✉️ Envoyer le mandat</div>
-      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:12px">Sélectionne la ou les compagnies à qui envoyer le mandat — un email pré-rempli s'ouvrira ensuite, à relire avant envoi. N'oublie pas de joindre le mandat signé (PDF) manuellement, l'email ne l'attache pas automatiquement.</div>
-      <div style="display:flex;flex-direction:column;gap:8px;max-height:320px;overflow-y:auto;margin-bottom:14px">
+  const client = allClients.find(x => x.id === clientId);
+  const m = creerModale('modal-envoi-mandat', `
+    <div class="opx-modale mdx-modale mdx-modale-flex" role="dialog" aria-modal="true" aria-labelledby="mdx-envoi-titre">
+      ${mdxTeteModale('✉️', 'Envoyer le mandat', client ? `${mdxEsc(mdxNomClient(client))} · choisis les compagnies destinataires` : 'Choisis les compagnies destinataires', 'modal-envoi-mandat', 'mdx-envoi-titre')}
+      <div class="mdx-alerte">📎 <span>Un e-mail pré-rempli s’ouvrira ensuite, <b>à relire avant tout envoi</b>. Le mandat signé (PDF) n’est pas joint automatiquement : pense à l’ajouter.</span></div>
+      ${contacts.length > 6 ? `<input class="form-input mdx-recherche" type="search" placeholder="Rechercher une compagnie…" aria-label="Rechercher une compagnie" oninput="mdxFiltrerCompagnies(this.value)"/>` : ''}
+      <div class="mdx-cies" id="mdx-cies">
         ${contacts.map(c => `
-          <label style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text);cursor:pointer;padding:6px 8px;border-radius:7px;background:var(--surface-alt)">
-            <input type="checkbox" class="mandat-cie-checkbox" value="${c.id}" style="width:15px;height:15px;accent-color:var(--accent)"/>
-            <span style="flex:1">${c.compagnie}${c.libelle_contact ? ` <span style="color:var(--text-muted);font-size:11px">— ${c.libelle_contact}</span>` : ''}</span>
-            <span style="font-size:11px;color:${c.email ? 'var(--text-muted)' : '#f87171'}">${c.email || 'pas d\'email'}</span>
-          </label>`).join('') || '<div class="table-empty">Aucune compagnie enregistrée — ajoute-en dans Paramètres → Contacts compagnies.</div>'}
+          <label class="mdx-cie" data-nom="${mdxEsc(((c.compagnie || '') + ' ' + (c.libelle_contact || '')).toLowerCase())}">
+            <input type="checkbox" class="mandat-cie-checkbox" value="${mdxEsc(c.id)}" onchange="mdxMajCompteur()"/>
+            <span class="mdx-cie-picto">${typeof pictoCompagnie === 'function' ? pictoCompagnie(c.compagnie, 26) : '🏢'}</span>
+            <span class="mdx-cie-nom"><b>${mdxEsc(c.compagnie)}</b>${c.libelle_contact ? `<small>${mdxEsc(c.libelle_contact)}</small>` : ''}</span>
+            ${c.email ? `<span class="mdx-pastille">${mdxEsc(c.email)}</span>` : `<span class="mdx-pastille alerte">pas d’e-mail</span>`}
+          </label>`).join('') || '<div class="mdx-vide">Aucune compagnie enregistrée — ajoute-en dans Paramètres → Contacts compagnies.</div>'}
       </div>
-      <div style="display:flex;gap:8px;justify-content:flex-end">
-        <button class="btn-secondary" onclick="document.getElementById('modal-envoi-mandat').remove()">Annuler</button>
-        <button class="btn-save" onclick="genererApercuMandat('${clientId}')">✉️ Générer l'email</button>
+      <div class="opx-modale-actions mdx-actions">
+        <span class="mdx-compteur" id="mdx-compteur">Aucune compagnie sélectionnée</span>
+        <button type="button" class="btn-secondary" onclick="document.getElementById('modal-envoi-mandat').remove()">Annuler</button>
+        <button type="button" class="btn-save" onclick="genererApercuMandat('${clientId}')">Préparer l’e-mail →</button>
       </div>
     </div>`, { padding: '16px' });
+  m.classList.add('rex-modale-feuille');
+}
+
+// ── Petits utilitaires d'affichage des modales de mandat (mdx-) ──
+function mdxEsc(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+function mdxNomClient(c) { return c ? (estEntreprise(c) ? (c.nom || '') : `${c.prenom || ''} ${c.nom || ''}`.trim()) : ''; }
+function mdxTeteModale(icone, titre, sous, idModale, idTitre) {
+  return `<div class="mdx-tete">
+      <span class="mdx-tete-icone" aria-hidden="true">${icone}</span>
+      <div class="mdx-tete-texte"><h3 id="${idTitre}">${titre}</h3>${sous ? `<div class="opx-modale-sous">${sous}</div>` : ''}</div>
+      <button type="button" class="mdx-fermer" aria-label="Fermer" onclick="${idModale === 'modal-signature-mandat' ? 'fermerSignatureMandat()' : `document.getElementById('${idModale}').remove()`}">✕</button>
+    </div>`;
+}
+// Étapes du parcours « mandat de courtage » : clauses → signature → document
+function mdxEtapes(actif) {
+  return `<ol class="mdx-etapes" aria-label="Étapes">${['Clauses', 'Signature', 'Document'].map((l, i) => `<li class="${i < actif ? 'fait' : i === actif ? 'actif' : ''}"><span>${i < actif ? '✓' : i + 1}</span>${l}</li>`).join('')}</ol>`;
+}
+function mdxFiltrerCompagnies(q) {
+  const t = (q || '').trim().toLowerCase();
+  document.querySelectorAll('#mdx-cies .mdx-cie').forEach(el => { el.hidden = !!t && !el.dataset.nom.includes(t); });
+}
+function mdxMajCompteur() {
+  const n = document.querySelectorAll('.mandat-cie-checkbox:checked').length;
+  const el = document.getElementById('mdx-compteur');
+  if (el) { el.textContent = n ? `${n} compagnie${n > 1 ? 's' : ''} sélectionnée${n > 1 ? 's' : ''}` : 'Aucune compagnie sélectionnée'; el.classList.toggle('actif', n > 0); }
 }
 
 function genererApercuMandat(clientId) {
@@ -1542,22 +1551,22 @@ function genererApercuMandat(clientId) {
 
 function ouvrirApercuEmailMandat({ clientId, cies, emails, sansEmail, sujet, corps }) {
   window._apercuEmailMandat = { clientId, cies, emails };
-  const qa = (s) => (s || '').toString().replace(/"/g, '&quot;');
-  creerModale('modal-apercu-email-mandat', `
-    <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:600px;width:100%;max-height:90vh;display:flex;flex-direction:column">
-      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">✉️ Aperçu — envoi du mandat</div>
-      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:12px">Ce courriel n'est PAS envoyé automatiquement — relis-le, corrige-le si besoin, joins le mandat signé (PDF), puis choisis comment le transmettre.</div>
-      <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px"><strong>Destinataires :</strong> ${emails.length ? emails.join(', ') : '— aucun email connu'}</div>
-      ${sansEmail.length ? `<div style="font-size:11px;color:#f59e0b;margin-bottom:10px">⚠ Pas d'email enregistré pour : ${sansEmail.join(', ')}</div>` : ''}
-      <div class="form-field" style="margin-bottom:8px"><label class="form-label">Objet</label><input class="form-input" id="apercu-mandat-sujet" value="${qa(sujet)}"/></div>
-      <div class="form-field" style="flex:1;display:flex;flex-direction:column;margin-bottom:14px"><label class="form-label">Corps</label><textarea class="form-input" id="apercu-mandat-corps" style="flex:1;min-height:220px;font-family:inherit;resize:vertical">${corps}</textarea></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
-        <button class="btn-secondary" onclick="document.getElementById('modal-apercu-email-mandat').remove()">Fermer</button>
-        <button class="btn-secondary" onclick="copierApercuEmailMandat()">📋 Copier</button>
-        <button class="btn-secondary" onclick="ouvrirMailtoApercuMandat()">📧 Ouvrir dans mon client mail</button>
-        <button class="btn-save" style="margin-left:auto" onclick="envoyerApercuEmailMandatViaOutlook()">📨 Envoyer maintenant via Outlook</button>
+  const m = creerModale('modal-apercu-email-mandat', `
+    <div class="opx-modale mdx-modale mdx-modale-flex mdx-modale-large" role="dialog" aria-modal="true" aria-labelledby="mdx-apercu-titre">
+      ${mdxTeteModale('✉️', 'Aperçu avant envoi', 'Rien n’est envoyé automatiquement — relis, corrige si besoin, puis choisis comment le transmettre.', 'modal-apercu-email-mandat', 'mdx-apercu-titre')}
+      <div class="mdx-destinataires"><span class="mdx-dest-label">À</span>${emails.length ? emails.map(e => `<span class="mdx-puce">${mdxEsc(e)}</span>`).join('') : '<span class="mdx-puce alerte">aucun e-mail connu</span>'}</div>
+      ${sansEmail.length ? `<div class="mdx-alerte orange">⚠ <span>Pas d’e-mail enregistré pour : <b>${sansEmail.map(mdxEsc).join(', ')}</b></span></div>` : ''}
+      <div class="mdx-alerte">📎 <span>Joins le mandat signé (PDF) : il n’est pas attaché automatiquement.</span></div>
+      <div class="form-field"><label class="form-label" for="apercu-mandat-sujet">Objet</label><input class="form-input" id="apercu-mandat-sujet" value="${mdxEsc(sujet)}"/></div>
+      <div class="form-field mdx-champ-corps"><label class="form-label" for="apercu-mandat-corps">Message</label><textarea class="form-input" id="apercu-mandat-corps" rows="10">${String(corps || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')}</textarea></div>
+      <div class="opx-modale-actions mdx-actions mdx-actions-envoi">
+        <button type="button" class="btn-secondary mdx-a-gauche" onclick="document.getElementById('modal-apercu-email-mandat').remove()">Fermer</button>
+        <button type="button" class="btn-secondary" onclick="copierApercuEmailMandat()">📋 Copier</button>
+        <button type="button" class="btn-secondary" onclick="ouvrirMailtoApercuMandat()">📧 Ouvrir dans mon client mail</button>
+        <button type="button" class="btn-save" onclick="envoyerApercuEmailMandatViaOutlook()">📨 Envoyer via Outlook…</button>
       </div>
     </div>`, { padding: '16px' });
+  m.classList.add('rex-modale-feuille');
 }
 
 function copierApercuEmailMandat() {
@@ -1619,20 +1628,25 @@ async function envoyerApercuEmailMandatViaOutlook() {
 function ouvrirOptionsMandatCourtage(clientId) {
   const c = allClients.find(x => x.id === clientId);
   if (!c) return;
-  creerModale('modal-options-mandat', `
-    <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:480px;width:100%">
-      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">📄 Mandat de courtage</div>
-      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">Le mandat standard s'applique par défaut. Ajoute ici une clause spéciale seulement si ce mandat en a besoin — c'est l'exception, pas la règle.</div>
-      <div class="form-field">
-        <label class="form-label">Clause(s) spéciale(s) pour ce mandat (optionnel)</label>
-        <textarea class="form-input" id="mandat-clauses-speciales" rows="4" placeholder="Ex : Le mandataire s'engage à..." style="resize:vertical"></textarea>
-        <div style="font-size:10.5px;color:var(--text-muted);margin-top:5px">Ajoutée telle quelle comme clause supplémentaire, après les clauses standards du mandat. Laisse vide s'il n'y en a pas.</div>
+  const m = creerModale('modal-options-mandat', `
+    <div class="opx-modale mdx-modale" role="dialog" aria-modal="true" aria-labelledby="mdx-options-titre">
+      ${mdxTeteModale('📄', 'Mandat de courtage', mdxEsc(mdxNomClient(c)), 'modal-options-mandat', 'mdx-options-titre')}
+      ${mdxEtapes(0)}
+      <div class="mdx-carte-info">
+        <span class="mdx-pastille ok">Mandat standard</span>
+        <p>Le texte standard s’applique par défaut : représentation et gestion du portefeuille, informations art. 45 LSA, utilisation des données. Ajoute une clause spéciale seulement si ce mandat en a besoin — c’est l’exception, pas la règle.</p>
       </div>
-      <div style="display:flex;gap:10px;margin-top:16px">
-        <button class="btn-secondary" onclick="document.getElementById('modal-options-mandat').remove()">Annuler</button>
-        <button class="btn-save" onclick="validerOptionsMandatCourtage('${clientId}')" style="margin-left:auto">Continuer →</button>
+      <div class="form-field">
+        <label class="form-label" for="mandat-clauses-speciales">Clause(s) spéciale(s) pour ce mandat <span class="mdx-optionnel">facultatif</span></label>
+        <textarea class="form-input mdx-textarea" id="mandat-clauses-speciales" rows="4" placeholder="Ex : Le mandataire s'engage à..."></textarea>
+        <small class="mdx-aide">Ajoutée telle quelle après les clauses standards du mandat — à rédiger proprement. Laisse vide s’il n’y en a pas.</small>
+      </div>
+      <div class="opx-modale-actions mdx-actions">
+        <button type="button" class="btn-secondary" onclick="document.getElementById('modal-options-mandat').remove()">Annuler</button>
+        <button type="button" class="btn-save" onclick="validerOptionsMandatCourtage('${clientId}')">Continuer vers la signature →</button>
       </div>
     </div>`, { opacite: 0.8, padding: '16px' });
+  m.classList.add('rex-modale-feuille');
 }
 
 function validerOptionsMandatCourtage(clientId) {
@@ -1647,49 +1661,84 @@ function validerOptionsMandatCourtage(clientId) {
 
 function ouvrirSignatureMandat(clientId, contexte) {
   signatureContexteActuel = contexte || null;
-  const titreModale = signatureContexteActuel ? `✍️ Signature — ${signatureContexteActuel.documentNom}` : '✍️ Signature du mandant';
-  creerModale('modal-signature-mandat', `
-    <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:520px;width:100%">
-      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">${titreModale}</div>
-      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">Choisis comment le client va signer :</div>
-      <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
-        <button id="onglet-signature-ici" class="btn-secondary" onclick="basculerModeSignature('ici', '${clientId}')" style="flex:1;min-width:110px;font-size:11.5px">✍️ Ici, sur cet écran</button>
-        <button id="onglet-signature-qr" class="btn-secondary" onclick="basculerModeSignature('qr', '${clientId}')" style="flex:1;min-width:110px;font-size:11.5px">📱 QR code / lien</button>
-        <button id="onglet-signature-email" class="btn-secondary" onclick="basculerModeSignature('email', '${clientId}')" style="flex:1;min-width:110px;font-size:11.5px">✉️ Par e-mail</button>
-        <button id="onglet-signature-whatsapp" class="btn-secondary" onclick="basculerModeSignature('whatsapp', '${clientId}')" style="flex:1;min-width:110px;font-size:11.5px">📲 WhatsApp</button>
+  const ctxS = signatureContexteActuel;
+  const titreModale = ctxS && ctxS.documentNom ? `Signature — ${mdxEsc(ctxS.documentNom)}` : 'Signature du mandant';
+  const client = allClients.find(x => x.id === clientId);
+  const estMandat = !ctxS || ctxS.type === 'mandat_courtage';
+  const modes = [['ici', '✍️', 'Ici', 'sur cet écran'], ['qr', '📱', 'QR code', 'ou lien'], ['email', '✉️', 'E-mail', 'lien au client'], ['whatsapp', '📲', 'WhatsApp', 'lien au client']];
+  const m = creerModale('modal-signature-mandat', `
+    <div class="opx-modale mdx-modale mdx-modale-signature" role="dialog" aria-modal="true" aria-labelledby="mdx-signature-titre">
+      ${mdxTeteModale('✍️', titreModale, client ? `${estMandat ? 'Mandant' : 'Client'} : ${mdxEsc(mdxNomClient(client))}` : '', 'modal-signature-mandat', 'mdx-signature-titre')}
+      ${estMandat ? mdxEtapes(1) : ''}
+      <div class="mdx-modes" role="tablist" aria-label="Mode de signature">
+        ${modes.map(([k, ic, l, s]) => `<button type="button" role="tab" id="onglet-signature-${k}" class="mdx-mode" onclick="basculerModeSignature('${k}', '${clientId}')"><span class="mdx-mode-ic" aria-hidden="true">${ic}</span><b>${l}</b><small>${s}</small></button>`).join('')}
       </div>
-      <div id="zone-mode-signature"></div>
-      <div style="display:flex;gap:10px;margin-top:12px">
-        <button class="btn-secondary" onclick="genererSansSignature('${clientId}')">🖨️ Sans signature (impression)</button>
+      <div id="zone-mode-signature" class="mdx-zone"></div>
+      <div class="mdx-pied">
+        <button type="button" class="mdx-lien" onclick="genererSansSignature('${clientId}')">🖨️ Générer sans signature (le client signe sur papier)</button>
       </div>
-    </div>`, { opacite: 0.8, padding: '16px', overflowY: false });
+    </div>`, { opacite: 0.8, padding: '16px' });
+  m.classList.add('rex-modale-feuille');
   basculerModeSignature('ici', clientId);
+}
+
+// Fermeture de la modale de signature sans rien générer : arrête l'attente d'une signature à
+// distance (une signature reçue plus tard reste rattrapée par recupererSignaturesEnAttente).
+function fermerSignatureMandat() {
+  clearInterval(window._pollingSignatureInterval);
+  signatureContexteActuel = null;
+  document.getElementById('modal-signature-mandat')?.remove();
+}
+
+// Donne au canvas la taille réellement affichée (× densité d'écran) : trait net et non déformé,
+// quelle que soit la largeur de la modale (mobile compris).
+function mdxDimensionnerCanvas(canvas) {
+  const r = canvas.getBoundingClientRect();
+  if (r.width < 10 || r.height < 10) return 1;
+  const dpr = Math.min(window.devicePixelRatio || 1, 3);
+  canvas.width = Math.round(r.width * dpr);
+  canvas.height = Math.round(r.height * dpr);
+  return dpr;
 }
 
 // Bascule entre les 3 modes de signature : ici sur cet écran, via QR code/lien à distance,
 // ou envoi direct par e-mail au client. Ce sont 3 options indépendantes, pas des sous-options.
 function basculerModeSignature(mode, clientId) {
   ['ici', 'qr', 'email', 'whatsapp'].forEach(m => {
-    document.getElementById(`onglet-signature-${m}`).style.background = mode === m ? 'var(--accent-dim)' : 'var(--surface-alt)';
+    const b = document.getElementById(`onglet-signature-${m}`);
+    if (!b) return;
+    b.classList.toggle('actif', mode === m);
+    b.setAttribute('aria-selected', mode === m ? 'true' : 'false');
   });
   clearInterval(window._pollingSignatureInterval);
   const zone = document.getElementById('zone-mode-signature');
   if (mode === 'ici') {
     const boutonVoirDocumentIci = (signatureContexteActuel && signatureContexteActuel.type === 'contrat' && signatureContexteActuel.documentPath)
-      ? `<button type="button" onclick="ouvrirPieceJointe('${signatureContexteActuel.documentPath}')" style="display:block;width:100%;margin-bottom:10px;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface-alt);color:var(--text);font-weight:700;font-size:11.5px;cursor:pointer">📄 Voir le document avant de faire signer</button>`
+      ? `<button type="button" class="mdx-btn-doc" onclick="ouvrirPieceJointe('${signatureContexteActuel.documentPath}')">📄 Voir le document avant de faire signer</button>`
       : (signatureContexteActuel && signatureContexteActuel.type === 'resiliation' && signatureContexteActuel.documentData)
-      ? `<button type="button" onclick="window.open(signatureContexteActuel.documentData, '_blank')" style="display:block;width:100%;margin-bottom:10px;padding:8px;border-radius:8px;border:1px solid var(--border);background:var(--surface-alt);color:var(--text);font-weight:700;font-size:11.5px;cursor:pointer">📄 Voir le document avant de faire signer</button>`
+      ? `<button type="button" class="mdx-btn-doc" onclick="window.open(signatureContexteActuel.documentData, '_blank')">📄 Voir le document avant de faire signer</button>`
       : '';
+    const typeS = signatureContexteActuel ? signatureContexteActuel.type : null;
+    const libValider = typeS === 'contrat' ? '✓ Valider la signature' : typeS === 'resiliation' ? '✓ Valider et générer la lettre' : '✓ Valider et générer le mandat';
     zone.innerHTML = `
       ${boutonVoirDocumentIci}
-      <canvas id="canvas-signature" width="460" height="200" style="width:100%;height:200px;background:#fff;border-radius:9px;touch-action:none;cursor:crosshair;display:block"></canvas>
-      <div style="display:flex;gap:10px;margin-top:12px">
-        <button class="btn-secondary" onclick="effacerSignature()">🗑️ Effacer</button>
-        <button class="btn-save" onclick="validerSignatureEtGenerer('${clientId}')" style="margin-left:auto">✓ Valider et générer le mandat</button>
+      <div class="mdx-signature" id="mdx-signature">
+        <canvas id="canvas-signature" class="mdx-canvas" width="460" height="200" aria-label="Zone de signature"></canvas>
+        <div class="mdx-signature-aide" aria-hidden="true">Signez ici, au doigt, au stylet ou à la souris</div>
+        <div class="mdx-signature-ligne" aria-hidden="true"><span>✕</span></div>
+        <button type="button" class="mdx-effacer" onclick="effacerSignature()" title="Effacer la signature">↺ Effacer</button>
+      </div>
+      <div class="opx-modale-actions mdx-actions">
+        <button type="button" class="btn-save mdx-btn-large" onclick="validerSignatureEtGenerer('${clientId}')">${libValider}</button>
       </div>`;
+    const canvas = document.getElementById('canvas-signature');
+    const dpr = mdxDimensionnerCanvas(canvas);
     initCanvasSignature();
+    const ctx2d = canvas.getContext('2d');
+    ctx2d.lineWidth = 2.4 * dpr;
+    canvas.addEventListener('pointerdown', () => document.getElementById('mdx-signature')?.classList.add('signe'));
   } else {
-    zone.innerHTML = `<div style="text-align:center;padding:20px;color:var(--text-muted);font-size:12.5px">Génération du lien...</div>`;
+    zone.innerHTML = `<div class="mdx-chargement"><span class="loader-spin"></span>Génération du lien…</div>`;
     envoyerVersAutreAppareil(clientId, mode);
   }
 }
@@ -1731,6 +1780,7 @@ function initCanvasSignature(canvasId = 'canvas-signature') {
 function effacerSignature(canvasId = 'canvas-signature') {
   const canvas = document.getElementById(canvasId);
   if (canvas) canvas.getContext('2d').clearRect(0, 0, canvas.width, canvas.height);
+  if (canvas && canvas.parentElement) canvas.parentElement.classList.remove('signe'); // réaffiche l'aide « Signez ici »
 }
 
 // Bug corrigé le 07.08.2026 : le bouton "Sans signature" fermait la modale sans rien produire.
@@ -2372,26 +2422,39 @@ function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire, cla
     || 'Client';
   const titreDoc = `Mandat de courtage — ${nomPourTitre}`.replace(/[<>]/g, '');
   return `<html><head><meta charset="utf-8"><title>${titreDoc}</title><style>
-    body{font-family:Arial,sans-serif;padding:35px;color:#1a1a1a;font-size:12.5px;line-height:1.5;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-    .entete{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #000;padding-bottom:14px;margin-bottom:20px}
-    h1{font-size:19px;color:#000;text-align:center;margin:10px 0 2px}
-    .sous-titre{text-align:center;font-style:italic;color:#444;margin-bottom:18px;font-size:12px}
-    h2{font-size:13px;color:#000;margin:18px 0 8px;font-weight:800}
+    /* Présentation soignée le 19.09.2026 (typographie, en-tête, marges) — texte et clauses inchangés.
+       À l'écran : feuille blanche centrée sur fond gris ; à l'impression : mêmes tailles compactes qu'avant. */
+    html{background:#EEF1F6}
+    body{font-family:"Helvetica Neue",Arial,sans-serif;padding:40px 46px;color:#1F2937;font-size:12.5px;line-height:1.55;-webkit-print-color-adjust:exact;print-color-adjust:exact;max-width:800px;margin:28px auto;background:#fff;border-radius:6px;box-shadow:0 10px 40px rgba(17,54,121,0.14);box-sizing:border-box}
+    .entete{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #113679;padding-bottom:14px;margin-bottom:20px;position:relative}
+    .entete::after{content:"";position:absolute;left:0;bottom:-2px;width:72px;height:2px;background:#00CFFF}
+    h1{font-size:20px;color:#113679;text-align:center;margin:12px 0 2px;letter-spacing:.14em;font-weight:800}
+    .sous-titre{text-align:center;font-style:italic;color:#56627A;margin-bottom:20px;font-size:12px}
+    h2{font-size:12.5px;color:#113679;margin:18px 0 8px;font-weight:800;letter-spacing:.06em;border-left:3px solid #00CFFF;padding-left:8px}
     table{width:100%;border-collapse:collapse;margin-bottom:4px}
-    td{border:1px solid #ccc;padding:7px 10px;font-size:11.5px;vertical-align:middle}
-    td.label{background:#f2f5fa;font-weight:700;width:22%;color:#000}
-    td.valeur{width:28%}
-    ol{padding-left:20px}
-    ol li{margin-bottom:9px;font-size:11.5px}
+    td{border:1px solid #D5DCE8;padding:7px 10px;font-size:11.5px;vertical-align:middle}
+    td.label{background:#F2F5FA;font-weight:700;width:22%;color:#113679}
+    td.valeur{width:28%;color:#111827}
+    ol{padding-left:22px}
+    ol li{margin-bottom:9px;font-size:11.5px;padding-left:2px}
+    ol li::marker{color:#113679;font-weight:700}
     .signatures{display:flex;justify-content:space-between;margin-top:40px}
     .signatures div{width:45%}
-    .ligne-signature{border-top:1px solid #333;margin-top:50px;padding-top:5px;font-style:italic;font-size:11px;color:#555}
-    .footer{text-align:center;font-size:9.5px;color:#888;margin-top:30px;border-top:1px solid #ddd;padding-top:10px}
-    .page-break{page-break-before:always}
-    .art45-table th{background:#000;color:#fff;padding:8px 10px;font-size:11px;text-align:left}
+    .signatures strong{color:#113679}
+    .ligne-signature{border-top:1px solid #334155;margin-top:50px;padding-top:5px;font-style:italic;font-size:11px;color:#56627A}
+    .footer{text-align:center;font-size:9.5px;color:#8A94A8;margin-top:30px;border-top:1px solid #E2E7EF;padding-top:10px;letter-spacing:.02em}
+    .page-break{page-break-before:always;border-top:1px dashed #CBD5E1;margin:34px -46px 30px}
+    .art45-table th{background:#113679;color:#fff;padding:8px 10px;font-size:11px;text-align:left}
     .art45-table td{font-size:10.5px;padding:8px 10px}
-    .print-btn{margin-top:25px;padding:10px 20px;background:#000;color:#fff;border:none;border-radius:6px;cursor:pointer;font-size:13px}
+    .art45-table tr:nth-child(odd) td{background:#F8FAFC}
+    .print-btn{position:fixed;right:24px;bottom:24px;padding:12px 22px;background:#113679;color:#fff;border:none;border-radius:12px;cursor:pointer;font-size:13.5px;font-weight:700;box-shadow:0 10px 26px rgba(17,54,121,0.35);font-family:inherit}
+    .print-btn:hover{background:#1A4A9C}
+    @media (max-width:700px){body{margin:0;padding:22px 16px;border-radius:0;box-shadow:none}.entete{gap:8px}.entete > *{max-width:48%;box-sizing:border-box;overflow:hidden}.entete img{max-width:100%;height:auto !important}.page-break{margin:28px -16px 24px}.signatures{gap:16px}.print-btn{left:16px;right:16px;bottom:16px}}
     @media print {
+      html { background: #fff; }
+      body { max-width: none; margin: 0; border-radius: 0; box-shadow: none; }
+      .entete::after { display: none; }
+      .page-break { border: none; margin: 0; }
       .print-btn { display: none !important; }
       body { padding: 10px 20px; font-size: 10px; line-height: 1.32; }
       h1 { font-size: 16px; margin: 4px 0 2px; }
@@ -2826,7 +2889,52 @@ async function saveDetailsEntrepriseClient(clientId) {
 // couvertures souhaitées, budgets) reste à remplir à la main pendant l'entretien.
 // Récupère les mandats enregistrés pour un client donné
 async function getMandatsSignesClient(clientId) {
-  return await dbGet('mandats_signes', `client_id=eq.${clientId}&select=*&order=created_at.desc`).catch(() => []);
+  const r = await dbGet('mandats_signes', `client_id=eq.${clientId}&select=*&order=created_at.desc`).catch(() => []);
+  return Array.isArray(r) ? r : [];
+}
+
+// Nature d'une ligne de mandats_signes, pour l'affichage : mandat de courtage généré dans le CRM,
+// document signé électroniquement (contrat uploadé ou lettre de résiliation) ou fichier uploadé
+// (mandat signé à la main).
+function mdxNatureDocument(m) {
+  if (m.html_snapshot && m.fichier_url) return { icone: '✍️', titre: m.fichier_nom || 'Contrat signé', type: 'Contrat · signature électronique' };
+  if (m.html_snapshot && m.fichier_nom) return { icone: '📝', titre: m.fichier_nom, type: 'Document généré dans le CRM' };
+  if (m.fichier_url) return { icone: '📎', titre: m.fichier_nom || 'Document uploadé', type: 'Fichier uploadé (signé à la main)' };
+  return { icone: '📄', titre: 'Mandat de courtage', type: 'Généré dans le CRM' };
+}
+
+// Onglet « Documents » de la fiche client : mandats et documents signés, sous forme de cartes.
+function htmlDocumentsMandatsClient(c, liste) {
+  liste = Array.isArray(liste) ? liste : [];
+  const nbSignes = liste.filter(m => m.signe).length;
+  const cartes = liste.map((m, i) => {
+    const n = mdxNatureDocument(m);
+    const statut = m.signe ? '<span class="mdx-pastille ok">✓ Signé</span>' : '<span class="mdx-pastille">Non signé</span>';
+    return `<article class="mdx-doc" style="--i:${i}">
+        <span class="mdx-doc-icone" aria-hidden="true">${n.icone}</span>
+        <div class="mdx-doc-texte">
+          <div class="mdx-doc-titre"><b>${mdxEsc(n.titre)}</b>${statut}</div>
+          <div class="mdx-doc-meta">${fmtDate(m.created_at)} · ${mdxEsc(n.type)}${m.cree_par ? ` · par ${mdxEsc(m.cree_par)}` : ''}</div>
+        </div>
+        <div class="mdx-doc-actions">
+          <button type="button" class="mdx-btn-voir" onclick="voirMandatSauvegarde('${m.id}')">👁️ Voir / télécharger</button>
+          <button type="button" class="mdx-btn-suppr" onclick="supprimerMandatSauvegarde('${m.id}','${c.id}')" title="Supprimer ce document" aria-label="Supprimer ce document">✕</button>
+        </div>
+      </article>`;
+  }).join('');
+  return `<section class="dbx-carte mdx-carte">
+      <header class="dbx-carte-tete mdx-carte-tete">
+        <div><h2>Documents & mandats signés</h2><span class="dbx-carte-sous">${liste.length ? `${liste.length} document${liste.length > 1 ? 's' : ''} · ${nbSignes} signé${nbSignes > 1 ? 's' : ''}` : 'aucun document pour l’instant'}</span></div>
+        <div class="mdx-carte-boutons">
+          <button type="button" class="btn-save" onclick="ouvrirOptionsMandatCourtage('${c.id}')">📄 Nouveau mandat</button>
+          ${liste.length ? `<button type="button" class="btn-secondary" onclick="ouvrirEnvoiMandatCompagnies('${c.id}')">✉️ Envoyer aux compagnies</button>` : ''}
+          <label class="btn-secondary mdx-upload" title="Mandat déjà signé à la main (PDF ou photo)">📤 Uploader un document signé
+            <input type="file" accept="application/pdf,image/*" hidden onchange="uploadMandatSigne('${c.id}', this)"/>
+          </label>
+        </div>
+      </header>
+      ${liste.length ? `<div class="mdx-docs">${cartes}</div>` : `<div class="mdx-vide"><span aria-hidden="true">📄</span><b>Aucun mandat enregistré</b><small>Crée un mandat de courtage à faire signer ici, par QR code, e-mail ou WhatsApp — ou uploade un mandat déjà signé à la main.</small></div>`}
+    </section>`;
 }
 
 // Réouvre un mandat sauvegardé dans une nouvelle fenêtre — imprimable/téléchargeable en PDF
@@ -2839,7 +2947,8 @@ async function voirMandatSauvegarde(mandatId) {
     // Blob/ObjectURL (voir genererMandatCourtage) : un F5 recharge le même snapshot au lieu
     // d'une page blanche.
     const blobSnapshot = new Blob([m.html_snapshot], { type: 'text/html;charset=utf-8' });
-    window.open(URL.createObjectURL(blobSnapshot), '_blank', 'popup');
+    const w = window.open(URL.createObjectURL(blobSnapshot), '_blank', 'popup');
+    if (!w) showError('Autorise les fenêtres pop-up pour afficher le document.');
     return;
   }
   if (m.fichier_url) { ouvrirPieceJointe(m.fichier_url); return; }

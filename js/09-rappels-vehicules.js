@@ -590,6 +590,12 @@ function viewNouveauContrat() {
         <div id="ct-rappel-note" style="display:none;font-size:10.5px;color:var(--text-muted);margin-top:4px">ℹ️ Pas de commission créée. Un rappel sera généré 6 mois avant la date d'échéance pour proposer un transfert vers une compagnie partenaire.</div>
       </div>
       <div class="form-field"><label class="form-label">Nature de la commission</label><select class="form-select" id="ct-nature-commission" onchange="updateCommissionPreview()"><option value="acquisition">Acquisition (nouvelle affaire)</option><option value="gestion">Gestion (portefeuille existant)</option></select></div>
+      <!-- Vie / 3a (19.09.2026) : en plus de l'acquisition, certaines compagnies (Swiss Life : 1 %) versent une
+           commission sur chaque paiement d'épargne du client — créée comme commission de gestion annuelle
+           répartie selon la périodicité (un versement par paiement : chaque décompte s'y additionne). -->
+      <div class="form-field"><label class="form-label" for="ct-comm-paiement">Commission de paiement sur l'épargne (%)</label>
+        <input class="form-input" id="ct-comm-paiement" inputmode="decimal" placeholder="ex. 1 — vie / 3a uniquement"/>
+        <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Vie / 3a : % versé par la compagnie sur chaque prime d'épargne payée (Swiss Life : 1 %). Laisse vide si aucune.</div></div>
     </div>`)}
     <div id="commission-preview" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:14px 18px;margin-top:14px">
       <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px" id="commission-preview-label">Commission d'acquisition estimée</div>
@@ -1329,6 +1335,8 @@ const ALIAS_COMPAGNIES = {
   'axa winterthur': 'AXA', 'axa assurances': 'AXA', 'axa': 'AXA',
   'zurich assurances': 'Zurich', 'zurich': 'Zurich',
   'generali assurances': 'Generali', 'generali': 'Generali', 'generali assurances générales sa': 'Generali',
+  // GMA SA = Groupe Mutuel Assurances (nom lu en tête des décomptes GM)
+  'gma sa': 'Groupe Mutuel', 'gma': 'Groupe Mutuel', 'groupe mutuel assurances gma sa': 'Groupe Mutuel', 'groupe mutuel services sa': 'Groupe Mutuel',
   // Fortuna = protection juridique du groupe Generali (indication de Jonathan, 19.09.2026)
   'fortuna': 'Generali', 'fortuna protection juridique': 'Generali', "fortuna compagnie d'assurance de protection juridique sa": 'Generali', 'fortuna compagnie d’assurance de protection juridique sa': 'Generali', 'fortuna rechtsschutz': 'Generali',
   // Baloise a fusionné avec Helvetia (2026) : toutes les anciennes variantes "Baloise" (y compris
@@ -1874,6 +1882,19 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
     contrat_id: rContrat && rContrat[0] ? rContrat[0].id : null,
   };
   const rComm = await dbPost('commissions_attente', commissionBody);
+  // Commission de paiement sur l'épargne (vie / 3a) : s'ajoute à l'acquisition, annuelle, versée à
+  // chaque paiement du client (périodicité du contrat) — les décomptes mensuels s'y additionnent.
+  const pctPaiement = typeof nombreCH === 'function' ? nombreCH(document.getElementById('ct-comm-paiement')?.value || '') : parseFloat(document.getElementById('ct-comm-paiement')?.value);
+  if (Number.isFinite(pctPaiement) && pctPaiement > 0 && contratBody.prime_annuelle > 0 && rContrat && rContrat[0]) {
+    const per = parseInt(document.getElementById('ct-periodicite')?.value) || 12;
+    await dbPost('commissions_attente', {
+      ...commissionBody,
+      nature: 'gestion',
+      montant_estime: Math.round(contratBody.prime_annuelle * pctPaiement) / 100,
+      detail_calcul: `[commission de paiement] ${pctPaiement} % de l'épargne versée (prime annuelle CHF ${contratBody.prime_annuelle}), versée à chaque paiement du client (${per}× par an)`,
+      date_creation: contratBody.date_debut || commissionBody.date_creation,
+    });
+  }
   return { error: false, commissionError: rComm && rComm.error, contrat: rContrat && rContrat[0] ? rContrat[0] : null };
 }
 

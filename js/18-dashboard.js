@@ -65,7 +65,7 @@ function dbxDonnees() {
   // Versements partiels déjà encaissés sur des commissions encore en attente (paiement échelonné)
   (typeof allCommissionTranches !== 'undefined' ? allCommissionTranches : []).forEach(t => {
     const ca = allCommissionsAttente.find(c => c.id === t.commission_id);
-    if (!ca || ca.statut !== 'en_attente' || !t.date_reception || t.date_reception < DATE_BASCULE_ASSUREX) return;
+    if (!ca || ca.statut !== 'en_attente' || t.encaisse_par === 'oz' || !t.date_reception || t.date_reception < DATE_BASCULE_ASSUREX) return; // encaissé par OZ : hors chiffres Assurex
     const m = Number(t.montant || 0);
     totalRecu += m;
     if (commMois[t.date_reception.slice(0, 7)] != null) commMois[t.date_reception.slice(0, 7)] += m;

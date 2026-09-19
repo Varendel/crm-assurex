@@ -32,7 +32,7 @@ function sfxEncaissements() {
   const res = [];
   tranches.forEach(t => {
     const ca = allCommissionsAttente.find(c => c.id === t.commission_id);
-    if (!ca || ca.statut === 'versé_oz') return;
+    if (!ca || ca.statut === 'versé_oz' || t.encaisse_par === 'oz') return; // encaissé par OZ : hors chiffres Assurex
     const d = (t.date_reception || t.created_at || '').slice(0, 10);
     if (d && d >= bascule) res.push({ date: d, montant: Number(t.montant || 0), ca });
   });

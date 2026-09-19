@@ -96,7 +96,7 @@ function renderBordereauxList() {
             ${b.numero ? `<span style="background:var(--surface-alt);color:var(--text-muted);border-radius:5px;padding:2px 7px;font-size:10.5px;font-weight:800;font-family:monospace">${b.numero}</span>` : ''}
             <div style="font-size:14px;font-weight:800;color:var(--text)">${b.compagnie}</div>
             ${b.encaisse_par === 'oz' ? `<span title="Encaissé par OZ Assure — hors chiffres Assurex" style="display:inline-flex;align-items:center;gap:4px;background:var(--surface-alt);border:1px solid var(--border);border-radius:999px;padding:1px 9px;font-size:10.5px;font-weight:600;color:var(--text-muted)">${OZ_MINI_LOGO} encaissé par OZ</span>` : ''}
-            ${b.pdf_url ? `<button onclick="event.stopPropagation(); ouvrirPieceJointe('${b.pdf_url}')" title="Ouvrir le PDF" style="background:none;border:none;cursor:pointer;font-size:13px">📎</button>` : ''}
+            ${b.pdf_url ? `<button type="button" onclick="event.stopPropagation(); ouvrirPieceJointe('${b.pdf_url}')" title="Ouvrir le décompte uploadé${b.pdf_nom ? ' : ' + String(b.pdf_nom).replace(/["<>]/g, '') : ''}" style="display:inline-flex;align-items:center;gap:5px;background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:999px;padding:3px 11px;font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap">📎 Voir le décompte</button>` : ''}
           </div>
           <div style="font-size:11px;color:var(--text-muted)">${b.mois}${b.date_reception ? ' · Reçu le ' + fmtDate(b.date_reception) : ''}${tauxCaution > 0 ? ' · Caution ' + tauxCaution + '%' : ''}</div>
         </div>

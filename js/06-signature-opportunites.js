@@ -1701,7 +1701,11 @@ function htmlContratImport(l) {
 // Référence unique d'une ligne de décompte (police, facture, date, branche, montant) : mémorisée dans
 // le détail de la commission ou du versement créé → un réimport du même fichier est reconnu à coup sûr.
 function refLigneImport(l) {
-  return `ref:${normPoliceNumero(l.numeroContrat)}|${l.noFacture || ''}|${l.dateFacture || ''}|${(l.brancheInterne || '').toLowerCase().replace(/\s+/g, ' ').slice(0, 40)}|${Number(l.montant || 0).toFixed(2)}`;
+  // Sans n° de facture (Swiss Life, GM…), le mois du décompte fait partie de la référence : une
+  // commission de paiement mensuelle identique d'un mois à l'autre n'est pas un doublon (19.09.2026).
+  let periode = '';
+  if (!l.noFacture && typeof periodeDecompteImport === 'function') { const p = periodeDecompteImport(); periode = `|P:${p.annee}-${String(p.mois + 1).padStart(2, '0')}`; }
+  return `ref:${normPoliceNumero(l.numeroContrat)}|${l.noFacture || ''}|${l.dateFacture || ''}|${(l.brancheInterne || '').toLowerCase().replace(/\s+/g, ' ').slice(0, 40)}|${Number(l.montant || 0).toFixed(2)}${periode}`;
 }
 // Complète une ligne : doublon éventuel (déjà importé / probable) et commission en attente à laquelle
 // imputer le montant (paiements échelonnés, rapprochement automatique). Un doublon est décoché d'office.
@@ -1714,7 +1718,9 @@ function enrichirLigneImport(l) {
   const certain = commsContrat.find(c => (c.detail_calcul || '').includes(`[${l.ref}]`)) || tranches.find(t => (t.note || '').includes(`[${l.ref}]`));
   if (certain) {
     l.doublon = { certain: true, court: 'cette ligne de facture existe déjà', detail: `Même police, facture, date, branche et montant — importée le ${fmtDate(certain.date_creation || certain.date_reception || certain.created_at)}` };
-  } else {
+  } else if (!commsContrat.some(c => c.statut === 'en_attente' && (typeof commissionResteAttendu === 'function' ? commissionResteAttendu(c) : Number(c.montant_estime || 0)) >= Number(l.montant) - 0.01)) {
+    // (Si une commission annuelle est encore attendue sur ce contrat avec un reste suffisant, la ligne
+    // en est un versement — ex. commission de paiement mensuelle sur l'épargne : jamais un doublon.)
     // Même contrat, même montant (au centime, ou au franc pour les anciens imports arrondis), déjà encaissé —
     // seulement pour les commissions SANS référence (anciens imports, historique OZ) : une commission
     // importée depuis REX porte sa référence de facture, une autre facture n'est donc pas un doublon
@@ -2444,24 +2450,14 @@ async function importerCommissionsEtBordereau(nomAssureur) {
       // mensualités) → le montant est DÉDUIT de l'attente (versement partiel) au lieu de créer une
       // nouvelle commission ; l'attente est soldée quand le total est atteint. Pas pour un décompte OZ.
       const natureLigne = natureImportLigne(l, natureLot);
-      if (surOZ && l.imputer && l.attenteId) {
-        // Décompte encaissé par OZ : la commission attendue a été versée à OZ → elle quitte l'attente
-        // Assurex (statut « versé à OZ ») au lieu d'être recréée à côté (repéré le 19.09.2026, Mobilière)
+      // Rapprochement (Assurex ou OZ) : chaque ligne devient un versement partiel de la commission
+      // attendue ; elle est soldée quand le total est atteint (boucle ci-dessous). Un décompte OZ marque
+      // ses versements « encaissés par OZ » (hors chiffres Assurex) et la commission soldée passe
+      // « versée à OZ ». Avant le 19.09.2026, un décompte OZ soldait l'attente dès la 1re ligne — une
+      // commission de paiement mensuelle (Swiss Life 1 % de l'épargne) était close au 1er mois.
+      if (l.imputer && l.attenteId) {
         const attente = allCommissionsAttente.find(c => c.id === l.attenteId);
-        if (attente) {
-          const deja = attente.statut === 'versé_oz' ? Number(attente.montant_final || 0) : 0;
-          const total = Math.round((deja + montant) * 100) / 100;
-          const rO = await dbPatch('commissions_attente', attente.id, { statut: 'versé_oz', montant_final: total, bordereau_id: nouveauBordereau.id, date_reception: dateReceptionCommission, detail_calcul: `${attente.detail_calcul || ''} — versée à OZ, décompte ${compagnie} [${l.ref}]` });
-          if (rO && rO.error) { nbEchecs++; continue; }
-          if (attente.statut !== 'versé_oz') ecartsAJournaliser.push({ attente, taux: l.taux, source: 'import OZ' });
-          attente.statut = 'versé_oz'; attente.montant_final = total;
-          nbImputes++; totalImpute += montant;
-          continue;
-        }
-      }
-      if (!surOZ && l.imputer && l.attenteId) {
-        const attente = allCommissionsAttente.find(c => c.id === l.attenteId);
-        const rT = await dbPost('commission_tranches', { commission_id: l.attenteId, montant, date_reception: dateReceptionCommission, bordereau_id: nouveauBordereau.id, note: `Décompte ${compagnie} — ${l.brancheInterne || ''} (police ${l.numeroContrat}) [${l.ref}]` });
+        const rT = await dbPost('commission_tranches', { commission_id: l.attenteId, montant, date_reception: dateReceptionCommission, bordereau_id: nouveauBordereau.id, encaisse_par: surOZ ? 'oz' : 'assurex', note: `Décompte ${compagnie}${surOZ ? ' (encaissé par OZ)' : ''} — ${l.brancheInterne || ''} (police ${l.numeroContrat}) [${l.ref}]` });
         if (rT && rT.error) { nbEchecs++; continue; }
         if (Array.isArray(rT) && rT[0]) allCommissionTranches.push(rT[0]);
         nbImputes++;
@@ -2495,8 +2491,12 @@ async function importerCommissionsEtBordereau(nomAssureur) {
     const estime = Number(attente.montant_estime || 0);
     const deja = typeof commissionDejaRecu === 'function' ? commissionDejaRecu(attente) : 0;
     if (deja > 0 && estime - deja <= Math.max(1, estime * 0.02)) {
-      const rS = await dbPatch('commissions_attente', attente.id, { statut: 'reçue', montant_final: Math.round(deja * 100) / 100, bordereau_id: nouveauBordereau.id, date_reception: dateReceptionCommission });
-      if (!(rS && rS.error)) { attente.statut = 'reçue'; attente.montant_final = Math.round(deja * 100) / 100; nbSoldes++; ecartsAJournaliser.push({ attente, source: 'import' }); }
+      // Soldée : « versée à OZ » si l'essentiel a été encaissé par OZ, sinon « reçue » (Assurex)
+      const trs = typeof commissionTranches === 'function' ? commissionTranches(attente) : [];
+      const partOZ = trs.filter(t => t.encaisse_par === 'oz').reduce((s, t) => s + Number(t.montant || 0), 0);
+      const statutSolde = partOZ > deja / 2 ? 'versé_oz' : 'reçue';
+      const rS = await dbPatch('commissions_attente', attente.id, { statut: statutSolde, montant_final: Math.round(deja * 100) / 100, bordereau_id: nouveauBordereau.id, date_reception: dateReceptionCommission });
+      if (!(rS && rS.error)) { attente.statut = statutSolde; attente.montant_final = Math.round(deja * 100) / 100; nbSoldes++; ecartsAJournaliser.push({ attente, source: statutSolde === 'versé_oz' ? 'import OZ' : 'import' }); }
     }
   }
   await journaliserEcartsCommission(ecartsAJournaliser, nouveauBordereau.id);

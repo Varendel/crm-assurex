@@ -514,6 +514,7 @@ async function showClient(id) {
 
     <div class="tabs">
       <button class="tab-btn active" onclick="switchTab(this,'tab-identite')">Identité</button>
+      <button class="tab-btn" onclick="switchTab(this,'tab-documents')">📄 Documents (${mandatsSignes.length})</button>
       ${estRoleRH() ? '' : `<button class="tab-btn" onclick="switchTab(this,'tab-prevoyance')">Prévoyance</button>`}
       ${isEntreprise ? `<button class="tab-btn" onclick="switchTab(this,'tab-collaborateurs')">Collaborateurs (${collaborateurs.length})</button>` : ''}
       ${isEntreprise ? `<button class="tab-btn" onclick="switchTab(this,'tab-flotte')">🚗 Flotte (${allVehicules.filter(v=>v.client_id===c.id).length})</button>` : ''}
@@ -521,7 +522,6 @@ async function showClient(id) {
       ${estRoleRH() ? '' : `<button class="tab-btn" onclick="switchTab(this,'tab-factures')">Factures (${factures.length})</button>`}
       <button class="tab-btn" onclick="switchTab(this,'tab-rappels')">Rappels (${rappels.length})</button>
       <button class="tab-btn" onclick="switchTab(this,'tab-rdv')">📅 RDV (${rendezVousClient.length})</button>
-      <button class="tab-btn" onclick="switchTab(this,'tab-notes')">Notes</button>
     </div>
 
     <div id="tab-identite">
@@ -617,6 +617,9 @@ async function showClient(id) {
         ${infoBlock("Taux d'activité", c.taux_activite ? c.taux_activite + '%' : '—')}
       </div>`) : ''}
       `}
+    </div>
+
+    <div id="tab-documents" class="hidden">
       ${sectionCard('📄 Documents & mandats signés', '#38bdf8', `
         <div style="margin-bottom:12px">
           <label style="background:var(--surface-alt);border:1px solid var(--border);border-radius:8px;padding:7px 14px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer;display:inline-block">
@@ -810,6 +813,8 @@ async function showClient(id) {
       <button onclick="confirmerSuppressionClient('${c.id}', '${displayName.replace(/'/g, "\\'")}')" style="background:none;border:none;color:var(--text-dim);font-size:11px;cursor:pointer;text-decoration:underline dotted">🗑️ Supprimer cette fiche client</button>
     </div>`;
   bindAdresseAutocomplete({ adresseId: 'ec-adresse', npaId: 'ec-npa', villeId: 'ec-ville', cantonId: 'ec-canton' });
+  // Journal d'activité à droite de la fiche (js/17-fiche-activite.js) — remplace l'ancien onglet « Notes »
+  if (typeof monterJournalActivite === 'function') monterJournalActivite(main, c, { rappels, mandatsSignes, rendezVousClient, contrats });
   insertBackBar({ homeId: 'clients', homeLabel: 'Clients', itemLabel: displayName });
 }
 

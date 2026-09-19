@@ -305,6 +305,28 @@
   .kanban-dot { width: 8px; height: 8px; border-radius: 50%; }
   .kanban-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 10px; }
   .kanban-empty { font-size: 11px; color: var(--text-dim); padding: 10px 0; text-align: center; }
+  /* Fiche client : journal d'activité à droite (js/17) */
+  .fiche-grille { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start; }
+  .fiche-principale { min-width: 0; }
+  .fiche-activite { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  @media (max-width: 1280px) { .fiche-grille { grid-template-columns: minmax(0, 1fr); } .fiche-activite { position: static; max-height: none; } }
+  .ja-titre { font-size: 15px; font-weight: 600; color: var(--text); }
+  .ja-compositeur { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 10px; background: var(--surface-alt); border: 1px solid var(--border); }
+  .ja-compositeur textarea { resize: vertical; min-height: 64px; font-family: inherit; }
+  .ja-modes { display: flex; gap: 4px; flex-wrap: wrap; }
+  .ja-modes button, .ja-filtres button { background: none; border: 1px solid transparent; border-radius: 7px; padding: 5px 9px; font-size: 12px; color: var(--text-muted); cursor: pointer; }
+  .ja-modes button.actif { background: var(--accent-dim); color: var(--accent); border-color: var(--accent-border); }
+  .ja-filtres { display: flex; gap: 6px; flex-wrap: wrap; }
+  .ja-filtres button { border-color: var(--border); border-radius: 999px; }
+  .ja-filtres button.actif { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .ja-fil { display: flex; flex-direction: column; }
+  .ja-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .ja-item:last-child { border-bottom: none; }
+  .ja-icone { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+  .ja-corps { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .ja-item-titre { font-size: 12.5px; font-weight: 600; color: var(--text); }
+  .ja-item-detail { font-size: 12px; color: var(--text-muted); white-space: pre-line; overflow-wrap: anywhere; }
+  .ja-item-meta { font-size: 11px; color: var(--text-dim); }
   /* Glisser-déposer du pipeline (js/16) */
   .kanban-col { border-radius: 12px; padding: 6px; margin: -6px; transition: background 0.12s, outline-color 0.12s; outline: 2px dashed transparent; outline-offset: -2px; }
   .kanban-col.drop-cible { background: var(--accent-dim); outline-color: var(--accent); }
@@ -578,8 +600,8 @@
 <script src="js/02-catalogue-session.js?v=1789487348"></script>
 <script src="js/03-auth-navigation.js?v=1789900000"></script>
 <script src="js/04-dashboard-finma.js?v=1789920000"></script>
-<script src="js/05-contrats-clients.js?v=1789880000"></script>
-<script src="js/06-signature-opportunites.js?v=1789930000"></script>
+<script src="js/05-contrats-clients.js?v=1789940000"></script>
+<script src="js/06-signature-opportunites.js?v=1789940000"></script>
 <script src="js/07-fichepaie-bordereaux.js?v=1789880000"></script>
 <script src="js/08-nouveaux-formulaires.js?v=1788452540"></script>
 <script src="js/09-rappels-vehicules.js?v=1789860000"></script>
@@ -590,6 +612,7 @@
 <script src="js/14-sources.js?v=1789880000"></script>
 <script src="js/15-pictos-compagnies.js?v=1789910000"></script>
 <script src="js/16-pipeline-kanban.js?v=1789930000"></script>
+<script src="js/17-fiche-activite.js?v=1789940000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

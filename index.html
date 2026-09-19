@@ -973,7 +973,11 @@
   .imp-encaisse input:focus-visible + span { box-shadow: 0 0 0 3px var(--accent-dim); }
   /* Logo Assurex dans « Encaissé par » : couleurs d'origine au repos, blanc sur le bleu (thème clair)
      ou foncé sur le cyan (thème sombre) une fois sélectionné */
+  /* Deux boutons de même taille : même hauteur de logo, même largeur, contenu centré */
+  .imp-encaisse > label > span { min-width: 132px; height: 36px; justify-content: center; box-sizing: border-box; }
   .imp-logo-assurex { height: 16px; width: auto; display: block; transition: filter .15s; }
+  .imp-logo-oz { display: inline-flex; height: 16px; font-size: 16px; line-height: 1; }
+  .imp-logo-oz svg { height: 16px !important; width: auto; }
   .imp-encaisse input:checked + span .imp-logo-assurex { filter: brightness(0) invert(1); }
   html:not([data-theme="clair"]) .imp-encaisse span .imp-logo-assurex { filter: brightness(0) invert(1); }
   html:not([data-theme="clair"]) .imp-encaisse input:checked + span .imp-logo-assurex { filter: brightness(0); }
@@ -2072,7 +2076,7 @@
 <script src="js/03-auth-navigation.js?v=1790260000"></script>
 <script src="js/04-dashboard-finma.js?v=1790000000"></script>
 <script src="js/05-contrats-clients.js?v=1790250000"></script>
-<script src="js/06-signature-opportunites.js?v=1790300000"></script>
+<script src="js/06-signature-opportunites.js?v=1790310000"></script>
 <script src="js/07-fichepaie-bordereaux.js?v=1790300000"></script>
 <script src="js/08-nouveaux-formulaires.js?v=1790250000"></script>
 <script src="js/09-rappels-vehicules.js?v=1790300000"></script>

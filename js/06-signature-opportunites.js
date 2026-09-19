@@ -1632,7 +1632,7 @@ function viewImportDecompte() {
       <div style="margin-top:14px"><label class="form-label">Encaissé par</label>
         <div class="imp-encaisse" role="radiogroup" aria-label="Encaissé par">
           <label><input type="radio" name="imp-encaisse-par" value="assurex" checked/> <span><img src="assets/logos/assurex.png" alt="Assurex" class="imp-logo-assurex"/></span></label>
-          <label><input type="radio" name="imp-encaisse-par" value="oz"/> <span>${typeof OZ_MINI_LOGO !== 'undefined' ? OZ_MINI_LOGO : ''} OZ Assure</span></label>
+          <label><input type="radio" name="imp-encaisse-par" value="oz"/> <span aria-label="OZ Assure" title="OZ Assure"><span class="imp-logo-oz">${typeof OZ_LOGO_TERTIAIRE_SVG !== 'undefined' ? OZ_LOGO_TERTIAIRE_SVG : 'OZ Assure'}</span></span></label>
         </div>
         <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">« OZ Assure » : décompte versé sur le compte d'OZ — les commissions sont enregistrées en « Versé OZ » et le bordereau marqué OZ, <strong>sans compter dans les encaissements Assurex</strong> (tableau de bord, suivi financier, trésorerie).</div>
       </div>

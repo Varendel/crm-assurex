@@ -196,7 +196,8 @@ function htmlCockpitControle() {
       <button type="button" class="ck-ouvrir" onclick="showModalEditCommission('${ca.id}')">Ouvrir</button></div>`;
   };
   return `
-    <div class="sfx-intro">Contrôle automatique de toutes les commissions, recalculé à chaque ouverture. « Ouvrir » donne accès à la commission pour la corriger, la solder ou l’annuler (jamais de suppression).</div>
+    <div class="sfx-intro">Contrôle automatique de toutes les commissions, recalculé à chaque ouverture. « Ouvrir » donne accès à la commission pour la corriger, la solder ou l’annuler (jamais de suppression).
+      ${typeof rexAutotests === 'function' ? `<div style="margin-top:8px;display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap"><button type="button" class="btn-secondary" onclick="ckLancerAutotests()">🧪 Lancer les autotests des calculs</button><div id="ck-autotests" style="font-size:12.5px"></div></div>` : ''}</div>
     <div class="dbx-kpis">
       ${dbxKpi({ label: 'Anomalies probables', valeur: nb('erreur'), sous: 'à corriger', i: 0 })}
       ${dbxKpi({ label: 'Points d’attention', valeur: nb('attention'), sous: 'à vérifier', i: 1 })}

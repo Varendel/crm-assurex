@@ -33,6 +33,11 @@ function ozxBrd(t) { const m = String(t || '').match(/\bBRD\s*(?:n[°o.]?\s*)?(\
 function ozxPeriode(t) { const m = String(t || '').match(/(\d{1,2}\.\d{1,2}\.\d{2,4})\s*[-–]\s*(\d{1,2}\.\d{1,2}\.\d{2,4})/); return m ? `${m[1]} – ${m[2]}` : ''; }
 function ozxEstVie(produit) { const p = String(produit || '').toLowerCase(); return (typeof PRODUITS_VIE_KEYWORDS !== 'undefined' ? PRODUITS_VIE_KEYWORDS : ['vie', '3a', '3b', 'lpp']).some(kw => p.includes(kw)); }
 function ozxDateCH(iso) { const p = String(iso || '').slice(0, 10).split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : '—'; }
+// Menu : dès l'archivage (01.01.2027), l'entrée devient « OZ Assure · archives »
+if (typeof SECTIONS !== 'undefined' && typeof ozArchive === 'function' && ozArchive()) {
+  const s = SECTIONS.find(x => x.id === 'oz-assure-solo');
+  if (s) s.label = 'OZ Assure · archives';
+}
 function ozxDateFusion() { return typeof DATE_GESTION_ASSUREX !== 'undefined' ? DATE_GESTION_ASSUREX : '2027-01-01'; }
 function ozxTendance(actuel, precedent) {
   if (!precedent) return '';
@@ -517,8 +522,11 @@ function ozxRendre(calme) {
 }
 
 function ozxEntete() {
-  return `<header class="dx-tete">
-    <div><div class="dx-surtitre">Archive & transition · 2024 → 2027</div><h2>OZ Assure</h2></div>
+  const archive = typeof ozArchive === 'function' && ozArchive();
+  const bandeauArchive = archive ? `<div class="ozx-archive" role="status"><span aria-hidden="true">🗄️</span><div><b>Archive OZ Assure — données arrêtées au 31.12.2026</b>
+    <small>Depuis le ${ozxDateCH(ozxDateFusion())}, tout est production Assurex : OZ n'encaisse plus rien de nouveau. Ces chiffres restent consultables et imprimables, rien n'a été supprimé.</small></div></div>` : '';
+  return `${bandeauArchive}<header class="dx-tete">
+    <div><div class="dx-surtitre">${archive ? 'Archive · 2024 → 31.12.2026' : 'Archive & transition · 2024 → 2027'}</div><h2>OZ Assure${archive ? ' <small class="ozx-archive-pastille">archive</small>' : ''}</h2></div>
     <div class="dx-tete-actions">
       <button type="button" class="btn-secondary" onclick="navigate('oz-commissions-assurex')">💼 Commissions Assurex versées à OZ</button>
       <button type="button" class="btn-secondary" onclick="navigate('rapport-finma-oz')">📋 Recensement FINMA</button>

@@ -110,6 +110,17 @@ function _prevDateAnnuelle(ca) {
 // Jonathan le 19.09.2026). Jusque-là, la gestion des clients OZ Assure est encaissée par OZ : elle
 // ne doit pas compter dans la trésorerie / les prévisions d'encaissement d'Assurex.
 const DATE_GESTION_ASSUREX = '2027-01-01';
+// Le même jour, les données OZ Assure s'archivent (Jonathan, 19.09.2026) : OZ n'encaisse plus rien
+// de nouveau, la vue OZ Assure devient une archive consultable arrêtée au 31.12.2026. Rien n'est
+// supprimé ni modifié en base : c'est l'affichage et la saisie qui basculent, automatiquement.
+// window._ozArchiveForce = true / false permet de prévisualiser le mode archive avant la date.
+const DATE_ARCHIVE_OZ = DATE_GESTION_ASSUREX;
+function ozArchive() {
+  if (typeof window !== 'undefined' && window._ozArchiveForce !== undefined) return !!window._ozArchiveForce;
+  const d = new Date();
+  const auj = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  return auj >= DATE_ARCHIVE_OZ;
+}
 function commissionGestionEncaisseeParOZ(ca, dateEncaissement) {
   if (!ca || ca.nature !== 'gestion') return false;
   const d = (dateEncaissement || '').slice(0, 10);

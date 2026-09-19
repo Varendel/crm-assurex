@@ -39,6 +39,10 @@ sont en bas de ce fichier.
   client ; factures « n° — client » ; financement immobilier (maison, diagrammes, légendes).
 - **19.09** — Tableau de bord : horloge et agenda sur 2 jours (js/40) ; citations de Rex (js/37) ;
   légende du plan de trésorerie.
+- **19.09** — Récurrence sourcée OZ mise en avant (OZ Assure, cockpit, tableau de bord) ; bandeau
+  bleu foncé en tête de toutes les pages (js/44).
+- **19.09** — **Archivage OZ au 01.01.2027** (automatique) : vue OZ Assure en archive arrêtée au
+  31.12.2026, menu « OZ Assure · archives », saisie OZ limitée aux anciens décomptes ; rien supprimé.
 
 ## 🟡 En attente
 

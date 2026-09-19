@@ -65,6 +65,14 @@ function rexAutotests() {
       eq('Ventes 2026 : 2 affaires', v.nb, 2);
       eq('Ventes 2026 : acquisitions réelles 150 + 320', Math.round(v.acquisition), 470);
     }
+    // 6b. Archive OZ : bascule automatique le 01.01.2027
+    if (typeof ozArchive === 'function') {
+      const f = window._ozArchiveForce; delete window._ozArchiveForce;
+      const auj = new Date(); const iso = `${auj.getFullYear()}-${String(auj.getMonth() + 1).padStart(2, '0')}-${String(auj.getDate()).padStart(2, '0')}`;
+      eq('Archive OZ : active dès le 01.01.2027 seulement', ozArchive(), iso >= '2027-01-01');
+      window._ozArchiveForce = true; eq('Archive OZ : prévisualisation forcée', ozArchive(), true);
+      if (f === undefined) delete window._ozArchiveForce; else window._ozArchiveForce = f;
+    }
     // 7. Doublons compte courant : une ligne déjà déduite n'est plus proposée
     if (typeof ozPropositionsCompteCourant === 'function' && window._ck) {
       const sauveLedger = window._ck.ozLedger;

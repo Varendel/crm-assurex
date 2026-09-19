@@ -1637,6 +1637,7 @@ function viewImportDecompte() {
           <label><input type="radio" name="imp-encaisse-par" value="oz"/> <span aria-label="OZ Assure" title="OZ Assure"><span class="imp-logo-oz">${typeof OZ_LOGO_TERTIAIRE_SVG !== 'undefined' ? OZ_LOGO_TERTIAIRE_SVG : 'OZ Assure'}</span></span></label>
         </div>
         <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">« OZ Assure » : décompte versé sur le compte d'OZ — les commissions sont enregistrées en « Versé OZ » et le bordereau marqué OZ, <strong>sans compter dans les encaissements Assurex</strong> (tableau de bord, suivi financier, trésorerie).</div>
+        ${typeof ozArchive === 'function' && ozArchive() ? `<div style="font-size:11px;color:#B45309;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);border-radius:8px;padding:6px 10px;margin-top:6px">🗄️ Données OZ archivées depuis le 01.01.2027 : « OZ Assure » uniquement pour un ancien décompte (période 2026 ou avant) arrivé en retard sur le compte d'OZ.</div>` : ''}
       </div>
     `)}
 

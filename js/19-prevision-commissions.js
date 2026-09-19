@@ -169,10 +169,24 @@ function commissionVersementAnnuel(ca) {
   return PREVISION_GESTION_ANNUELLE.some(c => c.toLowerCase() === (nom || '').toLowerCase());
 }
 
+// ── Commissions d'une assurance prénatale (19.09.2026, demande de Jonathan) ────────────────────
+// Statut 'en_attente_naissance' : la compagnie ne verse qu'une fois la naissance confirmée. Ces
+// commissions comptent désormais dans les prévisions (trésorerie, prévisions 12 mois, cockpit),
+// datées depuis la date de naissance prévue (fiche client) et non depuis la saisie du contrat.
+const COMMISSION_STATUTS_ATTENDUS = ['en_attente', 'en_attente_naissance'];
+function commissionAttendue(ca) { return !!ca && COMMISSION_STATUTS_ATTENDUS.includes(ca.statut); }
+function commissionNaissance(ca) { return !!ca && ca.statut === 'en_attente_naissance'; }
+// Date de naissance prévue du client de cette commission (ou null)
+function commissionDateNaissancePrevue(ca) {
+  if (!commissionNaissance(ca) || typeof allClients === 'undefined') return null;
+  const cl = allClients.find(c => c.id === ca.client_id);
+  return cl && cl.date_naissance ? String(cl.date_naissance).slice(0, 10) : null;
+}
+
 // Date d'encaissement attendue (AAAA-MM-JJ) ou null si aucune règle ne s'applique
 function commissionDatePrevue(ca) {
   if (!ca || ca.nature !== 'gestion') return null;
-  const depart = commissionDateDepart(ca);
+  const depart = commissionNaissance(ca) ? (commissionDateNaissancePrevue(ca) || commissionDateDepart(ca)) : commissionDateDepart(ca);
   if (!depart) return null;
   const [y, m, d] = depart.split('-').map(Number);
   const annuel = _prevDateAnnuelle(ca);
@@ -224,7 +238,7 @@ function previsionGestionParMois(nbMois) {
   const mois = [];
   for (let i = 0; i < nbMois; i++) { const d = new Date(auj.getFullYear(), auj.getMonth() + i, 1); mois.push(_prevIso(d).slice(0, 7)); }
   const res = { retard: { total: 0, nb: 0 }, mois: mois.map(m => ({ cle: m, total: 0, nb: 0 })) };
-  allCommissionsAttente.filter(ca => ca.statut === 'en_attente').forEach(ca => {
+  allCommissionsAttente.filter(commissionAttendue).forEach(ca => {
     const ct = ca.contrat_id ? allContrats.find(x => x.id === ca.contrat_id) : null;
     if (ct && (ct.commissionne === false || ct.statut === 'annulé')) return;
     const p = commissionDatePrevue(ca);

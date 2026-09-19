@@ -23,20 +23,23 @@ function pvCalculer() {
   const fin = _prevIso(new Date(auj.getFullYear(), auj.getMonth() + 12, 0));
   const delaiAcq = typeof trDelaiMoyenAcquisition === 'function' ? trDelaiMoyenAcquisition() : 60;
   const items = [];
-  allCommissionsAttente.filter(ca => ca.statut === 'en_attente').forEach(ca => {
+  allCommissionsAttente.filter(ca => typeof commissionAttendue === 'function' ? commissionAttendue(ca) : ca.statut === 'en_attente').forEach(ca => {
     const ct = ca.contrat_id ? allContrats.find(x => x.id === ca.contrat_id) : null;
     if (ct && (ct.commissionne === false || ct.statut === 'annulé')) return;
     const reste = typeof commissionResteAttendu === 'function' ? commissionResteAttendu(ca) : Number(ca.montant_estime || 0);
     if (!reste) return;
     const gestion = ca.nature === 'gestion';
+    // Assurance prénatale : versée après la naissance → date de départ = naissance prévue (19.09.2026)
+    const naissance = typeof commissionNaissance === 'function' && commissionNaissance(ca);
+    const dateNaiss = naissance && typeof commissionDateNaissancePrevue === 'function' ? commissionDateNaissancePrevue(ca) : null;
     let date = commissionDatePrevue(ca);
-    if (!date) { const b = new Date(((ca.date_creation || aujIso).slice(0, 10)) + 'T00:00:00'); b.setDate(b.getDate() + delaiAcq); date = _prevIso(b); }
+    if (!date) { const b = new Date(((dateNaiss || ca.date_creation || aujIso).slice(0, 10)) + 'T00:00:00'); b.setDate(b.getDate() + delaiAcq); date = _prevIso(b); }
     const parts = gestion ? commissionEcheancier(ca, reste) : [{ date, montant: reste }];
     parts.forEach(pt => {
       if (pt.date > fin) return;
       items.push({ date: pt.date, montant: pt.montant, ca, ct, client_id: ca.client_id, client: ca.client_nom || pvNomClient(ca.client_id),
         compagnie: ca.compagnie || (ct && ct.compagnie), produit: ca.produit || (ct && ct.produit), police: ct && ct.numero_police,
-        nature: gestion ? 'gestion' : 'acquisition', type: 'attendu', oz: commissionGestionEncaisseeParOZ(ca, pt.date), retard: pt.date < aujIso });
+        nature: gestion ? 'gestion' : 'acquisition', type: 'attendu', naissance, oz: commissionGestionEncaisseeParOZ(ca, pt.date), retard: pt.date < aujIso && !naissance });
     });
   });
   if (typeof projectionGestionRecurrente === 'function') {
@@ -71,7 +74,7 @@ function htmlPrevisions12Mois() {
       <span class="pv-logo">${typeof pictoCompagnie === 'function' ? pictoCompagnie(i.compagnie, 26) : ''}</span>
       <span class="pv-corps"><b ${i.client_id ? `onclick="showClient('${i.client_id}')" class="pv-lien"` : ''}>${pvEsc(i.client)}</b>
         <small>${pvEsc(i.compagnie || '')} · ${pvEsc(i.produit || '')}${i.police ? ` · police ${pvEsc(i.police)}` : ''}</small></span>
-      <span class="pv-tags"><em class="pv-tag ${i.nature}">${i.nature === 'gestion' ? 'Gestion' : 'Acquisition'}</em>${i.type === 'projection' ? '<em class="pv-tag proj">Projection</em>' : ''}${i.oz ? '<em class="pv-tag ozt">Encaissé par OZ</em>' : ''}</span>
+      <span class="pv-tags"><em class="pv-tag ${i.nature}">${i.nature === 'gestion' ? 'Gestion' : 'Acquisition'}</em>${i.naissance ? '<em class="pv-tag naiss" title="Versée par la compagnie une fois la naissance confirmée">🍼 À la naissance</em>' : ''}${i.type === 'projection' ? '<em class="pv-tag proj">Projection</em>' : ''}${i.oz ? '<em class="pv-tag ozt">Encaissé par OZ</em>' : ''}</span>
       <span class="pv-montant">CHF ${fmtCHF2(i.montant)}</span>
     </div>`;
   const filtres = [['tous', 'Tout'], ['assurex', 'Assurex'], ['oz', 'Encaissé par OZ'], ['gestion', 'Gestion'], ['acquisition', 'Acquisition']];

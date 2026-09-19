@@ -48,13 +48,15 @@ function sfxDonnees() {
   const enc = sfxEncaissements();
   const annee = auj.slice(0, 4);
   const recuAnnee = enc.filter(e => e.date.startsWith(annee)).reduce((s, e) => s + e.montant, 0);
-  const attente = allCommissionsAttente.filter(ca => ca.statut === 'en_attente' && sfxCompte(ca));
+  // Naissances incluses (19.09.2026) : elles font partie de l'attendu, datées depuis la naissance prévue
+  const attente = allCommissionsAttente.filter(ca => (typeof commissionAttendue === 'function' ? commissionAttendue(ca) : ca.statut === 'en_attente') && sfxCompte(ca));
   const reste = ca => typeof commissionResteAttendu === 'function' ? commissionResteAttendu(ca) : Number(ca.montant_estime || 0);
   const totalReste = attente.reduce((s, ca) => s + reste(ca), 0);
   const il60 = sfxIso(new Date(Date.now() - 60 * 86400000));
   const retards = attente.map(ca => {
     const j = typeof commissionJoursRetard === 'function' ? commissionJoursRetard(ca) : null;
     if (j !== null) return j > 0 ? { ca, jours: j, prevue: commissionDatePrevue(ca) } : null;
+    if (typeof commissionNaissance === 'function' && commissionNaissance(ca)) return null; // en attente de la naissance : jamais « en retard »
     const d = (ca.date_creation || '').slice(0, 10);
     return d && d < il60 ? { ca, jours: Math.round((new Date(auj) - new Date(d)) / 86400000) - 60, prevue: null } : null;
   }).filter(Boolean).sort((a, b) => b.jours - a.jours);

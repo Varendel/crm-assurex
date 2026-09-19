@@ -1942,11 +1942,12 @@ async function viewContactsCompagnies() {
       <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Contacts compagnies</h2>
       <button class="btn-add" onclick="showFormContactCompagnie()">+ Ajouter une compagnie</button>
     </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Utilisés pour générer les emails de demande d'offre depuis le formulaire "Demande d'offre".</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Utilisés pour générer les emails de demande d'offre depuis le formulaire "Demande d'offre". Le logo est celui affiché partout dans le CRM (contrats, bordereaux, commissions) ; à défaut de logo fourni, un monogramme aux couleurs de la compagnie est utilisé.</div>
     <div class="table-wrap">
-      <div class="table-header" style="grid-template-columns:1fr 1fr 1fr 60px"><div>Compagnie</div><div>Contact</div><div>Email</div><div></div></div>
-      ${(contacts||[]).map(c => `<div class="table-row" style="grid-template-columns:1fr 1fr 1fr 60px">
-        <div style="font-weight:700;font-size:13px;color:var(--text)">${c.compagnie}${c.convention && c.convention.valable_des ? `<div style="font-size:10px;font-weight:600;color:#4ade80;margin-top:2px">📄 Convention active dès ${fmtDate(c.convention.valable_des)}</div>` : ''}</div>
+      <div class="table-header" style="grid-template-columns:44px 1fr 1fr 1fr 60px"><div></div><div>Compagnie</div><div>Contact</div><div>Email</div><div></div></div>
+      ${(contacts||[]).map(c => `<div class="table-row" style="grid-template-columns:44px 1fr 1fr 1fr 60px;align-items:center">
+        <div>${typeof pictoCompagnie === 'function' ? pictoCompagnie(c.compagnie, 32) : ''}</div>
+        <div style="font-weight:700;font-size:13px;color:var(--text)">${typeof normaliserCompagnie === 'function' ? normaliserCompagnie(c.compagnie) : c.compagnie}${(typeof normaliserCompagnie === 'function' && normaliserCompagnie(c.compagnie) !== c.compagnie) ? `<div style="font-size:10px;color:var(--text-dim)">saisi : ${c.compagnie}</div>` : ''}${c.convention && c.convention.valable_des ? `<div style="font-size:10px;font-weight:600;color:#4ade80;margin-top:2px">📄 Convention active dès ${fmtDate(c.convention.valable_des)}</div>` : ''}</div>
         <div style="font-size:12.5px;color:var(--text-muted)">${c.libelle_contact || '—'}</div>
         <div style="font-size:12.5px;color:${c.email ? 'var(--text)' : '#f87171'}">${c.email || 'Non renseigné'}</div>
         <div><button onclick="showFormContactCompagnie('${c.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:4px 8px;font-size:12px;cursor:pointer">✏️</button></div>
@@ -1959,7 +1960,7 @@ function showFormContactCompagnie(id) {
   const conv = (existant && existant.convention) || {};
   creerModale('modal-contact-cie', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto">
-      <h3 style="margin:0 0 20px;font-size:16px;font-weight:800;color:var(--text)">${existant ? 'Modifier' : 'Ajouter'} une compagnie</h3>
+      <h3 style="margin:0 0 20px;font-size:16px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:10px">${existant && typeof pictoCompagnie === 'function' ? pictoCompagnie(existant.compagnie, 30) : ''}${existant ? 'Modifier' : 'Ajouter'} une compagnie</h3>
       <div class="form-grid">
         <div class="form-field" style="grid-column:span 2"><label class="form-label">Nom de la compagnie *</label><input class="form-input" id="cc-nom" value="${existant ? existant.compagnie : ''}"/></div>
         <div class="form-field" style="grid-column:span 2"><label class="form-label">Libellé contact (agence/courtier)</label><input class="form-input" id="cc-libelle" value="${existant ? (existant.libelle_contact||'') : ''}"/></div>

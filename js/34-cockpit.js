@@ -56,7 +56,7 @@ function htmlCockpitEnsemble(D) {
 
   // Prochains encaissements (60 jours) : commissions datées, projections, factures
   const prochains = [];
-  allCommissionsAttente.filter(ca => ca.statut === 'en_attente' && sfxCompte(ca)).forEach(ca => {
+  allCommissionsAttente.filter(ca => (typeof commissionAttendue === 'function' ? commissionAttendue(ca) : ca.statut === 'en_attente') && sfxCompte(ca)).forEach(ca => {
     const parts = typeof commissionEcheancier === 'function' ? commissionEcheancier(ca, D.reste(ca)) : [];
     parts.forEach((pt, i) => { if (pt.date >= auj && pt.date <= dans(60)) prochains.push({ date: pt.date, montant: pt.montant, titre: ca.client_nom || '—', sous: `${ca.produit || ''} · gestion${parts.length > 1 ? ` (versement ${i + 1}/${parts.length})` : ''}`, cie: ca.compagnie }); });
   });

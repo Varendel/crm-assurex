@@ -77,7 +77,7 @@ function trCalculer() {
   };
 
   // 1. Commissions en attente (hors contrats annulés / non commissionnés)
-  allCommissionsAttente.filter(ca => ca.statut === 'en_attente').forEach(ca => {
+  allCommissionsAttente.filter(ca => typeof commissionAttendue === 'function' ? commissionAttendue(ca) : ca.statut === 'en_attente').forEach(ca => {
     const ct = ca.contrat_id ? allContrats.find(x => x.id === ca.contrat_id) : null;
     if (ct && (ct.commissionne === false || ct.statut === 'annulé')) return;
     const montant = typeof commissionResteAttendu === 'function' ? commissionResteAttendu(ca) : Number(ca.montant_estime || 0); // reste après versements partiels
@@ -85,7 +85,9 @@ function trCalculer() {
     let date = typeof commissionDatePrevue === 'function' ? commissionDatePrevue(ca) : null;
     const gestion = ca.nature === 'gestion';
     if (!date) {
-      const base = new Date((ca.date_creation || aujIso) + 'T00:00:00');
+      // Assurance prénatale : on part de la naissance prévue, pas de la saisie du contrat (19.09.2026)
+      const naiss = typeof commissionDateNaissancePrevue === 'function' ? commissionDateNaissancePrevue(ca) : null;
+      const base = new Date((naiss || ca.date_creation || aujIso) + 'T00:00:00');
       base.setDate(base.getDate() + res.delaiAcq);
       date = trIso(base);
     }

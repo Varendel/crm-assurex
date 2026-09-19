@@ -81,7 +81,7 @@ sont en bas de ce fichier.
       classement par date limite de résiliation, suivi de revue, tâche de revue en un clic
 - [x] **Relances LAMal** (19.09) — page Vente › Relances LAMal : la LAMal comme levier de RDV,
       message e-mail / WhatsApp avec lien de réservation personnalisé, suivi relancé → RDV
-- [x] Échéancier, suite : préavis modifiable par contrat dans la fiche contrat (19.09) — note de revue à faire
+- [x] Échéancier, suite : préavis modifiable par contrat dans la fiche contrat (19.09) + note de revue sur chaque renouvellement
 - [x] **Équipement & ventes croisées** (19.09) — page Vente › Équipement : besoins de base par profil
       (particulier / entreprise), taux de couverture par besoin, opportunité « Vente croisée » en un
       clic, liste des clients sans contrat actif avec tâche de contact

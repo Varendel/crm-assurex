@@ -218,6 +218,7 @@ function rnLigne({ ct, limite, horizon, revue }, cols) {
       <select class="form-select" aria-label="Suivi du renouvellement" style="padding:6px 8px;font-size:12px" onchange="rnChangerStatut('${ct.id}', this.value)">
         ${RN_STATUTS.map(s => `<option value="${s.v}" ${s.v === revue ? 'selected' : ''}>${s.label}</option>`).join('')}
       </select>
+      <button type="button" onclick="rnEditerNote('${ct.id}')" title="${ct.revue_note ? rnEsc(ct.revue_note) : 'Ajouter une note de revue'}" style="display:block;width:100%;margin-top:4px;text-align:left;border:0;background:none;padding:0;font-size:11px;color:${ct.revue_note ? 'var(--text)' : 'var(--text-muted)'};cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ct.revue_note ? '📝 ' + rnEsc(ct.revue_note) : '+ note'}</button>
     </div>
     <div style="display:flex;gap:6px;justify-content:flex-end">
       ${tache
@@ -238,6 +239,20 @@ async function rnChangerStatut(contratId, statut) {
   logAction('revue_renouvellement', 'contrats', contratId, `${statut} (échéance ${fmtDate(maj.revue_echeance)})`);
   rnRafraichir();
   return true;
+}
+
+// Note de revue du renouvellement (19.09.2026) : ce qui a été discuté / décidé, sur le contrat
+async function rnEditerNote(contratId) {
+  const ct = allContrats.find(c => c.id === contratId);
+  if (!ct) return;
+  const note = prompt(`Note de revue — ${rnNomClient(ct)} · ${ct.produit || ''}`, ct.revue_note || '');
+  if (note === null) return;
+  const maj = { revue_note: note.trim() || null, revue_maj: new Date().toISOString() };
+  const r = await dbPatch('contrats', contratId, maj);
+  if (r && r.error) { showError('Note non enregistrée : ' + errMsg(r)); return; }
+  Object.assign(ct, maj);
+  logAction('revue_renouvellement', 'contrats', contratId, `Note : ${maj.revue_note || '(effacée)'}`);
+  rnRafraichir();
 }
 
 function rnRafraichir() {

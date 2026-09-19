@@ -882,7 +882,7 @@ function viewCommissions() {
       <button class="btn-add" onclick="navigate('fiche-commission')">📄 Générer une fiche de commission</button>
     </div>
     <div class="stat-grid" style="margin-bottom:24px">
-      ${statCard('Brut total', 'CHF ' + totalBrut.toLocaleString(), '#e2e8f0')}
+      ${statCard('Produit total (Assurex + part OZ)', 'CHF ' + totalBrut.toLocaleString(), '#e2e8f0', 'commissions reçues + part OZ à refacturer')}
       ${statCard('Part Jonathan', 'CHF ' + partJ.toLocaleString(), '#38bdf8')}
       ${statCard('Part apporteurs', 'CHF ' + partA.toLocaleString(), '#f59e0b')}
     </div>

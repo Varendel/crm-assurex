@@ -620,8 +620,33 @@ async function doLogin() {
     } catch(e) { /* ignore si non supporté */ }
   }
 
+  // L'animation de Rex (course puis sprint hors de l'écran) va jusqu'au bout avant d'ouvrir le CRM
+  // (demande de Jonathan, 20.09.2026). Les données se chargent pendant ce temps, rien n'est perdu.
+  await attendreFinAnimationRex(ecranLogin);
+
+  // Compte client (espace client, js/48) : jamais le CRM, seulement son propre espace
+  if (typeof ecAccesDeLEmail === 'function') {
+    const acces = await ecAccesDeLEmail(email);
+    if (acces) { await ecEntrerEspaceClient(acces, email); return; }
+  }
+
   const userData = USER_ROLES[email] || { prenom: email.split('@')[0], nom: '', role: 'apporteur', taux: 50 };
   enterApp({ id: email, prenom: userData.prenom, nom: userData.nom, email, role: userData.role, taux: userData.taux });
+}
+
+// Attend la fin du sprint de Rex sur l'écran de connexion (au plus 2 s, et pas d'attente du tout
+// si l'animation est désactivée par le système ou si l'écran n'existe pas).
+function attendreFinAnimationRex(ecran) {
+  const rex = ecran && ecran.querySelector('.lp-rex');
+  const reduit = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (!rex || reduit) return Promise.resolve();
+  return new Promise(resolve => {
+    let fini = false;
+    const terminer = () => { if (fini) return; fini = true; rex.removeEventListener('animationend', surFin); resolve(); };
+    const surFin = e => { if (e.animationName === 'lp-sprint') terminer(); };
+    rex.addEventListener('animationend', surFin);
+    setTimeout(terminer, 2000); // filet de sécurité : jamais bloqué si l'événement ne vient pas
+  });
 }
 
 async function enterApp(user) {

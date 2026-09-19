@@ -125,7 +125,13 @@ sont en bas de ce fichier.
       de versement / ordres permanents 3a, changement de compagnie, résiliation, rappel
       d'échéance…), variables remplies automatiquement, export PDF et Word, archivage sur la
       fiche client (onglet Documents) et envoi par e-mail depuis Outlook.
-- [ ] **Espace client** (app installable) — prérequis : rôles
+- [x] **Espace client, première version** (20.09, js/48) — rôle « client » : un compte et un mot de
+      passe par client, créés depuis la fiche client (fonction serveur dédiée, mot de passe affiché
+      une seule fois). Le client voit sa fiche, ses contrats en vigueur avec dates limites de
+      résiliation, ses véhicules et ses rendez-vous ; tout le reste lui est fermé au niveau de la
+      base. Reste à faire : accès aux documents (polices), changement de mot de passe côté client,
+      et test de bout en bout avec un compte de test avant ouverture à un vrai client.
+- [ ] Espace client, suite : app installable, documents téléchargeables, notifications
 - [ ] Lecture IA des certificats LPP, scénario avant / après, import bancaire, notes de frais
 - [ ] Ouverture à 1–2 cabinets pilotes — prérequis : priorité 1 complète + licence
 - [x] Autotests des calculs de commissions (js/43, 18 tests, bouton dans Cockpit › Contrôle)

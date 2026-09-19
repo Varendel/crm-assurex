@@ -419,13 +419,20 @@ function renderToutesCommissions() {
   const totAssurexC = totauxEntiteComm(cl => cl && cl.source_cofidex);
   const totAucunC = totauxEntiteComm(cl => !(cl && (cl.source_oz || cl.source_cofidex)));
 
+  // Part encaissée par OZ qui revient à Assurex (à refacturer) : affichée à part pour que le total
+  // « produit » corresponde à la vue interne Commissions (20.09.2026 — deux vues, un seul langage).
+  const ozRefacturable = baseTous.filter(c => c.statut === 'versé_oz' && typeof ozPartAssurex === 'function' && ozPartAssurex(c));
+  const totalOzRefacturable = ozRefacturable.reduce((s, c) => s + montantC(c), 0);
+  const dejaRefacture = ozRefacturable.filter(c => c.refacture_le).reduce((s, c) => s + montantC(c), 0);
+
   const kpi = (o) => typeof dbxKpi === 'function' ? dbxKpi(o) : statCard(o.label, (o.prefixe || '') + fmtCHF(Math.round(o.valeur)), '#00CFFF', o.sous);
   const zoneStats = document.getElementById('tc-stats');
   if (zoneStats) zoneStats.innerHTML = [
     kpi({ i: 0, label: 'En attente', valeur: totalAttente, prefixe: 'CHF ', sous: `${baseStats.filter(c => c.statut === 'en_attente').length} commission(s) · reste attendu`, onclick: "tcChoisirStatut('en_attente')" }),
-    kpi({ i: 1, label: 'Reçues (brut)', valeur: totalRecuBrut, prefixe: 'CHF ', sous: `${nbRecues} commission(s) · versements partiels inclus`, onclick: "tcChoisirStatut('reçue')" }),
-    kpi({ i: 2, label: 'Net Assurex encaissé', valeur: totalRecuNet, prefixe: 'CHF ', sous: totalExtourne ? `après CHF ${fmtCHF(Math.round(totalExtourne))} d’extournes` : 'aucune extourne' }),
-    kpi({ i: 3, label: 'Acquisition · Gestion', valeur: totalAcquisition + totalGestion, prefixe: 'CHF ', sous: `acquisition CHF ${fmtCHF(Math.round(totalAcquisition))} · gestion CHF ${fmtCHF(Math.round(totalGestion))}` }),
+    kpi({ i: 1, label: 'Encaissé par Assurex', valeur: totalRecuNet, prefixe: 'CHF ', sous: `${nbRecues} commission(s) · versements partiels inclus${totalExtourne ? ` · après ${fmtCHF(Math.round(totalExtourne))} d’extournes` : ''}`, onclick: "tcChoisirStatut('reçue')" }),
+    kpi({ i: 2, label: 'Versé à OZ, revient à Assurex', valeur: totalOzRefacturable, prefixe: 'CHF ', sous: dejaRefacture ? `dont ${fmtCHF(Math.round(dejaRefacture))} déjà refacturés` : 'à refacturer à OZ', onclick: "tcChoisirStatut('versé_oz_a_refacturer')" }),
+    kpi({ i: 3, label: 'Produit total', valeur: totalRecuNet + totalOzRefacturable, prefixe: 'CHF ', sous: 'encaissé Assurex + part OZ à refacturer — même total que la vue Commissions' }),
+    kpi({ i: 4, label: 'Acquisition · Gestion', valeur: totalAcquisition + totalGestion, prefixe: 'CHF ', sous: `acquisition CHF ${fmtCHF(Math.round(totalAcquisition))} · gestion CHF ${fmtCHF(Math.round(totalGestion))}` }),
   ].join('');
 
   // Onglets de statut avec compteurs (mêmes autres filtres)

@@ -2833,6 +2833,32 @@
 }
 @media (max-width: 700px) { .loader { min-height: 150px; padding-top: 96px; background-size: 48px 96px; background-position: calc(50% + 58px) 6px; } .loader::before { width: 84px; height: 96px; left: calc(50% - 106px); } }
 @media (prefers-reduced-motion: reduce) { .loader::before, .loader::after { animation: none; } .loader::after { opacity: .9; transform: translate(86px, -14px); } }
+/* ═══ Espace client (js/48, 20.09.2026) ═══ */
+body.mode-espace-client .sidebar, body.mode-espace-client #rex-tabbar, body.mode-espace-client .rex-bulle, body.mode-espace-client #nav-back-bar { display: none !important; }
+body.mode-espace-client .main, body.mode-espace-client #main-content { margin-left: 0 !important; max-width: 1080px; margin-inline: auto; padding: 24px 20px 60px; }
+.ec-contrats { display: flex; flex-direction: column; gap: 10px; }
+.ec-contrat { display: grid; grid-template-columns: 44px 1fr 210px 120px; gap: 12px; align-items: center; padding: 12px; border-radius: 12px; background: var(--surface-alt); }
+.ec-corps b { display: block; font-size: 14px; color: var(--text); }
+.ec-corps small { display: block; font-size: 11.5px; color: var(--text-muted); }
+.ec-corps .ec-modules { font-size: 11px; color: var(--text-dim); margin-top: 2px; }
+.ec-dates { display: flex; flex-direction: column; gap: 2px; font-size: 11.5px; color: var(--text-muted); }
+.ec-dates .ec-alerte { color: #B45309; font-weight: 700; }
+.ec-prime { text-align: right; font-size: 15px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; }
+.ec-prime small { font-size: 11px; font-weight: 500; color: var(--text-muted); }
+.ec-vehicules { display: flex; flex-wrap: wrap; gap: 8px; }
+.ec-vehicule { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; border-radius: 999px; background: var(--surface-alt); font-size: 12.5px; }
+.ec-vehicule em { font-style: normal; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--text-muted); }
+.ec-pied { text-align: center; font-size: 11px; color: var(--text-dim); margin: 26px 0 10px; }
+.ec-etat { font-size: 12.5px; padding: 10px 12px; border-radius: 10px; margin: 10px 0 14px; background: var(--surface-alt); color: var(--text-muted); }
+.ec-etat.actif { background: rgba(22,163,74,.10); color: #15803D; }
+.ec-etat.inactif { background: rgba(245,158,11,.12); color: #B45309; }
+.ec-note { font-size: 11px; color: var(--text-dim); margin-top: 10px; }
+.ec-mdp { margin: 12px 0; padding: 14px; border-radius: 12px; background: rgba(0,207,255,.08); border: 1px solid rgba(0,207,255,.35); }
+.ec-mdp-tete { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); }
+.ec-mdp code { display: block; font-size: 20px; font-weight: 700; letter-spacing: 2px; margin: 8px 0 10px; color: var(--text); user-select: all; }
+.ec-mdp-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.ec-mdp-actions .btn-secondary { text-decoration: none; display: inline-flex; align-items: center; }
+@media (max-width: 800px) { .ec-contrat { grid-template-columns: 34px 1fr; } .ec-dates, .ec-prime { grid-column: 2; text-align: left; } }
 @media (prefers-reduced-motion: reduce) {
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
@@ -2931,14 +2957,14 @@
 
 <script src="js/01-prevoyance-immo.js?v=1790350000"></script>
 <script src="js/02-catalogue-session.js?v=1790060000"></script>
-<script src="js/03-auth-navigation.js?v=1790820000"></script>
+<script src="js/03-auth-navigation.js?v=1790860000"></script>
 <script src="js/04-dashboard-finma.js?v=1790700000"></script>
-<script src="js/05-contrats-clients.js?v=1790700000"></script>
+<script src="js/05-contrats-clients.js?v=1790860000"></script>
 <script src="js/06-signature-opportunites.js?v=1790700000"></script>
-<script src="js/07-fichepaie-bordereaux.js?v=1790390000"></script>
+<script src="js/07-fichepaie-bordereaux.js?v=1790860000"></script>
 <script src="js/08-nouveaux-formulaires.js?v=1790700000"></script>
 <script src="js/09-rappels-vehicules.js?v=1790700000"></script>
-<script src="js/10-commissions-parametres.js?v=1790760000"></script>
+<script src="js/10-commissions-parametres.js?v=1790860000"></script>
 <script src="js/11-renouvellements.js?v=1790530000"></script>
 <script src="js/12-equipement.js?v=1790520000"></script>
 <script src="js/13-prochaine-action.js?v=1790200000"></script>
@@ -2976,6 +3002,7 @@
 <script src="js/45-courriers.js?v=1790640000"></script>
 <script src="js/46-offre-vers-contrat.js?v=1790640000"></script>
 <script src="js/47-profil-investisseur.js?v=1790820000"></script>
+<script src="js/48-espace-client.js?v=1790860000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

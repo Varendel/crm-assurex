@@ -20,6 +20,25 @@ sont en bas de ce fichier.
   erreurs capturées automatiquement, signalement manuel **Ctrl+Alt+E**.
 - **19.09** — Git en place (GitHub Desktop) ; migrations SQL versionnées dans `supabase/migrations/`.
 - **19.09** — Maquette du nouveau tableau de bord (bureau + mobile) — en attente de validation.
+- **19.09** — **Cockpit financier** (js/29, 34) : vue d'ensemble, commissions (encaissé Assurex + OZ
+  en barres empilées, commission mensuelle moyenne), **par compagnie** (rythme réel, prochain
+  versement, attendu ajusté par la précision observée), **prévisions 12 mois** (qui paie quoi,
+  quand, pour quel contrat — export Excel, js/41), rentabilité, précision, retards, contrôle,
+  onglet OZ ↔ Assurex (refacturation + rapprochement du compte courant OZ).
+- **19.09** — **Prévisions de gestion** (js/19) : profils de versement réels par compagnie
+  (Vaudoise, AXA, Swiss Life trimestriel, Nest), échéancier des primes fractionnées ancré sur
+  l'année de facturation, gestion annuelle automatique, date de droit aux commissions par
+  compagnie (HOTELA dès le 01.01.2027).
+- **19.09** — Rapprochement **compte courant OZ → commissions attendues** (déduction automatique,
+  jamais deux fois la même ligne) ; montants réels repris sur les commissions historiques OZ.
+- **19.09** — Import décomptes : polices alphanumériques, noms proches, commission de paiement
+  épargne, logos Assurex / OZ, n° de bordereau cohérents, logo compagnie sur chaque bordereau.
+- **19.09** — Factures QR suisses (js/33), comptes de caution (js/35), rentabilité par produit (js/36).
+- **19.09** — Vue **OZ Assure** refondue (js/38), **Marquage des entités** OZ / Assurex-EX (js/39).
+- **19.09** — Mandats modernisés (onglet Documents, signature, envoi) et enregistrés au nom du
+  client ; factures « n° — client » ; financement immobilier (maison, diagrammes, légendes).
+- **19.09** — Tableau de bord : horloge et agenda sur 2 jours (js/40) ; citations de Rex (js/37) ;
+  légende du plan de trésorerie.
 
 ## 🟡 En attente
 
@@ -29,6 +48,21 @@ sont en bas de ce fichier.
       protection contre les mots de passe compromis
 - [ ] Retrouver les décisions du chantier « sécurisation / segmentation » déjà discuté
 - [ ] Retour sur la maquette + logo en fichier (SVG/PNG)
+
+## 💰 Finances & commissions — à faire
+
+- [ ] Saisir en détail les décomptes repérés sur le relevé bancaire mais absents des dossiers
+      (Mobilière, Helsana, Groupe Mutuel, AXA) pour les ventiler par client
+- [ ] Commissions OZ historiques restées à l'estimation (surtout santé) : retrouver les décomptes
+- [ ] Compléter les primes estimées de quelques contrats créés depuis les décomptes (auto AXA,
+      LPP Swiss Life) et la police définitive d'un véhicule
+- [ ] Dépenses OZ : trancher les écritures « à vérifier » avant transmission à la fiduciaire
+- [ ] **Import XML IGB2B** (standard des assureurs) dans « Importer un décompte »
+- [ ] Plan de trésorerie : fourchette d'incertitude calculée sur les écarts mesurés + mention
+      « prévisionnel » à l'impression
+- [ ] Remplacer les estimations génériques à 10 % dès le premier décompte de chaque compagnie
+- [ ] Profils de versement Helsana / Groupe Mutuel / CSS / Mobilière dès que la gestion sera versée
+- [ ] Fiscalité (plus tard)
 
 ## 🔴 Priorité 1 — Sécurité & fondations
 
@@ -67,6 +101,7 @@ sont en bas de ce fichier.
 - [x] Nouveau design, étape 2 (19.09) : kanban du pipeline, fiche client avec journal d'activité, thème clair deux tons
 - [x] **Nouveau tableau de bord** (19.09, js/18-dashboard.js) — onglets « Aujourd'hui » (liste d'actions par urgence, cochables sur place ; nouveautés 7 jours ; signaux à surveiller ; agenda) et « Pilotage » (graphiques 12 mois, portefeuille par compagnie, pipeline par stade). L'ancien reste accessible (« Vue classique »)
 - [ ] **Espace client** (app installable) — prérequis : rôles
+- [ ] Lecture IA des certificats LPP, scénario avant / après, import bancaire, notes de frais
 - [ ] Ouverture à 1–2 cabinets pilotes — prérequis : priorité 1 complète + licence
 - [ ] Code : découpage en modules, build (Vite), tests sur commissions et signature
 

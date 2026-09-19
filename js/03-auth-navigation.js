@@ -709,25 +709,26 @@ const SECTIONS = [
   { id: 'dashboard-solo', label: 'Tableau de bord', icon: '📊', solo: true, target: 'dashboard' },
   { id: 'pipeline-solo', label: 'Pipeline', icon: '🎯', solo: true, target: 'opportunites', rhAllowed: true },
   { id: 'oz-assure-solo', label: 'OZ Assure', solo: true, logo: true, target: 'oz-assure', signataireOnly: true },
+  // « groupe » : sous-menu repliable à l'intérieur d'une section (19.09.2026, demande de Jonathan)
   { id: 'clients', label: 'Clients', icon: '👥', sub: [
-    { id: 'portefeuille', icon: '👥', label: 'Tous les clients', staff: true, rhAllowed: true },
-    { id: 'clients-prives', icon: '🙂', label: 'Clients privés', rhAllowed: true },
-    { id: 'clients-entreprises', icon: '🏢', label: 'Entreprises', rhAllowed: true },
-    { id: 'clients-oz', icon: '🔹', label: 'Clients OZ Assure', staff: true },
-    { id: 'marquage-entites', icon: '🏷️', label: 'Marquage des entités', staff: true },
-    { id: 'tous-contrats', icon: '📄', label: 'Tous les contrats', rhAllowed: true },
-    { id: 'volume-primes', icon: '📦', label: 'Volume de primes', staff: true, rhAllowed: true },
-    { id: 'recherche-vehicules', icon: '🚗', label: 'Recherche véhicules', rhAllowed: true },
+    { id: 'portefeuille', icon: '👥', label: 'Tous les clients', staff: true, rhAllowed: true, groupe: 'Clients' },
+    { id: 'clients-prives', icon: '🙂', label: 'Clients privés', rhAllowed: true, groupe: 'Clients' },
+    { id: 'clients-entreprises', icon: '🏢', label: 'Entreprises', rhAllowed: true, groupe: 'Clients' },
+    { id: 'clients-oz', icon: '🔹', label: 'Clients OZ Assure', staff: true, groupe: 'Clients' },
+    { id: 'marquage-entites', icon: '🏷️', label: 'Marquage des entités', staff: true, groupe: 'Clients' },
+    { id: 'tous-contrats', icon: '📄', label: 'Tous les contrats', rhAllowed: true, groupe: 'Contrats' },
+    { id: 'volume-primes', icon: '📦', label: 'Volume de primes', staff: true, rhAllowed: true, groupe: 'Contrats' },
+    { id: 'recherche-vehicules', icon: '🚗', label: 'Recherche véhicules', rhAllowed: true, groupe: 'Contrats' },
   ]},
   { id: 'vente', label: 'Ventes', icon: '🚀', sub: [
-    { id: 'suivi', icon: '📋', label: 'Suivi des affaires' },
-    { id: 'nouvelle-demande-offre', icon: '📝', label: 'Demande d\'offre' },
-    { id: 'nouveau-contrat-direct', icon: '➕', label: 'Nouveau contrat' },
-    { id: 'renouvellements', icon: '🔁', label: 'Renouvellements' },
-    { id: 'relances-lamal', icon: '🩺', label: 'Relances LAMal' },
-    { id: 'equipement', icon: '🧩', label: 'Équipement & ventes croisées' },
-    { id: 'sources', icon: '🧭', label: 'Sources des clients' },
-    { id: 'campagnes', icon: '📣', label: 'Campagnes' },
+    { id: 'suivi', icon: '📋', label: 'Suivi des affaires', groupe: 'Affaires' },
+    { id: 'nouvelle-demande-offre', icon: '📝', label: 'Demande d\'offre', groupe: 'Affaires' },
+    { id: 'nouveau-contrat-direct', icon: '➕', label: 'Nouveau contrat', groupe: 'Affaires' },
+    { id: 'renouvellements', icon: '🔁', label: 'Renouvellements', groupe: 'Portefeuille' },
+    { id: 'relances-lamal', icon: '🩺', label: 'Relances LAMal', groupe: 'Portefeuille' },
+    { id: 'equipement', icon: '🧩', label: 'Équipement & ventes croisées', groupe: 'Portefeuille' },
+    { id: 'sources', icon: '🧭', label: 'Sources des clients', groupe: 'Marketing' },
+    { id: 'campagnes', icon: '📣', label: 'Campagnes', groupe: 'Marketing' },
   ]},
   { id: 'conseil-section', label: 'Conseil', icon: '💼', sub: [
     { id: 'conseil', icon: '💼', label: 'Conseil financier' },
@@ -740,17 +741,17 @@ const SECTIONS = [
     { id: 'rendez-vous', icon: '📅', label: 'Rendez-vous', rhAllowed: true },
   ]},
   { id: 'compta', label: 'Finances', icon: '💰', sub: [
-    { id: 'bordereaux', icon: '🧾', label: 'Bordereaux' },
-    { id: 'import-decompte', icon: '📥', label: 'Importer un décompte' },
-    { id: 'commissions-attente', icon: '💸', label: 'Toutes les commissions' },
-    { id: 'commissions', icon: '🧮', label: 'Commissions (vue interne)', staff: true },
-    { id: 'suivi-financier', icon: '🧭', label: 'Cockpit financier' },
-    { id: 'factures', icon: '🧾', label: 'Factures QR' },
-    { id: 'caution', icon: '🔒', label: 'Comptes de caution' },
-    { id: 'tresorerie', icon: '📈', label: 'Plan de trésorerie' },
-    { id: 'fiche-paie', icon: '🧑‍💼', label: 'Fiche de paie (agents)' },
-    { id: 'production', icon: '🏭', label: 'Production par période', staff: true },
-    { id: 'rapport-finma', icon: '🏛️', label: 'Rapport FINMA' },
+    { id: 'suivi-financier', icon: '🧭', label: 'Cockpit financier', groupe: 'Pilotage' },
+    { id: 'tresorerie', icon: '📈', label: 'Plan de trésorerie', groupe: 'Pilotage' },
+    { id: 'production', icon: '🏭', label: 'Production par période', staff: true, groupe: 'Pilotage' },
+    { id: 'import-decompte', icon: '📥', label: 'Importer un décompte', groupe: 'Commissions' },
+    { id: 'bordereaux', icon: '🧾', label: 'Bordereaux', groupe: 'Commissions' },
+    { id: 'commissions-attente', icon: '💸', label: 'Toutes les commissions', groupe: 'Commissions' },
+    { id: 'commissions', icon: '🧮', label: 'Commissions (vue interne)', staff: true, groupe: 'Commissions' },
+    { id: 'factures', icon: '🧾', label: 'Factures QR', groupe: 'Facturation' },
+    { id: 'caution', icon: '🔒', label: 'Comptes de caution', groupe: 'Facturation' },
+    { id: 'fiche-paie', icon: '🧑‍💼', label: 'Fiche de paie (agents)', groupe: 'Administration' },
+    { id: 'rapport-finma', icon: '🏛️', label: 'Rapport FINMA', groupe: 'Administration' },
   ]},
   { id: 'settings', label: 'Paramètres', icon: '⚙️', sub: [
     { id: 'agents', icon: '🧑‍🤝‍🧑', label: 'Agents' },
@@ -794,8 +795,18 @@ function renderSidebar() {
       <span class="arrow" aria-hidden="true">›</span>
     </button>`;
     if (openSections[sec.id]) {
+      // Sous-menus (groupe) : en-tête repliable ; un groupe contenant la vue active reste ouvert
+      let groupeCourant = null;
       subVisibles.forEach(s => {
         const active = s.id === vueMenu;
+        if (s.groupe && s.groupe !== groupeCourant) {
+          groupeCourant = s.groupe;
+          const cle = sec.id + '|' + s.groupe;
+          const contientActif = subVisibles.some(x => x.groupe === s.groupe && x.id === vueMenu);
+          const ferme = window._navGroupesFermes[cle] && !contientActif;
+          nav += `<button type="button" class="nav-groupe ${ferme ? 'ferme' : ''}" onclick="event.stopPropagation();basculerGroupeNav('${cle}')" aria-expanded="${!ferme}"><span>${s.groupe}</span><span class="nav-groupe-fleche" aria-hidden="true">▾</span></button>`;
+        }
+        if (s.groupe && window._navGroupesFermes[sec.id + '|' + s.groupe] && !subVisibles.some(x => x.groupe === s.groupe && x.id === vueMenu)) return;
         let badgeHtml = '';
         if (s.id === 'rappels') {
           const monAgent = currentUser ? allAgents.find(a => a.email === currentUser.email) : null;
@@ -829,6 +840,14 @@ function renderSidebar() {
 
 function toggleSection(id) {
   openSections[id] = !openSections[id];
+  renderSidebar();
+}
+
+// Sous-menus repliables (état mémorisé sur ce navigateur)
+window._navGroupesFermes = (() => { try { return JSON.parse(localStorage.getItem('rex-nav-groupes-fermes') || '{}') || {}; } catch (e) { return {}; } })();
+function basculerGroupeNav(cle) {
+  window._navGroupesFermes[cle] = !window._navGroupesFermes[cle];
+  try { localStorage.setItem('rex-nav-groupes-fermes', JSON.stringify(window._navGroupesFermes)); } catch (e) {}
   renderSidebar();
 }
 

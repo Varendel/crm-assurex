@@ -245,7 +245,10 @@ function viewDashboard() {
     <div style="display:flex;justify-content:space-between;align-items:flex-start">
       <div>
         <div style="margin-bottom:4px;color:var(--text-muted);font-size:11px;font-weight:700;letter-spacing:1.5px;text-transform:uppercase">${now}</div>
-        <h1 style="margin:0 0 4px;font-size:24px;font-weight:900;color:var(--text)">Bonjour, ${currentUser.prenom} 👋</h1>
+        <div style="display:flex;align-items:center;gap:18px;flex-wrap:wrap;margin:0 0 4px">
+          <h1 style="margin:0;font-size:24px;font-weight:900;color:var(--text)">Bonjour, ${currentUser.prenom} 👋</h1>
+          ${typeof LOGO_EXGROUPE_SVG !== 'undefined' ? `<span style="display:inline-flex;align-items:center;padding-left:18px;border-left:1px solid var(--border);color:var(--text)">${LOGO_EXGROUPE_SVG}</span>` : ''}
+        </div>
       </div>
       <div style="display:flex;gap:8px">
         <button id="btn-sync-outlook" onclick="synchroniserOutlook()" title="Vérifie dans Outlook si des compagnies ont répondu aux demandes d'offre envoyées" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:9px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">📧 Synchroniser Outlook</button>

@@ -958,6 +958,46 @@ async function deleteCollaborateur(colId, clientId) {
 }
 
 // ═══ FLOTTE DE VÉHICULES (clients entreprise) ═══
+// Harmonisation (19.09.2026) : marque = constructeur seul, modèle = modèle, type = catégorie
+// (voiture de tourisme, camion, chariot…). Les imports mettaient « ISUZU NLR 85 » dans la marque
+// et le type dans le modèle ; vehNormaliser() remet chaque morceau à sa place, à chaque saisie.
+const VEH_TYPES = ['Voiture de tourisme', 'Voiture électrique', 'Voiture hybride', 'Motocycle / scooter', 'Vhc. de livraison/camion (propre compte)', 'Camion (compte d’autrui)', 'Remorque pour transport de marchandises', 'Chariot de travail', 'Machine de travail', 'Tracteur / véhicule agricole', 'Autre'];
+const VEH_MARQUES = [
+  [/^bmw\b/i, 'BMW'], [/^dacia\b/i, 'Dacia'], [/^fiat\b/i, 'Fiat'], [/^ford(\s*\(d\))?/i, 'Ford'], [/^honda\b/i, 'Honda'], [/^hyundai\b/i, 'Hyundai'],
+  [/^[il]suzu\b/i, 'Isuzu'], [/^jeep\b/i, 'Jeep'], [/^[il]for[- ]williams\b/i, 'Ifor Williams'], [/^liebherr\b/i, 'Liebherr'], [/^mecalac\b/i, 'Mecalac'],
+  [/^menzi(\s*muck)?\b/i, 'Menzi Muck'], [/^mercedes(-benz)?\b/i, 'Mercedes-Benz'], [/^nissan\b/i, 'Nissan'], [/^renault\b/i, 'Renault'], [/^scania\b/i, 'Scania'],
+  [/^takeuchi\b/i, 'Takeuchi'], [/^(wacker\s*neu(son|sen|sson)|wacher)\b/i, 'Wacker Neuson'], [/^(volkswagen|vw)\b/i, 'Volkswagen'], [/^volvo\b/i, 'Volvo'],
+  [/^alfa\s*romeo\b/i, 'Alfa Romeo'], [/^land\s*rover\b/i, 'Land Rover'], [/^citro[eë]n\b/i, 'Citroën'], [/^maserati\b/i, 'Maserati'], [/^bobcat\b/i, 'Bobcat'],
+  [/^audi\b/i, 'Audi'], [/^peugeot\b/i, 'Peugeot'], [/^opel\b/i, 'Opel'], [/^skoda\b/i, 'Škoda'], [/^seat\b/i, 'Seat'], [/^cupra\b/i, 'Cupra'], [/^toyota\b/i, 'Toyota'],
+  [/^tesla\b/i, 'Tesla'], [/^kia\b/i, 'Kia'], [/^mazda\b/i, 'Mazda'], [/^porsche\b/i, 'Porsche'], [/^mini\b/i, 'Mini'], [/^iveco\b/i, 'Iveco'], [/^man\b/i, 'MAN'],
+  [/^daf\b/i, 'DAF'], [/^suzuki\b/i, 'Suzuki'], [/^subaru\b/i, 'Subaru'], [/^mitsubishi\b/i, 'Mitsubishi'], [/^jaguar\b/i, 'Jaguar'], [/^lexus\b/i, 'Lexus'],
+];
+function vehEstType(t) { return !!t && VEH_TYPES.some(x => x.toLowerCase() === String(t).trim().toLowerCase()); }
+function vehNormaliser(v) {
+  const r = { ...v };
+  let marque = String(r.marque || '').trim(), modele = String(r.modele || '').trim(), type = String(r.type_vehicule || '').trim();
+  if (vehEstType(modele)) { type = type || modele; modele = ''; }
+  if (vehEstType(marque)) { type = type || marque; marque = ''; }
+  const regle = VEH_MARQUES.find(([re]) => re.test(marque));
+  if (regle) {
+    const reste = marque.replace(regle[0], '').trim();
+    marque = regle[1];
+    if (reste && !modele) modele = reste; else if (reste && !modele.toLowerCase().startsWith(reste.toLowerCase())) modele = `${reste} ${modele}`.trim();
+  }
+  if (r.numero_plaque) {
+    const p = String(r.numero_plaque).toUpperCase().trim();
+    r.numero_plaque = /^[A-Z]{2}\s*[0-9 ]+$/.test(p) ? p.replace(/^([A-Z]{2})\s*/, '$1 ').replace(/(?<=^[A-Z]{2} .*)\s+/g, '') : p;
+    if (/^[A-Z]{2} 0+$/.test(r.numero_plaque)) r.numero_plaque = null;
+  }
+  r.marque = marque || null; r.modele = modele || null; r.type_vehicule = type || null;
+  return r;
+}
+function vehLibelle(v) { return [v.marque, v.modele].filter(Boolean).join(' ') || v.type_vehicule || 'Véhicule'; }
+function vehOptionsType(courant) {
+  const liste = courant && !vehEstType(courant) ? [...VEH_TYPES, courant] : VEH_TYPES;
+  return `<option value="">—</option>${liste.map(t => `<option value="${t}" ${courant === t ? 'selected' : ''}>${t}</option>`).join('')}`;
+}
+
 function flotteListeHtml(clientId, searchOverride) {
   const search = (searchOverride !== undefined ? searchOverride : (document.getElementById('flotte-search-'+clientId)?.value || '')).toLowerCase().trim();
   let vehicules = allVehicules.filter(v => v.client_id === clientId);
@@ -965,6 +1005,7 @@ function flotteListeHtml(clientId, searchOverride) {
     vehicules = vehicules.filter(v =>
       (v.marque||'').toLowerCase().includes(search) ||
       (v.modele||'').toLowerCase().includes(search) ||
+      (v.type_vehicule||'').toLowerCase().includes(search) ||
       (v.cylindree||'').toLowerCase().includes(search) ||
       (v.numero_plaque||'').toLowerCase().includes(search) ||
       (v.numero_police||'').toLowerCase().includes(search)
@@ -984,6 +1025,7 @@ function flotteListeHtml(clientId, searchOverride) {
       <thead><tr style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px">
         <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Marque</th>
         <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Modèle</th>
+        <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Type</th>
         <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Cylindrée</th>
         <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">N° plaque</th>
         <th style="padding:8px 12px;text-align:right;border-bottom:1px solid var(--border)">Prime brute</th>
@@ -994,6 +1036,7 @@ function flotteListeHtml(clientId, searchOverride) {
         <tr style="border-bottom:1px solid var(--border)">
           <td style="padding:9px 12px;font-weight:700;color:var(--text)">${v.marque || '—'}</td>
           <td style="padding:9px 12px;color:var(--text)">${v.modele || '—'}</td>
+          <td style="padding:9px 12px;color:var(--text-muted)">${v.type_vehicule || '—'}</td>
           <td style="padding:9px 12px;color:var(--text-muted)">${v.cylindree || '—'}</td>
           <td style="padding:9px 12px;color:var(--text-muted);font-family:monospace;font-weight:700">${v.numero_plaque || '—'}</td>
           <td style="padding:9px 12px;text-align:right;color:#f59e0b;font-weight:700">CHF ${fmtCHF(Number(v.prime_brute||0))}</td>
@@ -1022,7 +1065,8 @@ function showFormVehicule(clientId, vehiculeId, presetContratId) {
       <h3 style="margin:0 0 18px;font-size:16px;font-weight:800;color:var(--text)">${v ? 'Modifier le véhicule' : '🚗 Nouveau véhicule'}</h3>
       <div class="form-grid">
         <div class="form-field"><label class="form-label">Marque *</label><input class="form-input" id="veh-marque" value="${v?.marque || ''}" placeholder="Renault, Mercedes..."/></div>
-        <div class="form-field"><label class="form-label">Modèle *</label><input class="form-input" id="veh-modele" value="${v?.modele || ''}" placeholder="Trafic, Sprinter..."/></div>
+        <div class="form-field"><label class="form-label">Modèle</label><input class="form-input" id="veh-modele" value="${v?.modele || ''}" placeholder="Trafic, Sprinter..."/></div>
+        <div class="form-field"><label class="form-label">Type de véhicule</label><select class="form-select" id="veh-type">${vehOptionsType(v?.type_vehicule || '')}</select></div>
         <div class="form-field"><label class="form-label">Cylindrée</label><input class="form-input" id="veh-cylindree" value="${v?.cylindree || ''}" placeholder="1998 cm3"/></div>
         <div class="form-field"><label class="form-label">N° de plaque *</label><input class="form-input" id="veh-plaque" value="${v?.numero_plaque || ''}" placeholder="VD 123456"/></div>
         <div class="form-field" style="grid-column:span 2"><label class="form-label">Contrat flotte lié (si applicable)</label>
@@ -1098,6 +1142,7 @@ async function importFlottePdf(clientId, input) {
 }
 
 function showModalVerifFlotte(clientId, vehicules) {
+  vehicules = vehicules.map(v => vehNormaliser({ ...v, type_vehicule: v.type_vehicule || v.type || v.categorie }));
   const contratsFlotte = allContrats.filter(ct => ct.client_id === clientId && (ct.produit||'').toLowerCase().includes('véhicule'));
   window._flotteAImporter = vehicules;
   creerModale('modal-verif-flotte', `
@@ -1117,7 +1162,7 @@ function showModalVerifFlotte(clientId, vehicules) {
         <table style="width:100%;border-collapse:collapse;font-size:12.5px">
           <thead style="position:sticky;top:0;background:var(--surface)"><tr style="color:var(--text-muted);font-size:10.5px;text-transform:uppercase">
             <th style="padding:8px"><input type="checkbox" checked onchange="document.querySelectorAll('.verif-veh-check').forEach(cb=>cb.checked=this.checked)"/></th>
-            <th style="padding:8px;text-align:left">Marque</th><th style="padding:8px;text-align:left">Modèle</th>
+            <th style="padding:8px;text-align:left">Marque</th><th style="padding:8px;text-align:left">Modèle</th><th style="padding:8px;text-align:left">Type</th>
             <th style="padding:8px;text-align:left">Cylindrée</th><th style="padding:8px;text-align:left">Plaque</th>
             <th style="padding:8px;text-align:right">Prime brute</th><th style="padding:8px;text-align:right">Prime nette</th>
           </tr></thead>
@@ -1126,6 +1171,7 @@ function showModalVerifFlotte(clientId, vehicules) {
               <td style="padding:7px"><input type="checkbox" class="verif-veh-check" data-idx="${i}" checked/></td>
               <td style="padding:7px;font-weight:700;color:var(--text)">${v.marque||'—'}</td>
               <td style="padding:7px;color:var(--text)">${v.modele||'—'}</td>
+              <td style="padding:7px;color:var(--text-muted)">${v.type_vehicule||'—'}</td>
               <td style="padding:7px;color:var(--text-muted)">${v.cylindree||'—'}</td>
               <td style="padding:7px;font-family:monospace;font-weight:700">${v.numero_plaque||'—'}</td>
               <td style="padding:7px;text-align:right;color:#f59e0b">${v.prime_brute!=null?'CHF '+v.prime_brute:'—'}</td>
@@ -1156,13 +1202,16 @@ async function confirmerImportFlotte(clientId) {
   let echecsImport = 0;
 
   for (const v of aImporter) {
+    const n = vehNormaliser(v);
     const rVeh = await dbPost('vehicules', {
       client_id: clientId,
       contrat_id: contratId,
-      marque: v.marque || null,
-      modele: v.modele || null,
+      marque: n.marque,
+      modele: n.modele,
+      type_vehicule: n.type_vehicule,
       cylindree: v.cylindree || null,
-      numero_plaque: v.numero_plaque || null,
+      numero_plaque: n.numero_plaque || null,
+      numero_police: contratId ? (allContrats.find(ct => ct.id === contratId)?.numero_police || null) : null,
       prime_brute: Number(v.prime_brute) || 0,
       prime_nette: Number(v.prime_nette) || 0,
     });
@@ -1185,6 +1234,10 @@ async function confirmerImportFlotte(clientId) {
 
 async function recalculerPrimeFlotte(contratId) {
   if (!contratId) return true;
+  // Uniquement pour une police FLOTTE : sur une police individuelle (RC véhicule, casco), la prime
+  // du contrat ne doit jamais être écrasée par celle du véhicule (19.09.2026).
+  const ctFlotte = allContrats.find(ct => ct.id === contratId);
+  if (!ctFlotte || !/flotte/i.test(ctFlotte.produit || '')) return true;
   const vehiculesDuContrat = allVehicules.filter(v => v.contrat_id === contratId);
   const totalBrut = vehiculesDuContrat.reduce((s, v) => s + Number(v.prime_brute || 0), 0);
   const r = await dbPatch('contrats', contratId, { prime_annuelle: Math.round(totalBrut * 100) / 100 });
@@ -1199,12 +1252,14 @@ async function saveVehicule(clientId, vehiculeId) {
   const ancienVehicule = vehiculeId ? allVehicules.find(x => x.id === vehiculeId) : null;
   const ancienContratId = ancienVehicule ? ancienVehicule.contrat_id : null;
   const nouveauContratId = document.getElementById('veh-contrat').value || null;
+  const n = vehNormaliser({ marque, modele: document.getElementById('veh-modele').value, type_vehicule: document.getElementById('veh-type')?.value, numero_plaque: plaque });
   const body = {
     client_id: clientId,
-    marque,
-    modele: document.getElementById('veh-modele').value.trim() || null,
+    marque: n.marque,
+    modele: n.modele,
+    type_vehicule: n.type_vehicule,
     cylindree: document.getElementById('veh-cylindree').value.trim() || null,
-    numero_plaque: plaque,
+    numero_plaque: n.numero_plaque || plaque,
     contrat_id: nouveauContratId,
     numero_police: document.getElementById('veh-police').value.trim() || null,
     prime_brute: Number(document.getElementById('veh-prime-brute').value) || 0,

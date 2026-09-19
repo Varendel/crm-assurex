@@ -43,6 +43,25 @@ function commissionEcheancier(ca, montant) {
     : (profil && profil.periodicite) ? profil.periodicite
     : (ct && [2, 4, 12].includes(Number(ct.periodicite)) ? Number(ct.periodicite) : 1);
   if (n === 1) return [{ date: p, montant }];
+  // Ancrage sur l'ANNÉE DE FACTURATION couverte (19.09.2026) : les n fractions tombent à l'échéance
+  // + k × 12/n mois + délai de la compagnie ; la part déjà reçue couvre les premières fractions,
+  // le reste est réparti sur les suivantes (évite le chevauchement avec l'année suivante projetée).
+  let ancre = null;
+  if (/\[gestion annuelle\]/.test(ca.detail_calcul || '') && ca.date_creation) ancre = ca.date_creation.slice(0, 10);
+  else if (ct && typeof echeanceFacturationMMJJ === 'function') {
+    const mmjj = echeanceFacturationMMJJ(ct), dep = commissionDateDepart(ca);
+    if (mmjj && dep) { const an = Number(dep.slice(0, 4)); ancre = `${an}-${mmjj}`; if (ancre > dep) ancre = `${an - 1}-${mmjj}`; }
+  }
+  if (ancre) {
+    const decalage = profil ? profil.decalageJours : 60;
+    const [ay, am, ad] = ancre.split('-').map(Number);
+    const dates = Array.from({ length: n }, (_, i) => _prevAjouterJours(_prevIso(new Date(ay, am - 1 + i * (12 / n), ad)), decalage));
+    const estime = Number(ca.montant_estime || 0);
+    const payees = estime > 0 ? Math.max(0, Math.min(n - 1, Math.round((estime - montant) / estime * n))) : 0;
+    const restantes = dates.slice(payees);
+    const partR = Math.round(montant / restantes.length * 100) / 100;
+    return restantes.map((dt, i) => ({ date: dt, montant: i === restantes.length - 1 ? Math.round((montant - partR * (restantes.length - 1)) * 100) / 100 : partR }));
+  }
   const [y, m, d] = p.split('-').map(Number);
   const part = Math.round(montant / n * 100) / 100;
   const finDeMois = d === new Date(y, m, 0).getDate(); // renouvellement : fin de mois → reste en fin de mois

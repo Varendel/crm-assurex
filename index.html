@@ -2534,6 +2534,36 @@
 .hl-rdv-badge{font-size:10px;font-weight:700;color:#16A34A;background:rgba(34,197,94,.14);border-radius:99px;padding:2px 8px;white-space:nowrap}
 .hl-vide{font-size:12px;color:var(--text-muted);padding:10px;border:1px dashed var(--border);border-radius:10px;text-align:center}
 @media (max-width:768px){.hl-agenda{grid-template-columns:1fr}}
+/* ═══ PRÉVISIONS 12 MOIS (pv-, js/41) — 19.09.2026 ═══ */
+.pv-filtre{border:1px solid var(--border);background:var(--surface);color:var(--text-muted);border-radius:99px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer}
+.pv-filtre.actif{background:var(--accent-dim,rgba(0,207,255,.12));border-color:var(--accent);color:var(--accent)}
+.pv-barres{display:flex;align-items:flex-end;gap:6px;height:190px;padding-top:12px}
+.pv-col{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;height:100%;border:0;background:none;cursor:pointer;padding:0}
+.pv-col:hover .pv-pile{filter:brightness(1.1);transform:translateY(-2px)}
+.pv-val{font-size:10px;color:var(--text-muted);margin-bottom:3px;white-space:nowrap}
+.pv-pile{width:70%;max-width:34px;display:flex;flex-direction:column;border-radius:6px 6px 3px 3px;overflow:hidden;background:var(--surface-alt,rgba(148,163,184,.15));transition:transform .15s}
+.pv-mois{font-size:10.5px;color:var(--text-muted);margin-top:5px;text-transform:capitalize}
+.pv-legende{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:12px;color:var(--text-muted)}
+.pv-legende span{display:inline-flex;align-items:center;gap:6px}.pv-legende i{width:11px;height:11px;border-radius:3px;display:inline-block}
+.pv-mois-bloc{padding:0}
+.pv-mois-bloc>summary{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 18px;cursor:pointer;list-style:none}
+.pv-mois-bloc>summary::-webkit-details-marker{display:none}
+.pv-mois-bloc>summary em{font-style:normal;color:var(--text-muted);font-size:12.5px;font-weight:600}
+.pv-mois-bloc.retard>summary b{color:#DC2626}
+.pv-liste{display:flex;flex-direction:column;gap:6px;padding:0 14px 14px}
+.pv-ligne{display:grid;grid-template-columns:78px 30px minmax(0,1fr) auto auto;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface)}
+.pv-ligne.oz{opacity:.75}.pv-ligne.projection{border-style:dashed}
+.pv-date{font-size:12px;font-weight:700;color:var(--text-muted);font-variant-numeric:tabular-nums}
+.pv-corps{display:flex;flex-direction:column;min-width:0}
+.pv-corps b{font-size:13px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pv-corps small{font-size:11.5px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pv-lien{cursor:pointer}.pv-lien:hover{color:var(--accent)}
+.pv-tags{display:flex;gap:4px;flex-wrap:wrap;justify-content:flex-end}
+.pv-tag{font-style:normal;font-size:10px;font-weight:700;border-radius:99px;padding:2px 8px;white-space:nowrap}
+.pv-tag.gestion{background:rgba(0,207,255,.14);color:#0891B2}.pv-tag.acquisition{background:rgba(245,158,11,.15);color:#B45309}
+.pv-tag.proj{background:rgba(143,180,255,.2);color:#3B5BDB}.pv-tag.ozt{background:rgba(34,197,94,.15);color:#15803D}
+.pv-montant{font-weight:800;font-size:13px;color:var(--text);white-space:nowrap;font-variant-numeric:tabular-nums}
+@media (max-width:768px){.pv-ligne{grid-template-columns:64px 26px minmax(0,1fr) auto}.pv-tags{grid-column:3/5;justify-content:flex-start}}
 @media (prefers-reduced-motion: reduce) {
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
@@ -2643,7 +2673,7 @@
 <script src="js/16-pipeline-kanban.js?v=1789930000"></script>
 <script src="js/17-fiche-activite.js?v=1789940000"></script>
 <script src="js/18-dashboard.js?v=1790450000"></script>
-<script src="js/19-prevision-commissions.js?v=1790460000"></script>
+<script src="js/19-prevision-commissions.js?v=1790470000"></script>
 <script src="js/20-fiche-client-entete.js?v=1790020000"></script>
 <script src="js/21-tresorerie.js?v=1790400000"></script>
 <script src="js/22-conseil-financier.js?v=1790330000"></script>
@@ -2653,7 +2683,7 @@
 <script src="js/26-demande-offre.js?v=1790200000"></script>
 <script src="js/27-suivi-affaires.js?v=1790200000"></script>
 <script src="js/28-mobile.js?v=1790200000"></script>
-<script src="js/29-suivi-financier.js?v=1790440000"></script>
+<script src="js/29-suivi-financier.js?v=1790470000"></script>
 <script src="js/30-volume-primes.js?v=1790210000"></script>
 <script src="js/31-analyses-recentes.js?v=1790210000"></script>
 <script src="js/32-campagnes.js?v=1790240000"></script>
@@ -2665,6 +2695,7 @@
 <script src="js/38-oz-assure.js?v=1790370000"></script>
 <script src="js/39-marquage-entites.js?v=1790360000"></script>
 <script src="js/40-dashboard-horloge-agenda.js?v=1790450000"></script>
+<script src="js/41-previsions-12-mois.js?v=1790470000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

@@ -226,6 +226,7 @@ function viewSuiviFinancierV2() {
     ...(typeof htmlCockpitEnsemble === 'function' ? [['ensemble', '🧭 Vue d’ensemble']] : []),
     ['pilotage', '📊 Commissions'],
     ['compagnies', '🏢 Par compagnie'],
+    ...(typeof htmlPrevisions12Mois === 'function' ? [['previsions', '📅 Prévisions 12 mois']] : []),
     ...(typeof htmlCockpitRentabilite === 'function' ? [['rentabilite', '💎 Rentabilité']] : []),
     ['precision', '🎯 Précision des estimations'],
     ['retards', `⏳ Retards${D.retards.length ? ' <span class="dbx-pastille">' + D.retards.length + '</span>' : ''}`],
@@ -239,6 +240,7 @@ function viewSuiviFinancierV2() {
   else if (window._sfxOnglet === 'oz' && typeof htmlCockpitOZ === 'function' && currentUser && currentUser.role === 'signataire') corps = htmlCockpitOZ();
   else if (window._sfxOnglet === 'precision') corps = htmlSfxPrecision();
   else if (window._sfxOnglet === 'compagnies') corps = htmlSfxCompagnies();
+  else if (window._sfxOnglet === 'previsions' && typeof htmlPrevisions12Mois === 'function') corps = htmlPrevisions12Mois();
   else if (window._sfxOnglet === 'retards') corps = htmlSfxRetards(D);
   else corps = htmlSfxPilotage(D);
   return `<div class="dbx sfx">
@@ -259,7 +261,7 @@ function viewSuiviFinancierV2() {
 // ── Pilotage ────────────────────────────────────────────────────────────────────────────────
 function htmlSfxPilotage(D) {
   const totalRetard = D.retards.reduce((s, r) => s + D.reste(r.ca), 0);
-  const pv = typeof previsionGestionParMois === 'function' ? previsionGestionParMois(6) : null;
+  const pv = typeof previsionGestionParMois === 'function' ? previsionGestionParMois(12) : null;
   const ciesTri = Object.entries(D.cies).sort((a, b) => b[1].total - a[1].total).slice(0, 8);
   const maxCie = Math.max(1, ...ciesTri.map(([, x]) => x.total));
   const maxAge = Math.max(1, ...D.tranchesAge.map(t => t.total));

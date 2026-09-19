@@ -113,7 +113,7 @@ function rnContratsEcheancier() {
 }
 
 function viewRenouvellements() {
-  const compagnies = [...new Set(allContrats.filter(ct => ct.date_echeance).map(ct => ct.compagnie).filter(Boolean))].sort();
+  const compagnies = [...new Set(allContrats.filter(ct => ct.date_echeance).map(ct => normaliserCompagnie(ct.compagnie)).filter(Boolean))].sort();
   setTimeout(renderRenouvellements, 0);
   return `
     <h2 style="margin:0 0 4px;font-size:18px;font-weight:800;color:var(--text)">Renouvellements</h2>
@@ -155,7 +155,7 @@ function renderRenouvellements() {
   const tous = rnContratsEcheancier();
   const filtres = tous.filter(({ ct, horizon, revue }) => {
     if (rnFiltres.horizon && horizon !== rnFiltres.horizon) return false;
-    if (rnFiltres.compagnie && ct.compagnie !== rnFiltres.compagnie) return false;
+    if (rnFiltres.compagnie && !memeCompagnie(ct.compagnie, rnFiltres.compagnie)) return false;
     if (rnFiltres.commission === 'oui' && ct.commissionne === false) return false;
     if (rnFiltres.commission === 'non' && ct.commissionne !== false) return false;
     if (rnFiltres.masquerLamal && rnEstLamal(ct)) return false;
@@ -338,6 +338,15 @@ function rlReinitialiserModele() {
   if (zone) zone.value = rlModeleParDefaut();
 }
 
+// E-mail utilisable pour écrire au client : format valide et pas une adresse interne du cabinet
+// (certaines fiches portent « inconnu » ou l'adresse d'un collaborateur faute de mieux).
+function rlEmailClient(c) {
+  const e = (c && c.email || '').trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)) return null;
+  if (/@(cofidex|assurex)\.ch$/i.test(e)) return null;
+  return e;
+}
+
 function rlLienRdv(clientId) {
   const moi = (typeof allAgents !== 'undefined' ? allAgents : []).find(a => a.email === (currentUser && currentUser.email) && a.rdv_actif && a.rdv_token)
     || (typeof allAgents !== 'undefined' ? allAgents : []).find(a => a.rdv_actif && a.rdv_token);
@@ -431,11 +440,11 @@ function renderRelancesLamal() {
         <div><a href="?client=${c.id}" onclick="return irVersClient(event, '${c.id}')" style="font-weight:700;font-size:13px;color:var(--text);text-decoration:none">${rnEsc(nom)}</a>
           ${x.contrats.length > 1 ? `<div style="font-size:11px;color:var(--text-muted)">${x.contrats.length} contrats LAMal</div>` : ''}</div>
         <div><div style="font-size:12.5px;color:var(--text)">${rnEsc(caisses || '—')}</div>
-          <div style="font-size:11px;color:var(--text-muted)">${rnEsc(c.email || 'pas d\u2019e-mail')} · ${rnEsc(c.mobile || c.tel || 'pas de mobile')}</div></div>
+          <div style="font-size:11px;color:var(--text-muted)">${rnEsc(rlEmailClient(c) || (c.email ? 'e-mail non utilisable (' + c.email + ')' : 'pas d\u2019e-mail'))} · ${rnEsc(c.mobile || c.tel || 'pas de mobile')}</div></div>
         <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF(Math.round(x.prime))}</div>
         <div>${badge(statutInfo.label, statutInfo.couleur)}${x.rdv ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px">📅 ${fmtDate(x.rdv.date_heure)}</div>` : ''}</div>
         <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
-          ${c.email ? `<button type="button" onclick="rlEnvoyerEmail('${c.id}', this)" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">✉️ E-mail</button>` : ''}
+          ${rlEmailClient(c) ? `<button type="button" onclick="rlEnvoyerEmail('${c.id}', this)" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">✉️ E-mail</button>` : ''}
           ${(c.mobile || c.tel) ? `<button type="button" onclick="rlOuvrirWhatsapp('${c.id}')" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">📲 WhatsApp</button>` : ''}
           <button type="button" onclick="rlCopier('${c.id}')" title="Copier le message" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">📋</button>
           ${x.statut !== 'rdv' ? `<button type="button" onclick="rlMarquer('${c.id}', 'rdv')" title="Le client a pris RDV (téléphone, etc.)" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">✓ RDV</button>` : ''}
@@ -465,7 +474,8 @@ async function rlMarquer(clientId, statut) {
 
 async function rlEnvoyerEmail(clientId, btn) {
   const x = rlClientsLamal().find(y => y.client.id === clientId);
-  if (!x || !x.client.email) return;
+  const destinataire = x && rlEmailClient(x.client);
+  if (!destinataire) return;
   if (!(await assurerTokenOutlook())) { showError('Connecte-toi à Outlook (Microsoft) dans le CRM pour envoyer cet e-mail.'); return; }
   if (btn) { btn.disabled = true; btn.textContent = 'Envoi…'; }
   const annee = new Date().getMonth() >= 6 ? new Date().getFullYear() + 1 : new Date().getFullYear();
@@ -477,7 +487,7 @@ async function rlEnvoyerEmail(clientId, btn) {
         message: {
           subject: `Votre assurance maladie ${annee} — faisons le point`,
           body: { contentType: 'text', content: rlMessage(x) },
-          toRecipients: [{ emailAddress: { address: x.client.email } }],
+          toRecipients: [{ emailAddress: { address: destinataire } }],
         },
         saveToSentItems: true,
       }),
@@ -489,7 +499,7 @@ async function rlEnvoyerEmail(clientId, btn) {
     if (btn) { btn.disabled = false; btn.textContent = '✉️ E-mail'; }
     return;
   }
-  showError(`✓ E-mail envoyé à ${x.client.email}.`);
+  showError(`✓ E-mail envoyé à ${destinataire}.`);
   await rlMarquer(clientId, 'relance');
 }
 

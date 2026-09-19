@@ -1320,6 +1320,12 @@ const ALIAS_COMPAGNIES = {
   'baloise assurances': 'Helvetia', 'bâloise': 'Helvetia', 'baloise': 'Helvetia', 'bâloise assurances sa': 'Helvetia', 'baloise assurances sa': 'Helvetia',
   'helvetia assurances': 'Helvetia', 'helvetia': 'Helvetia', 'helvetia suisse': 'Helvetia',
   'helvetia compagnie suisse d’assurances sa': 'Helvetia', 'helvetia compagnie suisse d’assurances': 'Helvetia',
+  // Mêmes noms avec apostrophe droite (saisie clavier / imports) — ajoutés le 19.09.2026, sans quoi
+  // "Helvetia Compagnie Suisse d'Assurances SA" n'était pas reconnu comme Helvetia.
+  'helvetia compagnie suisse d\'assurances sa': 'Helvetia', 'helvetia compagnie suisse d\'assurances': 'Helvetia',
+  'balose': 'Helvetia', 'helvetia baloise': 'Helvetia',
+  'orion': 'Orion', 'orion assurance de protection juridique sa': 'Orion', 'orion protections juridiques sa': 'Orion', 'orion protection juridique': 'Orion',
+  'hotela fonds de prévoyance': 'HOTELA', 'hotela fonds de prevoyance': 'HOTELA',
   'helsana assurances': 'Helsana', 'helsana': 'Helsana',
   'sanitas assurances': 'Sanitas', 'sanitas': 'Sanitas',
   'allianz suisse': 'Allianz', 'allianz': 'Allianz',
@@ -1366,6 +1372,14 @@ const _CANONIQUES_VERS_ALIAS = (() => {
   });
   return table;
 })();
+// Deux libellés désignent-ils le même assureur ? ("Vaudoise Générale" = "La Vaudoise") — à utiliser
+// partout où l'on rapproche des données par compagnie (bordereaux ↔ commissions, filtres).
+function memeCompagnie(a, b) {
+  const na = (normaliserCompagnie((a || '').trim()) || '').toLowerCase();
+  const nb = (normaliserCompagnie((b || '').trim()) || '').toLowerCase();
+  return na !== '' && na === nb;
+}
+
 function normaliserCompagnie(nom) {
   if (!nom) return nom;
   const cle = nom.trim().toLowerCase();
@@ -1754,7 +1768,21 @@ function updateCommissionPreview() {
   if (natureEl && labelEl) labelEl.textContent = natureEl.value === 'gestion' ? 'Commission de gestion estimée' : 'Commission d\u2019acquisition estimée';
 }
 
+// Garde-fou anti-doublon (19.09.2026, après les 9 contrats identiques créés pour un même client) :
+// même client + même produit + même n° de police (hors contrats annulés/résiliés) = contrat déjà
+// en base. Le n° de police seul ne suffit pas : LAMal et LCA partagent volontairement le même.
+function contratExisteDeja(clientId, produitLabel, numeroPolice) {
+  const police = (numeroPolice || '').trim().toLowerCase();
+  if (!clientId || !police) return null;
+  return allContrats.find(ct => ct.client_id === clientId
+    && (ct.numero_police || '').trim().toLowerCase() === police
+    && (ct.produit || '').trim().toLowerCase() === (produitLabel || '').trim().toLowerCase()
+    && !['annulé', 'résilié', 'mandat_resilie'].includes(ct.statut)) || null;
+}
+
 async function creerContratEtCommission(clientId, compagnie, produitLabel, primeMensuelle, modules, montantCommission, detailCommission, plaques, dejaAnnuelle, detailLignes) {
+  const existant = contratExisteDeja(clientId, produitLabel, document.getElementById('ct-police').value);
+  if (existant) return { error: true, detail: `ce client a déjà un contrat « ${produitLabel} » avec la police ${existant.numero_police} — modifie le contrat existant plutôt que d'en créer un second.` };
   const commissionne = document.getElementById('ct-commissionne').value !== 'non';
   const contratBody = {
     client_id: clientId,

@@ -39,7 +39,7 @@ function renderBordereauxList() {
   const tri = document.getElementById('bd-tri')?.value || 'recent';
 
   let BORDS = allBordereaux.filter(b => {
-    if (compagnieF && b.compagnie !== compagnieF) return false;
+    if (compagnieF && !memeCompagnie(b.compagnie, compagnieF)) return false;
     if (statutF && b.statut !== statutF) return false;
     if (search) {
       const commissionsB = allCommissionsAttente.filter(c => c.bordereau_id === b.id);
@@ -67,7 +67,7 @@ function renderBordereauxList() {
 
   const cards = BORDS.map(b => {
     const commissions = allCommissionsAttente.filter(c => c.bordereau_id === b.id);
-    const enAttentePourCompagnie = allCommissionsAttente.filter(c => (c.compagnie||'').trim().toLowerCase() === (b.compagnie||'').trim().toLowerCase() && c.statut === 'en_attente');
+    const enAttentePourCompagnie = allCommissionsAttente.filter(c => memeCompagnie(c.compagnie, b.compagnie) && c.statut === 'en_attente');
     const tauxCaution = b.taux_caution || 0;
     const montantCaution = Math.round((b.montant_brut||0) * (tauxCaution/100));
     const montantNetApresCaution = (b.montant_brut||0) - montantCaution;
@@ -324,7 +324,7 @@ async function saveEditBordereau(bordereauId) {
 function showModalValidationCommission(bordereauId) {
   const b = allBordereaux.find(x => x.id === bordereauId);
   if (!b) return;
-  const enAttente = allCommissionsAttente.filter(c => (c.compagnie||'').trim().toLowerCase() === (b.compagnie||'').trim().toLowerCase() && c.statut === 'en_attente');
+  const enAttente = allCommissionsAttente.filter(c => memeCompagnie(c.compagnie, b.compagnie) && c.statut === 'en_attente');
 
   creerModale('modal-validation', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:0;width:100%;max-width:560px;overflow:hidden">
@@ -492,7 +492,7 @@ async function viewImporterBordereauIGB2B() {
 
   const parCompagnie = {};
   (allCommissionsAttente || []).filter(c => c.statut === 'en_attente').forEach(c => {
-    const cle = (c.compagnie || '').trim() || 'Compagnie inconnue';
+    const cle = normaliserCompagnie((c.compagnie || '').trim()) || 'Compagnie inconnue';
     if (!parCompagnie[cle]) parCompagnie[cle] = { nb: 0, total: 0 };
     parCompagnie[cle].nb++;
     parCompagnie[cle].total += (c.montant_estime || 0);
@@ -527,7 +527,7 @@ function chargerLignesImportBordereau() {
   window._ibCompagnie = compagnie;
   window._ibPrefill = null; // nouvelle compagnie choisie : on oublie les valeurs d'un éventuel aperçu précédent
   window._ibLignes = allCommissionsAttente
-    .filter(c => c.statut === 'en_attente' && ((c.compagnie || '').trim() || 'Compagnie inconnue') === compagnie)
+    .filter(c => c.statut === 'en_attente' && (normaliserCompagnie((c.compagnie || '').trim()) || 'Compagnie inconnue') === compagnie)
     .map(c => ({ id: c.id, client_id: c.client_id, contrat_id: c.contrat_id, client_nom: c.client_nom, produit: c.produit, date_creation: c.date_creation, selectionne: true, montantEdite: c.montant_estime || 0 }));
   renderImportBordereauSelection();
 }

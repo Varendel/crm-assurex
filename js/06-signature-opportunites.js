@@ -1726,7 +1726,14 @@ async function creerContratDepuisImport(idx) {
     if (!continuer) return;
   }
 
+  // Même client + même produit + même n° de police déjà en base : on ne crée pas de doublon
+  if (typeof contratExisteDeja === 'function' && contratExisteDeja(l.clientId, l.brancheInterne || 'Contrat (à préciser)', l.numeroContrat)) {
+    showError(`Ce client a déjà ce contrat (police ${l.numeroContrat}) — rien n'a été créé.`);
+    reassocierLignesImport();
+    return;
+  }
   const btn = document.getElementById(`imp-creer-${idx}`);
+  if (btn && btn.disabled) return; // double-clic : une création est déjà en cours
   if (btn) { btn.disabled = true; btn.textContent = 'Création...'; }
   const body = {
     client_id: l.clientId,

@@ -9,7 +9,8 @@
 // en ligne (d'où "je ne vois pas la mise à jour malgré F5"). Forcé { cache: 'no-store' } pour
 // garantir une requête réseau réellement fraîche à chaque fois. CACHE_NAME bumpé pour purger
 // l'ancien cache au passage (voir 'activate').
-const CACHE_NAME = 'crm-assurex-shell-v2';
+// v3 (19.09.2026) : nouvelle icône REX CRM → cache purgé.
+const CACHE_NAME = 'crm-assurex-shell-v3';
 const SHELL_ASSETS = ['./', './index.html', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', (event) => {

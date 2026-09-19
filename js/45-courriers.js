@@ -223,11 +223,31 @@ const CRX_CSS_IMPRESSION = `@page{size:A4;margin:0}body{margin:0;background:#fff
 .crx-pied{text-align:center;font-size:7.5pt;color:#113679;line-height:1.5;border-top:1px solid #00CFFF;padding-top:3mm;margin-top:8mm}
 @media screen{body{background:#e5e7eb}.crx-page{margin:10mm auto;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.15)}}`;
 
+// Impression dans un cadre invisible de la page (19.09.2026) : l'ancienne version ouvrait une
+// nouvelle fenêtre, bloquée chez Jonathan → rien ne se passait. Ici aucune fenêtre à ouvrir ;
+// on attend le chargement des logos avant d'imprimer. « Enregistrer au format PDF » dans la
+// boîte d'impression donne le PDF ; le titre sert de nom de fichier proposé.
 function crxPdf() {
   if (!crxClient()) return;
-  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Courrier — ${crxEsc(crxNomClient(crxClient()))} — ${crxEsc(_crx.objet)}</title><style>${CRX_CSS_IMPRESSION}</style></head>
-    <body>${crxHtmlLettre(true)}<script>window.onload=function(){setTimeout(function(){window.print()},400)}<\/script></body></html>`;
-  window.open(URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' })), '_blank');
+  const titre = crxNomFichier();
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>${crxEsc(titre)}</title><style>${CRX_CSS_IMPRESSION}</style></head><body>${crxHtmlLettre(true)}</body></html>`;
+  document.getElementById('crx-cadre-impression')?.remove();
+  const f = document.createElement('iframe');
+  f.id = 'crx-cadre-impression';
+  f.setAttribute('aria-hidden', 'true');
+  f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  document.body.appendChild(f);
+  const d = f.contentDocument;
+  d.open(); d.write(html); d.close();
+  const imprimer = () => {
+    const titreApp = document.title;
+    document.title = titre; // certains navigateurs reprennent le titre de la page parente pour le nom du PDF
+    try { f.contentWindow.focus(); f.contentWindow.print(); }
+    catch (e) { showError('Impression impossible : ' + e.message); }
+    setTimeout(() => { document.title = titreApp; }, 1500);
+  };
+  const imgs = [...d.images];
+  Promise.all(imgs.map(i => i.complete ? null : new Promise(ok => { i.onload = i.onerror = ok; }))).then(() => setTimeout(imprimer, 150));
   crxArchiver('PDF');
 }
 

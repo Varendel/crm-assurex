@@ -28,11 +28,37 @@ function rbVisible(el) {
   return cs.display !== 'none' && cs.visibility !== 'hidden' && !el.classList.contains('print-header') && !el.classList.contains('print-only');
 }
 
+// La barre « ← Retour + fil d'Ariane » (insertBackBar, js/03) est intégrée DANS le bandeau :
+// flèche ronde en verre + fil d'Ariane à la place du surtitre, au lieu d'une barre grise séparée
+// qui se retrouvait sous le bandeau (revu le 19.09.2026, demande de Jonathan).
+function rbAbsorberBarre(barre, cible) {
+  if (!barre || !cible) return;
+  const bouton = barre.querySelector('button');
+  const fil = barre.querySelector(':scope > div');
+  const nav = document.createElement('div');
+  nav.className = 'rex-bandeau-nav';
+  if (bouton) { bouton.removeAttribute('style'); bouton.className = 'rb-retour'; bouton.setAttribute('aria-label', 'Retour à la page précédente'); bouton.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>'; nav.appendChild(bouton); }
+  if (fil) { fil.removeAttribute('style'); fil.className = 'rb-fil'; fil.querySelectorAll('[style]').forEach(x => x.removeAttribute('style')); nav.appendChild(fil); }
+  if (cible.classList.contains('rex-bandeau')) {
+    const texte = cible.querySelector('.rex-bandeau-texte');
+    const sur = texte && texte.querySelector('.rex-bandeau-surtitre');
+    if (sur) { if (fil) sur.remove(); else nav.appendChild(sur); }
+    if (texte) texte.insertBefore(nav, texte.firstChild);
+  } else {
+    const bloc = cible.querySelector(':scope > div:not(.rex-bandeau-deco)') || cible;
+    bloc.insertBefore(nav, bloc.firstChild);
+  }
+  barre.remove();
+}
+
 function rbAppliquer() {
   const main = document.getElementById('main-content');
   if (!main || typeof currentUser === 'undefined' || !currentUser) return;
-  if (main.querySelector(RB_HEROS)) return;
-  const enfants = [...main.children].filter(rbVisible);
+  const barre = main.querySelector(':scope > #nav-back-bar');
+  const existant = main.querySelector('.rex-bandeau, .rex-bandeau-hote');
+  if (existant) { rbAbsorberBarre(barre, existant); return; }
+  if (main.querySelector(RB_HEROS)) return; // pages avec leur propre bandeau : la barre reste, restylée en CSS
+  const enfants = [...main.children].filter(x => rbVisible(x) && x.id !== 'nav-back-bar');
   if (!enfants.length || (enfants.length === 1 && enfants[0].classList.contains('loader'))) return;
 
   const infos = rbInfosVue(typeof currentView !== 'undefined' ? currentView : '') || { titre: '', icone: '', rubrique: '' };
@@ -51,6 +77,7 @@ function rbAppliquer() {
       const alpha = m ? (m[1].split(',')[3] !== undefined ? Number(m[1].split(',')[3]) : 1) : 0;
       if (alpha < 0.15) b.classList.add('rb-bouton-clair');
     });
+    rbAbsorberBarre(barre, hote);
     return;
   }
 
@@ -84,7 +111,49 @@ function rbAppliquer() {
   } else return;
   if (sousEl) bandeau.querySelector('.rex-bandeau-sous').appendChild(sousEl);
   main.insertBefore(bandeau, main.firstChild);
+  rbAbsorberBarre(barre, bandeau);
 }
+
+// ═══ HISTORIQUE SYNCHRONISÉ AVEC LE NAVIGATEUR ═══════════════════════════════════════════════
+// Avant : le CRM avait son propre historique (navHistory) mais le bouton « précédent » du
+// navigateur, de la souris ou Alt+← n'en savait rien (il quittait la page ou ne faisait rien),
+// et la flèche du CRM ne reculait pas l'historique du navigateur. Désormais chaque étape du CRM
+// crée une entrée d'historique du navigateur, et les deux reculent ensemble :
+//   - flèche du CRM → history.back() → même chemin que le bouton du navigateur ;
+//   - bouton du navigateur / souris / Alt+← → retour interne du CRM (popstate) ;
+//   - on ne sort jamais du CRM par erreur : arrivé au début, on revient au tableau de bord.
+(function rbHistorique() {
+  if (typeof navHistory === 'undefined' || typeof goBack !== 'function' || !window.history || !history.pushState) return;
+  let restauration = false;
+  const pousser = navHistory.push;
+  navHistory.push = function () {
+    const r = pousser.apply(this, arguments);
+    if (!restauration) { try { history.pushState({ rex: true, n: navHistory.length }, ''); } catch (e) { /* bac à sable */ } }
+    return r;
+  };
+  const retourInterne = goBack;
+  // Entrée « base » + une entrée de garde : le premier « précédent » reste dans le CRM
+  try { history.replaceState({ rex: true, n: 0, base: true }, ''); history.pushState({ rex: true, n: 0 }, ''); } catch (e) {}
+  window.addEventListener('popstate', async () => {
+    if (restauration) return;
+    // Une fenêtre (modale) ouverte : « précédent » la ferme, sans changer de page
+    const modales = document.querySelectorAll('.rex-modale');
+    if (modales.length) {
+      modales[modales.length - 1].remove();
+      try { history.pushState({ rex: true, n: navHistory.length }, ''); } catch (e) {}
+      return;
+    }
+    restauration = true;
+    try { await retourInterne(); }
+    finally { restauration = false; }
+    // Revenu tout au début : on recrée la garde pour ne jamais quitter le CRM par erreur
+    if (history.state && history.state.base) { try { history.pushState({ rex: true, n: 0 }, ''); } catch (e) {} }
+  });
+  goBack = function () {
+    if (navHistory.length && history.state && history.state.rex && !history.state.base) history.back();
+    else retourInterne();
+  };
+})();
 
 // Réapplique après chaque rendu (navigation, onglets internes qui réécrivent la page)
 (function rbObserver() {

@@ -597,6 +597,7 @@ function htmlOffresOpportunite(oppId) {
       <div class="opx-offre-boutons">
         ${st.cls === 'relancer' || st.cls === 'attente' ? `<button type="button" onclick="opRelancerCompagnie('${d.id}',${idx})">🔔 Relancer</button>` : ''}
         <button type="button" onclick="opSaisirOffre('${oppId}','${d.id}',${idx})">${e.prime || e.recue_le ? '✎' : '📥 Offre reçue'}</button>
+        ${(e.prime || e.recue_le) && e.statut !== 'déclinée' && typeof opSigneeVersContrat === 'function' ? `<button type="button" class="opx-offre-signee" onclick="opSigneeVersContrat('${oppId}','${d.id}',${idx})" title="Déposer la ou les polices, passer l’opportunité en Gagné et créer le contrat">✍️ Signée → contrat</button>` : ''}
       </div>
     </div>`;
   }).join('')}</div>

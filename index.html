@@ -2663,6 +2663,37 @@
 .crx-joindre { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text); margin: 4px 0 8px; }
 @media (max-width: 1100px) { .crx-grille { grid-template-columns: 1fr; } .crx-apercu-zone { position: static; max-height: none; } .crx-apercu-zone .crx-page { zoom: 0.5; } }
 @media (max-width: 760px) { .crx-deux, .crx-trois { grid-template-columns: 1fr; } .crx-apercu-zone { padding: 8px; } .crx-apercu-zone .crx-page { zoom: 0.42; } }
+/* ═══ Offre signée → contrat (js/46) ═══ */
+.opx-offre-signee { background: linear-gradient(135deg, #16A34A, #15803D) !important; color: #fff !important; border-color: transparent !important; font-weight: 600; }
+.ovc-etapes { margin: 10px 0 14px 18px; padding: 0; font-size: 12.5px; color: var(--text-muted); line-height: 1.6; }
+.ovc-etapes b { color: var(--text); }
+.ovc-depot { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 22px 16px; border: 2px dashed var(--accent-border); border-radius: 14px; background: var(--accent-dim); cursor: pointer; text-align: center; transition: background .15s, border-color .15s; }
+.ovc-depot.survol { border-color: var(--accent); background: rgba(0,207,255,0.16); }
+.ovc-depot input { display: none; }
+.ovc-depot-icone { font-size: 26px; }
+.ovc-depot b { font-size: 13.5px; color: var(--text); }
+.ovc-depot small { font-size: 11.5px; color: var(--text-muted); }
+.ovc-liste { display: flex; flex-direction: column; gap: 4px; margin: 10px 0 4px; font-size: 12.5px; color: var(--text); }
+.ovc-liste small { color: var(--text-muted); margin-left: 6px; }
+.ovc-liste .refuse { color: #DC2626; }
+.ovc-note { font-size: 11px; color: var(--text-muted); margin-top: 10px; }
+.ovc-bandeau { margin: 0 0 16px; padding: 10px 14px; border-radius: 10px; font-size: 12.5px; color: var(--text); background: rgba(22,163,74,0.10); border: 1px solid rgba(22,163,74,0.35); }
+/* ═══ Flèche retour + fil d'Ariane intégrés au bandeau (js/44) ═══ */
+.rex-bandeau-nav { display: flex; align-items: center; gap: 10px; margin-bottom: 6px; min-width: 0; }
+.rb-retour { flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: #fff;
+  background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.28); backdrop-filter: blur(6px); transition: background .15s, transform .15s; }
+.rb-retour:hover { background: rgba(255,255,255,0.22); transform: translateX(-2px); }
+.rb-retour:focus-visible { outline: 2px solid #00CFFF; outline-offset: 2px; }
+.rb-fil { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: 11px; letter-spacing: 1.2px; text-transform: uppercase; font-weight: 600; color: rgba(255,255,255,0.62); min-width: 0; }
+.rb-fil span:first-child { cursor: pointer; color: rgba(255,255,255,0.78); text-decoration: none; }
+.rb-fil span:first-child:hover { color: #fff; text-decoration: underline; }
+.rb-fil strong { color: #fff; font-weight: 700; }
+.rex-bandeau-nav .rex-bandeau-surtitre { margin: 0; }
+/* Pages avec leur propre bandeau (tableau de bord, OZ, fiche client…) : barre discrète */
+#nav-back-bar { border-bottom: none !important; padding-bottom: 0 !important; margin-bottom: 12px !important; }
+#nav-back-bar > button { border-radius: 50% !important; width: 34px !important; height: 34px !important; background: var(--surface) !important; box-shadow: 0 2px 8px rgba(17,54,121,0.10); transition: transform .15s; }
+#nav-back-bar > button:hover { transform: translateX(-2px); }
+@media print { .rex-bandeau-nav, #nav-back-bar { display: none !important; } }
 @media (prefers-reduced-motion: reduce) {
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
@@ -2778,7 +2809,7 @@
 <script src="js/22-conseil-financier.js?v=1790330000"></script>
 <script src="js/23-analyse-prevoyance.js?v=1790330000"></script>
 <script src="js/24-financement-immo.js?v=1790350000"></script>
-<script src="js/25-opportunite.js?v=1790210000"></script>
+<script src="js/25-opportunite.js?v=1790640000"></script>
 <script src="js/26-demande-offre.js?v=1790200000"></script>
 <script src="js/27-suivi-affaires.js?v=1790200000"></script>
 <script src="js/28-mobile.js?v=1790200000"></script>
@@ -2797,8 +2828,9 @@
 <script src="js/41-previsions-12-mois.js?v=1790470000"></script>
 <script src="js/42-objectifs.js?v=1790580000"></script>
 <script src="js/43-autotests.js?v=1790600000"></script>
-<script src="js/44-bandeau-pages.js?v=1790580000"></script>
-<script src="js/45-courriers.js?v=1790620000"></script>
+<script src="js/44-bandeau-pages.js?v=1790660000"></script>
+<script src="js/45-courriers.js?v=1790640000"></script>
+<script src="js/46-offre-vers-contrat.js?v=1790640000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

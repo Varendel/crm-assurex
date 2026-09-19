@@ -41,6 +41,11 @@ sont en bas de ce fichier.
   légende du plan de trésorerie.
 - **19.09** — Récurrence sourcée OZ mise en avant (OZ Assure, cockpit, tableau de bord) ; bandeau
   bleu foncé en tête de toutes les pages (js/44).
+- **19.09** — **Offre signée → contrat** (js/46) : depuis une offre reçue, dépôt de la ou des polices
+  PDF, opportunité gagnée, un contrat par police pré-rempli par REX, police archivée sur le contrat.
+- **19.09** — Retour arrière revu : flèche intégrée au bandeau avec fil d'Ariane, historique
+  synchronisé avec le navigateur (bouton précédent, souris, Alt+←), « précédent » ferme d'abord
+  la fenêtre ouverte et ne quitte jamais le CRM.
 - **19.09** — **Archivage OZ au 01.01.2027** (automatique) : vue OZ Assure en archive arrêtée au
   31.12.2026, menu « OZ Assure · archives », saisie OZ limitée aux anciens décomptes ; rien supprimé.
 

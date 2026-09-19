@@ -14,7 +14,10 @@ async function synchroniserOutlookInterne(oppIdFiltre) {
 
   try {
     const toutes = await dbGet('demandes_offre', 'select=id,opportunite_id,compagnies_envoi&order=created_at.desc');
-    const enAttenteBrut = (toutes || []).filter(d => (d.compagnies_envoi || []).some(e => e.statut !== 'reçue'));
+    // Seule une offre « envoyée » attend une réponse : une offre déjà reçue, retenue ou non retenue
+    // ne doit jamais être repassée à « reçue » par la synchro (correctif du 19.09.2026)
+    const attendReponse = e => !e.statut || e.statut === 'envoyée';
+    const enAttenteBrut = (toutes || []).filter(d => (d.compagnies_envoi || []).some(attendReponse));
     // Recherche scopée aux opportunités créées et EN COURS (décision de Jonathan le 06.08.2026) :
     // un dossier rattaché à une opportunité Gagnée ou Perdue n'est plus synchronisé (plus la
     // peine de vérifier les réponses reçues sur une affaire déjà classée). Un dossier sans
@@ -56,7 +59,7 @@ async function synchroniserOutlookInterne(oppIdFiltre) {
       // compagnie + date quand la synchro Outlook la détecte — sans écraser la ligne d'envoi).
       const compagniesRecuesCetteFois = [];
       compagniesEnvoi.forEach(e => {
-        if (e.statut === 'reçue' || !e.email || !e.email.includes('@')) return;
+        if (!attendReponse(e) || !e.email || !e.email.includes('@')) return;
         const domaine = e.email.split('@')[1].toLowerCase();
         const envoyeLe = new Date(e.envoye_le || 0);
         const match = messages.find(m => {

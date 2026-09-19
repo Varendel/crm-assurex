@@ -105,6 +105,88 @@ function sfxDonnees() {
   return { auj, annee, recuAnnee, totalReste, attente, retards, delaiMoyen, delais, mois, parMois, parMoisOZ, recuAnneeOZ, ozCharge: !!ledger, moyenne, cies, tranchesAge, oz, reste };
 }
 
+// ── Pilotage par compagnie (19.09.2026) ─────────────────────────────────────────────────────
+// Pour chaque compagnie, à partir des versements RÉELS (Assurex + compte courant OZ) :
+//   - encaissé sur 12 mois, nombre de versements, montant moyen ;
+//   - rythme de paiement détecté (écart médian entre deux versements : mensuel, trimestriel…)
+//     et date du prochain versement probable ;
+//   - attendu restant, et « attendu ajusté » = attendu × précision historique des estimations
+//     de cette compagnie (médiane réel / estimé, dès 3 commissions comparables).
+function sfxParCompagnie() {
+  const iso = d => sfxIso(d);
+  const d12 = new Date(); d12.setMonth(d12.getMonth() - 12); const debut = iso(d12);
+  const map = {};
+  const get = n => { const k = sfxCie(n); return map[k] = map[k] || { cie: k, pay: [], attendu: 0, nbAtt: 0, ratios: [] }; };
+  sfxEncaissements().forEach(e => get(e.ca.compagnie).pay.push({ d: e.date, m: e.montant, src: 'assurex' }));
+  ((window._ck && window._ck.ozLedger) || []).forEach(r => {
+    const m = Number(r.credit || 0) - Number(r.debit || 0);
+    if (m && r.compagnie && r.date_mouvement) get(r.compagnie).pay.push({ d: String(r.date_mouvement).slice(0, 10), m, src: 'oz' });
+  });
+  const reste = ca => typeof commissionResteAttendu === 'function' ? commissionResteAttendu(ca) : Number(ca.montant_estime || 0);
+  allCommissionsAttente.forEach(ca => {
+    if (ca.statut === 'en_attente') { const r = reste(ca); if (r > 0) { const x = get(ca.compagnie); x.attendu += r; x.nbAtt++; } }
+    else if (['reçue', 'versé_oz'].includes(ca.statut) && ca.montant_final != null && Number(ca.montant_estime) > 0 && Number(ca.montant_final) > 0) {
+      get(ca.compagnie).ratios.push(Number(ca.montant_final) / Number(ca.montant_estime));
+    }
+  });
+  const med = a => { if (!a.length) return null; const s = a.slice().sort((x, y) => x - y); const i = Math.floor(s.length / 2); return s.length % 2 ? s[i] : (s[i - 1] + s[i]) / 2; };
+  return Object.values(map).map(x => {
+    const p12 = x.pay.filter(p => p.d >= debut);
+    const total12 = p12.reduce((s, p) => s + p.m, 0);
+    const oz12 = p12.filter(p => p.src === 'oz').reduce((s, p) => s + p.m, 0);
+    const jours = [...new Set(x.pay.filter(p => p.m > 0).map(p => p.d))].sort();
+    const ecarts = jours.slice(1).map((d, i) => Math.round((new Date(d) - new Date(jours[i])) / 864e5)).filter(g => g > 3);
+    const gap = med(ecarts);
+    const rythme = gap == null ? (jours.length ? 'ponctuel' : '—') : gap <= 45 ? 'mensuel' : gap <= 110 ? 'trimestriel' : gap <= 220 ? 'semestriel' : 'annuel';
+    const dernier = jours[jours.length - 1] || null;
+    let prochain = null;
+    if (dernier && gap) { const d = new Date(dernier); d.setDate(d.getDate() + Math.round(gap)); prochain = iso(d); }
+    const coef = x.ratios.length >= 3 ? med(x.ratios) : null;
+    return { ...x, total12, oz12, assurex12: total12 - oz12, nb12: p12.filter(p => p.m > 0).length, moyVersement: p12.length ? total12 / Math.max(1, p12.filter(p => p.m > 0).length) : 0,
+      moyMens: total12 / 12, rythme, gap, dernier, prochain, coef, attenduAjuste: coef ? x.attendu * coef : x.attendu };
+  }).filter(x => x.total12 || x.attendu).sort((a, b) => (b.total12 + b.attenduAjuste) - (a.total12 + a.attenduAjuste));
+}
+
+function htmlSfxCompagnies() {
+  const L = sfxParCompagnie();
+  const charge = !!(window._ck && window._ck.ozLedger);
+  const auj = sfxIso(new Date());
+  const tot = k => L.reduce((s, x) => s + (x[k] || 0), 0);
+  const maxT = Math.max(1, ...L.map(x => x.total12));
+  const precision = x => x.coef == null ? '<span style="color:var(--text-muted)">pas assez de données</span>'
+    : `<b style="color:${x.coef >= 1 ? '#16A34A' : '#DC2626'}">${x.coef >= 1 ? '+' : ''}${Math.round((x.coef - 1) * 100)} %</b> <small>sur ${x.ratios.length}</small>`;
+  return `
+    <div class="sfx-intro">Entrées de commissions pilotées par compagnie, à partir des versements <strong>réels</strong> (Assurex et compte courant OZ). Le rythme et la date du prochain versement sont déduits de l’historique ; l’<strong>attendu ajusté</strong> corrige l’estimation par la précision réellement observée chez chaque compagnie.${charge ? '' : ' <em>Chargement du compte courant OZ…</em>'}</div>
+    <div class="dbx-kpis">
+      ${dbxKpi({ label: 'Encaissé 12 mois', valeur: tot('total12'), prefixe: 'CHF ', sous: `dont OZ CHF ${fmtCHF(Math.round(tot('oz12')))}`, i: 0 })}
+      ${dbxKpi({ label: 'Moyenne mensuelle', valeur: tot('moyMens'), prefixe: 'CHF ', sous: 'toutes compagnies, 12 mois', i: 1 })}
+      ${dbxKpi({ label: 'Attendu (estimations)', valeur: tot('attendu'), prefixe: 'CHF ', sous: `${L.reduce((s, x) => s + x.nbAtt, 0)} commissions`, i: 2 })}
+      ${dbxKpi({ label: 'Attendu ajusté', valeur: tot('attenduAjuste'), prefixe: 'CHF ', sous: 'corrigé par la précision réelle', i: 3 })}
+    </div>
+    <section class="dbx-carte"><header class="dbx-carte-tete"><h2>Par compagnie</h2><span class="dbx-carte-sous">trié par poids total</span></header>
+      <div style="display:flex;flex-direction:column;gap:10px">${L.map(x => {
+        const w = Math.round(x.total12 / maxT * 100), wOz = x.total12 ? Math.round(x.oz12 / x.total12 * w) : 0;
+        const retard = x.prochain && x.prochain < auj;
+        return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 14px;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--surface)">
+          <div style="display:flex;align-items:center;gap:8px;min-width:0">${typeof pictoCompagnie === 'function' ? pictoCompagnie(x.cie, 30) : ''}<b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${sfxEsc(x.cie)}</b></div>
+          <div><div style="font-weight:800">CHF ${fmtCHF(Math.round(x.total12))} <small style="color:var(--text-muted);font-weight:500">12 mois</small></div>
+            <div style="height:6px;border-radius:9px;background:var(--surface-alt,rgba(148,163,184,.18));overflow:hidden;margin-top:4px;display:flex"><i style="width:${w - wOz}%;background:#00CFFF"></i><i style="width:${wOz}%;background:#22C55E"></i></div>
+            <small style="color:var(--text-muted)">${x.nb12} versement${x.nb12 > 1 ? 's' : ''} · moy. CHF ${fmtCHF(Math.round(x.moyVersement))}</small></div>
+          <div><small style="color:var(--text-muted)">Rythme</small><div><b>${x.rythme}</b>${x.gap ? ` <small>(~${Math.round(x.gap)} j)</small>` : ''}</div>
+            <small style="color:${retard ? '#DC2626' : 'var(--text-muted)'}">${x.prochain ? `prochain ≈ ${fmtDate(x.prochain)}${retard ? ' · en retard' : ''}` : (x.dernier ? `dernier ${fmtDate(x.dernier)}` : '')}</small></div>
+          <div><small style="color:var(--text-muted)">Attendu</small><div><b>CHF ${fmtCHF(Math.round(x.attenduAjuste))}</b></div>
+            <small style="color:var(--text-muted)">${x.coef ? `estimé ${fmtCHF(Math.round(x.attendu))}` : `${x.nbAtt} commission${x.nbAtt > 1 ? 's' : ''}`}</small></div>
+          <div><small style="color:var(--text-muted)">Précision des estimations</small><div>${precision(x)}</div></div>
+        </div>`;
+      }).join('') || '<div class="dbx-vide-petit">Aucune donnée.</div>'}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:12px;font-size:12px;color:var(--text-muted)">
+        <span style="display:inline-flex;align-items:center;gap:6px"><i style="width:11px;height:11px;border-radius:3px;background:#00CFFF"></i>Assurex</span>
+        <span style="display:inline-flex;align-items:center;gap:6px"><i style="width:11px;height:11px;border-radius:3px;background:#22C55E"></i>OZ Assure</span>
+        <span>Précision : écart médian réel / estimé (+ = la compagnie paie plus que prévu)</span>
+      </div>
+    </section>`;
+}
+
 // Barres empilées Assurex (bleu) + OZ Assure (vert) par mois, avec légende
 function sfxBarresEncaisse(D) {
   const tot = D.mois.map((m, i) => Math.max(0, D.parMois[i]) + Math.max(0, D.parMoisOZ[i] || 0));
@@ -143,6 +225,7 @@ function viewSuiviFinancierV2() {
   const onglets = [
     ...(typeof htmlCockpitEnsemble === 'function' ? [['ensemble', '🧭 Vue d’ensemble']] : []),
     ['pilotage', '📊 Commissions'],
+    ['compagnies', '🏢 Par compagnie'],
     ...(typeof htmlCockpitRentabilite === 'function' ? [['rentabilite', '💎 Rentabilité']] : []),
     ['precision', '🎯 Précision des estimations'],
     ['retards', `⏳ Retards${D.retards.length ? ' <span class="dbx-pastille">' + D.retards.length + '</span>' : ''}`],
@@ -155,6 +238,7 @@ function viewSuiviFinancierV2() {
   else if (window._sfxOnglet === 'rentabilite' && typeof htmlCockpitRentabilite === 'function') corps = htmlCockpitRentabilite();
   else if (window._sfxOnglet === 'oz' && typeof htmlCockpitOZ === 'function' && currentUser && currentUser.role === 'signataire') corps = htmlCockpitOZ();
   else if (window._sfxOnglet === 'precision') corps = htmlSfxPrecision();
+  else if (window._sfxOnglet === 'compagnies') corps = htmlSfxCompagnies();
   else if (window._sfxOnglet === 'retards') corps = htmlSfxRetards(D);
   else corps = htmlSfxPilotage(D);
   return `<div class="dbx sfx">

@@ -2861,6 +2861,24 @@ body.mode-espace-client .main, body.mode-espace-client #main-content { margin-le
 @media (max-width: 800px) { .ec-contrat { grid-template-columns: 34px 1fr; } .ec-dates, .ec-prime { grid-column: 2; text-align: left; } }
 .pi-profil .pi-en { font-size: 11px; font-weight: 600; color: var(--text-dim); }
 
+/* ═══ REX CLOUD — identité de l'espace client (20.09.2026) ═══ */
+.login-marque-cloud { display: none; }
+body.mode-cloud .login-marque:not(.login-marque-cloud) { display: none; }
+body.mode-cloud .login-marque-cloud { display: flex; flex-direction: column; align-items: flex-start; gap: 14px; }
+.cloud-visuel { position: relative; width: 230px; height: 150px; }
+.cloud-nuage { position: absolute; left: 0; bottom: 0; width: 230px; filter: drop-shadow(0 12px 26px rgba(0,0,0,.25)); }
+.cloud-rex { position: absolute; left: 62px; bottom: 52px; width: 108px; animation: cloud-flotte 4.5s ease-in-out infinite; }
+@keyframes cloud-flotte { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+.cloud-titre { display: flex; align-items: center; gap: 10px; font-size: 40px; font-weight: 300; letter-spacing: -0.02em; color: #fff; line-height: 1; }
+.cloud-titre b { font-weight: 700; }
+.cloud-titre i { width: 14px; height: 14px; background: #00CFFF; display: inline-block; }
+.cloud-sous { font-size: 13.5px; color: #B9CAE8; margin: 0; }
+/* Dans l'espace lui-même */
+.ec-marque { display: inline-flex; align-items: center; gap: 10px; font-size: 13px; letter-spacing: .04em; color: rgba(255,255,255,.85); }
+.ec-marque svg { width: 34px; height: auto; }
+.ec-marque b { font-weight: 700; }
+@media (max-width: 1000px) { .cloud-visuel { width: 180px; height: 118px; } .cloud-nuage { width: 180px; } .cloud-rex { width: 84px; left: 48px; bottom: 40px; } .cloud-titre { font-size: 30px; } }
+@media (prefers-reduced-motion: reduce) { .cloud-rex { animation: none; } }
 @media (prefers-reduced-motion: reduce) {
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
@@ -2881,7 +2899,17 @@ body.mode-espace-client .main, body.mode-espace-client #main-content { margin-le
   <aside class="login-panneau" aria-label="REX CRM">
     <span class="login-deco-cercle" aria-hidden="true"></span>
     <span class="login-deco-carre" aria-hidden="true"></span>
-    <div class="login-marque">
+    <div class="login-marque login-marque-cloud" aria-hidden="true">
+      <div class="cloud-visuel">
+        <svg viewBox="0 0 220 120" class="cloud-nuage" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M52 104c-20 0-34-13-34-30 0-15 11-27 26-29 4-20 21-34 42-34 19 0 35 11 41 28 3-1 6-1 9-1 18 0 32 13 32 30s-14 30-32 30H52z" fill="#ffffff" opacity=".96"/>
+          <path d="M52 104c-20 0-34-13-34-30 0-4 1-8 2-11 5 12 17 20 32 20h96c9 0 17-3 23-9-3 17-16 30-33 30H52z" fill="#D7ECFB"/>
+        </svg>
+        <img src="assets/logos/rex-mascotte-hd.png" alt="" class="cloud-rex"/>
+      </div>
+      <div class="cloud-titre"><b>REX</b><span>CLOUD</span><i></i></div>
+      <p class="cloud-sous">Votre espace assurances, à jour en permanence.</p>
+    </div>    <div class="login-marque">
       <img src="assets/logos/rex-mascotte-hd.png" alt="Rex, la mascotte du CRM" class="login-mascotte"/>
       <img src="assets/logos/rex-logotype.png" alt="REX CRM" class="login-logotype"/>
     </div>
@@ -3004,7 +3032,7 @@ body.mode-espace-client .main, body.mode-espace-client #main-content { margin-le
 <script src="js/45-courriers.js?v=1790640000"></script>
 <script src="js/46-offre-vers-contrat.js?v=1790640000"></script>
 <script src="js/47-profil-investisseur.js?v=1790880000"></script>
-<script src="js/48-espace-client.js?v=1790860000"></script>
+<script src="js/48-espace-client.js?v=1790900000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

@@ -9,6 +9,22 @@
 
 const EC_FONCTION_URL = (typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : '') + '/functions/v1/acces-client';
 
+// Côté client, le produit s'appelle REX CLOUD : jamais « REX CRM », qui est l'outil interne
+// (demande de Jonathan, 20.09.2026). Le lien envoyé au client porte ?espace=client pour que la
+// page de connexion affiche déjà cette identité, avant même qu'il se connecte.
+const EC_MARQUE = 'REX CLOUD';
+const EC_NUAGE_SVG = '<svg viewBox="0 0 220 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M52 104c-20 0-34-13-34-30 0-15 11-27 26-29 4-20 21-34 42-34 19 0 35 11 41 28 3-1 6-1 9-1 18 0 32 13 32 30s-14 30-32 30H52z" fill="currentColor" opacity=".95"/></svg>';
+function ecModeCloud(actif) { document.body.classList.toggle('mode-cloud', actif !== false); }
+// La page de connexion s'affiche déjà en REX CLOUD quand le lien vient d'une invitation client
+(function ecDetecterLienClient() {
+  const appliquer = () => {
+    if (!/[?&]espace=client/.test(location.search)) return;
+    ecModeCloud(true);
+    document.title = `${EC_MARQUE} — Espace client`;
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', appliquer); else appliquer();
+})();
+
 function ecEsc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
 // ── Connexion : ce compte est-il un accès client ? ──────────────────────────────────────────────
@@ -25,6 +41,8 @@ async function ecEntrerEspaceClient(acces, email) {
   const app = document.getElementById('app');
   app.classList.add('active');
   document.body.classList.add('mode-espace-client');
+  ecModeCloud(true);
+  document.title = `${EC_MARQUE} — Mon espace assurances`;
   const main = document.getElementById('main-content');
   if (main) main.innerHTML = '<div class="loader">Chargement de votre espace…</div>';
   const [clients, contrats, vehicules, rdv, mandats] = await Promise.all([
@@ -61,6 +79,7 @@ function ecVueEspaceClient() {
     <section class="cf-hero">
       <div class="cf-hero-deco" aria-hidden="true"></div>
       <div class="cf-hero-texte">
+        <span class="ec-marque">${EC_NUAGE_SVG}<b>REX</b> CLOUD</span>
         <span class="cf-surtitre">Mon espace assurances</span>
         <h1>${ecEsc(ecNomClient(c) || 'Bienvenue')}</h1>
         <p>Vos contrats, vos échéances et vos rendez-vous, à jour. Pour toute modification, votre conseiller reste votre interlocuteur.</p>
@@ -112,12 +131,14 @@ function ecVueEspaceClient() {
       <div class="dbx-vide-petit">Les polices et attestations sont transmises par votre conseiller. Écrivez-lui pour en recevoir une copie — le téléchargement direct arrivera dans une prochaine version.</div>
     </section>
 
-    <div class="ec-pied">${(E.mandats || []).length ? `Mandat de courtage signé le ${fmtDate((E.mandats[0].created_at || '').slice(0, 10))} · ` : ''}Assurex Sàrl — Agrément FINMA F01565757</div>
+    <div class="ec-pied">${(E.mandats || []).length ? `Mandat de courtage signé le ${fmtDate((E.mandats[0].created_at || '').slice(0, 10))} · ` : ''}${EC_MARQUE} · Assurex Sàrl — Agrément FINMA F01565757</div>
   </div>`;
 }
 
 async function ecDeconnexion() {
   document.body.classList.remove('mode-espace-client');
+  // On reste en identité REX CLOUD sur la page de connexion du client
+  try { history.replaceState(null, '', location.pathname + '?espace=client'); } catch (e) {}
   if (typeof supabaseAuthLogout === 'function') await supabaseAuthLogout();
   location.reload();
 }
@@ -169,7 +190,8 @@ async function ecAction(clientId, action) {
     if (!r.ok || data.error) { showError('Accès non créé : ' + (data.error || r.status)); if (btn) { btn.disabled = false; btn.textContent = '✓ Créer l’accès'; } return; }
     if (data.mot_de_passe) {
       const c = allClients.find(x => x.id === clientId);
-      const message = `Bonjour,\n\nVotre espace client Assurex est ouvert : ${location.origin}${location.pathname}\n\nIdentifiant : ${data.email}\nMot de passe : ${data.mot_de_passe}\n\nVous y retrouvez vos contrats, vos échéances et vos rendez-vous. Je reste à votre disposition.\n\nJonathan Özkan — Assurex Sàrl`;
+      const lien = `${location.origin}${location.pathname}?espace=client`;
+      const message = `Bonjour,\n\nVotre espace ${EC_MARQUE} est ouvert : ${lien}\n\nIdentifiant : ${data.email}\nMot de passe : ${data.mot_de_passe}\n\nVous y retrouvez vos contrats, vos échéances et vos rendez-vous, à jour en permanence. Je reste à votre disposition.\n\nJonathan Özkan — Assurex Sàrl`;
       if (zone) zone.innerHTML = `<div class="ec-mdp"><div class="ec-mdp-tete">Mot de passe (affiché une seule fois)</div>
         <code>${ecEsc(data.mot_de_passe)}</code>
         <div class="ec-mdp-actions">

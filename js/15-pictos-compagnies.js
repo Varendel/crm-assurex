@@ -18,8 +18,11 @@ const PICTOS_COMPAGNIES = {
   // Logos image (fichiers fournis par Jonathan le 19.09.2026, réduits à 128 px dans assets/logos/compagnies)
   'AXA': { img: 'assets/logos/compagnies/axa.png', forme: 'carre' },
   'La Vaudoise': { img: 'assets/logos/compagnies/vaudoise.png', forme: 'rond' },
-  'Allianz': { abr: 'AZ' },
-  'Generali': { abr: 'GE' },
+  'Allianz': { img: 'assets/logos/compagnies/allianz.png', forme: 'rond' },
+  'Generali': { img: 'assets/logos/compagnies/generali.png', forme: 'carre', bordure: true },
+  // Symbole Orion redessiné (deux arcs rouges formant un « O ») d'après le logo fourni le 19.09.2026
+  'Orion': { viewBox: '0 0 64 64', fond: '#FFFFFF', bordure: true,
+    svg: '<path d="M30 13 A26 19 0 0 0 30 51 A9 19 0 0 1 30 13 Z" fill="#E2211C"/><path d="M34 13 A26 19 0 0 1 34 51 A9 19 0 0 0 34 13 Z" fill="#E2211C"/>' },
   'Swiss Life': { abr: 'SL' },
   'HOTELA': { img: 'assets/logos/compagnies/hotela.png', forme: 'carre', bordure: true },
   'Groupe Mutuel': { img: 'assets/logos/compagnies/groupe-mutuel.png', forme: 'carre', bordure: true },
@@ -34,7 +37,6 @@ const PICTOS_COMPAGNIES = {
   'Gastrosocial': { abr: 'GS' },
   'SUVA': { abr: 'SU' },
   'PAX': { abr: 'PAX' },
-  'Orion': { abr: 'OR' },
   'CAP': { abr: 'CAP' },
   'goCaution': { abr: 'GC' },
   'Animalia': { abr: 'AN' },
@@ -68,8 +70,8 @@ function pictoCompagnie(nomCompagnie, taille) {
     return `<span title="${_pictoEsc(nom)}" aria-label="${_pictoEsc(nom)}" role="img" style="display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:${t}px;height:${t}px;color:var(--text);vertical-align:middle"><svg width="${Math.round(t * 0.86)}" height="${Math.round(t * 0.86)}" viewBox="${def.viewBox}" aria-hidden="true">${def.svg}</svg></span>`;
   }
   if (def.svg) {
-    const s = Math.round(t * 0.62);
-    return `<span title="${_pictoEsc(nom)}" aria-label="${_pictoEsc(nom)}" role="img" style="${base}"><svg width="${s}" height="${s}" viewBox="${def.viewBox}" aria-hidden="true">${def.svg}</svg></span>`;
+    const s = Math.round(t * (def.bordure ? 0.78 : 0.62));
+    return `<span title="${_pictoEsc(nom)}" aria-label="${_pictoEsc(nom)}" role="img" style="${base}${def.bordure ? ';border:1px solid rgba(23,52,84,0.25);box-sizing:border-box' : ''}"><svg width="${s}" height="${s}" viewBox="${def.viewBox}" aria-hidden="true">${def.svg}</svg></span>`;
   }
   const abr = def.abr || _pictoAbreviation(nom);
   const fs = abr.length >= 3 ? Math.round(t * 0.34) : Math.round(t * 0.42);

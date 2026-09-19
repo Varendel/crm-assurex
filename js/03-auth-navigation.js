@@ -1467,7 +1467,7 @@ function viewApparence() {
     { id: 'clair', label: 'Clair', desc: 'Fond blanc, texte foncé', bg: '#f1f5f9', surface: '#ffffff', text: '#0f172a' },
   ];
   const accents = [
-    { id: 'bleu', label: 'Bleu', couleur: '#38bdf8' },
+    { id: 'bleu', label: 'REX (cyan / bleu marine)', couleur: '#00CFFF' },
     { id: 'vert', label: 'Vert', couleur: '#4ade80' },
     { id: 'or', label: 'Or', couleur: '#f59e0b' },
     { id: 'violet', label: 'Violet', couleur: '#a78bfa' },

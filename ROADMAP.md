@@ -63,7 +63,8 @@ sont en bas de ce fichier.
 
 ## 🔵 Priorité 3 — Produit
 
-- [ ] Nouveau design : typographie, couleurs, hiérarchie, puis nouveau tableau de bord
+- [x] Nouveau design, étape 1 (19.09) : police Geist sans le « tout en gras », couleurs de la charte REX (cyan #00CFFF / bleu marine #113679), thème clair avec menu blanc, logo REX + mascotte (menu et connexion)
+- [ ] Nouveau design, étape 2 : nouveau tableau de bord (maquette validée)
 - [ ] **Espace client** (app installable) — prérequis : rôles
 - [ ] Ouverture à 1–2 cabinets pilotes — prérequis : priorité 1 complète + licence
 - [ ] Code : découpage en modules, build (Vite), tests sur commissions et signature

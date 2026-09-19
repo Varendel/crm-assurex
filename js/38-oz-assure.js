@@ -17,9 +17,10 @@ window._ozxAnnee = window._ozxAnnee || 'tous';
 window._ozxCourbe = window._ozxCourbe || 'cumul';
 window._ozxClientsTous = window._ozxClientsTous || false;
 
-const OZX_MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
-const OZX_MOIS_INIT = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
-const OZX_LIMITE_CLIENTS = 25;
+// (var : le fichier peut être rechargé sans erreur de redéclaration)
+var OZX_MOIS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
+var OZX_MOIS_INIT = ['J', 'F', 'M', 'A', 'M', 'J', 'J', 'A', 'S', 'O', 'N', 'D'];
+var OZX_LIMITE_CLIENTS = 25;
 
 function ozxEsc(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 function ozxCie(n) { const s = String(n || '').trim(); return (s && typeof normaliserCompagnie === 'function' ? normaliserCompagnie(s) : s) || '—'; }
@@ -31,6 +32,7 @@ function ozxBrd(t) { const m = String(t || '').match(/\bBRD\s*(?:n[°o.]?\s*)?(\
 // Période écrite dans le libellé (« 01.04.26 - 30.06.26 ») pour l'afficher sous le décompte
 function ozxPeriode(t) { const m = String(t || '').match(/(\d{1,2}\.\d{1,2}\.\d{2,4})\s*[-–]\s*(\d{1,2}\.\d{1,2}\.\d{2,4})/); return m ? `${m[1]} – ${m[2]}` : ''; }
 function ozxEstVie(produit) { const p = String(produit || '').toLowerCase(); return (typeof PRODUITS_VIE_KEYWORDS !== 'undefined' ? PRODUITS_VIE_KEYWORDS : ['vie', '3a', '3b', 'lpp']).some(kw => p.includes(kw)); }
+function ozxDateCH(iso) { const p = String(iso || '').slice(0, 10).split('-'); return p.length === 3 ? `${p[2]}.${p[1]}.${p[0]}` : '—'; }
 function ozxDateFusion() { return typeof DATE_GESTION_ASSUREX !== 'undefined' ? DATE_GESTION_ASSUREX : '2027-01-01'; }
 function ozxTendance(actuel, precedent) {
   if (!precedent) return '';
@@ -225,7 +227,7 @@ function ozxCalculs() {
     parCie: Object.entries(parCie).sort((a, b) => b[1].total - a[1].total),
     clients, parProduit: Object.entries(parProduit).sort((a, b) => b[1] - a[1]),
     brds: Object.values(parBrd).sort((a, b) => b.date.localeCompare(a.date) || Number(b.brd) - Number(a.brd)),
-    derniers: filtre.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 12),
+    derniers: filtre.slice().sort((a, b) => b.date.localeCompare(a.date)).slice(0, 8),
     glissant12, projection, derniereComplete, rapp, fusion, pf, derniereDate, auj,
   };
 }
@@ -282,7 +284,7 @@ function ozxCourbes(D) {
   return `<div class="ozx-courbes">
     <div class="ozx-axe-y">${graduations.map(g => `<span style="--y:${((g - min) / (max - min || 1) * 100).toFixed(2)}%">${ozxCompact(g)}</span>`).join('')}</div>
     <div class="ozx-trace">
-      ${graduations.map(g => `<span class="ozx-grille" style="--y:${((g - min) / (max - min || 1) * 100).toFixed(2)}%"></span>`).join('')}
+      ${graduations.map(g => `<span class="ozx-ligne-g" style="--y:${((g - min) / (max - min || 1) * 100).toFixed(2)}%"></span>`).join('')}
       <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
         <defs><linearGradient id="ozx-degrade" x1="0" x2="0" y1="0" y2="1"><stop offset="0" style="stop-color:${couleurAvant};stop-opacity:.32"/><stop offset="1" style="stop-color:${couleurAvant};stop-opacity:0"/></linearGradient></defs>
         ${ordre.map(o => o.t).join('')}
@@ -344,7 +346,7 @@ function ozxChaleur(D) {
     <span></span>${OZX_MOIS_INIT.map(m => `<span class="ozx-chaleur-m">${m}</span>`).join('')}
     ${D.annees.map(a => `<span class="ozx-chaleur-an">${a}</span>${D.parAnMois[a].map((v, i) => {
       const vide = D.estPartielle(a) && i >= (D.dernierMois[a] || 0);
-      const f = Math.round(Math.sqrt(Math.abs(v) / max) * 100);
+      const f = v ? Math.round(10 + 90 * Math.pow(Math.abs(v) / max, 1.4)) : 0;
       return `<span class="ozx-cellule ${vide ? 'vide' : ''} ${v < 0 ? 'neg' : ''}" style="--f:${vide ? 0 : f}%" title="${OZX_MOIS[i]} ${a} : ${vide ? 'pas encore de décompte' : ozxCHF(v)}"></span>`;
     }).join('')}`).join('')}
   </div>`;
@@ -436,7 +438,7 @@ function ozxRendre(calme) {
 
     <div class="dbx-carte ozx-bandeau dbx-anim" style="--i:5">
       <span class="ozx-bandeau-icone">⚑</span>
-      <span>Depuis le <b>01.06.2026</b>, le portefeuille OZ Assure est <b>virtuellement transféré à Assurex Sàrl</b> ; fusion complète le <b>${fmtDate(D.fusion.dateFusion)}</b>. Cette page est l’archive d’exploitation d’OZ et le suivi de la transition.</span>
+      <span>Depuis le <b>01.06.2026</b>, le portefeuille OZ Assure est <b>virtuellement transféré à Assurex Sàrl</b> ; fusion complète le <b>${ozxDateCH(D.fusion.dateFusion)}</b>. Cette page est l’archive d’exploitation d’OZ et le suivi de la transition.</span>
     </div>
 
     <div class="ozx-grille ozx-grille-large">
@@ -455,7 +457,8 @@ function ozxRendre(calme) {
         ${D.projection ? `<div class="ozx-projection">
           <div><span>Gestion ${D.projection.annee} à fin ${OZX_MOIS[D.projection.k - 1]}</span><b>${ozxCHF(D.projection.ytd)}</b></div>
           <div><span>Projection fin ${D.projection.annee}</span><b class="ozx-vert">${ozxCHF(D.projection.total)}</b></div>
-          <div><span>Gestion 12 mois glissants</span><b>${ozxCHF(D.glissant12)}</b></div>
+          ${D.parAn[String(Number(D.projection.annee) - 1)] ? `<div><span>Rappel : gestion ${Number(D.projection.annee) - 1} (année complète)</span><b>${ozxCHF(D.parAn[String(Number(D.projection.annee) - 1)].Gestion)}</b></div>` : ''}
+          ${Math.abs(D.glissant12 - D.projection.total) > 1 ? `<div><span>Gestion 12 mois glissants</span><b>${ozxCHF(D.glissant12)}</b></div>` : ''}
           <p>Projection = gestion déjà encaissée + gestion reçue sur les mois restants de ${Number(D.projection.annee) - 1} (même calendrier de versement des compagnies).</p>
         </div>` : ''}
       </section>
@@ -568,7 +571,7 @@ function ozxSectionFusion(D) {
       <div class="ozx-frise-etapes">
         <div class="fait"><i></i><b>01.06.2026</b><small>Portefeuille transféré virtuellement à Assurex</small></div>
         <div class="encours" style="--x:${progres.toFixed(1)}%"><i></i><b>Aujourd’hui</b><small>Refacturation et rapprochement</small></div>
-        <div class="${jours > 0 ? '' : 'fait'}"><i></i><b>${fmtDate(F.dateFusion)}</b><small>Gestion encaissée par Assurex</small></div>
+        <div class="${jours > 0 ? '' : 'fait'}"><i></i><b>${ozxDateCH(F.dateFusion)}</b><small>Gestion encaissée par Assurex</small></div>
       </div>
     </div>
     <div class="ozx-fusion-grille">
@@ -582,19 +585,19 @@ function ozxSectionFusion(D) {
       <div class="dbx-carte ozx-f-carte">
         <span class="ozx-f-label">Gestion OZ qui bascule chez Assurex</span>
         <b class="ozx-f-valeur ozx-vert">CHF <span data-ozx-compteur="${Math.round(F.bascule)}">${fmtCHF(Math.round(F.bascule))}</span></b>
-        <small>${F.nbBascule} commission${F.nbBascule > 1 ? 's' : ''} de gestion dès le ${fmtDate(F.dateFusion)} · ${F.clientsBascule} client${F.clientsBascule > 1 ? 's' : ''} OZ</small>
+        <small>${F.nbBascule} commission${F.nbBascule > 1 ? 's' : ''} de gestion dès le ${ozxDateCH(F.dateFusion)} · ${F.clientsBascule} client${F.clientsBascule > 1 ? 's' : ''} OZ</small>
         ${F.basculeCies.length ? `<span class="ozx-f-cies">${F.basculeCies.slice(0, 5).map(([c, v]) => `<span title="${ozxEsc(c)} : ${ozxCHF(v)}">${pictoCompagnie(c, 22)}<em>${ozxCompact(v)}</em></span>`).join('')}</span>` : ''}
         ${F.anneeReference ? `<small>Référence : gestion encaissée par OZ en ${F.anneeReference} = <b>${ozxCHF(F.gestionReference)}</b></small>` : ''}
       </div>
       <div class="dbx-carte ozx-f-carte ozx-f-rapp">
         <div class="ozx-f-rapp-haut">
-          ${ozxAnneau(pctRapp, 92, pctRapp >= 90 ? 'var(--ozx-ges)' : pctRapp >= 50 ? '#F59E0B' : '#EF4444', `<b>${pctRapp}%</b><small>rapproché</small>`)}
-          <div><span class="ozx-f-label">Rapprochement du compte courant ${R.annee}</span>
-            <small><b>${R.nbOk}</b> / ${R.nb} versement${R.nb > 1 ? 's' : ''} déduit${R.nbOk > 1 ? 's' : ''} des commissions attendues (${ozxCHF(R.montantOk)} sur ${ozxCHF(R.montant)})</small>
+          ${ozxAnneau(pctRapp, 84, pctRapp >= 90 ? 'var(--ozx-ges)' : pctRapp >= 50 ? '#F59E0B' : '#EF4444', `<b>${pctRapp}%</b><small>rapproché</small>`)}
+          <div><span class="ozx-f-label">Compte courant ${R.annee} rapproché</span>
+            <small><b>${R.nbOk}</b> / ${R.nb} versement${R.nb > 1 ? 's' : ''} déduit${R.nbOk > 1 ? 's' : ''} des commissions attendues · ${ozxCHF(R.montantOk)} sur ${ozxCHF(R.montant)}</small>
             ${R.restantes.length ? `<small class="ozx-attention">${R.restantes.length} versement${R.restantes.length > 1 ? 's' : ''} à rapprocher · ${ozxCHF(R.montant - R.montantOk)}</small>` : '<small class="ozx-vert">✓ Tout est rapproché</small>'}</div>
         </div>
         ${R.restantes.length ? `<div class="sfx-mini">${R.restantes.slice(0, 3).map(l => `<div><span>${pictoCompagnie(l.cie, 18)}<b>${ozxEsc(l.client || l.cie)}</b>${l.brd ? `<span class="ozx-chip brd">BRD ${ozxEsc(l.brd)}</span>` : ''}</span><em>${ozxCompact(l.credit)}</em></div>`).join('')}</div>` : ''}
-        <button type="button" class="btn-save ozx-f-bouton" onclick="window._sfxOnglet='oz';navigate('suivi-financier')">Déduire des commissions attendues →</button>
+        <button type="button" class="btn-save ozx-f-bouton" onclick="window._sfxOnglet='oz';navigate('suivi-financier')" title="Cockpit financier, onglet OZ ↔ Assurex : « Déduire des commissions attendues »">Rapprocher dans le cockpit →</button>
       </div>
     </div>
     ${F.nbVersesOz ? `<div class="ozx-aide ozx-fusion-note">🔹 ${F.nbVersesOz} commission${F.nbVersesOz > 1 ? 's' : ''} du CRM marquée${F.nbVersesOz > 1 ? 's' : ''} « versée à OZ » pour ${ozxCHF(F.versesOz)} au total — <button type="button" class="dbx-lien" onclick="navigate('oz-commissions-assurex')">voir le détail</button></div>` : ''}
@@ -693,7 +696,7 @@ function ozxRapportImprimable(D, libellePeriode) {
     <div style="text-align:center;margin-bottom:20px">
       <div style="font-size:20px;font-weight:900;color:black">OZ ASSURE — Résumé d'exploitation</div>
       <div style="font-size:12px;color:#555;margin-top:4px">Période : ${ozxEsc(libellePeriode)} · rapport généré le ${new Date().toLocaleDateString('fr-CH', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
-      <div style="font-size:11px;color:#888;margin-top:2px">Portefeuille virtuellement transféré à Assurex Sàrl depuis le 01.06.2026 · fusion complète le ${fmtDate(D.fusion.dateFusion)}</div>
+      <div style="font-size:11px;color:#888;margin-top:2px">Portefeuille virtuellement transféré à Assurex Sàrl depuis le 01.06.2026 · fusion complète le ${ozxDateCH(D.fusion.dateFusion)}</div>
     </div>
     <table style="width:100%;border-collapse:collapse;margin-bottom:18px"><tr>
       <td style="${td}"><div style="font-size:9px;color:#666">COMMISSIONS NETTES</div><b>${ozxCHF(D.tot.total)}</b></td>
@@ -714,7 +717,12 @@ function ozxRapportImprimable(D, libellePeriode) {
 
 // ── Après affichage : compteurs animés (sauf réaffichage « calme » ou mouvement réduit) ──────
 function ozxApresRendu(calme) {
-  if (!document.querySelector('.ozx')) return;
+  const racine = document.querySelector('.ozx');
+  if (!racine) return;
+  // Filtre année collant : juste sous la barre du haut mobile (hauteur variable selon l'appareil)
+  const barre = document.querySelector('.mobile-topbar');
+  const hBarre = barre && getComputedStyle(barre).display !== 'none' && getComputedStyle(barre).position === 'sticky' ? barre.offsetHeight : 0;
+  racine.style.setProperty('--ozx-haut', hBarre + 'px');
   const reduit = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   if (reduit || calme) return;
   document.querySelectorAll('.ozx [data-ozx-compteur], .ozx [data-dbx-compteur]').forEach(el => {

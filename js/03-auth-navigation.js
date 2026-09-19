@@ -639,7 +639,7 @@ async function enterApp(user) {
   allContrats = await dbGet('contrats', 'select=*');
   allOpportunites = await dbGet('opportunites', 'select=*');
   allRendezVous = await dbGet('rendez_vous', 'select=*&order=date_heure.asc').catch(() => []);
-  allCampagnesPersonnalisees = (await dbGet('campagnes_personnalisees', 'select=*&order=created_at.asc').catch(() => [])).map(normaliserCampagnePersonnalisee);
+  allCampagnesPersonnalisees = (await dbGet('campagnes_personnalisees', 'select=*&order=created_at.asc').catch(() => [])).filter(c => c.actif !== false).map(normaliserCampagnePersonnalisee);
 
   // Bascule automatique : contrats actifs dont l'échéance est passée → "à renouveler"
   await basculerContratsEchus();
@@ -743,7 +743,8 @@ const SECTIONS = [
     { id: 'import-decompte', icon: '📥', label: 'Importer un décompte' },
     { id: 'commissions-attente', icon: '💸', label: 'Toutes les commissions' },
     { id: 'commissions', icon: '🧮', label: 'Commissions (vue interne)', staff: true },
-    { id: 'suivi-financier', icon: '📊', label: 'Suivi financier' },
+    { id: 'suivi-financier', icon: '🧭', label: 'Cockpit financier' },
+    { id: 'factures', icon: '🧾', label: 'Factures QR' },
     { id: 'tresorerie', icon: '📈', label: 'Plan de trésorerie' },
     { id: 'fiche-paie', icon: '🧑‍💼', label: 'Fiche de paie (agents)' },
     { id: 'production', icon: '🏭', label: 'Production par période', staff: true },
@@ -1368,6 +1369,8 @@ async function renderView() {
       else main.innerHTML = viewSuiviFinancier();
       break;
     case 'conseil': main.innerHTML = viewConseil(); break;
+    // Factures QR suisses (js/33)
+    case 'factures': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = typeof viewFacturesQR === 'function' ? await viewFacturesQR() : '<div class="table-empty">Module factures non chargé.</div>'; break;
     case 'tresorerie': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); main.innerHTML = viewTresorerie(); break;
     case 'production': main.innerHTML = viewProduction(); break;
     case 'opportunites': main.innerHTML = viewOpportunites(); break;

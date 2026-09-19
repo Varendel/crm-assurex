@@ -7,7 +7,7 @@
 //   - Retards : commissions dont la date prévue est dépassée.
 // L'ancienne page reste accessible (« Vue classique »).
 
-window._sfxOnglet = window._sfxOnglet || 'pilotage';
+window._sfxOnglet = window._sfxOnglet || 'ensemble';
 
 function sfxEsc(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 function sfxIso(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
@@ -85,16 +85,26 @@ function viewSuiviFinancierV2() {
     return `<div class="dbx"><button type="button" class="dbx-lien" onclick="window._sfxOnglet='pilotage';navigate('suivi-financier')">← Revenir au nouveau suivi financier</button></div>${viewSuiviFinancier()}`;
   }
   const D = sfxDonnees();
-  const onglets = [['pilotage', '📊 Pilotage'], ['precision', '🎯 Précision des estimations'], ['retards', `⏳ Retards${D.retards.length ? ' <span class="dbx-pastille">' + D.retards.length + '</span>' : ''}`]];
+  const nbAnomalies = typeof ckAnomalies === 'function' ? ckAnomalies().filter(g => g.niveau !== 'info').reduce((s, g) => s + g.items.length, 0) : 0;
+  const onglets = [
+    ...(typeof htmlCockpitEnsemble === 'function' ? [['ensemble', '🧭 Vue d’ensemble']] : []),
+    ['pilotage', '📊 Commissions'],
+    ['precision', '🎯 Précision des estimations'],
+    ['retards', `⏳ Retards${D.retards.length ? ' <span class="dbx-pastille">' + D.retards.length + '</span>' : ''}`],
+    ...(typeof htmlCockpitControle === 'function' ? [['controle', `🔍 Contrôle${nbAnomalies ? ' <span class="dbx-pastille">' + nbAnomalies + '</span>' : ''}`]] : []),
+  ];
   let corps = '';
-  if (window._sfxOnglet === 'precision') corps = htmlSfxPrecision();
+  if (window._sfxOnglet === 'ensemble' && typeof htmlCockpitEnsemble === 'function') corps = htmlCockpitEnsemble(D);
+  else if (window._sfxOnglet === 'controle' && typeof htmlCockpitControle === 'function') corps = htmlCockpitControle();
+  else if (window._sfxOnglet === 'precision') corps = htmlSfxPrecision();
   else if (window._sfxOnglet === 'retards') corps = htmlSfxRetards(D);
   else corps = htmlSfxPilotage(D);
   return `<div class="dbx sfx">
     <header class="dx-tete">
-      <div><div class="dx-surtitre">Finances</div><h2>Suivi financier</h2></div>
+      <div><div class="dx-surtitre">Finances</div><h2>Cockpit financier</h2></div>
       <div class="dx-tete-actions">
         <button type="button" class="btn-secondary" onclick="navigate('tresorerie')">📈 Plan de trésorerie</button>
+        ${typeof viewFacturesQR === 'function' ? `<button type="button" class="btn-secondary" onclick="navigate('factures')">🧾 Factures QR</button>` : ''}
         <button type="button" class="btn-secondary" onclick="navigate('import-decompte')">📥 Importer un décompte</button>
         <button type="button" class="opx-lien" onclick="window._sfxOnglet='classique';navigate('suivi-financier')">Vue classique</button>
       </div>

@@ -23,22 +23,23 @@ const PICTOS_COMPAGNIES = {
   // Symbole Orion redessiné (deux arcs rouges formant un « O ») d'après le logo fourni le 19.09.2026
   'Orion': { viewBox: '0 0 64 64', fond: '#FFFFFF', bordure: true,
     svg: '<path d="M30 13 A26 19 0 0 0 30 51 A9 19 0 0 1 30 13 Z" fill="#E2211C"/><path d="M34 13 A26 19 0 0 1 34 51 A9 19 0 0 0 34 13 Z" fill="#E2211C"/>' },
-  'Swiss Life': { abr: 'SL' },
+  // Logos complets fournis le 19.09.2026 (soir) : affichés entiers (ajuste: 'contain') sur leur fond
+  'Swiss Life': { img: 'assets/logos/compagnies/swisslife.png', forme: 'carre', ajuste: 'contain', fondImg: '#FFFFFF', bordure: true },
+  'CSS': { img: 'assets/logos/compagnies/css.png', forme: 'carre', ajuste: 'contain', fondImg: '#FFFFFF', bordure: true },
+  'La Mobilière': { img: 'assets/logos/compagnies/mobiliere.jpg', forme: 'carre', ajuste: 'contain', fondImg: '#DA2323' },
+  'goCaution': { img: 'assets/logos/compagnies/gocaution.png', forme: 'carre', ajuste: 'contain', fondImg: '#FFFFFF', bordure: true },
   'HOTELA': { img: 'assets/logos/compagnies/hotela.png', forme: 'carre', bordure: true },
   'Groupe Mutuel': { img: 'assets/logos/compagnies/groupe-mutuel.png', forme: 'carre', bordure: true },
   'Zurich': { img: 'assets/logos/compagnies/zurich.png', forme: 'rond' },
   // Monogrammes aux couleurs relevées sur les logos officiels fournis le 19.09.2026
-  'La Mobilière': { abr: 'M', fond: '#DA2323' },
   'Helsana': { abr: 'He', fond: '#9A0941' },
   'SWICA': { abr: 'SW', fond: '#01BAA8' },
-  'CSS': { abr: 'CSS', fond: '#00A0DF' }, // bleu du logo officiel fourni le 19.09.2026
   'Sanitas': { abr: 'SA' },
   'Visana': { abr: 'VI' },
-  'Gastrosocial': { abr: 'GS' },
+  'Gastrosocial': { img: 'assets/logos/compagnies/gastrosocial.jpg', forme: 'rond', ajuste: 'contain', fondImg: '#FFFFFF' },
   'SUVA': { abr: 'SU' },
   'PAX': { abr: 'PAX' },
   'CAP': { abr: 'CAP' },
-  'goCaution': { abr: 'GC' },
   'Animalia': { abr: 'AN' },
 };
 
@@ -63,7 +64,8 @@ function pictoCompagnie(nomCompagnie, taille) {
   const fond = def.fond || PICTO_FOND_DEFAUT;
   if (def.img) {
     const rayon = def.forme === 'rond' ? '50%' : `${Math.round(t * 0.27)}px`;
-    return `<img src="${def.img}" alt="${_pictoEsc(nom)}" title="${_pictoEsc(nom)}" width="${t}" height="${t}" style="flex-shrink:0;width:${t}px;height:${t}px;border-radius:${rayon};object-fit:cover;vertical-align:middle;${def.bordure ? 'border:1px solid rgba(23,52,84,0.25);box-sizing:border-box;' : ''}">`;
+    const ajuste = def.ajuste === 'contain' ? `object-fit:contain;background:${def.fondImg || '#fff'};padding:${Math.max(1, Math.round(t * 0.08))}px;` : 'object-fit:cover;';
+    return `<img src="${def.img}" alt="${_pictoEsc(nom)}" title="${_pictoEsc(nom)}" width="${t}" height="${t}" style="flex-shrink:0;width:${t}px;height:${t}px;border-radius:${rayon};${ajuste}vertical-align:middle;box-sizing:border-box;${def.bordure ? 'border:1px solid rgba(23,52,84,0.25);' : ''}">`;
   }
   const base = `display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:${t}px;height:${t}px;border-radius:${Math.round(t * 0.27)}px;background:${fond};color:${def.texte || '#fff'};vertical-align:middle`;
   if (def.svg && def.sansFond) {

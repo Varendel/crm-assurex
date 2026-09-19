@@ -828,7 +828,7 @@ function viewCommissions() {
   COMMS.forEach(c => { const m = montantC(c); const s = splitMontantAgent(m, c.contrat_id); totalBrut += m; partJ += s.pJ; partA += s.pA; });
 
   // ── Commissions de gestion (récurrentes) ──
-  const gestion = COMMS.filter(c => (c.mouvement || '').toLowerCase().includes('gestion'));
+  const gestion = COMMS.filter(c => c.nature === 'gestion' || (c.mouvement || '').toLowerCase().includes('gestion'));
   const parMoisGestion = {};
   const parCompagnieGestion = {};
   let totalGestion = 0;
@@ -844,13 +844,16 @@ function viewCommissions() {
   const maxMoisGestion = Math.max(...moisGestionKeys.map(k => parMoisGestion[k]), 1);
   const compGestion = Object.entries(parCompagnieGestion).sort((a,b)=>b[1]-a[1]);
 
-  const cols = '1fr 130px 90px 100px 110px';
-  const rows = COMMS.map(c => {
+  // Logo de la compagnie et n° de bordereau sur chaque ligne (demande de Jonathan, 19.09.2026)
+  const cols = '1fr 150px 120px 90px 100px 110px';
+  const rows = COMMS.slice().sort((a, b) => String(b.date_reception || b.date_creation || '').localeCompare(String(a.date_reception || a.date_creation || ''))).map(c => {
     const m = montantC(c);
     const s = splitMontantAgent(m, c.contrat_id);
+    const bd = c.bordereau_id ? allBordereaux.find(b => b.id === c.bordereau_id) : null;
     return `<div class="table-row" style="grid-template-columns:${cols}">
-      <div style="font-size:13px;font-weight:600;color:var(--text)">${c.client_nom || '—'}</div>
-      <div style="font-size:11px;color:var(--text-muted)">${c.produit || ''}${c.mouvement ? ' · ' + c.mouvement : ''}</div>
+      <div style="display:flex;align-items:center;gap:10px;min-width:0">${typeof pictoCompagnie === 'function' ? pictoCompagnie(c.compagnie, 28) : ''}<div style="min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">${c.client_nom || '—'}</div><div style="font-size:11px;color:var(--text-dim)">${c.compagnie || ''}${c.date_reception ? ' · ' + fmtDate(c.date_reception) : ''}</div></div></div>
+      <div style="font-size:11px;color:var(--text-muted)">${c.produit || ''}${c.nature ? ' · ' + c.nature : ''}${c.mouvement ? ' · ' + c.mouvement : ''}</div>
+      <div>${bd ? `<button type="button" onclick="${typeof showBordereau === 'function' ? `showBordereau('${bd.id}')` : "navigate('bordereaux')"}" title="${(bd.mois || '').replace(/"/g, '')}" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:999px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis">🧾 ${bd.numero || bd.mois || 'Bordereau'}</button>` : '<span style="font-size:11px;color:var(--text-dim)">sans bordereau</span>'}</div>
       <div style="font-weight:800;color:var(--text)">CHF ${fmtCHF(m)}</div>
       <div style="font-weight:800;color:#38bdf8">CHF ${fmtCHF(s.pJ)}</div>
       <div>${s.pA > 0 ? `<div style="display:flex;align-items:center;gap:6px">${s.agent ? avatar(s.agent, 18) : ''}<span style="font-weight:700;color:#f59e0b">CHF ${fmtCHF(s.pA)}</span></div>` : '<span style="color:var(--text-dim)">—</span>'}</div>
@@ -895,7 +898,7 @@ function viewCommissions() {
 
     <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px">Toutes les commissions reçues (${COMMS.length})</div>
     <div class="table-wrap">
-      <div class="table-header" style="grid-template-columns:${cols}"><div>Client</div><div>Produit / Mouvement</div><div>Brut</div><div>Jonathan</div><div>Apporteur</div></div>
+      <div class="table-header" style="grid-template-columns:${cols}"><div>Compagnie · client</div><div>Produit / nature</div><div>Bordereau</div><div>Brut</div><div>Jonathan</div><div>Apporteur</div></div>
       ${rows || '<div class="table-empty">Aucune commission reçue encore rapprochée.</div>'}
     </div>`;
 }

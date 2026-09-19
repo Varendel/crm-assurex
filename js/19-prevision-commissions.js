@@ -184,3 +184,36 @@ async function assurerGestionAnnuelle() {
   if (crees && typeof logAction === 'function') logAction('gestion_annuelle', 'commissions_attente', null, `${crees} commission(s) de gestion annuelle créée(s) (échéances jusqu'au ${limite.split('-').reverse().join('.')})`);
   return crees;
 }
+
+// Projection des commissions de gestion RÉCURRENTES sur un horizon (trésorerie, cockpit) : pour chaque
+// contrat actif dont le taux de gestion est connu, les échéances de facturation à venir qui n'ont pas
+// encore de commission dans le CRM sont projetées (prime annuelle × taux), encaissement 3 mois après
+// l'échéance (ou à la date annuelle HOTELA / Gastrosocial). Rien n'est enregistré : c'est une prévision.
+function projectionGestionRecurrente(jusquA) {
+  const res = [];
+  const auj = _prevIso(new Date());
+  for (const ct of allContrats) {
+    if (ct.commissionne === false || !['actif', 'renouveler'].includes(ct.statut)) continue;
+    const prime = Number(ct.prime_annuelle || 0);
+    if (!prime) continue;
+    const gs = allCommissionsAttente.filter(c => c.contrat_id === ct.id && c.nature === 'gestion' && c.statut !== 'annulée');
+    if (!gs.length) continue;
+    const taux = gs.map(c => tauxGestionConnu(c, prime)).find(t => t !== null);
+    if (!taux) continue;
+    // Dernière période déjà couverte par une commission (en attente ou encaissée)
+    let depuis = gs.map(c => (c.date_creation || '').slice(0, 10)).filter(Boolean).sort().pop() || ct.date_debut;
+    if (!depuis) continue;
+    let garde = 0;
+    let ech = prochaineEcheanceFacturation(ct, depuis);
+    while (ech && garde++ < 20) {
+      const fictive = { nature: 'gestion', compagnie: ct.compagnie, client_id: ct.client_id, contrat_id: ct.id, date_creation: ech, detail_calcul: '[gestion annuelle]', statut: 'en_attente' };
+      const prevue = commissionDatePrevue(fictive);
+      if (!prevue || prevue > jusquA) break;
+      if (prevue >= auj && !commissionGestionEncaisseeParOZ(fictive, prevue)) {
+        res.push({ contrat: ct, echeance: ech, date: prevue, montant: Math.round(prime * taux * 100) / 100, taux });
+      }
+      ech = prochaineEcheanceFacturation(ct, ech);
+    }
+  }
+  return res;
+}

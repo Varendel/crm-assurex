@@ -85,6 +85,12 @@ function trCalculer() {
     placer(gestion ? res.gestion : res.acquisition, date, montant);
   });
 
+  // 1b. Gestion récurrente des années suivantes (projection, rien n'est enregistré) — js/19
+  res.recurrente = vide(); res.recurrenteNb = 0;
+  if (typeof projectionGestionRecurrente === 'function') {
+    projectionGestionRecurrente(dernier + '-31').forEach(p => { if (placer(res.recurrente, p.date, p.montant)) res.recurrenteNb++; });
+  }
+
   // 2. Pipeline pondéré (option) : commission estimée × probabilité, 3 mois après l'échéance
   if (_tr.pipeline) {
     allOpportunites.filter(o => o.stade !== 'Gagné' && o.stade !== 'Perdu').forEach(o => {
@@ -119,7 +125,7 @@ function trCalculer() {
   // Totaux mensuels et solde cumulé
   let courant = res.solde ? Number(res.solde.montant || 0) : 0;
   res.parMois = mois.map(m => {
-    const entrees = res.gestion[m] + res.acquisition[m] + res.pipeline[m] + res.entrees.reduce((s, x) => s + x.serie[m], 0);
+    const entrees = res.gestion[m] + res.recurrente[m] + res.acquisition[m] + res.pipeline[m] + res.entrees.reduce((s, x) => s + x.serie[m], 0);
     const sorties = res.sorties.reduce((s, x) => s + x.serie[m], 0);
     const debut = courant;
     courant += entrees - sorties;
@@ -221,6 +227,7 @@ function trTableau(R) {
       ${ligne('Solde en début de mois', R.parMois.map(x => x.debut), 'solde')}
       <tr class="tr-section"><td colspan="${m.length + 2}">Encaissements</td></tr>
       ${ligne('Commissions de gestion', m.map(k => R.gestion[k]), 'entree', ' <small>date prévue</small>')}
+      ${R.recurrenteNb ? ligne('Gestion des années suivantes', m.map(k => R.recurrente[k]), 'entree pipeline', ' <small>projection</small>') : ''}
       ${ligne('Commissions d’acquisition', m.map(k => R.acquisition[k]), 'entree', ` <small>+${R.delaiAcq} j</small>`)}
       ${_tr.pipeline ? ligne('Pipeline pondéré', m.map(k => R.pipeline[k]), 'entree pipeline', ' <small>estimation</small>') : ''}
       ${R.entrees.map(x => ligne(trEsc(x.ligne.libelle), m.map(k => x.serie[k]), 'entree', ` <small>${trEsc(x.ligne.categorie || '')}</small>`)).join('')}
@@ -255,6 +262,7 @@ function trLignesExport(R) {
   push('Solde en début de mois', '', R.parMois.map(x => x.debut), false);
   L.push(['ENCAISSEMENTS']);
   push('Commissions de gestion', 'date prévue', m.map(k => R.gestion[k]));
+  if (R.recurrenteNb) push('Gestion des années suivantes', 'projection', m.map(k => R.recurrente[k]));
   push('Commissions d’acquisition', `+${R.delaiAcq} j`, m.map(k => R.acquisition[k]));
   if (_tr.pipeline) push('Pipeline pondéré', 'estimation', m.map(k => R.pipeline[k]));
   R.entrees.forEach(x => push(x.ligne.libelle, x.ligne.categorie || '', m.map(k => x.serie[k])));

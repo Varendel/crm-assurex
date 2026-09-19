@@ -2428,6 +2428,10 @@ function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire, cla
     body{font-family:"Helvetica Neue",Arial,sans-serif;padding:40px 46px;color:#1F2937;font-size:12.5px;line-height:1.55;-webkit-print-color-adjust:exact;print-color-adjust:exact;max-width:800px;margin:28px auto;background:#fff;border-radius:6px;box-shadow:0 10px 40px rgba(17,54,121,0.14);box-sizing:border-box}
     .entete{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #113679;padding-bottom:14px;margin-bottom:20px;position:relative}
     .entete::after{content:"";position:absolute;left:0;bottom:-2px;width:72px;height:2px;background:#00CFFF}
+    /* Logos sur fond transparent (19.09.2026) : plus de bandeaux noirs sur la feuille blanche */
+    .entete .logo-assurex{height:44px;width:auto;display:block}
+    .entete .logo-exgroup{display:flex;align-items:center;color:#113679}
+    .entete .logo-exgroup svg{height:24px;width:auto;display:block}
     h1{font-size:20px;color:#113679;text-align:center;margin:12px 0 2px;letter-spacing:.14em;font-weight:800}
     .sous-titre{text-align:center;font-style:italic;color:#56627A;margin-bottom:20px;font-size:12px}
     h2{font-size:12.5px;color:#113679;margin:18px 0 8px;font-weight:800;letter-spacing:.06em;border-left:3px solid #00CFFF;padding-left:8px}
@@ -2449,7 +2453,7 @@ function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire, cla
     .art45-table tr:nth-child(odd) td{background:#F8FAFC}
     .print-btn{position:fixed;right:24px;bottom:24px;padding:12px 22px;background:#113679;color:#fff;border:none;border-radius:12px;cursor:pointer;font-size:13.5px;font-weight:700;box-shadow:0 10px 26px rgba(17,54,121,0.35);font-family:inherit}
     .print-btn:hover{background:#1A4A9C}
-    @media (max-width:700px){body{margin:0;padding:22px 16px;border-radius:0;box-shadow:none}.entete{gap:8px}.entete > *{max-width:48%;box-sizing:border-box;overflow:hidden}.entete img{max-width:100%;height:auto !important}.page-break{margin:28px -16px 24px}.signatures{gap:16px}.print-btn{left:16px;right:16px;bottom:16px}}
+    @media (max-width:700px){body{margin:0;padding:22px 16px;border-radius:0;box-shadow:none}.entete{gap:8px}.entete > *{max-width:48%;box-sizing:border-box;overflow:hidden}.entete .logo-assurex{height:34px;max-width:100%}.entete .logo-exgroup svg{height:18px;max-width:100%}.page-break{margin:28px -16px 24px}.signatures{gap:16px}.print-btn{left:16px;right:16px;bottom:16px}}
     @media print {
       html { background: #fff; }
       body { max-width: none; margin: 0; border-radius: 0; box-shadow: none; }
@@ -2490,8 +2494,12 @@ function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire, cla
     </script>
 
     <div class="entete">
-      ${genererBadgeLogoAssurex(28, '10px 16px', 'inline-block')}
-      ${genererBadgeExGroup(28, '10px 16px', 'inline-block')}
+      ${typeof ASSUREX_LOGO_B64 !== 'undefined'
+        ? `<img class="logo-assurex" src="${ASSUREX_LOGO_B64}" alt="Assurex"/>`
+        : genererBadgeLogoAssurex(28, '10px 16px', 'inline-block')}
+      ${typeof LOGO_EXGROUPE_SVG !== 'undefined'
+        ? `<span class="logo-exgroup">${LOGO_EXGROUPE_SVG}</span>`
+        : genererBadgeExGroup(28, '10px 16px', 'inline-block')}
     </div>
 
     <h1>MANDAT DE COURTAGE</h1>

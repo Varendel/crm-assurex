@@ -43,6 +43,7 @@ const REX_CITATIONS = [
   { t: 'Celui qui est fidèle dans les petites choses l’est aussi dans les grandes.', a: 'Luc 16, 10' },
   { t: 'Sois fort et courageux ; ne t’effraie point.', a: 'Josué 1, 9' },
   { t: 'Recommande ton sort à l’Éternel, et tes projets réussiront.', a: 'Proverbes 16, 3' },
+  { t: 'Jesus Christ is King.', tr: 'Jésus-Christ est Roi.', a: 'Christus Rex' },
   { t: 'N’ayez pas peur !', a: 'Saint Jean-Paul II' },
   { t: 'Fais tout avec amour, rien par force.', a: 'Saint François de Sales' },
   { t: 'Il faut agir comme si tout dépendait de nous, et prier comme si tout dépendait de Dieu.', a: 'd’après saint Ignace de Loyola' },

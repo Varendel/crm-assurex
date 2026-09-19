@@ -12,20 +12,21 @@ const PICTO_FOND_DEFAUT = '#113679';
 
 const PICTOS_COMPAGNIES = {
   // Symbole Helvetia (logo officiel « helvetia-logo-rgb-white.svg », fourni par Jonathan le 19.09.2026)
-  'Helvetia': { viewBox: '0 0 184 208', fond: PICTO_FOND_DEFAUT,
+  // Sans fond (demande de Jonathan) : le symbole prend la couleur du texte du thème (clair ou sombre)
+  'Helvetia': { viewBox: '0 0 184 208', sansFond: true,
     svg: '<path transform="translate(-0.5,2)" d="M2.52,97.92c-3.36,3.36-3.36,8.8,0,12.15l91.41,91.41c3.36,3.36,8.8,3.36,12.15,0l50.72-50.72-30.87-30.87-25.93,25.93-41.81-41.81,41.81-41.81,72.69,72.69,24.8-24.8c3.36-3.36,3.36-8.8,0-12.15L106.08,6.52c-3.36-3.36-8.8-3.36-12.15,0L2.52,97.92Z" fill="currentColor"/>' },
   // Logos image (fichiers fournis par Jonathan le 19.09.2026, réduits à 128 px dans assets/logos/compagnies)
   'AXA': { img: 'assets/logos/compagnies/axa.png', forme: 'carre' },
   'La Vaudoise': { img: 'assets/logos/compagnies/vaudoise.png', forme: 'rond' },
   'Allianz': { abr: 'AZ' },
   'Generali': { abr: 'GE' },
-  'Zurich': { abr: 'Z' },
   'Swiss Life': { abr: 'SL' },
-  'HOTELA': { img: 'assets/logos/compagnies/hotela.png', forme: 'carre' },
+  'HOTELA': { img: 'assets/logos/compagnies/hotela.png', forme: 'carre', bordure: true },
+  'Groupe Mutuel': { img: 'assets/logos/compagnies/groupe-mutuel.png', forme: 'carre', bordure: true },
+  'Zurich': { img: 'assets/logos/compagnies/zurich.png', forme: 'rond' },
   // Monogrammes aux couleurs relevées sur les logos officiels fournis le 19.09.2026
   'La Mobilière': { abr: 'M', fond: '#DA2323' },
   'Helsana': { abr: 'He', fond: '#9A0941' },
-  'Groupe Mutuel': { abr: 'gm', fond: '#FAB100', texte: '#01313F' },
   'SWICA': { abr: 'SW', fond: '#01BAA8' },
   'CSS': { abr: 'CSS' },
   'Sanitas': { abr: 'SA' },
@@ -60,9 +61,12 @@ function pictoCompagnie(nomCompagnie, taille) {
   const fond = def.fond || PICTO_FOND_DEFAUT;
   if (def.img) {
     const rayon = def.forme === 'rond' ? '50%' : `${Math.round(t * 0.27)}px`;
-    return `<img src="${def.img}" alt="${_pictoEsc(nom)}" title="${_pictoEsc(nom)}" width="${t}" height="${t}" style="flex-shrink:0;width:${t}px;height:${t}px;border-radius:${rayon};object-fit:cover;vertical-align:middle;${def.forme === 'carre' && def.img.includes('hotela') ? 'border:1px solid rgba(23,52,84,0.25);box-sizing:border-box;' : ''}">`;
+    return `<img src="${def.img}" alt="${_pictoEsc(nom)}" title="${_pictoEsc(nom)}" width="${t}" height="${t}" style="flex-shrink:0;width:${t}px;height:${t}px;border-radius:${rayon};object-fit:cover;vertical-align:middle;${def.bordure ? 'border:1px solid rgba(23,52,84,0.25);box-sizing:border-box;' : ''}">`;
   }
   const base = `display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:${t}px;height:${t}px;border-radius:${Math.round(t * 0.27)}px;background:${fond};color:${def.texte || '#fff'};vertical-align:middle`;
+  if (def.svg && def.sansFond) {
+    return `<span title="${_pictoEsc(nom)}" aria-label="${_pictoEsc(nom)}" role="img" style="display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:${t}px;height:${t}px;color:var(--text);vertical-align:middle"><svg width="${Math.round(t * 0.86)}" height="${Math.round(t * 0.86)}" viewBox="${def.viewBox}" aria-hidden="true">${def.svg}</svg></span>`;
+  }
   if (def.svg) {
     const s = Math.round(t * 0.62);
     return `<span title="${_pictoEsc(nom)}" aria-label="${_pictoEsc(nom)}" role="img" style="${base}"><svg width="${s}" height="${s}" viewBox="${def.viewBox}" aria-hidden="true">${def.svg}</svg></span>`;

@@ -670,6 +670,7 @@ async function cfImprimerRapport() {
   ${A.projets.length ? `<h2>Projets</h2><table>${A.projets.map(p => ligne(`${cfEsc(p.libelle)} — ${cfCHF(p.montant)} en ${cfEsc(p.annee)}`, cfCHF(p.mensuel) + '/mois')).join('')}</table>` : ''}
   ${A.hypo ? `<h2>Financement immobilier</h2><table>${ligne('Prix du bien', cfCHF(A.hypo.params.prix))}${ligne('Fonds propres', cfCHF(A.hypo.params.fondsPropresDisponibles))}${ligne('Hypothèque', cfCHF(A.hypo.hypotheque))}${ligne('Taux d’effort', (A.hypo.tauxEffort * 100).toFixed(1) + ' %')}${ligne('Prix maximal finançable', cfCHF(A.hypo.prixMax))}</table>` : ''}
   ${recos.length ? `<h2>Nos recommandations</h2>${recos.map(r => `<div class="reco"><small>${cfEsc(r.cat || 'Conseil')}</small><div>${cfEsc(r.texte)}</div></div>`).join('')}` : ''}
+  ${typeof rexCitationRapportHtml === 'function' ? rexCitationRapportHtml('investissement') : ''}
   <div class="mention">Document établi à titre indicatif sur la base des informations communiquées par le client. Les projections (AVS, LPP, rendements, fiscalité) sont des estimations et ne constituent pas une garantie ; elles doivent être confirmées par les documents officiels (extrait de compte AVS, certificat de prévoyance, offres des établissements). Assurex Sàrl — courtier en assurances inscrit auprès de la FINMA.</div>
   <script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script></body></html>`;
   const w = window.open(URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' })), '_blank');

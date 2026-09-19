@@ -817,6 +817,7 @@ function apRapport() {
     ${apRapportCorps(A)}
     ${apRapportSolutions(A)}
     ${apRapportAnnexes(A)}
+    ${typeof rexCitationRapportHtml === 'function' ? rexCitationRapportHtml('prevoyance') : ''}
     <div class="mention">Estimation indicative établie sur la base des informations communiquées, selon les règles légales 2026 simplifiées (AVS/AI avec 13e rente de vieillesse, LPP, LAA). Elle ne remplace ni l'extrait de compte individuel AVS ni le certificat de prévoyance, qui font foi. Assurex Sàrl — courtier en assurances inscrit auprès de la FINMA.</div>
     <script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script></body></html>`;
   const w = window.open(URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' })), '_blank');

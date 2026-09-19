@@ -149,7 +149,7 @@ function cfRendre() {
   const c = _cf.client, d = _cf.dossier;
   const age = c.date_naissance && typeof ageAujourdhui === 'function' ? ageAujourdhui(c.date_naissance) : null;
   const i = CF_ETAPES.findIndex(e => e[0] === d.etape);
-  const onglets = [['synthese', 'Synthèse'], ['situation', 'Situation'], ['projets', `Projets (${d.projets.length})`], ['retraite', 'Retraite & prévoyance'], ['immobilier', 'Immobilier'], ['recommandations', `Recommandations (${d.recommandations.length})`]];
+  const onglets = [['synthese', 'Synthèse'], ['situation', 'Situation'], ['projets', `Projets (${d.projets.length})`], ['retraite', 'Retraite & prévoyance'], ['immobilier', 'Immobilier'], ...(typeof piOngletPlacements === 'function' ? [['placements', 'Placements']] : []), ['recommandations', `Recommandations (${d.recommandations.length})`]];
   main.innerHTML = `<div class="dbx cf">
     <section class="cf-hero cf-hero-dossier">
       <div class="cf-hero-deco" aria-hidden="true"></div>
@@ -185,6 +185,7 @@ function cfContenuOnglet() {
     case 'projets': return cfOngletProjets();
     case 'retraite': return cfOngletRetraite();
     case 'immobilier': return cfOngletImmobilier();
+    case 'placements': return typeof piOngletPlacements === 'function' ? piOngletPlacements() : ''; // profil investisseur (js/47)
     case 'recommandations': return cfOngletRecommandations();
     default: return cfOngletSynthese();
   }

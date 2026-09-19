@@ -2737,6 +2737,38 @@
 @media print { .tcx-onglets, .tcx-filtres, .tcx-kpis { display: none !important; } .tcx-ligne { break-inside: avoid; } }
 /* Commission d'assurance prénatale dans les prévisions (js/41, 19.09.2026) */
 .pv-tag.naiss { background: rgba(244,114,182,0.14); color: #DB2777; border-color: rgba(244,114,182,0.4); }
+/* ═══ Profil investisseur (js/47, 20.09.2026) ═══ */
+.pi-profils { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; }
+.pi-profil { display: flex; flex-direction: column; gap: 4px; text-align: left; padding: 12px 14px; border-radius: 14px; cursor: pointer; background: var(--surface); border: 1.5px solid var(--border); transition: border-color .15s, transform .15s, box-shadow .15s; font-family: inherit; }
+.pi-profil:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(17,54,121,0.10); }
+.pi-profil.actif { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,207,255,0.16); }
+.pi-profil b { font-size: 14px; color: var(--text); }
+.pi-profil .pi-chiffres { font-size: 12px; font-weight: 600; color: var(--accent); }
+.pi-profil small { font-size: 11.5px; color: var(--text-muted); line-height: 1.35; }
+.pi-profil em { font-size: 10.5px; color: var(--text-dim); font-style: normal; }
+.pi-jauge { display: block; height: 6px; border-radius: 999px; background: var(--surface-alt); overflow: hidden; margin-bottom: 4px; }
+.pi-jauge i { display: block; height: 100%; background: linear-gradient(90deg, #00CFFF, #113679); }
+.pi-note { font-size: 11px; color: var(--text-dim); margin-top: 10px; }
+.pi-alloc { display: flex; flex-direction: column; gap: 12px; }
+.pi-ligne-tete { display: flex; justify-content: space-between; align-items: baseline; font-size: 13px; color: var(--text); }
+.pi-ligne-tete span { font-weight: 700; font-variant-numeric: tabular-nums; }
+.pi-ligne small { font-size: 11px; color: var(--text-muted); }
+.pi-barre { height: 7px; border-radius: 999px; background: var(--surface-alt); overflow: hidden; margin: 4px 0 3px; }
+.pi-barre span { display: block; height: 100%; background: #94A3B8; }
+.pi-ligne.reserve .pi-barre span { background: #F59E0B; }
+.pi-ligne\.3a .pi-barre span, .pi-ligne[class*="3a"] .pi-barre span { background: #16A34A; }
+.pi-ligne.projets .pi-barre span { background: #60A5FA; }
+.pi-ligne.libre .pi-barre span { background: linear-gradient(90deg, #00CFFF, #113679); }
+.pi-proj-central { font-size: 30px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; line-height: 1.1; }
+.pi-proj-central small { display: block; font-size: 12px; font-weight: 500; color: var(--text-muted); margin-top: 2px; }
+.pi-proj-fourchette { font-size: 12px; color: var(--text-muted); margin: 8px 0 14px; }
+.pi-proj-fourchette b { color: var(--text); }
+.pi-comp { display: grid; grid-template-columns: 90px 1fr 110px; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); padding: 3px 0; }
+.pi-comp.actif { color: var(--text); font-weight: 700; }
+.pi-comp-barre { height: 8px; border-radius: 999px; background: var(--surface-alt); overflow: hidden; }
+.pi-comp-barre i { display: block; height: 100%; background: #CBD5E1; }
+.pi-comp.actif .pi-comp-barre i { background: linear-gradient(90deg, #00CFFF, #113679); }
+.pi-comp-val { text-align: right; font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) {
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
@@ -2849,7 +2881,7 @@
 <script src="js/19-prevision-commissions.js?v=1790760000"></script>
 <script src="js/20-fiche-client-entete.js?v=1790020000"></script>
 <script src="js/21-tresorerie.js?v=1790760000"></script>
-<script src="js/22-conseil-financier.js?v=1790330000"></script>
+<script src="js/22-conseil-financier.js?v=1790800000"></script>
 <script src="js/23-analyse-prevoyance.js?v=1790330000"></script>
 <script src="js/24-financement-immo.js?v=1790350000"></script>
 <script src="js/25-opportunite.js?v=1790640000"></script>
@@ -2874,6 +2906,7 @@
 <script src="js/44-bandeau-pages.js?v=1790660000"></script>
 <script src="js/45-courriers.js?v=1790640000"></script>
 <script src="js/46-offre-vers-contrat.js?v=1790640000"></script>
+<script src="js/47-profil-investisseur.js?v=1790800000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

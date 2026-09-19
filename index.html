@@ -127,6 +127,50 @@
   .demo-pass { font-size: 11px; color: var(--text-muted); font-family: monospace; }
   .login-footer { text-align: center; margin-top: 16px; font-size: 11px; color: var(--text-dim); }
 
+  /* ── Connexion en deux parties (19.09.2026) : panneau bleu marine REX à gauche, formulaire clair à droite,
+        identique quel que soit le thème choisi ── */
+  #login-screen { min-height: 100vh; display: flex; align-items: stretch; justify-content: stretch; background: #F4F6F9; background-image: none; }
+  .login-panneau { position: relative; overflow: hidden; width: 42%; max-width: 620px; min-width: 380px; box-sizing: border-box; padding: 56px 64px; display: flex; flex-direction: column; justify-content: space-between; background: #113679; color: #fff; }
+  .login-deco-cercle { position: absolute; right: -120px; top: 22%; width: 420px; height: 420px; border-radius: 50%; background: #1A4590; }
+  .login-deco-carre { position: absolute; right: 64px; top: 56px; width: 14px; height: 14px; background: #00CFFF; }
+  .login-assurex { position: relative; width: 170px; height: auto; filter: brightness(0) invert(1); }
+  .login-marque { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 26px; }
+  .login-mascotte { width: 170px; height: auto; filter: drop-shadow(0 10px 22px rgba(0,0,0,0.25)); }
+  .login-logotype { width: 280px; height: auto; filter: brightness(0) invert(1); }
+  .login-pied { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 13px; color: #B9CAE8; }
+  .login-pied svg { width: 170px; height: auto; }
+  .login-zone { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
+  #login-screen .login-card { width: 100%; max-width: 400px; background: transparent; border: 0; padding: 0; border-radius: 0; }
+  #login-screen .login-card h2 { text-align: left; font-size: 28px; font-weight: 600; letter-spacing: -0.02em; color: #0E1B33; margin-bottom: 6px; }
+  .login-sous-titre { font-size: 15px; color: #56627A; margin-bottom: 26px; }
+  #login-screen .field-wrap { margin-bottom: 18px; }
+  #login-screen .field-label { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 500; color: #33405A; }
+  #login-screen .field-input { background: #fff; border: 1px solid #D5DCE7; color: #0E1B33; height: 48px; border-radius: 10px; font-size: 15px; padding: 0 14px; }
+  #login-screen .pass-wrap .field-input { padding-right: 44px; }
+  #login-screen .field-input:focus { border-color: #113679; box-shadow: 0 0 0 3px rgba(17,54,121,0.12); }
+  #login-screen .pass-toggle { color: #56627A; }
+  #login-screen .btn-primary { background: #113679; color: #fff; height: 50px; font-size: 15px; font-weight: 600; margin-top: 4px; }
+  #login-screen .login-footer { text-align: left; margin-top: 24px; color: #8A94A8; font-size: 12px; }
+  @media (max-width: 860px) {
+    #login-screen { flex-direction: column; }
+    .login-panneau { width: 100%; max-width: none; min-width: 0; padding: 22px 24px; gap: 14px; }
+    .login-deco-cercle, .login-pied, .login-assurex { display: none; }
+    .login-deco-carre { top: 24px; right: 24px; }
+    .login-marque { flex-direction: row; align-items: center; gap: 14px; }
+    .login-mascotte { width: 64px; }
+    .login-logotype { width: 180px; }
+  }
+
+  /* ── Thème clair en deux tons (demande de Jonathan, 19.09.2026) : menu bleu marine, contenu clair.
+        Les couleurs sont redéfinies à l'intérieur du menu seulement : tout ce qui s'y trouve passe en clair sur bleu. ── */
+  html[data-theme="clair"] .sidebar {
+    --sidebar: #113679; --text: #FFFFFF; --text-muted: #C4D2EA; --text-dim: #8FA6CE;
+    --border: rgba(255,255,255,0.14); --surface: rgba(255,255,255,0.08); --surface-alt: rgba(255,255,255,0.06);
+    --accent: #00CFFF; --accent-dim: rgba(0,207,255,0.16); --accent-border: rgba(0,207,255,0.4); --on-accent: #06142C;
+    --logo-filter: brightness(0) invert(1);
+    background: #113679; border-right-color: #113679;
+  }
+
   /* APP */
   #app { display: none; min-height: 100vh; flex-direction: row; }
   #app.active { display: flex; }
@@ -442,35 +486,17 @@
 
 <!-- ═══ LOGIN ═══ -->
 <div id="login-screen">
-  <div class="login-box">
-    <div class="login-logo">
-      <div class="rex-banner">
-        <img src="assets/logos/rex-mascotte-hd.png" alt="Rex, la mascotte du CRM" class="rex-mascotte"/>
-        <img src="assets/logos/rex-logotype.png" alt="REX CRM" class="rex-wordmark"/>
-      </div>
-      <img src="assets/logos/assurex.png" alt="Assurex" class="assurex-login-logo"/>
+  <aside class="login-panneau" aria-label="REX CRM">
+    <span class="login-deco-cercle" aria-hidden="true"></span>
+    <span class="login-deco-carre" aria-hidden="true"></span>
+    <img src="assets/logos/assurex.png" alt="Assurex" class="login-assurex"/>
+    <div class="login-marque">
+      <img src="assets/logos/rex-mascotte-hd.png" alt="Rex, la mascotte du CRM" class="login-mascotte"/>
+      <img src="assets/logos/rex-logotype.png" alt="REX CRM" class="login-logotype"/>
     </div>
-    <div class="login-card">
-      <h2>Connexion</h2>
-      <form id="login-form" autocomplete="on" onsubmit="event.preventDefault(); doLogin();">
-        <div class="field-wrap">
-          <label class="field-label" for="login-email">Email</label>
-          <input class="field-input" type="email" id="login-email" name="username" autocomplete="username" placeholder="prenom@cofidex.ch"/>
-        </div>
-        <div class="field-wrap">
-          <label class="field-label" for="login-pass">Mot de passe</label>
-          <div class="pass-wrap">
-            <input class="field-input" type="password" id="login-pass" name="password" autocomplete="current-password" placeholder="••••••••"/>
-            <button type="button" class="pass-toggle" onclick="togglePass()">👁</button>
-          </div>
-        </div>
-        <div id="login-error" class="error-box hidden"></div>
-        <button type="submit" class="btn-primary">Se connecter</button>
-      </form>
-    </div>
-    <div class="exgroupe-mention-bottom">
-      <span>Une entreprise de</span>
-        <svg viewBox="670 488 580 100" xmlns="http://www.w3.org/2000/svg" class="exgroupe-logo">
+    <div class="login-pied">
+      <span>Assurex Sàrl · membre de</span>
+      <svg viewBox="670 488 580 100" xmlns="http://www.w3.org/2000/svg" class="exgroupe-logo">
           <rect x="829.47" y="551.34" width="18.15" height="18.15" fill="#00cfff"/>
           <rect x="686.18" y="538.2" width="48.56" height="10.09" fill="#ffffff"/>
           <rect x="686.18" y="558.47" width="53.17" height="10.09" fill="#ffffff"/>
@@ -483,8 +509,29 @@
           <path d="M1220.63,518.74h-43.32v49.83h11.21v-18.36h21.86l11.39-.14c1.22-.02,2.44-.13,3.61-.48,5.37-1.6,8.45-6.11,8.45-12.26v-6.43c0-7.31-5.41-12.16-13.19-12.16ZM1222.77,535.99c0,2.55-1.58,4.22-4.45,4.22h-29.8v-11.44h30.12c2.28,0,4.13,1.85,4.13,4.13v3.09Z" fill="#ffffff"/>
         </svg>
     </div>
-    <div class="login-footer">🔒 Données hébergées en Suisse · Zurich</div>
-  </div>
+  </aside>
+  <main class="login-zone">
+    <div class="login-card">
+      <h2>Connexion</h2>
+      <p class="login-sous-titre">Accès réservé à l'équipe Assurex.</p>
+      <form id="login-form" autocomplete="on" onsubmit="event.preventDefault(); doLogin();">
+        <div class="field-wrap">
+          <label class="field-label" for="login-email">E-mail</label>
+          <input class="field-input" type="email" id="login-email" name="username" autocomplete="username" placeholder="prenom@assurex.ch"/>
+        </div>
+        <div class="field-wrap">
+          <label class="field-label" for="login-pass">Mot de passe</label>
+          <div class="pass-wrap">
+            <input class="field-input" type="password" id="login-pass" name="password" autocomplete="current-password" placeholder="••••••••"/>
+            <button type="button" class="pass-toggle" onclick="togglePass()">👁</button>
+          </div>
+        </div>
+        <div id="login-error" class="error-box hidden"></div>
+        <button type="submit" class="btn-primary">Se connecter</button>
+      </form>
+      <div class="login-footer">🔒 Données hébergées en Suisse · Zurich</div>
+    </div>
+  </main>
 </div>
 
 <!-- ═══ APP ═══ -->
@@ -519,7 +566,7 @@
 <script src="js/01-prevoyance-immo.js?v=1789409777"></script>
 <script src="js/02-catalogue-session.js?v=1789487348"></script>
 <script src="js/03-auth-navigation.js?v=1789900000"></script>
-<script src="js/04-dashboard-finma.js?v=1789910000"></script>
+<script src="js/04-dashboard-finma.js?v=1789920000"></script>
 <script src="js/05-contrats-clients.js?v=1789880000"></script>
 <script src="js/06-signature-opportunites.js?v=1789880000"></script>
 <script src="js/07-fichepaie-bordereaux.js?v=1789880000"></script>

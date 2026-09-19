@@ -255,7 +255,7 @@ function viewDashboard() {
         <button onclick="navigate('dashboard')" title="Recharger les données depuis Supabase" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:9px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">🔄 Actualiser</button>
       </div>
     </div>
-    <div style="color:var(--text-muted);font-size:13px;margin-bottom:16px">Assurex Sàrl · EX Groupe · Commissions actives depuis le 01.06.2026</div>
+    <div style="margin-bottom:16px"></div>
 
     <div style="position:relative;margin-bottom:24px">
       <input id="recherche-globale-input" type="text" placeholder="🔍 Rechercher un client, contrat, opportunité, rappel..." class="form-input" autocomplete="off"

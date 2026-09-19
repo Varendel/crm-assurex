@@ -186,7 +186,8 @@ function renderBordereauxList() {
 async function toggleBordereauVerse(bordereauId) {
   const b = allBordereaux.find(x => x.id === bordereauId);
   if (!b) return;
-  const commissionsLiees = allCommissionsAttente.filter(c => c.bordereau_id === bordereauId && c.statut !== 'annulé');
+  const commissionsLiees = allCommissionsAttente.filter(c => c.bordereau_id === bordereauId && c.statut !== 'annulé' && c.statut !== 'annulée');
+  const surOZ = b.encaisse_par === 'oz';
 
   if (b.statut !== 'reçu') {
     // Bascule vers "versé" : le bordereau ET toutes ses commissions rapprochées
@@ -201,7 +202,9 @@ async function toggleBordereauVerse(bordereauId) {
     let echecsCommissions = 0;
     for (const c of commissionsLiees) {
       const patch = {};
-      if (c.statut !== 'reçue') patch.statut = 'reçue';
+      // Bordereau encaissé par OZ : ses commissions restent « versées à OZ » (hors chiffres Assurex)
+      const statutCible = surOZ ? 'versé_oz' : 'reçue';
+      if (c.statut !== statutCible) patch.statut = statutCible;
       if (!c.date_reception) patch.date_reception = dateRecep; // backfill même si déjà "reçue" (rapprochements historiques sans date)
       if (Object.keys(patch).length) {
         const r = await dbPatch('commissions_attente', c.id, patch);
@@ -221,17 +224,28 @@ async function toggleBordereauVerse(bordereauId) {
       showError('Erreur lors de la mise à jour du bordereau : ' + errMsg(resultatBordereau) + ' — aucune commission n\u2019a été touchée.');
       return;
     }
-    let echecsCommissions = 0;
+    // Retour en arrière (corrigé le 19.09.2026, cas BRD GM de mai) :
+    //   - une commission CRÉÉE par l'import de ce décompte n'existait pas avant → annulée (pas remise
+    //     en attente, sinon elle devient une fausse commission attendue, doublon de la vraie) ;
+    //   - une commission qui était déjà attendue et que l'import a soldée → remise en attente ;
+    //   - les versements partiels de ce bordereau sont annulés (jamais supprimés) ;
+    //   - le détail de calcul d'origine est conservé (la note est ajoutée à la suite).
+    const note = `[rapprochement annulé le ${fmtDate(new Date().toISOString())} — retour en arrière du bordereau ${b.numero || ''}]`;
+    let echecsCommissions = 0, nbAnnulees = 0, nbRemises = 0;
     for (const c of commissionsLiees) {
-      const r = await dbPatch('commissions_attente', c.id, {
-        statut: 'en_attente',
-        bordereau_id: null,
-        montant_final: null,
-        date_reception: null,
-        detail_calcul: `Rapprochement annulé le ${fmtDate(new Date().toISOString())} suite au retour en arrière du bordereau ${b.numero || ''} — remis en attente pour correction.`,
-      });
+      const creeParImport = /^Décompte compagnie importé/.test(c.detail_calcul || '');
+      const r = await dbPatch('commissions_attente', c.id, creeParImport
+        ? { statut: 'annulée', detail_calcul: `${c.detail_calcul || ''} — ${note}` }
+        : { statut: 'en_attente', bordereau_id: null, montant_final: null, date_reception: null, detail_calcul: `${c.detail_calcul || ''} — ${note}` });
+      if (r && r.error) echecsCommissions++; else if (creeParImport) nbAnnulees++; else nbRemises++;
+    }
+    const tranchesBd = (typeof allCommissionTranches !== 'undefined' ? allCommissionTranches : []).filter(t => t.bordereau_id === bordereauId);
+    for (const t of tranchesBd) {
+      const r = await dbPatch('commission_tranches', t.id, { annule: true, note: `${t.note || ''} ${note}`.trim() });
       if (r && r.error) echecsCommissions++;
     }
+    if (tranchesBd.length) allCommissionTranches = await dbGet('commission_tranches', 'annule=eq.false&select=*');
+    if (nbAnnulees || nbRemises || tranchesBd.length) showError(`↺ Bordereau ${b.numero || ''} remis « attendu » : ${nbAnnulees} commission(s) créée(s) par l'import annulée(s), ${nbRemises} remise(s) en attente${tranchesBd.length ? `, ${tranchesBd.length} versement(s) partiel(s) annulé(s)` : ''}.`);
     if (echecsCommissions > 0) {
       showError(`⚠️ Le bordereau est remis "attendu", mais ${echecsCommissions} commission(s) sur ${commissionsLiees.length} n'ont pas pu être déliées — vérifie-les manuellement.`);
     }
@@ -473,7 +487,7 @@ async function saveValidationCommission(bordereauId) {
     const comm = allCommissionsAttente.find(c => c.id === commId);
     const rT = await dbPost('commission_tranches', { commission_id: commId, montant: montantFinal, date_reception: dateReceptionFinale, bordereau_id: bordereauId, note: `Bordereau ${bordereauConcerne?.numero || ''} ${bordereauConcerne?.mois || ''}`.trim() });
     if (rT && rT.error) { showError('Versement non enregistré : ' + errMsg(rT)); if (btn) { btn.textContent = '✓ Valider'; btn.disabled = false; } return; }
-    allCommissionTranches = await dbGet('commission_tranches', 'select=*');
+    allCommissionTranches = await dbGet('commission_tranches', 'annule=eq.false&select=*');
     const deja = typeof commissionDejaRecu === 'function' ? commissionDejaRecu(comm) : montantFinal;
     const total = Number(comm?.montant_estime || 0);
     if (comm && deja >= total - 0.01) {
@@ -541,7 +555,7 @@ const MOIS_LISTE_IB = ['Janvier','Février','Mars','Avril','Mai','Juin','Juillet
 function genererNumeroBordereau(compagnie, mois, annee, tousLesBordereaux) {
   let maxNum = 0;
   (tousLesBordereaux || []).forEach(b => {
-    if (b.numero) { const m = b.numero.match(/^BRD\s+(\d+)/); if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10)); }
+    if (b.numero) { const m = b.numero.match(/^BRD[\s-]+(\d+)/); if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10)); }
   });
   const compagnieAffichee = (compagnie || '').trim() || 'Compagnie';
   return `BRD ${String(maxNum + 1).padStart(3, '0')} - ${mois} ${annee} - ${compagnieAffichee}`;

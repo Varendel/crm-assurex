@@ -1924,7 +1924,7 @@ async function analyserDecompteExcel() {
   if (!file) return;
   _decompteFichier = file;
   // Versements partiels et commissions à jour : nécessaires à la détection des doublons et à la déduction
-  try { const [tr, co] = await Promise.all([dbGet('commission_tranches', 'select=*'), dbGet('commissions_attente', 'select=*')]); if (Array.isArray(tr)) allCommissionTranches = tr; if (Array.isArray(co)) allCommissionsAttente = co; } catch (e) {}
+  try { const [tr, co] = await Promise.all([dbGet('commission_tranches', 'annule=eq.false&select=*'), dbGet('commissions_attente', 'select=*')]); if (Array.isArray(tr)) allCommissionTranches = tr; if (Array.isArray(co)) allCommissionsAttente = co; } catch (e) {}
   document.getElementById('imp-file-nom').textContent = file.name;
 
   const buffer = await file.arrayBuffer();
@@ -2062,7 +2062,7 @@ async function analyserDecomptePdf(input) {
   if (!file) return;
   _decompteFichier = file;
   // Versements partiels et commissions à jour : nécessaires à la détection des doublons et à la déduction
-  try { const [tr, co] = await Promise.all([dbGet('commission_tranches', 'select=*'), dbGet('commissions_attente', 'select=*')]); if (Array.isArray(tr)) allCommissionTranches = tr; if (Array.isArray(co)) allCommissionsAttente = co; } catch (e) {}
+  try { const [tr, co] = await Promise.all([dbGet('commission_tranches', 'annule=eq.false&select=*'), dbGet('commissions_attente', 'select=*')]); if (Array.isArray(tr)) allCommissionTranches = tr; if (Array.isArray(co)) allCommissionsAttente = co; } catch (e) {}
   document.getElementById('imp-file-nom').textContent = file.name;
   const statusEl = document.getElementById('imp-pdf-status');
   if (statusEl) { statusEl.textContent = '🤖 Lecture du PDF en cours (peut prendre 30-60 secondes)...'; statusEl.style.color = 'var(--accent)'; }
@@ -2118,6 +2118,22 @@ async function analyserDecomptePdf(input) {
 // les lignes précédentes y imputent déjà (plusieurs lignes d'une même police, ex. RC + casco).
 // Sans ça, toutes les lignes visaient la même attente, ou aucune (repéré le 19.09.2026, décompte Vaudoise).
 function repartirImputationsImport() {
+  // Doublon « agrégé » : une commission déjà encaissée (ou versée à OZ) sur le contrat, saisie en UNE
+  // ligne, dont le montant égale la SOMME des lignes du décompte pour ce contrat (ex. GM mai 2026 :
+  // 272 + 380.80 + 67.20 = 720 déjà enregistrés) → toutes ces lignes sont des doublons probables.
+  const parContrat = {};
+  _decompteLignes.filter(l => l.contratId && !l.estCaution).forEach(l => (parContrat[l.contratId] = parContrat[l.contratId] || []).push(l));
+  Object.entries(parContrat).forEach(([contratId, lignes]) => {
+    if (lignes.length < 2 || lignes.some(l => l.doublon)) return;
+    const somme = lignes.reduce((s, l) => s + Number(l.montant || 0), 0);
+    const existante = allCommissionsAttente.find(c => c.contrat_id === contratId && ['reçue', 'versé_oz'].includes(c.statut) && !(c.detail_calcul || '').includes('[ref:')
+      && Math.abs(Number(c.montant_final ?? c.montant_estime ?? 0) - somme) <= 1);
+    if (!existante) return;
+    lignes.forEach(l => {
+      l.doublon = { certain: false, court: `les ${lignes.length} lignes (CHF ${fmtCHF2(somme)}) sont déjà enregistrées en une commission ${existante.statut === 'versé_oz' ? 'versée à OZ' : 'reçue'}`, detail: `Commission existante : ${existante.produit || ''} CHF ${fmtCHF2(existante.montant_final ?? existante.montant_estime)} (${existante.detail_calcul || ''})` };
+      l.selectionne = false;
+    });
+  });
   const alloue = {};
   _decompteLignes.forEach(l => {
     l.attenteId = null; l.attenteReste = 0;
@@ -2249,23 +2265,52 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
 // est généré à l'affichage à partir des bordereaux existants ; le montant brut est préempli avec le
 // total des lignes actuellement cochées mais reste modifiable si le montant officiel du décompte
 // diffère (ex. arrondi compagnie, ligne exclue volontairement du bordereau mais gardée en commission).
+// Période du décompte (mois / année) déduite du nom du fichier : « …_2026-08-28_… », « 06.2026 »,
+// « BRD mai Groupe Mutuel » — à défaut le mois précédent (un décompte arrive après sa période).
+// Avant le 19.09.2026, le mois proposé était celui de l'IMPORT : des décomptes de mai ou juin
+// importés en septembre s'appelaient tous « Septembre 2026 ».
+function periodeDecompteImport() {
+  const nom = String((_decompteFichier && _decompteFichier.name) || '').toLowerCase();
+  const now = new Date();
+  let m = nom.match(/(20\d{2})[-_.](\d{2})[-_.](\d{2})/);
+  if (m) return { mois: Number(m[2]) - 1, annee: Number(m[1]) };
+  m = nom.match(/(?:^|\D)(\d{1,2})[._-](20\d{2})(?:\D|$)/);
+  if (m && Number(m[1]) >= 1 && Number(m[1]) <= 12) return { mois: Number(m[1]) - 1, annee: Number(m[2]) };
+  const noms = ['janv', 'f[ée]v', 'mars', 'avr', 'mai', 'juin', 'juil', 'ao[uû]t', 'sept', 'oct', 'nov', 'd[ée]c'];
+  const i = noms.findIndex(n => new RegExp(`(^|[^a-z])${n}`).test(nom));
+  if (i >= 0) { const a = nom.match(/20\d{2}/); return { mois: i, annee: a ? Number(a[0]) : (i > now.getMonth() ? now.getFullYear() - 1 : now.getFullYear()) }; }
+  const p = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  return { mois: p.getMonth(), annee: p.getFullYear() };
+}
+
+function majApercuNumeroBordereauImport() {
+  const el = document.getElementById('imp-bd-numero-apercu');
+  const mois = document.getElementById('imp-bd-mois')?.value, annee = document.getElementById('imp-bd-annee')?.value;
+  if (el && mois && annee) el.textContent = genererNumeroBordereau(normaliserCompagnie(_decompteNomAssureur || ''), mois, annee, allBordereaux);
+}
+
 function renderBlocBordereauImportDecompte() {
   const now = new Date();
+  const per = periodeDecompteImport();
   const totalCoche = _decompteLignes.filter(l => l.selectionne && l.contratId).reduce((s, l) => s + l.montant, 0);
-  const numeroApercu = genererNumeroBordereau(_decompteNomAssureur || '', MOIS_LISTE_IB[now.getMonth()], now.getFullYear(), allBordereaux);
+  const numeroApercu = genererNumeroBordereau(normaliserCompagnie(_decompteNomAssureur || ''), MOIS_LISTE_IB[per.mois], per.annee, allBordereaux);
+  const retenueCaution = -Math.round(_decompteLignes.filter(l => l.estCaution).reduce((s, l) => s + l.montant, 0) * 100) / 100;
   return `
-    <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">Numéro attribué automatiquement à la création — actuellement <span style="font-family:monospace;font-weight:700;color:var(--accent)">${numeroApercu}</span> (peut changer d'une unité si un autre bordereau est créé entretemps).</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">Numéro attribué automatiquement à la création — actuellement <span id="imp-bd-numero-apercu" style="font-family:monospace;font-weight:700;color:var(--accent)">${numeroApercu}</span>. Le mois est celui de la <strong>période du décompte</strong> (lu dans le nom du fichier), pas celui de l'import — vérifie-le.</div>
     <div class="form-grid">
-      <div class="form-field"><label class="form-label">Mois *</label>
-        <select class="form-select" id="imp-bd-mois">
-          ${MOIS_LISTE_IB.map(m => `<option value="${m}" ${m === MOIS_LISTE_IB[now.getMonth()] ? 'selected' : ''}>${m}</option>`).join('')}
+      <div class="form-field"><label class="form-label">Mois du décompte *</label>
+        <select class="form-select" id="imp-bd-mois" onchange="majApercuNumeroBordereauImport()">
+          ${MOIS_LISTE_IB.map((m, i) => `<option value="${m}" ${i === per.mois ? 'selected' : ''}>${m}</option>`).join('')}
         </select>
       </div>
       <div class="form-field"><label class="form-label">Année *</label>
-        <select class="form-select" id="imp-bd-annee">
-          ${[2024, 2025, 2026, 2027].map(y => `<option value="${y}" ${y === now.getFullYear() ? 'selected' : ''}>${y}</option>`).join('')}
+        <select class="form-select" id="imp-bd-annee" onchange="majApercuNumeroBordereauImport()">
+          ${[2024, 2025, 2026, 2027].map(y => `<option value="${y}" ${y === per.annee ? 'selected' : ''}>${y}</option>`).join('')}
         </select>
       </div>
+      <div class="form-field"><label class="form-label">Compte de caution — retenue (CHF)</label><input class="form-input" id="imp-bd-caution-retenue" inputmode="decimal" value="${retenueCaution || ''}" placeholder="GM, CSS : retenue du mois"/></div>
+      <div class="form-field"><label class="form-label">Compte de caution — retrait (CHF)</label><input class="form-input" id="imp-bd-caution-retrait" inputmode="decimal" placeholder="ex. pour couvrir une contre-passation"/></div>
+      <div class="form-field"><label class="form-label">Solde du compte de caution annoncé (CHF)</label><input class="form-input" id="imp-bd-caution-solde" inputmode="decimal" placeholder="selon le décompte"/></div>
       <div class="form-field"><label class="form-label">Montant brut (CHF) *</label>
         <input class="form-input" id="imp-bd-montant" type="number" step="0.01" value="${Math.round(totalCoche * 100) / 100}" oninput="recalculerEcartBordereauImport()"/>
         <div id="imp-bd-ecart" style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Préempli avec le total des lignes cochées ci-dessus — corrige si le montant officiel du bordereau compagnie diffère.</div>
@@ -2361,6 +2406,9 @@ async function importerCommissionsEtBordereau(nomAssureur) {
     statut: statutBordereau,
     date_reception: dateReception || null,
     encaisse_par: surOZ ? 'oz' : 'assurex',
+    caution_retenue: nombreCH(document.getElementById('imp-bd-caution-retenue')?.value) || null,
+    caution_retrait: nombreCH(document.getElementById('imp-bd-caution-retrait')?.value) || null,
+    caution_solde: document.getElementById('imp-bd-caution-solde')?.value ? nombreCH(document.getElementById('imp-bd-caution-solde').value) : null,
   });
   if (rBordereau && rBordereau.error) {
     showError('Erreur lors de la création du bordereau : ' + errMsg(rBordereau));
@@ -2454,7 +2502,7 @@ async function importerCommissionsEtBordereau(nomAssureur) {
   await journaliserEcartsCommission(ecartsAJournaliser, nouveauBordereau.id);
   logAction('import_decompte_et_bordereau', 'bordereaux', nouveauBordereau.id, `${numero} — ${compagnie} — ${nbCrees} commission(s) créée(s), ${nbImputes} versement(s) déduit(s) de l'attente${surOZ ? ' — encaissé par OZ Assure' : ''}`);
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
-  allCommissionTranches = await dbGet('commission_tranches', 'select=*') || [];
+  allCommissionTranches = await dbGet('commission_tranches', 'annule=eq.false&select=*') || [];
   allBordereaux = await dbGet('bordereaux', 'select=*');
   const partiesMsg = [];
   if (nbImputes) partiesMsg.push(`${nbImputes} ligne(s) rapprochée(s) de commissions déjà en attente (CHF ${fmtCHF2(totalImpute)} déduits${nbSoldes ? `, ${nbSoldes} commission(s) désormais soldée(s)` : ', le solde reste attendu'})`);

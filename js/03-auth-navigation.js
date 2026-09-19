@@ -745,6 +745,7 @@ const SECTIONS = [
     { id: 'commissions', icon: '🧮', label: 'Commissions (vue interne)', staff: true },
     { id: 'suivi-financier', icon: '🧭', label: 'Cockpit financier' },
     { id: 'factures', icon: '🧾', label: 'Factures QR' },
+    { id: 'caution', icon: '🔒', label: 'Comptes de caution' },
     { id: 'tresorerie', icon: '📈', label: 'Plan de trésorerie' },
     { id: 'fiche-paie', icon: '🧑‍💼', label: 'Fiche de paie (agents)' },
     { id: 'production', icon: '🏭', label: 'Production par période', staff: true },
@@ -886,7 +887,7 @@ async function refreshCoreData() {
     dbGet('bordereaux', 'select=*'),
     dbGet('clients', 'select=*'),
     dbGet('fiches_paie', 'select=*'),
-    dbGet('commission_tranches', 'select=*'),
+    dbGet('commission_tranches', 'annule=eq.false&select=*'),
   ]);
   allContrats = contrats || allContrats;
   allCommissionsAttente = commissions || allCommissionsAttente;
@@ -1369,6 +1370,7 @@ async function renderView() {
       else main.innerHTML = viewSuiviFinancier();
       break;
     case 'conseil': main.innerHTML = viewConseil(); break;
+    case 'caution': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); main.innerHTML = typeof viewComptesCaution === 'function' ? viewComptesCaution() : ''; break;
     // Factures QR suisses (js/33)
     case 'factures': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = typeof viewFacturesQR === 'function' ? await viewFacturesQR() : '<div class="table-empty">Module factures non chargé.</div>'; break;
     case 'tresorerie': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); main.innerHTML = viewTresorerie(); break;

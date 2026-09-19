@@ -1961,6 +1961,15 @@
   .oz-ligne { grid-template-columns: 22px minmax(0, 1fr) auto; cursor: pointer; }
   .oz-ligne input { width: 17px; height: 17px; accent-color: var(--accent); min-height: 0 !important; }
 
+  /* ═══ COMPTES DE CAUTION (js/35, 19.09.2026) ═══ */
+  .cau-grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(420px, 1fr)); gap: 18px; }
+  .cau-chiffres { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 12px; }
+  .cau-chiffres > div { background: var(--surface-alt); border: 1px solid var(--border); border-radius: 13px; padding: 10px 12px; display: flex; flex-direction: column; gap: 2px; }
+  .cau-chiffres span { font-size: 11px; color: var(--text-muted); } .cau-chiffres b { font-size: 17px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; } .cau-chiffres small { font-size: 10.5px; color: var(--text-dim); }
+  .cau-ligne { grid-template-columns: minmax(0, 1fr) 90px 80px 90px auto; }
+  .cau-val { display: flex; flex-direction: column; align-items: flex-end; font-size: 12.5px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
+  .cau-val small { font-size: 10px; font-weight: 500; color: var(--text-dim); } .cau-val em { font-style: normal; color: var(--text-dim); }
+  @media (max-width: 768px) { .cau-grille { grid-template-columns: 1fr; } .cau-chiffres { grid-template-columns: 1fr 1fr; } .cau-ligne { grid-template-columns: 1fr 1fr 1fr; } .cau-ligne .sfx-corps { grid-column: 1 / -1; } }
   @media (prefers-reduced-motion: reduce) {
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
@@ -2054,14 +2063,14 @@
 
 <script src="js/01-prevoyance-immo.js?v=1790090000"></script>
 <script src="js/02-catalogue-session.js?v=1790060000"></script>
-<script src="js/03-auth-navigation.js?v=1790250000"></script>
+<script src="js/03-auth-navigation.js?v=1790260000"></script>
 <script src="js/04-dashboard-finma.js?v=1790000000"></script>
 <script src="js/05-contrats-clients.js?v=1790250000"></script>
-<script src="js/06-signature-opportunites.js?v=1790250000"></script>
-<script src="js/07-fichepaie-bordereaux.js?v=1790250000"></script>
+<script src="js/06-signature-opportunites.js?v=1790260000"></script>
+<script src="js/07-fichepaie-bordereaux.js?v=1790260000"></script>
 <script src="js/08-nouveaux-formulaires.js?v=1790250000"></script>
-<script src="js/09-rappels-vehicules.js?v=1790040000"></script>
-<script src="js/10-commissions-parametres.js?v=1790110000"></script>
+<script src="js/09-rappels-vehicules.js?v=1790260000"></script>
+<script src="js/10-commissions-parametres.js?v=1790260000"></script>
 <script src="js/11-renouvellements.js?v=1789880000"></script>
 <script src="js/12-equipement.js?v=1789850000"></script>
 <script src="js/13-prochaine-action.js?v=1790200000"></script>
@@ -2086,6 +2095,7 @@
 <script src="js/32-campagnes.js?v=1790240000"></script>
 <script src="js/33-factures-qr.js?v=1790250000"></script>
 <script src="js/34-cockpit.js?v=1790250000"></script>
+<script src="js/35-comptes-caution.js?v=1790260000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

@@ -123,11 +123,11 @@ async function viewNouveauBordereau() {
   let maxNum = 0;
   (tousLesBordereaux || []).forEach(b => {
     if (b.numero) {
-      const m = b.numero.match(/(\d+)$/);
+      const m = b.numero.match(/^BRD[\s-]+(\d+)/);
       if (m) maxNum = Math.max(maxNum, parseInt(m[1], 10));
     }
   });
-  const prochainNumero = 'BRD-' + String(maxNum + 1).padStart(4, '0');
+  const prochainNumero = `BRD ${String(maxNum + 1).padStart(3, '0')} - …`; // format final attribué à l'enregistrement
   window._bordereauNumero = prochainNumero;
   window._bordereauPdfFile = null;
 
@@ -233,7 +233,10 @@ async function saveBordereau() {
   const tauxCaution = parseFloat(document.getElementById('b-caution').value) || 0;
   if (!compagnie) { alert('Compagnie obligatoire.'); return; }
   const body = {
-    numero: window._bordereauNumero || null,
+    // Même format que les imports : « BRD 008 - Mois Année - Compagnie » (compteur continu, 19.09.2026)
+    numero: typeof genererNumeroBordereau === 'function'
+      ? genererNumeroBordereau(compagnie, document.getElementById('b-mois-select').value, document.getElementById('b-annee-select').value, allBordereaux)
+      : (window._bordereauNumero || null),
     compagnie, mois,
     montant_brut: montant,
     taux_caution: tauxCaution,

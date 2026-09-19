@@ -43,7 +43,7 @@ async function ajouterVersementCommission(commId) {
   const r = await dbPost('commission_tranches', { commission_id: commId, montant, date_reception, note });
   if (r && r.error) { showError('Erreur lors de l\'enregistrement du versement.'); return; }
   logAction('add_versement_commission', 'commission_tranches', commId, `CHF ${fmtCHF(montant)} le ${date_reception}`);
-  allCommissionTranches = await dbGet('commission_tranches', 'select=*');
+  allCommissionTranches = await dbGet('commission_tranches', 'annule=eq.false&select=*');
   showModalEditCommission(commId);
   renderToutesCommissions();
 }
@@ -51,7 +51,7 @@ async function ajouterVersementCommission(commId) {
 async function supprimerVersementCommission(trancheId, commId) {
   if (!confirm('Supprimer ce versement ?')) return;
   await dbDelete('commission_tranches', trancheId);
-  allCommissionTranches = await dbGet('commission_tranches', 'select=*');
+  allCommissionTranches = await dbGet('commission_tranches', 'annule=eq.false&select=*');
   showModalEditCommission(commId);
   renderToutesCommissions();
 }
@@ -223,7 +223,7 @@ function viewCommissionsAttente(prefiltreStatut) {
   // affichés en vrac par défaut (demande de Jonathan le 11.08.2026).
   const statutInitial = prefiltreStatut !== undefined ? prefiltreStatut : 'en_attente';
   window._tcPrefiltre = statutInitial || null;
-  dbGet('commission_tranches', 'select=*').then(t => { allCommissionTranches = t; renderToutesCommissions(); });
+  dbGet('commission_tranches', 'annule=eq.false&select=*').then(t => { allCommissionTranches = t; renderToutesCommissions(); });
   setTimeout(() => renderToutesCommissions(), 0);
   const compagniesPresentes = [...new Set(allCommissionsAttente.map(c => normaliserCompagnie(c.compagnie)).filter(Boolean))].sort();
   return `

@@ -1980,6 +1980,15 @@
   .cau-val { display: flex; flex-direction: column; align-items: flex-end; font-size: 12.5px; font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; }
   .cau-val small { font-size: 10px; font-weight: 500; color: var(--text-dim); } .cau-val em { font-style: normal; color: var(--text-dim); }
   @media (max-width: 768px) { .cau-grille { grid-template-columns: 1fr; } .cau-chiffres { grid-template-columns: 1fr 1fr; } .cau-ligne { grid-template-columns: 1fr 1fr 1fr; } .cau-ligne .sfx-corps { grid-column: 1 / -1; } }
+  /* ═══ RENTABILITÉ (js/36, 19.09.2026) ═══ */
+  .rt-segments { margin-bottom: 14px; }
+  .rt-table .sfx-tr { grid-template-columns: minmax(200px, 2fr) 70px minmax(90px, 1fr) minmax(90px, 1fr) minmax(100px, 1fr) 80px minmax(100px, 1fr); min-width: 780px; }
+  .rt-nom { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+  .rt-nom .dbx-hbarre-piste { height: 5px; }
+  .rt-recurrent { color: #16A34A; font-weight: 600; } .rt-dim { color: var(--text-dim); }
+  .rt-reco { grid-template-columns: minmax(0, 1fr) auto auto auto; }
+  .rt-produit { font-size: 12px; font-weight: 600; color: var(--accent); background: var(--accent-dim); border-radius: 999px; padding: 3px 10px; white-space: nowrap; }
+  @media (max-width: 768px) { .rt-reco { grid-template-columns: 1fr auto; } .rt-reco .sfx-corps { grid-column: 1 / -1; } }
   @media (prefers-reduced-motion: reduce) {
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
@@ -2099,13 +2108,14 @@
 <script src="js/26-demande-offre.js?v=1790200000"></script>
 <script src="js/27-suivi-affaires.js?v=1790200000"></script>
 <script src="js/28-mobile.js?v=1790200000"></script>
-<script src="js/29-suivi-financier.js?v=1790300000"></script>
+<script src="js/29-suivi-financier.js?v=1790320000"></script>
 <script src="js/30-volume-primes.js?v=1790210000"></script>
 <script src="js/31-analyses-recentes.js?v=1790210000"></script>
 <script src="js/32-campagnes.js?v=1790240000"></script>
 <script src="js/33-factures-qr.js?v=1790250000"></script>
 <script src="js/34-cockpit.js?v=1790280000"></script>
 <script src="js/35-comptes-caution.js?v=1790260000"></script>
+<script src="js/36-rentabilite.js?v=1790320000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

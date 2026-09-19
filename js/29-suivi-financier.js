@@ -89,6 +89,7 @@ function viewSuiviFinancierV2() {
   const onglets = [
     ...(typeof htmlCockpitEnsemble === 'function' ? [['ensemble', '🧭 Vue d’ensemble']] : []),
     ['pilotage', '📊 Commissions'],
+    ...(typeof htmlCockpitRentabilite === 'function' ? [['rentabilite', '💎 Rentabilité']] : []),
     ['precision', '🎯 Précision des estimations'],
     ['retards', `⏳ Retards${D.retards.length ? ' <span class="dbx-pastille">' + D.retards.length + '</span>' : ''}`],
     ...(typeof htmlCockpitControle === 'function' ? [['controle', `🔍 Contrôle${nbAnomalies ? ' <span class="dbx-pastille">' + nbAnomalies + '</span>' : ''}`]] : []),
@@ -97,6 +98,7 @@ function viewSuiviFinancierV2() {
   let corps = '';
   if (window._sfxOnglet === 'ensemble' && typeof htmlCockpitEnsemble === 'function') corps = htmlCockpitEnsemble(D);
   else if (window._sfxOnglet === 'controle' && typeof htmlCockpitControle === 'function') corps = htmlCockpitControle();
+  else if (window._sfxOnglet === 'rentabilite' && typeof htmlCockpitRentabilite === 'function') corps = htmlCockpitRentabilite();
   else if (window._sfxOnglet === 'oz' && typeof htmlCockpitOZ === 'function' && currentUser && currentUser.role === 'signataire') corps = htmlCockpitOZ();
   else if (window._sfxOnglet === 'precision') corps = htmlSfxPrecision();
   else if (window._sfxOnglet === 'retards') corps = htmlSfxRetards(D);

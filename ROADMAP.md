@@ -108,7 +108,11 @@ sont en bas de ce fichier.
 - [x] Nouveau design, étape 1 (19.09) : police Geist sans le « tout en gras », couleurs de la charte REX (cyan #00CFFF / bleu marine #113679), thème clair avec menu blanc, logo REX + mascotte (menu et connexion)
 - [x] Nouveau design, étape 2 (19.09) : kanban du pipeline, fiche client avec journal d'activité, thème clair deux tons
 - [x] **Nouveau tableau de bord** (19.09, js/18-dashboard.js) — onglets « Aujourd'hui » (liste d'actions par urgence, cochables sur place ; nouveautés 7 jours ; signaux à surveiller ; agenda) et « Pilotage » (graphiques 12 mois, portefeuille par compagnie, pipeline par stade). L'ancien reste accessible (« Vue classique »)
-- [ ] **Génération de courriers clients avec en-tête** (demandé le 19.09, modèle Word fourni : envoi
+- [x] **Courriers clients avec en-tête** (19.09, js/45) — menu Clients › Courriers clients et fiche
+      client › Documents : 7 modèles, aperçu A4, Word (templates/courrier-client.docx), PDF, e-mail
+      Outlook avec le Word joint (aperçu + confirmation), archivage dans le journal de la fiche.
+      Reste : modèles personnalisables enregistrés par l'utilisateur.
+- [ ] ~~Génération de courriers clients avec en-tête~~ (détail d'origine) (demandé le 19.09, modèle Word fourni : envoi
       de polices 3a) — papier à en-tête Assurex / EX.GROUP (logos en haut), lieu et date
       (« St-Sulpice, le … »), bloc adresse du client repris de la fiche, n° de police(s) en
       référence, objet en gras, formule d'appel selon la civilité, corps du texte, signature avec

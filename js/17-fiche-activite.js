@@ -13,6 +13,7 @@ const JA_TYPES = {
   note:         { label: 'Notes',         icone: '📝', fond: 'rgba(245,158,11,0.14)' },
   email:        { label: 'E-mails',       icone: '✉️', fond: 'rgba(167,139,250,0.16)' },
   appel:        { label: 'Appels',        icone: '📞', fond: 'rgba(56,189,248,0.14)' },
+  courrier:     { label: 'Courriers',     icone: '📨', fond: 'rgba(17,54,121,0.12)' },
   tache:        { label: 'Tâches',        icone: '☑️', fond: 'rgba(56,189,248,0.14)' },
   rdv:          { label: 'RDV',           icone: '📅', fond: 'rgba(74,222,128,0.14)' },
   signature:    { label: 'Signatures',    icone: '✍️', fond: 'rgba(74,222,128,0.14)' },
@@ -79,7 +80,7 @@ async function chargerJournalActivite() {
 
   const items = [];
   (activites || []).forEach(a => items.push({ type: a.type, date: a.created_at, qui: a.auteur,
-    titre: a.type === 'email' ? `E-mail envoyé${a.sujet ? ' : ' + a.sujet : ''}` : a.type === 'appel' ? 'Appel' : 'Note', detail: a.contenu }));
+    titre: a.type === 'email' ? `E-mail envoyé${a.sujet ? ' : ' + a.sujet : ''}` : a.type === 'appel' ? 'Appel' : a.type === 'courrier' ? `Courrier${a.sujet ? ' : ' + a.sujet : ''}` : 'Note', detail: a.contenu }));
   (ctx.rappels || []).forEach(r => items.push({ type: 'tache', date: r.created_at || r.date_echeance, qui: r.cree_par || '',
     titre: `${r.statut === 'ouvert' ? 'Tâche' : 'Tâche terminée'} : ${r.titre || ''}`, detail: r.date_echeance ? `Échéance ${fmtDate(r.date_echeance)}` : '' }));
   (ctx.rendezVousClient || []).forEach(r => items.push({ type: 'rdv', date: r.created_at || r.date_heure, qui: r.cree_par === 'client' ? 'Client (en ligne)' : (r.cree_par || ''),

@@ -2640,6 +2640,29 @@
 .ozx-archive b { display: block; font-size: 13.5px; }
 .ozx-archive small { font-size: 12px; color: var(--text-muted); }
 .ozx-archive-pastille { font-size: 11px !important; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; vertical-align: middle; margin-left: 8px; padding: 3px 9px; border-radius: 999px; background: rgba(245,158,11,0.18); color: #B45309; }
+/* ═══ Courriers clients avec en-tête (js/45) ═══ */
+.crx-grille { display: grid; grid-template-columns: minmax(320px, 440px) 1fr; gap: 18px; align-items: start; }
+.crx-form { display: flex; flex-direction: column; gap: 4px; }
+.crx-deux { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.crx-trois { grid-template-columns: 1fr 1fr 1fr; }
+.crx-contrats { display: flex; flex-direction: column; gap: 6px; max-height: 180px; overflow: auto; padding: 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-alt, transparent); }
+.crx-contrats label { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text); cursor: pointer; }
+.crx-contrats small { color: var(--text-muted); margin-left: 4px; }
+.crx-apercu-zone { position: sticky; top: 12px; overflow: auto; max-height: calc(100vh - 40px); border-radius: 16px; background: #E5E7EB; padding: 18px; }
+.crx-apercu-zone .crx-page { zoom: 0.78; width: 210mm; min-height: 297mm; box-sizing: border-box; margin: 0 auto; padding: 14mm 20mm 12mm 25mm; background: #fff; color: #111; box-shadow: 0 10px 30px rgba(0,0,0,.15); display: flex; flex-direction: column; font-family: 'Segoe UI', Arial, sans-serif; }
+.crx-apercu-zone .crx-entete { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14mm; }
+.crx-apercu-zone .crx-entete img { height: 9.5mm; width: auto; }
+.crx-apercu-zone .crx-corps-lettre { flex: 1; font-size: 11pt; line-height: 1.45; text-align: justify; }
+.crx-apercu-zone .crx-droite { margin-left: 84mm; }
+.crx-apercu-zone .crx-adresse { margin-top: 22mm; margin-bottom: 20mm; }
+.crx-apercu-zone .crx-refs { font-weight: 700; }
+.crx-apercu-zone .crx-objet { font-weight: 700; margin: 4mm 0 6mm; }
+.crx-apercu-zone .crx-corps-lettre p { margin: 0 0 4mm; }
+.crx-apercu-zone .crx-signature { text-align: center; margin-top: 8mm; }
+.crx-apercu-zone .crx-pied { text-align: center; font-size: 7.5pt; color: #113679; line-height: 1.5; border-top: 1px solid #00CFFF; padding-top: 3mm; margin-top: 8mm; }
+.crx-joindre { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text); margin: 4px 0 8px; }
+@media (max-width: 1100px) { .crx-grille { grid-template-columns: 1fr; } .crx-apercu-zone { position: static; max-height: none; } .crx-apercu-zone .crx-page { zoom: 0.5; } }
+@media (max-width: 760px) { .crx-deux, .crx-trois { grid-template-columns: 1fr; } .crx-apercu-zone { padding: 8px; } .crx-apercu-zone .crx-page { zoom: 0.42; } }
 @media (prefers-reduced-motion: reduce) {
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
@@ -2733,9 +2756,9 @@
 
 <script src="js/01-prevoyance-immo.js?v=1790350000"></script>
 <script src="js/02-catalogue-session.js?v=1790060000"></script>
-<script src="js/03-auth-navigation.js?v=1790570000"></script>
+<script src="js/03-auth-navigation.js?v=1790620000"></script>
 <script src="js/04-dashboard-finma.js?v=1790510000"></script>
-<script src="js/05-contrats-clients.js?v=1790510000"></script>
+<script src="js/05-contrats-clients.js?v=1790620000"></script>
 <script src="js/06-signature-opportunites.js?v=1790600000"></script>
 <script src="js/07-fichepaie-bordereaux.js?v=1790390000"></script>
 <script src="js/08-nouveaux-formulaires.js?v=1790510000"></script>
@@ -2747,7 +2770,7 @@
 <script src="js/14-sources.js?v=1789880000"></script>
 <script src="js/15-pictos-compagnies.js?v=1790240000"></script>
 <script src="js/16-pipeline-kanban.js?v=1789930000"></script>
-<script src="js/17-fiche-activite.js?v=1789940000"></script>
+<script src="js/17-fiche-activite.js?v=1790620000"></script>
 <script src="js/18-dashboard.js?v=1790580000"></script>
 <script src="js/19-prevision-commissions.js?v=1790600000"></script>
 <script src="js/20-fiche-client-entete.js?v=1790020000"></script>
@@ -2775,6 +2798,7 @@
 <script src="js/42-objectifs.js?v=1790580000"></script>
 <script src="js/43-autotests.js?v=1790600000"></script>
 <script src="js/44-bandeau-pages.js?v=1790580000"></script>
+<script src="js/45-courriers.js?v=1790620000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

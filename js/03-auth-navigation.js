@@ -716,6 +716,7 @@ const SECTIONS = [
     { id: 'clients-entreprises', icon: '🏢', label: 'Entreprises', rhAllowed: true, groupe: 'Clients' },
     { id: 'clients-oz', icon: '🔹', label: 'Clients OZ Assure', staff: true, groupe: 'Clients' },
     { id: 'marquage-entites', icon: '🏷️', label: 'Marquage des entités', staff: true, groupe: 'Clients' },
+    { id: 'courriers', icon: '📨', label: 'Courriers clients', staff: true, groupe: 'Clients' },
     { id: 'tous-contrats', icon: '📄', label: 'Tous les contrats', rhAllowed: true, groupe: 'Contrats' },
     { id: 'volume-primes', icon: '📦', label: 'Volume de primes', staff: true, rhAllowed: true, groupe: 'Contrats' },
     { id: 'recherche-vehicules', icon: '🚗', label: 'Recherche véhicules', rhAllowed: true, groupe: 'Contrats' },
@@ -1392,6 +1393,8 @@ async function renderView() {
     case 'conseil': main.innerHTML = viewConseil(); break;
     case 'caution': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); main.innerHTML = typeof viewComptesCaution === 'function' ? viewComptesCaution() : ''; break;
     // Marquage OZ / Assurex-EX des clients sans entité (js/39)
+    // Courriers clients avec en-tête Assurex / EX.GROUP (js/45)
+    case 'courriers': main.innerHTML = typeof viewCourriers === 'function' ? viewCourriers() : ''; break;
     case 'marquage-entites': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); main.innerHTML = typeof viewMarquageEntites === 'function' ? viewMarquageEntites() : ''; break;
     // Factures QR suisses (js/33)
     case 'factures': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = typeof viewFacturesQR === 'function' ? await viewFacturesQR() : '<div class="table-empty">Module factures non chargé.</div>'; break;

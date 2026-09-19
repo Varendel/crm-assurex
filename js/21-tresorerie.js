@@ -219,7 +219,14 @@ function trGraphique(R) {
     ${barres}
     <polyline points="${pts.join(' ')}" fill="none" stroke="#00CFFF" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" class="tr-ligne"/>
     ${R.parMois.map((x, i) => `<circle cx="${x0(i) + larg / 2}" cy="${y(x.fin)}" r="4.5" fill="${x.fin < 0 ? '#EF4444' : '#00CFFF'}" stroke="var(--surface)" stroke-width="2"><title>${trLibelleMois(x.m)} — solde CHF ${trCHF(x.fin)}</title></circle>`).join('')}
-  </svg></div>`;
+  </svg>
+  <div class="tr-legende" style="display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:10px;font-size:12px;color:var(--text-muted)">
+    <span style="display:inline-flex;align-items:center;gap:7px"><i style="width:12px;height:12px;border-radius:3px;background:#22C55E;opacity:.75"></i><b style="color:var(--text)">Entrées du mois</b> — commissions (gestion, acquisition) et autres encaissements prévus</span>
+    <span style="display:inline-flex;align-items:center;gap:7px"><i style="width:12px;height:12px;border-radius:3px;background:#EF4444;opacity:.7"></i><b style="color:var(--text)">Sorties du mois</b> — charges saisies (salaires, loyer, abonnements…)</span>
+    <span style="display:inline-flex;align-items:center;gap:7px"><i style="width:18px;height:3px;border-radius:2px;background:#00CFFF"></i><b style="color:var(--text)">Solde en fin de mois</b> — trésorerie disponible après entrées et sorties</span>
+    <span style="display:inline-flex;align-items:center;gap:7px"><i style="width:10px;height:10px;border-radius:50%;background:#EF4444"></i><b style="color:var(--text)">Point rouge</b> — solde négatif ce mois-là</span>
+    <span style="display:inline-flex;align-items:center;gap:7px"><i style="width:18px;height:0;border-top:1.5px solid var(--text-dim, var(--text-muted))"></i>Ligne du zéro · échelle en CHF (k = milliers)</span>
+  </div></div>`;
 }
 
 function trTableau(R) {

@@ -106,7 +106,20 @@ function _prevIso(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).pad
 // Point de départ : date de signature du contrat. À défaut, la plus récente entre sa date de début
 // et la création de la commission — un contrat repris en gestion (début en 2019, commission créée
 // en 07.2026) part de la reprise, pas de 2019.
+// Date à partir de laquelle le courtier a droit aux commissions d'une compagnie (convention) —
+// Jonathan, 19.09.2026 : HOTELA ne commissionne qu'à partir du 01.01.2027.
+const PREVISION_DROIT_COMMISSIONS_DES = { 'hotela': '2027-01-01' };
+function droitCommissionsDes(ca) {
+  const nom = ((typeof normaliserCompagnie === 'function' ? normaliserCompagnie(ca.compagnie || '') : ca.compagnie) || '').toLowerCase();
+  const cle = Object.keys(PREVISION_DROIT_COMMISSIONS_DES).find(k => nom.includes(k));
+  return cle ? PREVISION_DROIT_COMMISSIONS_DES[cle] : null;
+}
 function commissionDateDepart(ca) {
+  const d = _commissionDateDepartBrute(ca);
+  const droit = droitCommissionsDes(ca);
+  return droit && (!d || d < droit) ? droit : d;
+}
+function _commissionDateDepartBrute(ca) {
   // Gestion des années suivantes : elle part de l'échéance de facturation (date_creation), pas de la signature
   if (/\[gestion annuelle\]/.test(ca.detail_calcul || '') && ca.date_creation) return ca.date_creation.slice(0, 10);
   const ct = ca.contrat_id ? allContrats.find(x => x.id === ca.contrat_id) : null;

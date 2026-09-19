@@ -180,7 +180,7 @@ const MSAL_CONFIG = {
 // ═══ STATE ═══
 let currentUser = null;
 let currentView = 'dashboard';
-let openSections = { vente: true, portefeuille: true, clients: true, compta: true, settings: false };
+let openSections = { clients: true, vente: true, 'conseil-section': true, organisation: true, compta: true, settings: false };
 let allAgents = [];
 let allClients = [];
 let allRappels = [];

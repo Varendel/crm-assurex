@@ -702,53 +702,58 @@ async function tryRestoreSession() {
 }
 
 // ═══ SIDEBAR ═══
+// Rubriques réorganisées par métier (19.09.2026) : Clients · Ventes · Conseil · Agenda · Finances ·
+// Paramètres — une icône par entrée pour se repérer d'un coup d'œil. Les droits RH (rhAllowed) et
+// les entrées réservées (staff) sont inchangés.
 const SECTIONS = [
-  { id: 'dashboard-solo', label: 'Dashboard', icon: '⬛', solo: true, target: 'dashboard' },
-  { id: 'pipeline-solo', label: 'Pipeline', icon: '📈', solo: true, target: 'opportunites', rhAllowed: true },
+  { id: 'dashboard-solo', label: 'Tableau de bord', icon: '📊', solo: true, target: 'dashboard' },
+  { id: 'pipeline-solo', label: 'Pipeline', icon: '🎯', solo: true, target: 'opportunites', rhAllowed: true },
   { id: 'oz-assure-solo', label: 'OZ Assure', solo: true, logo: true, target: 'oz-assure', signataireOnly: true },
-  { id: 'vente', label: 'Vente', icon: '◈', sub: [
-    { id: 'suivi', label: 'Suivi des affaires' },
-    { id: 'renouvellements', label: '🔁 Renouvellements' },
-    { id: 'relances-lamal', label: '🩺 Relances LAMal' },
-    { id: 'equipement', label: '🧩 Équipement & ventes croisées' },
-    { id: 'sources', label: '🧭 Sources des clients' },
-    { id: 'nouveau-contrat-direct', label: 'Nouveau contrat' },
-    { id: 'nouvelle-demande-offre', label: 'Demande d\'offre' },
-    { id: 'rappels', label: 'Tâches & Rappels', rhAllowed: true },
-    { id: 'agenda', label: 'Agenda', rhAllowed: true },
-    { id: 'rendez-vous', label: '📅 Rendez-vous', rhAllowed: true },
-    { id: 'campagnes', label: 'Campagnes' },
+  { id: 'clients', label: 'Clients', icon: '👥', sub: [
+    { id: 'portefeuille', icon: '👥', label: 'Tous les clients', staff: true, rhAllowed: true },
+    { id: 'clients-prives', icon: '🙂', label: 'Clients privés', rhAllowed: true },
+    { id: 'clients-entreprises', icon: '🏢', label: 'Entreprises', rhAllowed: true },
+    { id: 'clients-oz', icon: '🔹', label: 'Clients OZ Assure', staff: true },
+    { id: 'tous-contrats', icon: '📄', label: 'Tous les contrats', rhAllowed: true },
+    { id: 'volume-primes', icon: '📦', label: 'Volume de primes', staff: true, rhAllowed: true },
+    { id: 'recherche-vehicules', icon: '🚗', label: 'Recherche véhicules', rhAllowed: true },
   ]},
-  { id: 'conseil-section', label: 'Conseil', icon: '◇', sub: [
-    { id: 'conseil', label: '💼 Conseil financier' },
-    { id: 'analyse-prevoyance', label: '🧮 Analyse de prévoyance' },
-    { id: 'calc-immo', label: '🏠 Financement immobilier' },
+  { id: 'vente', label: 'Ventes', icon: '🚀', sub: [
+    { id: 'suivi', icon: '📋', label: 'Suivi des affaires' },
+    { id: 'nouvelle-demande-offre', icon: '📝', label: 'Demande d\'offre' },
+    { id: 'nouveau-contrat-direct', icon: '➕', label: 'Nouveau contrat' },
+    { id: 'renouvellements', icon: '🔁', label: 'Renouvellements' },
+    { id: 'relances-lamal', icon: '🩺', label: 'Relances LAMal' },
+    { id: 'equipement', icon: '🧩', label: 'Équipement & ventes croisées' },
+    { id: 'sources', icon: '🧭', label: 'Sources des clients' },
+    { id: 'campagnes', icon: '📣', label: 'Campagnes' },
   ]},
-  { id: 'portefeuille', label: 'Portefeuille', icon: '◑', sub: [
-    { id: 'portefeuille', label: 'Tous les clients', staff: true, rhAllowed: true },
-    { id: 'clients-prives', label: 'Clients privés', rhAllowed: true },
-    { id: 'clients-entreprises', label: 'Entreprises', rhAllowed: true },
-    { id: 'clients-oz', label: 'Clients OZ Assure', staff: true },
-    { id: 'volume-primes', label: 'Volume de primes', staff: true, rhAllowed: true },
-    { id: 'tous-contrats', label: 'Tous les contrats', rhAllowed: true },
-    { id: 'recherche-vehicules', label: '🚗 Recherche véhicules', rhAllowed: true },
+  { id: 'conseil-section', label: 'Conseil', icon: '💼', sub: [
+    { id: 'conseil', icon: '💼', label: 'Conseil financier' },
+    { id: 'analyse-prevoyance', icon: '🧮', label: 'Analyse de prévoyance' },
+    { id: 'calc-immo', icon: '🏠', label: 'Financement immobilier' },
   ]},
-  { id: 'compta', label: 'Comptabilité', icon: '◎', sub: [
-    { id: 'bordereaux', label: 'Bordereaux (reçus des compagnies)' },
-    { id: 'import-decompte', label: '📥 Importer un décompte (PDF/Excel)' },
-    { id: 'commissions', label: 'Commissions', staff: true },
-    { id: 'commissions-attente', label: 'Toutes les commissions' },
-    { id: 'suivi-financier', label: '💰 Suivi financier' },
-    { id: 'tresorerie', label: '📈 Plan de trésorerie' },
-    { id: 'fiche-paie', label: 'Fiche de paie (agents)' },
-    { id: 'rapport-finma', label: 'Rapport FINMA' },
-    { id: 'production', label: 'Production (par période)', staff: true },
+  { id: 'organisation', label: 'Agenda', icon: '🗓️', sub: [
+    { id: 'rappels', icon: '✅', label: 'Tâches & rappels', rhAllowed: true },
+    { id: 'agenda', icon: '🗓️', label: 'Agenda', rhAllowed: true },
+    { id: 'rendez-vous', icon: '📅', label: 'Rendez-vous', rhAllowed: true },
   ]},
-  { id: 'settings', label: 'Paramètres', icon: '⊙', sub: [
-    { id: 'agents', label: 'Agents' },
-    { id: 'audit-log', label: 'Journal d\'audit' },
-    { id: 'contacts-compagnies', label: 'Contacts compagnies' },
-    { id: 'apparence', label: 'Apparence (thème)', rhAllowed: true },
+  { id: 'compta', label: 'Finances', icon: '💰', sub: [
+    { id: 'bordereaux', icon: '🧾', label: 'Bordereaux' },
+    { id: 'import-decompte', icon: '📥', label: 'Importer un décompte' },
+    { id: 'commissions-attente', icon: '💸', label: 'Toutes les commissions' },
+    { id: 'commissions', icon: '🧮', label: 'Commissions (vue interne)', staff: true },
+    { id: 'suivi-financier', icon: '📊', label: 'Suivi financier' },
+    { id: 'tresorerie', icon: '📈', label: 'Plan de trésorerie' },
+    { id: 'fiche-paie', icon: '🧑‍💼', label: 'Fiche de paie (agents)' },
+    { id: 'production', icon: '🏭', label: 'Production par période', staff: true },
+    { id: 'rapport-finma', icon: '🏛️', label: 'Rapport FINMA' },
+  ]},
+  { id: 'settings', label: 'Paramètres', icon: '⚙️', sub: [
+    { id: 'agents', icon: '🧑‍🤝‍🧑', label: 'Agents' },
+    { id: 'contacts-compagnies', icon: '🏢', label: 'Contacts compagnies' },
+    { id: 'audit-log', icon: '🔍', label: 'Journal d\'audit' },
+    { id: 'apparence', icon: '🎨', label: 'Apparence', rhAllowed: true },
   ]},
 ];
 
@@ -770,8 +775,7 @@ function renderSidebar() {
         return;
       }
       nav += `<button class="nav-solo-btn ${active ? 'active' : ''}" onclick="navigate('${sec.target}')">
-        <span style="font-size:13px">📊</span>${sec.label}
-        ${active ? '<span class="nav-dot" style="margin-left:auto"></span>' : ''}
+        <span class="nav-ico" aria-hidden="true">${sec.icon || '•'}</span><span class="nav-lib">${sec.label}</span>
       </button>`;
       return;
     }
@@ -782,9 +786,9 @@ function renderSidebar() {
     // Un dossier de conseil ouvert allume l'entrée « Conseil financier » du menu
     const vueMenu = currentView === 'dossier-conseil' ? 'conseil' : currentView;
     const isActive = subVisibles.some(s => s.id === vueMenu);
-    nav += `<button class="nav-section-btn ${isActive ? 'active' : ''}" onclick="toggleSection('${sec.id}')">
-      <span style="font-size:14px">${sec.icon}</span>${sec.label}
-      <span class="arrow">${openSections[sec.id] ? '▲' : '▼'}</span>
+    nav += `<button class="nav-section-btn ${isActive ? 'active' : ''} ${openSections[sec.id] ? 'ouverte' : ''}" onclick="toggleSection('${sec.id}')" aria-expanded="${!!openSections[sec.id]}">
+      <span class="nav-lib">${sec.label}</span>
+      <span class="arrow" aria-hidden="true">›</span>
     </button>`;
     if (openSections[sec.id]) {
       subVisibles.forEach(s => {
@@ -793,10 +797,11 @@ function renderSidebar() {
         if (s.id === 'rappels') {
           const monAgent = currentUser ? allAgents.find(a => a.email === currentUser.email) : null;
           const mesTaches = (allRappels || []).filter(r => r.statut === 'ouvert' && monAgent && r.apporteur_id === monAgent.id);
-          if (mesTaches.length) badgeHtml = `<span style="background:#f87171;color:#fff;border-radius:10px;padding:1px 7px;font-size:10px;font-weight:800;margin-left:auto">${mesTaches.length}</span>`;
+          if (mesTaches.length) badgeHtml = `<span class="nav-compteur">${mesTaches.length}</span>`;
         }
-        nav += `<button class="nav-item ${active ? 'active' : ''}" onclick="navigate('${s.id}')" style="${s.staff ? `color:#fb923c;font-weight:700;${active ? 'background:rgba(251,146,60,0.12);' : ''}` : ''}">
-          ${active ? `<span class="nav-dot" style="${s.staff ? 'background:#fb923c' : ''}"></span>` : ''}${s.label}${badgeHtml}
+        // staff : vues réservées (anciennement en orange) — repérées par un petit point, plus discret
+        nav += `<button class="nav-item ${active ? 'active' : ''} ${s.staff ? 'staff' : ''}" onclick="navigate('${s.id}')" ${s.staff ? 'title="Vue réservée"' : ''}>
+          <span class="nav-ico" aria-hidden="true">${s.icon || '•'}</span><span class="nav-lib">${s.label}</span>${badgeHtml}
         </button>`;
       });
     }
@@ -958,7 +963,9 @@ function creerModale(id, contenuHtml, options = {}) {
   const overflowY = options.overflowY !== false; // true par défaut
   const modal = document.createElement('div');
   modal.id = id;
-  modal.style.cssText = `position:fixed;inset:0;background:rgba(0,0,0,${opacite});z-index:9999;display:flex;align-items:center;justify-content:center;padding:${padding};${overflowY ? 'overflow-y:auto' : ''}`;
+  // Fond bleu nuit flouté (19.09.2026) plutôt qu'un noir opaque : plus moderne, le contexte reste perceptible
+  modal.className = 'rex-modale';
+  modal.style.cssText = `position:fixed;inset:0;background:rgba(6,20,44,${Math.min(opacite, 0.55)});backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);z-index:9999;display:flex;align-items:center;justify-content:center;padding:${padding};${overflowY ? 'overflow-y:auto' : ''}`;
   modal.innerHTML = contenuHtml;
   document.body.appendChild(modal);
   return modal;
@@ -1409,7 +1416,7 @@ function insertBackBar(bc) {
 }
 // Home de chaque section pour le lien rapide de la barre de retour
 const SECTION_HOME = {
-  portefeuille: 'portefeuille',
+  clients: 'portefeuille',
   compta: 'commissions-attente',
   suivi: 'suivi',
   settings: 'agents',

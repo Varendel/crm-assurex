@@ -10,11 +10,38 @@ const PREVISION_GESTION_RENOUVELLEMENT_MOIS = 1;
 // Prime fractionnée (contrats.periodicite = nombre de paiements par an : 1, 2, 4, 12) : la commission
 // d'encaissement suit chaque paiement du client → la commission annuelle est répartie en autant de
 // versements, espacés de 12 / périodicité mois à partir de la première date prévue.
+// ── Profils de versement RÉELS par compagnie (affinés le 19.09.2026 sur les dates du compte
+//    courant OZ et du relevé BCV) : décalage entre le début de la période couverte (échéance /
+//    fraction de prime) et l'arrivée de l'argent sur le compte, et rythme imposé par la compagnie.
+//    - Vaudoise : commission d'encaissement versée au fil des primes (facturées 1-2 mois avant la
+//      période), décompte fin de mois, virement ~5-7 du mois suivant → +37 j en moyenne (13 versements) ;
+//    - AXA : commission B versée au paiement du client, bordereau mensuel, virement ~10 → +40 j ;
+//    - Swiss Life (LPP) : commission courante trimestrielle, décompte le 2e mois du trimestre,
+//      virement début du mois suivant → +65 j (4 versements), toujours 4× par an ;
+//    - Nest : courtage trimestriel à terme échu → +95 j, 4× par an.
+//    Sans profil : règles génériques (+3 mois après signature, fin du 2e mois après l'échéance).
+const PREVISION_PROFILS_COMPAGNIE = {
+  'La Vaudoise': { decalageJours: 37 },
+  'AXA': { decalageJours: 40 },
+  'Swiss Life': { decalageJours: 65, periodicite: 4 },
+  'Nest': { decalageJours: 95, periodicite: 4 },
+};
+function profilVersementCompagnie(ca) {
+  const nom = (typeof normaliserCompagnie === 'function' ? normaliserCompagnie(ca.compagnie || '') : (ca.compagnie || '')) || '';
+  const n = nom.toLowerCase();
+  const cle = Object.keys(PREVISION_PROFILS_COMPAGNIE).find(k => n === k.toLowerCase() || n.includes(k.toLowerCase().replace(/^la /, '')));
+  return cle ? PREVISION_PROFILS_COMPAGNIE[cle] : null;
+}
+function _prevAjouterJours(iso, j) { const [y, m, d] = iso.split('-').map(Number); return _prevIso(new Date(y, m - 1, d + j)); }
+
 function commissionEcheancier(ca, montant) {
   const p = commissionDatePrevue(ca);
   if (!p) return [];
   const ct = ca.contrat_id && typeof allContrats !== 'undefined' ? allContrats.find(x => x.id === ca.contrat_id) : null;
-  const n = ct && [2, 4, 12].includes(Number(ct.periodicite)) && !_prevDateAnnuelle(ca) ? Number(ct.periodicite) : 1;
+  const profil = profilVersementCompagnie(ca);
+  const n = _prevDateAnnuelle(ca) ? 1
+    : (profil && profil.periodicite) ? profil.periodicite
+    : (ct && [2, 4, 12].includes(Number(ct.periodicite)) ? Number(ct.periodicite) : 1);
   if (n === 1) return [{ date: p, montant }];
   const [y, m, d] = p.split('-').map(Number);
   const part = Math.round(montant / n * 100) / 100;
@@ -90,7 +117,13 @@ function commissionDatePrevue(ca) {
   // Renouvellement (échéance de facturation) : la prime part en novembre-décembre, le client paie au
   // plus tard à la fin du mois qui suit l'échéance, la commission arrive sur le décompte suivant →
   // fin du 2e mois après l'échéance (01.01 → fin février). Règle de Jonathan, 19.09.2026.
-  if (/\[gestion annuelle\]/.test(ca.detail_calcul || '')) return _prevIso(new Date(y, m - 1 + PREVISION_GESTION_RENOUVELLEMENT_MOIS + 1, 0));
+  const profil = profilVersementCompagnie(ca);
+  if (/\[gestion annuelle\]/.test(ca.detail_calcul || '')) {
+    if (profil) return _prevAjouterJours(depart, profil.decalageJours); // délai réel observé chez cette compagnie
+    return _prevIso(new Date(y, m - 1 + PREVISION_GESTION_RENOUVELLEMENT_MOIS + 1, 0));
+  }
+  // Nouvelle signature avec profil connu : ~1 mois pour la première facture, puis délai réel de la compagnie
+  if (profil) return _prevAjouterJours(depart, 30 + profil.decalageJours);
   // Nouvelle signature : facture dans les semaines qui suivent, paiement à 1-2 mois, puis décompte →
   // + 3 mois en restant sur le dernier jour du mois si besoin (30.11 + 3 mois = 28/29.02)
   const dernier = new Date(y, m - 1 + PREVISION_GESTION_DELAI_MOIS + 1, 0).getDate();
@@ -113,7 +146,8 @@ function htmlCommissionPrevue(ca) {
   const retard = commissionJoursRetard(ca);
   const annuel = commissionVersementAnnuel(ca) ? ' · versement annuel' : '';
   const couleur = retard > 0 ? '#EF4444' : retard > -15 ? '#F59E0B' : 'var(--text-dim)';
-  return `<div style="font-size:10.5px;color:${couleur};margin-top:2px" title="Commission de gestion : attendue ${commissionVersementAnnuel(ca) ? '1× par an' : `dans les ${PREVISION_GESTION_DELAI_MOIS} mois après la signature`}">${retard > 0 ? `⚠ prévue le ${fmtDate(p)} (${retard} j de retard)` : `prévue le ${fmtDate(p)}`}${annuel}</div>`;
+  const profil = profilVersementCompagnie(ca);
+  return `<div style="font-size:10.5px;color:${couleur};margin-top:2px" title="Commission de gestion : attendue ${commissionVersementAnnuel(ca) ? '1× par an' : profil ? `environ ${profil.decalageJours} jours après le début de la période (délai réel observé chez cette compagnie${profil.periodicite ? `, ${profil.periodicite} versements par an` : ''})` : `dans les ${PREVISION_GESTION_DELAI_MOIS} mois après la signature`}">${retard > 0 ? `⚠ prévue le ${fmtDate(p)} (${retard} j de retard)` : `prévue le ${fmtDate(p)}`}${annuel}</div>`;
 }
 
 // Encaissements de gestion attendus : en retard + chacun des N prochains mois

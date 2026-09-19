@@ -43,7 +43,7 @@ sont en bas de ce fichier.
 ## 🟡 En attente
 
 - [ ] Signature de test de bout en bout avec le correctif en ligne
-- [ ] Nettoyer les mandats en double créés entre le 17 et le 19.09
+- [x] Nettoyer les mandats en double créés entre le 16 et le 19.09 (archivés, 1 gardé par client)
 - [ ] Supabase Auth : vérifier que l'inscription publique est fermée, activer la MFA et la
       protection contre les mots de passe compromis
 - [ ] Retrouver les décisions du chantier « sécurisation / segmentation » déjà discuté
@@ -107,7 +107,8 @@ sont en bas de ce fichier.
 - [ ] **Espace client** (app installable) — prérequis : rôles
 - [ ] Lecture IA des certificats LPP, scénario avant / après, import bancaire, notes de frais
 - [ ] Ouverture à 1–2 cabinets pilotes — prérequis : priorité 1 complète + licence
-- [ ] Code : découpage en modules, build (Vite), tests sur commissions et signature
+- [x] Autotests des calculs de commissions (js/43, 18 tests, bouton dans Cockpit › Contrôle)
+- [ ] Code : découpage en modules, build (Vite), tests signature
 
 ---
 

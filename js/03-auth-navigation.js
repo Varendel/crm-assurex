@@ -786,7 +786,7 @@ function renderSidebar() {
     // Un dossier de conseil ouvert allume l'entrée « Conseil financier » du menu
     const vueMenu = currentView === 'dossier-conseil' ? 'conseil' : currentView;
     const isActive = subVisibles.some(s => s.id === vueMenu);
-    nav += `<button class="nav-section-btn ${isActive ? 'active' : ''} ${openSections[sec.id] ? 'ouverte' : ''}" onclick="toggleSection('${sec.id}')" aria-expanded="${!!openSections[sec.id]}">
+    nav += `<button class="nav-section-btn ${isActive ? 'active' : ''} ${openSections[sec.id] ? 'ouverte' : ''}" data-sec="${sec.id}" onclick="toggleSection('${sec.id}')" aria-expanded="${!!openSections[sec.id]}">
       <span class="nav-lib">${sec.label}</span>
       <span class="arrow" aria-hidden="true">›</span>
     </button>`;
@@ -800,7 +800,7 @@ function renderSidebar() {
           if (mesTaches.length) badgeHtml = `<span class="nav-compteur">${mesTaches.length}</span>`;
         }
         // staff : vues réservées (anciennement en orange) — repérées par un petit point, plus discret
-        nav += `<button class="nav-item ${active ? 'active' : ''} ${s.staff ? 'staff' : ''}" onclick="navigate('${s.id}')" ${s.staff ? 'title="Vue réservée"' : ''}>
+        nav += `<button class="nav-item ${active ? 'active' : ''} ${s.staff ? 'staff' : ''}" data-sec="${sec.id}" onclick="navigate('${s.id}')" ${s.staff ? 'title="Vue réservée"' : ''}>
           <span class="nav-ico" aria-hidden="true">${s.icon || '•'}</span><span class="nav-lib">${s.label}</span>${badgeHtml}
         </button>`;
       });

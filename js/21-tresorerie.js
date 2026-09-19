@@ -202,7 +202,7 @@ function trGraphique(R) {
       <text x="${x0(i) + larg / 2}" y="${h - 8}" text-anchor="middle" class="tr-axe">${trLibelleMois(x.m)}</text>`;
   }).join('');
   const pts = R.parMois.map((x, i) => `${x0(i) + larg / 2},${y(x.fin)}`);
-  const graduations = [max, (max + min) / 2, min].map(v => `<line x1="${padG}" x2="${w - 6}" y1="${y(v)}" y2="${y(v)}" class="tr-grille"/><text x="${padG - 8}" y="${y(v) + 4}" text-anchor="end" class="tr-axe">${trCHF(v / 1000)}k</text>`).join('');
+  const graduations = [max, (max + min) / 2, min].map(v => `<line x1="${padG}" x2="${w - 6}" y1="${y(v)}" y2="${y(v)}" class="tr-grille"/><text x="${padG - 8}" y="${y(v) + 4}" text-anchor="end" class="tr-axe">${Math.max(Math.abs(max), Math.abs(min)) >= 10000 ? trCHF(v / 1000) + 'k' : trCHF(v)}</text>`).join('');
   return `<div class="tr-graph"><svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Évolution du solde de trésorerie">
     ${graduations}
     <line x1="${padG}" x2="${w - 6}" y1="${y(0)}" y2="${y(0)}" class="tr-zero"/>

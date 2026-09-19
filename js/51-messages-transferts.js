@@ -73,8 +73,38 @@ async function ecEnvoyerMessage() {
 }
 
 // ── Transférer la gestion de ses contrats ───────────────────────────────────────────────────────
-// Étape 1 : les compagnies et contrats concernés · Étape 2 : signature du mandat · Étape 3 : dépôt.
+// Le bouton ouvre d'abord une page d'explication (Rex et sa bulle) : le client comprend ce que le
+// service lui apporte et qu'il est gratuit, avant de signer (demande de Jonathan, 20.09.2026).
+const EC_TEXTE_TRANSFERT = `En transférant vos contrats chez Assurex, vous bénéficiez d’un accompagnement de qualité et entièrement gratuit pour vos contrats existants, et vous êtes informé à l’échéance de vos contrats, à la recherche d’un meilleur tarif.
+
+De plus, vous pouvez déclarer vos sinistres directement depuis votre espace client : nous nous chargeons de l’enregistrement auprès de l’assureur et revenons vers vous avec une prise en charge.`;
+
 function ecOuvrirTransfert() {
+  const c = mtClientCourant();
+  if (!c) return;
+  creerModale('modal-ec-info-transfert', `
+    <div class="opx-modale ecinfo" role="dialog" aria-modal="true" aria-labelledby="ec-info-titre">
+      <button type="button" class="ecinfo-fermer" aria-label="Fermer" onclick="document.getElementById('modal-ec-info-transfert').remove()">✕</button>
+      <span class="ecinfo-gratuit">Service gratuit</span>
+      <h3 id="ec-info-titre">Transférer la gestion de mes assurances</h3>
+      <div class="ecinfo-scene">
+        <img src="assets/logos/rex-mascotte-hd.png" alt="" class="ecinfo-rex"/>
+        <div class="ecinfo-bulle">${EC_TEXTE_TRANSFERT.split(/\n\s*\n/).map(p => `<p>${mtEsc(p)}</p>`).join('')}</div>
+      </div>
+      <div class="ecinfo-points">
+        <span>✓ Vos couvertures restent inchangées</span>
+        <span>✓ Résiliable en tout temps, sans frais</span>
+        <span>✓ Un seul interlocuteur pour tous vos assureurs</span>
+      </div>
+      <div class="opx-modale-actions mdx-actions">
+        <button type="button" class="btn-secondary" onclick="document.getElementById('modal-ec-info-transfert').remove()">Plus tard</button>
+        <button type="button" class="btn-save" onclick="ecFormulaireTransfert()">✍️ Signer et transférer mon mandat</button>
+      </div>
+    </div>`, { padding: '16px' }).classList.add('rex-modale-feuille');
+}
+
+function ecFormulaireTransfert() {
+  document.getElementById('modal-ec-info-transfert')?.remove();
   const E = window._ec || {};
   const c = mtClientCourant();
   if (!c) return;

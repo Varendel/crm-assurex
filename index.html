@@ -3096,6 +3096,34 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
   .mcx-police-actions { justify-content: flex-start; }
 }
 
+/* ═══ REX CLOUD : page d'explication du transfert de gestion (Rex et sa bulle, 20.09.2026) ═══ */
+.ecinfo { position: relative; background: linear-gradient(160deg, #123E86 0%, #0B2A5B 70%); color: #fff;
+  border-radius: 20px; padding: 26px 26px 20px; max-width: 620px; width: 100%; box-shadow: 0 24px 60px rgba(4,16,38,.45); }
+.ecinfo-fermer { position: absolute; top: 12px; right: 14px; background: none; border: 0; color: rgba(255,255,255,.7);
+  font-size: 18px; line-height: 1; cursor: pointer; padding: 4px 6px; border-radius: 8px; }
+.ecinfo-fermer:hover { background: rgba(255,255,255,.12); color: #fff; }
+.ecinfo-gratuit { display: inline-block; background: #00CFFF; color: #06283F; font-size: 11px; font-weight: 800;
+  letter-spacing: .06em; text-transform: uppercase; border-radius: 999px; padding: 4px 12px; }
+.ecinfo h3 { margin: 10px 0 16px; font-size: 22px; font-weight: 700; color: #fff; }
+.ecinfo-scene { display: flex; align-items: flex-end; gap: 14px; }
+.ecinfo-rex { width: 118px; height: auto; flex: none; filter: drop-shadow(0 10px 18px rgba(0,0,0,.35)); }
+.ecinfo-bulle { position: relative; background: #fff; color: #1E293B; border-radius: 18px 18px 18px 4px;
+  padding: 16px 18px; font-size: 13.5px; line-height: 1.55; box-shadow: 0 10px 26px rgba(0,0,0,.2); }
+.ecinfo-bulle::before { content: ''; position: absolute; left: -9px; bottom: 14px; width: 0; height: 0;
+  border: 9px solid transparent; border-right-color: #fff; border-left: 0; }
+.ecinfo-bulle p { margin: 0 0 10px; }
+.ecinfo-bulle p:last-child { margin: 0; }
+.ecinfo-points { display: flex; flex-direction: column; gap: 5px; margin: 16px 0 4px; font-size: 13px; color: #D7E6FF; }
+.ecinfo .mdx-actions { margin-top: 14px; }
+.fcx-btn-blanc small, .fcx-btn-verre small { display: block; font-size: 10.5px; font-weight: 600; opacity: .75; margin-top: 2px; }
+@media (max-width: 700px) {
+  .ecinfo-scene { flex-direction: column; align-items: center; }
+  .ecinfo-rex { width: 92px; }
+  .ecinfo-bulle { border-radius: 18px 18px 18px 18px; }
+  .ecinfo-bulle::before { left: 50%; top: -9px; bottom: auto; transform: translateX(-50%);
+    border: 9px solid transparent; border-bottom-color: #fff; border-top: 0; border-right-color: transparent; }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
@@ -3278,10 +3306,10 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 <script src="js/45-courriers.js?v=1790640000"></script>
 <script src="js/46-offre-vers-contrat.js?v=1790640000"></script>
 <script src="js/47-profil-investisseur.js?v=1790980000"></script>
-<script src="js/48-espace-client.js?v=1791000000"></script>
+<script src="js/48-espace-client.js?v=1791002000"></script>
 <script src="js/49-nouveau-contrat.js?v=1790920000"></script>
 <script src="js/50-dossier-financement.js?v=1790995000"></script>
-<script src="js/51-messages-transferts.js?v=1791000000"></script>
+<script src="js/51-messages-transferts.js?v=1791002000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

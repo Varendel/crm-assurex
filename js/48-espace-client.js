@@ -96,7 +96,7 @@ function ecVueEspaceClient() {
       </div>
       <div class="cf-hero-actions">
         <div class="cf-boutons">
-          <button type="button" class="fcx-btn-blanc" onclick="ecOuvrirTransfert()">🤝 Transférer la gestion de mes assurances</button>
+          <button type="button" class="fcx-btn-blanc" onclick="ecOuvrirTransfert()">🤝 Transférer la gestion de mes assurances <small>appuyez pour plus d’infos — service gratuit</small></button>
           <button type="button" class="fcx-btn-verre" onclick="ecOuvrirMessage()">✉️ Laisser un message</button>
           <button type="button" class="fcx-btn-verre" onclick="ecDeconnexion()">Se déconnecter</button>
         </div>
@@ -171,7 +171,7 @@ function ecCarteTransfert() {
   }
   return `<section class="dbx-carte ec-transfert" style="margin-top:18px"><header class="dbx-carte-tete"><h2>Transférer la gestion de mes contrats</h2></header>
     <p class="ec-suivi-txt">Confiez-nous le suivi de vos assurances, même celles souscrites ailleurs : nous récupérons vos polices, surveillons vos échéances et comparons pour vous. Vos contrats et vos couvertures ne changent pas, et le mandat est résiliable en tout temps.</p>
-    <button type="button" class="fcx-btn-blanc ec-btn-transfert" onclick="ecOuvrirTransfert()">🤝 Transférer la gestion de mes contrats</button>
+    <button type="button" class="fcx-btn-blanc ec-btn-transfert" onclick="ecOuvrirTransfert()">🤝 Transférer la gestion de mes contrats <small>appuyez pour plus d’infos — service gratuit</small></button>
   </section>`;
 }
 

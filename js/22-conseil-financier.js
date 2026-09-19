@@ -644,12 +644,47 @@ async function cfRecoVersOpportunite(id) {
   if (titre && !titre.value) titre.value = `${r.cat} — ${r.texte}`.slice(0, 120);
 }
 
+// Imprime un document HTML sans ouvrir de fenêtre (les pop-up sont souvent bloquées) : cadre
+// invisible, attente du chargement des images, puis boîte d'impression du navigateur.
+function cfImprimerHtml(html, titre) {
+  document.getElementById('cf-cadre-impression')?.remove();
+  const f = document.createElement('iframe');
+  f.id = 'cf-cadre-impression';
+  f.setAttribute('aria-hidden', 'true');
+  f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  document.body.appendChild(f);
+  const doc = f.contentDocument;
+  doc.open(); doc.write(html); doc.close();
+  const lancer = () => {
+    const ancien = document.title;
+    if (titre) document.title = titre; // sert de nom de fichier proposé pour le PDF
+    try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { showError('Impression impossible : ' + e.message); }
+    setTimeout(() => { document.title = ancien; }, 1500);
+  };
+  const images = [...doc.images];
+  Promise.all(images.map(i => i.complete ? null : new Promise(ok => { i.onload = i.onerror = ok; }))).then(() => setTimeout(lancer, 150));
+}
+
 // ── Rapport client imprimable ───────────────────────────────────────────────────────────────
+// Refondu le 20.09.2026 : le rapport raconte le dossier dans l'ordre du conseil — résumé du projet,
+// puis situation → objectifs → profil → répartition → solutions → financement → plan d'action.
+// Chaque étape est introduite par une phrase qui la relie à la précédente (le « fil conducteur »),
+// et tout ce qui est saisi dans le dossier (y compris le profil investisseur) y figure.
 async function cfImprimerRapport() {
   await cfSauverMaintenant();
   const A = cfAnalyse(), c = _cf.client, d = _cf.dossier;
   const ligne = (l, v) => `<tr><td>${l}</td><td class="n">${v}</td></tr>`;
   const recos = d.recommandations.filter(r => r.statut !== 'refusee');
+  const alloc = typeof piAllocation === 'function' ? piAllocation(A) : null;
+  const profil = alloc ? alloc.profil : null;
+  const resume = typeof piResumeProjet === 'function' ? piResumeProjet(A, alloc) : [];
+  const solutions = typeof piSolutions === 'function' ? piSolutions(A, alloc) : [];
+  const avertissements = typeof piAvertissements === 'function' ? piAvertissements(A, alloc) : [];
+  const horizonProj = Math.max(1, A.annees != null && A.annees > 0 ? A.annees : Math.max(5, ...A.projets.map(x => x.n), 5));
+  const capitalDepart = cfNum(cfGet(d.situation || {}, 'patrimoine.placements')) + cfNum(cfGet(d.situation || {}, 'patrimoine.pilier3a'));
+  const mensuelPlace = alloc ? alloc.lignes.filter(l => ['3a', 'libre'].includes(l.cle)).reduce((s, l) => s + l.montant, 0) : 0;
+  const proj = profil && typeof piProjection === 'function' ? piProjection(capitalDepart, mensuelPlace, horizonProj, profil) : null;
+  const etape = (n, titre, fil) => `<h2><span class="etape">${n}</span>${titre}</h2>${fil ? `<p class="fil">${fil}</p>` : ''}`;
   const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Conseil financier — ${cfEsc(cfNomClient(c))}</title>
   <style>
     body{font-family:Arial,Helvetica,sans-serif;color:#0E1B33;margin:0;padding:32px 40px;font-size:12.5px;line-height:1.5}
@@ -660,21 +695,57 @@ async function cfImprimerRapport() {
     .kpi{background:#F4F6F9;border-radius:8px;padding:10px} .kpi b{display:block;font-size:15px;color:#113679} .kpi span{font-size:10px;color:#56627A;text-transform:uppercase}
     .reco{padding:8px 10px;border-left:3px solid #00CFFF;background:#F4F9FC;margin-bottom:6px} .reco small{color:#56627A;text-transform:uppercase;font-size:9.5px}
     .mention{font-size:9.5px;color:#8A94A8;margin-top:24px;border-top:1px solid #E2E7EF;padding-top:8px} @page{margin:14mm}
+    h3{font-size:12px;color:#0E1B33;margin:14px 0 4px}
+    .resume{background:#F4F9FC;border-left:4px solid #113679;padding:14px 16px;margin-bottom:18px;break-inside:avoid}
+    .resume-titre{border:0;margin:0 0 6px;padding:0;font-size:13px} .resume p{margin:0 0 6px}
+    .etape{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:50%;background:#113679;color:#fff;font-size:10px;margin-right:8px;vertical-align:middle}
+    .fil{color:#56627A;font-size:11.5px;margin:0 0 10px;font-style:italic}
+    .sous{color:#56627A;font-size:10.5px;font-style:normal}
+    .avis{margin:8px 0} .avis-l{padding:7px 10px;border-radius:6px;margin-bottom:5px;font-size:11.5px}
+    .avis-l.rouge{background:#FDECEC;border-left:3px solid #DC2626} .avis-l.orange{background:#FEF6E7;border-left:3px solid #F59E0B} .avis-l.vert{background:#EDF9F0;border-left:3px solid #16A34A}
+    .sol{border:1px solid #E2E7EF;border-radius:8px;padding:10px 12px;margin-bottom:8px;break-inside:avoid}
+    .sol-t{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px} .sol-t span{font-weight:bold;color:#113679}
+    .proj{background:#F4F6F9;border-radius:8px;padding:10px 12px;margin-top:10px} h2{break-after:avoid} table{break-inside:avoid}
   </style></head><body>
   <header><div><h1>Conseil financier</h1><div class="sous">${cfEsc(cfNomClient(c))}${A.age ? ` · ${A.age} ans` : ''} · ${new Date().toLocaleDateString('fr-CH', { day: 'numeric', month: 'long', year: 'numeric' })}</div></div>${typeof ASSUREX_LOGO_B64 !== 'undefined' ? `<img src="${ASSUREX_LOGO_B64}" alt="Assurex"/>` : ''}</header>
+
+  ${resume.length ? `<section class="resume"><h2 class="resume-titre">Votre projet en quelques lignes</h2>${resume.map(p => `<p>${p}</p>`).join('')}</section>` : ''}
+
   <div class="kpis"><div class="kpi"><span>Patrimoine net</span><b>${cfCHF(A.net)}</b></div><div class="kpi"><span>Capacité d'épargne</span><b>${cfCHF(A.capacite)}/mois</b></div><div class="kpi"><span>Revenu à la retraite</span><b>${cfCHF(A.revenuRetraite / 12)}/mois</b></div><div class="kpi"><span>Projets</span><b>${A.projets.length}</b></div></div>
+
+  ${etape(1, 'Votre situation aujourd’hui', 'Point de départ : ce qui entre, ce qui sort, et ce qui est déjà constitué.')}
   <div class="grille">
-    <div><h2>Budget mensuel</h2><table>${ligne('Revenus nets', cfCHF(A.revenus))}${ligne('Dépenses', cfCHF(A.depenses))}${ligne('Capacité d’épargne', cfCHF(A.capacite))}</table>
-      <h2>Patrimoine</h2><table>${ligne('Actifs', cfCHF(A.patrimoine))}${ligne('Dettes', cfCHF(A.dettes))}${ligne('Patrimoine net', cfCHF(A.net))}${ligne('Réserve de sécurité', A.moisReserve != null ? A.moisReserve.toFixed(1).replace('.', ',') + ' mois' : '—')}</table></div>
-    <div><h2>Retraite à ${A.ageRetraite} ans</h2><table>${ligne('Rente AVS', cfCHF(A.avsCouple / 12) + '/mois')}${ligne('Rente LPP', cfCHF(A.renteLPP / 12) + '/mois')}${ligne('3e pilier & épargne', cfCHF(A.renteCapitaux / 12) + '/mois')}${ligne('Revenu estimé', cfCHF(A.revenuRetraite / 12) + '/mois')}${ligne('Objectif', cfCHF(A.besoin / 12) + '/mois')}${A.lacune ? ligne('Lacune', cfCHF(A.lacune / 12) + '/mois') + ligne('Épargne pour la combler', cfCHF(A.epargneRetraite) + '/mois') : ''}</table></div>
+    <div><h3>Budget mensuel</h3><table>${ligne('Revenus nets', cfCHF(A.revenus))}${ligne('Dépenses', cfCHF(A.depenses))}${ligne('Capacité d’épargne', cfCHF(A.capacite))}</table></div>
+    <div><h3>Patrimoine</h3><table>${ligne('Actifs', cfCHF(A.patrimoine))}${ligne('Dettes', cfCHF(A.dettes))}${ligne('Patrimoine net', cfCHF(A.net))}${ligne('Réserve de sécurité', A.moisReserve != null ? A.moisReserve.toFixed(1).replace('.', ',') + ' mois de dépenses' : '—')}</table></div>
   </div>
-  ${A.projets.length ? `<h2>Projets</h2><table>${A.projets.map(p => ligne(`${cfEsc(p.libelle)} — ${cfCHF(p.montant)} en ${cfEsc(p.annee)}`, cfCHF(p.mensuel) + '/mois')).join('')}</table>` : ''}
-  ${A.hypo ? `<h2>Financement immobilier</h2><table>${ligne('Prix du bien', cfCHF(A.hypo.params.prix))}${ligne('Fonds propres', cfCHF(A.hypo.params.fondsPropresDisponibles))}${ligne('Hypothèque', cfCHF(A.hypo.hypotheque))}${ligne('Taux d’effort', (A.hypo.tauxEffort * 100).toFixed(1) + ' %')}${ligne('Prix maximal finançable', cfCHF(A.hypo.prixMax))}</table>` : ''}
-  ${recos.length ? `<h2>Nos recommandations</h2>${recos.map(r => `<div class="reco"><small>${cfEsc(r.cat || 'Conseil')}</small><div>${cfEsc(r.texte)}</div></div>`).join('')}` : ''}
+
+  ${etape(2, 'Vos objectifs', `Cette capacité d’épargne doit servir ${A.projets.length ? 'vos projets' : 'votre retraite'}${A.projets.length && A.annees != null ? ' et votre retraite' : ''} : voici ce que chacun demande.`)}
+  ${A.projets.length ? `<table>${A.projets.map(p => ligne(`${cfEsc(p.libelle || p.type || 'Projet')} — ${cfCHF(p.cible)} dans ${Math.round(p.n)} an(s)`, cfCHF(p.mensuel) + '/mois')).join('')}${ligne('<strong>Total des projets</strong>', '<strong>' + cfCHF(A.besoinProjets) + '/mois</strong>')}</table>` : '<p>Aucun projet chiffré dans ce dossier.</p>'}
+  <h3>Retraite à ${A.ageRetraite} ans</h3>
+  <table>${ligne('Rente AVS', cfCHF(A.avsCouple / 12) + '/mois')}${ligne('Rente LPP', cfCHF(A.renteLPP / 12) + '/mois')}${ligne('3e pilier & épargne', cfCHF(A.renteCapitaux / 12) + '/mois')}${ligne('<strong>Revenu estimé</strong>', '<strong>' + cfCHF(A.revenuRetraite / 12) + '/mois</strong>')}${ligne('Objectif visé', cfCHF(A.besoin / 12) + '/mois')}${A.lacune ? ligne('Lacune', cfCHF(A.lacune / 12) + '/mois') + ligne('Épargne pour la combler', cfCHF(A.epargneRetraite) + '/mois') : ''}</table>
+
+  ${profil ? `${etape(3, 'Votre profil d’investisseur', 'Ces échéances déterminent le niveau de risque acceptable : plus l’argent est nécessaire tôt, moins il peut être exposé.')}
+  <table>${ligne('Profil retenu', `<strong>${cfEsc(typeof piNomProfil === 'function' ? piNomProfil(profil) : profil.label)}</strong>`)}${ligne('Part en actions', profil.actions + ' %')}${ligne('Rendement visé (hypothèse)', profil.rendement.toFixed(1).replace('.', ',') + ' % par an')}${ligne('Horizon recommandé', profil.horizon + ' ans et plus')}${ligne('Ampleur d’une mauvaise année', profil.perte + ' %')}</table>
+  ${avertissements.length ? `<div class="avis">${avertissements.map(x => `<div class="avis-l ${x.ton}">${x.texte}</div>`).join('')}</div>` : ''}` : ''}
+
+  ${alloc && alloc.lignes.length ? `${etape(4, 'La répartition de votre épargne', `Sur ${cfCHF(alloc.capacite)} par mois, voici où va chaque franc et pourquoi.`)}
+  <table>${alloc.lignes.map(l => ligne(`<strong>${cfEsc(l.label)}</strong> — ${cfEsc(l.support)}<br><span class="sous">${cfEsc(l.detail)}</span>`, cfCHF(l.montant) + '/mois')).join('')}</table>
+  ${proj ? `<p class="proj">À ${horizonProj} ans, avec ${cfCHF(mensuelPlace)} par mois placés${capitalDepart ? ` et ${cfCHF(capitalDepart)} déjà investis` : ''} : <strong>${cfCHF(proj.central)}</strong> de capital projeté (fourchette réaliste ${cfCHF(proj.bas)} à ${cfCHF(proj.haut)}, pour ${cfCHF(proj.verse)} versés).</p>` : ''}` : ''}
+
+  ${solutions.length ? `${etape(5, 'Les solutions proposées', 'Cette répartition se met en place avec les contrats suivants.')}
+  ${solutions.map(s => `<div class="sol"><div class="sol-t"><strong>${cfEsc(s.titre)}</strong><span>${cfCHF(s.prime)}/mois${s.horizon ? ` · ${Math.round(s.horizon)} ans` : ''}</span></div><div>${s.pourquoi}</div>${s.compagnies && s.compagnies.length ? `<div class="sous">Compagnies à solliciter : ${cfEsc(s.compagnies.join(', '))}</div>` : ''}</div>`).join('')}` : ''}
+
+  ${A.hypo ? `${etape(6, 'Financement immobilier', 'Votre projet d’achat, vérifié selon les règles bancaires suisses (20 % de fonds propres, 33 % de taux d’effort).')}
+  <table>${ligne('Prix du bien', cfCHF(A.hypo.params.prix))}${ligne('Fonds propres', cfCHF(A.hypo.params.fondsPropresDisponibles))}${ligne('Hypothèque', cfCHF(A.hypo.hypotheque))}${ligne('Taux d’effort', (A.hypo.tauxEffort * 100).toFixed(1).replace('.', ',') + ' %')}${ligne('Prix maximal finançable', cfCHF(A.hypo.prixMax))}</table>` : ''}
+
+  ${etape(A.hypo ? 7 : 6, 'Le plan d’action', 'Ce que nous mettons en place, dans l’ordre, et ce que nous vérifions au prochain point.')}
+  ${recos.length ? recos.map(r => `<div class="reco"><small>${cfEsc(r.cat || 'Conseil')}</small><div>${cfEsc(r.texte)}</div></div>`).join('') : '<p>Les mesures seront arrêtées lors de notre prochain entretien.</p>'}
+  ${d.prochain_point ? `<p class="fil">Prochain point fixé au ${fmtDate(d.prochain_point)}.</p>` : ''}
   ${typeof rexCitationRapportHtml === 'function' ? rexCitationRapportHtml('investissement') : ''}
   <div class="mention">Document établi à titre indicatif sur la base des informations communiquées par le client. Les projections (AVS, LPP, rendements, fiscalité) sont des estimations et ne constituent pas une garantie ; elles doivent être confirmées par les documents officiels (extrait de compte AVS, certificat de prévoyance, offres des établissements). Assurex Sàrl — courtier en assurances inscrit auprès de la FINMA.</div>
-  <script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script></body></html>`;
-  const w = window.open(URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' })), '_blank');
-  if (!w) showError('Autorise les fenêtres pop-up pour afficher le rapport.');
+  </body></html>`;
+  // Impression dans un cadre invisible plutôt qu'une fenêtre pop-up (souvent bloquée), même
+  // mécanique que les courriers (js/45) — « Enregistrer au format PDF » donne le PDF.
+  cfImprimerHtml(html, `Conseil financier — ${cfNomClient(c)}`);
   logAction('rapport_conseil', 'dossiers_conseil', d.id, cfNomClient(c));
 }

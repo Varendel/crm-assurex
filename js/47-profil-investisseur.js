@@ -9,18 +9,21 @@
 // la fourchette montre ce que peut donner une mauvaise année. Rien n'est un conseil automatique :
 // le conseiller garde la main, le texte part ensuite dans les recommandations du dossier.
 
+// Les noms anglais sont ceux des compagnies et des banques (Swiss Life, Zurich, Helvetia, UBS…) :
+// le client les retrouve tels quels sur les offres et les relevés de fonds (demande du 20.09.2026).
 const PROFILS_INVESTISSEUR = [
-  { id: 'securite',  label: 'Sécurité',   actions: 0,  rendement: 1.0, volatilite: 2,  horizon: 2,  perte: -3,
+  { id: 'securite',  label: 'Sécurité',   en: 'Conservative', actions: 0,  rendement: 1.0, volatilite: 2,  horizon: 2,  perte: -3,
     resume: 'Capital préservé, rendement proche du compte épargne.', pour: 'argent nécessaire à court terme' },
-  { id: 'revenu',    label: 'Revenu',     actions: 25, rendement: 2.2, volatilite: 5,  horizon: 4,  perte: -8,
+  { id: 'revenu',    label: 'Revenu',     en: 'Income',       actions: 25, rendement: 2.2, volatilite: 5,  horizon: 4,  perte: -8,
     resume: 'Majorité d’obligations, une part d’actions pour le rendement.', pour: 'projets à 4–6 ans' },
-  { id: 'equilibre', label: 'Équilibré',  actions: 45, rendement: 3.2, volatilite: 8,  horizon: 6,  perte: -15,
+  { id: 'equilibre', label: 'Équilibré',  en: 'Balanced',     actions: 45, rendement: 3.2, volatilite: 8,  horizon: 6,  perte: -15,
     resume: 'Autant de sécurité que de croissance — le choix le plus courant.', pour: 'épargne de moyen terme et 3a' },
-  { id: 'croissance',label: 'Croissance', actions: 65, rendement: 4.0, volatilite: 11, horizon: 8,  perte: -25,
+  { id: 'croissance',label: 'Croissance', en: 'Growth',       actions: 65, rendement: 4.0, volatilite: 11, horizon: 8,  perte: -25,
     resume: 'Orienté actions, avec des années négatives assumées.', pour: 'retraite à plus de 8 ans' },
-  { id: 'actions',   label: 'Actions',    actions: 90, rendement: 5.0, volatilite: 15, horizon: 10, perte: -35,
+  { id: 'actions',   label: 'Actions',    en: 'Equity',       actions: 90, rendement: 5.0, volatilite: 15, horizon: 10, perte: -35,
     resume: 'Quasi tout en actions : rendement visé le plus élevé, secousses comprises.', pour: 'horizon long, tolérance aux baisses' },
 ];
+function piNomProfil(p) { return `${p.label} · ${p.en}`; }
 
 function piProfil(id) { return PROFILS_INVESTISSEUR.find(p => p.id === id) || PROFILS_INVESTISSEUR[2]; }
 function piProfilActif() { return piProfil(cfGet(_cf.dossier, 'hypotheses.profil_investisseur') || 'equilibre'); }
@@ -60,7 +63,7 @@ function piAllocation(A) {
   const place3a = Math.max(0, CF_PLAFOND_3A - verse3a);
   if (place3a > 0 && reste > 0) {
     const m = Math.min(reste, place3a / 12);
-    lignes.push({ cle: '3a', label: '3e pilier A', montant: m, support: `Fonds 3a — profil ${p.label} (${p.actions} % actions)`,
+    lignes.push({ cle: '3a', label: '3e pilier A', montant: m, support: `Fonds 3a — profil ${piNomProfil(p)} (${p.actions} % actions)`,
       detail: `${cfCHF(place3a)} encore déductibles cette année · économie d’impôt estimée ${cfCHF(A.economieImpot3a)}` });
     reste -= m;
   }
@@ -74,7 +77,7 @@ function piAllocation(A) {
     reste -= m;
   }
   // 4. Le solde : placement libre au profil choisi
-  if (reste > 0) lignes.push({ cle: 'libre', label: 'Placement libre', montant: reste, support: `Portefeuille ${p.label} (${p.actions} % actions)`,
+  if (reste > 0) lignes.push({ cle: 'libre', label: 'Placement libre', montant: reste, support: `Portefeuille ${piNomProfil(p)} (${p.actions} % actions)`,
     detail: `Horizon recommandé : ${p.horizon} ans et plus` });
 
   return { profil: p, capacite, lignes, reserve, manqueReserve, courtTerme, besoinCourt };
@@ -93,12 +96,12 @@ function piAvertissements(A, alloc) {
   const p = alloc.profil;
   const av = [];
   alloc.courtTerme.forEach(pr => {
-    av.push({ ton: 'rouge', texte: `<strong>${cfEsc(pr.libelle || pr.type || 'Projet')}</strong> arrive dans ${Math.round(pr.n)} an(s), alors que le profil <strong>${p.label}</strong> demande au moins ${p.horizon} ans. L’argent de ce projet (${cfCHF(pr.mensuel)}/mois) doit rester sans risque — sinon une baisse juste avant l’échéance coûterait jusqu’à ${p.perte} %.` });
+    av.push({ ton: 'rouge', texte: `<strong>${cfEsc(pr.libelle || pr.type || 'Projet')}</strong> arrive dans ${Math.round(pr.n)} an(s), alors que le profil <strong>${piNomProfil(p)}</strong> demande au moins ${p.horizon} ans. L’argent de ce projet (${cfCHF(pr.mensuel)}/mois) doit rester sans risque — sinon une baisse juste avant l’échéance coûterait jusqu’à ${p.perte} %.` });
   });
-  if (A.annees != null && A.annees < p.horizon) av.push({ ton: 'rouge', texte: `La retraite est dans ${A.annees} an(s) et le profil <strong>${p.label}</strong> demande ${p.horizon} ans : choisis un profil plus prudent pour la part qui financera les premières années de retraite.` });
+  if (A.annees != null && A.annees < p.horizon) av.push({ ton: 'rouge', texte: `La retraite est dans ${A.annees} an(s) et le profil <strong>${piNomProfil(p)}</strong> demande ${p.horizon} ans : choisis un profil plus prudent pour la part qui financera les premières années de retraite.` });
   if (alloc.manqueReserve > 0) av.push({ ton: 'orange', texte: `Réserve de sécurité incomplète : ${cfCHF(alloc.manqueReserve)} manquants pour ${alloc.reserve.mois} mois de dépenses. À constituer avant d’investir.` });
   if (alloc.capacite <= 0) av.push({ ton: 'orange', texte: 'Aucune capacité d’épargne dans le budget saisi : commencer par le budget avant de parler placement.' });
-  if (!av.length) av.push({ ton: 'vert', texte: `Profil <strong>${p.label}</strong> cohérent avec les échéances saisies (la plus proche dépasse ${p.horizon} ans).` });
+  if (!av.length) av.push({ ton: 'vert', texte: `Profil <strong>${piNomProfil(p)}</strong> cohérent avec les échéances saisies (la plus proche dépasse ${p.horizon} ans).` });
   return av;
 }
 
@@ -183,6 +186,37 @@ function piDemandeOffre() {
   cfSauverMaintenant().then(() => navigate('nouvelle-demande-offre'));
 }
 
+// Résumé « votre projet en quelques lignes » — sert d'ouverture et de fil conducteur au rapport
+// client (demande de Jonathan, 20.09.2026 : le rapport doit raconter une histoire, pas empiler
+// des tableaux). Retourne des phrases prêtes à lire, dans l'ordre : où on en est, ce qu'on vise,
+// ce qu'on met en place, ce qu'on surveille.
+function piResumeProjet(A, alloc) {
+  const p = (alloc && alloc.profil) || piProfilActif();
+  const c = _cf.client;
+  const nom = typeof cfNomClient === 'function' ? cfNomClient(c) : '';
+  const projets = (A.projets || []).slice().sort((a, b) => a.n - b.n);
+  const principal = projets[0];
+  const phrases = [];
+
+  phrases.push(`${nom || 'Vous'}${A.age ? `, ${A.age} ans,` : ''} dispose${nom ? '' : 'z'} aujourd’hui de ${cfCHF(Math.max(0, A.capacite))} par mois d’épargne possible, pour un patrimoine net de ${cfCHF(A.net)}${A.moisReserve != null ? ` et une réserve de sécurité de ${A.moisReserve.toFixed(1).replace('.', ',')} mois de dépenses` : ''}.`);
+
+  const objectifs = [];
+  if (principal) objectifs.push(`${principal.libelle || principal.type || 'un projet'} d’ici ${Math.round(principal.n)} an(s) (${cfCHF(principal.cible)})`);
+  if (A.annees != null) objectifs.push(`la retraite dans ${A.annees} an(s)${A.lacune > 0 ? `, avec une lacune estimée à ${cfCHF(A.lacune / 12)} par mois` : ', sans lacune apparente'}`);
+  if (objectifs.length) phrases.push(`Les objectifs retenus : ${objectifs.join(' et ')}.`);
+
+  const parts = (alloc && alloc.lignes || []).map(l => `${l.label} ${cfCHF(l.montant)}/mois`);
+  if (parts.length) phrases.push(`La proposition : profil ${piNomProfil(p)} (${p.actions} % actions, horizon ${p.horizon} ans et plus), avec ${parts.join(', ')}.`);
+
+  const risques = [];
+  if (alloc && alloc.manqueReserve > 0) risques.push(`reconstituer la réserve de sécurité (${cfCHF(alloc.manqueReserve)} manquants)`);
+  if (alloc && alloc.courtTerme.length) risques.push(`garder sans risque l’argent des projets à moins de ${p.horizon} ans`);
+  if (A.lacune > 0) risques.push('combler la lacune de retraite');
+  if (risques.length) phrases.push(`Points de vigilance : ${risques.join(', ')}.`);
+
+  return phrases;
+}
+
 function piOngletPlacements() {
   const A = cfAnalyse();
   const alloc = piAllocation(A);
@@ -198,7 +232,7 @@ function piOngletPlacements() {
     <section class="dbx-carte"><header class="dbx-carte-tete"><h2>Profil investisseur</h2><span class="dbx-carte-sous">choisis-en un : l’allocation et les projections suivent</span></header>
       <div class="pi-profils">${PROFILS_INVESTISSEUR.map(x => `<button type="button" class="pi-profil ${x.id === p.id ? 'actif' : ''}" onclick="piChoisirProfil('${x.id}')" aria-pressed="${x.id === p.id}">
         <span class="pi-jauge" aria-hidden="true"><i style="width:${x.actions}%"></i></span>
-        <b>${x.label}</b>
+        <b>${x.label} <span class="pi-en">${x.en}</span></b>
         <span class="pi-chiffres">${x.actions} % actions · ${x.rendement.toFixed(1)} %/an visés</span>
         <small>${cfEsc(x.resume)}</small>
         <em>Horizon ${x.horizon} ans et + · mauvaise année ≈ ${x.perte} %</em>
@@ -217,7 +251,7 @@ function piOngletPlacements() {
 
       <section class="dbx-carte"><header class="dbx-carte-tete"><h2>Projection à ${horizon} ans</h2><span class="dbx-carte-sous">${cfCHF(mensuelPlace)}/mois placés${capitalDepart ? ` + ${cfCHF(capitalDepart)} déjà investis` : ''}</span></header>
         <div class="pi-proj">
-          <div class="pi-proj-central">${cfCHF(proj.central)}<small>capital projeté, profil ${p.label}</small></div>
+          <div class="pi-proj-central">${cfCHF(proj.central)}<small>capital projeté, profil ${piNomProfil(p)}</small></div>
           <div class="pi-proj-fourchette">Fourchette réaliste : <b>${cfCHF(proj.bas)}</b> à <b>${cfCHF(proj.haut)}</b> · versé ${cfCHF(proj.verse)}</div>
           <div class="pi-comparatif">${PROFILS_INVESTISSEUR.map(x => { const v = piProjection(capitalDepart, mensuelPlace, horizon, x).central; return `<div class="pi-comp ${x.id === p.id ? 'actif' : ''}">
             <span class="pi-comp-nom">${x.label}</span><span class="pi-comp-barre"><i style="width:${Math.max(4, v / maxProj * 100)}%"></i></span><span class="pi-comp-val">${cfCHF(v)}</span></div>`; }).join('')}</div>
@@ -240,7 +274,7 @@ function piAjouterRecommandation() {
   const A = cfAnalyse();
   const alloc = piAllocation(A);
   const p = alloc.profil;
-  const texte = `Profil investisseur retenu : ${p.label} (${p.actions} % actions, ${p.rendement.toFixed(1)} %/an visés, horizon ${p.horizon} ans et plus). `
+  const texte = `Profil investisseur retenu : ${piNomProfil(p)} (${p.actions} % actions, ${p.rendement.toFixed(1)} %/an visés, horizon ${p.horizon} ans et plus). `
     + (alloc.lignes.length ? `Répartition de l’épargne : ${alloc.lignes.map(l => `${l.label} ${cfCHF(l.montant)}/mois`).join(', ')}.` : '')
     + (alloc.courtTerme.length ? ` Attention : ${alloc.courtTerme.map(x => x.libelle || x.type || 'projet').join(', ')} à moins de ${p.horizon} ans — cette part reste sans risque.` : '');
   _cf.dossier.recommandations = _cf.dossier.recommandations || [];

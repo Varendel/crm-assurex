@@ -133,8 +133,9 @@
   .login-panneau { position: relative; overflow: hidden; width: 42%; max-width: 620px; min-width: 380px; box-sizing: border-box; padding: 56px 64px; display: flex; flex-direction: column; justify-content: space-between; background: #113679; color: #fff; }
   .login-deco-cercle { position: absolute; right: -120px; top: 22%; width: 420px; height: 420px; border-radius: 50%; background: #1A4590; }
   .login-deco-carre { position: absolute; right: 64px; top: 56px; width: 14px; height: 14px; background: #00CFFF; }
-  .login-assurex { position: relative; width: 170px; height: auto; filter: brightness(0) invert(1); }
-  .login-marque { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 26px; }
+  .login-assurex { position: relative; width: 150px; height: auto; filter: brightness(0) invert(1); }
+  .login-membre { flex: 1; text-align: center; white-space: nowrap; }
+  .login-marque { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 26px; margin-top: -8px; }
   .login-mascotte { width: 170px; height: auto; filter: drop-shadow(0 10px 22px rgba(0,0,0,0.25)); }
   .login-logotype { width: 280px; height: auto; filter: brightness(0) invert(1); }
   .login-pied { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 13px; color: #B9CAE8; }
@@ -154,7 +155,7 @@
   @media (max-width: 860px) {
     #login-screen { flex-direction: column; }
     .login-panneau { width: 100%; max-width: none; min-width: 0; padding: 22px 24px; gap: 14px; }
-    .login-deco-cercle, .login-pied, .login-assurex { display: none; }
+    .login-deco-cercle, .login-pied { display: none; }
     .login-deco-carre { top: 24px; right: 24px; }
     .login-marque { flex-direction: row; align-items: center; gap: 14px; }
     .login-mascotte { width: 64px; }
@@ -185,7 +186,7 @@
   .sidebar-logo .rex-marque { display: flex; align-items: center; gap: 8px; }
   .sidebar-logo .rex-marque .rex-mascotte-menu { width: 34px; height: 44px; object-fit: contain; flex-shrink: 0; }
   .sidebar-logo .rex-marque .rex-logotype-menu { width: 130px; height: auto; filter: var(--logo-filter); }
-  .sidebar-logo .assurex-menu { display: block; width: 150px; height: auto; margin: 16px 0 0 6px; filter: var(--logo-filter); }
+  .sidebar .assurex-menu { display: block; width: 150px; height: auto; margin: 18px auto 4px; filter: var(--logo-filter); }
   .exgroupe-entete { width: 118px; height: auto; display: block; }
   .sidebar-logo .cofidex svg [fill="#fff"] { fill: var(--text); }
   /* Logo OZ Assure (blanc) : suit la couleur du texte pour rester visible en thème clair */
@@ -489,13 +490,13 @@
   <aside class="login-panneau" aria-label="REX CRM">
     <span class="login-deco-cercle" aria-hidden="true"></span>
     <span class="login-deco-carre" aria-hidden="true"></span>
-    <img src="assets/logos/assurex.png" alt="Assurex" class="login-assurex"/>
     <div class="login-marque">
       <img src="assets/logos/rex-mascotte-hd.png" alt="Rex, la mascotte du CRM" class="login-mascotte"/>
       <img src="assets/logos/rex-logotype.png" alt="REX CRM" class="login-logotype"/>
     </div>
     <div class="login-pied">
-      <span>Assurex Sàrl · membre de</span>
+      <img src="assets/logos/assurex.png" alt="Assurex" class="login-assurex"/>
+      <span class="login-membre">membre de</span>
       <svg viewBox="670 488 580 100" xmlns="http://www.w3.org/2000/svg" class="exgroupe-logo">
           <rect x="829.47" y="551.34" width="18.15" height="18.15" fill="#00cfff"/>
           <rect x="686.18" y="538.2" width="48.56" height="10.09" fill="#ffffff"/>
@@ -549,14 +550,13 @@
         <img src="assets/logos/rex-mascotte-hd.png" alt="" class="rex-mascotte-menu"/>
         <img src="assets/logos/rex-logotype.png" alt="REX CRM" class="rex-logotype-menu"/>
       </div>
-      <img src="assets/logos/assurex.png" alt="Assurex" class="assurex-menu"/>
     </div>
     <div id="nav"></div>
     <div class="sidebar-team">
       <div class="team-title">Équipe</div>
       <div id="team-list"></div>
       <button class="btn-logout" onclick="logout()">🚪 Déconnexion</button>
-      <div style="text-align:center;font-size:9px;color:var(--text-dim);margin-top:10px;letter-spacing:0.5px">Build 2026-07-22 audit-3-mutualisation</div>
+      <img src="assets/logos/assurex.png" alt="Assurex" class="assurex-menu"/>
     </div>
   </div>
   <!-- MAIN -->

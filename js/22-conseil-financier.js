@@ -238,6 +238,19 @@ function cfCalculsOnglet() {
 
 // ── Calculs ─────────────────────────────────────────────────────────────────────────────────
 function cfSomme(obj) { return Object.values(obj || {}).reduce((s, v) => s + cfNum(v), 0); }
+// Salaire brut annuel estimé depuis un revenu NET mensuel (charges sociales salarié ≈ 13 %)
+function cfBrutDepuisNet(netMensuel) { return netMensuel > 0 ? Math.round(netMensuel * 12 / 0.87) : 0; }
+// Reprend les revenus de l'onglet Situation dans les champs AVS de l'onglet Retraite
+function cfReprendreRevenus() {
+  const s = _cf.dossier.situation || {};
+  const net = cfNum(cfGet(s, 'revenus.net_client')), netC = cfNum(cfGet(s, 'revenus.net_conjoint'));
+  if (!net && !netC) { showError('Renseigne d’abord les revenus dans l’onglet Situation.'); return; }
+  if (net) cfSet(_cf.dossier, 'situation.prevoyance.salaire_brut', cfBrutDepuisNet(net));
+  if (netC) cfSet(_cf.dossier, 'situation.prevoyance.salaire_brut_conjoint', cfBrutDepuisNet(netC));
+  cfPlanifierSauvegarde();
+  cfRendre();
+  showError('✓ Salaires bruts estimés depuis les revenus nets — corrige-les si tu as les chiffres exacts.');
+}
 function cfMensualiteEpargne(capital, annees, tauxPct) {
   // Épargne mensuelle nécessaire pour constituer « capital » en « annees » à « tauxPct » %/an
   if (capital <= 0) return 0;
@@ -265,9 +278,14 @@ function cfAnalyse() {
   const p = s.prevoyance || {};
   const ageRetraite = cfNum(p.age_retraite) || 65;
   const annees = age != null ? Math.max(0, ageRetraite - age) : null;
-  const salaire = cfNum(p.salaire_brut);
+  // Le revenu n'est saisi qu'une fois : la Situation demande le NET MENSUEL, la Retraite a besoin du
+  // BRUT ANNUEL (base AVS). Si le brut n'est pas renseigné, on le déduit du net (≈ +15 % de charges
+  // sociales salarié) plutôt que de le redemander (20.09.2026).
+  const salaire = cfNum(p.salaire_brut) || cfBrutDepuisNet(cfNum(cfGet(s, 'revenus.net_client')));
+  const salaireConjoint = cfNum(p.salaire_brut_conjoint) || cfBrutDepuisNet(cfNum(cfGet(s, 'revenus.net_conjoint')));
+  const salaireEstime = !cfNum(p.salaire_brut) && salaire > 0;
   const avs = salaire ? estimerRenteAVS(salaire, 44) : 0;
-  const avsConjoint = cfNum(p.salaire_brut_conjoint) ? estimerRenteAVS(cfNum(p.salaire_brut_conjoint), 44) : 0;
+  const avsConjoint = salaireConjoint ? estimerRenteAVS(salaireConjoint, 44) : 0;
   const avsCouple = avsConjoint ? Math.min(avs + avsConjoint, AVS_LEGAL.rente_max * 1.5) : avs; // plafonnement couple marié 150 %
   let capitalLPP = cfNum(p.lpp_capital_projete);
   const lppProjeteCertificat = !!capitalLPP;
@@ -304,7 +322,7 @@ function cfAnalyse() {
 
   // Immobilier (projet d'achat)
   const im = s.immobilier || {};
-  const revenuBrutMenage = salaire + cfNum(p.salaire_brut_conjoint);
+  const revenuBrutMenage = salaire + salaireConjoint;
   let hypo = null;
   if (cfNum(im.prix) && revenuBrutMenage) {
     const params = { prix: cfNum(im.prix), fondsPropresDisponibles: cfNum(im.fonds_propres), fondsPropresLPP: cfNum(im.fonds_propres_lpp), revenuBrut: revenuBrutMenage,
@@ -318,7 +336,7 @@ function cfAnalyse() {
   const chargeTheoriqueActuelle = hypoActuelle ? hypoActuelle * IMMO_LEGAL.taux_interet_theorique_defaut + valeurBien * IMMO_LEGAL.charges_entretien_defaut : 0;
   const tauxEffortActuel = revenuBrutMenage && hypoActuelle ? chargeTheoriqueActuelle / revenuBrutMenage : null;
 
-  return { age, revenus, depenses, capacite, patrimoine, dettes, net: patrimoine - dettes, liquidites, moisReserve, ageRetraite, annees, salaire, avs, avsCouple, capitalLPP, lppProjeteCertificat, renteLPP, capital3a, capitalLibre, renteCapitaux, revenuRetraite, besoin, lacune, capitalManquant, epargneRetraite, dureeRetraite, manque3a, economieImpot3a, projets, besoinProjets, hypo, revenuBrutMenage, hypoActuelle, valeurBien, tauxEffortActuel };
+  return { age, revenus, depenses, capacite, patrimoine, dettes, net: patrimoine - dettes, liquidites, moisReserve, ageRetraite, annees, salaire, salaireConjoint, salaireEstime, avs, avsCouple, capitalLPP, lppProjeteCertificat, renteLPP, capital3a, capitalLibre, renteCapitaux, revenuRetraite, besoin, lacune, capitalManquant, epargneRetraite, dureeRetraite, manque3a, economieImpot3a, projets, besoinProjets, hypo, revenuBrutMenage, hypoActuelle, valeurBien, tauxEffortActuel };
 }
 
 // Recommandations proposées automatiquement à partir de l'analyse
@@ -364,7 +382,8 @@ function cfOngletSynthese() {
         </section>
         ${A.revenuRetraite ? `<section class="dbx-carte"><header class="dbx-carte-tete"><h2>Retraite à ${A.ageRetraite} ans</h2><button type="button" class="dbx-lien" onclick="cfChangerOnglet('retraite')">Détail →</button></header>${cfBarreRetraite(A)}</section>` : ''}
       </div>
-    </div>`;
+    </div>
+    ${typeof cfApercuPlacements === 'function' ? cfApercuPlacements(A) : ''}`;
 }
 function cfIconeCat(cat) { return { Budget: '📊', 'Épargne': '🛟', Dettes: '💳', 'Fiscalité': '🧾', Retraite: '🌅', Projets: '🎯', Immobilier: '🏡', Protection: '🛡️', Placements: '📈' }[cat] || '💡'; }
 
@@ -495,7 +514,8 @@ function cfOngletRetraite() {
   return `<div class="cf-grille-saisie">
     <div class="cf-col-saisie">
       <section class="dbx-carte"><header class="dbx-carte-tete"><h2>Projection de la retraite</h2><span class="dbx-carte-sous">AVS + LPP + 3e pilier + épargne</span></header>
-        <div class="cf-champs">${cfChamp(s + 'prevoyance.salaire_brut', 'Salaire brut annuel (AVS)', { unite: 'CHF/an' })}${cfChamp(s + 'prevoyance.salaire_brut_conjoint', 'Salaire brut du conjoint (AVS couple)', { unite: 'CHF/an' })}${cfChamp(s + 'patrimoine.lpp', 'Avoir LPP actuel', { unite: 'CHF' })}${cfChamp(s + 'prevoyance.lpp_capital_projete', 'Capital LPP projeté (certificat)', { unite: 'CHF', aide: 'si connu — sinon estimé au minimum légal' })}${cfChamp(s + 'prevoyance.taux_conversion', 'Taux de conversion LPP', { unite: '%', aide: 'légal 6,8 % ; souvent 5 à 6 % en réalité' })}${cfChamp(s + 'prevoyance.rachat_lpp_annuel', 'Rachat LPP prévu', { unite: 'CHF/an' })}${cfChamp(s + 'patrimoine.pilier3a', 'Avoir 3a actuel', { unite: 'CHF' })}${cfChamp(s + 'prevoyance.versement_3a', 'Versement 3a annuel', { unite: 'CHF/an' })}${cfChamp(s + 'prevoyance.age_retraite', 'Âge de retraite', { unite: 'ans' })}${cfChamp(s + 'prevoyance.objectif_pct', 'Objectif de revenu', { unite: '% du revenu actuel' })}</div></section>
+        <div class="cf-aide-revenus">Les revenus ont déjà été saisis en net mensuel dans <button type="button" class="dbx-lien" onclick="cfChangerOnglet('situation')">Situation</button>. Ici c'est le <strong>brut annuel</strong> (base AVS) : laissé vide, il est estimé depuis le net. <button type="button" class="btn-secondary" style="padding:5px 10px;font-size:12px" onclick="cfReprendreRevenus()">Reprendre les revenus de la situation</button></div>
+        <div class="cf-champs">${cfChamp(s + 'prevoyance.salaire_brut', 'Salaire brut annuel (AVS)', { unite: 'CHF/an', aide: 'vide = estimé depuis le revenu net de la situation' })}${cfChamp(s + 'prevoyance.salaire_brut_conjoint', 'Salaire brut du conjoint (AVS couple)', { unite: 'CHF/an', aide: 'vide = estimé depuis le revenu net du conjoint' })}${cfChamp(s + 'patrimoine.lpp', 'Avoir LPP actuel', { unite: 'CHF' })}${cfChamp(s + 'prevoyance.lpp_capital_projete', 'Capital LPP projeté (certificat)', { unite: 'CHF', aide: 'si connu — sinon estimé au minimum légal' })}${cfChamp(s + 'prevoyance.taux_conversion', 'Taux de conversion LPP', { unite: '%', aide: 'légal 6,8 % ; souvent 5 à 6 % en réalité' })}${cfChamp(s + 'prevoyance.rachat_lpp_annuel', 'Rachat LPP prévu', { unite: 'CHF/an' })}${cfChamp(s + 'patrimoine.pilier3a', 'Avoir 3a actuel', { unite: 'CHF' })}${cfChamp(s + 'prevoyance.versement_3a', 'Versement 3a annuel', { unite: 'CHF/an' })}${cfChamp(s + 'prevoyance.age_retraite', 'Âge de retraite', { unite: 'ans' })}${cfChamp(s + 'prevoyance.objectif_pct', 'Objectif de revenu', { unite: '% du revenu actuel' })}</div></section>
       <section class="dbx-carte"><header class="dbx-carte-tete"><h2>Protection décès & invalidité</h2><button type="button" class="dbx-lien" onclick="cfOuvrirBilanPrevoyance()">Analyse de prévoyance complète →</button></header>
         ${b.length ? `<div class="cf-bilans">${b.slice(0, 4).map(x => `<button type="button" class="cf-bilan" onclick="window._bilansPrevoyanceActuel=_cf.bilans;voirBilanSauvegarde('${x.id}')"><strong>Bilan du ${fmtDate(x.created_at)}</strong><small>${cfEsc(x.resume || '')}</small></button>`).join('')}</div>`
         : '<div class="dbx-vide-petit">Aucun bilan de prévoyance enregistré pour ce client. Le bilan complet calcule les lacunes en cas de décès et d’invalidité (AVS/AI + LPP).</div>'}

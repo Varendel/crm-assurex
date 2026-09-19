@@ -2886,6 +2886,28 @@ body.mode-cloud .login-marque-cloud { display: flex; flex-direction: column; ali
 .nc-brouillon small { font-size: 11.5px; color: var(--text-muted); }
 .nc-brouillon div { flex: 1; min-width: 0; }
 .nc-brouillon button { padding: 7px 14px; font-size: 12.5px; }
+/* Volume de primes interactif + aperçu placements dans la synthèse (20.09.2026) */
+#vpx-anneau-svg .vpx-seg { cursor: pointer; transition: opacity .15s, stroke-width .15s; }
+#vpx-anneau-svg .vpx-seg:focus-visible { outline: none; stroke-width: 26; }
+.vpx-legende button.survol { background: var(--surface-alt); }
+.vpx-legende button.actif { border-color: var(--accent); box-shadow: inset 2px 0 0 var(--accent); }
+.vpx-cat { cursor: pointer; border-radius: 8px; transition: background .15s; }
+.vpx-cat:hover { background: var(--surface-alt); }
+.vpx-cat.actif { background: var(--accent-dim); box-shadow: inset 2px 0 0 var(--accent); }
+.pi-apercu { display: grid; grid-template-columns: minmax(220px, 1fr) 1.4fr; gap: 18px; }
+.pi-apercu-profil b { display: block; font-size: 15px; color: var(--text); margin-top: 6px; }
+.pi-apercu-profil small { font-size: 11.5px; color: var(--text-muted); }
+.pi-apercu-alloc { display: flex; flex-direction: column; gap: 4px; margin-top: 10px; font-size: 12.5px; color: var(--text); }
+.pi-apercu-alloc span { display: flex; justify-content: space-between; gap: 10px; }
+.pi-apercu-alloc em { font-style: normal; color: var(--text-muted); }
+.pi-apercu-sols { display: flex; flex-direction: column; gap: 6px; }
+.pi-apercu-sol { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; background: var(--surface-alt); border: 1px solid transparent; cursor: pointer; text-align: left; font-family: inherit; }
+.pi-apercu-sol:hover { border-color: var(--accent-border); }
+.pi-apercu-sol b { flex: 1; font-size: 13px; color: var(--text); }
+.pi-apercu-sol em { font-style: normal; font-weight: 700; color: var(--accent); font-size: 12.5px; white-space: nowrap; }
+.pi-apercu-alerte { font-size: 11.5px; color: #B45309; background: rgba(245,158,11,.10); border-radius: 8px; padding: 8px 10px; }
+.cf-aide-revenus { font-size: 11.5px; color: var(--text-muted); background: var(--surface-alt); border-radius: 8px; padding: 8px 10px; margin-bottom: 10px; display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+@media (max-width: 900px) { .pi-apercu { grid-template-columns: 1fr; } }
 @media (prefers-reduced-motion: reduce) {
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
@@ -3013,7 +3035,7 @@ body.mode-cloud .login-marque-cloud { display: flex; flex-direction: column; ali
 <script src="js/19-prevision-commissions.js?v=1790760000"></script>
 <script src="js/20-fiche-client-entete.js?v=1790020000"></script>
 <script src="js/21-tresorerie.js?v=1790760000"></script>
-<script src="js/22-conseil-financier.js?v=1790880000"></script>
+<script src="js/22-conseil-financier.js?v=1790940000"></script>
 <script src="js/23-analyse-prevoyance.js?v=1790330000"></script>
 <script src="js/24-financement-immo.js?v=1790350000"></script>
 <script src="js/25-opportunite.js?v=1790820000"></script>
@@ -3021,7 +3043,7 @@ body.mode-cloud .login-marque-cloud { display: flex; flex-direction: column; ali
 <script src="js/27-suivi-affaires.js?v=1790200000"></script>
 <script src="js/28-mobile.js?v=1790200000"></script>
 <script src="js/29-suivi-financier.js?v=1790760000"></script>
-<script src="js/30-volume-primes.js?v=1790520000"></script>
+<script src="js/30-volume-primes.js?v=1790940000"></script>
 <script src="js/31-analyses-recentes.js?v=1790210000"></script>
 <script src="js/32-campagnes.js?v=1790240000"></script>
 <script src="js/33-factures-qr.js?v=1790420000"></script>
@@ -3038,7 +3060,7 @@ body.mode-cloud .login-marque-cloud { display: flex; flex-direction: column; ali
 <script src="js/44-bandeau-pages.js?v=1790660000"></script>
 <script src="js/45-courriers.js?v=1790640000"></script>
 <script src="js/46-offre-vers-contrat.js?v=1790640000"></script>
-<script src="js/47-profil-investisseur.js?v=1790880000"></script>
+<script src="js/47-profil-investisseur.js?v=1790940000"></script>
 <script src="js/48-espace-client.js?v=1790900000"></script>
 <script src="js/49-nouveau-contrat.js?v=1790920000"></script>
 <script>

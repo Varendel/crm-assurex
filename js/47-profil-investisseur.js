@@ -217,6 +217,35 @@ function piResumeProjet(A, alloc) {
   return phrases;
 }
 
+// Aperçu affiché directement dans la Synthèse : le profil et les solutions ne doivent pas être
+// cachés derrière un onglet (remarque de Jonathan, 20.09.2026 : « je ne vois pas le profil
+// investisseur ni les solutions proposées »).
+function cfApercuPlacements(A) {
+  A = A || cfAnalyse();
+  const alloc = piAllocation(A);
+  const p = alloc.profil;
+  const sols = piSolutions(A, alloc);
+  const av = piAvertissements(A, alloc).filter(x => x.ton !== 'vert');
+  return `<section class="dbx-carte" style="margin-top:18px"><header class="dbx-carte-tete">
+      <h2>Profil investisseur & solutions</h2>
+      <button type="button" class="dbx-lien" onclick="cfChangerOnglet('placements')">Choisir le profil et détailler →</button></header>
+    <div class="pi-apercu">
+      <div class="pi-apercu-profil">
+        <span class="pi-jauge" aria-hidden="true"><i style="width:${p.actions}%"></i></span>
+        <b>${piNomProfil(p)}</b>
+        <small>${p.actions} % actions · ${p.rendement.toFixed(1).replace('.', ',')} %/an visés · horizon ${p.horizon} ans et +</small>
+        ${alloc.lignes.length ? `<div class="pi-apercu-alloc">${alloc.lignes.map(l => `<span><em>${cfEsc(l.label)}</em>${cfCHF(l.montant)}/mois</span>`).join('')}</div>` : '<div class="dbx-vide-petit">Capacité d’épargne à compléter dans la situation.</div>'}
+      </div>
+      <div class="pi-apercu-sols">
+        ${sols.length ? sols.map(s => `<button type="button" class="pi-apercu-sol" onclick="cfChangerOnglet('placements')">
+            <span aria-hidden="true">${s.icone}</span><b>${cfEsc(s.titre)}</b><em>${cfCHF(s.prime)}/mois</em></button>`).join('')
+          : '<div class="dbx-vide-petit">Aucune solution à proposer pour l’instant.</div>'}
+        ${av.length ? `<div class="pi-apercu-alerte">⚠ ${av[0].texte}</div>` : ''}
+      </div>
+    </div>
+  </section>`;
+}
+
 function piOngletPlacements() {
   const A = cfAnalyse();
   const alloc = piAllocation(A);

@@ -69,8 +69,14 @@ function renderVolumePrimesCorps(contrats, clientsMap) {
   const top = cies.slice(0, 8); const autres = cies.slice(8).reduce((s, [, v]) => s + v, 0);
   const parts = [...top, ...(autres ? [['Autres', autres]] : [])];
   const R = 70, C = 2 * Math.PI * R; let cumul = 0;
+  // Anneau interactif (20.09.2026) : survol = segment mis en avant + détail au centre, clic =
+  // la compagnie est sélectionnée dans « Meilleurs clients ».
   const anneau = parts.map(([cie, v], i) => { const f = v / total, dash = f * C, off = cumul * C; cumul += f;
-    return `<circle cx="90" cy="90" r="${R}" fill="none" stroke="${VPX_PALETTE[i % VPX_PALETTE.length]}" stroke-width="22" stroke-dasharray="${dash.toFixed(1)} ${(C - dash).toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}" transform="rotate(-90 90 90)"><title>${vpxEsc(cie)} : ${dbxCHF(v)}</title></circle>`; }).join('');
+    return `<circle class="vpx-seg" data-cie="${vpxEsc(cie)}" cx="90" cy="90" r="${R}" fill="none" stroke="${VPX_PALETTE[i % VPX_PALETTE.length]}" stroke-width="22" stroke-dasharray="${dash.toFixed(1)} ${(C - dash).toFixed(1)}" stroke-dashoffset="${(-off).toFixed(1)}" transform="rotate(-90 90 90)"
+      tabindex="0" role="button" aria-label="${vpxEsc(cie)} : ${dbxCHF(v)}, ${pct(v)} %"
+      onmouseenter="vpxSurvolCie('${vpxEsc(cie).replace(/'/g, "\\'")}', ${v}, ${pct(v)})" onmouseleave="vpxFinSurvol()"
+      onfocus="vpxSurvolCie('${vpxEsc(cie).replace(/'/g, "\\'")}', ${v}, ${pct(v)})" onblur="vpxFinSurvol()"
+      onclick="vpxChoisirCie('${vpxEsc(cie).replace(/'/g, "\\'")}')" onkeydown="if(event.key==='Enter')vpxChoisirCie('${vpxEsc(cie).replace(/'/g, "\\'")}')"><title>${vpxEsc(cie)} : ${dbxCHF(v)}</title></circle>`; }).join('');
 
   const split = (titre, a, la, ca, lb, cb) => `<section class="dbx-carte"><header class="dbx-carte-tete"><h2>${titre}</h2></header>
     <div class="vpx-split"><span style="width:${pct(a)}%;background:${ca}"></span><span style="width:${100 - pct(a)}%;background:${cb}"></span></div>
@@ -88,10 +94,11 @@ function renderVolumePrimesCorps(contrats, clientsMap) {
     <div class="dbx-grille dbx-grille-egale">
       <section class="dbx-carte"><header class="dbx-carte-tete"><h2>Par compagnie</h2><span class="dbx-carte-sous">clique une compagnie pour ses meilleurs clients</span></header>
         <div class="vpx-anneau">
-          <svg width="180" height="180" viewBox="0 0 180 180" role="img" aria-label="Répartition par compagnie">${anneau}
-            <text x="90" y="86" text-anchor="middle" font-size="20" font-weight="700" fill="currentColor">${cies.length}</text>
-            <text x="90" y="104" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.6">compagnies</text></svg>
-          <div class="vpx-legende">${cies.slice(0, 10).map(([cie, v], i) => `<button type="button" onclick="afficherTopClientsCompagnie(this.dataset.c)" data-c="${vpxEsc(cie)}">
+          <svg id="vpx-anneau-svg" width="180" height="180" viewBox="0 0 180 180" role="img" aria-label="Répartition par compagnie">${anneau}
+            <text id="vpx-centre-haut" x="90" y="86" text-anchor="middle" font-size="20" font-weight="700" fill="currentColor" data-defaut="${cies.length}">${cies.length}</text>
+            <text id="vpx-centre-bas" x="90" y="104" text-anchor="middle" font-size="10" fill="currentColor" opacity="0.6" data-defaut="compagnies">compagnies</text></svg>
+          <div class="vpx-legende">${cies.slice(0, 10).map(([cie, v], i) => `<button type="button" onclick="vpxChoisirCie(this.dataset.c)" data-c="${vpxEsc(cie)}" class="${cie === premiere ? 'actif' : ''}"
+            onmouseenter="vpxSurvolCie(this.dataset.c, ${v}, ${pct(v)})" onmouseleave="vpxFinSurvol()">
             <i style="background:${VPX_PALETTE[Math.min(i, 8) % VPX_PALETTE.length]}"></i>${typeof pictoCompagnie === 'function' ? pictoCompagnie(cie, 20) : ''}<span>${vpxEsc(cie)}</span><b>${dbxCompact(v)}</b><small>${pct(v)} %</small></button>`).join('')}</div>
         </div>
       </section>
@@ -102,15 +109,57 @@ function renderVolumePrimesCorps(contrats, clientsMap) {
       ${split('Vie et prévoyance / non-vie', vie, '🫀 Vie & prévoyance', '#A78BFA', '🛡️ Non-vie (IARD)', '#00CFFF')}
       ${split('Clients privés / entreprises', prive, '👤 Privés', '#22C55E', '🏢 Entreprises', '#F59E0B')}
       <section class="dbx-carte"><header class="dbx-carte-tete"><h2>Par catégorie</h2><span class="dbx-carte-sous">clique pour voir les contrats</span></header>
-        <div class="dbx-hbarres">${cats.map(([cat, x], i) => `<div class="dbx-hbarre vpx-cat" style="--i:${i}" title="${vpxEsc(Object.entries(x.produits).sort((a, b) => b[1] - a[1]).slice(0, 4).map(([p, v]) => p + ' : ' + dbxCHF(v)).join(' · '))}">
+        <div class="dbx-hbarres">${cats.map(([cat, x], i) => `<div class="dbx-hbarre vpx-cat" style="--i:${i}" role="button" tabindex="0" data-cat="${vpxEsc(cat)}"
+          onclick="vpxChoisirCategorie(this.dataset.cat)" onkeydown="if(event.key==='Enter')vpxChoisirCategorie(this.dataset.cat)"
+          title="${vpxEsc(Object.entries(x.produits).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([p, v]) => p + ' : ' + dbxCHF(v)).join(' · '))}">
           <span class="dbx-hbarre-nom"><span class="dbx-point" style="background:${(typeof COULEUR_CATEGORIE_PRODUIT !== 'undefined' && COULEUR_CATEGORIE_PRODUIT[cat]) || '#94A3B8'}"></span><span>${vpxEsc(cat)}</span></span>
           <span class="dbx-hbarre-piste"><span style="--w:${Math.round(x.total / maxCat * 100)}%;background:${(typeof COULEUR_CATEGORIE_PRODUIT !== 'undefined' && COULEUR_CATEGORIE_PRODUIT[cat]) || '#94A3B8'}"></span></span>
           <span class="dbx-hbarre-val">${dbxCompact(x.total)}<small>${pct(x.total)} %</small></span></div>`).join('')}</div>
       </section>
-      <section class="dbx-carte"><header class="dbx-carte-tete"><h2>Top produits</h2><span class="dbx-carte-sous">volume annuel</span></header>
-        <div class="sfx-mini">${produits.map(([p, v], i) => `<button type="button" class="vpx-produit" data-produit="${vpxEsc(p)}" onclick="rechercherContratsProduit(this.dataset.produit)"><span><b><em>${i + 1}</em>${vpxEsc(p)}</b></span><em>${dbxCHF(v)} <small>${pct(v)} %</small></em></button>`).join('')}</div>
+      <section class="dbx-carte"><header class="dbx-carte-tete"><h2>Top produits</h2><span class="dbx-carte-sous" id="vpx-produits-sous">volume annuel</span></header>
+        <div class="sfx-mini" id="vpx-produits">${produits.map(([p, v], i) => `<button type="button" class="vpx-produit" data-produit="${vpxEsc(p)}" data-cat="${vpxEsc((typeof categoriePourProduitLibre === 'function' ? categoriePourProduitLibre(p) : null) || 'Autre')}" onclick="rechercherContratsProduit(this.dataset.produit)"><span><b><em>${i + 1}</em>${vpxEsc(p)}</b></span><em>${dbxCHF(v)} <small>${pct(v)} %</small></em></button>`).join('')}</div>
       </section>
     </div>`;
+}
+
+// ── Interactions à la souris (20.09.2026) ───────────────────────────────────────────────────────
+// Survol d'un segment ou d'une ligne de légende : le reste de l'anneau s'estompe et le centre
+// affiche la compagnie survolée. Clic : la compagnie passe dans « Meilleurs clients ».
+function vpxSurvolCie(cie, montant, pourcent) {
+  document.querySelectorAll('#vpx-anneau-svg .vpx-seg').forEach(s => {
+    const vise = s.dataset.cie === cie;
+    s.style.opacity = vise ? '1' : '0.28';
+    s.style.strokeWidth = vise ? '26' : '22';
+  });
+  const haut = document.getElementById('vpx-centre-haut'), bas = document.getElementById('vpx-centre-bas');
+  if (haut) { haut.textContent = typeof dbxCompact === 'function' ? dbxCompact(montant) : montant; haut.setAttribute('font-size', '17'); }
+  if (bas) bas.textContent = `${cie} · ${pourcent} %`;
+  document.querySelectorAll('.vpx-legende button').forEach(b => b.classList.toggle('survol', b.dataset.c === cie));
+}
+function vpxFinSurvol() {
+  document.querySelectorAll('#vpx-anneau-svg .vpx-seg').forEach(s => { s.style.opacity = ''; s.style.strokeWidth = '22'; });
+  const haut = document.getElementById('vpx-centre-haut'), bas = document.getElementById('vpx-centre-bas');
+  if (haut) { haut.textContent = haut.dataset.defaut || ''; haut.setAttribute('font-size', '20'); }
+  if (bas) bas.textContent = bas.dataset.defaut || '';
+  document.querySelectorAll('.vpx-legende button').forEach(b => b.classList.remove('survol'));
+}
+function vpxChoisirCie(cie) {
+  const select = document.getElementById('vp-compagnie-select');
+  if (select) select.value = cie;
+  document.querySelectorAll('.vpx-legende button').forEach(b => b.classList.toggle('actif', b.dataset.c === cie));
+  afficherTopClientsCompagnie(cie);
+  document.getElementById('vp-top-clients-corps')?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+// Clic sur une catégorie : les « Top produits » se limitent à cette catégorie (re-clic = tout)
+function vpxChoisirCategorie(cat) {
+  const actif = window._vpxCategorie === cat ? null : cat;
+  window._vpxCategorie = actif;
+  document.querySelectorAll('.vpx-cat').forEach(b => b.classList.toggle('actif', b.dataset.cat === actif));
+  document.querySelectorAll('#vpx-produits .vpx-produit').forEach(b => {
+    b.style.display = !actif || b.dataset.cat === actif ? '' : 'none';
+  });
+  const sous = document.getElementById('vpx-produits-sous');
+  if (sous) sous.textContent = actif ? `catégorie ${actif} — clique à nouveau pour tout revoir` : 'volume annuel';
 }
 
 // Meilleurs clients d'une compagnie — version moderne (même signature que js/04)

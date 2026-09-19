@@ -48,7 +48,11 @@ sont en bas de ce fichier.
 - [x] **Relances LAMal** (19.09) — page Vente › Relances LAMal : la LAMal comme levier de RDV,
       message e-mail / WhatsApp avec lien de réservation personnalisé, suivi relancé → RDV
 - [ ] Échéancier, suite : préavis modifiable par contrat dans la fiche contrat, note de revue
-- [ ] **Taux d'équipement / ventes croisées** (clients sans contrat, clients mono-équipés)
+- [x] **Équipement & ventes croisées** (19.09) — page Vente › Équipement : besoins de base par profil
+      (particulier / entreprise), taux de couverture par besoin, opportunité « Vente croisée » en un
+      clic, liste des clients sans contrat actif avec tâche de contact
+- [ ] Équipement, suite : distinguer « assuré ailleurs » de « pas assuré » (saisir les polices
+      externes connues comme contrats non commissionnés)
 - [ ] **Prochaine action obligatoire** sur chaque opportunité
 - [ ] **Source des clients** (remplacer `source_oz`, `source_cofidex`, `apporteur_externe`)
 - [ ] Synchronisation Outlook + suivi des offres reçues (voir idées détaillées ci-dessous)

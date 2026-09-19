@@ -710,6 +710,7 @@ const SECTIONS = [
     { id: 'suivi', label: 'Suivi des affaires' },
     { id: 'renouvellements', label: '🔁 Renouvellements' },
     { id: 'relances-lamal', label: '🩺 Relances LAMal' },
+    { id: 'equipement', label: '🧩 Équipement & ventes croisées' },
     { id: 'nouveau-contrat-direct', label: 'Nouveau contrat' },
     { id: 'nouvelle-demande-offre', label: 'Demande d\'offre' },
     { id: 'calc-lpp', label: '🧮 Bilan de prévoyance' },
@@ -1340,6 +1341,7 @@ async function renderView() {
     case 'suivi': main.innerHTML = viewSuivi(); break;
     case 'renouvellements': main.innerHTML = viewRenouvellements(); break;
     case 'relances-lamal': main.innerHTML = viewRelancesLamal(); break;
+    case 'equipement': main.innerHTML = viewEquipement(); break;
     case 'rappels': main.innerHTML = viewRappels(); break;
     case 'calc-lpp': main.innerHTML = viewCalculateurLPP(); bindAdresseAutocomplete({ adresseId: 'clpp-adresse', npaVilleId: 'clpp-npa-ville' }); break;
     case 'calc-immo': main.innerHTML = viewFinancementImmo(); break;

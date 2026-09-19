@@ -975,7 +975,18 @@
   /* ═══ ANALYSE DE PRÉVOYANCE (js/23-analyse-prevoyance.js, 19.09.2026) ═══ */
   .ap-analyses select { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); color: #fff; border-radius: 9px; padding: 6px 10px; font-size: 12px; }
   .ap-analyses select option { color: #0E1B33; }
-  .ap-grille { display: grid; grid-template-columns: minmax(300px, 400px) minmax(0, 1fr); gap: 18px; align-items: start; }
+  .ap-grille { display: grid; grid-template-columns: minmax(280px, 360px) minmax(0, 1fr); gap: 18px; align-items: start; }
+  /* Colonne des résultats adaptative (écrans portables ~1280 px) : les blocs s'empilent quand la place manque */
+  .ap-droite { container-type: inline-size; }
+  @container (max-width: 860px) {
+    .ap-droite .dbx-grille, .ap-droite .dbx-grille-egale { grid-template-columns: minmax(0, 1fr); }
+    .ap-droite .dbx-kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .ap-droite .ap-visuel { grid-template-columns: minmax(0, 1fr); }
+    .ap-droite .ap-colonnes { max-width: 380px; width: 100%; margin: 0 auto; }
+    .ap-droite .ap-apercu { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .ap-droite .fi-schema svg { max-width: 460px !important; }
+  }
+  @container (max-width: 480px) { .ap-droite .dbx-kpis, .ap-droite .ap-apercu { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
   .ap-saisie { display: flex; flex-direction: column; gap: 10px; position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; padding-right: 4px; }
   .ap-bloc { flex-shrink: 0; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
   .ap-bloc summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 13px 16px; font-size: 13.5px; font-weight: 600; color: var(--text); }
@@ -1256,12 +1267,12 @@
   <div class="main" id="main-content"></div>
 </div>
 
-<script src="js/01-prevoyance-immo.js?v=1790080000"></script>
+<script src="js/01-prevoyance-immo.js?v=1790090000"></script>
 <script src="js/02-catalogue-session.js?v=1790060000"></script>
 <script src="js/03-auth-navigation.js?v=1790070000"></script>
 <script src="js/04-dashboard-finma.js?v=1790000000"></script>
 <script src="js/05-contrats-clients.js?v=1789990000"></script>
-<script src="js/06-signature-opportunites.js?v=1790040000"></script>
+<script src="js/06-signature-opportunites.js?v=1790090000"></script>
 <script src="js/07-fichepaie-bordereaux.js?v=1790040000"></script>
 <script src="js/08-nouveaux-formulaires.js?v=1788452540"></script>
 <script src="js/09-rappels-vehicules.js?v=1790040000"></script>
@@ -1277,9 +1288,9 @@
 <script src="js/19-prevision-commissions.js?v=1790040000"></script>
 <script src="js/20-fiche-client-entete.js?v=1790020000"></script>
 <script src="js/21-tresorerie.js?v=1790040000"></script>
-<script src="js/22-conseil-financier.js?v=1790080000"></script>
-<script src="js/23-analyse-prevoyance.js?v=1790080000"></script>
-<script src="js/24-financement-immo.js?v=1790080000"></script>
+<script src="js/22-conseil-financier.js?v=1790090000"></script>
+<script src="js/23-analyse-prevoyance.js?v=1790090000"></script>
+<script src="js/24-financement-immo.js?v=1790090000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

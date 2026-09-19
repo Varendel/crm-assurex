@@ -30,14 +30,14 @@ const AP_RISQUES = [
 const AP_SCENARIOS = [['retraite', '🌅', 'Retraite'], ...AP_RISQUES];
 const AP_COULEURS = { avs: '#113679', lpp: '#0EA5E9', lpps: '#8B5CF6', laa: '#F59E0B', p3: '#22C55E' };
 const AP_LIBELLES = { avs: 'AVS / AI', lpp: 'LPP', lpps: 'LPP rentes subsidiaires', laa: 'LAA', p3: '3e pilier' };
-const AP_LPP_VIDE = () => ({ avoir: '', capital_65: '', rente_vieillesse: '', rente_invalidite: '', rente_conjoint: '', rente_enfant: '', capital_deces: '', taux_conversion: 6.8, concubin_couvert: false });
+const AP_LPP_VIDE = () => ({ rachat_possible: '', avoir: '', capital_65: '', rente_vieillesse: '', rente_invalidite: '', rente_conjoint: '', rente_enfant: '', capital_deces: '', taux_conversion: 6.8, concubin_couvert: false });
 const AP_P3_VIDE = () => ({ avoir3a: '', versement3a: '', rente_inv_privee: '', capital_deces_risque: '' });
 const AP_DEFAUT = () => ({
   nom: '', sexe: 'H', naissance: '', etat_civil: 'marie', mariage_5ans: true, enfants: '',
   salaire: '', statut: 'salarie', lacunes_avs: 0, ramd: '', age_retraite: 65,
   lpp: AP_LPP_VIDE(), laa: { salaire_assure: '' }, p3: { ...AP_P3_VIDE(), rendement: 1.5 },
   conjoint: { nom: '', sexe: 'F', naissance: '', salaire: '', statut: 'salarie', lacunes_avs: 0, age_retraite: 65, lpp: AP_LPP_VIDE(), laa: { salaire_assure: '' }, p3: AP_P3_VIDE() },
-  besoins: { retraite: 80, invalidite: 80, deces: 80, horizon: 90 },
+  besoins: { retraite: 80, invalidite: 80, deces: 80, horizon: 90, taux_marginal: 25 },
 });
 
 let _ap = { d: AP_DEFAUT(), clientId: null, scenario: 'retraite', personne: 1, unite: 'mois', analyses: [] };
@@ -408,7 +408,8 @@ function apChampsLpp(b) {
     ${apChamp(b + 'rente_invalidite', 'Rente d’invalidité', { unite: 'CHF/an' })}
     ${apChamp(b + 'rente_enfant', 'Rente d’enfant (invalide / orphelin)', { unite: 'CHF/an' })}
     ${apChamp(b + 'rente_conjoint', 'Rente de conjoint survivant', { unite: 'CHF/an' })}
-    ${apChamp(b + 'capital_deces', 'Capital décès supplémentaire', { unite: 'CHF' })}`;
+    ${apChamp(b + 'capital_deces', 'Capital décès supplémentaire', { unite: 'CHF' })}
+    ${apChamp(b + 'rachat_possible', 'Potentiel de rachat', { unite: 'CHF', aide: 'selon le certificat' })}`;
 }
 function apFormulaire() {
   const d = _ap.d;
@@ -458,6 +459,7 @@ function apFormulaire() {
       ${apChamp('besoins.deces', 'Besoin des survivants', { unite: '% du revenu' })}
       ${apChamp('p3.rendement', 'Rendement de l’épargne', { unite: '%/an' })}
       ${apChamp('besoins.horizon', 'Planifier jusqu’à l’âge de', { unite: 'ans' })}
+      ${apChamp('besoins.taux_marginal', 'Taux marginal d’imposition', { unite: '%', aide: 'pour chiffrer les économies d’impôt' })}
       <p class="ap-aide large">Usuel : 70–80 % du revenu brut. Le besoin de retraite porte sur le revenu du ménage.</p>
     `, true)}`;
 }
@@ -666,6 +668,7 @@ function apRapportCorps(A) {
     const coul = !s.besoin ? '#56627A' : s.lacune ? '#DC2626' : '#16A34A';
     return `<div style="break-inside:avoid;page-break-inside:avoid;margin-bottom:14px;border:1px solid #E2E7EF;border-radius:12px;padding:14px 16px">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px"><b style="font-size:14px;color:#113679">${titre}</b><span style="font-size:12px;color:${coul};font-weight:bold">${!s.besoin ? 'pas de besoin' : s.lacune ? `lacune CHF ${chf(s.lacune)}/an` : 'besoin couvert ✓'}</span></div>
+      ${AP_EXPLICATIONS[k] ? `<p style="font-size:11.5px;color:#475569;margin:0 0 10px;line-height:1.5">${AP_EXPLICATIONS[k]}</p>` : ''}
       <div style="display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:center">
       <div>${apSvgColonnes(s, k === 'retraite' ? 'À la retraite' : k.startsWith('inv') ? 'En invalidité' : 'Après un décès', true)}</div>
       <table style="width:100%;border-collapse:collapse;font-size:11.5px">
@@ -699,14 +702,118 @@ function apRapportCorps(A) {
   _ap.unite = uniteSauve;
   return html;
 }
+// ── Contenu enrichi du rapport (19.09.2026) : synthèse, explications, solutions chiffrées,
+//    prochaines étapes, hypothèses, glossaire, contact du conseiller ─────────────────────────────
+const AP_EXPLICATIONS = {
+  retraite: 'À la retraite, le salaire est remplacé par les rentes AVS (1er pilier), LPP (2e pilier) et l’épargne du 3e pilier. Le besoin usuel se situe autour de 70 à 80 % du revenu actuel.',
+  inv_maladie: 'En cas d’invalidité suite à une maladie, l’AI et la caisse de pension versent des rentes, complétées par des rentes pour les enfants. C’est la cause d’invalidité la plus fréquente — et souvent la moins bien couverte.',
+  inv_accident: 'Après un accident, l’assurance-accidents (LAA) complète l’AI jusqu’à 90 % du salaire assuré ; la caisse de pension n’intervient qu’au-delà. La couverture est généralement meilleure qu’en cas de maladie.',
+  deces_maladie: 'En cas de décès, le conjoint et les enfants reçoivent des rentes de survivants (AVS et LPP). Les rentes d’orphelin s’arrêtent à la fin des études, au plus tard à 25 ans.',
+  deces_accident: 'Après un décès accidentel, la LAA verse en plus des rentes au conjoint et aux orphelins. Les capitaux décès éventuels (LPP, 3e pilier) s’ajoutent aux rentes.',
+};
+const AP_R_CSS = 'break-inside:avoid;page-break-inside:avoid;border:1px solid #E2E7EF;border-radius:12px;padding:14px 16px;margin-bottom:14px';
+
+function apRapportSynthese(A) {
+  const d = _ap.d, uniteSauve = _ap.unite; _ap.unite = 'mois';
+  const tuile = (ic, l, s) => {
+    const couv = s.besoin ? Math.min(1, s.total / s.besoin) : 1;
+    const coul = !s.besoin || couv >= 0.95 ? '#16A34A' : couv >= 0.75 ? '#D97706' : '#DC2626';
+    return `<div style="border:1px solid #E2E7EF;border-radius:12px;padding:12px;text-align:center">
+      <div style="font-size:11px;color:#56627A;min-height:28px">${ic} ${l}</div>
+      <div style="font-size:22px;font-weight:bold;color:${coul}">${s.besoin ? Math.round(couv * 100) + ' %' : '—'}</div>
+      <div style="font-size:10.5px;color:${coul}">${!s.besoin ? 'pas de besoin' : s.lacune ? `lacune ${apCHF(s.lacune)}/mois` : 'couvert'}</div></div>`;
+  };
+  const lignes = Object.keys(A.pers).map(i => `
+    ${A.pers[2] ? `<div style="font-size:12px;font-weight:bold;color:#113679;margin:10px 0 6px">Si l’événement touche ${apEsc(apNomPers(d, +i))}</div>` : ''}
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">${AP_RISQUES.map(([k, ic, l]) => tuile(ic, l, A.pers[i][k])).join('')}</div>`).join('');
+  const html = `<div style="${AP_R_CSS}">
+    <h2 style="color:#113679;font-size:16px;margin:0 0 4px">Votre situation en un coup d’œil</h2>
+    <p style="font-size:11.5px;color:#56627A;margin:0 0 12px">Part du besoin de revenu couverte par les assurances sociales et la prévoyance existante, dans chaque situation. Vert : couvert · orange : lacune modérée · rouge : lacune importante.</p>
+    <div style="display:grid;grid-template-columns:1fr 3fr;gap:12px;align-items:start">
+      <div>${tuile('🌅', A.couple ? 'Retraite du ménage' : 'Retraite', A.retraite)}</div>
+      <div>${lignes}</div>
+    </div>
+    <div style="margin-top:12px;font-size:11.5px">${apCoach(A).replace(/<header[\s\S]*?<\/header>/, '<b style="color:#113679">Ce qu’il faut retenir</b>').replace(/class="ap-coach-ligne (\w+)"/g, 'style="display:flex;gap:8px;margin-top:5px"').replace(/<span>([✓!i])<\/span>/g, '<b style="width:14px">$1</b>').replace(/<p>/g, '<span>').replace(/<\/p>/g, '</span>')}</div>
+  </div>`;
+  _ap.unite = uniteSauve;
+  return html;
+}
+
+function apRapportSolutions(A) {
+  const d = _ap.d;
+  const tm = (apNum(d.besoins.taux_marginal) || 0) / 100;
+  const plafond3a = typeof CF_PLAFOND_3A !== 'undefined' ? CF_PLAFOND_3A : 7258;
+  const items = [];
+  Object.keys(A.pers).forEach(i => {
+    const P = A.pers[i], qui = A.pers[2] ? ` — ${apEsc(apNomPers(d, +i))}` : '';
+    const inv = Math.max(P.inv_maladie.lacune, P.inv_accident.lacune);
+    if (inv > 0) items.push(['🛡️', `Rente d’invalidité${qui}`, `Assurer une rente de <b>${apCHFbrut(inv)}/an</b> (≈ ${apCHFbrut(inv / 12)}/mois) jusqu’à la retraite, avec un délai d’attente coordonné avec l’assurance perte de gain (souvent 24 mois).`, 'Protège le niveau de vie si la personne ne peut plus travailler.']);
+    const dec = Math.max(P.deces_maladie.capitalAAssurer || 0, P.deces_accident.capitalAAssurer || 0);
+    if (dec > 0) items.push(['🕊️', `Capital décès${qui}`, `Une assurance risque décès de <b>${apCHFbrut(dec)}</b>, idéalement dégressive jusqu’à la fin des études du plus jeune enfant (prime plus basse, besoin qui diminue avec le temps).`, 'Permet à la famille de garder son logement et son niveau de vie.']);
+  });
+  const p1 = A.p1, p2 = A.p2;
+  const manque3a = [p1, A.couple ? p2 : null].filter(p => p && p.salaire && p.statut === 'salarie').reduce((s, p) => s + Math.max(0, plafond3a - apNum(p.p3.versement3a)), 0);
+  if (manque3a > 0) items.push(['🧾', 'Optimiser le 3e pilier A', `Verser le maximum autorisé (${apCHFbrut(plafond3a)}/an par personne salariée) : <b>${apCHFbrut(manque3a)}</b> de plus par an${tm ? `, soit environ <b>${apCHFbrut(manque3a * tm)}</b> d’impôts économisés chaque année` : ''}.`, 'Déduction fiscale immédiate et capital supplémentaire à la retraite.']);
+  const rachat = apNum(d.lpp.rachat_possible) + (A.couple ? apNum((d.conjoint.lpp || {}).rachat_possible) : 0);
+  if (rachat > 0) items.push(['🏦', 'Rachats dans la caisse de pension', `Potentiel de rachat de <b>${apCHFbrut(rachat)}</b>. Échelonné sur plusieurs années${tm ? `, il réduit l’impôt d’environ <b>${apCHFbrut(rachat * tm)}</b> au total` : ''} et augmente la rente de vieillesse.`, 'Attention : pas de retrait en capital dans les 3 ans qui suivent un rachat.']);
+  if (A.retraite.lacune > 0) items.push(['🌅', 'Épargne pour la retraite', `Constituer environ <b>${apCHFbrut(A.retraite.capitalManquant)}</b> d’ici la retraite, soit <b>${apCHFbrut(A.retraite.epargneMensuelle)}/mois</b> (3e pilier, placements, rachats LPP).`, 'Plus l’épargne commence tôt, plus l’effort mensuel est faible.']);
+  if (d.etat_civil === 'concubin') items.push(['🤝', 'Protéger le partenaire', 'Désigner le partenaire comme bénéficiaire auprès de la caisse de pension et dans les contrats du 3e pilier ; envisager une assurance décès croisée.', 'Sans ces démarches, le partenaire n’a droit à presque rien.']);
+  if (!items.length) items.push(['✅', 'Situation solide', 'Les besoins sont couverts dans toutes les situations analysées. Un point annuel permet de vérifier que cela reste vrai (salaire, famille, logement).', '']);
+  return `<div style="${AP_R_CSS}">
+    <h2 style="color:#113679;font-size:16px;margin:0 0 10px">Nos pistes de solutions</h2>
+    ${items.map(([ic, t, txt, n], j) => `<div style="display:grid;grid-template-columns:34px 1fr;gap:10px;padding:9px 0;${j ? 'border-top:1px solid #EEF1F5' : ''}">
+      <div style="width:32px;height:32px;border-radius:9px;background:#EEF4FF;display:flex;align-items:center;justify-content:center;font-size:16px">${ic}</div>
+      <div><b style="font-size:13px">${t}</b><div style="font-size:12px;margin-top:2px">${txt}</div>${n ? `<div style="font-size:10.5px;color:#56627A;margin-top:2px">${n}</div>` : ''}</div></div>`).join('')}
+    <p style="font-size:10.5px;color:#8A94A8;margin:8px 0 0">Montants indicatifs, à affiner avec des offres concrètes (primes selon l’âge, la santé et la profession).</p>
+  </div>`;
+}
+
+function apRapportAnnexes(A) {
+  const d = _ap.d;
+  const conseiller = currentUser ? `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() : '';
+  const etapes = ['Extrait de compte individuel AVS (à demander gratuitement à votre caisse de compensation)', 'Certificat de prévoyance LPP le plus récent' + (A.couple ? ' — pour chacun' : ''), 'Polices des 3e piliers existants (3a, 3b, assurances risque)', 'Dernière déclaration d’impôts (pour chiffrer les économies)', 'Rendez-vous de présentation des solutions et des offres'];
+  return `<div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+    <div style="${AP_R_CSS}"><h2 style="color:#113679;font-size:14px;margin:0 0 8px">Prochaines étapes</h2>
+      ${etapes.map(e => `<div style="display:flex;gap:8px;font-size:11.5px;margin:5px 0"><span style="width:14px;height:14px;border:1.5px solid #113679;border-radius:3px;flex-shrink:0;margin-top:1px"></span>${e}</div>`).join('')}</div>
+    <div style="${AP_R_CSS}"><h2 style="color:#113679;font-size:14px;margin:0 0 8px">Hypothèses de calcul</h2>
+      <div style="font-size:11px;line-height:1.6;color:#334155">
+        • Besoins : ${apNum(d.besoins.retraite)} % du revenu à la retraite, ${apNum(d.besoins.invalidite)} % en invalidité, ${apNum(d.besoins.deces)} % pour les survivants<br>
+        • AVS : échelle 44, 13e rente de vieillesse dès 2026, plafond couple 150 %<br>
+        • LPP : ${[d.lpp, A.couple ? d.conjoint.lpp : null].some(l => l && (apNum(l.rente_invalidite) || apNum(l.rente_vieillesse))) ? 'chiffres du certificat' : 'minimum légal'} ; rentes d’enfant 20 % et de conjoint 60 % si non indiquées<br>
+        • LAA : 80 % du salaire assuré (max. CHF 148’200), coordination à 90 %<br>
+        • Rendement de l’épargne ${fmtCHF(apNum(d.p3.rendement))} %/an, planification jusqu’à ${apNum(d.besoins.horizon) || 90} ans${apNum(d.besoins.taux_marginal) ? `, taux marginal d’imposition ${apNum(d.besoins.taux_marginal)} %` : ''}
+      </div></div>
+  </div>
+  <div style="${AP_R_CSS}"><h2 style="color:#113679;font-size:14px;margin:0 0 8px">Petit glossaire</h2>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px 18px;font-size:10.5px;color:#334155">
+      <div><b>AVS / AI</b> — 1er pilier : rentes de vieillesse, de survivants et d’invalidité de l’État.</div>
+      <div><b>LPP</b> — 2e pilier : caisse de pension de l’employeur.</div>
+      <div><b>LAA</b> — assurance-accidents obligatoire des salariés.</div>
+      <div><b>3e pilier A / B</b> — prévoyance privée ; le 3a est fiscalement déductible.</div>
+      <div><b>Lacune</b> — différence entre le besoin et les prestations prévues.</div>
+      <div><b>Surindemnisation</b> — les rentes cumulées ne dépassent pas 90 % du revenu perdu.</div>
+      <div><b>Rentes subsidiaires</b> — rentes d’enfant et d’orphelin versées en plus de la rente principale.</div>
+      <div><b>Rachat LPP</b> — versement volontaire dans la caisse de pension, déductible des impôts.</div>
+    </div></div>
+  <div style="${AP_R_CSS};background:#F4F7FC">
+    <div style="display:flex;justify-content:space-between;gap:12px;align-items:center;font-size:12px">
+      <div><b style="color:#113679">Votre conseiller${conseiller ? ' : ' + apEsc(conseiller) : ''}</b><br><span style="color:#56627A">Assurex Sàrl${currentUser && currentUser.email ? ' · ' + apEsc(currentUser.email) : ''}</span></div>
+      <div style="text-align:right;color:#56627A;font-size:11px">Analyse établie le ${new Date().toLocaleDateString('fr-CH')}<br>à revoir chaque année ou lors d’un changement de situation</div>
+    </div></div>`;
+}
+
 function apRapport() {
   if (!apNum(_ap.d.salaire) || !_ap.d.naissance) { showError('Renseigne au moins la date de naissance et le revenu.'); return; }
   const A = apCalculer(_ap.d);
   const nom = _ap.d.nom || (_ap.clientId ? apNomClient(allClients.find(c => c.id === _ap.clientId)) : 'Simulation');
   const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Analyse de prévoyance — ${apEsc(nom)}</title>
-    <style>body{margin:0;padding:28px 36px;font-family:Arial,Helvetica,sans-serif}header{display:flex;justify-content:space-between;align-items:flex-end;background:linear-gradient(135deg,#0B2458,#113679 60%,#1A4A9C);color:#fff;border-radius:14px;padding:18px 22px;margin-bottom:18px}h1{font-size:21px;margin:0}header img{height:30px;filter:brightness(0) invert(1)}.sous{color:rgba(255,255,255,.75);font-size:11.5px;margin-top:3px}.mention{font-size:9.5px;color:#8A94A8;margin-top:16px;border-top:1px solid #E2E7EF;padding-top:8px}@page{margin:12mm}.ap-svg{width:100%;height:auto;display:block}.ap-legende{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:9.5px;color:#56627A;margin-top:2px}.ap-legende span{display:inline-flex;align-items:center;gap:4px}.ap-legende i{display:inline-block;width:9px;height:9px;border-radius:2px}.ap-lacune{background:repeating-linear-gradient(45deg,#EF4444 0 4px,#FECACA 4px 8px)}.ap-revenu{background:#A5B4FC}svg rect,svg path,i{-webkit-print-color-adjust:exact;print-color-adjust:exact}@media print{header{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>
+    <style>body{margin:0;padding:28px 36px;font-family:Arial,Helvetica,sans-serif}header{display:flex;justify-content:space-between;align-items:flex-end;background:linear-gradient(135deg,#0B2458,#113679 60%,#1A4A9C);color:#fff;border-radius:14px;padding:18px 22px;margin-bottom:18px}h1{font-size:21px;margin:0}header img{height:30px;filter:brightness(0) invert(1)}.sous{color:rgba(255,255,255,.75);font-size:11.5px;margin-top:3px}.mention{font-size:9.5px;color:#8A94A8;margin-top:16px;border-top:1px solid #E2E7EF;padding-top:8px}.titre-partie{color:#113679;font-size:16px;margin:20px 0 10px;break-after:avoid}@page{margin:12mm}.ap-svg{width:100%;height:auto;display:block}.ap-legende{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:9.5px;color:#56627A;margin-top:2px}.ap-legende span{display:inline-flex;align-items:center;gap:4px}.ap-legende i{display:inline-block;width:9px;height:9px;border-radius:2px}.ap-lacune{background:repeating-linear-gradient(45deg,#EF4444 0 4px,#FECACA 4px 8px)}.ap-revenu{background:#A5B4FC}svg rect,svg path,i{-webkit-print-color-adjust:exact;print-color-adjust:exact}@media print{header{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>
     <header><div><h1>Analyse de prévoyance</h1><div class="sous">${apEsc(nom)} · ${new Date().toLocaleDateString('fr-CH', { day: 'numeric', month: 'long', year: 'numeric' })}</div></div>${typeof ASSUREX_LOGO_B64 !== 'undefined' ? `<img src="${ASSUREX_LOGO_B64}" alt="Assurex"/>` : ''}</header>
+    ${apRapportSynthese(A)}
+    <h2 class="titre-partie">Le détail, situation par situation</h2>
     ${apRapportCorps(A)}
+    ${apRapportSolutions(A)}
+    ${apRapportAnnexes(A)}
     <div class="mention">Estimation indicative établie sur la base des informations communiquées, selon les règles légales 2026 simplifiées (AVS/AI avec 13e rente de vieillesse, LPP, LAA). Elle ne remplace ni l'extrait de compte individuel AVS ni le certificat de prévoyance, qui font foi. Assurex Sàrl — courtier en assurances inscrit auprès de la FINMA.</div>
     <script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script></body></html>`;
   const w = window.open(URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' })), '_blank');

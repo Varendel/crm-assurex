@@ -1680,6 +1680,28 @@ function estStatutResilieOuAnnule(statut) {
 // par ressemblance de branche si plusieurs contrats partagent la même police), et à défaut un client
 // probable par le nom — factorisé pour être réutilisé à l'analyse initiale ET après création manuelle
 // d'un contrat manquant depuis l'écran d'import (sans redemander le fichier).
+// Colonne « Contrat CRM » de l'import : le contrat auquel la ligne sera rattachée. Quand plusieurs
+// contrats partagent le n° de police (ex. RC véhicule + casco sous une même police Vaudoise), une
+// liste permet de choisir — présélection automatique selon la branche (marqueursBranche).
+function htmlContratImport(l) {
+  if (!l.contratId) return '<span style="color:var(--text-dim)">—</span>';
+  const cands = l.candidats || [];
+  if (cands.length > 1) {
+    return `<select aria-label="Contrat CRM pour cette ligne" onchange="choisirContratImport(${l.idx}, this.value)" title="Plusieurs contrats partagent ce n° de police : choisis celui qui correspond à la branche" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.45);border-radius:8px;color:var(--text);padding:4px 6px;font-size:12px;max-width:220px">
+      ${cands.map(c => `<option value="${c.id}" ${c.id === l.contratId ? 'selected' : ''}>${String(c.produit).replace(/</g, '&lt;')}${c.statut && c.statut !== 'actif' ? ` (${c.statut})` : ''}</option>`).join('')}
+    </select>`;
+  }
+  return `<span style="color:var(--text-muted)">${String(l.contratProduit || 'Contrat').replace(/</g, '&lt;')}</span>`;
+}
+function choisirContratImport(idx, contratId) {
+  const l = _decompteLignes[idx];
+  const ct = allContrats.find(c => c.id === contratId);
+  if (!l || !ct) return;
+  l.contratId = ct.id; l.contratProduit = ct.produit;
+  const cl = allClients.find(c => c.id === ct.client_id);
+  if (cl) { l.clientId = cl.id; l.clientNomCRM = estEntreprise(cl) ? cl.nom : `${cl.prenom} ${cl.nom}`; }
+}
+
 // Familles de couverture reconnues dans un libellé de branche ou de produit (19.09.2026)
 function marqueursBranche(texte) {
   const t = (texte || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
@@ -1745,6 +1767,8 @@ function reassocierLignesImport() {
     l.clientNomCRM = clientTrouve ? (estEntreprise(clientTrouve) ? clientTrouve.nom : `${clientTrouve.prenom} ${clientTrouve.nom}`) : null;
     l.clientSuggereNom = (!clientTrouve && clientSuggere) ? (estEntreprise(clientSuggere) ? clientSuggere.nom : `${clientSuggere.prenom} ${clientSuggere.nom}`) : null;
     l.ambigu = candidats.length > 1;
+    l.candidats = candidats.map(c => ({ id: c.id, produit: c.produit || 'Contrat', statut: c.statut }));
+    l.contratProduit = contratTrouve ? contratTrouve.produit : null;
     if (contratTrouve) l.selectionne = true;
   });
   renderImportDecompte(_decompteNomAssureur, _decompteCommissionTotaleAnnoncee);
@@ -1928,6 +1952,8 @@ function construireLigneImport(i, champs) {
     clientSuggereNom: (!clientTrouve && clientSuggere) ? (estEntreprise(clientSuggere) ? clientSuggere.nom : `${clientSuggere.prenom} ${clientSuggere.nom}`) : null,
     primeCRM: contratTrouve ? contratTrouve.prime_annuelle : null,
     ambigu: candidats.length > 1,
+    candidats: candidats.map(c => ({ id: c.id, produit: c.produit || 'Contrat', statut: c.statut })),
+    contratProduit: contratTrouve ? contratTrouve.produit : null,
     selectionne: !!contratTrouve,
   };
 }
@@ -1999,7 +2025,7 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
       <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:10px">${_decompteLignes.length} ligne(s) de commission — ${nbTrouves} contrat(s) reconnu(s) dans le CRM, ${nbSuggeres} client(s) probable(s) trouvé(s) par le nom (contrat à choisir/créer toi-même), ${nbRienTrouve} totalement non trouvé(s).</div>
       ${commissionTotaleAnnoncee != null ? `
       <div style="font-size:11.5px;margin-bottom:12px;padding:8px 12px;border-radius:8px;background:var(--surface-alt);color:${Math.abs(ecartTotal) > 1 ? '#f87171' : '#4ade80'}">
-        Total annoncé par le fichier : CHF ${fmtCHF(commissionTotaleAnnoncee)} — total des lignes lues : CHF ${fmtCHF2(totalFichier)}
+        Total annoncé par le fichier : CHF ${fmtCHF2(commissionTotaleAnnoncee)} — total des lignes lues : CHF ${fmtCHF2(totalFichier)}
         ${Math.abs(ecartTotal) > 1 ? ` ⚠️ écart de CHF ${fmtCHF(ecartTotal)} — une ligne a probablement été mal lue, vérifie avant d'importer` : ' ✓ les lignes lues correspondent au total du fichier'}
       </div>` : ''}
       <div style="overflow-x:auto">
@@ -2014,6 +2040,7 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
           <th style="padding:6px 8px;text-align:left">Localité</th>
           <th style="padding:6px 8px;text-align:left">Client CRM</th>
           <th style="padding:6px 8px;text-align:left">Branche</th>
+          <th style="padding:6px 8px;text-align:left">Contrat CRM</th>
           <th style="padding:6px 8px;text-align:right">Base commission</th>
           <th style="padding:6px 8px;text-align:right">Taux %</th>
           <th style="padding:6px 8px;text-align:right">Montant</th>
@@ -2021,7 +2048,7 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
         <tbody>${_decompteLignes.map(l => `
           <tr style="border-top:1px solid var(--border)">
             <td style="padding:5px 8px"><input type="checkbox" id="imp-check-${l.idx}" ${l.selectionne ? 'checked' : ''} ${!l.contratId ? 'disabled' : ''} onchange="_decompteLignes[${l.idx}].selectionne = this.checked; recalculerEcartBordereauImport();"/></td>
-            <td style="padding:5px 8px;font-family:monospace;white-space:nowrap">${l.numeroContrat}${l.ambigu ? ' <span title="Plusieurs contrats CRM partagent ce n° de police — vérifie que le bon a été choisi" style="color:#f59e0b">⚠</span>' : ''}</td>
+            <td style="padding:5px 8px;font-family:monospace;white-space:nowrap">${l.numeroContrat}</td>
             <td style="padding:5px 8px;white-space:nowrap;color:var(--text-muted)">${l.noFacture || '—'}</td>
             <td style="padding:5px 8px;white-space:nowrap;color:var(--text-muted)">${l.dateFacture || '—'}</td>
             <td style="padding:5px 8px;white-space:nowrap">${l.nomVaudoise}</td>
@@ -2029,13 +2056,14 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
             <td style="padding:5px 8px;white-space:nowrap;color:var(--text-muted)">${l.localite || '—'}</td>
             <td style="padding:5px 8px;white-space:nowrap">${l.clientNomCRM ? l.clientNomCRM : (l.clientSuggereNom ? `<span style="color:#f59e0b">≈ ${l.clientSuggereNom}</span>` : '<span style="color:#f87171">Non trouvé</span>')}${!l.clientNomCRM && l.clientSuggereNom ? `<div style="font-size:9.5px;color:var(--text-muted);white-space:normal;max-width:170px;margin-bottom:4px">nom trouvé, pas de contrat avec cette police — vérifie avant de créer</div><div style="display:flex;gap:6px"><button type="button" onclick="document.getElementById('modal-detail-contrat')?.remove(); showClient('${l.clientId}')" style="background:var(--surface-alt);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:10.5px;cursor:pointer;font-weight:700;white-space:nowrap">👁 Voir la fiche</button><button type="button" id="imp-creer-${l.idx}" onclick="creerContratDepuisImport(${l.idx})" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:3px 8px;font-size:10.5px;cursor:pointer;font-weight:700;white-space:nowrap">📝 Créer</button></div>` : ''}</td>
             <td style="padding:5px 8px;color:var(--text-muted);white-space:nowrap">${l.brancheInterne}</td>
+            <td style="padding:5px 8px;white-space:nowrap">${htmlContratImport(l)}</td>
             <td style="padding:5px 8px;text-align:right;white-space:nowrap;color:var(--text-muted)">CHF ${fmtCHF(l.commissionProduction)}</td>
             <td style="padding:5px 8px;text-align:right;white-space:nowrap">${l.taux}%</td>
-            <td style="padding:5px 8px;text-align:right;white-space:nowrap"><input type="number" step="0.01" value="${l.montant}" class="imp-montant-input" data-idx="${l.idx}" style="width:75px;background:var(--surface-alt);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 5px;text-align:right" onchange="_decompteLignes[${l.idx}].montant = parseFloat(this.value)||0; recalculerTotalImport(); recalculerEcartBordereauImport();"/></td>
+            <td style="padding:5px 8px;text-align:right;white-space:nowrap"><input type="number" step="0.01" value="${l.montant}" class="imp-montant-input" data-idx="${l.idx}" style="width:75px;background:var(--surface-alt);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 5px;text-align:right" onchange="_decompteLignes[${l.idx}].montant = nombreCH(this.value)||0; recalculerTotalImport(); recalculerEcartBordereauImport();"/></td>
           </tr>`).join('')}</tbody>
         <tfoot><tr style="border-top:2px solid var(--border)">
-          <td colspan="11" style="padding:8px;text-align:right;font-weight:700;color:var(--text)">Total des lignes ci-dessus</td>
-          <td id="imp-total-cell" style="padding:8px;text-align:right;font-weight:800;color:#4ade80;white-space:nowrap">CHF ${fmtCHF(Math.round(_decompteLignes.reduce((s,l)=>s+l.montant,0)))}</td>
+          <td colspan="12" style="padding:8px;text-align:right;font-weight:700;color:var(--text)">Total des lignes ci-dessus</td>
+          <td id="imp-total-cell" style="padding:8px;text-align:right;font-weight:800;color:#4ade80;white-space:nowrap">CHF ${fmtCHF2(_decompteLignes.reduce((s,l)=>s+l.montant,0))}</td>
         </tr></tfoot>
       </table>
       </div>
@@ -2107,7 +2135,7 @@ function recalculerEcartBordereauImport() {
 function recalculerTotalImport() {
   const total = _decompteLignes.reduce((s, l) => s + l.montant, 0);
   const cell = document.getElementById('imp-total-cell');
-  if (cell) cell.textContent = 'CHF ' + Math.round(total).toLocaleString();
+  if (cell) cell.textContent = 'CHF ' + fmtCHF2(total);
 }
 
 // Flux fusionné (demande de Jonathan, 16.09.2026) : un seul bouton fait upload PDF/Excel → lecture

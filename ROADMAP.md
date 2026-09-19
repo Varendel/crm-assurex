@@ -95,7 +95,9 @@ sont en bas de ce fichier.
       clients qui recommandent, attribution rapide des clients sans source
 - [x] **Pictogrammes des compagnies** (19.09) sur les contrats — logos AXA, Vaudoise, HOTELA,
       symbole Helvetia ; monogrammes aux couleurs officielles pour les autres
-- [ ] Synchronisation Outlook + suivi des offres reçues (voir idées détaillées ci-dessous)
+- [x] Synchronisation Outlook des offres reçues (bouton « Synchroniser Outlook »)
+- [x] **Décomptes reçus par e-mail** (19.09) : recherche des pièces jointes Excel / XML / PDF des compagnies
+      dans Outlook et import en un clic (Importer un décompte)
 
 ## 🔵 Priorité 3 — Produit
 

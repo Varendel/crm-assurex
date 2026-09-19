@@ -1640,8 +1640,84 @@ function viewImportDecompte() {
       </div>
     `)}
 
+    ${sectionCard('Décomptes reçus par e-mail', '#a78bfa', `
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:10px">Cherche dans ta boîte Outlook (90 derniers jours) les e-mails des compagnies avec un décompte en pièce jointe (Excel, XML IG B2B ou PDF) et les ouvre ici en un clic. Ceux déjà importés sont signalés.</div>
+      <button class="btn-secondary" id="imp-outlook-btn" onclick="impChercherDecomptesOutlook()">📬 Chercher les décomptes dans Outlook</button>
+      <div id="imp-outlook-liste" style="margin-top:12px"></div>
+    `)}
+
     <div id="imp-resultats"></div>
   `;
+}
+
+// ═══ DÉCOMPTES REÇUS PAR E-MAIL (Outlook, 19.09.2026) ═════════════════════════════════════════
+// Le CRM a déjà le droit de lire la boîte (Mail.Read, js/03). On liste les e-mails reçus des
+// compagnies (domaine connu ou objet évoquant un décompte) qui portent une pièce jointe Excel /
+// XML / PDF, puis on ouvre la pièce choisie dans l'import habituel (mêmes contrôles, doublons…).
+const IMP_DOMAINES_COMPAGNIES = ['vaudoise', 'mobi', 'axa', 'swisslife', 'helsana', 'css.ch', 'groupemutuel', 'baloise', 'allianz', 'helvetia', 'generali', 'zurich', 'nest-info', 'gocaution', 'orion', 'swica', 'hotela', 'gastrosocial', 'sanitas', 'visana', 'concordia', 'assura', 'sympany', 'pax', 'animalia', 'cap.ch', 'protekta', 'emmental', 'smile'];
+window._impOutlook = window._impOutlook || [];
+
+async function impChercherDecomptesOutlook() {
+  const zone = document.getElementById('imp-outlook-liste');
+  const btn = document.getElementById('imp-outlook-btn');
+  if (typeof assurerTokenOutlook === 'function' && !(await assurerTokenOutlook())) { showError('Connecte-toi à Outlook (bouton Microsoft dans le menu) pour chercher les décomptes.'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = '🔄 Recherche…'; }
+  try {
+    const depuis = new Date(Date.now() - 90 * 864e5).toISOString();
+    const r = await fetch(`https://graph.microsoft.com/v1.0/me/messages?$filter=hasAttachments eq true and receivedDateTime ge ${depuis}&$orderby=receivedDateTime desc&$top=250&$select=id,subject,from,receivedDateTime`, { headers: { Authorization: `Bearer ${msalAccessToken}` } });
+    if (r.status === 401) { showError('Session Outlook expirée — reconnecte-toi puis réessaie.'); return; }
+    const msgs = ((await r.json()).value || []).filter(m => {
+      const de = ((m.from && m.from.emailAddress && m.from.emailAddress.address) || '').toLowerCase();
+      return IMP_DOMAINES_COMPAGNIES.some(d => de.includes(d)) || /commission|d[ée]compte|bordereau|\bbrd\b|igb2b|provision|indemnit|r[ée]mun[ée]ration|courtage/i.test(m.subject || '');
+    }).slice(0, 60);
+    const trouves = [];
+    for (const m of msgs) {
+      const ra = await fetch(`https://graph.microsoft.com/v1.0/me/messages/${m.id}/attachments?$select=id,name,contentType,size`, { headers: { Authorization: `Bearer ${msalAccessToken}` } });
+      if (!ra.ok) continue;
+      ((await ra.json()).value || []).filter(a => /\.(xml|xlsx|xls|pdf)$/i.test(a.name || '')).forEach(a => {
+        // Les PDF ne sont gardés que s'ils évoquent un décompte (évite polices, offres, factures…)
+        if (/\.pdf$/i.test(a.name) && !/commission|d[ée]compte|bordereau|brd|provision|indemnit|r[ée]mun|courtage|verg[üu]tung/i.test(`${a.name} ${m.subject || ''}`)) return;
+        trouves.push({ mid: m.id, aid: a.id, nom: a.name, taille: a.size, sujet: m.subject || '', de: (m.from && m.from.emailAddress && (m.from.emailAddress.name || m.from.emailAddress.address)) || '', date: m.receivedDateTime });
+      });
+    }
+    const deja = new Set((allBordereaux || []).map(b => String(b.pdf_nom || '').toLowerCase()).filter(Boolean));
+    trouves.forEach(t => { t.importe = deja.has(t.nom.toLowerCase()); });
+    window._impOutlook = trouves;
+    if (!zone) return;
+    zone.innerHTML = trouves.length ? `<div style="display:flex;flex-direction:column;gap:6px">${trouves.map((t, i) => `
+      <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface)${t.importe ? ';opacity:.6' : ''}">
+        <span style="font-size:18px">${/\.xml$/i.test(t.nom) ? '🧾' : /\.pdf$/i.test(t.nom) ? '📄' : '📊'}</span>
+        <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${String(t.nom).replace(/</g, '&lt;')}</div>
+          <div style="font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fmtDate(t.date)} · ${String(t.de).replace(/</g, '&lt;')} · ${String(t.sujet).replace(/</g, '&lt;')}</div></div>
+        ${t.importe ? '<span style="font-size:11px;color:#16A34A;font-weight:700">✓ déjà importé</span>' : ''}
+        <button class="btn-secondary" style="padding:5px 12px;font-size:12px" onclick="impOuvrirPieceOutlook(${i})">${t.importe ? 'Revoir' : 'Importer'}</button>
+      </div>`).join('')}</div>` : '<div class="dbx-vide-petit">Aucun décompte trouvé dans les 90 derniers jours.</div>';
+  } catch (e) {
+    showError('Recherche Outlook impossible : ' + e.message);
+  } finally {
+    if (btn) { btn.disabled = false; btn.textContent = '📬 Chercher les décomptes dans Outlook'; }
+  }
+}
+
+async function impOuvrirPieceOutlook(i) {
+  const t = (window._impOutlook || [])[i];
+  if (!t) return;
+  try {
+    const r = await fetch(`https://graph.microsoft.com/v1.0/me/messages/${t.mid}/attachments/${t.aid}`, { headers: { Authorization: `Bearer ${msalAccessToken}` } });
+    if (!r.ok) { showError('Pièce jointe inaccessible (' + r.status + ').'); return; }
+    const a = await r.json();
+    const bin = atob(a.contentBytes || '');
+    const octets = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) octets[k] = bin.charCodeAt(k);
+    const file = new File([octets], t.nom, { type: a.contentType || 'application/octet-stream' });
+    const cible = /\.xml$/i.test(t.nom) ? 'imp-xml-input' : /\.pdf$/i.test(t.nom) ? 'imp-pdf-input' : 'imp-file-input';
+    const input = document.getElementById(cible);
+    const dt = new DataTransfer(); dt.items.add(file); input.files = dt.files;
+    window._decomptePeriodeXml = null;
+    if (cible === 'imp-xml-input') await analyserDecompteXml(input);
+    else if (cible === 'imp-pdf-input') await analyserDecomptePdf(input);
+    else await analyserDecompteExcel();
+    document.getElementById('imp-resultats')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (e) { showError('Ouverture de la pièce jointe impossible : ' + e.message); }
 }
 
 let _decompteLignes = [];

@@ -39,6 +39,20 @@ function srcResume(c) {
   return srcLabel(c.source) + (complement ? ' — ' + complement : '');
 }
 
+// Client « apporteur » à l'origine de ce client : lui-même s'il vient d'un apporteur, sinon on
+// remonte la famille / les recommandations (5 niveaux max, sans boucle). null si aucun.
+function srcApporteurRacine(c) {
+  const vus = new Set();
+  let x = c;
+  for (let i = 0; x && i < 6 && !vus.has(x.id); i++) {
+    if (x.source === 'apporteur') return x;
+    if (!['famille', 'recommandation_client'].includes(x.source) || !x.source_client_id) return null;
+    vus.add(x.id);
+    x = allClients.find(y => y.id === x.source_client_id);
+  }
+  return null;
+}
+
 // ── Champ de formulaire (nouveau client / modification) ─────────────────────────────────────────
 // prefixe : préfixe des id du formulaire ('f' = création, 'e' = modification)
 function htmlChampSourceClient(prefixe, c) {
@@ -213,10 +227,12 @@ function renderSources() {
     </div>`).join('')}
   </div>`;
 
-  // Apporteurs externes et meilleurs recommandeurs
+  // Apporteurs externes et meilleurs recommandeurs. Un apporteur compte aussi la famille et les
+  // recommandations des clients qu'il a amenés (chaîne source_client_id) — ex. l'apporteur d'une
+  // maman compte aussi le conjoint et les enfants saisis « Famille d'un client » (19.09.2026).
   const parApporteur = {};
-  clients.filter(c => c.source === 'apporteur').forEach(c => { const k = c.source_detail || '(sans nom)'; (parApporteur[k] = parApporteur[k] || []).push(c); });
-  const apporteurs = Object.entries(parApporteur).map(([nom, cl]) => ({ nom, ind: srcIndicateurs(cl) })).sort((a, b) => b.ind.commissions - a.ind.commissions);
+  clients.forEach(c => { const racine = srcApporteurRacine(c); if (racine) { const k = racine.source_detail || '(sans nom)'; (parApporteur[k] = parApporteur[k] || []).push(c); } });
+  const apporteurs = Object.entries(parApporteur).map(([nom, cl]) => ({ nom, cl, directs: cl.filter(c => c.source === 'apporteur').length, ind: srcIndicateurs(cl) })).sort((a, b) => b.ind.commissions - a.ind.commissions || b.cl.length - a.cl.length);
   const parRef = {};
   clients.filter(c => c.source === 'recommandation_client' && c.source_client_id).forEach(c => { (parRef[c.source_client_id] = parRef[c.source_client_id] || []).push(c); });
   const recommandeurs = Object.entries(parRef).map(([id, cl]) => ({ ref: allClients.find(x => x.id === id), cl, ind: srcIndicateurs(cl) })).filter(x => x.ref).sort((a, b) => b.cl.length - a.cl.length);
@@ -226,7 +242,8 @@ function renderSources() {
     <div class="table-wrap" style="margin-bottom:24px">
       <div class="table-header" style="grid-template-columns:${colsA}"><div>Apporteur</div><div>Clients</div><div>Contrats</div><div>Primes/an</div><div>Commissions</div></div>
       ${apporteurs.map(a => `<div class="table-row" style="grid-template-columns:${colsA}">
-        <div style="font-weight:700;font-size:13px;color:var(--text)">${srcEsc(a.nom)}</div><div>${a.ind.clients}</div><div>${a.ind.contrats}</div>
+        <div style="font-size:13px;color:var(--text)"><b>${srcEsc(a.nom)}</b><div style="font-size:11.5px;color:var(--text-muted);margin-top:2px">${a.cl.map(c => `<a href="?client=${c.id}" onclick="return irVersClient(event, '${c.id}')" style="color:inherit">${srcEsc(srcNomClient(c))}</a>`).join(', ')}</div></div>
+        <div title="${a.directs} apporté(s) directement, ${a.cl.length - a.directs} par la famille ou une recommandation">${a.ind.clients}</div><div>${a.ind.contrats}</div>
         <div style="color:#f59e0b;font-weight:700">CHF ${fmtCHF(Math.round(a.ind.primes))}</div><div style="color:#4ade80;font-weight:800">CHF ${fmtCHF(Math.round(a.ind.commissions))}</div></div>`).join('')}
     </div>` : '';
   const blocRecommandeurs = recommandeurs.length ? `<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px">⭐ Clients qui recommandent</div>

@@ -222,6 +222,7 @@ function dbxVueAujourdhui(D, actions) {
 
   return `
     <div class="dbx-kpis">${kpis}</div>
+    ${typeof htmlBandeauRecurrenceOZ === 'function' ? htmlBandeauRecurrenceOZ() : ''}
     <div class="dbx-grille">
       <div class="dbx-col">
         <section class="dbx-carte dbx-anim" style="--i:5" aria-labelledby="dbx-titre-actions">

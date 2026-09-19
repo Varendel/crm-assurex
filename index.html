@@ -2587,6 +2587,53 @@
 .nav-groupe:hover{color:var(--text);background:var(--surface-alt,rgba(148,163,184,.12))}
 .nav-groupe-fleche{font-size:10px;transition:transform .2s ease}
 .nav-groupe.ferme .nav-groupe-fleche{transform:rotate(-90deg)}
+/* ═══ Bandeau bleu foncé commun à toutes les pages (js/44, 19.09.2026) ═══ */
+.rex-bandeau, .rex-bandeau-hote { position: relative; overflow: hidden; border-radius: 20px; margin-bottom: 18px; color: #fff;
+  background: radial-gradient(120% 150% at 100% 0%, rgba(0,207,255,0.26) 0%, transparent 55%), linear-gradient(135deg, #0B2458 0%, #113679 55%, #1A4A9C 100%);
+  box-shadow: 0 16px 36px rgba(17,54,121,0.24); animation: dbx-entree .45s cubic-bezier(.2,.8,.2,1) both; }
+.rex-bandeau { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; padding: 22px 28px; }
+.rex-bandeau-hote { padding: 22px 28px !important; }
+.rex-bandeau-deco { position: absolute; inset: 0; pointer-events: none; }
+.rex-bandeau-deco::before { content: ''; position: absolute; width: 380px; height: 380px; right: -120px; top: -220px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.09); }
+.rex-bandeau-deco::after { content: ''; position: absolute; width: 220px; height: 220px; left: 42%; bottom: -170px; border-radius: 50%; border: 1px solid rgba(0,207,255,0.22); }
+.rex-bandeau > *:not(.rex-bandeau-deco), .rex-bandeau-hote > *:not(.rex-bandeau-deco) { position: relative; }
+.rex-bandeau-texte { flex: 1 1 320px; min-width: 0; }
+.rex-bandeau-surtitre { font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: rgba(255,255,255,0.62); font-weight: 600; }
+.rex-bandeau h1, .rex-bandeau h2, .rex-bandeau-hote h1, .rex-bandeau-hote h2 { color: #fff !important; font-size: 26px !important; font-weight: 600 !important; letter-spacing: -0.02em; margin: 4px 0 0 !important; }
+.rex-bandeau-icone { margin-right: 10px; }
+.rex-bandeau-sous > *, .rex-bandeau-hote .dx-sous, .rex-bandeau-hote p { color: rgba(255,255,255,0.78) !important; margin: 6px 0 0 !important; font-size: 13px; }
+.rex-bandeau-sous strong, .rex-bandeau-hote strong { color: #fff; }
+.rex-bandeau-hote .dx-surtitre { color: rgba(255,255,255,0.62); }
+.rex-bandeau-droite { display: flex; flex-direction: column; align-items: flex-end; gap: 8px; }
+.rex-bandeau-date { font-size: 12px; color: rgba(255,255,255,0.7); text-transform: capitalize; }
+.rex-bandeau-logo svg { height: 22px; width: auto; }
+.rex-bandeau-logo svg * { fill: #fff; }
+.rex-bandeau-hote .rb-bouton-clair { color: #fff !important; border-color: rgba(255,255,255,0.35) !important; }
+.rex-bandeau-hote .rb-bouton-clair:hover { background: rgba(255,255,255,0.12) !important; }
+.rex-bandeau-hote select.rb-bouton-clair option { color: #111; }
+/* Récurrence sourcée OZ (tableau de bord + cockpit) */
+.rec-oz-bandeau { display: grid; grid-template-columns: auto auto 1fr; align-items: center; gap: 6px 26px; padding: 16px 22px; margin: 0 0 18px; border-radius: 16px; cursor: pointer;
+  background: linear-gradient(135deg, rgba(0,207,255,0.10), rgba(17,54,121,0.06)), var(--surface); border: 1px solid rgba(0,207,255,0.35); transition: transform .15s, box-shadow .15s; }
+.rec-oz-bandeau:hover { transform: translateY(-1px); box-shadow: 0 10px 24px rgba(17,54,121,0.14); }
+.rec-oz-titre span { display: block; font-size: 11px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; color: #0891B2; }
+.rec-oz-titre small { font-size: 11.5px; color: var(--text-muted); }
+.rec-oz-valeur { font-size: 26px; font-weight: 700; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rec-oz-valeur small { font-size: 13px; font-weight: 600; color: var(--text-muted); }
+.rec-oz-detail { font-size: 12.5px; color: var(--text-muted); }
+.rec-oz-cies { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 8px 18px; font-size: 12px; color: var(--text-muted); }
+.rec-oz-cies span { display: inline-flex; align-items: center; gap: 6px; }
+.rec-oz-cies b { color: var(--text); }
+@media (max-width: 760px) {
+  .rex-bandeau, .rex-bandeau-hote { padding: 18px 16px !important; border-radius: 16px; }
+  .rex-bandeau h1, .rex-bandeau h2, .rex-bandeau-hote h1, .rex-bandeau-hote h2 { font-size: 21px !important; }
+  .rex-bandeau-droite { align-items: flex-start; }
+  .rec-oz-bandeau { grid-template-columns: 1fr; }
+}
+@media print {
+  .rex-bandeau, .rex-bandeau-hote { background: none !important; color: #000 !important; box-shadow: none !important; padding: 0 !important; }
+  .rex-bandeau h1, .rex-bandeau h2, .rex-bandeau-hote h1, .rex-bandeau-hote h2 { color: #000 !important; }
+  .rex-bandeau-deco, .rex-bandeau-droite, .rec-oz-bandeau { display: none !important; }
+}
 @media (prefers-reduced-motion: reduce) {
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
@@ -2695,7 +2742,7 @@
 <script src="js/15-pictos-compagnies.js?v=1790240000"></script>
 <script src="js/16-pipeline-kanban.js?v=1789930000"></script>
 <script src="js/17-fiche-activite.js?v=1789940000"></script>
-<script src="js/18-dashboard.js?v=1790520000"></script>
+<script src="js/18-dashboard.js?v=1790580000"></script>
 <script src="js/19-prevision-commissions.js?v=1790510000"></script>
 <script src="js/20-fiche-client-entete.js?v=1790020000"></script>
 <script src="js/21-tresorerie.js?v=1790500000"></script>
@@ -2711,16 +2758,17 @@
 <script src="js/31-analyses-recentes.js?v=1790210000"></script>
 <script src="js/32-campagnes.js?v=1790240000"></script>
 <script src="js/33-factures-qr.js?v=1790420000"></script>
-<script src="js/34-cockpit.js?v=1790560000"></script>
+<script src="js/34-cockpit.js?v=1790580000"></script>
 <script src="js/35-comptes-caution.js?v=1790260000"></script>
 <script src="js/36-rentabilite.js?v=1790320000"></script>
 <script src="js/37-citations-rex.js?v=1790430000"></script>
-<script src="js/38-oz-assure.js?v=1790370000"></script>
+<script src="js/38-oz-assure.js?v=1790580000"></script>
 <script src="js/39-marquage-entites.js?v=1790360000"></script>
 <script src="js/40-dashboard-horloge-agenda.js?v=1790450000"></script>
 <script src="js/41-previsions-12-mois.js?v=1790470000"></script>
-<script src="js/42-objectifs.js?v=1790540000"></script>
+<script src="js/42-objectifs.js?v=1790580000"></script>
 <script src="js/43-autotests.js?v=1790560000"></script>
+<script src="js/44-bandeau-pages.js?v=1790580000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

@@ -183,7 +183,19 @@ function ozxCalculs() {
   const refac = typeof ozLignesRefacturation === 'function' ? ozLignesRefacturation(String(anneeCal)) : [];
   const versesOz = ca.filter(x => x.statut === 'versé_oz');
   const clientsOz = new Set((typeof allClients !== 'undefined' ? allClients : []).filter(c => c.source_oz).map(c => c.id));
-  const bascule = ca.filter(x => x.nature === 'gestion' && !['annulée', 'annulé'].includes(x.statut) && String(x.date_creation || '').slice(0, 10) >= dateFusion && clientsOz.has(x.client_id));
+  // Récurrence sourcée OZ (19.09.2026, demande expresse de Jonathan) : commission de gestion
+  // ANNUELLE de chaque contrat actif des clients OZ (dernière gestion connue, réel si encaissé) —
+  // c'est ce qui devient production Assurex chaque année dès la fusion, pas seulement les
+  // commissions 2027 déjà créées.
+  const derniereGestion = {};
+  ca.filter(x => x.nature === 'gestion' && !['annulée', 'annulé'].includes(x.statut) && x.contrat_id && clientsOz.has(x.client_id)).forEach(x => {
+    const p = derniereGestion[x.contrat_id];
+    if (!p || String(x.date_creation || '') > String(p.date_creation || '')) derniereGestion[x.contrat_id] = x;
+  });
+  const bascule = Object.values(derniereGestion).filter(x => {
+    const ct = (typeof allContrats !== 'undefined' ? allContrats : []).find(c => c.id === x.contrat_id);
+    return ct && ct.commissionne !== false && ['actif', 'renouveler'].includes(ct.statut) && montantCa(x) > 0;
+  }).map(x => ({ ...x, montant_estime: montantCa(x) }));
   const basculeCies = {};
   bascule.forEach(x => { const k = ozxCie(x.compagnie); basculeCies[k] = (basculeCies[k] || 0) + Number(x.montant_estime || 0); });
   const fusion = {
@@ -583,9 +595,9 @@ function ozxSectionFusion(D) {
         <button type="button" class="dbx-lien" onclick="window._sfxOnglet='oz';navigate('suivi-financier')">Préparer la refacturation →</button>
       </div>
       <div class="dbx-carte ozx-f-carte">
-        <span class="ozx-f-label">Gestion OZ qui bascule chez Assurex</span>
-        <b class="ozx-f-valeur ozx-vert">CHF <span data-ozx-compteur="${Math.round(F.bascule)}">${fmtCHF(Math.round(F.bascule))}</span></b>
-        <small>${F.nbBascule} commission${F.nbBascule > 1 ? 's' : ''} de gestion dès le ${ozxDateCH(F.dateFusion)} · ${F.clientsBascule} client${F.clientsBascule > 1 ? 's' : ''} OZ</small>
+        <span class="ozx-f-label">Récurrence sourcée OZ — par an dès le ${ozxDateCH(F.dateFusion)}</span>
+        <b class="ozx-f-valeur ozx-vert">CHF <span data-ozx-compteur="${Math.round(F.bascule)}">${fmtCHF(Math.round(F.bascule))}</span> <small style="font-size:12px;font-weight:600">/ an</small></b>
+        <small>Gestion annuelle de ${F.nbBascule} contrat${F.nbBascule > 1 ? 's' : ''} actifs · ${F.clientsBascule} client${F.clientsBascule > 1 ? 's' : ''} OZ — devient production Assurex</small>
         ${F.basculeCies.length ? `<span class="ozx-f-cies">${F.basculeCies.slice(0, 5).map(([c, v]) => `<span title="${ozxEsc(c)} : ${ozxCHF(v)}">${pictoCompagnie(c, 22)}<em>${ozxCompact(v)}</em></span>`).join('')}</span>` : ''}
         ${F.anneeReference ? `<small>Référence : gestion encaissée par OZ en ${F.anneeReference} = <b>${ozxCHF(F.gestionReference)}</b></small>` : ''}
       </div>

@@ -60,6 +60,22 @@ function objRecurrence() {
   return res;
 }
 
+// Bandeau « Récurrence sourcée OZ » affiché en tête du tableau de bord et du cockpit
+function htmlBandeauRecurrenceOZ() {
+  if (typeof allCommissionsAttente === 'undefined' || !allCommissionsAttente.length) return '';
+  const R = objRecurrence();
+  if (!R.oz) return '';
+  const chf = v => 'CHF ' + fmtCHF(Math.round(v));
+  const cies = Object.entries(R.parCieOZ).sort((a, b) => b[1] - a[1]).slice(0, 4);
+  const part = R.oz + R.assurex ? Math.round(R.oz / (R.oz + R.assurex) * 100) : 0;
+  return `<div class="rec-oz-bandeau" onclick="navigate('oz-assure')" role="button" tabindex="0" title="Voir la vue OZ Assure">
+    <div class="rec-oz-titre"><span>Récurrence sourcée OZ</span><small>gestion annuelle — production Assurex dès le 01.01.2027</small></div>
+    <div class="rec-oz-valeur">${chf(R.oz)}<small> / an</small></div>
+    <div class="rec-oz-detail"><b>${R.ozNb}</b> contrat${R.ozNb > 1 ? 's' : ''} · <b>${part} %</b> de la récurrence totale (${chf(R.oz + R.assurex)})</div>
+    <div class="rec-oz-cies">${cies.map(([k, v]) => `<span>${typeof pictoCompagnie === 'function' ? pictoCompagnie(k, 18) : ''} ${objEsc(k)} <b>${chf(v)}</b></span>`).join('')}</div>
+  </div>`;
+}
+
 // Ventes de l'année : contrats signés (date de signature, à défaut début) dans l'année
 function objVentes(annee) {
   const dansAnnee = d => String(d || '').startsWith(annee);

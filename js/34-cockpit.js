@@ -86,6 +86,7 @@ function htmlCockpitEnsemble(D) {
       ${dbxKpi({ label: 'Entrées attendues · 90 j', valeur: entrees90, prefixe: 'CHF ', sous: aEncaisser.length ? `dont factures CHF ${fmtCHF(Math.round(aEncaisser.reduce((s, f) => s + Number(f.montant || 0), 0)))} à encaisser` : 'commissions et autres encaissements', i: 2 })}
       ${dbxKpi({ label: 'Charges · 90 j', valeur: sorties90, prefixe: 'CHF ', sous: `${R.sorties.length} poste${R.sorties.length > 1 ? 's' : ''} de charges`, onclick: "navigate('tresorerie')", i: 3 })}
     </div>
+    ${typeof htmlBandeauRecurrenceOZ === 'function' ? htmlBandeauRecurrenceOZ() : ''}
     ${alertes.length ? `<div class="dbx-signaux ck-alertes">${alertes.map((x, i) => `<div class="dbx-signal ${x.ton}" style="--i:${i}"><span class="dbx-signal-icone" aria-hidden="true">${x.icone}</span><span class="dbx-signal-texte">${x.texte}</span><button type="button" onclick="${x.action}">${x.bouton}</button></div>`).join('')}</div>` : ''}
     <section class="dbx-carte ck-flux"><header class="dbx-carte-tete"><h2>Flux sur 12 mois</h2><span class="dbx-carte-sous">entrées, charges et solde de fin de mois</span></header>
       ${typeof trGraphique === 'function' ? trGraphique(R) : ''}

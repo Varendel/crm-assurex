@@ -108,7 +108,9 @@ function rexCitationStyles() {
   .rex-citation-fermer:hover{background:var(--accent-dim,rgba(37,99,235,.08))}
   .rex-citation img{pointer-events:auto;width:46px;height:46px;object-fit:contain;flex:0 0 auto;filter:drop-shadow(0 4px 8px rgba(0,0,0,.15));cursor:pointer}
   .rex-citation.change .rex-citation-bulle{animation:rexCitChange .45s ease}
-  @keyframes rexCitIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
+  .rex-citation.reduite .rex-citation-bulle{display:none}
+  .rex-citation.reduite img{width:40px;height:40px;opacity:.85}
+  .rex-citation.reduite img:hover{opacity:1;transform:scale(1.06)}  @keyframes rexCitIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
   @keyframes rexCitChange{0%{opacity:.2;transform:scale(.97)}100%{opacity:1;transform:none}}
   @media (max-width:768px){.rex-citation{right:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 24px)}.rex-citation img{width:38px;height:38px}}
   @media print{.rex-citation{display:none!important}}
@@ -146,10 +148,20 @@ function rexAfficherCitation(changer) {
       ${c.tr ? `<div class="rex-citation-trad">${rexEsc(c.tr)}</div>` : ''}
       <div class="rex-citation-auteur">— ${rexEsc(c.a)}</div>
     </div>
-    <img src="assets/logos/rex-mascotte-hd.png" alt="Rex" onclick="rexAfficherCitation(true)"/>`;
+    <img src="assets/logos/rex-mascotte-hd.png" alt="Rex" title="Une citation de Rex" onclick="document.getElementById('rex-citation').classList.contains('reduite') ? rexAfficherCitation(false) : rexAfficherCitation(true)"/>`;
   el.style.display = '';
+  el.classList.remove('reduite');
   el.classList.remove('change'); void el.offsetWidth; if (changer) el.classList.add('change');
   window._rexCit.masquee = false;
+  // La bulle ne doit jamais masquer le travail (imports, formulaires) : après quelques secondes
+  // elle se replie sur Rex seul ; un clic sur Rex la rouvre.
+  clearTimeout(window._rexCit.repli);
+  window._rexCit.repli = setTimeout(rexReduireCitation, 14000);
+}
+
+function rexReduireCitation() {
+  const el = document.getElementById('rex-citation');
+  if (el) el.classList.add('reduite');
 }
 
 function rexMasquerCitation() {

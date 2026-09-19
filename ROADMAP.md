@@ -1,8 +1,65 @@
-# Roadmap — Idées futures CRM Assurex
+# Roadmap — CRM Assurex
 
-Notes de fonctionnalités envisagées mais pas encore planifiées. Chaque idée reste ici jusqu'à ce qu'on décide de la développer.
+État du chantier (mis à jour le 19.09.2026). Les idées détaillées notées au fil de l'eau
+sont en bas de ce fichier.
+
+> Le repo est encore public : ce fichier ne contient volontairement ni chiffres du
+> portefeuille ni détail des points de sécurité ouverts.
 
 ---
+
+## ✅ Fait
+
+- **18.09** — Signatures : plus d'écriture anonyme directe sur `signature_requests` (tout passe
+  par les fonctions RPC) ; la purge 24 h ne supprime plus une signature reçue mais pas encore
+  enregistrée sur la fiche client.
+- **19.09** — Nettoyage des règles d'accès (RLS) en double + index sur les clés étrangères.
+- **19.09** — Mandats signés en double corrigés (sondage en direct et rattrapage ne peuvent plus
+  enregistrer deux fois le même mandat) + message de confirmation à la réception de la signature.
+- **19.09** — Journal des erreurs (`js/00-journal-erreurs.js` → table `journal_erreurs`) :
+  erreurs capturées automatiquement, signalement manuel **Ctrl+Alt+E**.
+- **19.09** — Git en place (GitHub Desktop) ; migrations SQL versionnées dans `supabase/migrations/`.
+- **19.09** — Maquette du nouveau tableau de bord (bureau + mobile) — en attente de validation.
+
+## 🟡 En attente
+
+- [ ] Signature de test de bout en bout avec le correctif en ligne
+- [ ] Nettoyer les mandats en double créés entre le 17 et le 19.09
+- [ ] Supabase Auth : vérifier que l'inscription publique est fermée, activer la MFA et la
+      protection contre les mots de passe compromis
+- [ ] Retrouver les décisions du chantier « sécurisation / segmentation » déjà discuté
+- [ ] Retour sur la maquette + logo en fichier (SVG/PNG)
+
+## 🔴 Priorité 1 — Sécurité & fondations
+
+- [ ] Repo **privé** + hébergement Cloudflare Pages (ou Netlify), déploiement à chaque push
+- [ ] **Rôles** (admin, courtier, RH, client) à la place de « connecté = tout voir » et des
+      emails codés en dur dans les règles d'accès
+- [ ] **Cloisonnement par cabinet** (`tenant_id` porté par la session) — prérequis SaaS
+- [ ] **Environnement de test** séparé de la production
+- [ ] Exporter le schéma d'avant le 17.09 en migration initiale
+- [ ] Durcir les fonctions publiques restantes, la prise de RDV publique, et l'affichage des
+      données (`innerHTML` sans échappement)
+
+## 🟢 Priorité 2 — Suivi commercial
+
+- [ ] **Échéancier des renouvellements** + relance automatique (contrats qui arrivent à échéance
+      dans 3 / 6 / 12 mois) — urgent avant la saison des échéances du 1er janvier
+- [ ] **Taux d'équipement / ventes croisées** (clients sans contrat, clients mono-équipés)
+- [ ] **Prochaine action obligatoire** sur chaque opportunité
+- [ ] **Source des clients** (remplacer `source_oz`, `source_cofidex`, `apporteur_externe`)
+- [ ] Synchronisation Outlook + suivi des offres reçues (voir idées détaillées ci-dessous)
+
+## 🔵 Priorité 3 — Produit
+
+- [ ] Nouveau design : typographie, couleurs, hiérarchie, puis nouveau tableau de bord
+- [ ] **Espace client** (app installable) — prérequis : rôles
+- [ ] Ouverture à 1–2 cabinets pilotes — prérequis : priorité 1 complète + licence
+- [ ] Code : découpage en modules, build (Vite), tests sur commissions et signature
+
+---
+
+# Idées détaillées
 
 ## Agent IA de suivi quotidien des dossiers (check matinal 8h00)
 

@@ -883,6 +883,8 @@ function convertirPostitEnRappel(postitId, clientId, boutonCliquer) {
 
 // ═══ FACTURES ═══
 async function showFormFacture(clientId) {
+  // Remplacé par le générateur de factures QR (js/33) : même bouton, éditeur QR prérempli avec le client
+  if (typeof fqrNouvelleFactureDepuis === 'function') { fqrNouvelleFactureDepuis({ client_id: clientId }); return; }
   const allFactures = await dbGet('factures', 'select=numero&order=created_at.desc&limit=1');
   let prochainNumero = 'FAC-0001';
   if (allFactures && allFactures[0] && allFactures[0].numero) {

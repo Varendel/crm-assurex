@@ -821,7 +821,8 @@ function splitMontantAgent(montant, contratId) {
 }
 
 function viewCommissions() {
-  const COMMS = allCommissionsAttente.filter(c => c.statut === 'reçue');
+  // + commissions versées à OZ qui reviennent à Assurex (à refacturer à OZ, js/34) : partage apporteurs identique
+  const COMMS = allCommissionsAttente.filter(c => c.statut === 'reçue' || (c.statut === 'versé_oz' && typeof ozPartAssurex === 'function' && ozPartAssurex(c)));
   function montantC(c) { return c.montant_final != null ? c.montant_final : (c.montant_estime || 0); }
 
   let totalBrut = 0, partJ = 0, partA = 0;
@@ -852,8 +853,8 @@ function viewCommissions() {
     const bd = c.bordereau_id ? allBordereaux.find(b => b.id === c.bordereau_id) : null;
     return `<div class="table-row" style="grid-template-columns:${cols}">
       <div style="display:flex;align-items:center;gap:10px;min-width:0">${typeof pictoCompagnie === 'function' ? pictoCompagnie(c.compagnie, 28) : ''}<div style="min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">${c.client_nom || '—'}</div><div style="font-size:11px;color:var(--text-dim)">${c.compagnie || ''}${c.date_reception ? ' · ' + fmtDate(c.date_reception) : ''}</div></div></div>
-      <div style="font-size:11px;color:var(--text-muted)">${c.produit || ''}${c.nature ? ' · ' + c.nature : ''}${c.mouvement ? ' · ' + c.mouvement : ''}</div>
-      <div>${bd ? `<button type="button" onclick="${typeof showBordereau === 'function' ? `showBordereau('${bd.id}')` : "navigate('bordereaux')"}" title="${(bd.mois || '').replace(/"/g, '')}" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:999px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis">🧾 ${bd.numero || bd.mois || 'Bordereau'}</button>` : '<span style="font-size:11px;color:var(--text-dim)">sans bordereau</span>'}</div>
+      <div style="font-size:11px;color:var(--text-muted)">${c.produit || ''}${c.nature ? ' · ' + c.nature : ''}${c.mouvement ? ' · ' + c.mouvement : ''}${c.statut === 'versé_oz' ? `<div style="margin-top:3px;color:#1a56db;font-weight:600">🔹 versée à OZ · ${c.refacture_le ? 'refacturée le ' + fmtDate(c.refacture_le) : 'à refacturer'}</div>` : ''}</div>
+      <div>${bd ? `<button type="button" onclick="${bd.pdf_url ? `ouvrirPieceJointe('${bd.pdf_url}')` : "navigate('bordereaux')"}" title="${bd.pdf_url ? 'Voir le bordereau uploadé' : 'Aucun fichier joint — ouvrir les bordereaux'} (${(bd.mois || '').replace(/"/g, '')})" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:999px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis">${bd.pdf_url ? '📎' : '🧾'} ${bd.numero || bd.mois || 'Bordereau'}</button>` : '<span style="font-size:11px;color:var(--text-dim)">sans bordereau</span>'}</div>
       <div style="font-weight:800;color:var(--text)">CHF ${fmtCHF(m)}</div>
       <div style="font-weight:800;color:#38bdf8">CHF ${fmtCHF(s.pJ)}</div>
       <div>${s.pA > 0 ? `<div style="display:flex;align-items:center;gap:6px">${s.agent ? avatar(s.agent, 18) : ''}<span style="font-weight:700;color:#f59e0b">CHF ${fmtCHF(s.pA)}</span></div>` : '<span style="color:var(--text-dim)">—</span>'}</div>
@@ -931,8 +932,9 @@ function genererFicheCommission() {
 
   const agent = allAgents.find(a => a.id === agentId);
   const bordereauxMois = allBordereaux.filter(b => b.mois === mois).map(b => b.id);
+  // Commissions versées à OZ qui reviennent à Assurex (js/34, refacturées à OZ) : même partage apporteurs
   const lignes = allCommissionsAttente.filter(c =>
-    c.statut === 'reçue' && bordereauxMois.includes(c.bordereau_id) &&
+    (c.statut === 'reçue' || (c.statut === 'versé_oz' && typeof ozPartAssurex === 'function' && ozPartAssurex(c))) && bordereauxMois.includes(c.bordereau_id) &&
     c.contrat_id && allContrats.find(ct => ct.id === c.contrat_id && ct.apporteur_id === agentId)
   );
 

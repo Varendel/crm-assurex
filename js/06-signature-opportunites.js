@@ -2049,7 +2049,9 @@ function construireLigneImport(i, champs) {
     ambigu: candidats.length > 1,
     candidats: candidats.map(c => ({ id: c.id, produit: c.produit || 'Contrat', statut: c.statut })),
     contratProduit: contratTrouve ? contratTrouve.produit : null,
-    selectionne: !!contratTrouve,
+    // Retenue / contribution au compte de caution (GM) : ni une commission ni une contre-passation
+    estCaution: /compte de caution|retenue du cc|contribution mensuelle/i.test(brancheInterne || ''),
+    selectionne: !!contratTrouve && !/compte de caution|retenue du cc|contribution mensuelle/i.test(brancheInterne || ''),
     parNom,
   });
 }
@@ -2174,7 +2176,15 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
   const nbSuggeres = _decompteLignes.filter(l => !l.contratId && l.clientSuggereNom).length;
   const nbRienTrouve = _decompteLignes.length - nbTrouves - nbSuggeres;
   const totalFichier = _decompteLignes.reduce((s, l) => s + l.montant, 0);
-  const ecartTotal = commissionTotaleAnnoncee != null ? Math.round((totalFichier - commissionTotaleAnnoncee) * 100) / 100 : null;
+  // Le « total » d'un décompte peut être celui des seules commissions positives, les rectifications
+  // (contre-passations) étant présentées à part en « Déductions » et couvertes par le compte de
+  // caution (Groupe Mutuel, avril 2026) : on accepte les deux lectures.
+  const totalPositifs = _decompteLignes.filter(l => l.montant > 0 && !l.estCaution).reduce((s, l) => s + l.montant, 0);
+  const totalDeductions = _decompteLignes.filter(l => l.montant < 0 && !l.estCaution).reduce((s, l) => s + l.montant, 0);
+  const totalCaution = _decompteLignes.filter(l => l.estCaution).reduce((s, l) => s + l.montant, 0);
+  const ecartBrut = commissionTotaleAnnoncee != null ? Math.round((totalFichier - commissionTotaleAnnoncee) * 100) / 100 : null;
+  const ecartPositifs = commissionTotaleAnnoncee != null ? Math.round((totalPositifs - commissionTotaleAnnoncee) * 100) / 100 : null;
+  const ecartTotal = ecartBrut === null ? null : (Math.abs(ecartPositifs) <= 1 ? 0 : ecartBrut);
 
   zone.innerHTML = `
     ${sectionCard(`Résultat de l'analyse — ${nomAssureur || 'Compagnie'}`, '#4ade80', `
@@ -2183,6 +2193,7 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
       <div style="font-size:11.5px;margin-bottom:12px;padding:8px 12px;border-radius:8px;background:var(--surface-alt);color:${Math.abs(ecartTotal) > 1 ? '#f87171' : '#4ade80'}">
         Total annoncé par le fichier : CHF ${fmtCHF2(commissionTotaleAnnoncee)} — total des lignes lues : CHF ${fmtCHF2(totalFichier)}
         ${Math.abs(ecartTotal) > 1 ? ` ⚠️ écart de CHF ${fmtCHF(ecartTotal)} — une ligne a probablement été mal lue, vérifie avant d'importer` : ' ✓ les lignes lues correspondent au total du fichier'}
+        ${(totalDeductions || totalCaution) ? `<div style="margin-top:4px;color:var(--text-muted)">Commissions CHF ${fmtCHF2(totalPositifs)}${totalDeductions ? ` · rectifications / contre-passations CHF ${fmtCHF2(totalDeductions)}` : ''}${totalCaution ? ` · compte de caution CHF ${fmtCHF2(totalCaution)} (hors commissions, non importé)` : ''}</div>` : ''}
       </div>` : ''}
       <div style="overflow-x:auto">
       <table style="width:100%;min-width:1180px;border-collapse:collapse;font-size:12px">

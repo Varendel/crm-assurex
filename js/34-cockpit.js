@@ -209,3 +209,83 @@ function htmlCockpitControle() {
       <div class="sfx-liste">${gr.items.slice(0, 60).map(ligne).join('')}</div>
     </details>`).join('') : '<section class="dbx-carte"><div class="dbx-vide"><span style="font-size:26px">✓</span>Aucune anomalie détectée.</div></section>'}`;
 }
+
+// ═══ OZ ↔ ASSUREX : REFACTURATION 2026 ══════════════════════════════════════════════════════
+// Jusqu'à la fusion complète (01.01.2027), certaines commissions sont encore versées sur le compte
+// OZ Assure alors qu'elles reviennent à Assurex. Règle (Jonathan, 19.09.2026) :
+//   - reste à OZ : la gestion des clients marqués OZ encaissée avant 2027, et les acquisitions de
+//     clients OZ sur des contrats antérieurs à la bascule (01.06.2026) ;
+//   - revient à Assurex (à refacturer à OZ) : tout le reste — clients Assurex / EX, et production
+//     OZ signée depuis la bascule.
+// Les commissions qui reviennent à Assurex suivent le partage des apporteurs comme une commission
+// reçue normalement (fiche de commission incluse).
+function ozPartAssurex(ca) {
+  if (!ca || ca.statut !== 'versé_oz') return false;
+  const cl = ca.client_id ? allClients.find(x => x.id === ca.client_id) : null;
+  const clientOZ = !!(cl && cl.source_oz);
+  if (!clientOZ) return true;
+  const date = (ca.date_reception || ca.date_creation || '').slice(0, 10);
+  if (ca.nature === 'gestion') return !!date && date >= (typeof DATE_GESTION_ASSUREX !== 'undefined' ? DATE_GESTION_ASSUREX : '2027-01-01');
+  const ct = ca.contrat_id ? allContrats.find(x => x.id === ca.contrat_id) : null;
+  const depart = ct ? (ct.date_signature || ct.date_debut || '').slice(0, 10) : '';
+  return !!depart && depart >= (typeof DATE_BASCULE_ASSUREX !== 'undefined' ? DATE_BASCULE_ASSUREX : '2026-06-01');
+}
+
+function ozLignesRefacturation(annee) {
+  return allCommissionsAttente.filter(ca => ca.statut === 'versé_oz' && ozPartAssurex(ca) && String(ca.date_reception || ca.date_creation || '').startsWith(annee)).map(ca => {
+    const m = Number(ca.montant_final != null ? ca.montant_final : (ca.montant_estime || 0));
+    const s = typeof splitMontantAgent === 'function' ? splitMontantAgent(m, ca.contrat_id) : { pJ: m, pA: 0, agent: null };
+    return { ca, m, pJ: s.pJ, pA: s.pA, agent: s.agent };
+  });
+}
+
+function htmlCockpitOZ() {
+  const annee = String(new Date().getFullYear());
+  const lignes = ozLignesRefacturation(annee);
+  const ouvertes = lignes.filter(l => !l.ca.refacture_le);
+  const somme = (arr, k) => arr.reduce((s, x) => s + x[k], 0);
+  const restentOZ = allCommissionsAttente.filter(ca => ca.statut === 'versé_oz' && !ozPartAssurex(ca) && String(ca.date_reception || ca.date_creation || '').startsWith(annee));
+  window._ozSelection = new Set(ouvertes.map(l => l.ca.id));
+  return `
+    <div class="sfx-intro">Commissions ${annee} versées sur le compte OZ Assure mais qui reviennent à Assurex : elles sont à <strong>refacturer à OZ</strong> pour équilibrer les comptes avant la fusion complète du 01.01.2027. Les parts des apporteurs s’appliquent comme pour une commission reçue.</div>
+    <div class="dbx-kpis">
+      ${dbxKpi({ label: 'À refacturer à OZ', valeur: somme(ouvertes, 'm'), prefixe: 'CHF ', sous: `${ouvertes.length} commission${ouvertes.length > 1 ? 's' : ''}`, i: 0 })}
+      ${dbxKpi({ label: 'dont parts apporteurs', valeur: somme(ouvertes, 'pA'), prefixe: 'CHF ', sous: 'à verser via la fiche de commission', i: 1 })}
+      ${dbxKpi({ label: 'Déjà refacturé', valeur: somme(lignes.filter(l => l.ca.refacture_le), 'm'), prefixe: 'CHF ', sous: annee, i: 2 })}
+      ${dbxKpi({ label: 'Reste chez OZ', valeur: restentOZ.reduce((s, ca) => s + Number(ca.montant_final ?? ca.montant_estime ?? 0), 0), prefixe: 'CHF ', sous: 'gestion OZ avant 2027, production OZ antérieure', i: 3 })}
+    </div>
+    <section class="dbx-carte"><header class="dbx-carte-tete"><h2>À refacturer</h2>
+      <span class="dx-tete-actions">
+        ${typeof fqrNouvelleFactureDepuis === 'function' ? `<button type="button" class="btn-secondary" onclick="ozPreparerFacture()">🧾 Préparer la facture QR</button>` : ''}
+        <button type="button" class="btn-save" onclick="ozMarquerRefacture()" ${ouvertes.length ? '' : 'disabled'}>✓ Marquer refacturé</button>
+      </span></header>
+      ${ouvertes.length ? `<div class="sfx-liste">${ouvertes.map(l => `<label class="sfx-ligne oz-ligne">
+        <input type="checkbox" checked onchange="this.checked?window._ozSelection.add('${l.ca.id}'):window._ozSelection.delete('${l.ca.id}')"/>
+        <span class="sfx-corps"><b>${ckEsc(l.ca.client_nom || '—')}</b><small>${ckEsc(l.ca.compagnie || '')} · ${ckEsc(l.ca.produit || '')} · ${ckEsc(l.ca.nature || '')} · ${fmtDate(l.ca.date_reception || l.ca.date_creation)}${l.pA ? ` · apporteur CHF ${fmtCHF2(l.pA)}` : ''}</small></span>
+        <span class="sfx-montant">CHF ${fmtCHF2(l.m)}</span></label>`).join('')}</div>` : '<div class="dbx-vide-petit">✓ Rien à refacturer pour l’instant.</div>'}
+    </section>`;
+}
+
+async function ozMarquerRefacture() {
+  const ids = [...(window._ozSelection || [])];
+  if (!ids.length) { showError('Coche au moins une commission.'); return; }
+  const total = ids.reduce((s, id) => { const ca = allCommissionsAttente.find(x => x.id === id); return s + Number(ca ? (ca.montant_final ?? ca.montant_estime ?? 0) : 0); }, 0);
+  if (!confirm(`Marquer ${ids.length} commission(s) (CHF ${fmtCHF2(total)}) comme refacturée(s) à OZ aujourd’hui ?`)) return;
+  const auj = ckIso(new Date());
+  for (const id of ids) {
+    const r = await dbPatch('commissions_attente', id, { refacture_le: auj });
+    if (!(r && r.error)) { const ca = allCommissionsAttente.find(x => x.id === id); if (ca) ca.refacture_le = auj; }
+  }
+  if (typeof logAction === 'function') logAction('refacturation_oz', 'commissions_attente', null, `${ids.length} commission(s) refacturée(s) à OZ — CHF ${fmtCHF2(total)}`);
+  showError('✓ Refacturation enregistrée.');
+  ckRerendre();
+}
+
+// Facture QR à OZ pour la sélection (si le module factures est chargé)
+function ozPreparerFacture() {
+  const ids = [...(window._ozSelection || [])];
+  const lignes = ids.map(id => allCommissionsAttente.find(x => x.id === id)).filter(Boolean)
+    .map(ca => ({ libelle: `Commission ${ca.compagnie || ''} — ${ca.client_nom || ''} (${ca.produit || ''})`, quantite: 1, prix: Number(ca.montant_final ?? ca.montant_estime ?? 0) }));
+  if (!lignes.length) { showError('Coche au moins une commission.'); return; }
+  fqrNouvelleFactureDepuis({ debiteur: { nom: 'OZ Assure' }, lignes, message: `Refacturation commissions ${new Date().getFullYear()} versées à OZ` });
+}

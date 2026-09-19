@@ -1,3 +1,17 @@
+-- NB : la table factures existait déjà (ancien formulaire js/08 : client_nom, description,
+-- date_paiement, statut 'en_attente') ; le « create table if not exists » ci-dessous n'a donc rien
+-- créé. Les colonnes du générateur QR ont été ajoutées par la migration factures_colonnes_qr :
+--   alter table public.factures add column if not exists debiteur jsonb not null default '{}'::jsonb;
+--   alter table public.factures add column if not exists lignes jsonb not null default '[]'::jsonb;
+--   alter table public.factures add column if not exists devise text not null default 'CHF';
+--   alter table public.factures add column if not exists reference text;
+--   alter table public.factures add column if not exists message text;
+--   alter table public.factures add column if not exists paye_le date;
+--   alter table public.factures add column if not exists notes text;
+--   alter table public.factures add column if not exists created_at timestamptz not null default now();
+--   alter table public.factures alter column statut set default 'emise';
+--   alter table public.factures alter column date_emission set default current_date;
+--   alter table public.factures alter column montant set default 0;
 -- Factures QR suisses (générateur js/33) + paramètres de la société émettrice (IBAN, adresse).
 -- Jamais supprimées : statut 'annulee' à la place. Appliquée le 19.09.2026.
 create table if not exists public.factures (

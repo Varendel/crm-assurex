@@ -1055,7 +1055,8 @@ async function executerSuppressionClient(clientId, btn) {
     dbGet('postits', `client_id=eq.${clientId}&select=id`),
   ]);
   if (!(await supprimerLot('rappels', rappelsLies, 'un rappel lié'))) return;
-  if (!(await supprimerLot('factures', facturesLiees, 'une facture liée'))) return;
+  // Factures conservées (obligation de conservation 10 ans) : détachées du client, jamais supprimées
+  for (const f of (Array.isArray(facturesLiees) ? facturesLiees : [])) await dbPatch('factures', f.id, { client_id: null });
   if (!(await supprimerLot('collaborateurs', collaborateursLies, 'un collaborateur lié'))) return;
   if (!(await supprimerLot('postits', postitsLies, 'un post-it lié'))) return;
 

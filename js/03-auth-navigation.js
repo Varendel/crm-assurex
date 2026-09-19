@@ -714,12 +714,15 @@ const SECTIONS = [
     { id: 'sources', label: '🧭 Sources des clients' },
     { id: 'nouveau-contrat-direct', label: 'Nouveau contrat' },
     { id: 'nouvelle-demande-offre', label: 'Demande d\'offre' },
-    { id: 'calc-lpp', label: '🧮 Bilan de prévoyance' },
-    { id: 'calc-immo', label: '🏠 Financement immobilier' },
     { id: 'rappels', label: 'Tâches & Rappels', rhAllowed: true },
     { id: 'agenda', label: 'Agenda', rhAllowed: true },
     { id: 'rendez-vous', label: '📅 Rendez-vous', rhAllowed: true },
     { id: 'campagnes', label: 'Campagnes' },
+  ]},
+  { id: 'conseil-section', label: 'Conseil', icon: '◇', sub: [
+    { id: 'conseil', label: '💼 Conseil financier' },
+    { id: 'calc-lpp', label: '🧮 Bilan de prévoyance' },
+    { id: 'calc-immo', label: '🏠 Financement immobilier' },
   ]},
   { id: 'portefeuille', label: 'Portefeuille', icon: '◑', sub: [
     { id: 'portefeuille', label: 'Tous les clients', staff: true, rhAllowed: true },
@@ -776,14 +779,16 @@ function renderSidebar() {
     // Paramètres) disparaît si aucun de ses sous-éléments n'est autorisé.
     const subVisibles = rh ? sec.sub.filter(s => s.rhAllowed) : sec.sub;
     if (rh && !subVisibles.length) return;
-    const isActive = subVisibles.some(s => s.id === currentView);
+    // Un dossier de conseil ouvert allume l'entrée « Conseil financier » du menu
+    const vueMenu = currentView === 'dossier-conseil' ? 'conseil' : currentView;
+    const isActive = subVisibles.some(s => s.id === vueMenu);
     nav += `<button class="nav-section-btn ${isActive ? 'active' : ''}" onclick="toggleSection('${sec.id}')">
       <span style="font-size:14px">${sec.icon}</span>${sec.label}
       <span class="arrow">${openSections[sec.id] ? '▲' : '▼'}</span>
     </button>`;
     if (openSections[sec.id]) {
       subVisibles.forEach(s => {
-        const active = s.id === currentView;
+        const active = s.id === vueMenu;
         let badgeHtml = '';
         if (s.id === 'rappels') {
           const monAgent = currentUser ? allAgents.find(a => a.email === currentUser.email) : null;
@@ -845,6 +850,7 @@ async function restaurerEtat(etat) {
   if (etat.type === 'client') { await showClient(etat.id); return; }
   if (etat.type === 'rappel') { showRappel(etat.id); return; }
   if (etat.type === 'campagne') { showCampagne(etat.id); return; }
+  if (etat.type === 'conseil' && typeof ouvrirDossierConseil === 'function') { await ouvrirDossierConseil(etat.id, { sansHistorique: true }); return; }
   if (etat.type === 'opportunite') {
     opportuniteEnEditionId = etat.id;
     currentView = 'nouvelle-opportunite';
@@ -1339,6 +1345,7 @@ async function renderView() {
       break;
     case 'rapport-finma': main.innerHTML = viewRapportFinma(); break;
     case 'suivi-financier': main.innerHTML = viewSuiviFinancier(); break;
+    case 'conseil': main.innerHTML = viewConseil(); break;
     case 'tresorerie': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); main.innerHTML = viewTresorerie(); break;
     case 'production': main.innerHTML = viewProduction(); break;
     case 'opportunites': main.innerHTML = viewOpportunites(); break;

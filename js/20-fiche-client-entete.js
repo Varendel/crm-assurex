@@ -59,6 +59,7 @@ function htmlEnteteFicheClient(c, ctx) {
         <div class="fcx-actions-principales">
           <button type="button" class="fcx-btn-blanc" onclick="prefillOpportuniteClientId='${c.id}'; opportuniteEnEditionId=null; navigate('nouvelle-opportunite')">🎯 Opportunité</button>
           <button type="button" class="fcx-btn-verre" onclick="ouvrirModaleNouveauRdv('${c.id}')">📅 Rendez-vous</button>
+          ${!isEntreprise && !rh && typeof ouvrirDossierConseil === 'function' ? `<button type="button" class="fcx-btn-verre" onclick="ouvrirDossierConseil('${c.id}')" title="Dossier de conseil financier : budget, projets, retraite, immobilier">💼 Conseil</button>` : ''}
         </div>
         <div class="fcx-actions-menus">
           <button type="button" onclick="ouvrirOngletDocumentsClient('${c.id}')">📄 Documents ▾</button>

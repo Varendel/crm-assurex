@@ -849,7 +849,113 @@
   .tr-form-actions { display: flex; justify-content: flex-end; margin-top: 14px; }
   @media (max-width: 768px) { .tr-tableau tbody th { min-width: 150px; } .tr-espace { display: none; } }
 
+  /* ═══ CONSEIL FINANCIER (js/22-conseil-financier.js, 19.09.2026) ═══ */
+  .cf-hero { position: relative; display: flex; justify-content: space-between; gap: 24px; flex-wrap: wrap; padding: 26px 30px; border-radius: 22px; margin-bottom: 18px; color: #fff; overflow: hidden;
+    background: radial-gradient(110% 150% at 100% 0%, rgba(0,207,255,0.24) 0%, transparent 55%), linear-gradient(135deg, #0B2458 0%, #113679 55%, #1A4A9C 100%); box-shadow: 0 18px 40px rgba(17,54,121,0.26); animation: dbx-entree .5s cubic-bezier(.2,.8,.2,1) both; }
+  .cf-hero-deco { position: absolute; inset: 0; pointer-events: none; }
+  .cf-hero-deco::before { content: ''; position: absolute; width: 420px; height: 420px; right: -130px; top: -230px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.09); }
+  .cf-hero-deco::after { content: ''; position: absolute; width: 240px; height: 240px; left: 38%; bottom: -190px; border-radius: 50%; border: 1px solid rgba(0,207,255,0.22); }
+  .cf-hero-texte { position: relative; flex: 1 1 380px; min-width: 0; }
+  .cf-hero h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; margin: 4px 0 6px; color: #fff; }
+  .cf-hero p { font-size: 13.5px; color: rgba(255,255,255,0.78); max-width: 560px; line-height: 1.5; }
+  .cf-surtitre { font-size: 11px; letter-spacing: 1.4px; text-transform: uppercase; color: rgba(255,255,255,0.62); font-weight: 600; }
+  .cf-retour { background: none; border: none; color: rgba(255,255,255,0.75); font-size: 12px; cursor: pointer; padding: 0; margin-bottom: 8px; display: block; }
+  .cf-retour:hover { color: #fff; }
+  .cf-hero-actions { position: relative; display: flex; flex-direction: column; align-items: flex-end; gap: 10px; justify-content: center; }
+  .cf-choix-client input { width: min(420px, 80vw); border: none; border-radius: 14px; padding: 13px 16px; font-size: 14px; color: #0E1B33; background: rgba(255,255,255,0.96); box-shadow: 0 10px 30px rgba(0,0,0,0.18); outline: none; }
+  .cf-choix-client input:focus { box-shadow: 0 0 0 4px rgba(0,207,255,0.35), 0 14px 34px rgba(0,0,0,0.22); }
+  .cf-outils { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .cf-outils button { background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.22); color: #fff; border-radius: 10px; padding: 7px 12px; font-size: 12px; cursor: pointer; }
+  .cf-outils button:hover { background: rgba(255,255,255,0.2); }
+  .cf-etapes { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+  .cf-etapes button { display: inline-flex; align-items: center; gap: 7px; background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.16); color: rgba(255,255,255,0.72); border-radius: 999px; padding: 5px 12px 5px 5px; font-size: 12px; cursor: pointer; transition: all .15s; }
+  .cf-etapes button span { width: 20px; height: 20px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 10.5px; font-weight: 600; background: rgba(255,255,255,0.14); }
+  .cf-etapes button.fait { color: #fff; } .cf-etapes button.fait span { background: #22C55E; }
+  .cf-etapes button.actif { background: #fff; color: #113679; font-weight: 600; } .cf-etapes button.actif span { background: #00CFFF; color: #06142C; }
+  .cf-etapes button:hover:not(.actif) { background: rgba(255,255,255,0.16); color: #fff; }
+  .cf-etat { font-size: 11.5px; color: rgba(255,255,255,0.7); } .cf-etat.erreur { color: #FCA5A5; } .cf-etat.enregistre { color: #BBF7D0; }
+  .cf-boutons { display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+  .cf-prochain { display: flex; align-items: center; gap: 8px; font-size: 12px; color: rgba(255,255,255,0.8); }
+  .cf-prochain input { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); color: #fff; border-radius: 9px; padding: 5px 8px; color-scheme: dark; }
+  .cf-onglets { flex-wrap: wrap; }
+  .cf-dossiers { display: flex; flex-direction: column; }
+  .cf-dossier { display: grid; grid-template-columns: minmax(160px, 1.4fr) auto 120px 1.4fr auto; align-items: center; gap: 14px; padding: 12px 10px; border: none; border-bottom: 1px solid var(--border); background: none; text-align: left; cursor: pointer; color: var(--text); border-radius: 10px; transition: background .15s; }
+  .cf-dossier:hover { background: var(--surface-alt); }
+  .cf-dossier-nom { font-size: 13.5px; font-weight: 600; }
+  .cf-dossier-etape { font-size: 12px; color: var(--accent); font-weight: 600; }
+  .cf-dossier-info, .cf-dossier-date { font-size: 11.5px; color: var(--text-muted); }
+  .cf-etapes-mini { display: inline-flex; gap: 3px; } .cf-etapes-mini span { width: 16px; height: 5px; border-radius: 3px; background: var(--border); } .cf-etapes-mini span.fait { background: #22C55E; }
+  .cf .dbx-kpi.cf-alerte { border-color: rgba(239,68,68,0.45); }
+  .cf-grille-saisie { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(280px, 1fr); gap: 18px; align-items: start; }
+  .cf-col-saisie { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
+  .cf-col-saisie .dbx-carte { margin: 0; }
+  .cf-collant { position: sticky; top: 16px; display: flex; flex-direction: column; gap: 16px; }
+  .cf-champs { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px 14px; }
+  .cf-champ { display: flex; flex-direction: column; gap: 5px; font-size: 11.5px; color: var(--text-muted); min-width: 0; }
+  .cf-champ.large { grid-column: 1 / -1; }
+  .cf-champ small { font-size: 10.5px; color: var(--text-dim); }
+  .cf-champ select, .cf-champ > input { background: var(--surface-alt); border: 1px solid var(--border); border-radius: 10px; padding: 9px 11px; font-size: 13.5px; color: var(--text); }
+  .cf-saisie { display: flex; align-items: center; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 10px; transition: border-color .15s, box-shadow .15s; }
+  .cf-saisie:focus-within, .cf-champ select:focus, .cf-champ > input:focus { border-color: var(--accent-border); box-shadow: 0 0 0 3px var(--accent-dim); outline: none; }
+  .cf-saisie input { flex: 1; min-width: 0; border: none; background: transparent; padding: 9px 11px; font-size: 13.5px; color: var(--text); font-variant-numeric: tabular-nums; outline: none; }
+  .cf-saisie em { font-style: normal; font-size: 11px; color: var(--text-dim); padding-right: 11px; white-space: nowrap; }
+  .cf-resume h2 { font-size: 15px; font-weight: 600; margin-bottom: 12px; color: var(--text); } .cf-resume h2 small { font-weight: 400; color: var(--text-muted); font-size: 12px; }
+  .cf-ligne { display: flex; justify-content: space-between; gap: 10px; padding: 6px 0; font-size: 12.5px; color: var(--text-muted); }
+  .cf-ligne b { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .cf-ligne small { color: var(--text-dim); font-size: 10.5px; }
+  .cf-ligne.total { border-top: 1px solid var(--border); margin-top: 4px; padding-top: 9px; color: var(--text); font-weight: 500; }
+  .cf-ligne.total b { font-size: 14px; }
+  .cf .pos, .cf-ligne.pos b { color: #16A34A; } .cf .neg, .cf-ligne.neg b { color: #EF4444; }
+  html:not([data-theme="clair"]) .cf .pos, html:not([data-theme="clair"]) .cf-ligne.pos b { color: #4ADE80; }
+  .cf-sep { height: 1px; background: var(--border); margin: 8px 0; }
+  .cf-mention { font-size: 11px; color: var(--text-dim); margin-top: 10px; line-height: 1.5; }
+  .cf-note { font-size: 12px; border-radius: 10px; padding: 9px 12px; margin-top: 8px; }
+  .cf-note.rouge { background: rgba(239,68,68,0.09); color: #DC2626; } .cf-note.vert { background: rgba(34,197,94,0.1); color: #16A34A; }
+  .cf-budget-barre, .cf-retraite-barre { display: flex; height: 22px; border-radius: 8px; overflow: hidden; background: var(--surface-alt); gap: 2px; }
+  .cf-budget-barre span, .cf-retraite-barre span { display: block; min-width: 3px; transform-origin: left center; animation: cf-deploie .8s cubic-bezier(.2,.8,.2,1) both; }
+  @keyframes cf-deploie { from { transform: scaleX(0); } }
+  .cf-retraite-barre { position: relative; }
+  .cf-retraite-barre span { flex: none; }
+  .cf-retraite-objectif { position: relative; height: 18px; margin-top: 2px; }
+  .cf-retraite-objectif::before { content: ''; position: absolute; top: -26px; left: 0; height: 28px; border-left: 2px dashed var(--text); }
+  .cf-retraite-objectif span { position: absolute; top: 3px; right: 0; font-size: 10.5px; color: var(--text-muted); white-space: nowrap; }
+  .cf-legende { display: flex; flex-wrap: wrap; gap: 8px 16px; margin-top: 12px; font-size: 11.5px; color: var(--text-muted); }
+  .cf-legende span { display: inline-flex; align-items: center; gap: 6px; } .cf-legende i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .cf-legende b { color: var(--text); font-weight: 600; } .cf-legende small { color: var(--text-dim); }
+  .cf-types { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .cf-types button { display: flex; align-items: center; gap: 8px; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; font-size: 12.5px; color: var(--text); cursor: pointer; text-align: left; transition: all .15s; }
+  .cf-types button span { font-size: 18px; } .cf-types button:hover { border-color: var(--accent-border); transform: translateY(-2px); box-shadow: 0 8px 20px rgba(17,54,121,0.1); }
+  .cf-projet { animation: dbx-entree .35s ease both; }
+  .cf-projets-mini { display: flex; flex-direction: column; gap: 12px; }
+  .cf-projet-mini { display: flex; gap: 12px; align-items: center; } .cf-projet-mini > div { flex: 1; display: flex; flex-direction: column; gap: 3px; }
+  .cf-projet-mini strong { font-size: 13px; font-weight: 500; color: var(--text); } .cf-projet-mini small { font-size: 11.5px; color: var(--text-muted); }
+  .cf-projet-icone { width: 38px; height: 38px; border-radius: 12px; background: var(--accent-dim); display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+  .cf-progression { height: 6px; border-radius: 99px; background: var(--surface-alt); overflow: hidden; } .cf-progression span { display: block; height: 100%; background: linear-gradient(90deg, #113679, #00CFFF); border-radius: 99px; }
+  .cf-jauge { position: relative; text-align: center; margin-bottom: 8px; } .cf-jauge svg { width: 180px; height: auto; }
+  .cf-jauge b { position: absolute; left: 0; right: 0; top: 46px; font-size: 22px; font-weight: 600; color: var(--text); } .cf-jauge small { display: block; font-size: 11px; color: var(--text-muted); }
+  .cf-schema { margin-top: 12px; }
+  .cf-bilans { display: flex; flex-direction: column; gap: 8px; }
+  .cf-bilan { display: flex; flex-direction: column; gap: 3px; text-align: left; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; cursor: pointer; color: var(--text); }
+  .cf-bilan:hover { border-color: var(--accent-border); } .cf-bilan small { font-size: 11.5px; color: var(--text-muted); }
+  .cf-recos { display: flex; flex-direction: column; gap: 8px; }
+  .cf-reco { display: flex; align-items: flex-start; gap: 10px; padding: 10px 12px; border: 1px solid var(--border); border-left: 3px solid #00CFFF; border-radius: 12px; }
+  .cf-reco.acceptee { border-left-color: #F59E0B; } .cf-reco.realisee { border-left-color: #22C55E; opacity: .85; } .cf-reco.refusee { border-left-color: #94A3B8; opacity: .6; }
+  .cf-reco-icone { font-size: 17px; padding-top: 4px; }
+  .cf-reco-texte { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; } .cf-reco-texte small { font-size: 10.5px; text-transform: uppercase; letter-spacing: .8px; color: var(--text-muted); }
+  .cf-reco-texte textarea { width: 100%; resize: vertical; border: 1px solid transparent; background: transparent; color: var(--text); font: inherit; font-size: 13px; line-height: 1.45; border-radius: 8px; padding: 2px 4px; }
+  .cf-reco-texte textarea:focus { border-color: var(--accent-border); background: var(--surface-alt); outline: none; }
+  .cf-reco select { background: var(--surface-alt); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 12px; padding: 5px 6px; }
+  .cf-ajout-reco { display: flex; gap: 8px; margin-top: 12px; } .cf-ajout-reco input { flex: 1; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 10px; padding: 9px 12px; color: var(--text); font-size: 13px; }
+  .cf-notes { width: 100%; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 12px; padding: 12px; color: var(--text); font: inherit; font-size: 13px; line-height: 1.5; resize: vertical; }
+  @media (max-width: 1100px) { .cf-grille-saisie { grid-template-columns: 1fr; } .cf-collant { position: static; } }
+  @media (max-width: 768px) {
+    .cf-hero { padding: 20px 16px; } .cf-hero h1 { font-size: 22px; } .cf-hero-actions { align-items: stretch; width: 100%; }
+    .cf-dossier { grid-template-columns: 1fr auto; } .cf-dossier-info, .cf-dossier-date, .cf-etapes-mini { display: none; }
+    .cf-reco { flex-wrap: wrap; }
+  }
+
   @media (prefers-reduced-motion: reduce) {
+    .cf-hero, .cf-projet, .cf-budget-barre span, .cf-retraite-barre span { animation: none !important; }
     .tr-ligne { animation: none !important; stroke-dashoffset: 0; }
     .fcx-hero, .fcx-kpi { animation: none !important; opacity: 1; }
     .dbx *, .dbx { animation: none !important; transition: none !important; }
@@ -938,10 +1044,10 @@
 
 <script src="js/01-prevoyance-immo.js?v=1790010000"></script>
 <script src="js/02-catalogue-session.js?v=1789487348"></script>
-<script src="js/03-auth-navigation.js?v=1790000000"></script>
+<script src="js/03-auth-navigation.js?v=1790030000"></script>
 <script src="js/04-dashboard-finma.js?v=1790000000"></script>
 <script src="js/05-contrats-clients.js?v=1789990000"></script>
-<script src="js/06-signature-opportunites.js?v=1790000000"></script>
+<script src="js/06-signature-opportunites.js?v=1790020000"></script>
 <script src="js/07-fichepaie-bordereaux.js?v=1790000000"></script>
 <script src="js/08-nouveaux-formulaires.js?v=1788452540"></script>
 <script src="js/09-rappels-vehicules.js?v=1790000000"></script>
@@ -955,8 +1061,9 @@
 <script src="js/17-fiche-activite.js?v=1789940000"></script>
 <script src="js/18-dashboard.js?v=1789980000"></script>
 <script src="js/19-prevision-commissions.js?v=1790000000"></script>
-<script src="js/20-fiche-client-entete.js?v=1790010000"></script>
+<script src="js/20-fiche-client-entete.js?v=1790020000"></script>
 <script src="js/21-tresorerie.js?v=1790010000"></script>
+<script src="js/22-conseil-financier.js?v=1790030000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

@@ -1673,6 +1673,21 @@ function estStatutResilieOuAnnule(statut) {
 // par ressemblance de branche si plusieurs contrats partagent la même police), et à défaut un client
 // probable par le nom — factorisé pour être réutilisé à l'analyse initiale ET après création manuelle
 // d'un contrat manquant depuis l'écran d'import (sans redemander le fichier).
+// Familles de couverture reconnues dans un libellé de branche ou de produit (19.09.2026)
+function marqueursBranche(texte) {
+  const t = (texte || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+  const m = new Set();
+  if (/\brc\b|responsabilite|haftpflicht/.test(t)) m.add('rc');
+  if (/casco|kasko/.test(t)) m.add('casco');
+  if (/collision|complete|vollkasko/.test(t)) m.add('complete');
+  if (/partielle|\bvol\b|teilkasko|bris de glace|incendie|forces? de la nature|parking/.test(t)) m.add('partielle');
+  if (/accident|occupant|\blaa\b|unfall/.test(t)) m.add('accident');
+  if (/juridique|rechtsschutz/.test(t)) m.add('pj');
+  if (/menage|inventaire|hausrat/.test(t)) m.add('menage');
+  if (/cyber/.test(t)) m.add('cyber');
+  return m;
+}
+
 function matcherContratEtClient(numeroContrat, brancheInterne, nomFichier) {
   const npReq = normPoliceNumero(numeroContrat);
   const candidats = allContrats.filter(c => c.numero_police && normPoliceNumero(c.numero_police) === npReq);
@@ -1681,10 +1696,17 @@ function matcherContratEtClient(numeroContrat, brancheInterne, nomFichier) {
   if (candidats.length === 1) contratTrouve = candidats[0];
   else if (candidats.length > 1) {
     const motsB = (brancheInterne || '').toLowerCase().split(/[^a-zàâäéèêëïîôöùûüç0-9]+/).filter(w => w.length >= 4);
+    const marqB = marqueursBranche(brancheInterne);
     let meilleur = candidats[0], meilleurScore = -1;
     candidats.forEach(c => {
       const p = (c.produit || '').toLowerCase();
       let score = motsB.reduce((s, m) => s + (p.includes(m) ? 1 : 0), 0);
+      // Familles de couverture (RC, casco partielle/complète, accidents…) : « Ass. RC Avenue » →
+      // « RC véhicule », « Casco segmentée vol » → « Casco partielle », « … collision » → « Casco complète »
+      const marqP = marqueursBranche(c.produit);
+      marqB.forEach(m => { if (marqP.has(m)) score += 2; });
+      if (marqB.has('rc') && marqP.has('casco')) score -= 2;
+      if (marqB.has('casco') && marqP.has('rc') && !marqP.has('casco')) score -= 2;
       if (!estStatutResilieOuAnnule(c.statut)) score += 0.5;
       if (score > meilleurScore) { meilleurScore = score; meilleur = c; }
     });
@@ -1829,7 +1851,9 @@ async function analyserDecompteExcel() {
   // que si aucune ligne de détail n'existe pour ce contrat, sinon la commission serait comptée 2×.
   const parContrat = {};
   lignesBrutes.forEach(r => {
-    const key = (r[iContrat] || '').toString().trim();
+    // Par contrat ET par facture : une facture « total + détails » ne doit pas faire écarter la ligne
+    // total d'une autre facture du même contrat qui, elle, n'a pas de détail (19.09.2026)
+    const key = `${(r[iContrat] || '').toString().trim()}|${iNoFacture !== -1 ? (r[iNoFacture] ?? '') : ''}`;
     (parContrat[key] = parContrat[key] || []).push(r);
   });
   const lignesUtiles = [];

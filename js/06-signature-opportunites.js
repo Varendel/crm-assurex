@@ -1617,8 +1617,10 @@ function viewImportDecompte() {
     ${sectionCard('Fichier', '#38bdf8', `
       <input type="file" id="imp-file-input" accept=".xlsx,.xls" style="display:none" onchange="analyserDecompteExcel()"/>
       <input type="file" id="imp-pdf-input" accept="application/pdf" style="display:none" onchange="analyserDecomptePdf(this)"/>
-      <button class="btn-secondary" onclick="document.getElementById('imp-file-input').click()">📎 Choisir le fichier Excel</button>
-      <button class="btn-secondary" style="margin-left:8px" onclick="document.getElementById('imp-pdf-input').click()">📄 Choisir un PDF (ex: AXA)</button>
+      <input type="file" id="imp-xml-input" accept=".xml,application/xml,text/xml" style="display:none" onchange="analyserDecompteXml(this)"/>
+      <button class="btn-secondary" onclick="window._decomptePeriodeXml=null;document.getElementById('imp-file-input').click()">📎 Choisir le fichier Excel</button>
+      <button class="btn-secondary" style="margin-left:8px" onclick="window._decomptePeriodeXml=null;document.getElementById('imp-pdf-input').click()">📄 Choisir un PDF (ex: AXA)</button>
+      <button class="btn-secondary" style="margin-left:8px" onclick="document.getElementById('imp-xml-input').click()">🧾 Fichier XML IG B2B (ex: Swiss Life)</button>
       <span id="imp-file-nom" style="margin-left:10px;font-size:12px;color:var(--text-muted)"></span>
       <div id="imp-pdf-status" style="margin-top:8px;font-size:12px"></div>
       <div style="margin-top:14px"><label class="form-label">Nature des commissions de ce lot</label>
@@ -2071,6 +2073,94 @@ function construireLigneImport(i, champs) {
   });
 }
 
+// ═══ IMPORT DÉCOMPTE XML — norme IG B2B « commission » (19.09.2026) ═══════════════════════════
+// Format standard des assureurs suisses (ex. Swiss Life « CommissionAI082026.xml ») :
+//   header/sender/insurer/companyName, header/recipient/broker/companyName, exchangeDateFrom/To,
+//   contract[@contractNo] → commStatement → commStatementTotalOnly | commStatementDetail…
+//   (premiumPeriodFromDate/ToDate, lobINS, premiumComm, commissionRate, commissionAmount, invoiceNo…),
+//   preneur : ICBusiness/companyName ou ICPerson (lastName / firstName).
+// Lecture tolérante aux espaces de noms et aux variantes de version : chaque élément qui porte
+// directement un <commissionAmount> devient une ligne du décompte.
+async function analyserDecompteXml(input) {
+  const file = input.files[0];
+  if (!file) return;
+  _decompteFichier = file;
+  try { const [tr, co] = await Promise.all([dbGet('commission_tranches', 'annule=eq.false&select=*'), dbGet('commissions_attente', 'select=*')]); if (Array.isArray(tr)) allCommissionTranches = tr; if (Array.isArray(co)) allCommissionsAttente = co; } catch (e) {}
+  document.getElementById('imp-file-nom').textContent = file.name;
+  const statusEl = document.getElementById('imp-pdf-status');
+  try {
+    const doc = new DOMParser().parseFromString(await file.text(), 'application/xml');
+    if (doc.getElementsByTagName('parsererror').length) throw new Error('fichier XML illisible');
+    const tous = (el, tag) => Array.from(el.getElementsByTagNameNS('*', tag));
+    const premier = (el, tag) => tous(el, tag)[0] || null;
+    const txt = (el, tag) => { const e = el && premier(el, tag); return e ? e.textContent.trim() : ''; };
+    const enfant = (el, tag) => Array.from(el.children).find(c => c.localName === tag) || null;
+    const txtEnfant = (el, tag) => { const e = enfant(el, tag); return e ? e.textContent.trim() : ''; };
+    const dateCH = iso => /^\d{4}-\d{2}-\d{2}/.test(iso) ? iso.slice(0, 10).split('-').reverse().join('.') : iso;
+
+    const insurer = premier(doc, 'insurer');
+    const nomAssureur = txt(insurer, 'companyName') || '';
+    const broker = premier(doc, 'broker');
+    const destinataire = txt(broker, 'companyName');
+    const du = txt(doc, 'exchangeDateFrom');
+    window._decomptePeriodeXml = du ? du.slice(0, 7) : null;
+    const totalAnnonce = nombreCH(txt(doc, 'commissionTotal'));
+
+    const lignes = [];
+    tous(doc, 'contract').forEach(ct => {
+      const no = (ct.getAttribute('contractNo') || txtEnfant(ct, 'contractNo') || '').trim();
+      const ic = premier(ct, 'ICBusiness') || premier(ct, 'ICPerson') || premier(ct, 'policyHolder');
+      let nom = ic ? (txt(ic, 'companyName') || [txt(ic, 'lastName') || txt(ic, 'name'), txt(ic, 'firstName')].filter(Boolean).join(' ')) : '';
+      // « AGV Toni SA, Cugy VD » → nom et localité
+      let localite = '';
+      const m = nom.match(/^(.*?),\s*([^,]+)$/); if (m) { nom = m[1].trim(); localite = m[2].trim(); }
+      const porteurs = tous(ct, 'commissionAmount').map(a => a.parentElement).filter((p, i, arr) => p && arr.indexOf(p) === i);
+      porteurs.forEach(p => {
+        const montant = nombreCH(txtEnfant(p, 'commissionAmount'));
+        if (!montant) return;
+        const base = nombreCH(txtEnfant(p, 'premiumComm') || txtEnfant(p, 'commissionBase') || txt(p, 'premiumComm'));
+        const tauxXml = nombreCH(txtEnfant(p, 'commissionRate') || txtEnfant(p, 'commRate'));
+        const periodeDu = txtEnfant(p, 'premiumPeriodFromDate') || txt(p, 'premiumPeriodFromDate');
+        const periodeAu = txtEnfant(p, 'premiumPeriodToDate') || txt(p, 'premiumPeriodToDate');
+        lignes.push({
+          numeroContrat: no,
+          noFacture: txtEnfant(p, 'invoiceNo') || txtEnfant(p, 'invoiceNumber') || null,
+          dateFacture: dateCH(periodeDu || du),
+          nomFichier: nom,
+          npa: '', localite,
+          brancheInterne: `${txtEnfant(p, 'lobINS') || txt(p, 'lobINS') || 'Commission'}${periodeDu ? ` (${dateCH(periodeDu)} – ${dateCH(periodeAu)})` : ''}`,
+          commissionProduction: base || 0,
+          taux: tauxXml || (base ? Math.round(montant / base * 10000) / 100 : 0),
+          montant,
+        });
+      });
+    });
+    if (!lignes.length) throw new Error('aucune ligne de commission trouvée');
+
+    // Décompte adressé à OZ Assure → « Encaissé par OZ » coché d'office
+    if (/oz\s*assure/i.test(destinataire)) { const r = document.querySelector('input[name="imp-encaisse-par"][value="oz"]'); if (r) r.checked = true; }
+
+    _decompteNomAssureur = nomAssureur;
+    _decompteLignes = lignes.map((l, i) => construireLigneImport(i, l));
+    // Déjà saisi (ex. XML repris à la main dans le compte courant OZ) : même contrat, même montant,
+    // versement noté pour la même période (jj.mm.aa) → doublon, décoché
+    _decompteLignes.forEach((l, i) => {
+      if (l.doublon || !l.contratId) return;
+      const src = lignes[i];
+      const per = String(src.dateFacture || '').replace(/^(\d{2})\.(\d{2})\.\d{2}(\d{2})$/, '$1.$2.$3');
+      const ids = allCommissionsAttente.filter(c => c.contrat_id === l.contratId).map(c => c.id);
+      const t = (allCommissionTranches || []).find(t => ids.includes(t.commission_id) && Math.abs(Number(t.montant) - l.montant) < 0.01 && (String(t.note || '').includes(per) || String(t.note || '').includes(src.dateFacture)));
+      if (t) { l.doublon = { certain: true, court: `déjà enregistré le ${fmtDate(t.date_reception)}`, detail: t.note || '' }; l.selectionne = false; }
+    });
+    _decompteCommissionTotaleAnnoncee = totalAnnonce != null && !isNaN(totalAnnonce) ? totalAnnonce : null;
+    if (statusEl) { statusEl.textContent = `✓ XML IG B2B lu : ${lignes.length} ligne(s) — ${nomAssureur || 'assureur ?'}${destinataire ? ` → ${destinataire}` : ''}${du ? `, période ${dateCH(du)}` : ''}.`; statusEl.style.color = '#4ade80'; }
+    renderImportDecompte(nomAssureur, _decompteCommissionTotaleAnnoncee);
+  } catch (e) {
+    if (statusEl) { statusEl.textContent = '✗ XML : ' + e.message; statusEl.style.color = '#f87171'; }
+  }
+  input.value = '';
+}
+
 // ═══ IMPORT DÉCOMPTE PDF (compagnies qui n'envoient pas d'Excel, ex: AXA) — lecture par IA ═══
 async function analyserDecomptePdf(input) {
   const file = input.files[0];
@@ -2285,6 +2375,8 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
 // Avant le 19.09.2026, le mois proposé était celui de l'IMPORT : des décomptes de mai ou juin
 // importés en septembre s'appelaient tous « Septembre 2026 ».
 function periodeDecompteImport() {
+  // Fichier XML IG B2B : la période est écrite dans le fichier (exchangeDateFrom)
+  if (window._decomptePeriodeXml) { const [y, m] = window._decomptePeriodeXml.split('-').map(Number); if (y && m) return { mois: m - 1, annee: y }; }
   const nom = String((_decompteFichier && _decompteFichier.name) || '').toLowerCase();
   const now = new Date();
   let m = nom.match(/(20\d{2})[-_.](\d{2})[-_.](\d{2})/);

@@ -48,6 +48,16 @@ function trDelaiMoyenAcquisition() {
   return d.length >= 3 ? Math.round(d.reduce((s, j) => s + j, 0) / d.length) : 60;
 }
 
+// Incertitude des commissions : écart médian |réel − estimé| / estimé sur les commissions déjà
+// encaissées (Assurex ou OZ) ; à défaut de 5 comparaisons, 20 % par prudence.
+function trIncertitude() {
+  const e = allCommissionsAttente.filter(ca => ['reçue', 'versé_oz'].includes(ca.statut) && ca.montant_final != null && Number(ca.montant_estime) > 0 && Number(ca.montant_final) > 0)
+    .map(ca => Math.abs(Number(ca.montant_final) - Number(ca.montant_estime)) / Number(ca.montant_estime)).sort((a, b) => a - b);
+  if (e.length < 5) return { taux: 0.2, n: e.length };
+  const med = e.length % 2 ? e[(e.length - 1) / 2] : (e[e.length / 2 - 1] + e[e.length / 2]) / 2;
+  return { taux: Math.min(0.5, Math.max(0.05, med)), n: e.length };
+}
+
 function trCalculer() {
   const auj = new Date();
   const aujIso = trIso(auj);
@@ -126,14 +136,22 @@ function trCalculer() {
   const soldes = _tr.lignes.filter(l => l.type === 'solde').sort((a, b) => (b.date_debut || '').localeCompare(a.date_debut || '') || (b.created_at || '').localeCompare(a.created_at || ''));
   res.solde = soldes[0] || null;
 
-  // Totaux mensuels et solde cumulé
+  // Totaux mensuels et solde cumulé — avec une FOURCHETTE (19.09.2026) : les commissions attendues
+  // sont des estimations ; l'écart médian réel / estimé mesuré dans le CRM (trIncertitude) donne
+  // un solde bas (commissions − x %) et un solde haut (+ x %). Les charges saisies restent fixes.
+  const inc = trIncertitude();
+  res.incertitude = inc;
   let courant = res.solde ? Number(res.solde.montant || 0) : 0;
+  let bas = courant, haut = courant;
   res.parMois = mois.map(m => {
-    const entrees = res.gestion[m] + res.recurrente[m] + res.acquisition[m] + res.pipeline[m] + res.entrees.reduce((s, x) => s + x.serie[m], 0);
+    const commissions = res.gestion[m] + res.recurrente[m] + res.acquisition[m] + res.pipeline[m];
+    const entrees = commissions + res.entrees.reduce((s, x) => s + x.serie[m], 0);
     const sorties = res.sorties.reduce((s, x) => s + x.serie[m], 0);
     const debut = courant;
     courant += entrees - sorties;
-    return { m, debut, entrees, sorties, net: entrees - sorties, fin: courant };
+    bas += entrees - commissions * inc.taux - sorties;
+    haut += entrees + commissions * inc.taux - sorties;
+    return { m, debut, entrees, sorties, net: entrees - sorties, fin: courant, finBas: bas, finHaut: haut };
   });
   res.totalEntrees = res.parMois.reduce((s, x) => s + x.entrees, 0);
   res.totalSorties = res.parMois.reduce((s, x) => s + x.sorties, 0);
@@ -164,7 +182,7 @@ function renderTresorerie() {
       ${kpi('Solde bancaire de départ', R.solde ? 'CHF ' + trCHF(R.solde.montant) : '—', `${soldeTxt} · <button type="button" class="dbx-lien" onclick="trOuvrirSolde()">${R.solde ? 'mettre à jour' : 'saisir'}</button>`, R.solde ? '' : 'alerte', 1)}
       ${kpi(`Encaissements attendus · ${_tr.horizon} mois`, 'CHF ' + trCHF(R.totalEntrees), R.retard.nb ? `<span class="fcx-rouge">dont CHF ${trCHF(R.retard.total)} en retard (${R.retard.nb})</span>` : `réalisé récent ≈ CHF ${trCHF(R.moyenneRecue3)}/mois`, '', 2)}
       ${kpi(`Charges · ${_tr.horizon} mois`, 'CHF ' + trCHF(R.totalSorties), R.sorties.length ? `${R.sorties.length} poste(s) de charges` : '<button type="button" class="dbx-lien" onclick="trOuvrirLigne(\'sortie\')">ajouter vos charges</button>', '', 3)}
-      ${kpi(`Solde fin ${trLibelleMois(fin.m)}`, 'CHF ' + trCHF(fin.fin), R.plusBas && R.plusBas.fin < 0 ? `<span class="fcx-rouge">⚠ négatif en ${trLibelleMois(R.plusBas.m)} (CHF ${trCHF(R.plusBas.fin)})</span>` : `point bas : CHF ${trCHF(R.plusBas ? R.plusBas.fin : 0)} (${R.plusBas ? trLibelleMois(R.plusBas.m) : '—'})`, fin.fin < 0 || (R.plusBas && R.plusBas.fin < 0) ? 'alerte' : 'ok', 4)}
+      ${kpi(`Solde fin ${trLibelleMois(fin.m)}`, 'CHF ' + trCHF(fin.fin), `${R.plusBas && R.plusBas.fin < 0 ? `<span class="fcx-rouge">⚠ négatif en ${trLibelleMois(R.plusBas.m)} (CHF ${trCHF(R.plusBas.fin)})</span>` : `point bas : CHF ${trCHF(R.plusBas ? R.plusBas.fin : 0)} (${R.plusBas ? trLibelleMois(R.plusBas.m) : '—'})`}<br>fourchette CHF ${trCHF(fin.finBas)} – ${trCHF(fin.finHaut)} (±${Math.round(R.incertitude.taux * 100)} %)`, fin.fin < 0 || (R.plusBas && R.plusBas.fin < 0) ? 'alerte' : 'ok', 4)}
     </div>
 
     <div class="tr-barre-outils">
@@ -200,7 +218,7 @@ function renderTresorerie() {
 function trGraphique(R) {
   const w = 900, h = 240, padG = 56, padB = 26, padH = 14;
   const n = R.parMois.length;
-  const valeurs = R.parMois.flatMap(x => [x.entrees, x.sorties, x.fin, 0]);
+  const valeurs = R.parMois.flatMap(x => [x.entrees, x.sorties, x.fin, x.finBas ?? x.fin, x.finHaut ?? x.fin, 0]);
   const max = Math.max(...valeurs, 1), min = Math.min(...valeurs, 0);
   const y = v => padH + (max - v) / (max - min || 1) * (h - padH - padB);
   const larg = (w - padG - 10) / n;
@@ -217,6 +235,9 @@ function trGraphique(R) {
     ${graduations}
     <line x1="${padG}" x2="${w - 6}" y1="${y(0)}" y2="${y(0)}" class="tr-zero"/>
     ${barres}
+    ${R.parMois[0] && R.parMois[0].finHaut != null ? `<polygon points="${R.parMois.map((x, i) => `${x0(i) + larg / 2},${y(x.finHaut)}`).join(' ')} ${R.parMois.slice().reverse().map((x, j) => `${x0(R.parMois.length - 1 - j) + larg / 2},${y(x.finBas)}`).join(' ')}" fill="#00CFFF" opacity=".12"/>
+    <polyline points="${R.parMois.map((x, i) => `${x0(i) + larg / 2},${y(x.finHaut)}`).join(' ')}" fill="none" stroke="#00CFFF" stroke-width="1.2" stroke-dasharray="4 4" opacity=".7"/>
+    <polyline points="${R.parMois.map((x, i) => `${x0(i) + larg / 2},${y(x.finBas)}`).join(' ')}" fill="none" stroke="#00CFFF" stroke-width="1.2" stroke-dasharray="4 4" opacity=".7"/>` : ''}
     <polyline points="${pts.join(' ')}" fill="none" stroke="#00CFFF" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" class="tr-ligne"/>
     ${R.parMois.map((x, i) => `<circle cx="${x0(i) + larg / 2}" cy="${y(x.fin)}" r="4.5" fill="${x.fin < 0 ? '#EF4444' : '#00CFFF'}" stroke="var(--surface)" stroke-width="2"><title>${trLibelleMois(x.m)} — solde CHF ${trCHF(x.fin)}</title></circle>`).join('')}
   </svg>
@@ -225,6 +246,7 @@ function trGraphique(R) {
     <span style="display:inline-flex;align-items:center;gap:7px"><i style="width:12px;height:12px;border-radius:3px;background:#EF4444;opacity:.7"></i><b style="color:var(--text)">Sorties du mois</b> — charges saisies (salaires, loyer, abonnements…)</span>
     <span style="display:inline-flex;align-items:center;gap:7px"><i style="width:18px;height:3px;border-radius:2px;background:#00CFFF"></i><b style="color:var(--text)">Solde en fin de mois</b> — trésorerie disponible après entrées et sorties</span>
     <span style="display:inline-flex;align-items:center;gap:7px"><i style="width:10px;height:10px;border-radius:50%;background:#EF4444"></i><b style="color:var(--text)">Point rouge</b> — solde négatif ce mois-là</span>
+    ${R.incertitude ? `<span style="display:inline-flex;align-items:center;gap:7px"><i style="width:18px;height:10px;border-radius:3px;background:rgba(0,207,255,.18);border-top:1.5px dashed #00CFFF;border-bottom:1.5px dashed #00CFFF"></i><b style="color:var(--text)">Zone bleutée</b> — fourchette : commissions ±${Math.round(R.incertitude.taux * 100)} % (écart médian réel / estimé${R.incertitude.n ? ` mesuré sur ${R.incertitude.n} commissions` : ''})</span>` : ''}
     <span style="display:inline-flex;align-items:center;gap:7px"><i style="width:18px;height:0;border-top:1.5px solid var(--text-dim, var(--text-muted))"></i>Ligne du zéro · échelle en CHF (k = milliers)</span>
   </div></div>`;
 }
@@ -246,6 +268,8 @@ function trTableau(R) {
       ${R.sorties.length ? R.sorties.map(x => ligne(trEsc(x.ligne.libelle), m.map(k => -x.serie[k]), 'sortie', ` <small>${trEsc(x.ligne.categorie || '')}</small>`)).join('') : `<tr><td colspan="${m.length + 2}" class="tr-invite">Aucune charge saisie — <button type="button" class="dbx-lien" onclick="trOuvrirLigne('sortie')">ajouter les salaires, le loyer, les abonnements…</button></td></tr>`}
       ${ligne('Variation du mois', R.parMois.map(x => x.net), 'net')}
       ${ligne('Solde en fin de mois', R.parMois.map(x => x.fin), 'solde fin')}
+      ${ligne(`Fourchette basse <small>commissions −${Math.round(R.incertitude.taux * 100)} %</small>`, R.parMois.map(x => x.finBas), 'solde')}
+      ${ligne(`Fourchette haute <small>commissions +${Math.round(R.incertitude.taux * 100)} %</small>`, R.parMois.map(x => x.finHaut), 'solde')}
     </tbody></table></div>`;
 }
 
@@ -283,6 +307,8 @@ function trLignesExport(R) {
   push('Total charges', '', R.parMois.map(x => -x.sorties));
   push('Variation du mois', '', R.parMois.map(x => x.net));
   push('Solde en fin de mois', '', R.parMois.map(x => x.fin), false);
+  push('Solde — fourchette basse', `commissions −${Math.round(R.incertitude.taux * 100)} %`, R.parMois.map(x => x.finBas), false);
+  push('Solde — fourchette haute', `commissions +${Math.round(R.incertitude.taux * 100)} %`, R.parMois.map(x => x.finHaut), false);
   return L;
 }
 
@@ -290,7 +316,7 @@ function trExporterExcel() {
   const R = trCalculer();
   const entete = ['Poste', 'Détail', ...R.mois.map(trLibelleMois), 'Total'];
   const titre = [
-    ['Plan de trésorerie — Assurex Sàrl'],
+    ['Plan de trésorerie PRÉVISIONNEL — Assurex Sàrl'],
     [`Établi le ${new Date().toLocaleDateString('fr-CH')} · horizon ${_tr.horizon} mois${_tr.pipeline ? ' · pipeline pondéré inclus' : ''}`],
     [R.solde ? `Solde bancaire de départ : CHF ${fmtCHF2(R.solde.montant)} au ${fmtDate(R.solde.date_debut)}` : 'Solde bancaire de départ : non renseigné (0)'],
     [],
@@ -332,7 +358,8 @@ function trImprimer() {
     tr.fort td{font-weight:bold;background:#F4F6F9} thead th{color:#56627A;font-size:9.5px;text-transform:uppercase}
     .mention{font-size:9px;color:#8A94A8;margin-top:14px} @page{size:A4 landscape;margin:10mm}
   </style></head><body>
-    <header><div><h1>Plan de trésorerie</h1><div class="sous">Établi le ${new Date().toLocaleDateString('fr-CH', { day: 'numeric', month: 'long', year: 'numeric' })} · horizon ${_tr.horizon} mois${_tr.pipeline ? ' · pipeline pondéré inclus' : ''}</div></div>${typeof ASSUREX_LOGO_B64 !== 'undefined' ? `<img src="${ASSUREX_LOGO_B64}" alt="Assurex"/>` : ''}</header>
+    <div style="position:fixed;top:42%;left:0;right:0;text-align:center;font-size:92px;font-weight:900;letter-spacing:.2em;color:#113679;opacity:.05;transform:rotate(-18deg);pointer-events:none">PRÉVISIONNEL</div>
+    <header><div><h1>Plan de trésorerie <span style="font-size:10px;font-weight:800;letter-spacing:.12em;color:#fff;background:#F59E0B;border-radius:4px;padding:3px 7px;vertical-align:middle">PRÉVISIONNEL</span></h1><div class="sous">Établi le ${new Date().toLocaleDateString('fr-CH', { day: 'numeric', month: 'long', year: 'numeric' })} · horizon ${_tr.horizon} mois${_tr.pipeline ? ' · pipeline pondéré inclus' : ''}</div></div>${typeof ASSUREX_LOGO_B64 !== 'undefined' ? `<img src="${ASSUREX_LOGO_B64}" alt="Assurex"/>` : ''}</header>
     <div class="kpis">
       <div class="kpi"><span>Solde de départ</span><b>${R.solde ? 'CHF ' + trCHF(R.solde.montant) : '—'}</b></div>
       <div class="kpi"><span>Encaissements attendus</span><b>CHF ${trCHF(R.totalEntrees)}</b></div>
@@ -344,7 +371,7 @@ function trImprimer() {
       ${lignes.map(l => l.length === 1 ? `<tr class="section"><td colspan="${R.mois.length + 3}">${trEsc(l[0])}</td></tr>`
         : `<tr class="${/^(Solde|Total|Variation)/.test(l[0]) ? 'fort' : ''}"><td>${trEsc(l[0])}</td><td style="text-align:left;color:#8A94A8">${trEsc(l[1])}</td>${l.slice(2).map(cell).join('')}</tr>`).join('')}
     </tbody></table>
-    <div class="mention">Commissions attendues calculées depuis le CRM (gestion : date prévue selon la règle de versement ; acquisition : délai moyen observé de ${R.delaiAcq} jours). Projection indicative.</div>
+    <div class="mention">Commissions attendues calculées depuis le CRM (gestion : date prévue selon la règle de versement ; acquisition : délai moyen observé de ${R.delaiAcq} jours). <strong>Document prévisionnel</strong> : les commissions sont des estimations ; fourchette basse / haute = commissions ±${Math.round(R.incertitude.taux * 100)} %, écart médian mesuré entre estimations et montants réellement reçus${R.incertitude.n ? ` (${R.incertitude.n} commissions)` : ''}. Charges saisies non modulées.</div>
     <script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script></body></html>`;
   const w = window.open(URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' })), '_blank');
   if (!w) showError('Autorise les fenêtres pop-up pour afficher le PDF.');

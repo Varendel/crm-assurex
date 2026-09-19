@@ -1,5 +1,5 @@
 // ═══ ANALYSE DE PRÉVOYANCE (19.09.2026) ═══════════════════════════════════════════════════════
-// Remplace l'ancien « Bilan de prévoyance » (js/01 + js/02, conservé en « calculateur classique »).
+// Remplace l'ancien « Bilan de prévoyance » (retiré le 19.09.2026).
 // Inspiré des outils du marché (Logismata, Argo…) mais en version moderne : saisie à gauche,
 // résultats à droite recalculés EN DIRECT, vue d'ensemble puis détail de chaque situation :
 //   Retraite (ménage) · Invalidité maladie / accident · Décès maladie / accident
@@ -28,7 +28,8 @@ const AP_RISQUES = [
   ['deces_accident', '⚠️', 'Décès accident'],
 ];
 const AP_SCENARIOS = [['retraite', '🌅', 'Retraite'], ...AP_RISQUES];
-const AP_COULEURS = { avs: '#113679', lpp: '#0EA5E9', laa: '#F59E0B', p3: '#22C55E' };
+const AP_COULEURS = { avs: '#113679', lpp: '#0EA5E9', lpps: '#8B5CF6', laa: '#F59E0B', p3: '#22C55E' };
+const AP_LIBELLES = { avs: 'AVS / AI', lpp: 'LPP', lpps: 'LPP rentes subsidiaires', laa: 'LAA', p3: '3e pilier' };
 const AP_LPP_VIDE = () => ({ avoir: '', capital_65: '', rente_vieillesse: '', rente_invalidite: '', rente_conjoint: '', rente_enfant: '', capital_deces: '', taux_conversion: 6.8, concubin_couvert: false });
 const AP_P3_VIDE = () => ({ avoir3a: '', versement3a: '', rente_inv_privee: '', capital_deces_risque: '' });
 const AP_DEFAUT = () => ({
@@ -74,7 +75,7 @@ function apLpp(p, d) {
   let avoirSansInteret = apNum(p.lpp.avoir);
   if (age != null && assure) for (let a = age; a < p.ageRet; a++) avoirSansInteret += coord * tauxBonificationLPP(a);
   const inv = apNum(p.lpp.rente_invalidite) || (assure ? avoirSansInteret * LPP_LEGAL.taux_conversion_legal : 0);
-  return { capital65, vieillesse, inv, enfant: apNum(p.lpp.rente_enfant) || 0.2 * inv, conjoint: apNum(p.lpp.rente_conjoint) || 0.6 * inv, capitalDeces: apNum(p.lpp.capital_deces), certificat, assure };
+  return { capital65, vieillesse, inv, enfant: apNum(p.lpp.rente_enfant) || 0.2 * inv, conjoint: apNum(p.lpp.rente_conjoint) || 0.6 * inv, enfantTheo: !apNum(p.lpp.rente_enfant), conjointTheo: !apNum(p.lpp.rente_conjoint), capitalDeces: apNum(p.lpp.capital_deces), certificat, assure };
 }
 
 // ── Calcul ──────────────────────────────────────────────────────────────────────────────────
@@ -123,58 +124,127 @@ function apCalculer(d) {
   scenRetraite.note = `${couple ? 'Revenu et besoin du ménage. ' : ''}Capital 3a converti en revenu et lacune capitalisée sur ${dureeRetraite} ans (jusqu’à ${apNum(d.besoins.horizon) || 90} ans).${marie && avs1 + avs2 >= AVS_LEGAL.rente_max * 1.5 - 1 ? ' Rentes AVS du couple plafonnées à 150 %.' : ''}`;
 
   // ── Risques pour une personne (p touchée, q survivant/conjoint) ──
+  // LPP : rente principale (invalidité / conjoint survivant) et rentes SUBSIDIAIRES (enfant d'invalide,
+  // orphelin), affichées dans une couleur distincte. Si le certificat ne les indique pas, elles sont
+  // calculées théoriquement (20 % de la rente d'invalidité par enfant, 60 % pour le conjoint) — et
+  // seulement si les conditions légales sont remplies. La surindemnisation (90 %) réduit l'ensemble
+  // LPP au prorata.
+  const repartirLpp = (principal, subsidiaire, plafond) => {
+    const brut = principal + subsidiaire;
+    const f = brut > 0 ? Math.min(1, Math.max(0, plafond) / brut) : 0;
+    return { lpp: principal * f, lpps: subsidiaire * f, reduit: f < 0.999 && brut > 0 };
+  };
   const risques = (p, R, L, q, Rq) => {
     const S = p.salaire;
     const besoinInv = S * (apNum(d.besoins.invalidite) || 80) / 100;
     const res = {};
+    const nomP = apNomPers(d, p === p1 ? 1 : 2);
+    const theoE = L.enfantTheo ? ' — théorique 20 %' : '';
     // Invalidité
     const aiTotal = R + enfantsACharge * 0.4 * R;
-    const lppInvTotal = L.inv + enfantsACharge * L.enfant;
     const privee = apNum(p.p3.rente_inv_privee);
-    const lppMal = Math.min(lppInvTotal, Math.max(0, 0.9 * S - aiTotal));
+    const subInv = enfantsACharge * L.enfant; // rentes d'enfant d'invalide : enfants de moins de 25 ans
+    const invMal = repartirLpp(L.inv, subInv, 0.9 * S - aiTotal);
     res.inv_maladie = apScenario([
       { src: 'avs', label: `Rente AI${enfantsACharge ? ` + ${enfantsACharge} rente(s) d’enfant` : ''}`, montant: aiTotal },
-      { src: 'lpp', label: `LPP invalidité${enfantsACharge ? ' + enfants' : ''}${lppMal < lppInvTotal - 1 ? ' (limitée à 90 %)' : ''}`, montant: lppMal },
+      { src: 'lpp', label: `Rente d’invalidité LPP${invMal.reduit ? ' (réduite : plafond 90 %)' : ''}`, montant: invMal.lpp },
+      { src: 'lpps', label: `Rentes d’enfant d’invalide LPP (${enfantsACharge})${theoE}`, montant: invMal.lpps },
       { src: 'p3', label: 'Rente d’invalidité privée', montant: privee },
     ], besoinInv, S);
     res.inv_maladie.note = 'Invalidité totale suite à une maladie. Montants dès la 3e année : avant, indemnités journalières (employeur, perte de gain), puis rente AI après le délai d’attente.';
     const Sa = p.statut === 'salarie' ? Math.min(apNum(p.laa.salaire_assure) || S, AP_LAA_SALAIRE_MAX) : 0;
     const laaInv = Sa ? Math.min(0.8 * Sa, Math.max(0, 0.9 * Sa - aiTotal)) : 0;
-    const lppAcc = Math.min(lppInvTotal, Math.max(0, 0.9 * S - aiTotal - laaInv));
+    const invAcc = repartirLpp(L.inv, subInv, 0.9 * S - aiTotal - laaInv);
     res.inv_accident = apScenario([
       { src: 'avs', label: `Rente AI${enfantsACharge ? ' + enfants' : ''}`, montant: aiTotal },
       { src: 'laa', label: 'Rente complémentaire LAA', montant: laaInv },
-      { src: 'lpp', label: 'LPP (après surindemnisation)', montant: lppAcc },
+      { src: 'lpp', label: 'Rente d’invalidité LPP (après surindemnisation)', montant: invAcc.lpp },
+      { src: 'lpps', label: `Rentes d’enfant d’invalide LPP (${enfantsACharge})${theoE}`, montant: invAcc.lpps },
       { src: 'p3', label: 'Rente d’invalidité privée', montant: privee },
     ], besoinInv, S);
     res.inv_accident.note = Sa ? 'LAA : 80 % du salaire assuré, coordonnée avec l’AI (total ≤ 90 %) ; la LPP ne complète que jusqu’à 90 % du revenu perdu.' : 'Pas de LAA (indépendant ou non assuré) : l’accident est traité comme la maladie.';
+
     // Décès — droits du survivant q
     const survivantFemme = q.sexe === 'F';
     const ageQ = apAge(q.naissance);
     let veuvage = false;
     if (marie) veuvage = enfantsMineurs > 0 || (survivantFemme && (enfantsACharge > 0 || (ageQ != null && ageQ >= 45 && d.mariage_5ans)));
     const avsSurv = (veuvage ? 0.8 * R : 0) + enfantsACharge * 0.4 * R;
-    const lppConj = marie || (d.etat_civil === 'concubin' && p.lpp.concubin_couvert) ? L.conjoint : 0;
-    const lppSurv = lppConj + enfantsACharge * L.enfant;
+    // LPP conjoint survivant (art. 19 LPP) : marié·e ET (enfant à charge OU 45 ans et 5 ans de mariage),
+    // sinon allocation unique de 3 rentes annuelles. Concubin·e : seulement si le règlement le prévoit.
+    const condConjointLpp = (marie && (enfantsACharge > 0 || (ageQ != null && ageQ >= 45 && d.mariage_5ans)))
+      || (d.etat_civil === 'concubin' && p.lpp.concubin_couvert);
+    const lppConj = condConjointLpp ? L.conjoint : 0;
+    const allocationUnique = marie && !condConjointLpp ? 3 * L.conjoint : 0;
+    const subDeces = enfantsACharge * L.enfant; // rentes d'orphelin
     const besoinDeces = (couple || enfantsACharge) ? S * (apNum(d.besoins.deces) || 80) / 100 : 0;
-    const capitaux = [['Capital décès LPP', L.capitalDeces], ['Avoir 3e pilier A', apNum(p.p3.avoir3a)], ['Capital décès risque (3e pilier)', apNum(p.p3.capital_deces_risque)]];
+    const capitaux = [['Capital décès LPP', L.capitalDeces], ['Allocation unique LPP au conjoint (3 rentes)', allocationUnique], ['Avoir 3e pilier A', apNum(p.p3.avoir3a)], ['Capital décès risque (3e pilier)', apNum(p.p3.capital_deces_risque)]];
     const totalCapitaux = capitaux.reduce((s, x) => s + x[1], 0);
     const duree = plusJeune != null ? Math.max(25 - plusJeune, 10) : (couple ? 15 : 0);
-    const finirDeces = s => { s.capitaux = capitaux; s.dureeBesoin = duree; s.capitalNecessaire = s.lacune * duree; s.capitalAAssurer = Math.max(0, s.capitalNecessaire - totalCapitaux); s.note = besoinDeces ? `Seules les rentes figurent dans le graphique ; les capitaux décès sont déduits du capital nécessaire (besoin sur ${duree} ans${plusJeune != null ? ', jusqu’aux 25 ans du plus jeune' : ''}).${couple && !veuvage && marie ? ' Pas de rente AVS de conjoint survivant dans cette situation.' : ''}` : 'Ni conjoint ni enfant à charge : pas de besoin de revenu pour des survivants.'; return s; };
-    const lppDecMal = Math.min(lppSurv, Math.max(0, 0.9 * S - avsSurv));
+    const finirDeces = s => { s.capitaux = capitaux; s.dureeBesoin = duree; s.capitalNecessaire = s.lacune * duree; s.capitalAAssurer = Math.max(0, s.capitalNecessaire - totalCapitaux); s.note = besoinDeces ? `Seules les rentes figurent dans les graphiques ; les capitaux décès sont déduits du capital nécessaire (besoin sur ${duree} ans${plusJeune != null ? ', jusqu’aux 25 ans du plus jeune' : ''}).${couple && !veuvage && marie ? ' Pas de rente AVS de conjoint survivant dans cette situation.' : ''}${allocationUnique ? ' Conditions de la rente LPP de conjoint non remplies : allocation unique de 3 rentes annuelles.' : ''}` : 'Ni conjoint ni enfant à charge : pas de besoin de revenu pour des survivants.'; return s; };
+    const theoC = L.conjointTheo ? ' — théorique 60 %' : '';
+    const decMal = repartirLpp(lppConj, subDeces, 0.9 * S - avsSurv);
     res.deces_maladie = finirDeces(apScenario([
       { src: 'avs', label: `AVS ${veuvage ? 'veuf/veuve' : ''}${veuvage && enfantsACharge ? ' + ' : ''}${enfantsACharge ? `${enfantsACharge} orphelin(s)` : ''}`.trim() || 'AVS survivants', montant: avsSurv },
-      { src: 'lpp', label: 'Rentes de survivants LPP', montant: lppDecMal },
+      { src: 'lpp', label: `Rente de conjoint survivant LPP${theoC}${decMal.reduit ? ' (plafond 90 %)' : ''}`, montant: decMal.lpp },
+      { src: 'lpps', label: `Rentes d’orphelin LPP (${enfantsACharge})${theoE}`, montant: decMal.lpps },
     ], besoinDeces, S));
     const laaSurv = Sa ? Math.min((marie ? 0.4 * Sa : 0) + enfantsACharge * 0.15 * Sa, 0.7 * Sa) : 0;
     const laaSurvC = Math.min(laaSurv, Math.max(0, 0.9 * Sa - avsSurv));
+    const decAcc = repartirLpp(lppConj, subDeces, 0.9 * S - avsSurv - laaSurvC);
     res.deces_accident = finirDeces(apScenario([
       { src: 'avs', label: 'AVS survivants', montant: avsSurv },
       { src: 'laa', label: 'Rentes de survivants LAA', montant: laaSurvC },
-      { src: 'lpp', label: 'LPP (après surindemnisation)', montant: Math.min(lppSurv, Math.max(0, 0.9 * S - avsSurv - laaSurvC)) },
+      { src: 'lpp', label: `Rente de conjoint survivant LPP (après surindemnisation)${theoC}`, montant: decAcc.lpp },
+      { src: 'lpps', label: `Rentes d’orphelin LPP (${enfantsACharge})${theoE}`, montant: decAcc.lpps },
     ], besoinDeces, S));
     res.inv_maladie.renteAAssurer = res.inv_maladie.lacune;
     res.inv_accident.renteAAssurer = res.inv_accident.lacune;
+
+    // ── Évolution dans le temps (événement survenant aujourd'hui) ──
+    const horizon = apNum(d.besoins.horizon) || 90;
+    const ageP = apAge(p.naissance);
+    const nEnf = y => enfants.filter(a => a + y < 25).length;
+    const nMin = y => enfants.filter(a => a + y < 18).length;
+    const serieInv = accident => {
+      const pts = [];
+      if (ageP == null) return pts;
+      for (let y = 0; ageP + y <= horizon && y <= 55; y++) {
+        const ag = ageP + y, n = nEnf(y), retraite = ag >= p.ageRet;
+        // Retraite : rente de vieillesse AVS (13e rente) ; les rentes pour enfant continuent jusqu'à 25 ans
+        const avs = (retraite ? R * AP_TREIZIEME_AVS : R) + n * 0.4 * R;
+        const laa = accident && Sa ? Math.min(0.8 * Sa, Math.max(0, 0.9 * Sa - avs)) : 0;
+        const l = repartirLpp(L.inv, n * L.enfant, 0.9 * S - avs - laa);
+        const evt = ag === p.ageRet ? 'Retraite' : (y > 0 && n < nEnf(y - 1) ? 'Fin rente d’enfant' : '');
+        pts.push({ an: anneeCourante + y, age: ag, v: { avs, lpp: l.lpp, lpps: l.lpps, laa, p3: retraite ? 0 : privee }, besoin: retraite ? S * (apNum(d.besoins.retraite) || 80) / 100 : besoinInv, evt });
+      }
+      return pts;
+    };
+    const serieDeces = accident => {
+      const pts = [];
+      if (!besoinDeces) return pts;
+      const ageQ0 = apAge(q.naissance);
+      const fin = Math.min(45, Math.max(plusJeune != null ? 25 - plusJeune : 0, ageQ0 != null ? q.ageRet - ageQ0 : 15, 5));
+      for (let y = 0; y <= fin; y++) {
+        const n = nEnf(y);
+        // Veuve : rente AVS à vie si elle y avait droit ; veuf : tant qu'il a un enfant de moins de 18 ans
+        const veuvY = veuvage && (survivantFemme || nMin(y) > 0);
+        const avs = (veuvY ? 0.8 * R : 0) + n * 0.4 * R;
+        const laaB = accident && Sa ? Math.min((marie ? 0.4 * Sa : 0) + n * 0.15 * Sa, 0.7 * Sa) : 0;
+        const laa = Math.min(laaB, Math.max(0, 0.9 * Sa - avs));
+        const l = repartirLpp(lppConj, n * L.enfant, 0.9 * S - avs - laa);
+        const veuvPrec = y > 0 && veuvage && (survivantFemme || nMin(y - 1) > 0);
+        const evt = y > 0 && n < nEnf(y - 1) ? 'Fin rente d’orphelin' : (veuvPrec && !veuvY ? 'Fin rente AVS de veuf' : '');
+        pts.push({ an: anneeCourante + y, age: ageQ0 != null ? ageQ0 + y : null, v: { avs, lpp: l.lpp, lpps: l.lpps, laa, p3: 0 }, besoin: besoinDeces, evt });
+      }
+      return pts;
+    };
+    res.inv_maladie.serie = serieInv(false);
+    res.inv_accident.serie = serieInv(true);
+    res.deces_maladie.serie = serieDeces(false);
+    res.deces_accident.serie = serieDeces(true);
+    res.deces_maladie.serieLibelle = res.deces_accident.serieLibelle = `âge de ${apNomPers(d, p === p1 ? 2 : 1)} (survivant·e)`;
+    res.inv_maladie.serieLibelle = res.inv_accident.serieLibelle = `âge de ${nomP}`;
     return res;
   };
 
@@ -187,6 +257,29 @@ function apCalculer(d) {
   [p1, couple ? p2 : null].forEach((p, i) => { if (p && p.statut === 'salarie' && p.salaire > AP_LAA_SALAIRE_MAX) remarques.push(`${apNomPers(d, i + 1)} : salaire au-delà du maximum LAA (CHF 148'200) — la part excédentaire n’est couverte en cas d’accident que par une complémentaire LAA.`); if (p && p.statut === 'independant') remarques.push(`${apNomPers(d, i + 1)} est indépendant·e : pas de LAA ni de LPP obligatoires — invalidité et décès reposent sur l’AI et le 3e pilier.`); });
   if (d.etat_civil === 'concubin') remarques.push('Concubinage : aucune rente AVS ni LAA pour le partenaire survivant ; la LPP seulement si le règlement le prévoit et que le partenaire est désigné. Le 3e pilier (clause bénéficiaire) est le moyen de le protéger.');
   if (enfantsACharge) remarques.push('Les rentes d’enfant cessent à 18 ans (25 ans en formation) : la lacune augmente ensuite.');
+
+  // Évolution du revenu du ménage : activité jusqu'à chaque retraite (1re / 2e retraite du couple), puis rentes
+  scenRetraite.serie = [];
+  if (age1 != null) {
+    const horizon = apNum(d.besoins.horizon) || 90;
+    const besoinR = scenRetraite.besoin;
+    for (let y = 0; age1 + y <= horizon && y <= 60; y++) {
+      const a1 = age1 + y, a2 = age2 != null ? age2 + y : null;
+      const ret1 = a1 >= p1.ageRet, ret2 = couple && a2 != null && a2 >= p2.ageRet;
+      const tousRetraites = ret1 && (!couple || ret2);
+      const v = { activite: 0, avs: 0, lpp: 0, laa: 0, p3: 0 };
+      if (!ret1) v.activite += p1.salaire;
+      if (couple && !ret2) v.activite += p2.salaire;
+      // AVS : rentes individuelles tant qu'un seul conjoint est retraité, puis rentes du couple (splitting + plafond)
+      if (ret1) v.avs += (tousRetraites && couple ? avs1 : R1) * AP_TREIZIEME_AVS;
+      if (ret2) v.avs += (tousRetraites ? avs2 : R2) * AP_TREIZIEME_AVS;
+      if (ret1) { v.lpp += L1.vieillesse; v.p3 += cap3a1 / dureeRetraite; }
+      if (ret2) { v.lpp += L2.vieillesse; v.p3 += cap3a2 / dureeRetraite; }
+      const evt = (a1 === p1.ageRet ? (couple && !ret2 ? '1re retraite' : 'Retraite') : '') || (couple && a2 === p2.ageRet ? (ret1 && a1 > p1.ageRet ? '2e retraite' : '1re retraite') : '');
+      scenRetraite.serie.push({ an: anneeCourante + y, age: a1, v, besoin: ret1 || ret2 ? besoinR : null, evt });
+    }
+    scenRetraite.serieLibelle = `âge de ${apNomPers(d, 1)}`;
+  }
 
   return { p1, p2, couple, enfants, enfantsACharge, retraite: scenRetraite, pers, remarques, R1 };
 }
@@ -225,7 +318,6 @@ function viewAnalysePrevoyance() {
     <div class="ap-grille">
       <aside class="ap-saisie">${apFormulaire()}</aside>
       <section class="ap-droite"><div id="ap-resultats">${apResultats()}</div>
-        <p class="ap-classique">Ancien outil : <button type="button" class="dbx-lien" onclick="navigate('calc-lpp')">calculateur classique</button></p>
       </section>
     </div>
   </div>`;
@@ -415,7 +507,10 @@ function apResultats() {
 
     <section class="dbx-carte ap-detail">
       <header class="dbx-carte-tete"><h2>${t[1]} ${_ap.scenario === 'retraite' ? (A.couple ? 'Retraite du ménage' : 'Retraite') : `${t[2]}${A.pers[2] ? ' — ' + apEsc(apNomPers(d, _ap.personne)) : ''}`}</h2><span class="dbx-carte-sous">montants ${_ap.unite === 'mois' ? 'mensuels' : 'annuels'}</span></header>
-      ${apGraphique(sel)}
+      <div class="ap-visuel">
+      <div class="ap-colonnes">${apSvgColonnes(sel, _ap.scenario === 'retraite' ? 'À la retraite' : _ap.scenario.startsWith('inv') ? 'En invalidité' : 'Après un décès')}
+        <div class="ap-legende"><span><i class="ap-revenu"></i>Revenu actuel</span>${sel.items.map(x => `<span><i style="background:${AP_COULEURS[x.src]}"></i>${AP_LIBELLES[x.src]}</span>`).filter((v, i, a) => a.indexOf(v) === i).join('')}${sel.lacune ? '<span><i class="ap-lacune"></i>Lacune</span>' : ''}</div>
+      </div>
       <div class="ap-lignes">
         <div class="ap-ligne discret"><span>Revenu actuel</span><b>${apCHF(sel.revenu)}</b></div>
         <div class="ap-ligne discret"><span>Besoin de prévoyance</span><b>${apCHF(sel.besoin)}</b></div>
@@ -423,7 +518,9 @@ function apResultats() {
         <div class="ap-ligne total"><span>Revenus dans cette situation</span><b>${apCHF(sel.total)}</b></div>
         ${sel.lacune ? `<div class="ap-ligne total neg"><span>Lacune</span><b>${apCHF(sel.lacune)}</b></div>` : sel.besoin ? `<div class="ap-ligne total pos"><span>Besoin couvert — excédent</span><b>${apCHF(sel.surplus)}</b></div>` : ''}
       </div>
+      </div>
       ${apConseil(_ap.scenario, sel)}
+      ${sel.serie && sel.serie.length > 1 ? `<div class="ap-temps"><h3>Évolution dans le temps</h3><p class="ap-temps-aide">${_ap.scenario === 'retraite' ? 'Revenu du ménage année après année : activité jusqu’à la retraite, puis rentes.' : `Si l’événement survenait aujourd’hui : ce que ${_ap.scenario.startsWith('deces') ? 'la famille' : 'le ménage'} toucherait chaque année.`}</p>${apSvgTemps(sel.serie, sel.serieLibelle)}</div>` : ''}
       ${sel.capitaux && sel.capitaux.some(c => c[1] > 0) ? `<div class="ap-capitaux">${sel.capitaux.filter(c => c[1] > 0).map(c => `<span>${c[0]} <b>${apCHFbrut(c[1])}</b></span>`).join('')}</div>` : ''}
       ${sel.note ? `<p class="cf-mention">${sel.note}</p>` : ''}
     </section>
@@ -454,6 +551,79 @@ function apCoach(A) {
   A.remarques.forEach(r => msgs.push(['info', r]));
   return `<section class="dbx-carte ap-coach"><header class="dbx-carte-tete"><h2>En résumé</h2></header>
     ${msgs.map(([ton, m]) => `<div class="ap-coach-ligne ${ton}"><span>${ton === 'ok' ? '✓' : ton === 'alerte' ? '!' : 'i'}</span><p>${m}</p></div>`).join('')}</section>`;
+}
+
+// ── Diagrammes (SVG autonomes : couleurs en dur → identiques à l'écran et dans le rapport) ────
+let _apSvgId = 0;
+const AP_GRIS_TEXTE = '#8A94A8';
+const AP_ACTIVITE = '#CBD5E1';
+function apFmtK(v) { const x = Math.round(v); return Math.abs(x) >= 1000 ? fmtCHF(Math.round(x / 1000)) + 'k' : fmtCHF(x); }
+function apPattern(id) { return `<pattern id="${id}" width="8" height="8" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="8" height="8" fill="#FECACA"/><rect width="4" height="8" fill="#EF4444"/></pattern>`; }
+
+// Colonnes verticales : « Aujourd'hui » (revenu actuel) vs « En cas de… » (prestations empilées + lacune), ligne du besoin
+function apSvgColonnes(s, titreSituation, annuelForce) {
+  const f = v => annuelForce || _ap.unite === 'an' ? v : v / 12;
+  const W = 320, H = 240, bas = 200, haut = 22, g = 44;
+  const max = Math.max(f(s.besoin), f(s.total + s.lacune), f(s.revenu || 0), 1) * 1.08;
+  const y = v => bas - (v / max) * (bas - haut);
+  const pid = 'aph' + (++_apSvgId);
+  const col = (x, w, segs) => { let cum = 0; return segs.map(([v, fill, tip]) => { const h = (v / max) * (bas - haut); const r = `<rect x="${x}" y="${(bas - cum - h).toFixed(1)}" width="${w}" height="${Math.max(0, h).toFixed(1)}" fill="${fill}"><title>${tip}</title></rect>`; cum += h; return r; }).join(''); };
+  const segs = [...s.items.map(x => [f(x.montant), AP_COULEURS[x.src], `${x.label} : ${fmtCHF(Math.round(f(x.montant)))}`]), ...(s.lacune ? [[f(s.lacune), `url(#${pid})`, `Lacune : ${fmtCHF(Math.round(f(s.lacune)))}`]] : [])];
+  const ticks = [0, max / 2 / 1.08, max / 1.08].map(v => `<line x1="${g}" x2="${W - 6}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="#94A3B8" stroke-opacity=".25"/><text x="${g - 6}" y="${(y(v) + 3.5).toFixed(1)}" text-anchor="end" font-size="10" fill="${AP_GRIS_TEXTE}">${apFmtK(v)}</text>`).join('');
+  const yb = y(f(s.besoin));
+  return `<svg viewBox="0 0 ${W} ${H}" class="ap-svg" role="img" aria-label="Revenu actuel et revenu dans cette situation" font-family="Arial,Helvetica,sans-serif">
+    <defs>${apPattern(pid)}</defs>${ticks}
+    ${col(g + 22, 88, [[f(s.revenu || 0), '#A5B4FC', `Revenu actuel : ${fmtCHF(Math.round(f(s.revenu || 0)))}`]])}
+    ${col(g + 150, 88, segs)}
+    <text x="${g + 66}" y="${bas + 16}" text-anchor="middle" font-size="11" fill="${AP_GRIS_TEXTE}">Aujourd’hui</text>
+    <text x="${g + 194}" y="${bas + 16}" text-anchor="middle" font-size="11" fill="${AP_GRIS_TEXTE}">${apEsc(titreSituation || 'Dans cette situation')}</text>
+    <text x="${g + 66}" y="${(y(f(s.revenu || 0)) - 5).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="bold" fill="#6366F1">${apFmtK(f(s.revenu || 0))}</text>
+    <text x="${g + 194}" y="${(y(f(s.total + s.lacune)) - 5).toFixed(1)}" text-anchor="middle" font-size="10.5" font-weight="bold" fill="${s.lacune ? '#DC2626' : '#16A34A'}">${apFmtK(f(s.total))}</text>
+    ${s.besoin ? `<line x1="${g}" x2="${W - 6}" y1="${yb.toFixed(1)}" y2="${yb.toFixed(1)}" stroke="#EF4444" stroke-width="2.5"/><text x="${W - 8}" y="${(yb - 5).toFixed(1)}" text-anchor="end" font-size="10" font-weight="bold" fill="#EF4444">besoin ${apFmtK(f(s.besoin))}</text>` : ''}
+  </svg>`;
+}
+
+// Évolution dans le temps : une barre par année (activité / AVS-AI / LPP / LAA / 3e pilier + lacune), besoin en escalier
+function apSvgTemps(serie, libelleAxe, annuelForce) {
+  if (!serie || serie.length < 2) return '';
+  const f = v => annuelForce || _ap.unite === 'an' ? v : v / 12;
+  const W = 760, H = 270, g = 48, bas = 214, haut = 18, droite = W - 10;
+  const pid = 'apt' + (++_apSvgId);
+  const tot = pt => Object.values(pt.v).reduce((s, x) => s + x, 0);
+  const max = Math.max(...serie.map(pt => Math.max(f(tot(pt)), f(pt.besoin || 0))), 1) * 1.08;
+  const y = v => bas - (v / max) * (bas - haut);
+  const n = serie.length, pas = (droite - g) / n, bw = Math.max(2, pas * 0.78);
+  const ordre = [['activite', AP_ACTIVITE, 'Revenu d’activité'], ['avs', AP_COULEURS.avs, 'AVS / AI'], ['lpp', AP_COULEURS.lpp, 'LPP'], ['lpps', AP_COULEURS.lpps, 'LPP rentes subsidiaires'], ['laa', AP_COULEURS.laa, 'LAA'], ['p3', AP_COULEURS.p3, '3e pilier']];
+  const barres = serie.map((pt, i) => {
+    const x = g + i * pas + (pas - bw) / 2;
+    let cum = 0;
+    const r = ordre.map(([k, fill, l]) => { const v = f(pt.v[k] || 0); if (v <= 0) return ''; const h = (v / max) * (bas - haut); const s = `<rect x="${x.toFixed(1)}" y="${(bas - cum - h).toFixed(1)}" width="${bw.toFixed(1)}" height="${h.toFixed(1)}" fill="${fill}"><title>${pt.an}${pt.age != null ? ` (${pt.age} ans)` : ''} — ${l} : ${fmtCHF(Math.round(v))}</title></rect>`; cum += h; return s; }).join('');
+    const lac = pt.besoin ? Math.max(0, f(pt.besoin) - f(tot(pt))) : 0;
+    const rl = lac > 0 ? `<rect x="${x.toFixed(1)}" y="${(bas - cum - (lac / max) * (bas - haut)).toFixed(1)}" width="${bw.toFixed(1)}" height="${((lac / max) * (bas - haut)).toFixed(1)}" fill="url(#${pid})"><title>${pt.an} — lacune : ${fmtCHF(Math.round(lac))}</title></rect>` : '';
+    return r + rl;
+  }).join('');
+  // Besoin en escalier (interrompu quand pas de besoin défini, ex. avant la retraite)
+  let besoin = '', ouvert = false;
+  serie.forEach((pt, i) => {
+    const x1 = g + i * pas, x2 = x1 + pas;
+    if (pt.besoin) { const yy = y(f(pt.besoin)).toFixed(1); besoin += `${ouvert ? 'L' : 'M'}${x1.toFixed(1)},${yy} L${x2.toFixed(1)},${yy} `; ouvert = true; } else ouvert = false;
+  });
+  const ticks = [0, max / 2 / 1.08, max / 1.08].map(v => `<line x1="${g}" x2="${droite}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="#94A3B8" stroke-opacity=".25"/><text x="${g - 6}" y="${(y(v) + 3.5).toFixed(1)}" text-anchor="end" font-size="10" fill="${AP_GRIS_TEXTE}">${apFmtK(v)}</text>`).join('');
+  const etiq = serie.map((pt, i) => (i % 5 === 0 || i === n - 1) ? `<text x="${(g + i * pas + pas / 2).toFixed(1)}" y="${bas + 14}" text-anchor="middle" font-size="10" fill="${AP_GRIS_TEXTE}">${pt.age != null ? pt.age : ''}</text><text x="${(g + i * pas + pas / 2).toFixed(1)}" y="${bas + 26}" text-anchor="middle" font-size="9" fill="${AP_GRIS_TEXTE}" opacity=".75">${pt.an}</text>` : '').join('');
+  let dernierEvtX = -99;
+  const evts = serie.map((pt, i) => {
+    if (!pt.evt) return '';
+    const x = g + i * pas;
+    const decal = x - dernierEvtX < 70 ? 12 : 0; dernierEvtX = x;
+    return `<line x1="${x.toFixed(1)}" x2="${x.toFixed(1)}" y1="${haut - 4}" y2="${bas}" stroke="#0E1B33" stroke-opacity=".45" stroke-dasharray="3 3"/><text x="${(x + 3).toFixed(1)}" y="${haut + 6 + decal}" font-size="9.5" font-weight="bold" fill="#475569">${apEsc(pt.evt)}</text>`;
+  }).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" class="ap-svg ap-svg-temps" role="img" aria-label="Évolution dans le temps" font-family="Arial,Helvetica,sans-serif">
+    <defs>${apPattern(pid)}</defs>${ticks}${barres}
+    ${besoin ? `<path d="${besoin}" fill="none" stroke="#EF4444" stroke-width="2.5"/>` : ''}
+    ${evts}${etiq}
+    <text x="${g}" y="${H - 4}" font-size="9.5" fill="${AP_GRIS_TEXTE}">${apEsc(libelleAxe || 'âge')} · année · montants ${annuelForce || _ap.unite === 'an' ? 'annuels' : 'mensuels'}</text>
+  </svg>
+  <div class="ap-legende"><span><i style="background:${AP_ACTIVITE}"></i>Revenu d’activité</span><span><i style="background:${AP_COULEURS.avs}"></i>AVS / AI</span><span><i style="background:${AP_COULEURS.lpp}"></i>LPP</span><span><i style="background:${AP_COULEURS.lpps}"></i>LPP rentes subsidiaires</span><span><i style="background:${AP_COULEURS.laa}"></i>LAA</span><span><i style="background:${AP_COULEURS.p3}"></i>3e pilier</span><span><i class="ap-lacune"></i>Lacune</span><span><i style="background:#EF4444;height:3px"></i>Besoin</span></div>`;
 }
 
 function apGraphique(s) {
@@ -493,22 +663,21 @@ function apRapportCorps(A) {
   const d = _ap.d, uniteSauve = _ap.unite; _ap.unite = 'an';
   const chf = v => fmtCHF(Math.round(v || 0));
   const bloc = (titre, s, k) => {
-    const max = Math.max(s.besoin, s.total, s.revenu || 0, 1);
-    const w = v => (v / max * 100).toFixed(1) + '%';
     const coul = !s.besoin ? '#56627A' : s.lacune ? '#DC2626' : '#16A34A';
-    return `<div style="break-inside:avoid;margin-bottom:12px;border:1px solid #E2E7EF;border-radius:12px;padding:14px 16px">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px"><b style="font-size:13.5px;color:#113679">${titre}</b><span style="font-size:12px;color:${coul};font-weight:bold">${!s.besoin ? 'pas de besoin' : s.lacune ? `lacune CHF ${chf(s.lacune)}/an` : 'besoin couvert ✓'}</span></div>
-      <div style="display:grid;grid-template-columns:78px 1fr;gap:6px 10px;align-items:center;font-size:10.5px;color:#56627A;position:relative">
-        <span>Aujourd'hui</span><div style="height:14px;background:#F0F2F6;border-radius:5px;overflow:hidden"><div style="height:100%;width:${w(s.revenu || 0)};background:#A5B4FC"></div></div>
-        <span>Situation</span><div style="height:14px;background:#F0F2F6;border-radius:5px;overflow:hidden;display:flex">${s.items.map(x => `<div style="width:${w(x.montant)};background:${AP_COULEURS[x.src]}"></div>`).join('')}${s.lacune ? `<div style="width:${w(s.lacune)};background:repeating-linear-gradient(45deg,#EF4444 0 5px,#FCA5A5 5px 10px)"></div>` : ''}</div>
-      </div>
-      <table style="width:100%;border-collapse:collapse;font-size:11.5px;margin-top:8px">
+    return `<div style="break-inside:avoid;page-break-inside:avoid;margin-bottom:14px;border:1px solid #E2E7EF;border-radius:12px;padding:14px 16px">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:8px"><b style="font-size:14px;color:#113679">${titre}</b><span style="font-size:12px;color:${coul};font-weight:bold">${!s.besoin ? 'pas de besoin' : s.lacune ? `lacune CHF ${chf(s.lacune)}/an` : 'besoin couvert ✓'}</span></div>
+      <div style="display:grid;grid-template-columns:300px 1fr;gap:18px;align-items:center">
+      <div>${apSvgColonnes(s, k === 'retraite' ? 'À la retraite' : k.startsWith('inv') ? 'En invalidité' : 'Après un décès', true)}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:11.5px">
         <tr><td style="color:#56627A;padding:2px 0">Revenu actuel</td><td style="text-align:right">CHF ${chf(s.revenu)}</td></tr>
         <tr><td style="color:#56627A;padding:2px 0">Besoin de prévoyance</td><td style="text-align:right">CHF ${chf(s.besoin)}</td></tr>
         ${s.items.map(x => `<tr><td style="padding:2px 0"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${AP_COULEURS[x.src]};margin-right:6px"></span>${x.label}</td><td style="text-align:right">CHF ${chf(x.montant)}</td></tr>`).join('')}
         <tr><td style="padding:3px 0;border-top:1px solid #E2E7EF"><b>Revenus dans cette situation</b></td><td style="text-align:right;border-top:1px solid #E2E7EF"><b>CHF ${chf(s.total)}</b></td></tr>
+        ${s.lacune ? `<tr><td style="padding:3px 0;color:#DC2626"><b>Lacune</b></td><td style="text-align:right;color:#DC2626"><b>CHF ${chf(s.lacune)}</b></td></tr>` : ''}
       </table>
+      </div>
       ${s.lacune && s.besoin ? `<div style="font-size:11px;color:#B91C1C;margin-top:6px">${apConseil(k, s).replace(/<[^>]+>/g, '')}</div>` : ''}
+      ${s.serie && s.serie.length > 1 ? `<div style="margin-top:10px"><div style="font-size:11.5px;font-weight:bold;color:#113679;margin-bottom:2px">Évolution dans le temps</div>${apSvgTemps(s.serie, s.serieLibelle, true)}</div>` : ''}
     </div>`;
   };
   const [p1, p2] = [A.p1, A.p2];
@@ -535,7 +704,7 @@ function apRapport() {
   const A = apCalculer(_ap.d);
   const nom = _ap.d.nom || (_ap.clientId ? apNomClient(allClients.find(c => c.id === _ap.clientId)) : 'Simulation');
   const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Analyse de prévoyance — ${apEsc(nom)}</title>
-    <style>body{margin:0;padding:28px 36px;font-family:Arial,Helvetica,sans-serif}header{display:flex;justify-content:space-between;align-items:flex-end;background:linear-gradient(135deg,#0B2458,#113679 60%,#1A4A9C);color:#fff;border-radius:14px;padding:18px 22px;margin-bottom:18px}h1{font-size:21px;margin:0}header img{height:30px;filter:brightness(0) invert(1)}.sous{color:rgba(255,255,255,.75);font-size:11.5px;margin-top:3px}.mention{font-size:9.5px;color:#8A94A8;margin-top:16px;border-top:1px solid #E2E7EF;padding-top:8px}@page{margin:12mm}@media print{header{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>
+    <style>body{margin:0;padding:28px 36px;font-family:Arial,Helvetica,sans-serif}header{display:flex;justify-content:space-between;align-items:flex-end;background:linear-gradient(135deg,#0B2458,#113679 60%,#1A4A9C);color:#fff;border-radius:14px;padding:18px 22px;margin-bottom:18px}h1{font-size:21px;margin:0}header img{height:30px;filter:brightness(0) invert(1)}.sous{color:rgba(255,255,255,.75);font-size:11.5px;margin-top:3px}.mention{font-size:9.5px;color:#8A94A8;margin-top:16px;border-top:1px solid #E2E7EF;padding-top:8px}@page{margin:12mm}.ap-svg{width:100%;height:auto;display:block}.ap-legende{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:9.5px;color:#56627A;margin-top:2px}.ap-legende span{display:inline-flex;align-items:center;gap:4px}.ap-legende i{display:inline-block;width:9px;height:9px;border-radius:2px}.ap-lacune{background:repeating-linear-gradient(45deg,#EF4444 0 4px,#FECACA 4px 8px)}.ap-revenu{background:#A5B4FC}svg rect,svg path,i{-webkit-print-color-adjust:exact;print-color-adjust:exact}@media print{header{-webkit-print-color-adjust:exact;print-color-adjust:exact}}</style></head><body>
     <header><div><h1>Analyse de prévoyance</h1><div class="sous">${apEsc(nom)} · ${new Date().toLocaleDateString('fr-CH', { day: 'numeric', month: 'long', year: 'numeric' })}</div></div>${typeof ASSUREX_LOGO_B64 !== 'undefined' ? `<img src="${ASSUREX_LOGO_B64}" alt="Assurex"/>` : ''}</header>
     ${apRapportCorps(A)}
     <div class="mention">Estimation indicative établie sur la base des informations communiquées, selon les règles légales 2026 simplifiées (AVS/AI avec 13e rente de vieillesse, LPP, LAA). Elle ne remplace ni l'extrait de compte individuel AVS ni le certificat de prévoyance, qui font foi. Assurex Sàrl — courtier en assurances inscrit auprès de la FINMA.</div>

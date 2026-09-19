@@ -1356,7 +1356,8 @@ async function renderView() {
     case 'sources': main.innerHTML = viewSources(); break;
     case 'rappels': main.innerHTML = viewRappels(); break;
     case 'analyse-prevoyance': main.innerHTML = viewAnalysePrevoyance(); break;
-    case 'calc-lpp': main.innerHTML = viewCalculateurLPP(); bindAdresseAutocomplete({ adresseId: 'clpp-adresse', npaVilleId: 'clpp-npa-ville' }); break;
+    // Ancien calculateur de prévoyance retiré (19.09.2026) : redirigé vers l'analyse de prévoyance
+    case 'calc-lpp': currentView = 'analyse-prevoyance'; renderSidebar(); main.innerHTML = viewAnalysePrevoyance(); break;
     case 'calc-immo': main.innerHTML = viewFinancementImmo(); break;
     case 'agenda': main.innerHTML = viewAgenda(); break;
     case 'rendez-vous': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewRendezVous(); break;

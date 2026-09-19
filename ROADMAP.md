@@ -45,6 +45,8 @@ sont en bas de ce fichier.
 
 - [x] **Échéancier des renouvellements** (19.09) — page Vente › Renouvellements + carte dashboard :
       classement par date limite de résiliation, suivi de revue, tâche de revue en un clic
+- [x] **Relances LAMal** (19.09) — page Vente › Relances LAMal : la LAMal comme levier de RDV,
+      message e-mail / WhatsApp avec lien de réservation personnalisé, suivi relancé → RDV
 - [ ] Échéancier, suite : préavis modifiable par contrat dans la fiche contrat, note de revue
 - [ ] **Taux d'équipement / ventes croisées** (clients sans contrat, clients mono-équipés)
 - [ ] **Prochaine action obligatoire** sur chaque opportunité

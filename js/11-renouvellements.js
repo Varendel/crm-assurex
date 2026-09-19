@@ -6,12 +6,13 @@
 //
 // Colonnes utilisées sur contrats (migration 20260919_contrats_suivi_renouvellement) :
 //   preavis_mois   — null = défaut (3 mois, 1 mois pour la LAMal)
-//   revue_statut   — a_contacter / rdv / offre / reconduit / remplace / resilie
+//   revue_statut   — a_contacter / relance / rdv / offre / reconduit / remplace / resilie
 //   revue_echeance — l'échéance à laquelle se rapporte revue_statut : si date_echeance change
 //                    (contrat reconduit, nouvelle police), le suivi repart automatiquement à zéro.
 
 const RN_STATUTS = [
   { v: 'a_contacter', label: 'À contacter', couleur: '#94a3b8' },
+  { v: 'relance',     label: 'Relancé',     couleur: '#fbbf24' },
   { v: 'rdv',         label: 'RDV planifié', couleur: '#38bdf8' },
   { v: 'offre',       label: 'Offre envoyée', couleur: '#a78bfa' },
   { v: 'reconduit',   label: 'Reconduit',     couleur: '#4ade80', traite: true },
@@ -43,10 +44,27 @@ function rnPreavis(ct) {
   return rnEstLamal(ct) ? 1 : 3;
 }
 
+// Échéance à prendre en compte. La LAMal se renouvelle d'office chaque année : une échéance
+// passée (ex. 31.12.2025 restée en base) est ramenée à la prochaine échéance annuelle.
+function rnEcheance(ct) {
+  if (!ct.date_echeance) return null;
+  const iso = ct.date_echeance.split('T')[0];
+  if (!rnEstLamal(ct)) return iso;
+  const aujIso = new Date().toISOString().split('T')[0];
+  let [y, m, d] = iso.split('-').map(Number);
+  const fmt = an => {
+    const dernier = new Date(Date.UTC(an, m, 0)).getUTCDate();
+    return `${an}-${String(m).padStart(2, '0')}-${String(Math.min(d, dernier)).padStart(2, '0')}`;
+  };
+  while (fmt(y) < aujIso) y++;
+  return fmt(y);
+}
+
 // Échéance − N mois, en restant sur le dernier jour du mois si besoin (31.12 − 3 mois = 30.09)
 function rnDateLimite(ct) {
-  if (!ct.date_echeance) return null;
-  const [y, m, d] = ct.date_echeance.split('T')[0].split('-').map(Number);
+  const echeance = rnEcheance(ct);
+  if (!echeance) return null;
+  const [y, m, d] = echeance.split('-').map(Number);
   const cible = new Date(Date.UTC(y, m - 1 - rnPreavis(ct), 1));
   const dernierJour = new Date(Date.UTC(cible.getUTCFullYear(), cible.getUTCMonth() + 1, 0)).getUTCDate();
   cible.setUTCDate(Math.min(d, dernierJour));
@@ -61,13 +79,13 @@ function rnJoursJusqua(iso) {
 
 // Statut de revue valable seulement pour l'échéance en cours
 function rnStatutRevue(ct) {
-  if (ct.revue_statut && ct.revue_echeance && ct.date_echeance && ct.revue_echeance === ct.date_echeance.split('T')[0]) return ct.revue_statut;
+  if (ct.revue_statut && ct.revue_echeance && ct.date_echeance && ct.revue_echeance === rnEcheance(ct)) return ct.revue_statut;
   return 'a_contacter';
 }
 
 function rnHorizon(ct) {
   const aujIso = new Date().toISOString().split('T')[0];
-  if (ct.statut === 'renouveler' || ct.date_echeance.split('T')[0] < aujIso) return 'echu';
+  if (!rnEstLamal(ct) && (ct.statut === 'renouveler' || rnEcheance(ct) < aujIso)) return 'echu';
   const jours = rnJoursJusqua(rnDateLimite(ct));
   if (jours < 0) return 'depasse';
   if (jours < 30) return 'j30';
@@ -101,6 +119,10 @@ function viewRenouvellements() {
     <h2 style="margin:0 0 4px;font-size:18px;font-weight:800;color:var(--text)">Renouvellements</h2>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Contrats classés par <strong>date limite de résiliation</strong> (échéance − préavis : 3 mois par défaut, 1 mois pour la LAMal). C'est cette date qui compte pour revoir un client ou reprendre une police.</div>
     <div id="rn-stats" class="stat-grid" style="margin-bottom:20px"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:10px 16px;margin-bottom:18px">
+      <span style="font-size:12.5px;color:var(--text)">🩺 LAMal : relance chaque client avec son lien de prise de RDV, depuis une page dédiée.</span>
+      <button type="button" onclick="navigate('relances-lamal')" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Relances LAMal →</button>
+    </div>
     <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:center">
       <select class="form-select" id="rn-horizon" style="max-width:260px" onchange="rnFiltres.horizon=this.value;renderRenouvellements()">
         <option value="">Tous les horizons</option>
@@ -186,7 +208,7 @@ function rnLigne({ ct, limite, horizon, revue }, cols) {
       <div style="font-size:13px;color:var(--text)">${rnEsc(ct.produit || '')}</div>
       <div style="font-size:11px;color:var(--text-muted)">${rnEsc(ct.compagnie || '')}${ct.numero_police ? ' · ' + rnEsc(ct.numero_police) : ''}</div>
     </div>
-    <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ct.date_echeance)}</div>
+    <div style="font-size:12px;color:var(--text-muted)">${fmtDate(rnEcheance(ct))}</div>
     <div style="font-size:12px;color:var(--text)">${limiteTxt}</div>
     <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF(Number(ct.prime_annuelle || 0))}</div>
     <div>
@@ -206,12 +228,18 @@ function rnLigne({ ct, limite, horizon, revue }, cols) {
 async function rnChangerStatut(contratId, statut) {
   const ct = allContrats.find(c => c.id === contratId);
   if (!ct) return;
-  const maj = { revue_statut: statut, revue_echeance: ct.date_echeance.split('T')[0], revue_maj: new Date().toISOString() };
+  const maj = { revue_statut: statut, revue_echeance: rnEcheance(ct), revue_maj: new Date().toISOString() };
   const r = await dbPatch('contrats', contratId, maj);
-  if (r && r.error) { showError('Suivi non enregistré : ' + errMsg(r)); renderRenouvellements(); return; }
+  if (r && r.error) { showError('Suivi non enregistré : ' + errMsg(r)); rnRafraichir(); return false; }
   Object.assign(ct, maj);
-  logAction('revue_renouvellement', 'contrats', contratId, `${statut} (échéance ${fmtDate(ct.date_echeance)})`);
-  renderRenouvellements();
+  logAction('revue_renouvellement', 'contrats', contratId, `${statut} (échéance ${fmtDate(maj.revue_echeance)})`);
+  rnRafraichir();
+  return true;
+}
+
+function rnRafraichir() {
+  if (document.getElementById('rn-liste')) renderRenouvellements();
+  if (document.getElementById('rl-liste')) renderRelancesLamal();
 }
 
 async function rnCreerTache(contratId) {
@@ -237,7 +265,7 @@ async function rnCreerTache(contratId) {
     date_echeance: echeanceTache,
     statut: 'ouvert',
     notes: `${nomClient} — ${ct.produit || ''} chez ${ct.compagnie || ''}${ct.numero_police ? ' (police ' + ct.numero_police + ')' : ''}.\n`
-      + `Échéance le ${fmtDate(ct.date_echeance)}, date limite de résiliation le ${limite ? fmtDate(limite) : '—'} (préavis ${rnPreavis(ct)} mois).\n`
+      + `Échéance le ${fmtDate(rnEcheance(ct))}, date limite de résiliation le ${limite ? fmtDate(limite) : '—'} (préavis ${rnPreavis(ct)} mois).\n`
       + (ct.commissionne === false
         ? 'Police non commissionnée : proposer un transfert vers une compagnie partenaire avant la date limite.'
         : 'Revoir la couverture et la prime avec le client avant la date limite.'),
@@ -247,7 +275,7 @@ async function rnCreerTache(contratId) {
   allRappels = await dbGet('rappels', 'select=*');
   logAction('tache_renouvellement', 'contrats', contratId, `Tâche de revue pour le ${fmtDate(echeanceTache)}`);
   showError(`✓ Tâche de revue créée pour le ${fmtDate(echeanceTache)}.`);
-  renderRenouvellements();
+  rnRafraichir();
 }
 
 // Carte compacte pour le tableau de bord
@@ -278,4 +306,206 @@ function carteRenouvellementsDashboard() {
         <button onclick="rnFiltres.horizon='';navigate('renouvellements')" style="background:none;border:none;color:var(--accent);font-size:11px;font-weight:700;cursor:pointer">Ouvrir l'échéancier →</button>
       </div>
     </div>`;
+}
+
+// ═══ RELANCES LAMAL — la LAMal comme levier de prise de RDV (ajouté le 19.09.2026) ══════════════
+// Chaque automne, les nouvelles primes LAMal sont une raison naturelle de recontacter un client.
+// Cette page liste les clients ayant une LAMal (une ligne par client), avec un message prêt à
+// envoyer par e-mail (Outlook) ou WhatsApp contenant le lien de réservation en ligne personnalisé
+// (?rdv=<token agent>&client=<id>, le client n'a pas à ressaisir ses coordonnées).
+// Suivi : À contacter → Relancé (automatique à l'envoi) → RDV planifié (automatique si un RDV
+// futur existe pour le client, ou à la main). Relance manuelle, un client à la fois.
+
+let rlFiltre = 'a_relancer';
+const RL_CLE_MODELE = 'rn_modele_relance_lamal';
+
+function rlModeleParDefaut() {
+  const annee = new Date().getMonth() >= 6 ? new Date().getFullYear() + 1 : new Date().getFullYear();
+  return `Bonjour {prenom},\n\nLes primes d'assurance maladie ${annee} sont publiées cet automne. C'est le bon moment pour vérifier que votre caisse maladie, votre modèle et votre franchise sont toujours les plus avantageux pour vous — un éventuel changement doit être annoncé avant le {date_limite}.\n\nJe vous propose un court rendez-vous (15 à 20 minutes) pour faire le point ensemble. Vous pouvez choisir directement le créneau qui vous convient ici :\n{lien_rdv}\n\nMeilleures salutations,\n{conseiller}\nAssurex Sàrl`;
+}
+
+function rlModele() {
+  try { return localStorage.getItem(RL_CLE_MODELE) || rlModeleParDefaut(); } catch (e) { return rlModeleParDefaut(); }
+}
+
+function rlSauverModele(txt) {
+  try { localStorage.setItem(RL_CLE_MODELE, txt); } catch (e) {}
+}
+
+function rlReinitialiserModele() {
+  try { localStorage.removeItem(RL_CLE_MODELE); } catch (e) {}
+  const zone = document.getElementById('rl-modele');
+  if (zone) zone.value = rlModeleParDefaut();
+}
+
+function rlLienRdv(clientId) {
+  const moi = (typeof allAgents !== 'undefined' ? allAgents : []).find(a => a.email === (currentUser && currentUser.email) && a.rdv_actif && a.rdv_token)
+    || (typeof allAgents !== 'undefined' ? allAgents : []).find(a => a.rdv_actif && a.rdv_token);
+  let base;
+  if (moi) base = `${window.location.origin}${window.location.pathname}?rdv=${moi.rdv_token}`;
+  else if (typeof LIEN_RESERVATION_RDV !== 'undefined') base = LIEN_RESERVATION_RDV;
+  else return '';
+  return `${base}&client=${clientId}`;
+}
+
+// Une ligne par client : ses contrats LAMal, le statut le moins avancé, son prochain RDV
+function rlClientsLamal() {
+  const parClient = new Map();
+  for (const ct of allContrats) {
+    if (!rnEstLamal(ct) || !['actif', 'renouveler'].includes(ct.statut) || !ct.client_id) continue;
+    if (!parClient.has(ct.client_id)) parClient.set(ct.client_id, []);
+    parClient.get(ct.client_id).push(ct);
+  }
+  const ordre = RN_STATUTS.map(s => s.v);
+  const maintenant = new Date();
+  return [...parClient.entries()].map(([clientId, contrats]) => {
+    const client = allClients.find(c => c.id === clientId);
+    if (!client) return null;
+    const statuts = contrats.map(rnStatutRevue);
+    const statut = statuts.sort((a, b) => ordre.indexOf(a) - ordre.indexOf(b))[0];
+    const rdv = (typeof allRendezVous !== 'undefined' ? allRendezVous : [])
+      .filter(r => r.client_id === clientId && r.statut !== 'annule' && new Date(r.date_heure) >= maintenant)
+      .sort((a, b) => new Date(a.date_heure) - new Date(b.date_heure))[0] || null;
+    const limite = contrats.map(rnDateLimite).filter(Boolean).sort()[0] || null;
+    return { client, contrats, statut: rdv && ['a_contacter', 'relance'].includes(statut) ? 'rdv' : statut, rdv, limite,
+      prime: contrats.reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0) };
+  }).filter(Boolean);
+}
+
+function rlMessage(x) {
+  const prenom = estEntreprise(x.client) ? '' : (x.client.prenom || '');
+  return rlModele()
+    .replace(/\{prenom\}/g, prenom)
+    .replace(/\{date_limite\}/g, x.limite ? fmtDate(x.limite) : '30 novembre')
+    .replace(/\{lien_rdv\}/g, rlLienRdv(x.client.id))
+    .replace(/\{conseiller\}/g, (currentUser && currentUser.prenom) || '')
+    .replace(/Bonjour ,/g, 'Bonjour,');
+}
+
+function viewRelancesLamal() {
+  setTimeout(renderRelancesLamal, 0);
+  return `
+    <h2 style="margin:0 0 4px;font-size:18px;font-weight:800;color:var(--text)">Relances LAMal</h2>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Les nouvelles primes LAMal sont une occasion de recontacter chaque client et de lui proposer un rendez-vous. Le message contient son lien de réservation personnel. Date limite de changement : 30.11 (préavis 1 mois).</div>
+    <div id="rl-stats" class="stat-grid" style="margin-bottom:20px"></div>
+    <details style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:18px">
+      <summary style="cursor:pointer;font-size:13px;font-weight:700;color:var(--text)">✏️ Modèle du message</summary>
+      <div style="font-size:11.5px;color:var(--text-muted);margin:10px 0 8px">Variables : {prenom} · {date_limite} · {lien_rdv} · {conseiller}. Le modèle est gardé sur cet ordinateur.</div>
+      <textarea id="rl-modele" class="form-input" rows="11" style="width:100%;font-family:inherit;font-size:12.5px;line-height:1.5" oninput="rlSauverModele(this.value)">${rnEsc(rlModele())}</textarea>
+      <div style="margin-top:8px;text-align:right"><button type="button" class="btn-secondary" onclick="rlReinitialiserModele()">Revenir au modèle par défaut</button></div>
+    </details>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap">
+      ${[['a_relancer', 'À relancer'], ['relance', 'Relancés, sans RDV'], ['rdv', 'RDV planifié'], ['tous', 'Tous']].map(([v, l]) =>
+        `<button type="button" onclick="rlFiltre='${v}';renderRelancesLamal()" class="${rlFiltre === v ? 'btn-save' : 'btn-secondary'}" style="padding:7px 14px;font-size:12px">${l}</button>`).join('')}
+    </div>
+    <div id="rl-liste"></div>`;
+}
+
+function renderRelancesLamal() {
+  const zoneStats = document.getElementById('rl-stats');
+  const zoneListe = document.getElementById('rl-liste');
+  if (!zoneStats || !zoneListe) return;
+  const tous = rlClientsLamal();
+  const aRelancer = tous.filter(x => x.statut === 'a_contacter');
+  const relances = tous.filter(x => x.statut === 'relance');
+  const rdv = tous.filter(x => x.statut === 'rdv');
+  zoneStats.innerHTML = `
+    ${statCard('Clients LAMal', tous.length, '#38bdf8', `${tous.reduce((s, x) => s + x.contrats.length, 0)} contrats`)}
+    ${statCard('À relancer', aRelancer.length, aRelancer.length ? '#f59e0b' : '#64748b')}
+    ${statCard('Relancés, sans RDV', relances.length, '#fbbf24')}
+    ${statCard('RDV planifiés', rdv.length, '#4ade80', tous.length ? Math.round(rdv.length / tous.length * 100) + ' % des clients' : '')}`;
+
+  const liste = (rlFiltre === 'a_relancer' ? aRelancer : rlFiltre === 'relance' ? relances : rlFiltre === 'rdv' ? rdv : tous)
+    .sort((a, b) => `${a.client.nom} ${a.client.prenom}`.localeCompare(`${b.client.nom} ${b.client.prenom}`));
+  if (!liste.length) { zoneListe.innerHTML = '<div class="table-empty">Aucun client dans cette liste.</div>'; return; }
+
+  const cols = '1.3fr 1.2fr 110px 150px 260px';
+  zoneListe.innerHTML = `<div class="table-wrap">
+    <div class="table-header" style="grid-template-columns:${cols}"><div>Client</div><div>Caisse · contact</div><div>Prime/an</div><div>Suivi</div><div></div></div>
+    ${liste.map(x => {
+      const c = x.client;
+      const nom = estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`;
+      const caisses = [...new Set(x.contrats.map(ct => ct.compagnie).filter(Boolean))].join(', ');
+      const statutInfo = RN_STATUTS.find(s => s.v === x.statut) || RN_STATUTS[0];
+      return `<div class="table-row" style="grid-template-columns:${cols};align-items:center">
+        <div><a href="?client=${c.id}" onclick="return irVersClient(event, '${c.id}')" style="font-weight:700;font-size:13px;color:var(--text);text-decoration:none">${rnEsc(nom)}</a>
+          ${x.contrats.length > 1 ? `<div style="font-size:11px;color:var(--text-muted)">${x.contrats.length} contrats LAMal</div>` : ''}</div>
+        <div><div style="font-size:12.5px;color:var(--text)">${rnEsc(caisses || '—')}</div>
+          <div style="font-size:11px;color:var(--text-muted)">${rnEsc(c.email || 'pas d\u2019e-mail')} · ${rnEsc(c.mobile || c.tel || 'pas de mobile')}</div></div>
+        <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF(Math.round(x.prime))}</div>
+        <div>${badge(statutInfo.label, statutInfo.couleur)}${x.rdv ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px">📅 ${fmtDate(x.rdv.date_heure)}</div>` : ''}</div>
+        <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
+          ${c.email ? `<button type="button" onclick="rlEnvoyerEmail('${c.id}', this)" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">✉️ E-mail</button>` : ''}
+          ${(c.mobile || c.tel) ? `<button type="button" onclick="rlOuvrirWhatsapp('${c.id}')" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">📲 WhatsApp</button>` : ''}
+          <button type="button" onclick="rlCopier('${c.id}')" title="Copier le message" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">📋</button>
+          ${x.statut !== 'rdv' ? `<button type="button" onclick="rlMarquer('${c.id}', 'rdv')" title="Le client a pris RDV (téléphone, etc.)" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">✓ RDV</button>` : ''}
+        </div>
+      </div>`;
+    }).join('')}
+  </div>`;
+}
+
+// Passe tous les contrats LAMal du client au statut donné (sans jamais faire reculer un dossier)
+async function rlMarquer(clientId, statut) {
+  const x = rlClientsLamal().find(y => y.client.id === clientId);
+  if (!x) return;
+  const ordre = RN_STATUTS.map(s => s.v);
+  let echecs = 0;
+  for (const ct of x.contrats) {
+    if (ordre.indexOf(rnStatutRevue(ct)) >= ordre.indexOf(statut)) continue;
+    const maj = { revue_statut: statut, revue_echeance: rnEcheance(ct), revue_maj: new Date().toISOString() };
+    const r = await dbPatch('contrats', ct.id, maj);
+    if (r && r.error) { echecs++; continue; }
+    Object.assign(ct, maj);
+  }
+  if (echecs) showError(`Suivi non enregistré pour ${echecs} contrat(s) — réessaie.`);
+  logAction('relance_lamal', 'clients', clientId, statut);
+  rnRafraichir();
+}
+
+async function rlEnvoyerEmail(clientId, btn) {
+  const x = rlClientsLamal().find(y => y.client.id === clientId);
+  if (!x || !x.client.email) return;
+  if (!(await assurerTokenOutlook())) { showError('Connecte-toi à Outlook (Microsoft) dans le CRM pour envoyer cet e-mail.'); return; }
+  if (btn) { btn.disabled = true; btn.textContent = 'Envoi…'; }
+  const annee = new Date().getMonth() >= 6 ? new Date().getFullYear() + 1 : new Date().getFullYear();
+  try {
+    const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: {
+          subject: `Votre assurance maladie ${annee} — faisons le point`,
+          body: { contentType: 'text', content: rlMessage(x) },
+          toRecipients: [{ emailAddress: { address: x.client.email } }],
+        },
+        saveToSentItems: true,
+      }),
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+  } catch (e) {
+    console.error('rlEnvoyerEmail', e);
+    showError('L\u2019e-mail n\u2019est pas parti — réessaie ou utilise 📋 pour copier le message.');
+    if (btn) { btn.disabled = false; btn.textContent = '✉️ E-mail'; }
+    return;
+  }
+  showError(`✓ E-mail envoyé à ${x.client.email}.`);
+  await rlMarquer(clientId, 'relance');
+}
+
+function rlOuvrirWhatsapp(clientId) {
+  const x = rlClientsLamal().find(y => y.client.id === clientId);
+  if (!x) return;
+  let tel = (x.client.mobile || x.client.tel || '').replace(/[^\d]/g, '');
+  if (tel.startsWith('00')) tel = tel.slice(2);
+  if (tel.startsWith('0')) tel = '41' + tel.slice(1);
+  window.open(`https://wa.me/${tel}?text=${encodeURIComponent(rlMessage(x))}`, '_blank', 'noopener');
+  rlMarquer(clientId, 'relance');
+}
+
+async function rlCopier(clientId) {
+  const x = rlClientsLamal().find(y => y.client.id === clientId);
+  if (!x) return;
+  try { await navigator.clipboard.writeText(rlMessage(x)); showError('✓ Message copié.'); }
+  catch (e) { showError('Copie impossible dans ce navigateur.'); }
 }

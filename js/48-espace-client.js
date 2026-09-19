@@ -172,6 +172,38 @@ async function ouvrirAccesEspaceClient(clientId) {
     </div>`, { padding: '16px' });
 }
 
+// Envoi des accès par e-mail depuis le compte Outlook connecté — seule action qui envoie
+// réellement quelque chose, toujours après confirmation explicite (jamais automatique).
+async function ecEnvoyerAcces() {
+  const ctx = window._ecEnvoi;
+  if (!ctx) { showError('Rien à envoyer — recrée l’accès pour obtenir un mot de passe.'); return; }
+  if (!confirm(`Envoyer les accès REX CLOUD à ${ctx.email} depuis ton compte Outlook ?\n\nLe mot de passe figure en clair dans le message : c'est le seul envoi, il ne sera plus affiché ensuite.`)) return;
+  if (typeof assurerTokenOutlook === 'function' && !(await assurerTokenOutlook())) {
+    showError('Connecte-toi à Outlook (bouton Microsoft dans le menu) pour envoyer, ou utilise « Copier le message ».');
+    return;
+  }
+  try {
+    const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: {
+          subject: `Votre espace ${EC_MARQUE}${ctx.nom ? ' — ' + ctx.nom : ''}`,
+          body: { contentType: 'text', content: ctx.message },
+          toRecipients: [{ emailAddress: { address: ctx.email } }],
+        },
+        saveToSentItems: true,
+      }),
+    });
+    if (r.status === 401) { showError('Session Outlook expirée — reconnecte-toi puis réessaie.'); return; }
+    if (!r.ok) { showError('Échec de l’envoi via Outlook — utilise « Copier le message ».'); return; }
+  } catch (e) { showError('Erreur réseau : ' + e.message); return; }
+  showError(`✓ Accès envoyés à ${ctx.email}.`);
+  if (typeof logAction === 'function') logAction('envoi_acces_client', 'acces_clients', null, ctx.email);
+  window._ecEnvoi = null;
+  document.getElementById('modal-acces-client')?.remove();
+}
+
 async function ecAction(clientId, action) {
   const btn = document.getElementById('ec-btn');
   const zone = document.getElementById('ec-resultat');
@@ -195,10 +227,14 @@ async function ecAction(clientId, action) {
       if (zone) zone.innerHTML = `<div class="ec-mdp"><div class="ec-mdp-tete">Mot de passe (affiché une seule fois)</div>
         <code>${ecEsc(data.mot_de_passe)}</code>
         <div class="ec-mdp-actions">
-          <button type="button" class="btn-secondary" onclick="navigator.clipboard.writeText('${data.mot_de_passe.replace(/'/g, "\\'")}').then(()=>showError('✓ Mot de passe copié'))">📋 Copier</button>
+          <button type="button" class="btn-save" onclick="ecEnvoyerAcces()">📨 Envoyer via Outlook…</button>
+          <button type="button" class="btn-secondary" onclick="navigator.clipboard.writeText('${data.mot_de_passe.replace(/'/g, "\\'")}').then(()=>showError('✓ Mot de passe copié'))">📋 Copier le mot de passe</button>
           <button type="button" class="btn-secondary" onclick="navigator.clipboard.writeText(${JSON.stringify(message).replace(/"/g, '&quot;')}).then(()=>showError('✓ Message copié'))">✉️ Copier le message</button>
-          <a class="btn-secondary" href="mailto:${encodeURIComponent(data.email)}?subject=${encodeURIComponent('Votre espace client Assurex')}&body=${encodeURIComponent(message)}">📧 Ouvrir dans le mail</a>
-        </div></div>`;
+          <a class="btn-secondary" href="mailto:${encodeURIComponent(data.email)}?subject=${encodeURIComponent('Votre espace REX CLOUD')}&body=${encodeURIComponent(message)}">📧 Ouvrir dans mon client mail</a>
+        </div>
+        <div class="ec-note">Rien n’est envoyé automatiquement : choisis comment transmettre ces accès.</div></div>`;
+      // Mémorisé pour l'envoi Outlook, jamais enregistré ailleurs (perdu dès que la fenêtre se ferme)
+      window._ecEnvoi = { email: data.email, message, nom: ecNomClient(allClients.find(x => x.id === clientId)) };
       if (typeof logAction === 'function') logAction(action === 'creer' ? 'creer_acces_client' : 'reinit_mdp_client', 'acces_clients', clientId, data.email);
     } else {
       showError('✓ Accès mis à jour.');

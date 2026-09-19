@@ -55,7 +55,7 @@ function trCalculer() {
   for (let i = 0; i < _tr.horizon; i++) mois.push(trIso(new Date(auj.getFullYear(), auj.getMonth() + i, 1)).slice(0, 7));
   const premier = mois[0], dernier = mois[mois.length - 1];
   const vide = () => Object.fromEntries(mois.map(m => [m, 0]));
-  const res = { mois, gestion: vide(), acquisition: vide(), pipeline: vide(), entrees: [], sorties: [], retard: { total: 0, nb: 0 }, delaiAcq: trDelaiMoyenAcquisition() };
+  const res = { mois, gestion: vide(), acquisition: vide(), pipeline: vide(), entrees: [], sorties: [], retard: { total: 0, nb: 0 }, oz: { total: 0, nb: 0 }, delaiAcq: trDelaiMoyenAcquisition() };
 
   // Place un montant dans son mois (un mois passé = mois en cours ; au-delà de l'horizon = ignoré)
   const placer = (serie, iso, montant) => {
@@ -79,6 +79,8 @@ function trCalculer() {
       base.setDate(base.getDate() + res.delaiAcq);
       date = trIso(base);
     }
+    // Gestion d'un client OZ attendue avant le 01.01.2027 : encaissée par OZ, hors trésorerie Assurex
+    if (typeof commissionGestionEncaisseeParOZ === 'function' && commissionGestionEncaisseeParOZ(ca, date)) { res.oz.total += montant; res.oz.nb++; return; }
     if (date < aujIso) { res.retard.total += montant; res.retard.nb++; }
     placer(gestion ? res.gestion : res.acquisition, date, montant);
   });
@@ -163,6 +165,8 @@ function renderTresorerie() {
       <span class="tr-espace"></span>
       <button type="button" class="tr-btn" onclick="trOuvrirLigne('sortie')">− Ajouter une charge</button>
       <button type="button" class="tr-btn" onclick="trOuvrirLigne('entree')">+ Ajouter un encaissement</button>
+      <button type="button" class="tr-btn" onclick="trExporterExcel()" title="Télécharger le plan au format Excel">⬇️ Excel</button>
+      <button type="button" class="tr-btn" onclick="trImprimer()" title="Imprimer ou enregistrer en PDF">🖨️ PDF</button>
     </div>
 
     <div id="tr-formulaire"></div>
@@ -173,7 +177,7 @@ function renderTresorerie() {
     </section>
 
     <section class="dbx-carte tr-carte-tableau">
-      <header class="dbx-carte-tete"><h2>Détail mois par mois</h2><span class="dbx-carte-sous">acquisition : délai moyen observé ${R.delaiAcq} j</span></header>
+      <header class="dbx-carte-tete"><h2>Détail mois par mois</h2><span class="dbx-carte-sous">acquisition : délai moyen observé ${R.delaiAcq} j${R.oz.nb ? ` · ${R.oz.nb} commission(s) de gestion de clients OZ (CHF ${trCHF(R.oz.total)}) exclue(s) : encaissées par OZ jusqu’au 31.12.2026` : ''}</span></header>
       ${trTableau(R)}
     </section>
 
@@ -238,6 +242,93 @@ function trListePostes() {
     <button type="button" class="tr-icone" title="Modifier" aria-label="Modifier" onclick="trOuvrirLigne('${l.type}','${l.id}')">✎</button>
     <button type="button" class="tr-icone" title="Retirer du plan" aria-label="Retirer du plan" onclick="trRetirerLigne('${l.id}')">✕</button>
   </div>`).join('')}</div>`;
+}
+
+// ── Export ──────────────────────────────────────────────────────────────────────────────────
+// Lignes du tableau (mêmes que l'écran) : [libellé, catégorie, ...montants par mois, total]
+function trLignesExport(R) {
+  const m = R.mois;
+  const tot = v => Math.round(v.reduce((s, x) => s + x, 0) * 100) / 100;
+  const arr = v => v.map(x => Math.round(x * 100) / 100);
+  const L = [];
+  const push = (lib, cat, vals, avecTotal = true) => L.push([lib, cat, ...arr(vals), avecTotal ? tot(vals) : '']);
+  push('Solde en début de mois', '', R.parMois.map(x => x.debut), false);
+  L.push(['ENCAISSEMENTS']);
+  push('Commissions de gestion', 'date prévue', m.map(k => R.gestion[k]));
+  push('Commissions d’acquisition', `+${R.delaiAcq} j`, m.map(k => R.acquisition[k]));
+  if (_tr.pipeline) push('Pipeline pondéré', 'estimation', m.map(k => R.pipeline[k]));
+  R.entrees.forEach(x => push(x.ligne.libelle, x.ligne.categorie || '', m.map(k => x.serie[k])));
+  push('Total encaissements', '', R.parMois.map(x => x.entrees));
+  L.push(['CHARGES']);
+  R.sorties.forEach(x => push(x.ligne.libelle, x.ligne.categorie || '', m.map(k => -x.serie[k])));
+  push('Total charges', '', R.parMois.map(x => -x.sorties));
+  push('Variation du mois', '', R.parMois.map(x => x.net));
+  push('Solde en fin de mois', '', R.parMois.map(x => x.fin), false);
+  return L;
+}
+
+function trExporterExcel() {
+  const R = trCalculer();
+  const entete = ['Poste', 'Détail', ...R.mois.map(trLibelleMois), 'Total'];
+  const titre = [
+    ['Plan de trésorerie — Assurex Sàrl'],
+    [`Établi le ${new Date().toLocaleDateString('fr-CH')} · horizon ${_tr.horizon} mois${_tr.pipeline ? ' · pipeline pondéré inclus' : ''}`],
+    [R.solde ? `Solde bancaire de départ : CHF ${fmtCHF2(R.solde.montant)} au ${fmtDate(R.solde.date_debut)}` : 'Solde bancaire de départ : non renseigné (0)'],
+    [],
+  ];
+  const lignes = trLignesExport(R);
+  const nom = `plan_tresorerie_${new Date().toISOString().slice(0, 10)}`;
+  if (typeof XLSX !== 'undefined' && XLSX.utils && XLSX.writeFile) {
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet([...titre, entete, ...lignes]);
+    ws['!cols'] = [{ wch: 34 }, { wch: 24 }, ...R.mois.map(() => ({ wch: 11 })), { wch: 12 }];
+    // Format monétaire suisse sur les cellules numériques
+    Object.keys(ws).forEach(k => { if (k[0] !== '!' && typeof ws[k].v === 'number') ws[k].z = "#,##0.00"; });
+    XLSX.utils.book_append_sheet(wb, ws, 'Plan de trésorerie');
+    const postes = _tr.lignes.filter(l => l.type !== 'solde').map(l => [l.type === 'entree' ? 'Encaissement' : 'Charge', l.libelle, l.categorie || '', Number(l.montant), (TR_FREQUENCES.find(f => f[0] === l.frequence) || [0, l.frequence])[1], l.date_debut, l.date_fin || '']);
+    const ws2 = XLSX.utils.aoa_to_sheet([['Type', 'Libellé', 'Catégorie', 'Montant (CHF)', 'Fréquence', 'Dès le', 'Jusqu’au'], ...postes]);
+    ws2['!cols'] = [{ wch: 14 }, { wch: 30 }, { wch: 26 }, { wch: 14 }, { wch: 18 }, { wch: 12 }, { wch: 12 }];
+    XLSX.utils.book_append_sheet(wb, ws2, 'Postes saisis');
+    XLSX.writeFile(wb, nom + '.xlsx');
+  } else {
+    exporterCsv(nom, entete, lignes);
+  }
+}
+
+function trImprimer() {
+  const R = trCalculer();
+  const fin = R.parMois[R.parMois.length - 1];
+  const lignes = trLignesExport(R);
+  const cell = v => typeof v === 'number' ? `<td class="${v < 0 ? 'neg' : ''}">${Math.round(v) ? trCHF(v) : '·'}</td>` : `<td></td>`;
+  const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Plan de trésorerie</title><style>
+    :root{--text:#0E1B33;--text-dim:#8A94A8;--border:#E2E7EF;--surface:#fff}
+    body{font-family:Arial,Helvetica,sans-serif;color:#0E1B33;margin:0;padding:24px 28px;font-size:10.5px}
+    header{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:3px solid #113679;padding-bottom:10px;margin-bottom:14px}
+    header img{height:30px} h1{font-size:19px;margin:0;color:#113679} .sous{color:#56627A;font-size:10.5px}
+    .kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px} .kpi{background:#F4F6F9;border-radius:6px;padding:8px}
+    .kpi span{display:block;font-size:9px;color:#56627A;text-transform:uppercase} .kpi b{font-size:13px;color:#113679} .kpi b.neg{color:#DC2626}
+    .graph svg{width:100%;height:auto} .tr-axe{font-size:11px;fill:#8A94A8} .tr-grille{stroke:#E2E7EF;stroke-dasharray:3 4} .tr-zero{stroke:#8A94A8}
+    table{width:100%;border-collapse:collapse;margin-top:10px} th,td{padding:3px 5px;text-align:right;border-bottom:1px solid #EEF1F5;white-space:nowrap}
+    th:first-child,td:first-child{text-align:left} td.neg{color:#DC2626} tr.section td{font-weight:bold;color:#56627A;padding-top:8px;border:none}
+    tr.fort td{font-weight:bold;background:#F4F6F9} thead th{color:#56627A;font-size:9.5px;text-transform:uppercase}
+    .mention{font-size:9px;color:#8A94A8;margin-top:14px} @page{size:A4 landscape;margin:10mm}
+  </style></head><body>
+    <header><div><h1>Plan de trésorerie</h1><div class="sous">Établi le ${new Date().toLocaleDateString('fr-CH', { day: 'numeric', month: 'long', year: 'numeric' })} · horizon ${_tr.horizon} mois${_tr.pipeline ? ' · pipeline pondéré inclus' : ''}</div></div>${typeof ASSUREX_LOGO_B64 !== 'undefined' ? `<img src="${ASSUREX_LOGO_B64}" alt="Assurex"/>` : ''}</header>
+    <div class="kpis">
+      <div class="kpi"><span>Solde de départ</span><b>${R.solde ? 'CHF ' + trCHF(R.solde.montant) : '—'}</b></div>
+      <div class="kpi"><span>Encaissements attendus</span><b>CHF ${trCHF(R.totalEntrees)}</b></div>
+      <div class="kpi"><span>Charges</span><b>CHF ${trCHF(R.totalSorties)}</b></div>
+      <div class="kpi"><span>Solde fin ${trLibelleMois(fin.m)}</span><b class="${fin.fin < 0 ? 'neg' : ''}">CHF ${trCHF(fin.fin)}</b></div>
+    </div>
+    <div class="graph">${trGraphique(R)}</div>
+    <table><thead><tr><th>Poste</th><th>Détail</th>${R.mois.map(k => `<th>${trLibelleMois(k)}</th>`).join('')}<th>Total</th></tr></thead><tbody>
+      ${lignes.map(l => l.length === 1 ? `<tr class="section"><td colspan="${R.mois.length + 3}">${trEsc(l[0])}</td></tr>`
+        : `<tr class="${/^(Solde|Total|Variation)/.test(l[0]) ? 'fort' : ''}"><td>${trEsc(l[0])}</td><td style="text-align:left;color:#8A94A8">${trEsc(l[1])}</td>${l.slice(2).map(cell).join('')}</tr>`).join('')}
+    </tbody></table>
+    <div class="mention">Commissions attendues calculées depuis le CRM (gestion : date prévue selon la règle de versement ; acquisition : délai moyen observé de ${R.delaiAcq} jours). Projection indicative.</div>
+    <script>window.onload=()=>setTimeout(()=>window.print(),400)<\/script></body></html>`;
+  const w = window.open(URL.createObjectURL(new Blob([html], { type: 'text/html;charset=utf-8' })), '_blank');
+  if (!w) showError('Autorise les fenêtres pop-up pour afficher le PDF.');
 }
 
 // ── Saisie ──────────────────────────────────────────────────────────────────────────────────

@@ -721,7 +721,7 @@ const SECTIONS = [
   ]},
   { id: 'conseil-section', label: 'Conseil', icon: '◇', sub: [
     { id: 'conseil', label: '💼 Conseil financier' },
-    { id: 'calc-lpp', label: '🧮 Bilan de prévoyance' },
+    { id: 'analyse-prevoyance', label: '🧮 Analyse de prévoyance' },
     { id: 'calc-immo', label: '🏠 Financement immobilier' },
   ]},
   { id: 'portefeuille', label: 'Portefeuille', icon: '◑', sub: [
@@ -1355,6 +1355,7 @@ async function renderView() {
     case 'equipement': main.innerHTML = viewEquipement(); break;
     case 'sources': main.innerHTML = viewSources(); break;
     case 'rappels': main.innerHTML = viewRappels(); break;
+    case 'analyse-prevoyance': main.innerHTML = viewAnalysePrevoyance(); break;
     case 'calc-lpp': main.innerHTML = viewCalculateurLPP(); bindAdresseAutocomplete({ adresseId: 'clpp-adresse', npaVilleId: 'clpp-npa-ville' }); break;
     case 'calc-immo': main.innerHTML = viewFinancementImmo(); break;
     case 'agenda': main.innerHTML = viewAgenda(); break;

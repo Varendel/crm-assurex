@@ -1628,6 +1628,13 @@ function viewImportDecompte() {
         </select>
         <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Un décompte de prime périodique est généralement de la gestion — change si ce lot contient des affaires nouvelles.</div>
       </div>
+      <div style="margin-top:14px"><label class="form-label">Encaissé par</label>
+        <div class="imp-encaisse" role="radiogroup" aria-label="Encaissé par">
+          <label><input type="radio" name="imp-encaisse-par" value="assurex" checked/> <span>Assurex</span></label>
+          <label><input type="radio" name="imp-encaisse-par" value="oz"/> <span>${typeof OZ_MINI_LOGO !== 'undefined' ? OZ_MINI_LOGO : ''} OZ Assure</span></label>
+        </div>
+        <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">« OZ Assure » : décompte versé sur le compte d'OZ — les commissions sont enregistrées en « Versé OZ » et le bordereau marqué OZ, <strong>sans compter dans les encaissements Assurex</strong> (tableau de bord, suivi financier, trésorerie).</div>
+      </div>
     `)}
 
     <div id="imp-resultats"></div>
@@ -2132,6 +2139,17 @@ async function importerCommissionsEtBordereau(nomAssureur) {
   if (btn) { btn.disabled = true; btn.textContent = 'Création en cours...'; }
 
   const nature = document.getElementById('imp-nature-commission')?.value || 'gestion';
+  // Décompte encaissé par OZ Assure : commissions « versé_oz » (exclues des chiffres Assurex) et bordereau marqué OZ
+  let surOZ = (document.querySelector('input[name="imp-encaisse-par"]:checked')?.value || 'assurex') === 'oz';
+  // Dès le 01.01.2027, toute la gestion est production Assurex (règle générale) : pas de gestion « OZ » après cette date
+  const dateRef = document.getElementById('imp-bd-date')?.value || new Date().toISOString().slice(0, 10);
+  if (surOZ && nature === 'gestion' && typeof DATE_GESTION_ASSUREX !== 'undefined' && dateRef >= DATE_GESTION_ASSUREX) {
+    if (!confirm(`Depuis le 01.01.2027, toutes les commissions de gestion sont de la production Assurex.\n\nEnregistrer ce décompte de gestion en Assurex (recommandé) ?\n\nOK = Assurex · Annuler = arrêter l'import`)) {
+      if (btn) { btn.disabled = false; btn.textContent = '✓ Créer les commissions et le bordereau'; }
+      return;
+    }
+    surOZ = false;
+  }
   const aujourdhui = new Date().toISOString().split('T')[0];
   const compagnie = normaliserCompagnie(nomAssureur || '');
 
@@ -2146,6 +2164,7 @@ async function importerCommissionsEtBordereau(nomAssureur) {
     taux_caution: caution,
     statut: statutBordereau,
     date_reception: dateReception || null,
+    encaisse_par: surOZ ? 'oz' : 'assurex',
   });
   if (rBordereau && rBordereau.error) {
     showError('Erreur lors de la création du bordereau : ' + errMsg(rBordereau));
@@ -2160,7 +2179,7 @@ async function importerCommissionsEtBordereau(nomAssureur) {
   }
   // Le fichier du décompte (Excel ou PDF scanné) reste archivé avec le bordereau
   const fichierArchive = _decompteFichier && typeof archiverFichierBordereau === 'function' ? await archiverFichierBordereau(nouveauBordereau, _decompteFichier) : false;
-  const dateReceptionCommission = (dateReception && dateReception >= DATE_BASCULE_ASSUREX) ? dateReception : aujourdhui;
+  const dateReceptionCommission = surOZ ? (dateReception || aujourdhui) : ((dateReception && dateReception >= DATE_BASCULE_ASSUREX) ? dateReception : aujourdhui);
 
   let nbCrees = 0, nbEchecs = 0, nbIgnores = 0;
   for (const l of aTraiter) {
@@ -2184,7 +2203,7 @@ async function importerCommissionsEtBordereau(nomAssureur) {
         montant_estime: montant,
         montant_final: montant,
         detail_calcul: `Décompte compagnie importé — ${l.brancheInterne || ''}${montant < 0 ? ' (correction' + (l.noFacture ? ' facture n°' + l.noFacture : '') + ')' : ''} : base CHF ${fmtCHF(l.commissionProduction)} × ${l.taux}% — contrat ${l.numeroContrat}`,
-        statut: 'reçue',
+        statut: surOZ ? 'versé_oz' : 'reçue',
         bordereau_id: nouveauBordereau.id,
         nature,
         date_creation: aujourdhui,
@@ -2194,10 +2213,10 @@ async function importerCommissionsEtBordereau(nomAssureur) {
       nbCrees++;
     }
   }
-  logAction('import_decompte_et_bordereau', 'bordereaux', nouveauBordereau.id, `${numero} — ${compagnie} — ${nbCrees} commission(s) créée(s) et rapprochée(s)`);
+  logAction('import_decompte_et_bordereau', 'bordereaux', nouveauBordereau.id, `${numero} — ${compagnie} — ${nbCrees} commission(s) créée(s) et rapprochée(s)${surOZ ? ' — encaissé par OZ Assure' : ''}`);
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
   allBordereaux = await dbGet('bordereaux', 'select=*');
-  showError(`✓ Bordereau ${numero} créé avec ${nbCrees} commission(s) rapprochée(s)${fichierArchive ? ' — fichier archivé 📎' : ''}.${nbIgnores ? ' ' + nbIgnores + ' ligne(s) ignorée(s) car déjà importée(s) aujourd\'hui (doublon évité).' : ''}${nbEchecs ? ' ⚠️ ' + nbEchecs + ' échec(s) d’écriture — vérifie manuellement depuis le bordereau.' : ''}`);
+  showError(`✓ Bordereau ${numero} créé avec ${nbCrees} commission(s) ${surOZ ? 'enregistrée(s) en « Versé OZ » (hors chiffres Assurex)' : 'rapprochée(s)'}${fichierArchive ? ' — fichier archivé 📎' : ''}.${nbIgnores ? ' ' + nbIgnores + ' ligne(s) ignorée(s) car déjà importée(s) aujourd\'hui (doublon évité).' : ''}${nbEchecs ? ' ⚠️ ' + nbEchecs + ' échec(s) d’écriture — vérifie manuellement depuis le bordereau.' : ''}`);
   if (btn) { btn.disabled = false; btn.textContent = '✓ Créer les commissions et le bordereau'; }
   _decompteLignes = []; _decompteNomAssureur = ''; _decompteCommissionTotaleAnnoncee = null; _decompteFichier = null;
   navigate('bordereaux');

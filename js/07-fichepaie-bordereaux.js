@@ -54,15 +54,20 @@ function renderBordereauxList() {
   else if (tri === 'ancien') BORDS.sort((a,b) => new Date(a.created_at||0) - new Date(b.created_at||0));
   else if (tri === 'montant') BORDS.sort((a,b) => (b.montant_brut||0) - (a.montant_brut||0));
 
-  const totalRecu = BORDS.filter(b=>b.statut==='reçu').reduce((s,b)=>s+(b.montant_brut||0),0);
-  const totalAttendu = BORDS.filter(b=>b.statut==='attendu').reduce((s,b)=>s+(b.montant_brut||0),0);
-  const totalCaution = BORDS.reduce((s,b)=>s+Math.round((b.montant_brut||0)*((b.taux_caution||0)/100)),0);
+  // Les bordereaux encaissés par OZ Assure (encaisse_par = 'oz') sont affichés mais exclus des totaux Assurex
+  const BORDS_ASSUREX = BORDS.filter(b => b.encaisse_par !== 'oz');
+  const BORDS_OZ = BORDS.filter(b => b.encaisse_par === 'oz');
+  const totalRecu = BORDS_ASSUREX.filter(b=>b.statut==='reçu').reduce((s,b)=>s+Number(b.montant_brut||0),0);
+  const totalAttendu = BORDS_ASSUREX.filter(b=>b.statut==='attendu').reduce((s,b)=>s+Number(b.montant_brut||0),0);
+  const totalCaution = BORDS_ASSUREX.reduce((s,b)=>s+Math.round(Number(b.montant_brut||0)*((b.taux_caution||0)/100)),0);
+  const totalOZ = BORDS_OZ.reduce((s,b)=>s+Number(b.montant_brut||0),0);
 
   document.getElementById('bd-stats').innerHTML = `
-    ${statCard('Bordereaux', BORDS.length, '#38bdf8')}
-    ${statCard('Reçus', 'CHF ' + totalRecu.toLocaleString(), '#4ade80')}
-    ${statCard('Attendus', 'CHF ' + totalAttendu.toLocaleString(), '#f59e0b')}
-    ${statCard('Caution totale retenue', 'CHF ' + totalCaution.toLocaleString(), '#a78bfa')}
+    ${statCard('Bordereaux', BORDS.length, '#38bdf8', BORDS_OZ.length ? `dont ${BORDS_OZ.length} encaissé(s) par OZ` : '')}
+    ${statCard('Reçus (Assurex)', 'CHF ' + fmtCHF2(totalRecu), '#4ade80')}
+    ${statCard('Attendus', 'CHF ' + fmtCHF2(totalAttendu), '#f59e0b')}
+    ${statCard('Caution totale retenue', 'CHF ' + fmtCHF(totalCaution), '#a78bfa')}
+    ${BORDS_OZ.length ? statCard(OZ_MINI_LOGO + ' Encaissé par OZ', 'CHF ' + fmtCHF2(totalOZ), '#64748b', 'hors chiffres Assurex') : ''}
   `;
 
   const cards = BORDS.map(b => {
@@ -90,6 +95,7 @@ function renderBordereauxList() {
           <div style="display:flex;align-items:center;gap:8px">
             ${b.numero ? `<span style="background:var(--surface-alt);color:var(--text-muted);border-radius:5px;padding:2px 7px;font-size:10.5px;font-weight:800;font-family:monospace">${b.numero}</span>` : ''}
             <div style="font-size:14px;font-weight:800;color:var(--text)">${b.compagnie}</div>
+            ${b.encaisse_par === 'oz' ? `<span title="Encaissé par OZ Assure — hors chiffres Assurex" style="display:inline-flex;align-items:center;gap:4px;background:var(--surface-alt);border:1px solid var(--border);border-radius:999px;padding:1px 9px;font-size:10.5px;font-weight:600;color:var(--text-muted)">${OZ_MINI_LOGO} encaissé par OZ</span>` : ''}
             ${b.pdf_url ? `<button onclick="event.stopPropagation(); ouvrirPieceJointe('${b.pdf_url}')" title="Ouvrir le PDF" style="background:none;border:none;cursor:pointer;font-size:13px">📎</button>` : ''}
           </div>
           <div style="font-size:11px;color:var(--text-muted)">${b.mois}${b.date_reception ? ' · Reçu le ' + fmtDate(b.date_reception) : ''}${tauxCaution > 0 ? ' · Caution ' + tauxCaution + '%' : ''}</div>

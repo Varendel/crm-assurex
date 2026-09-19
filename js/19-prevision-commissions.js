@@ -15,6 +15,18 @@ function _prevDateAnnuelle(ca) {
   return cle ? PREVISION_GESTION_ANNUELLE_DATES[cle] : null;
 }
 
+// Dès le 01.01.2027, TOUS les mandats de gestion passent en production Assurex (règle générale,
+// Jonathan le 19.09.2026). Jusque-là, la gestion des clients OZ Assure est encaissée par OZ : elle
+// ne doit pas compter dans la trésorerie / les prévisions d'encaissement d'Assurex.
+const DATE_GESTION_ASSUREX = '2027-01-01';
+function commissionGestionEncaisseeParOZ(ca, dateEncaissement) {
+  if (!ca || ca.nature !== 'gestion') return false;
+  const d = (dateEncaissement || '').slice(0, 10);
+  if (d && d >= DATE_GESTION_ASSUREX) return false;
+  const cl = ca.client_id && typeof allClients !== 'undefined' ? allClients.find(x => x.id === ca.client_id) : null;
+  return !!(cl && cl.source_oz);
+}
+
 function _prevIso(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 
 // Point de départ : date de signature du contrat. À défaut, la plus récente entre sa date de début
@@ -80,6 +92,7 @@ function previsionGestionParMois(nbMois) {
     if (ct && (ct.commissionne === false || ct.statut === 'annulé')) return;
     const p = commissionDatePrevue(ca);
     if (!p) return;
+    if (commissionGestionEncaisseeParOZ(ca, p)) return; // encaissée par OZ jusqu'au 31.12.2026
     const montant = Number(ca.montant_estime || 0);
     if (p < _prevIso(auj)) { res.retard.total += montant; res.retard.nb++; return; }
     const cible = res.mois.find(x => x.cle === p.slice(0, 7));

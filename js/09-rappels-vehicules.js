@@ -1326,6 +1326,8 @@ const ALIAS_COMPAGNIES = {
   'axa winterthur': 'AXA', 'axa assurances': 'AXA', 'axa': 'AXA',
   'zurich assurances': 'Zurich', 'zurich': 'Zurich',
   'generali assurances': 'Generali', 'generali': 'Generali', 'generali assurances générales sa': 'Generali',
+  // Fortuna = protection juridique du groupe Generali (indication de Jonathan, 19.09.2026)
+  'fortuna': 'Generali', 'fortuna protection juridique': 'Generali', "fortuna compagnie d'assurance de protection juridique sa": 'Generali', 'fortuna compagnie d’assurance de protection juridique sa': 'Generali', 'fortuna rechtsschutz': 'Generali',
   // Baloise a fusionné avec Helvetia (2026) : toutes les anciennes variantes "Baloise" (y compris
   // sur des documents plus anciens) se normalisent désormais directement vers "Helvetia".
   'baloise assurances': 'Helvetia', 'bâloise': 'Helvetia', 'baloise': 'Helvetia', 'bâloise assurances sa': 'Helvetia', 'baloise assurances sa': 'Helvetia',

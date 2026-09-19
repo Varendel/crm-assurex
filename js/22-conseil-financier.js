@@ -54,7 +54,7 @@ function viewConseil() {
           <datalist id="cf-liste-clients">${allClients.filter(c => !estEntreprise(c)).map(c => `<option value="${cfEsc(cfNomClient(c))}"></option>`).join('')}</datalist>
         </div>
         <div class="cf-outils">
-          <button type="button" onclick="navigate('calc-lpp')">🧮 Bilan de prévoyance</button>
+          <button type="button" onclick="navigate('analyse-prevoyance')">🧮 Analyse de prévoyance</button>
           <button type="button" onclick="navigate('calc-immo')">🏠 Simulateur hypothécaire</button>
         </div>
       </div>
@@ -495,7 +495,7 @@ function cfOngletRetraite() {
     <div class="cf-col-saisie">
       <section class="dbx-carte"><header class="dbx-carte-tete"><h2>Projection de la retraite</h2><span class="dbx-carte-sous">AVS + LPP + 3e pilier + épargne</span></header>
         <div class="cf-champs">${cfChamp(s + 'prevoyance.salaire_brut', 'Salaire brut annuel (AVS)', { unite: 'CHF/an' })}${cfChamp(s + 'prevoyance.salaire_brut_conjoint', 'Salaire brut du conjoint (AVS couple)', { unite: 'CHF/an' })}${cfChamp(s + 'patrimoine.lpp', 'Avoir LPP actuel', { unite: 'CHF' })}${cfChamp(s + 'prevoyance.lpp_capital_projete', 'Capital LPP projeté (certificat)', { unite: 'CHF', aide: 'si connu — sinon estimé au minimum légal' })}${cfChamp(s + 'prevoyance.taux_conversion', 'Taux de conversion LPP', { unite: '%', aide: 'légal 6,8 % ; souvent 5 à 6 % en réalité' })}${cfChamp(s + 'prevoyance.rachat_lpp_annuel', 'Rachat LPP prévu', { unite: 'CHF/an' })}${cfChamp(s + 'patrimoine.pilier3a', 'Avoir 3a actuel', { unite: 'CHF' })}${cfChamp(s + 'prevoyance.versement_3a', 'Versement 3a annuel', { unite: 'CHF/an' })}${cfChamp(s + 'prevoyance.age_retraite', 'Âge de retraite', { unite: 'ans' })}${cfChamp(s + 'prevoyance.objectif_pct', 'Objectif de revenu', { unite: '% du revenu actuel' })}</div></section>
-      <section class="dbx-carte"><header class="dbx-carte-tete"><h2>Protection décès & invalidité</h2><button type="button" class="dbx-lien" onclick="cfOuvrirBilanPrevoyance()">Faire un bilan complet →</button></header>
+      <section class="dbx-carte"><header class="dbx-carte-tete"><h2>Protection décès & invalidité</h2><button type="button" class="dbx-lien" onclick="cfOuvrirBilanPrevoyance()">Analyse de prévoyance complète →</button></header>
         ${b.length ? `<div class="cf-bilans">${b.slice(0, 4).map(x => `<button type="button" class="cf-bilan" onclick="window._bilansPrevoyanceActuel=_cf.bilans;voirBilanSauvegarde('${x.id}')"><strong>Bilan du ${fmtDate(x.created_at)}</strong><small>${cfEsc(x.resume || '')}</small></button>`).join('')}</div>`
         : '<div class="dbx-vide-petit">Aucun bilan de prévoyance enregistré pour ce client. Le bilan complet calcule les lacunes en cas de décès et d’invalidité (AVS/AI + LPP).</div>'}
       </section>
@@ -506,7 +506,8 @@ function cfOngletRetraite() {
 function cfOuvrirBilanPrevoyance() {
   cfSauverMaintenant();
   const id = _cf.client.id;
-  navigate('calc-lpp').then(() => { const sel = document.getElementById('clpp-client'); if (sel) { sel.value = id; if (typeof prefillClientLPP === 'function') prefillClientLPP(); } });
+  window._apClientInitial = id;
+  navigate('analyse-prevoyance');
 }
 function cfPanneauRetraite() {
   const A = cfAnalyse();

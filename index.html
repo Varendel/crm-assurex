@@ -954,7 +954,84 @@
     .cf-reco { flex-wrap: wrap; }
   }
 
+  /* Import de décompte : choix « encaissé par » */
+  .imp-encaisse { display: inline-flex; padding: 3px; gap: 3px; background: var(--surface-alt); border: 1px solid var(--border); border-radius: 11px; }
+  .imp-encaisse label { cursor: pointer; } .imp-encaisse input { position: absolute; opacity: 0; pointer-events: none; }
+  .imp-encaisse span { display: inline-flex; align-items: center; gap: 6px; padding: 7px 14px; border-radius: 8px; font-size: 12.5px; color: var(--text-muted); transition: all .15s; }
+  .imp-encaisse input:checked + span { background: var(--accent); color: var(--on-accent); font-weight: 600; }
+  .imp-encaisse input:focus-visible + span { box-shadow: 0 0 0 3px var(--accent-dim); }
+
+  /* ═══ ANALYSE DE PRÉVOYANCE (js/23-analyse-prevoyance.js, 19.09.2026) ═══ */
+  .ap-analyses select { background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.25); color: #fff; border-radius: 9px; padding: 6px 10px; font-size: 12px; }
+  .ap-analyses select option { color: #0E1B33; }
+  .ap-grille { display: grid; grid-template-columns: minmax(300px, 400px) minmax(0, 1fr); gap: 18px; align-items: start; }
+  .ap-saisie { display: flex; flex-direction: column; gap: 10px; position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; padding-right: 4px; }
+  .ap-bloc { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+  .ap-bloc summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 10px; padding: 13px 16px; font-size: 13.5px; font-weight: 600; color: var(--text); }
+  .ap-bloc summary::-webkit-details-marker { display: none; }
+  .ap-bloc summary::after { content: '▾'; margin-left: auto; color: var(--text-dim); transition: transform .2s; }
+  .ap-bloc:not([open]) summary::after { transform: rotate(-90deg); }
+  .ap-bloc summary span { width: 28px; height: 28px; border-radius: 9px; background: var(--accent-dim); display: inline-flex; align-items: center; justify-content: center; font-size: 14px; }
+  .ap-champs { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 12px; padding: 2px 16px 16px; }
+  .ap-champ { display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: var(--text-muted); min-width: 0; }
+  .ap-champ.large, .ap-case.large, .ap-aide.large { grid-column: 1 / -1; }
+  .ap-champ small { font-size: 10px; color: var(--text-dim); }
+  .ap-champ select, .ap-champ > input { background: var(--surface-alt); border: 1px solid var(--border); border-radius: 9px; padding: 8px 10px; font-size: 13px; color: var(--text); min-width: 0; }
+  .ap-champ select:focus, .ap-champ > input:focus { border-color: var(--accent-border); box-shadow: 0 0 0 3px var(--accent-dim); outline: none; }
+  .ap-champ .cf-saisie input { padding: 8px 10px; font-size: 13px; }
+  .ap-case { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text); cursor: pointer; }
+  .ap-aide { font-size: 11px; color: var(--text-dim); margin: 0; }
+  .ap-droite { min-width: 0; }
+  .ap-barre-haut { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+  .ap-barre-haut h2 { font-size: 16px; font-weight: 600; color: var(--text); }
+  .ap-commandes { display: flex; gap: 8px; flex-wrap: wrap; } .ap-commandes .dbx-onglets { margin: 0; }
+  .ap-sous { font-size: 12px; color: var(--text-muted); margin: -4px 0 12px; }
+  .ap-apercu { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+  .ap-carte { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 10px 12px; background: var(--surface); border: 1px solid var(--border); border-radius: 16px; cursor: pointer; color: var(--text); text-align: center; transition: transform .2s, box-shadow .2s, border-color .2s; }
+  .ap-carte:hover { transform: translateY(-2px); box-shadow: 0 12px 26px rgba(17,54,121,0.12); }
+  .ap-carte.actif { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+  .ap-carte-titre { font-size: 11.5px; font-weight: 600; color: var(--text-muted); min-height: 30px; display: flex; align-items: center; }
+  .ap-anneau { width: 62px; height: 62px; }
+  .ap-carte.ok .ap-anneau { color: #22C55E; } .ap-carte.moyen .ap-anneau { color: #F59E0B; } .ap-carte.critique .ap-anneau { color: #EF4444; }
+  .ap-carte-pct { position: absolute; top: 62px; font-size: 13px; font-weight: 600; }
+  .ap-carte-lacune { font-size: 11px; color: var(--text-muted); min-height: 28px; }
+  .ap-carte.critique .ap-carte-lacune, .ap-carte.moyen .ap-carte-lacune { color: #DC2626; }
+  .ap-detail .ap-graph { margin-bottom: 14px; }
+  .ap-graph { position: relative; }
+  .ap-graph-ligne { display: grid; grid-template-columns: 82px 1fr 110px; align-items: center; gap: 10px; margin-bottom: 10px; font-size: 12px; }
+  .ap-graph-lib { color: var(--text-muted); }
+  .ap-graph-ligne b { text-align: right; font-variant-numeric: tabular-nums; }
+  .ap-graph-piste { height: 26px; display: flex; background: var(--surface-alt); border-radius: 8px; overflow: hidden; }
+  .ap-graph-piste span { display: block; height: 100%; transform-origin: left; animation: cf-deploie .7s cubic-bezier(.2,.8,.2,1) both; }
+  .ap-revenu { background: #A5B4FC; }
+  .ap-lacune { background: repeating-linear-gradient(45deg, #EF4444 0 6px, #FCA5A5 6px 12px); }
+  .ap-graph-besoin { position: absolute; top: -4px; height: 68px; left: calc(92px + (100% - 212px) * var(--pos, 0)); pointer-events: none; }
+  .ap-graph-besoin { left: 92px; right: 120px; }
+  .ap-graph-besoin::before { content: ''; position: absolute; top: 0; bottom: 0; left: var(--x); border-left: 2px solid #EF4444; }
+  .ap-graph-besoin span { position: absolute; top: -16px; left: var(--x); transform: translateX(-50%); font-size: 10.5px; color: #EF4444; font-weight: 600; white-space: nowrap; }
+  .ap-legende { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+  .ap-legende span { display: inline-flex; align-items: center; gap: 5px; } .ap-legende i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .ap-lignes { display: flex; flex-direction: column; }
+  .ap-ligne { display: flex; align-items: center; gap: 10px; padding: 7px 0; font-size: 12.5px; color: var(--text); border-bottom: 1px solid var(--border); }
+  .ap-ligne i { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .ap-ligne span { flex: 1; } .ap-ligne b { font-weight: 600; font-variant-numeric: tabular-nums; }
+  .ap-ligne.discret { color: var(--text-muted); font-size: 12px; }
+  .ap-ligne.total { border-bottom: none; font-weight: 500; } .ap-ligne.total b { font-size: 14px; }
+  .ap-ligne.neg b { color: #DC2626; } .ap-ligne.pos b { color: #16A34A; }
+  .ap-capitaux { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .ap-capitaux span { background: var(--surface-alt); border: 1px solid var(--border); border-radius: 999px; padding: 5px 12px; font-size: 11.5px; color: var(--text-muted); } .ap-capitaux b { color: var(--text); }
+  .ap-coach { margin-top: 16px; }
+  .ap-coach-ligne { display: flex; gap: 10px; align-items: flex-start; padding: 7px 0; }
+  .ap-coach-ligne > span { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; }
+  .ap-coach-ligne.ok > span { background: #22C55E; } .ap-coach-ligne.alerte > span { background: #EF4444; } .ap-coach-ligne.info > span { background: #94A3B8; }
+  .ap-coach-ligne p { margin: 0; font-size: 12.5px; color: var(--text); line-height: 1.5; }
+  .ap-classique { font-size: 11.5px; color: var(--text-dim); margin-top: 14px; }
+  @media (max-width: 1250px) { .ap-apercu { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+  @media (max-width: 1000px) { .ap-grille { grid-template-columns: 1fr; } .ap-saisie { position: static; max-height: none; overflow: visible; } }
+  @media (max-width: 600px) { .ap-apercu { grid-template-columns: 1fr 1fr; } .ap-champs { grid-template-columns: 1fr; } .ap-graph-ligne { grid-template-columns: 64px 1fr 84px; } .ap-graph-besoin { left: 74px; right: 94px; } }
+
   @media (prefers-reduced-motion: reduce) {
+    .ap-graph-piste span { animation: none !important; }
     .cf-hero, .cf-projet, .cf-budget-barre span, .cf-retraite-barre span { animation: none !important; }
     .tr-ligne { animation: none !important; stroke-dashoffset: 0; }
     .fcx-hero, .fcx-kpi { animation: none !important; opacity: 1; }
@@ -1044,13 +1121,13 @@
 
 <script src="js/01-prevoyance-immo.js?v=1790010000"></script>
 <script src="js/02-catalogue-session.js?v=1789487348"></script>
-<script src="js/03-auth-navigation.js?v=1790030000"></script>
+<script src="js/03-auth-navigation.js?v=1790040000"></script>
 <script src="js/04-dashboard-finma.js?v=1790000000"></script>
 <script src="js/05-contrats-clients.js?v=1789990000"></script>
-<script src="js/06-signature-opportunites.js?v=1790020000"></script>
-<script src="js/07-fichepaie-bordereaux.js?v=1790000000"></script>
+<script src="js/06-signature-opportunites.js?v=1790040000"></script>
+<script src="js/07-fichepaie-bordereaux.js?v=1790040000"></script>
 <script src="js/08-nouveaux-formulaires.js?v=1788452540"></script>
-<script src="js/09-rappels-vehicules.js?v=1790000000"></script>
+<script src="js/09-rappels-vehicules.js?v=1790040000"></script>
 <script src="js/10-commissions-parametres.js?v=1789980000"></script>
 <script src="js/11-renouvellements.js?v=1789880000"></script>
 <script src="js/12-equipement.js?v=1789850000"></script>
@@ -1060,10 +1137,11 @@
 <script src="js/16-pipeline-kanban.js?v=1789930000"></script>
 <script src="js/17-fiche-activite.js?v=1789940000"></script>
 <script src="js/18-dashboard.js?v=1789980000"></script>
-<script src="js/19-prevision-commissions.js?v=1790000000"></script>
+<script src="js/19-prevision-commissions.js?v=1790040000"></script>
 <script src="js/20-fiche-client-entete.js?v=1790020000"></script>
-<script src="js/21-tresorerie.js?v=1790010000"></script>
-<script src="js/22-conseil-financier.js?v=1790030000"></script>
+<script src="js/21-tresorerie.js?v=1790040000"></script>
+<script src="js/22-conseil-financier.js?v=1790040000"></script>
+<script src="js/23-analyse-prevoyance.js?v=1790050000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

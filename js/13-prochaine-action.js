@@ -179,5 +179,6 @@ async function enregistrerProchaineAction(oppId) {
     const suivante = allOpportunites.find(x => paOuverte(x) && !prochaineAction(x.id));
     if (suivante) { ouvrirModaleProchaineAction(suivante.id, 'enchainer'); return; }
   }
-  if (typeof currentView !== 'undefined' && (currentView === 'opportunites' || currentView === 'dashboard')) navigate(currentView);
+  if (typeof currentView !== 'undefined' && (currentView === 'opportunites' || currentView === 'dashboard' || currentView === 'suivi')) navigate(currentView);
+  if (typeof currentView !== 'undefined' && currentView === 'nouvelle-opportunite' && typeof opRafraichir === 'function') opRafraichir();
 }

@@ -2063,7 +2063,7 @@ async function genererEmailDemandeOffre() {
 // séparée et explicite déclenchée depuis cet aperçu (envoyerApercuEmailDemandeOffreViaOutlook),
 // jamais automatique.
 function ouvrirApercuEmailDemandeOffre({ demandeOffreId, cies, emails, sansEmail, sujet, corps }) {
-  window._apercuEmailDemandeOffre = { demandeOffreId, cies, emails };
+  window._apercuEmailDemandeOffre = { demandeOffreId, cies, emails, oppId: document.getElementById('do-opportunite-id')?.value || null };
   const qa = (s) => (s || '').toString().replace(/"/g, '&quot;');
   creerModale('modal-apercu-email-do', `
     <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:600px;width:100%;max-height:90vh;display:flex;flex-direction:column">
@@ -2131,15 +2131,22 @@ async function envoyerApercuEmailDemandeOffreViaOutlook() {
     const existantes = (await dbGet('demandes_offre', `id=eq.${ctx.demandeOffreId}&select=compagnies_envoi`))?.[0]?.compagnies_envoi || [];
     const maintenant = new Date().toISOString();
     const compagniesEnvoi = [...existantes];
-    ctx.cies.forEach(cie => {
-      const i = compagniesEnvoi.findIndex(e => e.compagnie_id === cie.id);
-      const entree = { compagnie_id: cie.id, compagnie: cie.compagnie, email: cie.email || null, envoye_le: maintenant, statut: 'envoyée' };
-      if (i >= 0) compagniesEnvoi[i] = entree; else compagniesEnvoi.push(entree);
-    });
+    if (ctx.relance && compagniesEnvoi[ctx.relanceIndex]) {
+      // Relance (js/25) : on garde la date d'envoi d'origine et les offres déjà saisies
+      const e = compagniesEnvoi[ctx.relanceIndex];
+      compagniesEnvoi[ctx.relanceIndex] = { ...e, relance_le: maintenant, nb_relances: (e.nb_relances || 0) + 1 };
+    } else {
+      ctx.cies.forEach(cie => {
+        const i = compagniesEnvoi.findIndex(e => e.compagnie_id === cie.id);
+        const entree = { compagnie_id: cie.id, compagnie: cie.compagnie, email: cie.email || null, envoye_le: maintenant, statut: 'envoyée' };
+        if (i >= 0) compagniesEnvoi[i] = entree; else compagniesEnvoi.push(entree);
+      });
+    }
     await dbPatch('demandes_offre', ctx.demandeOffreId, { compagnies_envoi: compagniesEnvoi });
   }
   document.getElementById('modal-apercu-email-do')?.remove();
   showError(envoiOk ? `✓ Courriel envoyé à ${ctx.emails.join(', ')}.` : "Échec de l'envoi.");
+  if (envoiOk && typeof opApresEnvoiDemande === 'function') opApresEnvoiDemande(ctx);
 }
 
 // Construit le corps de la requête (donnees + liens client/opp) à partir du formulaire — factorisé
@@ -2821,11 +2828,19 @@ async function saveOpportunite(id) {
     btn.textContent = id ? '✓ Enregistrer les modifications' : '✓ Enregistrer'; btn.disabled = false;
     return;
   }
-  opportuniteEnEditionId = null;
   allOpportunites = await dbGet('opportunites', 'select=*');
-  navigate('opportunites');
-  // Opportunité ouverte sans étape prévue : on demande tout de suite la prochaine action
   const idEnregistre = id || (Array.isArray(r) && r[0] && r[0].id);
+  // Hors session RH : retour sur la fiche opportunité (js/25) plutôt que sur le pipeline
+  window._oppFormulairePour = null;
+  window._oppFormulaireNouveau = false;
+  if (!rh && idEnregistre && typeof viewOpportuniteRoute === 'function') {
+    opportuniteEnEditionId = idEnregistre;
+    navigate('nouvelle-opportunite', { silent: true });
+  } else {
+    opportuniteEnEditionId = null;
+    navigate('opportunites');
+  }
+  // Opportunité ouverte sans étape prévue : on demande tout de suite la prochaine action
   if (idEnregistre && typeof verifierProchaineAction === 'function') verifierProchaineAction(idEnregistre);
 }
 

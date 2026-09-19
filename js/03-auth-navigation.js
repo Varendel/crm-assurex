@@ -915,6 +915,7 @@ async function navigate(view, opts) {
   vueDetailActive = null; // une navigation normale quitte toute fiche détail affichée
   currentView = view;
   renderSidebar();
+  if (typeof rexMajTabbar === 'function') rexMajTabbar(); // barre d'onglets iPhone (js/28)
   toggleSidebarMobile(false); // referme le tiroir mobile après un choix dans le menu
   await renderView();
 }
@@ -1323,6 +1324,8 @@ function sectionCard(title, accentColor, content) {
 // ═══ VIEWS ═══
 async function renderView() {
   const main = document.getElementById('main-content');
+  if (currentView !== 'nouvelle-opportunite') { window._oppFormulairePour = null; window._oppFormulaireNouveau = false; }
+  if (currentView !== 'nouvelle-demande-offre') window._doClassique = false;
   switch (currentView) {
     case 'dashboard':
       main.innerHTML = '<div class="loader">Actualisation des données...</div>';
@@ -1340,13 +1343,15 @@ async function renderView() {
     case 'recherche-vehicules': main.innerHTML = viewRechercheVehicules(); break;
     case 'volume-primes': main.innerHTML = '<div class="loader">Calcul en cours...</div>'; main.innerHTML = await viewVolumePrimes(); break;
     case 'nouveau-client': main.innerHTML = viewNouveauClient(); break;
-    case 'nouvelle-opportunite': main.innerHTML = viewNouvelleOpportunite(); break;
+    // Fiche opportunité aérée + création rapide (js/25) ; l'ancien formulaire reste le mode « tous les champs »
+    case 'nouvelle-opportunite': main.innerHTML = typeof viewOpportuniteRoute === 'function' ? viewOpportuniteRoute() : viewNouvelleOpportunite(); break;
     case 'nouveau-rappel': main.innerHTML = viewNouveauRappel(); break;
     case 'nouveau-bordereau': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewNouveauBordereau(); break;
     case 'importer-bordereau': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewImporterBordereauIGB2B(); break;
     case 'nouveau-contrat': main.innerHTML = viewNouveauContrat(); initSegmentContrat(); break;
     case 'nouveau-contrat-direct': contratClientId = null; main.innerHTML = viewNouveauContrat(); initSegmentContrat(); break;
-    case 'nouvelle-demande-offre': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewNouvelleDemandeOffre(); bindAdresseAutocomplete({ adresseId: 'do-adresse', champUnique: true }); break;
+    // Demande d'offre simplifiée (js/26) ; l'ancien formulaire reste accessible (« Formulaire détaillé »)
+    case 'nouvelle-demande-offre': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = (typeof viewDemandeOffreSimple === 'function' && !window._doClassique) ? await viewDemandeOffreSimple() : await viewNouvelleDemandeOffre(); bindAdresseAutocomplete({ adresseId: 'do-adresse', champUnique: true }); break;
     case 'commissions-attente':
       main.innerHTML = '<div class="loader">Actualisation des données...</div>';
       await refreshCoreData();
@@ -1358,7 +1363,7 @@ async function renderView() {
     case 'tresorerie': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); main.innerHTML = viewTresorerie(); break;
     case 'production': main.innerHTML = viewProduction(); break;
     case 'opportunites': main.innerHTML = viewOpportunites(); break;
-    case 'suivi': main.innerHTML = viewSuivi(); break;
+    case 'suivi': main.innerHTML = typeof viewSuiviAffaires === 'function' ? viewSuiviAffaires() : viewSuivi(); break;
     case 'renouvellements': main.innerHTML = viewRenouvellements(); break;
     case 'relances-lamal': main.innerHTML = viewRelancesLamal(); break;
     case 'equipement': main.innerHTML = viewEquipement(); break;

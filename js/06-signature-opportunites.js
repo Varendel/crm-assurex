@@ -2068,7 +2068,30 @@ async function analyserDecomptePdf(input) {
   input.value = '';
 }
 
+// Répartit les lignes du décompte entre les commissions en attente du même contrat : chaque ligne
+// va vers l'attente dont le reste est le plus proche de son montant, en tenant compte de ce que
+// les lignes précédentes y imputent déjà (plusieurs lignes d'une même police, ex. RC + casco).
+// Sans ça, toutes les lignes visaient la même attente, ou aucune (repéré le 19.09.2026, décompte Vaudoise).
+function repartirImputationsImport() {
+  const alloue = {};
+  _decompteLignes.forEach(l => {
+    l.attenteId = null; l.attenteReste = 0;
+    if (!l.contratId || !l.montant) return;
+    const cands = allCommissionsAttente
+      .filter(c => c.contrat_id === l.contratId && c.statut === 'en_attente')
+      .map(c => ({ c, reste: (typeof commissionResteAttendu === 'function' ? commissionResteAttendu(c) : Number(c.montant_estime || 0)) - (alloue[c.id] || 0) }))
+      .filter(x => x.reste > 0.005)
+      .sort((a, b) => Math.abs(a.reste - l.montant) - Math.abs(b.reste - l.montant));
+    if (!cands.length) return;
+    l.attenteId = cands[0].c.id;
+    l.attenteReste = cands[0].reste;
+    if (l.imputer === undefined) l.imputer = true;
+    if (l.imputer && l.selectionne !== false && !l.doublon) alloue[l.attenteId] = (alloue[l.attenteId] || 0) + Number(l.montant);
+  });
+}
+
 function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
+  repartirImputationsImport();
   const zone = document.getElementById('imp-resultats');
   const nbTrouves = _decompteLignes.filter(l => l.contratId).length;
   const nbSuggeres = _decompteLignes.filter(l => !l.contratId && l.clientSuggereNom).length;
@@ -2265,7 +2288,8 @@ async function importerCommissionsEtBordereau(nomAssureur) {
   const fichierArchive = _decompteFichier && typeof archiverFichierBordereau === 'function' ? await archiverFichierBordereau(nouveauBordereau, _decompteFichier) : false;
   const dateReceptionCommission = surOZ ? (dateReception || aujourdhui) : ((dateReception && dateReception >= DATE_BASCULE_ASSUREX) ? dateReception : aujourdhui);
 
-  let nbCrees = 0, nbEchecs = 0, nbIgnores = 0, nbImputes = 0, nbSoldes = 0;
+  let nbCrees = 0, nbEchecs = 0, nbIgnores = 0, nbImputes = 0, nbSoldes = 0, totalImpute = 0;
+  const attentesTouchees = new Set();
   for (const l of aTraiter) {
     const montant = Math.round((Number(l.montant) || 0) * 100) / 100; // centimes conservés (19.09.2026)
     // Un montant négatif est une vraie correction de la compagnie (2e facture ajustant une branche
@@ -2287,12 +2311,8 @@ async function importerCommissionsEtBordereau(nomAssureur) {
         if (rT && rT.error) { nbEchecs++; continue; }
         if (Array.isArray(rT) && rT[0]) allCommissionTranches.push(rT[0]);
         nbImputes++;
-        const deja = typeof commissionDejaRecu === 'function' ? commissionDejaRecu(attente) : montant;
-        if (attente && deja >= Number(attente.montant_estime || 0) - 0.01) {
-          await dbPatch('commissions_attente', attente.id, { statut: 'reçue', montant_final: Math.round(deja * 100) / 100, bordereau_id: nouveauBordereau.id, date_reception: dateReceptionCommission });
-          attente.statut = 'reçue';
-          nbSoldes++;
-        }
+        totalImpute += montant;
+        if (attente) attentesTouchees.add(attente);
         continue;
       }
       const r = await dbPost('commissions_attente', {
@@ -2314,11 +2334,25 @@ async function importerCommissionsEtBordereau(nomAssureur) {
       nbCrees++;
     }
   }
-  logAction('import_decompte_et_bordereau', 'bordereaux', nouveauBordereau.id, `${numero} — ${compagnie} — ${nbCrees} commission(s) créée(s) et rapprochée(s)${surOZ ? ' — encaissé par OZ Assure' : ''}`);
+  // Solde des commissions en attente touchées, une fois TOUTES les lignes imputées (une police peut
+  // avoir plusieurs lignes). Tolérance : l'estimation diffère souvent de quelques centimes du montant
+  // réel versé — reste ≤ CHF 1 ou ≤ 2 % de l'estimation → commission soldée au montant réellement reçu.
+  for (const attente of attentesTouchees) {
+    const estime = Number(attente.montant_estime || 0);
+    const deja = typeof commissionDejaRecu === 'function' ? commissionDejaRecu(attente) : 0;
+    if (deja > 0 && estime - deja <= Math.max(1, estime * 0.02)) {
+      const rS = await dbPatch('commissions_attente', attente.id, { statut: 'reçue', montant_final: Math.round(deja * 100) / 100, bordereau_id: nouveauBordereau.id, date_reception: dateReceptionCommission });
+      if (!(rS && rS.error)) { attente.statut = 'reçue'; nbSoldes++; }
+    }
+  }
+  logAction('import_decompte_et_bordereau', 'bordereaux', nouveauBordereau.id, `${numero} — ${compagnie} — ${nbCrees} commission(s) créée(s), ${nbImputes} versement(s) déduit(s) de l'attente${surOZ ? ' — encaissé par OZ Assure' : ''}`);
   allCommissionsAttente = await dbGet('commissions_attente', 'select=*');
   allCommissionTranches = await dbGet('commission_tranches', 'select=*') || [];
   allBordereaux = await dbGet('bordereaux', 'select=*');
-  showError(`✓ Bordereau ${numero} créé avec ${nbCrees} commission(s) ${surOZ ? 'enregistrée(s) en « Versé OZ » (hors chiffres Assurex)' : 'rapprochée(s)'}${nbImputes ? ` et ${nbImputes} versement(s) déduit(s) de commissions en attente${nbSoldes ? ` (${nbSoldes} soldée(s))` : ''}` : ''}${fichierArchive ? ' — fichier archivé 📎' : ''}.${nbIgnores ? ' ' + nbIgnores + ' ligne(s) ignorée(s) car déjà importée(s) aujourd\'hui (doublon évité).' : ''}${nbEchecs ? ' ⚠️ ' + nbEchecs + ' échec(s) d’écriture — vérifie manuellement depuis le bordereau.' : ''}`);
+  const partiesMsg = [];
+  if (nbImputes) partiesMsg.push(`${nbImputes} ligne(s) rapprochée(s) de commissions déjà en attente (CHF ${fmtCHF2(totalImpute)} déduits${nbSoldes ? `, ${nbSoldes} commission(s) désormais soldée(s)` : ', le solde reste attendu'})`);
+  if (nbCrees || !nbImputes) partiesMsg.push(`${nbCrees} nouvelle(s) commission(s) ${surOZ ? 'enregistrée(s) en « Versé OZ » (hors chiffres Assurex)' : 'enregistrée(s) comme reçue(s)'}`);
+  showError(`✓ Bordereau ${numero} créé : ${partiesMsg.join(' · ')}${fichierArchive ? ' — fichier archivé 📎' : ''}.${nbIgnores ? ' ' + nbIgnores + ' ligne(s) ignorée(s) car déjà importée(s) aujourd\'hui (doublon évité).' : ''}${nbEchecs ? ' ⚠️ ' + nbEchecs + ' échec(s) d’écriture — vérifie manuellement depuis le bordereau.' : ''}`);
   if (btn) { btn.disabled = false; btn.textContent = '✓ Créer les commissions et le bordereau'; }
   _decompteLignes = []; _decompteNomAssureur = ''; _decompteCommissionTotaleAnnoncee = null; _decompteFichier = null;
   navigate('bordereaux');

@@ -342,6 +342,10 @@ function dbxSignaux(D) {
     const n = nbOppsSansProchaineAction();
     if (n) s.push({ ton: 'orange', icone: '➜', texte: `<strong>${n} opportunité${n > 1 ? 's' : ''}</strong> sans prochaine action : elles risquent de s’endormir.`, action: "navigate('opportunites')", bouton: 'Planifier' });
   }
+  if (typeof opEstDormante === 'function') {
+    const n = allOpportunites.filter(opEstDormante).length;
+    if (n) s.push({ ton: 'orange', icone: '💤', texte: `<strong>${n} affaire${n > 1 ? 's' : ''}</strong> sans aucune activité depuis plus de ${OP_DELAI_DORMANTE_JOURS} jours.`, action: "navigate('suivi')", bouton: 'Relancer' });
+  }
   if (typeof rlClientsLamal === 'function') {
     const n = rlClientsLamal().filter(x => x.statut === 'a_contacter').length;
     if (n) s.push({ ton: 'bleu', icone: '🩺', texte: `<strong>${n} client${n > 1 ? 's' : ''} LAMal</strong> à relancer avant le 30.11 — une occasion de rendez-vous.`, action: "navigate('relances-lamal')", bouton: 'Relancer' });

@@ -171,6 +171,17 @@
     --logo-filter: brightness(0) invert(1);
     background: #113679; border-right-color: #113679;
   }
+  /* ── Thème sombre en deux tons aussi (demande de Jonathan, 19.09.2026) : menu bleu marine de la
+        marque, contenu gris-bleu très sombre — même principe que le thème clair. ── */
+  html:not([data-theme="clair"]) .sidebar {
+    --sidebar: #0F2D66; --text: #FFFFFF; --text-muted: #BFCDE6; --text-dim: #8499C2;
+    --border: rgba(255,255,255,0.12); --surface: rgba(255,255,255,0.07); --surface-alt: rgba(255,255,255,0.05);
+    --accent: #00CFFF; --accent-dim: rgba(0,207,255,0.16); --accent-border: rgba(0,207,255,0.4); --on-accent: #06142C;
+    --logo-filter: brightness(0) invert(1);
+    background: linear-gradient(180deg, #113679 0%, #0B2458 100%); border-right-color: #0B2458;
+  }
+  html:not([data-theme="clair"]) { --bg: #0A0F1C; }
+  html:not([data-theme="clair"]) .mobile-topbar { background: #113679; }
 
   /* APP */
   #app { display: none; min-height: 100vh; flex-direction: row; }
@@ -1026,6 +1037,24 @@
   .ap-coach-ligne.ok > span { background: #22C55E; } .ap-coach-ligne.alerte > span { background: #EF4444; } .ap-coach-ligne.info > span { background: #94A3B8; }
   .ap-coach-ligne p { margin: 0; font-size: 12.5px; color: var(--text); line-height: 1.5; }
   .ap-visuel { display: grid; grid-template-columns: minmax(240px, 330px) minmax(0, 1fr); gap: 22px; align-items: center; margin-bottom: 10px; }
+  /* Financement immobilier (js/24) */
+  .fi .dbx-carte { margin-bottom: 16px; }
+  .fi .dbx-grille { margin-bottom: 0; }
+  .fi-verdict { display: flex; align-items: center; gap: 14px; padding: 16px 18px; border-radius: 16px; margin-bottom: 16px; animation: dbx-entree .35s ease both; }
+  .fi-verdict.ok { background: rgba(34,197,94,0.1); border: 1px solid rgba(34,197,94,0.35); }
+  .fi-verdict.ko { background: rgba(239,68,68,0.08); border: 1px solid rgba(239,68,68,0.35); }
+  .fi-verdict-icone { width: 38px; height: 38px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 18px; font-weight: 700; color: #fff; flex-shrink: 0; }
+  .fi-verdict.ok .fi-verdict-icone { background: #22C55E; } .fi-verdict.ko .fi-verdict-icone { background: #EF4444; }
+  .fi-verdict > div { display: flex; flex-direction: column; gap: 2px; font-size: 13px; color: var(--text-muted); }
+  .fi-verdict strong { font-size: 15px; font-weight: 600; color: var(--text); }
+  .fi-verif { display: flex; gap: 12px; align-items: flex-start; padding: 9px 0; border-bottom: 1px solid var(--border); }
+  .fi-verif:last-of-type { border-bottom: none; }
+  .fi-verif > span { width: 24px; height: 24px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: #fff; flex-shrink: 0; }
+  .fi-verif.ok > span { background: #22C55E; } .fi-verif.ko > span { background: #EF4444; }
+  .fi-verif div { display: flex; flex-direction: column; gap: 2px; } .fi-verif strong { font-size: 13px; font-weight: 600; color: var(--text); } .fi-verif small { font-size: 11.5px; color: var(--text-muted); }
+  .fi-leviers { margin-top: 12px; padding: 12px 14px; border-radius: 12px; background: var(--accent-dim); border: 1px solid var(--accent-border); display: flex; flex-direction: column; gap: 5px; font-size: 12.5px; color: var(--text); }
+  .fi-leviers strong { font-weight: 600; }
+  .fi-schema > div { border-radius: 14px !important; }
   .ap-colonnes .ap-legende { justify-content: center; }
   .ap-svg { width: 100%; height: auto; display: block; }
   .ap-svg rect { transition: opacity .15s; } .ap-svg rect:hover { opacity: .8; }
@@ -1225,7 +1254,7 @@
   <div class="main" id="main-content"></div>
 </div>
 
-<script src="js/01-prevoyance-immo.js?v=1790070000"></script>
+<script src="js/01-prevoyance-immo.js?v=1790080000"></script>
 <script src="js/02-catalogue-session.js?v=1790060000"></script>
 <script src="js/03-auth-navigation.js?v=1790070000"></script>
 <script src="js/04-dashboard-finma.js?v=1790000000"></script>
@@ -1246,8 +1275,9 @@
 <script src="js/19-prevision-commissions.js?v=1790040000"></script>
 <script src="js/20-fiche-client-entete.js?v=1790020000"></script>
 <script src="js/21-tresorerie.js?v=1790040000"></script>
-<script src="js/22-conseil-financier.js?v=1790040000"></script>
-<script src="js/23-analyse-prevoyance.js?v=1790060000"></script>
+<script src="js/22-conseil-financier.js?v=1790080000"></script>
+<script src="js/23-analyse-prevoyance.js?v=1790080000"></script>
+<script src="js/24-financement-immo.js?v=1790080000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

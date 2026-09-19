@@ -546,14 +546,16 @@ function cfOngletImmobilier() {
 function cfOuvrirSimulateurImmo() {
   cfSauverMaintenant();
   const s = _cf.dossier.situation || {}, im = s.immobilier || {}, p = s.prevoyance || {};
-  const id = _cf.client.id;
-  navigate('calc-immo').then(() => {
-    const set = (i, v) => { const el = document.getElementById(i); if (el && v !== undefined && v !== '' && v !== null) el.value = v; };
-    set('fi-client', id); if (typeof prefillClientImmo === 'function') prefillClientImmo();
-    set('fi-prix', cfNum(im.prix) || ''); set('fi-fp-total', cfNum(im.fonds_propres) || ''); set('fi-fp-lpp', cfNum(im.fonds_propres_lpp) || 0);
-    set('fi-revenu', (cfNum(p.salaire_brut) + cfNum(p.salaire_brut_conjoint)) || '');
-    set('fi-type-residence', im.type === 'secondaire' ? 'secondaire' : 'principale');
-  });
+  // Le simulateur (js/24) s'ouvre prérempli avec les données du dossier
+  const c = _cf.client, pa = s.patrimoine || {};
+  const lpp = cfNum(im.fonds_propres_lpp);
+  window._fiInitial = { clientId: c.id, d: {
+    nom: cfNomClient(c), naissance: c.date_naissance || '', prix: cfNum(im.prix) || '', type: im.type === 'secondaire' ? 'secondaire' : 'principale',
+    fp_epargne: cfNum(im.fonds_propres) ? Math.max(0, cfNum(im.fonds_propres) - lpp) : (cfNum(pa.liquidites) || ''), fp_lpp: lpp || '',
+    revenu: (cfNum(p.salaire_brut) + cfNum(p.salaire_brut_conjoint)) || '', age_retraite: cfNum(p.age_retraite) || 65,
+    taux_effectif: cfNum(im.taux_actuel) || 1.8,
+  } };
+  navigate('calc-immo');
 }
 function cfPanneauImmobilier() {
   const A = cfAnalyse();

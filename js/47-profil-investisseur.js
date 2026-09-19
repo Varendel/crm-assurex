@@ -102,6 +102,87 @@ function piAvertissements(A, alloc) {
   return av;
 }
 
+// ── Solutions concrètes : c'est là qu'on sort du conseil pour proposer un produit ───────────────
+// Objectif (Jonathan, 20.09.2026) : le profil et l'allocation doivent déboucher sur une POLICE VIE
+// (3a lié, 3b libre, amortissement indirect) ou un FINANCEMENT LONG TERME (hypothèque, apport),
+// avec la prime mensuelle, les compagnies à solliciter, et le bouton qui crée l'affaire.
+const PI_COMPAGNIES_VIE = ['Swiss Life', 'Helvetia', 'Generali', 'PAX', 'Zurich', 'Groupe Mutuel'];
+
+function piSolutions(A, alloc) {
+  const p = alloc.profil;
+  const s = [];
+  const m = cle => (alloc.lignes.find(l => l.cle === cle) || {}).montant || 0;
+  const mens = x => `${cfCHF(x)}/mois`;
+  const hypo = A.hypoActuelle || 0;
+
+  // 1. 3e pilier A — police vie liée, la solution de base quand il reste du plafond
+  if (m('3a') > 0) s.push({
+    icone: '🛡️', titre: 'Police vie liée 3a', produit: 'Assurance vie liée 3a (pilier 3a)',
+    prime: m('3a'), horizon: A.annees,
+    pourquoi: `Déductible du revenu (${cfCHF(A.economieImpot3a)} d’impôt économisé cette année), capital garanti au décès et à l’invalidité, fonds au profil ${p.label}.`,
+    compagnies: PI_COMPAGNIES_VIE,
+  });
+  // 2. Amortissement indirect : hypothèque existante + 3a → financement long terme
+  if (hypo > 0) s.push({
+    icone: '🏡', titre: 'Amortissement indirect de l’hypothèque', produit: 'Assurance vie liée 3a (pilier 3a)',
+    prime: Math.min(CF_PLAFOND_3A / 12, Math.max(m('3a'), hypo * 0.01 / 12)), horizon: A.annees,
+    pourquoi: `Hypothèque de ${cfCHF(hypo)} : amortir via une police 3a nantie plutôt qu’en direct garde la dette (et sa déduction fiscale) et fait travailler l’épargne au profil ${p.label}.`,
+    compagnies: PI_COMPAGNIES_VIE, route: 'calc-immo',
+  });
+  // 3. Projet immobilier : apport à constituer + financement à préparer
+  const projetImmo = A.projets.find(x => x.type === 'immobilier');
+  if (projetImmo) s.push({
+    icone: '🔑', titre: 'Financement immobilier à préparer', produit: 'Financement / hypothèque',
+    prime: projetImmo.mensuel, horizon: projetImmo.n,
+    pourquoi: `Apport de ${cfCHF(projetImmo.cible)} à réunir d’ici ${Math.round(projetImmo.n)} an(s). À moins de ${p.horizon} ans, cette part reste sans risque ; le 2e pilier et le 3a peuvent être nantis ou retirés.`,
+    compagnies: [], route: 'calc-immo',
+  });
+  // 4. Placement libre — police vie 3b ou plan d'épargne en fonds
+  if (m('libre') > 0) s.push({
+    icone: '📈', titre: 'Épargne libre : police vie 3b ou plan en fonds', produit: 'Assurance vie liée 3b',
+    prime: m('libre'), horizon: Math.max(p.horizon, A.annees || p.horizon),
+    pourquoi: `Au-delà du plafond 3a : police vie 3b (bénéficiaires désignés, capital en cas de décès) ou plan d’épargne en fonds si la souplesse prime. Profil ${p.label}, horizon ${p.horizon} ans et plus.`,
+    compagnies: PI_COMPAGNIES_VIE,
+  });
+  // 5. Lacune de retraite non couverte par ce qui précède
+  if (A.lacune > 0 && A.epargneRetraite > m('3a') + m('libre')) s.push({
+    icone: '🌅', titre: 'Compléter la retraite', produit: 'Rachats LPP + vie 3a',
+    prime: A.epargneRetraite, horizon: A.annees,
+    pourquoi: `Lacune estimée à ${cfCHF(A.lacune)}/an à la retraite : il manque ${cfCHF(Math.max(0, A.epargneRetraite - m('3a') - m('libre')))}/mois. Rachats LPP (déductibles, sans risque de marché) puis vie 3a pour le solde.`,
+    compagnies: PI_COMPAGNIES_VIE,
+  });
+  return s;
+}
+
+function piHtmlSolutions(A, alloc) {
+  const sols = piSolutions(A, alloc);
+  if (!sols.length) return '<div class="dbx-vide-petit">Pas encore de solution à proposer : compléter le budget et les projets.</div>';
+  return `<div class="pi-solutions">${sols.map(x => `<article class="pi-solution">
+    <div class="pi-sol-tete"><span aria-hidden="true">${x.icone}</span><b>${cfEsc(x.titre)}</b><em>${cfCHF(x.prime)}/mois${x.horizon ? ` · ${Math.round(x.horizon)} ans` : ''}</em></div>
+    <p>${x.pourquoi}</p>
+    ${x.compagnies.length ? `<div class="pi-sol-cies">${x.compagnies.map(c => `<span>${typeof pictoCompagnie === 'function' ? pictoCompagnie(c, 20) : ''} ${cfEsc(c)}</span>`).join('')}</div>` : ''}
+    <div class="pi-sol-actions">
+      <button type="button" class="btn-save" onclick="piCreerOpportunite('${encodeURIComponent(x.titre)}', '${encodeURIComponent(x.produit)}', ${Math.round(x.prime * 12)})">🎯 Créer l’affaire</button>
+      <button type="button" class="btn-secondary" onclick="piDemandeOffre()">📝 Demander des offres</button>
+      ${x.route ? `<button type="button" class="btn-secondary" onclick="cfSauverMaintenant().then(() => navigate('${x.route}'))">🏡 Simulateur</button>` : ''}
+    </div>
+  </article>`).join('')}</div>`;
+}
+
+// Crée l'opportunité depuis le dossier de conseil (le formulaire s'ouvre pré-rempli, rien n'est
+// enregistré tant que l'utilisateur n'a pas validé)
+function piCreerOpportunite(titre, produit, primeAnnuelle) {
+  const c = _cf.client;
+  prefillOpportuniteClientId = c.id;
+  if (typeof opportuniteEnEditionId !== 'undefined') opportuniteEnEditionId = null;
+  window._opcPrefill = { titre: decodeURIComponent(titre), produit: decodeURIComponent(produit), montant: primeAnnuelle, origine: 'conseil financier' };
+  cfSauverMaintenant().then(() => navigate('nouvelle-opportunite'));
+}
+function piDemandeOffre() {
+  prefillDemandeOffreClientId = _cf.client.id;
+  cfSauverMaintenant().then(() => navigate('nouvelle-demande-offre'));
+}
+
 function piOngletPlacements() {
   const A = cfAnalyse();
   const alloc = piAllocation(A);
@@ -143,6 +224,10 @@ function piOngletPlacements() {
         </div>
       </section>
     </div>
+
+    <section class="dbx-carte" style="margin-top:18px"><header class="dbx-carte-tete"><h2>Solutions à proposer</h2><span class="dbx-carte-sous">polices vie et financement long terme déduits du profil</span></header>
+      ${piHtmlSolutions(A, alloc)}
+    </section>
 
     <section class="dbx-carte" style="margin-top:18px"><header class="dbx-carte-tete"><h2>Cohérence avec les échéances</h2><span class="dbx-carte-sous">profil vs projets et retraite</span></header>
       <div class="dbx-signaux">${av.map((x, i) => `<div class="dbx-signal ${x.ton === 'rouge' ? 'rouge' : x.ton === 'orange' ? 'orange' : 'bleu'}" style="--i:${i}"><span class="dbx-signal-icone">${x.ton === 'vert' ? '✅' : x.ton === 'rouge' ? '⛔' : '⚠️'}</span><span class="dbx-signal-texte">${x.texte}</span></div>`).join('')}</div>

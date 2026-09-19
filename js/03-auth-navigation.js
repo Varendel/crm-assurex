@@ -604,9 +604,11 @@ async function doLogin() {
   if (!email || !pwd) { showError('Email et mot de passe requis.'); return; }
   const btn = document.querySelector('.btn-primary');
   if (btn) { btn.textContent = 'Connexion...'; btn.disabled = true; }
+  const ecranLogin = document.getElementById('login-screen');
+  if (ecranLogin) ecranLogin.classList.add('lp-go'); // Rex s'élance dans le paysage pendant la connexion
   const res = await supabaseAuthLogin(email, pwd);
   if (btn) { btn.textContent = 'Se connecter'; btn.disabled = false; }
-  if (res.error) { showError('Email ou mot de passe incorrect.'); return; }
+  if (res.error) { if (ecranLogin) ecranLogin.classList.remove('lp-go'); showError('Email ou mot de passe incorrect.'); return; }
   document.getElementById('login-error').classList.add('hidden');
 
   // Propose au navigateur d'enregistrer les identifiants (SPA = pas de rechargement de page,

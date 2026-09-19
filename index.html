@@ -138,7 +138,7 @@
   .login-marque { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 26px; margin-top: -8px; }
   .login-mascotte { width: 170px; height: auto; filter: drop-shadow(0 10px 22px rgba(0,0,0,0.25)); }
   .login-logotype { width: 280px; height: auto; filter: brightness(0) invert(1); }
-  .login-pied { position: relative; display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 13px; color: #B9CAE8; }
+  .login-pied { position: relative; z-index: 2; background: #113679; padding-top: 10px; display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 13px; color: #B9CAE8; }
   .login-pied svg { width: 170px; height: auto; }
   .login-zone { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
   #login-screen .login-card { width: 100%; max-width: 400px; background: transparent; border: 0; padding: 0; border-radius: 0; }
@@ -2769,6 +2769,70 @@
 .pi-comp-barre i { display: block; height: 100%; background: #CBD5E1; }
 .pi-comp.actif .pi-comp-barre i { background: linear-gradient(90deg, #00CFFF, #113679); }
 .pi-comp-val { text-align: right; font-variant-numeric: tabular-nums; }
+/* ═══ Paysage animé de la page de connexion (20.09.2026) : plaine et montagnes qui défilent,
+   Rex qui court ; au clic sur « Se connecter », il accélère et sort de l'écran. ═══ */
+.lp-paysage { position: absolute; left: 0; right: 0; bottom: 58px; height: 190px; overflow: hidden; pointer-events: none; }
+.lp-couche { position: absolute; left: 0; right: 0; background-repeat: repeat-x; }
+.lp-montagnes { bottom: 74px; height: 120px; opacity: .38;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='900' height='120' viewBox='0 0 900 120'%3E%3Cpath d='M0 120 L120 34 L190 78 L280 18 L360 70 L450 26 L540 84 L630 40 L720 92 L810 44 L900 120 Z' fill='%23ffffff'/%3E%3C/svg%3E");
+  background-size: 900px 120px; animation: lp-defile 46s linear infinite; }
+.lp-collines { bottom: 58px; height: 90px; opacity: .55;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='700' height='90' viewBox='0 0 700 90'%3E%3Cpath d='M0 90 Q90 30 180 62 Q260 88 330 52 Q420 12 500 60 Q580 100 640 58 Q670 38 700 66 L700 90 Z' fill='%2300CFFF'/%3E%3C/svg%3E");
+  background-size: 700px 90px; animation: lp-defile 26s linear infinite; }
+.lp-plaine { position: absolute; left: 0; right: 0; bottom: 0; height: 64px; background: linear-gradient(180deg, #1A4590 0%, #0E2A5E 100%); }
+.lp-plaine::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: rgba(0,207,255,.55); }
+.lp-rex { position: absolute; left: 14%; bottom: 44px; width: 96px; height: auto; transform-origin: 50% 100%;
+  filter: drop-shadow(0 8px 14px rgba(0,0,0,.35)); animation: lp-course .52s ease-in-out infinite; }
+@keyframes lp-defile { from { background-position-x: 0; } to { background-position-x: -900px; } }
+.lp-collines { animation-name: lp-defile-collines; }
+@keyframes lp-defile-collines { from { background-position-x: 0; } to { background-position-x: -700px; } }
+@keyframes lp-course {
+  0%, 100% { transform: translateY(0) rotate(-2deg) scaleY(1); }
+  35% { transform: translateY(-16px) rotate(2deg) scaleY(1.04); }
+  70% { transform: translateY(-3px) rotate(0deg) scaleY(.97); }
+}
+/* Connexion lancée : Rex accélère et part vers l'horizon */
+#login-screen.lp-go .lp-rex { animation: lp-course .26s ease-in-out infinite, lp-sprint 1.6s ease-in forwards; }
+#login-screen.lp-go .lp-collines { animation-duration: 6s; }
+#login-screen.lp-go .lp-montagnes { animation-duration: 14s; }
+@keyframes lp-sprint { to { left: 108%; width: 70px; opacity: .85; } }
+@media (max-width: 1000px) { .lp-paysage { height: 150px; } .lp-rex { width: 68px; bottom: 34px; } .lp-plaine { height: 48px; } }
+@media (prefers-reduced-motion: reduce) {
+  .lp-couche, .lp-rex, #login-screen.lp-go .lp-rex { animation: none !important; }
+}
+/* ═══ Chargement : Rex allume une bougie en crachant une petite flamme (20.09.2026) ═══ */
+.loader {
+  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+  min-height: 190px; padding: 118px 0 0; gap: 4px; text-align: center; font-size: 13px; color: var(--text-muted);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='120' viewBox='0 0 60 120'%3E%3Crect x='20' y='44' width='20' height='64' rx='5' fill='%23EAF6FF' stroke='%23B9D6EA'/%3E%3Crect x='24' y='52' width='4' height='48' rx='2' fill='%23ffffff' opacity='.8'/%3E%3Cpath d='M30 44 L30 34' stroke='%236B7A90' stroke-width='2.5' stroke-linecap='round'/%3E%3Cellipse cx='30' cy='112' rx='18' ry='5' fill='%2300CFFF' opacity='.18'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: calc(50% + 74px) 6px; background-size: 60px 120px;
+}
+.loader::before { /* Rex, tourné vers la bougie */
+  content: ''; position: absolute; top: 4px; left: calc(50% - 128px); width: 104px; height: 120px;
+  background: url('assets/logos/rex-mascotte-hd.png') center/contain no-repeat;
+  filter: drop-shadow(0 8px 14px rgba(17,54,121,.20)); animation: chx-souffle 2.4s ease-in-out infinite;
+}
+.loader::after { /* la petite flamme crachée, qui file vers la mèche */
+  content: ''; position: absolute; top: 46px; left: calc(50% - 34px); width: 16px; height: 20px;
+  border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
+  background: radial-gradient(60% 60% at 50% 70%, #FFF3B0 0%, #FFB300 55%, #FF6A00 100%);
+  box-shadow: 0 0 14px rgba(255,150,0,.65); opacity: 0; animation: chx-flamme 2.4s ease-in-out infinite;
+}
+@keyframes chx-souffle {
+  0%, 24% { transform: translateX(0) scaleX(1); }
+  32% { transform: translateX(6px) scaleX(1.04); }
+  46%, 100% { transform: translateX(0) scaleX(1); }
+}
+@keyframes chx-flamme {
+  0%, 26% { opacity: 0; transform: translate(0, 12px) scale(.35); }
+  36% { opacity: 1; transform: translate(22px, 4px) scale(.7); }
+  52% { opacity: 1; transform: translate(66px, -6px) scale(.9); }
+  64% { opacity: .95; transform: translate(86px, -14px) scale(1); }
+  78% { opacity: .9; transform: translate(86px, -18px) scale(.92) rotate(-3deg); }
+  92%, 100% { opacity: 0; transform: translate(86px, -22px) scale(.6); }
+}
+@media (max-width: 700px) { .loader { min-height: 150px; padding-top: 96px; background-size: 48px 96px; background-position: calc(50% + 58px) 6px; } .loader::before { width: 84px; height: 96px; left: calc(50% - 106px); } }
+@media (prefers-reduced-motion: reduce) { .loader::before, .loader::after { animation: none; } .loader::after { opacity: .9; transform: translate(86px, -14px); } }
 @media (prefers-reduced-motion: reduce) {
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
@@ -2793,7 +2857,12 @@
       <img src="assets/logos/rex-mascotte-hd.png" alt="Rex, la mascotte du CRM" class="login-mascotte"/>
       <img src="assets/logos/rex-logotype.png" alt="REX CRM" class="login-logotype"/>
     </div>
-    <div class="login-pied">
+    <div class="lp-paysage" aria-hidden="true">
+      <div class="lp-couche lp-montagnes"></div>
+      <div class="lp-couche lp-collines"></div>
+      <div class="lp-plaine"></div>
+      <img src="assets/logos/rex-mascotte-hd.png" alt="" class="lp-rex"/>
+    </div>    <div class="login-pied">
       <img src="assets/logos/assurex.png" alt="Assurex" class="login-assurex"/>
       <svg viewBox="670 488 580 100" xmlns="http://www.w3.org/2000/svg" class="exgroupe-logo">
           <rect x="829.47" y="551.34" width="18.15" height="18.15" fill="#00cfff"/>
@@ -2862,7 +2931,7 @@
 
 <script src="js/01-prevoyance-immo.js?v=1790350000"></script>
 <script src="js/02-catalogue-session.js?v=1790060000"></script>
-<script src="js/03-auth-navigation.js?v=1790620000"></script>
+<script src="js/03-auth-navigation.js?v=1790820000"></script>
 <script src="js/04-dashboard-finma.js?v=1790700000"></script>
 <script src="js/05-contrats-clients.js?v=1790700000"></script>
 <script src="js/06-signature-opportunites.js?v=1790700000"></script>
@@ -2884,7 +2953,7 @@
 <script src="js/22-conseil-financier.js?v=1790800000"></script>
 <script src="js/23-analyse-prevoyance.js?v=1790330000"></script>
 <script src="js/24-financement-immo.js?v=1790350000"></script>
-<script src="js/25-opportunite.js?v=1790640000"></script>
+<script src="js/25-opportunite.js?v=1790820000"></script>
 <script src="js/26-demande-offre.js?v=1790200000"></script>
 <script src="js/27-suivi-affaires.js?v=1790200000"></script>
 <script src="js/28-mobile.js?v=1790200000"></script>
@@ -2906,7 +2975,7 @@
 <script src="js/44-bandeau-pages.js?v=1790660000"></script>
 <script src="js/45-courriers.js?v=1790640000"></script>
 <script src="js/46-offre-vers-contrat.js?v=1790640000"></script>
-<script src="js/47-profil-investisseur.js?v=1790800000"></script>
+<script src="js/47-profil-investisseur.js?v=1790820000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

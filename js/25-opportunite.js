@@ -110,7 +110,8 @@ function viewCreationRapideOpportunite() {
       </div>
       <div class="form-field opc-champ">
         <label class="form-label" for="opc-titre">2 · Objet</label>
-        <input class="form-input" id="opc-titre" placeholder="Ex. LPP pour 6 collaborateurs"/>
+        <input class="form-input" id="opc-titre" placeholder="Ex. LPP pour 6 collaborateurs" value="${opEsc((window._opcPrefill && window._opcPrefill.titre) || '')}"/>
+        ${window._opcPrefill && window._opcPrefill.montant ? `<div class="opc-etat">Depuis le dossier de conseil : ${opEsc(window._opcPrefill.produit || '')} · prime estimée CHF ${fmtCHF(Math.round(window._opcPrefill.montant))}/an</div>` : ''}
         <div class="opc-puces">${OP_OBJETS_RAPIDES.map(t => `<button type="button" onclick="opcObjet(this)">${opEsc(t)}</button>`).join('')}</div>
       </div>
       <div class="form-field opc-champ">
@@ -167,6 +168,7 @@ function opcFormulaireComplet() {
 }
 
 async function opcCreer() {
+  const pre = window._opcPrefill; window._opcPrefill = null; // repris du dossier de conseil (js/47), utilisé une seule fois
   const err = document.getElementById('opc-erreur');
   const montrer = t => { if (err) { err.textContent = t; err.style.display = ''; } };
   const clientId = window._opcClientId || null;

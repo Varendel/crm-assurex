@@ -13,7 +13,18 @@
 // Piège comptable : quand il y a une liste, le TOTAL est la somme des DÉTAILS. On marque donc
 // chaque ligne (« total » ou « detail ») et on ne compte que les totaux, sans quoi tout est doublé.
 
-const EHC_TYPES_COMM = { '01': 'acquisition', '02': 'gestion', '03': 'extourne', '04': 'participation' };
+// Codes typeComm — repris mot pour mot de commissionTypeLib_V5.4.1.xsd (vérifié le 20.09.2026
+// contre un décompte Allianz réel : une première version de cette table inversait gestion et
+// acquisition, ce qui aurait faussé toute la récurrence du portefeuille).
+const EHC_TYPES_COMM = {
+  '00': 'mixte',              // Mehrere, unterschiedliche Provisionsarten
+  '01': 'gestion',            // Courtage / Betreuungsprovision
+  '02': 'acquisition',        // Einmalige Abschlussprovision
+  '03': 'acquisition_courante', // Laufende Abschlussprovision
+  '04': 'forfait',            // Pauschalprovision
+  '05': 'super_commission',   // Superprovision
+  '06': 'acompte',            // Akontocourtage
+};
 
 function ehcTexte(parent, nom) {
   if (!parent) return '';

@@ -325,6 +325,13 @@
 @media (prefers-reduced-motion: reduce) { .neige { display: none; } }
 @media print { .neige { display: none !important; } }
 
+/* Sur l'ecran de connexion, le decor est pose DANS #login-screen (js/62). Il doit passer au-dessus
+   du panneau de marque, qui est peint plein ecran, mais rester derriere la carte de connexion :
+   personne ne doit avoir a viser un champ a travers un flocon. */
+#login-screen > .saison-decor { z-index: 3; }
+#login-screen > .neige { z-index: 4; }
+#login-screen .login-zone, #login-screen .login-card { position: relative; z-index: 6; }
+
 .apx-section { margin-top: var(--e-4, 16px); }
 .apx-cartes { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: var(--e-2, 8px); }
 .apx-carte { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left;

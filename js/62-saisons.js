@@ -19,6 +19,10 @@ const SAISONS = [
     // Du 1er au 31 octobre
     debut: { mois: 10, jour: 1 }, fin: { mois: 10, jour: 31 },
     dossierRex: 'assets/logos/rex/poses-halloween/',
+    // La planche Halloween ne contient pas la pose « debout » : sur l'écran de connexion, Rex
+    // retombait donc sur sa tenue ordinaire, et l'habillage passait inaperçu là où il compte le
+    // plus. Chaque saison désigne la pose qu'elle a réellement dessinée pour la connexion.
+    poseConnexion: 'joie',
     decors: ['🎃', '👻', '🦇', '🕸️'],
   },
   {
@@ -27,6 +31,7 @@ const SAISONS = [
     // Du 1er novembre au 6 janvier (Jonathan : « Noël dès le 01.11 »)
     debut: { mois: 11, jour: 1 }, fin: { mois: 1, jour: 6 },
     dossierRex: 'assets/logos/rex/poses-noel/',
+    poseConnexion: 'debout',
     decors: ['🎄', '⭐', '🎁', '❄️'],
   },
 ];
@@ -55,6 +60,7 @@ function saisonCoupee() {
 function saisonBasculer(couper) {
   try { localStorage.setItem(SAISON_CLE_COUPE, couper ? '1' : '0'); } catch (e) {}
   saisonAppliquer();
+  if (typeof saisonPoserDecorConnexion === 'function') saisonPoserDecorConnexion();
   if (typeof ecRendre === 'function' && document.body.classList.contains('mode-espace-client')) ecRendre();
   else if (typeof dbxRerendre === 'function' && currentView === 'dashboard') dbxRerendre(true);
 }
@@ -66,6 +72,7 @@ function saisonImposer(cle) {
   try { localStorage.setItem(SAISON_CLE_FORCEE, cle || ''); } catch (e) {}
   saisonAppliquer();
   if (typeof saisonPoserCompagnonConnexion === 'function') saisonPoserCompagnonConnexion();
+  if (typeof saisonPoserDecorConnexion === 'function') saisonPoserDecorConnexion();
   if (typeof navigate === 'function' && currentView === 'apparence') navigate('apparence');
 }
 
@@ -151,7 +158,9 @@ function saisonPoserCompagnonConnexion() {
   const rex = piste.querySelector('.login-mascotte');
   if (rex) {
     const normal = 'assets/logos/rex/poses/debout.png';
-    const voulu = s ? s.dossierRex + 'debout.png' : normal;
+    const fichier = (s && typeof REX_POSES !== 'undefined' && REX_POSES[s.poseConnexion])
+      ? REX_POSES[s.poseConnexion].f : 'debout.png';
+    const voulu = s ? s.dossierRex + fichier : normal;
     if (!rex.getAttribute('src') || rex.getAttribute('src').split('?')[0] !== voulu) {
       rex.onerror = function () { this.onerror = null; this.src = normal; };
       rex.src = voulu;
@@ -172,10 +181,29 @@ function saisonPoserCompagnonConnexion() {
   piste.appendChild(img);
 }
 
+// ── Le décor de la page de connexion (20.09.2026) ───────────────────────────────────────────────
+// Jusqu'ici, seuls Rex et son compagnon changeaient de tenue à la connexion : le décor (citrouilles
+// qui flottent, neige) n'apparaissait qu'une fois entré dans le CRM. C'est l'inverse de ce qu'il
+// faut — la page de connexion est la seule que voit un client avant d'ouvrir son espace, et c'est
+// donc là que l'habillage compte le plus. Le décor est maintenant posé sur l'écran de connexion
+// aux mêmes dates, et retiré dès que la saison est coupée ou terminée.
+function saisonPoserDecorConnexion() {
+  const ecran = document.getElementById('login-screen');
+  if (!ecran) return;
+  ecran.querySelector(':scope > .saison-decor')?.remove();
+  ecran.querySelector(':scope > .neige')?.remove();
+  const html = saisonDecorHtml();
+  if (!html) return;
+  const zone = document.createElement('div');
+  zone.innerHTML = html;
+  // saisonDecorHtml peut renvoyer deux blocs (le décor et la neige) : on les déplace tels quels.
+  while (zone.firstElementChild) ecran.appendChild(zone.firstElementChild);
+}
+
 // Au chargement, puis une fois par heure : une session ouverte en continu doit basculer le jour
 // venu sans qu'on ait à recharger la page.
 (function saisonDemarrer() {
-  const poser = () => { if (document.body) { saisonAppliquer(); saisonPoserCompagnonConnexion(); } };
+  const poser = () => { if (document.body) { saisonAppliquer(); saisonPoserCompagnonConnexion(); saisonPoserDecorConnexion(); } };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', poser);
   else poser();
   setInterval(poser, 60 * 60 * 1000);

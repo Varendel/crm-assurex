@@ -308,3 +308,50 @@
     .opc-carte, .dx-rub, .sux-ligne, .opx-micro.ecoute, .rex-micro.ecoute { animation: none !important; }
     .dbx-barre { transform: none; } .dbx-hbarre-piste > span { width: var(--w); } .dbx-spark path:last-child { stroke-dashoffset: 0; }
   }
+
+
+/* ═══ NEIGE ET REGLAGES D'APPARENCE (js/62, js/64 — 20.09.2026) ═══ */
+/* Flocons dessines plutot qu'emojis : a cette taille un emoji devient une tache, et il s'affiche
+   differemment sur chaque systeme. Trois tailles, trois vitesses, et un balancement lateral —
+   sans lui la neige tombe comme de la pluie, et l'oeil le remarque. */
+.neige { position: fixed; inset: 0; pointer-events: none; z-index: 1; overflow: hidden; }
+.neige i { position: absolute; top: -12px; left: var(--x); width: var(--t); height: var(--t);
+  border-radius: 50%; background: #fff; opacity: var(--o);
+  box-shadow: 0 0 calc(var(--t) * 1.6) rgba(255,255,255,.55);
+  animation: neige-chute var(--d) linear infinite, neige-derive calc(var(--d) / 2.4) ease-in-out infinite alternate;
+  animation-delay: var(--r), var(--r); }
+@keyframes neige-chute { to { transform: translateY(108vh); } }
+@keyframes neige-derive { to { margin-left: var(--dx); } }
+@media (prefers-reduced-motion: reduce) { .neige { display: none; } }
+@media print { .neige { display: none !important; } }
+
+.apx-section { margin-top: var(--e-4, 16px); }
+.apx-cartes { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: var(--e-2, 8px); }
+.apx-carte { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left;
+  padding: var(--e-3, 12px); border-radius: var(--r-m, 14px); cursor: pointer; font-family: inherit;
+  background: var(--bg); border: 1px solid var(--border); transition: all var(--v-court, .15s); }
+.apx-carte:hover { border-color: var(--accent); }
+.apx-carte.actif { border-color: var(--accent); background: var(--accent-dim); }
+.apx-carte b { font-size: var(--t-m, 13.5px); color: var(--text); }
+.apx-carte small { font-size: var(--t-xs, 11px); color: var(--text-muted); }
+.apx-saison-icone { font-size: 22px; line-height: 1; margin-bottom: 2px; }
+.apx-apercu { display: flex; flex-direction: column; gap: 3px; width: 100%; margin-bottom: 4px; }
+.apx-apercu i { display: block; background: var(--border); border-radius: 3px; }
+.apx-apercu-confortable i { height: 9px; }
+.apx-apercu-compact i { height: 5px; }
+
+.apx-rex-ligne { display: flex; gap: var(--e-4, 16px); flex-wrap: wrap; align-items: flex-end;
+  margin-top: var(--e-4, 16px); padding-top: var(--e-3, 12px); border-top: 1px solid var(--border); }
+.apx-rex { display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.apx-rex small { font-size: var(--t-xs, 11px); color: var(--text-muted); }
+.apx-note { margin: var(--e-3, 12px) 0 0; font-size: var(--t-xs, 11px); line-height: 1.5; color: var(--text-muted); }
+.apx-note code { font-family: var(--t-mono); font-size: 10.5px; background: var(--bg); padding: 1px 5px; border-radius: 4px; }
+
+.apx-groupe { margin-top: var(--e-3, 12px); }
+.apx-groupe h4 { margin: 0 0 6px; font-size: var(--t-xs, 11px); font-weight: 800; letter-spacing: .06em;
+  text-transform: uppercase; color: var(--text-dim); }
+.apx-pastilles { display: flex; gap: var(--e-2, 8px); flex-wrap: wrap; }
+.apx-pastille { display: flex; flex-direction: column; gap: 2px; min-width: 96px; }
+.apx-pastille i { display: block; height: 34px; border-radius: var(--r-s, 10px); border: 1px solid var(--border); }
+.apx-pastille b { font-size: var(--t-xs, 11px); color: var(--text); }
+.apx-pastille small { font-family: var(--t-mono); font-size: 10px; color: var(--text-muted); }

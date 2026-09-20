@@ -150,6 +150,8 @@ function viewEcohubSync() {
         <button type="button" class="btn-save" onclick="ehsPreparerCorrespondances()">🔗 Préparer les correspondances</button>
       </div></header>
 
+    ${typeof ehmCarteDashboard === 'function' ? ehmCarteDashboard() : ''}
+
     ${ehsJournalHtml()}
 
     <div class="dbx-kpis">

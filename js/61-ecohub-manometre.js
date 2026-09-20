@@ -89,9 +89,15 @@ function ehmCarteDashboard() {
   if (!E) {
     if (!window._ehm.chargement) {
       window._ehm.chargement = true;
-      ehmCharger().then(() => { window._ehm.chargement = false; if (currentView === 'dashboard' && typeof dbxRerendre === 'function') dbxRerendre(true); });
+      ehmCharger().then(() => {
+        window._ehm.chargement = false;
+        // La carte vit à deux endroits : le tableau de bord et la page EcoHub. On rafraîchit
+        // celui où l'on se trouve, sinon la jauge reste vide là où on l'a justement cherchée.
+        if (currentView === 'dashboard' && typeof dbxRerendre === 'function') dbxRerendre(true);
+        else if (currentView === 'ecohub-sync' && typeof navigate === 'function') navigate('ecohub-sync', { silent: true });
+      });
     }
-    return '';
+    return '<section class="dbx-carte ehm-carte"><div class="loader">Lecture de l’état EcoHub…</div></section>';
   }
   const d = E.derniere;
   const etatFlux = E.compagniesOuvertes

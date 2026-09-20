@@ -32,6 +32,9 @@ const SAISONS = [
 ];
 
 const SAISON_CLE_COUPE = 'rex-saison-coupee';
+// Saison imposée à la main, pour voir un habillage hors de sa période : on ne valide pas un
+// décor de Noël le 20 septembre en imaginant à quoi il ressemblera.
+const SAISON_CLE_FORCEE = 'rex-saison-forcee';
 
 // Une période peut enjamber le 31 décembre : on compare alors en deux morceaux.
 function saisonActive(date) {
@@ -56,7 +59,19 @@ function saisonBasculer(couper) {
   else if (typeof dbxRerendre === 'function' && currentView === 'dashboard') dbxRerendre(true);
 }
 
+function saisonForcee() {
+  try { return localStorage.getItem(SAISON_CLE_FORCEE) || ''; } catch (e) { return ''; }
+}
+function saisonImposer(cle) {
+  try { localStorage.setItem(SAISON_CLE_FORCEE, cle || ''); } catch (e) {}
+  saisonAppliquer();
+  if (typeof navigate === 'function' && currentView === 'apparence') navigate('apparence');
+}
+
 function saisonCourante() {
+  const f = saisonForcee();
+  if (f === 'aucune') return null;
+  if (f) return SAISONS.find(s => s.cle === f) || null;
   return saisonCoupee() ? null : saisonActive();
 }
 
@@ -90,7 +105,26 @@ function saisonDecorHtml() {
     const g = (i * 100 / n + (i % 3) * 4).toFixed(1);
     return `<span style="--g:${g}%;--r:${(i * 1.7 % 9).toFixed(1)}s;--v:${(11 + (i % 5) * 2.4).toFixed(1)}s">${d}</span>`;
   }).join('');
-  return `<div class="saison-decor" aria-hidden="true">${pieces}</div>`;
+  return `<div class="saison-decor" aria-hidden="true">${pieces}</div>${s.cle === 'noel' ? saisonNeigeHtml() : ''}`;
+}
+
+// ── Neige (20.09.2026) ──────────────────────────────────────────────────────────────────────────
+// Des flocons dessinés, pas des emojis : à cette taille un emoji devient une tache illisible, et
+// surtout il s'affiche différemment sur chaque système. Trois tailles, trois vitesses, un léger
+// balancement latéral — sans quoi la neige tombe comme de la pluie et le regard le remarque.
+const NEIGE_FLOCONS = 48;
+
+function saisonNeigeHtml() {
+  const f = Array.from({ length: NEIGE_FLOCONS }, (_, i) => {
+    const taille = [2, 3, 4, 5, 6][i % 5];
+    const depart = ((i * 97) % 100).toFixed(1);
+    const duree = (9 + (i % 7) * 2.1).toFixed(1);
+    const retard = ((i * 1.31) % 12).toFixed(1);
+    const derive = (14 + (i % 4) * 11);
+    const opacite = (0.35 + (i % 4) * 0.16).toFixed(2);
+    return `<i style="--t:${taille}px;--x:${depart}%;--d:${duree}s;--r:-${retard}s;--dx:${derive}px;--o:${opacite}"></i>`;
+  }).join('');
+  return `<div class="neige" aria-hidden="true">${f}</div>`;
 }
 
 // Petit interrupteur, à poser dans un en-tête. Discret : c'est un habillage, pas une fonction.

@@ -1722,5 +1722,6 @@ function viewApparence() {
       <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">Couleur d'accent</div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px">Boutons, liens et éléments actifs du CRM.</div>
       <div style="display:flex;gap:18px">${accentsHtml}</div>
-    </div>`;
+    </div>
+    ${typeof apxSectionHtml === 'function' ? apxSectionHtml() : ''}`;
 }

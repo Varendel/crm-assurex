@@ -231,6 +231,22 @@ function trGraphique(R) {
       <rect x="${x0(i) + larg / 2 + 1}" y="${y(x.sorties)}" width="${bw}" height="${Math.max(0, y(0) - y(x.sorties))}" rx="3" fill="#EF4444" opacity=".7"><title>${trLibelleMois(x.m)} — sorties CHF ${trCHF(x.sorties)}</title></rect>
       <text x="${x0(i) + larg / 2}" y="${h - 8}" text-anchor="middle" class="tr-axe">${trLibelleMois(x.m)}</text>`;
   }).join('');
+
+  // Chaque colonne est cliquable et ouvre le détail du mois dans « Entrées d'argent » (demande de
+  // Jonathan, 20.09.2026). La zone de clic couvre toute la hauteur plutôt que la seule barre :
+  // viser une barre de six pixels de large, dont la hauteur dépend du montant, serait pénible —
+  // et impossible pour un mois à zéro, qui est justement un mois qu'on a envie d'interroger.
+  // Elle est posée au-dessus du dessin, donc elle porte son propre libellé de survol.
+  const zonesCliquables = typeof eafDepuisTresorerie === 'function' ? R.parMois.map((x, i) =>
+    `<rect class="tr-zone-mois" x="${x0(i)}" y="${padH}" width="${larg}" height="${h - padH - padB}"
+       fill="transparent" onclick="eafDepuisTresorerie('${x.m}')" role="button" tabindex="0"
+       onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();eafDepuisTresorerie('${x.m}')}"
+     ><title>${trLibelleMois(x.m)}
+Solde au 1er : CHF ${trCHF(x.debut)}
+  + entrées CHF ${trCHF(x.entrees)}
+  − sorties CHF ${trCHF(x.sorties)}
+  = CHF ${trCHF(x.fin)} en fin de mois
+Cliquez pour voir les lignes qui composent les entrées de ce mois.</title></rect>`).join('') : '';
   const pts = R.parMois.map((x, i) => `${x0(i) + larg / 2},${y(x.fin)}`);
   const graduations = [max, (max + min) / 2, min].map(v => `<line x1="${padG}" x2="${w - 6}" y1="${y(v)}" y2="${y(v)}" class="tr-grille"/><text x="${padG - 8}" y="${y(v) + 4}" text-anchor="end" class="tr-axe">${Math.max(Math.abs(max), Math.abs(min)) >= 10000 ? trCHF(v / 1000) + 'k' : trCHF(v)}</text>`).join('');
   return `<div class="tr-graph"><svg viewBox="0 0 ${w} ${h}" role="img" aria-label="Évolution du solde de trésorerie">
@@ -242,12 +258,14 @@ function trGraphique(R) {
     <polyline points="${R.parMois.map((x, i) => `${x0(i) + larg / 2},${y(x.finBas)}`).join(' ')}" fill="none" stroke="#00CFFF" stroke-width="1.2" stroke-dasharray="4 4" opacity=".7"/>` : ''}
     <polyline points="${pts.join(' ')}" fill="none" stroke="#00CFFF" stroke-width="3" stroke-linejoin="round" stroke-linecap="round" class="tr-ligne"/>
     ${R.parMois.map((x, i) => `<circle cx="${x0(i) + larg / 2}" cy="${y(x.fin)}" r="4.5" fill="${x.fin < 0 ? '#EF4444' : '#00CFFF'}" stroke="var(--surface)" stroke-width="2"><title>${trLibelleMois(x.m)} — solde CHF ${trCHF(x.fin)}</title></circle>`).join('')}
+    ${zonesCliquables}
   </svg>
   <div class="tr-legende" style="display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:10px;font-size:12px;color:var(--text-muted)">
     <span style="display:inline-flex;align-items:center;gap:7px"><i style="width:12px;height:12px;border-radius:3px;background:#22C55E;opacity:.75"></i><b style="color:var(--text)">Entrées du mois</b> — commissions (gestion, acquisition) et autres encaissements prévus</span>
     <span style="display:inline-flex;align-items:center;gap:7px"><i style="width:12px;height:12px;border-radius:3px;background:#EF4444;opacity:.7"></i><b style="color:var(--text)">Sorties du mois</b> — charges saisies (salaires, loyer, abonnements…)</span>
-    <span style="display:inline-flex;align-items:center;gap:7px"><i style="width:18px;height:3px;border-radius:2px;background:#00CFFF"></i><b style="color:var(--text)">Solde en fin de mois</b> — trésorerie disponible après entrées et sorties</span>
+    <span style="display:inline-flex;align-items:center;gap:7px"><i style="width:18px;height:3px;border-radius:2px;background:#00CFFF"></i><b style="color:var(--text)">Solde en fin de mois</b> — <b style="color:var(--text)">cumulé</b> : solde du mois précédent + entrées − sorties. Un mois à fortes entrées peut donc finir bas s’il part d’un solde négatif, et l’inverse.</span>
     <span style="display:inline-flex;align-items:center;gap:7px"><i style="width:10px;height:10px;border-radius:50%;background:#EF4444"></i><b style="color:var(--text)">Point rouge</b> — solde négatif ce mois-là</span>
+    ${typeof eafDepuisTresorerie === 'function' ? '<span style="display:inline-flex;align-items:center;gap:7px">👆<b style="color:var(--text)">Cliquez un mois</b> — le détail des lignes qui composent ses entrées s’ouvre dans « Entrées d’argent »</span>' : ''}
     ${R.incertitude ? `<span style="display:inline-flex;align-items:center;gap:7px"><i style="width:18px;height:10px;border-radius:3px;background:rgba(0,207,255,.18);border-top:1.5px dashed #00CFFF;border-bottom:1.5px dashed #00CFFF"></i><b style="color:var(--text)">Zone bleutée</b> — fourchette : commissions ±${Math.round(R.incertitude.taux * 100)} % (écart médian réel / estimé${R.incertitude.n ? ` mesuré sur ${R.incertitude.n} commissions` : ''})</span>` : ''}
     <span style="display:inline-flex;align-items:center;gap:7px"><i style="width:18px;height:0;border-top:1.5px solid var(--text-dim, var(--text-muted))"></i>Ligne du zéro · échelle en CHF (k = milliers)</span>
   </div></div>`;

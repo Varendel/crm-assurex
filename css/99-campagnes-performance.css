@@ -1,0 +1,145 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   PERFORMANCE DES CAMPAGNES (js/85, 20.09.2026)
+
+   Un écran de mesure doit rendre la comparaison possible sans effort : mêmes unités alignées,
+   chiffres en caractères tabulaires, et un ton de couleur qui situe chaque taux par rapport à ce
+   qui se pratique. La couleur n'est jamais la seule information — chaque mesure porte son repère
+   écrit à côté.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.cpf-carte { margin-top: 18px; }
+
+/* ── Les indicateurs ───────────────────────────────────────────────────────────────────────────── */
+.cpf-kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); gap: var(--e-2, 8px); }
+.cpf-kpi {
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 12px 14px; border-radius: var(--r-s, 10px);
+  background: var(--surface-alt); border: 1px solid var(--border);
+}
+.cpf-kpi-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--text-muted); font-weight: 600; }
+.cpf-kpi b {
+  font-size: 21px; font-weight: var(--t-moyen, 600); letter-spacing: -0.03em; color: var(--text);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.cpf-kpi small { font-size: var(--t-xs, 11px); color: var(--text-muted); line-height: 1.4; }
+.cpf-kpi.ton-ok b { color: var(--c-succes, #16A34A); }
+.cpf-kpi.ton-moyen b { color: var(--c-alerte, #F59E0B); }
+.cpf-kpi.ton-faible b { color: var(--c-danger, #EF4444); }
+
+/* ── L'entonnoir ──────────────────────────────────────────────────────────────────────────────── */
+.cpf-entonnoir { display: flex; flex-direction: column; gap: var(--e-2, 8px); }
+.cpf-etage { display: flex; align-items: center; gap: var(--e-3, 12px); }
+.cpf-etage-barre {
+  flex: 1 1 auto; height: 34px; border-radius: var(--r-s, 10px);
+  background: var(--surface-alt); border: 1px solid var(--border); overflow: hidden;
+}
+/* Le dégradé fonce à mesure qu'on descend l'entonnoir : la largeur dit le volume, la couleur dit
+   la profondeur. Deux codes pour la même idée valent mieux qu'un seul. */
+.cpf-etage-barre i {
+  display: block; height: 100%;
+  background: linear-gradient(90deg, var(--accent) 0%, color-mix(in srgb, var(--accent) 62%, transparent) 100%);
+  transition: width .3s ease-out;
+}
+.cpf-etage-texte { flex: 0 0 210px; display: flex; align-items: baseline; gap: 7px; flex-wrap: wrap; }
+.cpf-etage-texte b {
+  font-size: var(--t-l, 15px); font-weight: var(--t-moyen, 600); color: var(--text);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.cpf-etage-texte span { font-size: var(--t-m, 13.5px); color: var(--text); }
+.cpf-etage-texte small { flex-basis: 100%; font-size: var(--t-xs, 11px); color: var(--text-muted); }
+
+/* ── Les mesures de qualité ───────────────────────────────────────────────────────────────────── */
+.cpf-mesures { display: grid; grid-template-columns: repeat(auto-fill, minmax(178px, 1fr)); gap: var(--e-2, 8px); }
+.cpf-mesure {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 12px 14px; border-radius: var(--r-s, 10px);
+  background: var(--surface-alt); border: 1px solid var(--border);
+  border-left-width: 3px;
+}
+.cpf-mesure.ton-ok { border-left-color: var(--c-succes, #16A34A); }
+.cpf-mesure.ton-moyen { border-left-color: var(--c-alerte, #F59E0B); }
+.cpf-mesure.ton-faible { border-left-color: var(--c-danger, #EF4444); }
+.cpf-mesure-nom { font-size: var(--t-s, 12.5px); color: var(--text-muted); }
+.cpf-mesure b {
+  font-size: 20px; font-weight: var(--t-moyen, 600); letter-spacing: -0.03em; color: var(--text);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.cpf-mesure small { font-size: var(--t-xs, 11px); color: var(--text-muted); }
+/* Le repère est écrit, pas seulement suggéré par la couleur : sur un écran mal calibré ou pour un
+   œil qui distingue mal le vert du rouge, la couleur seule ne dit rien. */
+.cpf-repere { margin-top: 3px; font-size: 10px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+
+/* ── Le tableau ────────────────────────────────────────────────────────────────────────────────── */
+.cpf-table-enveloppe { overflow-x: auto; }
+.cpf-table { width: 100%; border-collapse: collapse; font-size: var(--t-m, 13.5px); }
+.cpf-table th { text-align: left; border-bottom: 1px solid var(--border); padding: 0; }
+.cpf-table th > span {
+  display: block; padding: 8px 10px; font-size: 10.5px; text-transform: uppercase;
+  letter-spacing: .07em; color: var(--text-muted); font-weight: 600; white-space: nowrap;
+}
+.cpf-table th.d > span { text-align: right; }
+.cpf-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.cpf-table tr:last-child td { border-bottom: none; }
+.cpf-table tbody tr { cursor: pointer; }
+.cpf-table tbody tr:hover { background: var(--surface-hover); }
+.cpf-table tbody tr.actif { background: var(--accent-dim); }
+.cpf-table tbody tr.actif td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+.cpf-table td b { display: block; font-weight: 500; color: var(--text); }
+.cpf-table td small { display: block; margin-top: 1px; font-size: var(--t-xs, 11px); color: var(--text-muted); }
+.cpf-table .d { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums lining-nums; }
+.cpf-vide { color: var(--text-dim); }
+
+.cpf-taux { font-variant-numeric: tabular-nums lining-nums; font-weight: 500; }
+.cpf-taux.ton-ok { color: var(--c-succes, #16A34A); }
+.cpf-taux.ton-moyen { color: var(--c-alerte, #F59E0B); }
+.cpf-taux.ton-faible { color: var(--c-danger, #EF4444); }
+.cpf-tag, .cpf-candidats {
+  display: inline-block; padding: 2px 8px; border-radius: var(--r-rond, 999px);
+  font-size: var(--t-xs, 11px); white-space: nowrap;
+  background: var(--surface-alt); color: var(--text-muted); border: 1px solid var(--border);
+}
+.cpf-candidats { background: var(--c-info-fond); color: var(--c-info-texte, #0369A1);
+  border-color: color-mix(in srgb, var(--c-info, #0EA5E9) 30%, transparent); }
+
+.cpf-note { margin: 12px 0 0; font-size: var(--t-s, 12.5px); color: var(--text-muted);
+  line-height: 1.55; text-wrap: pretty; }
+.cpf-aide { display: block; margin-top: 4px; font-size: var(--t-xs, 11px); color: var(--text-muted); line-height: 1.45; }
+
+/* ── Les retours à trier ──────────────────────────────────────────────────────────────────────── */
+.cpf-retours { display: flex; flex-direction: column; gap: 6px; }
+.cpf-retour {
+  display: flex; gap: var(--e-3, 12px); align-items: center; flex-wrap: wrap;
+  padding: 10px 14px; border-radius: var(--r-s, 10px);
+  background: var(--surface-alt); border: 1px solid var(--border);
+}
+/* Un candidat est en attente de décision : il se signale, sans crier. */
+.cpf-retour.candidat { border-left: 3px solid var(--c-info, #0EA5E9); }
+.cpf-retour.confirme { border-left: 3px solid var(--c-succes, #16A34A); }
+.cpf-retour.ecarte { opacity: .55; }
+.cpf-retour-texte { flex: 1 1 220px; min-width: 0; }
+.cpf-retour-texte b { display: block; font-weight: 500; color: var(--text); font-size: var(--t-m, 13.5px); }
+.cpf-retour-texte small { display: block; font-size: var(--t-xs, 11px); color: var(--text-muted); }
+.cpf-retour-actions { margin-left: auto; display: flex; gap: 6px; align-items: center; }
+
+.cpf-act {
+  padding: 5px 11px; border-radius: var(--r-s, 10px); cursor: pointer; font-family: inherit;
+  font-size: var(--t-xs, 11px); font-weight: 500; white-space: nowrap;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-muted);
+  transition: color var(--v-court, .15s), border-color var(--v-court, .15s);
+}
+.cpf-act:hover { color: var(--text); border-color: var(--accent-border); }
+.cpf-act-oui { color: var(--c-succes-texte, #15803D); border-color: color-mix(in srgb, var(--c-succes, #16A34A) 34%, transparent); }
+.cpf-act-oui:hover { color: var(--c-succes, #16A34A); border-color: var(--c-succes, #16A34A); }
+.cpf-statut { font-size: var(--t-xs, 11px); }
+.cpf-statut.confirme { color: var(--c-succes, #16A34A); }
+.cpf-statut.ecarte { color: var(--text-dim); }
+
+.cpf-modale { max-width: 460px; }
+
+@media (max-width: 760px) {
+  .cpf-etage-texte { flex-basis: 140px; }
+  .cpf-table th:nth-child(2), .cpf-table td:nth-child(2),
+  .cpf-table th:nth-child(7), .cpf-table td:nth-child(7) { display: none; }
+  .cpf-retour-actions { margin-left: 0; width: 100%; }
+}

@@ -1,0 +1,89 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   CALENDLY (js/83, 20.09.2026)
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.cdl-carte { margin-top: 18px; }
+
+/* ── Le lien à partager ────────────────────────────────────────────────────────────────────────── */
+.cdl-lien-boite {
+  display: flex; gap: var(--e-2, 8px); align-items: center; flex-wrap: wrap;
+  padding: var(--e-3, 12px) var(--e-4, 16px); border-radius: var(--r-s, 10px);
+  background: var(--surface-alt); border: 1px solid var(--border);
+}
+.cdl-lien-boite code {
+  flex: 1 1 260px; min-width: 0; overflow-x: auto; white-space: nowrap;
+  font-size: var(--t-s, 12.5px); color: var(--text);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+.cdl-note { margin: 10px 0 0; font-size: var(--t-s, 12.5px); color: var(--text-muted);
+  line-height: 1.55; text-wrap: pretty; }
+
+/* ── L'état « pas encore configuré » ───────────────────────────────────────────────────────────
+   Ce n'est pas une erreur, c'est une étape : le ton reste informatif, pas alarmant. Un bloc rouge
+   ferait croire à une panne alors que le lien de réservation marche déjà. */
+.cdl-vide {
+  padding: var(--e-4, 16px); border-radius: var(--r-s, 10px);
+  background: var(--c-info-fond); border: 1px solid color-mix(in srgb, var(--c-info, #0EA5E9) 26%, transparent);
+}
+.cdl-vide b { display: block; font-size: var(--t-l, 15px); font-weight: var(--t-moyen, 600); color: var(--text); }
+.cdl-vide p { margin: 6px 0 0; font-size: var(--t-m, 13.5px); color: var(--text); line-height: 1.55; text-wrap: pretty; }
+.cdl-vide ol { margin: 10px 0 0; padding-left: 20px; font-size: var(--t-m, 13.5px); color: var(--text); line-height: 1.75; }
+.cdl-vide code {
+  padding: 1px 6px; border-radius: 4px; background: var(--surface); border: 1px solid var(--border);
+  font-size: var(--t-s, 12.5px);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+
+/* ── La liste des rendez-vous ─────────────────────────────────────────────────────────────────── */
+.cdl-liste { display: flex; flex-direction: column; gap: var(--e-2, 8px); }
+.cdl-rdv {
+  display: flex; gap: var(--e-3, 12px); align-items: center; flex-wrap: wrap;
+  padding: var(--e-3, 12px) var(--e-4, 16px); border-radius: var(--r-s, 10px);
+  background: var(--surface-alt); border: 1px solid var(--border);
+}
+.cdl-rdv.annule { opacity: .6; }
+.cdl-rdv.annule .cdl-quand b { text-decoration: line-through; }
+
+/* La date en colonne fixe : sur une liste, l'œil descend le long des dates, il faut qu'elles
+   soient alignées. */
+.cdl-quand {
+  flex: 0 0 104px; display: flex; flex-direction: column;
+  border-right: 1px solid var(--border); padding-right: var(--e-3, 12px);
+}
+.cdl-quand b { font-size: var(--t-m, 13.5px); font-weight: var(--t-moyen, 600); color: var(--text); text-transform: capitalize; }
+.cdl-quand small { font-size: var(--t-s, 12.5px); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+.cdl-qui { flex: 1 1 210px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.cdl-qui > b { font-size: var(--t-m, 13.5px); font-weight: 500; color: var(--text); }
+.cdl-qui > small { font-size: var(--t-xs, 11px); color: var(--text-muted); }
+
+.cdl-fiche {
+  align-self: flex-start; margin-top: 3px; padding: 0;
+  background: none; border: none; cursor: pointer; font-family: inherit;
+  font-size: var(--t-xs, 11px); color: var(--accent);
+  text-decoration: underline dotted; text-underline-offset: 3px;
+}
+.cdl-fiche:hover { text-decoration-style: solid; }
+/* Un invité hors portefeuille n'est pas une anomalie : c'est un prospect. Ton neutre. */
+.cdl-inconnu { margin-top: 3px; font-size: var(--t-xs, 11px); color: var(--text-dim); font-style: italic; }
+
+.cdl-actions { margin-left: auto; display: flex; gap: var(--e-2, 8px); align-items: center; }
+.cdl-annule-tag { font-size: var(--t-xs, 11px); color: var(--c-danger-texte, #B91C1C); }
+
+/* ── Espace client ─────────────────────────────────────────────────────────────────────────────── */
+.cdl-bloc { display: flex; flex-wrap: wrap; gap: var(--e-2, 8px); align-items: center; }
+.cdl-bloc small { flex-basis: 100%; font-size: var(--t-s, 12.5px); color: var(--text-muted); line-height: 1.5; }
+.cdl-principal { text-decoration: none; }
+
+/* ── La zone de mois cliquable du plan de trésorerie ───────────────────────────────────────────
+   Invisible au repos, elle s'éclaire au survol pour dire qu'il y a quelque chose à cliquer. La
+   colonne entière réagit : c'est ce qu'on vise, pas la barre. */
+.tr-zone-mois { cursor: pointer; transition: fill .12s; }
+.tr-zone-mois:hover { fill: rgba(0, 207, 255, .07); }
+.tr-zone-mois:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+@media (max-width: 640px) {
+  .cdl-quand { flex-basis: 100%; border-right: none; border-bottom: 1px solid var(--border);
+    padding-right: 0; padding-bottom: 8px; flex-direction: row; gap: 8px; align-items: baseline; }
+  .cdl-actions { margin-left: 0; width: 100%; }
+}

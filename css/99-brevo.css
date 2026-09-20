@@ -1,0 +1,77 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   BREVO (js/84, 20.09.2026)
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.brv-carte { margin-top: 18px; }
+
+.brv-kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: var(--e-2, 8px); }
+.brv-kpi {
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 11px 13px; border-radius: var(--r-s, 10px);
+  background: var(--surface-alt); border: 1px solid var(--border);
+}
+.brv-kpi b {
+  font-size: 20px; font-weight: var(--t-moyen, 600); letter-spacing: -0.03em;
+  color: var(--text); font-variant-numeric: tabular-nums lining-nums; text-transform: capitalize;
+}
+.brv-kpi small { font-size: var(--t-xs, 11px); color: var(--text-muted); }
+
+.brv-pastille {
+  display: inline-block; padding: 3px 9px; border-radius: var(--r-rond, 999px);
+  font-size: var(--t-xs, 11px); font-weight: 500; white-space: nowrap;
+  background: var(--surface-alt); color: var(--text-muted); border: 1px solid var(--border);
+}
+.brv-pastille.ok { background: var(--c-succes-fond); color: var(--c-succes-texte, #15803D);
+  border-color: color-mix(in srgb, var(--c-succes, #16A34A) 30%, transparent); }
+.brv-pastille.attente { background: var(--c-info-fond); color: var(--c-info-texte, #0369A1);
+  border-color: color-mix(in srgb, var(--c-info, #0EA5E9) 30%, transparent); }
+.brv-pastille.alerte { background: var(--c-danger-fond); color: var(--c-danger-texte, #B91C1C);
+  border-color: color-mix(in srgb, var(--c-danger, #EF4444) 34%, transparent); }
+
+/* Le bloc « pas encore configuré » : informatif, pas alarmant. Rien n'est cassé — il manque une
+   étape, et le reste du CRM continue de fonctionner sans. */
+.brv-message { padding: var(--e-4, 16px); border-radius: var(--r-s, 10px); }
+.brv-message.info { background: var(--c-info-fond); border: 1px solid color-mix(in srgb, var(--c-info, #0EA5E9) 26%, transparent); }
+.brv-message.alerte { background: var(--c-alerte-fond); border: 1px solid var(--c-alerte, #F59E0B); }
+.brv-message b { display: block; font-size: var(--t-l, 15px); font-weight: var(--t-moyen, 600); color: var(--text); }
+.brv-message ol { margin: 10px 0 0; padding-left: 20px; font-size: var(--t-m, 13.5px); color: var(--text); line-height: 1.8; }
+.brv-message code, .brv-note code {
+  padding: 1px 6px; border-radius: 4px; background: var(--surface); border: 1px solid var(--border);
+  font-size: var(--t-s, 12.5px);
+  font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+.brv-note { margin: 10px 0 0; font-size: var(--t-s, 12.5px); color: var(--text-muted);
+  line-height: 1.55; text-wrap: pretty; }
+
+/* ── Le tableau ────────────────────────────────────────────────────────────────────────────────── */
+.brv-table-enveloppe { overflow-x: auto; }
+.brv-table { width: 100%; border-collapse: collapse; font-size: var(--t-m, 13.5px); }
+/* L'habillage va sur le contenu, jamais sur le <th> : un th en display:block quitte le flux de
+   tableau et les en-têtes suivants se regroupent dans une seule cellule. */
+.brv-table th { text-align: left; border-bottom: 1px solid var(--border); padding: 0; }
+.brv-table th > span {
+  display: block; padding: 8px 10px; font-size: 10.5px; text-transform: uppercase;
+  letter-spacing: .07em; color: var(--text-muted); font-weight: 600; white-space: nowrap;
+}
+.brv-table th.d > span { text-align: right; }
+.brv-table td { padding: 9px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.brv-table tr:last-child td { border-bottom: none; }
+.brv-table tbody tr:hover { background: var(--surface-hover); }
+.brv-table td b { display: block; font-weight: 500; color: var(--text); }
+.brv-table td small { display: block; margin-top: 1px; font-size: var(--t-xs, 11px); color: var(--text-muted); }
+.brv-table .d { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums lining-nums; }
+.brv-vide { color: var(--text-dim); }
+
+.brv-actions { white-space: nowrap; display: flex; gap: 6px; align-items: center; }
+.brv-act {
+  padding: 5px 10px; border-radius: var(--r-s, 10px); cursor: pointer; font-family: inherit;
+  font-size: var(--t-xs, 11px); font-weight: 500; text-decoration: none; white-space: nowrap;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-muted);
+  transition: color var(--v-court, .15s), border-color var(--v-court, .15s);
+}
+.brv-act:hover { color: var(--text); border-color: var(--accent-border); }
+.brv-lie { font-size: 13px; }
+
+@media (max-width: 760px) {
+  .brv-table th:nth-child(5), .brv-table td:nth-child(5) { display: none; }
+}

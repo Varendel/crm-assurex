@@ -254,6 +254,39 @@ async function kbcEnregistrer(id) {
   showError('✓ Campagne enregistrée.');
 }
 
+// ── Le pont avec Brevo (20.09.2026) ─────────────────────────────────────────────────────────────
+// Les chiffres se saisissaient à la main ; depuis que la clé d'API vit dans les secrets Supabase,
+// l'écran Brevo (js/84) peut les relever et les reporter ici. Le rapprochement se fait par le
+// numéro de campagne Brevo, jamais par le titre : deux campagnes peuvent porter le même nom, et
+// écrire des statistiques sur la mauvaise ne se remarque pas avant longtemps.
+function kbcCampagneParBrevo(brevoId) {
+  const n = Number(brevoId);
+  if (!n) return null;
+  return (window._kbc.cartes || []).find(c => Number(c.brevo_id) === n) || null;
+}
+
+async function kbcReporterChiffres(brevoId, chiffres) {
+  // Le tableau peut ne pas avoir été ouvert de la session : on le charge avant de conclure qu'il
+  // n'y a pas de correspondance.
+  if (!(window._kbc.cartes || []).length) await kbcCharger();
+  const c = kbcCampagneParBrevo(brevoId);
+  if (!c) return { ok: false, erreur: 'Aucune campagne du tableau ne porte ce numéro Brevo.' };
+
+  const stats = {
+    envoyes: Number(chiffres.envoyes || 0),
+    ouvertures: Number(chiffres.ouvertures || 0),
+    clics: Number(chiffres.clics || 0),
+  };
+  const r = await dbPatch('campagnes_projets', c.id, {
+    stats, stats_le: chiffres.releve_le || new Date().toISOString(),
+  });
+  if (r && r.error) return { ok: false, erreur: errMsg(r) };
+
+  c.stats = stats; c.stats_le = chiffres.releve_le || new Date().toISOString();
+  if (typeof currentView !== 'undefined' && currentView === 'kanban-campagnes') kbcRendre();
+  return { ok: true, nom: c.titre };
+}
+
 async function kbcArchiver(id) {
   if (!confirm('Archiver cette campagne ? Elle disparaît du tableau mais rien n’est supprimé.')) return;
   const r = await dbPatch('campagnes_projets', id, { archive: true });

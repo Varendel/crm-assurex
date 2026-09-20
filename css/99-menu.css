@@ -1,0 +1,153 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   LE BANDEAU DE GAUCHE (20.09.2026)
+
+   Demande de Jonathan : un bleu plus proche de celui du bandeau, et des lignes en relief à
+   l'intérieur pour moderniser.
+
+   LE BLEU. Le menu descendait de #16408F à #0A2150 — il s'assombrissait vers le bas, alors que le
+   bandeau des pages s'éclaircit (#0B2458 → #113679 → #1A4A9C). Deux bleus de la même famille qui
+   vont en sens inverse : côte à côte, ils ne se répondaient pas. Le menu reprend maintenant les
+   mêmes trois valeurs et le même halo turquoise que le bandeau. Ce ne sont plus deux bleus, c'en
+   est un seul.
+
+   LE RELIEF. Pas d'ombres portées ni de faux boutons bombés : ce qui donne du volume sur un écran,
+   ce sont les ARÊTES. Une surface éclairée d'en haut reçoit une ligne claire sur son bord
+   supérieur et une ligne sombre sur son bord inférieur ; l'œil en déduit une épaisseur sans qu'on
+   ait rien dessiné. Trois couches ici, toutes discrètes :
+     — un réseau de lignes obliques à 2 % d'opacité, qui donne une matière plutôt qu'un aplat ;
+     — des lignes horizontales fines espacées de 4 px, comme un métal brossé ;
+     — les arêtes proprement dites : liseré clair en haut, bord droit lumineux, ombre interne
+       à droite pour détacher le menu de la page.
+   Rien ne doit se voir au premier regard. Si on remarque l'effet, c'est qu'il est trop fort.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+html .sidebar {
+  position: sticky;            /* déjà posé par css/00 ; répété car les couches en dépendent */
+  isolation: isolate;          /* les pseudo-éléments restent sous le contenu, jamais au-dessus */
+  background:
+    /* Le halo turquoise du bandeau, en haut à gauche, à la même intensité. */
+    radial-gradient(120% 34% at 0% 0%, rgba(0, 207, 255, .22) 0%, transparent 60%),
+    /* Un rappel plus froid en bas à droite, pour que la colonne ne soit pas plate sur 100vh. */
+    radial-gradient(100% 30% at 100% 100%, rgba(0, 207, 255, .10) 0%, transparent 66%),
+    /* Les trois valeurs exactes du bandeau, dans le même ordre. */
+    linear-gradient(168deg, #0B2458 0%, #113679 52%, #1A4A9C 100%);
+  border-right: none;
+  /* L'arête : une ligne claire sur le bord droit, puis l'ombre qui détache de la page. */
+  box-shadow:
+    inset -1px 0 0 rgba(255, 255, 255, .10),
+    4px 0 18px -6px rgba(3, 14, 38, .55);
+}
+
+/* Couche 1 — la matière. Deux trames superposées : des obliques larges qui accrochent la lumière
+   en diagonale, et des horizontales fines qui font le brossé. La couche est en position:fixed
+   plutôt qu'absolute pour que la trame ne défile PAS avec le menu : une matière qui glisse
+   pendant qu'on fait défiler un menu est ce qui trahit l'effet. */
+html .sidebar::before {
+  content: ''; position: fixed; top: 0; left: 0;
+  width: 238px; height: 100vh; pointer-events: none; z-index: 0;
+  background:
+    repeating-linear-gradient(118deg,
+      rgba(255, 255, 255, .030) 0 1px,
+      transparent 1px 34px),
+    repeating-linear-gradient(0deg,
+      rgba(255, 255, 255, .016) 0 1px,
+      transparent 1px 4px);
+  /* Le brossé s'estompe vers le bas : une trame uniforme sur 100 vh se voit ; une trame qui
+     s'éteint donne de la profondeur. */
+  mask-image: linear-gradient(180deg, #000 0%, rgba(0, 0, 0, .55) 46%, transparent 92%);
+}
+
+/* Couche 2 — l'arête du haut. Une seule ligne, sur les deux tiers de la largeur, qui s'éteint :
+   c'est le bord éclairé de la surface. */
+html .sidebar::after {
+  content: ''; position: fixed; top: 0; left: 0;
+  width: 238px; height: 1px; pointer-events: none; z-index: 0;
+  background: linear-gradient(90deg, rgba(255, 255, 255, .34) 0%, rgba(255, 255, 255, .06) 62%, transparent 100%);
+}
+
+/* Le contenu passe au-dessus des deux couches. */
+html .sidebar > * { position: relative; z-index: 1; }
+
+/* ── Les arêtes des éléments ───────────────────────────────────────────────────────────────────── */
+
+/* L'élément actif : c'est lui qui doit sembler en relief, et lui seul. Ligne claire en haut,
+   ligne sombre en bas, plus une barre turquoise à gauche qui sert de repère de position. */
+html .sidebar .nav-item.active,
+html .sidebar .nav-solo-btn.active {
+  background: linear-gradient(90deg, rgba(0, 207, 255, .20) 0%, rgba(0, 207, 255, .07) 100%);
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, .20),
+    inset 0 -1px 0 rgba(3, 14, 38, .30),
+    inset 2px 0 0 var(--brand-cyan, #00CFFF);
+}
+
+/* Le survol : un creux, pas une bosse. L'inverse de l'actif — ligne sombre en haut, claire en
+   bas — pour que les deux états ne se confondent jamais. */
+html .sidebar .nav-item:hover:not(.active),
+html .sidebar .nav-solo-btn:hover:not(.active) {
+  background: rgba(255, 255, 255, .055);
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgba(3, 14, 38, .22),
+    inset 0 -1px 0 rgba(255, 255, 255, .08);
+}
+
+/* Les pastilles d'icônes gardent leur teinte par rubrique (css/30) et reçoivent l'arête. */
+html .sidebar .nav-item .nav-ico {
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--teinte, 255, 255, 255), .20),
+    inset 0 1px 0 rgba(255, 255, 255, .16),
+    0 1px 2px rgba(3, 14, 38, .28);
+}
+
+/* Les titres de rubrique : un filet gravé au-dessus (sombre puis clair = un sillon), qui sépare
+   les groupes sans ajouter de trait franc. Le premier n'en porte pas : on ne grave pas au bord. */
+html .sidebar .nav-section-btn {
+  position: relative;
+  color: rgba(255, 255, 255, .62);
+}
+html .sidebar .nav-section-btn::after {
+  content: ''; position: absolute; left: 10px; right: 10px; top: -5px; height: 2px;
+  background: linear-gradient(180deg, rgba(3, 14, 38, .34) 0 1px, rgba(255, 255, 255, .07) 1px 2px);
+  border-radius: 1px;
+}
+html .sidebar .nav-section-btn:first-of-type::after { display: none; }
+html .sidebar .nav-section-btn.active { color: var(--brand-cyan, #00CFFF); }
+
+/* Le bloc équipe, en bas : même sillon, sur toute la largeur. */
+html .sidebar .sidebar-team {
+  border-top: none;
+  box-shadow: inset 0 1px 0 rgba(3, 14, 38, .34), inset 0 2px 0 rgba(255, 255, 255, .07);
+}
+
+/* ── Thème clair ───────────────────────────────────────────────────────────────────────────────
+   Le menu reste marine dans les deux thèmes (c'est déjà le parti pris de css/00) : c'est la
+   colonne de marque. On allège seulement la matière, qui se verrait davantage à côté d'une page
+   blanche. */
+html[data-theme="clair"] .sidebar::before { opacity: .72; }
+
+/* ── Ambiances ─────────────────────────────────────────────────────────────────────────────────
+   « Nuit » et « Contraste élevé » ne peuvent pas garder un menu marine lumineux : l'une vise
+   l'écran éteint, l'autre la lisibilité maximale. Chacune reçoit son propre menu. */
+html[data-ambiance="nuit"] .sidebar {
+  background: linear-gradient(168deg, #101216 0%, #0C0D10 60%, #08090B 100%);
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, .07), 4px 0 18px -6px #000;
+}
+html[data-ambiance="nuit"] .sidebar::before { opacity: .5; }
+
+html[data-ambiance="contraste"] .sidebar {
+  background: #0B2458;
+  box-shadow: inset -1px 0 0 rgba(255, 255, 255, .5);
+}
+html[data-ambiance="contraste"] .sidebar::before,
+html[data-ambiance="contraste"] .sidebar::after { display: none; }
+html[data-ambiance="contraste"] .sidebar .nav-section-btn { color: #fff; }
+html[data-ambiance="contraste"] .sidebar .nav-item { color: #E8EDF5; }
+
+/* ── Mobile ────────────────────────────────────────────────────────────────────────────────────
+   Le menu y est un tiroir qui glisse : une couche en position:fixed resterait en place pendant
+   que le tiroir bouge, et le décalage se verrait. On la fait glisser avec lui. */
+@media (max-width: 900px) {
+  html .sidebar::before, html .sidebar::after { position: absolute; }
+}

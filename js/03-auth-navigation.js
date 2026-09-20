@@ -821,6 +821,8 @@ const SECTIONS = [
     { id: 'sources', icon: '🧭', label: 'Sources des clients', groupe: 'Marketing' },
     { id: 'campagnes', icon: '📣', label: 'Campagnes', groupe: 'Marketing' },
     { id: 'kanban-campagnes', icon: '🗂️', label: 'Tableau des campagnes', groupe: 'Marketing' },
+    { id: 'campagnes-performance', icon: '📊', label: 'Performance des campagnes', groupe: 'Marketing' },
+    { id: 'brevo', icon: '📧', label: 'Brevo', groupe: 'Marketing' },
   ]},
   { id: 'conseil-section', label: 'Conseil', icon: '💼', sub: [
     { id: 'conseil', icon: '💼', label: 'Conseil financier' },
@@ -831,6 +833,7 @@ const SECTIONS = [
     { id: 'rappels', icon: '✅', label: 'Tâches & rappels', rhAllowed: true },
     { id: 'agenda', icon: '🗓️', label: 'Agenda', rhAllowed: true },
     { id: 'rendez-vous', icon: '📅', label: 'Rendez-vous', rhAllowed: true },
+    { id: 'calendly', icon: '🔗', label: 'Calendly', rhAllowed: true },
   ]},
   { id: 'compta', label: 'Finances', icon: '💰', sub: [
     { id: 'suivi-financier', icon: '🧭', label: 'Cockpit financier', groupe: 'Pilotage' },
@@ -1562,6 +1565,12 @@ async function renderView() {
     case 'rapprochement': main.innerHTML = typeof viewRapprochement === 'function' ? viewRapprochement() : ''; break;
     // Contrôle croisé : aucun contrat ne doit rester sans commission encaissée, attendue ou close (js/81)
     case 'controle-coherence': main.innerHTML = typeof viewControleCoherence === 'function' ? viewControleCoherence() : ''; break;
+    // Lien de réservation et rendez-vous pris (js/83)
+    case 'calendly': main.innerHTML = typeof viewCalendly === 'function' ? viewCalendly() : ''; break;
+    // État de la connexion Brevo et relevé des chiffres de campagne (js/84)
+    case 'brevo': main.innerHTML = typeof viewBrevo === 'function' ? viewBrevo() : ''; break;
+    // Diffusion, engagement, retour commercial et rendement des campagnes (js/85)
+    case 'campagnes-performance': main.innerHTML = typeof viewCampagnesPerformance === 'function' ? viewCampagnesPerformance() : ''; break;
     // Préparation de l'échange de données EcoHub : qualité des clés de rapprochement (js/54)
     case 'ecohub-sync': main.innerHTML = typeof viewEcohubSync === 'function' ? viewEcohubSync() : ''; break;
     case 'marquage-entites': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); main.innerHTML = typeof viewMarquageEntites === 'function' ? viewMarquageEntites() : ''; break;

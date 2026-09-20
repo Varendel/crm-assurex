@@ -1,0 +1,73 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   LE TABLEAU (js/66-tableau.js, 20.09.2026)
+
+   Une seule définition visuelle pour toutes les listes du CRM. Les hauteurs et les marges sortent
+   des jetons de densité (--d-ligne, --d-cellule-y) : basculer en compact dans les paramètres
+   resserre toutes les listes d'un coup, sans qu'aucune ne soit retouchée.
+
+   L'en-tête est collant. Sur une liste de 200 lignes, savoir quelle colonne on lit sans remonter
+   est la différence entre un outil professionnel et un tableau HTML.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.tbl { display: flex; flex-direction: column; gap: var(--e-2, 8px); }
+
+.tbl-barre { display: flex; align-items: center; gap: var(--e-2, 8px); flex-wrap: wrap; }
+.tbl-titre { font-size: var(--t-l, 15px); font-weight: var(--t-gras, 700); color: var(--text); }
+.tbl-compte { font-size: var(--t-xs, 11px); color: var(--text-muted);
+  background: var(--accent-dim); border-radius: var(--r-rond, 999px); padding: 2px 9px; }
+.tbl-recherche { flex: 1 1 200px; max-width: 320px; min-height: 0; padding: 6px 11px; font-size: var(--t-s, 12.5px); }
+.tbl-selection { font-size: var(--t-xs, 11px); font-weight: var(--t-moyen, 600); color: var(--accent); }
+.tbl-barre .tbl-export { margin-left: auto; padding: 5px 11px; font-size: var(--t-xs, 11px); }
+
+.tbl-grille { border: 1px solid var(--border); border-radius: var(--r-m, 14px); overflow: hidden; background: var(--surface); }
+
+.tbl-entete { display: grid; grid-template-columns: var(--gabarit); position: sticky; top: 0; z-index: 2;
+  background: var(--bg); border-bottom: 1px solid var(--border); }
+.tbl-th { display: flex; align-items: center; gap: 5px; text-align: left; font-family: inherit;
+  font-size: var(--t-xs, 11px); font-weight: var(--t-lourd, 800); letter-spacing: .04em; text-transform: uppercase;
+  color: var(--text-dim); background: none; border: 0; cursor: pointer;
+  padding: var(--d-cellule-y, 10px) var(--d-cellule-x, 14px); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; }
+.tbl-th:hover:not(:disabled) { color: var(--accent); }
+.tbl-th:disabled { cursor: default; }
+.tbl-th.trie { color: var(--accent); }
+.tbl-th i { font-style: normal; font-size: 8px; }
+.tbl-th.droite { justify-content: flex-end; }
+
+.tbl-ligne { display: grid; grid-template-columns: var(--gabarit); align-items: center;
+  min-height: var(--d-ligne, 42px); border-bottom: 1px solid var(--border); transition: background var(--v-court, .15s); }
+.tbl-ligne:last-child { border-bottom: 0; }
+.tbl-ligne:nth-child(even) { background: color-mix(in srgb, var(--bg) 45%, transparent); }
+.tbl-ligne.cliquable:hover { background: var(--accent-dim); }
+.tbl-ligne.cliquable:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.tbl-cellule { padding: var(--d-cellule-y, 10px) var(--d-cellule-x, 14px); font-size: var(--t-m, 13.5px);
+  color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.tbl-cellule.droite { text-align: right; font-variant-numeric: tabular-nums; }
+.tbl-cellule.sourdine { color: var(--text-muted); font-size: var(--t-s, 12.5px); }
+.tbl-cellule.mono { font-family: var(--t-mono); font-size: var(--t-s, 12.5px); }
+.tbl-case { display: flex; align-items: center; justify-content: center; padding-left: 0; padding-right: 0; }
+.tbl-case input { width: 15px; height: 15px; min-height: 0; margin: 0; cursor: pointer; }
+
+.tbl-pages { display: flex; align-items: center; justify-content: center; gap: var(--e-3, 12px);
+  font-size: var(--t-s, 12.5px); color: var(--text-muted); }
+.tbl-pages button { padding: 4px 12px; }
+
+.tbl-vide { padding: var(--e-8, 32px) var(--e-4, 16px); text-align: center;
+  font-size: var(--t-s, 12.5px); color: var(--text-muted); }
+
+/* Sous 720 px, une grille de six colonnes devient illisible : chaque ligne se replie en bloc et
+   les en-têtes disparaissent, le libellé passant devant la valeur. */
+@media (max-width: 720px) {
+  .tbl-entete { display: none; }
+  .tbl-ligne { grid-template-columns: 1fr; padding: var(--e-2, 8px) 0; gap: 1px; }
+  .tbl-cellule { white-space: normal; padding: 2px var(--d-cellule-x, 14px); }
+  .tbl-cellule.droite { text-align: left; }
+  .tbl-cellule:first-child { font-weight: var(--t-moyen, 600); }
+}
+
+@media print {
+  .tbl-barre, .tbl-pages, .tbl-case { display: none !important; }
+  .tbl-grille { border-color: #ccc; }
+  .tbl-ligne { break-inside: avoid; }
+}

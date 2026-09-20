@@ -86,12 +86,76 @@ function viewDocumentsCompagnies() {
     window._dcx.chargement = true;
     dcxCharger().then(() => { window._dcx.chargement = false; if (currentView === 'documents-compagnies') dcxRendre(); });
   }
+  setTimeout(dcxPeindreTableau, 0);
   return `<div id="dcx-page">${dcxContenu()}</div>`;
 }
 
 function dcxRendre() {
   const el = document.getElementById('dcx-page');
-  if (el) el.innerHTML = dcxContenu();
+  if (el) { el.innerHTML = dcxContenu(); dcxPeindreTableau(); }
+}
+
+// Première liste du CRM portée sur le composant tableau (js/66). Elle gagne d'un coup le tri par
+// colonne, le filtre, la densité compacte et l'export CSV — sans qu'aucun de ces quatre mots
+// n'apparaisse ici : la liste se décrit, elle ne se dessine plus.
+function dcxPeindreTableau() {
+  if (typeof tblRendre !== 'function' || !document.getElementById('dcx-tableau')) return;
+  const f = window._dcx.filtre;
+  const liste = window._dcx.docs.filter(d => {
+    if (f.type && d.type !== f.type) return false;
+    if (f.etat === 'a-rattacher' && (d.contrat_id || d.client_id)) return false;
+    if (f.etat === 'visible' && !d.visible_client) return false;
+    if (f.etat === 'masque' && d.visible_client) return false;
+    return true;
+  });
+
+  const bouton = (texte, titre, action, classe) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = classe; b.textContent = texte; b.title = titre;
+    b.addEventListener('click', ev => { ev.stopPropagation(); action(); });
+    return b;
+  };
+
+  tblRendre('dcx-tableau', {
+    titre: 'Documents',
+    vide: 'Aucun document. Dépose les PDF reçus des compagnies ci-dessus, ou attends la prochaine synchronisation EcoHub.',
+    triInitial: 'date', sensInitial: 'desc',
+    lignes: liste,
+    surClic: d => dcxApercu(d.chemin, d.titre || d.nom_fichier || ''),
+    classeLigne: d => (d.contrat_id || d.client_id) ? '' : 'orphelin',
+    colonnes: [
+      { cle: 'type', titre: '', gabarit: '38px', triable: false,
+        valeur: d => d.type, texte: d => (DCX_TYPES[d.type] || DCX_TYPES.autre).icone },
+      { cle: 'titre', titre: 'Document', gabarit: '1.8fr',
+        valeur: d => d.titre || d.nom_fichier || '', titreCellule: d => d.nom_fichier || '' },
+      { cle: 'client', titre: 'Client', gabarit: '1.3fr', classe: 'sourdine',
+        valeur: d => dcxNomClient(d.client_id) || 'à rattacher' },
+      { cle: 'compagnie', titre: 'Compagnie', gabarit: '1fr', classe: 'sourdine', valeur: d => d.compagnie || '' },
+      { cle: 'police', titre: 'Police', gabarit: '120px', classe: 'mono', valeur: d => d.numero_police || '' },
+      { cle: 'date', titre: 'Date', gabarit: '96px',
+        valeur: d => d.date_document || String(d.created_at || '').slice(0, 10),
+        texte: d => fmtDate(d.date_document || String(d.created_at || '').slice(0, 10)) },
+      { cle: 'montant', titre: 'Montant', gabarit: '100px', aligne: 'droite',
+        valeur: d => Number(d.montant || 0),
+        texte: d => (d.montant != null && d.montant !== '') ? fmtCHF(Number(d.montant)) : '—' },
+      { cle: 'actions', titre: '', gabarit: '160px', triable: false, valeur: () => '',
+        rendu: d => {
+          const z = document.createElement('span');
+          z.className = 'dcx-actions';
+          z.appendChild(bouton('🔍', 'Aperçu rapide', () => dcxApercu(d.chemin, d.titre || ''), 'dcx-loupe'));
+          if (d.contrat_id || d.client_id) {
+            z.appendChild(bouton(d.visible_client ? '👁 Visible' : 'Publier',
+              d.visible_client ? 'Visible dans l’espace du client — cliquer pour le retirer' : 'Rendre visible dans l’espace du client',
+              () => dcxBasculerVisible(d.id, !d.visible_client),
+              'dcx-publier' + (d.visible_client ? ' on' : '')));
+          } else {
+            z.appendChild(bouton('Rattacher…', 'Aucun contrat trouvé pour ce document',
+              () => dcxOuvrirRattachement(d.id), 'dcx-rattacher'));
+          }
+          return z;
+        } },
+    ],
+  });
 }
 
 function dcxContenu() {
@@ -144,8 +208,6 @@ function dcxContenu() {
   <div id="dcx-progression"></div>
 
   <div class="dcx-filtres">
-    <input class="form-input" type="search" placeholder="Rechercher un client, une police, une compagnie…"
-      value="${dcxEsc(f.texte)}" oninput="window._dcx.filtre.texte=this.value; dcxRendre(); document.querySelector('.dcx-filtres input[type=search]').focus()"/>
     <select class="form-input" onchange="window._dcx.filtre.type=this.value; dcxRendre()">
       <option value="">Tous les types</option>
       ${Object.entries(DCX_TYPES).map(([k, v]) => `<option value="${k}" ${f.type === k ? 'selected' : ''}>${v.icone} ${v.label}</option>`).join('')}
@@ -158,10 +220,7 @@ function dcxContenu() {
     </select>
   </div>
 
-  ${liste.length ? `<div class="dcx-liste">${liste.map(dcxLigne).join('')}</div>`
-    : `<div class="dbx-vide">${typeof rexBanquierHtml === 'function' ? rexBanquierHtml({ taille: 140 }) : ''}
-<strong>${docs.length ? 'Aucun document ne correspond au filtre.' : 'Aucun document pour l’instant.'}</strong>
-<span>${docs.length ? 'Change le filtre pour revoir la liste.' : 'Dépose les PDF reçus des compagnies ci-dessus : ils seront classés par client et consultables sur leur fiche.'}</span></div>`}`;
+  <div id="dcx-tableau"></div>`;
 }
 
 function dcxLigne(d) {

@@ -1,0 +1,49 @@
+# Déploiement automatique de REX CRM / REX CLOUD (20.09.2026)
+# Jusqu'ici les fichiers étaient téléversés à la main : il arrivait qu'une correction soit commitée
+# mais pas en ligne (bug déjà corrigé qui réapparaît sur le téléphone, page absente…). Désormais,
+# chaque envoi sur « main » publie le site. Le workflow s'occupe aussi de deux corvées :
+#   - il remplace les ?v=… des balises <script> par le numéro du commit (fin du cache-busting manuel)
+#   - il écrit version.js, affiché en bas du menu, pour savoir d'un coup d'œil ce qui tourne
+name: Déploiement
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  publier:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploiement.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Contrôles avant publication (syntaxe, scripts, fonctions clés)
+        run: node test/verifier.js
+
+      - name: Estampiller la version (cache-busting + version.js)
+        run: |
+          VERSION="$(date -u +%Y.%m.%d)-$(echo ${GITHUB_SHA} | cut -c1-7)"
+          DATE_FR="$(date -u +%d.%m.%Y' à '%H:%M) UTC"
+          sed -i -E "s/(src=\"js\/[^\"?]*)\?v=[0-9a-zA-Z._-]+/\1?v=${GITHUB_SHA::7}/g" index.html
+          printf '// Généré au déploiement — ne pas modifier à la main.\nconst APP_VERSION = "%s";\nconst APP_DEPLOIEMENT = "%s";\n' "$VERSION" "$DATE_FR" > version.js
+          grep -q 'version.js' index.html || sed -i 's|</body>|<script src="version.js"></script>\n</body>|' index.html
+          echo "Version publiée : $VERSION"
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deploiement
+        uses: actions/deploy-pages@v4

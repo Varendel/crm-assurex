@@ -16,9 +16,15 @@ const EC_MARQUE = 'REX CLOUD';
 const EC_NUAGE_SVG = '<svg viewBox="0 0 220 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><path d="M52 104c-20 0-34-13-34-30 0-15 11-27 26-29 4-20 21-34 42-34 19 0 35 11 41 28 3-1 6-1 9-1 18 0 32 13 32 30s-14 30-32 30H52z" fill="currentColor" opacity=".95"/></svg>';
 function ecModeCloud(actif) { document.body.classList.toggle('mode-cloud', actif !== false); }
 // La page de connexion s'affiche déjà en REX CLOUD quand le lien vient d'une invitation client
+// Sous-domaine dédié (20.09.2026) : espace.assurex.ch ouvre directement REX CLOUD, sans paramètre
+// dans l'adresse. Le paramètre ?espace=client reste accepté pour les liens déjà envoyés.
+function ecSousDomaineClient() {
+  const h = (location.hostname || '').toLowerCase();
+  return /^(espace|cloud|client|mon)\./.test(h);
+}
 (function ecDetecterLienClient() {
   const appliquer = () => {
-    if (!/[?&]espace=client/.test(location.search)) return;
+    if (!/[?&]espace=client/.test(location.search) && !ecSousDomaineClient()) return;
     ecModeCloud(true);
     document.title = `${EC_MARQUE} — Espace client`;
     // Logo EX.GROUP : on reprend celui du code (js/15) plutôt qu'une copie du tracé

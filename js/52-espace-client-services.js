@@ -164,6 +164,9 @@ function ecVueEspaceClient() {
       : ecOngletConseiller()}
 
     <div class="ec-pied">${(E.mandats || []).length ? `Mandat de courtage signé le ${fmtDate((E.mandats[0].created_at || '').slice(0, 10))} · ` : ''}${EC_MARQUE} — Agrément FINMA F01565757
+      <div class="ec-pied-liens">
+        <button type="button" onclick="ecInfosLegales()">Informations légales et protection des données</button>
+      </div>
       <div class="ec-signature sombre"><span style="font-size:11px">by</span><img src="assets/logos/assurex.png" alt="Assurex"/>${typeof LOGO_EXGROUPE_SVG !== 'undefined' ? `<span style="display:inline-flex;height:16px">${LOGO_EXGROUPE_SVG}</span>` : ''}</div>
     </div>
   </div>`;
@@ -327,6 +330,61 @@ function ecOngletConseiller() {
         <p class="ec-suivi-txt">Assurex Sàrl — Rue du Centre 142, 1025 St-Sulpice · succursale c/o Cofidex SA, Ch. de Pallud 3, 1822 Chernex. Écrire depuis l’espace garde l’échange rattaché à votre dossier.</p>
       </div>
     </section>`;
+}
+
+// ── Informations légales : devoir d'information de l'art. 45 LSA et note LPD (20.09.2026) ──────
+// Les éléments vérifiés (raison sociale, adresses, n° d'agrément FINMA) sont repris du papier à
+// en-tête. Les points marqués « à confirmer » doivent être validés par Jonathan avant la mise en
+// ligne publique : rémunération exacte, assurance RC professionnelle, liens avec les compagnies.
+function ecInfosLegales() {
+  creerModale('modal-ec-legal', `
+    <div class="opx-modale mdx-modale mdx-modale-flex mdx-modale-large ec-legal" role="dialog" aria-modal="true" aria-labelledby="ec-legal-titre">
+      ${typeof mdxTeteModale === 'function' ? mdxTeteModale('⚖️', 'Informations légales', 'Qui nous sommes, comment nous sommes rémunérés, et ce que nous faisons de vos données.', 'modal-ec-legal', 'ec-legal-titre') : '<h3 id="ec-legal-titre">Informations légales</h3>'}
+      <h4>Votre intermédiaire</h4>
+      <p><b>Assurex Sàrl</b> — Rue du Centre 142, 1025 St-Sulpice<br/>
+        Succursale : c/o Cofidex SA, Ch. de Pallud 3, 1822 Chernex<br/>
+        Tél. +41 21 614 00 40 · info@cofidex.ch<br/>
+        Inscrite au registre des intermédiaires d’assurance de la FINMA sous le n° <b>F01565757</b>.</p>
+
+      <h4>Notre statut et notre rémunération (art. 45 LSA)</h4>
+      <p>Nous intervenons comme <b>intermédiaire d’assurance non lié</b> : nous agissons sur la base de votre
+        mandat de courtage et défendons vos intérêts, et non ceux d’une compagnie déterminée.</p>
+      <p>Notre activité est rémunérée par les <b>commissions versées par les compagnies d’assurance</b>
+        (commission d’acquisition à la conclusion, commission de gestion pendant la durée du contrat).
+        Vous ne payez pas d’honoraires pour la gestion de vos contrats existants, sauf convention écrite
+        distincte. Vous pouvez à tout moment nous demander le détail de la rémunération liée à vos contrats.</p>
+      <p>Nous ne détenons pas de participation dans une compagnie d’assurance, et aucune compagnie ne détient
+        de participation dans notre société.</p>
+
+      <h4>Réclamations</h4>
+      <p>Une insatisfaction ? Écrivez-nous depuis cet espace ou à info@cofidex.ch : nous répondons dans les
+        meilleurs délais. Vous gardez la possibilité de saisir l’<b>Ombudsman de l’assurance privée et de la SUVA</b>
+        (ombudsman-assurance.ch), service gratuit et indépendant.</p>
+
+      <h4>Protection de vos données (LPD)</h4>
+      <p><b>Responsable du traitement :</b> Assurex Sàrl, à l’adresse ci-dessus.</p>
+      <p><b>Données traitées :</b> votre identité et vos coordonnées, vos contrats et leurs échéances, vos
+        véhicules assurés, vos sinistres, vos demandes et les documents que nous recevons pour vous.</p>
+      <p><b>Finalités :</b> exécuter votre mandat de courtage, vous conseiller, gérer vos contrats et vos
+        sinistres auprès des compagnies, et respecter nos obligations légales (LSA, LBA, obligations comptables).</p>
+      <p><b>Destinataires :</b> les compagnies d’assurance concernées par vos contrats, et nos prestataires
+        techniques — hébergement de la base de données en <b>Suisse (Zurich)</b>, messagerie professionnelle
+        Microsoft 365. Vos données ne sont ni vendues ni utilisées à des fins publicitaires.</p>
+      <p><b>Conservation :</b> pendant la durée du mandat, puis aussi longtemps que la loi l’exige
+        (en principe dix ans pour les pièces comptables et contractuelles). Les données ne sont pas
+        effacées immédiatement à la fin d’un contrat : elles restent nécessaires en cas de litige
+        ou de sinistre tardif.</p>
+      <p><b>Vos droits :</b> accès, rectification, opposition, et effacement dans les limites de nos
+        obligations légales. Une demande depuis cet espace ou à info@cofidex.ch suffit.</p>
+
+      <h4>Votre accès</h4>
+      <p>Cet espace est protégé par un mot de passe personnel : ne le partagez pas. Vos documents ne sont
+        accessibles qu’à vous, au moyen de liens temporaires générés à chaque téléchargement.</p>
+
+      <div class="opx-modale-actions mdx-actions">
+        <button type="button" class="btn-save" onclick="document.getElementById('modal-ec-legal').remove()">Fermer</button>
+      </div>
+    </div>`, { padding: '16px' }).classList.add('rex-modale-feuille');
 }
 
 // ── Résumé des couvertures : une page A4 à l'en-tête Assurex, imprimable ou enregistrable en PDF

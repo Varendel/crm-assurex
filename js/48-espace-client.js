@@ -81,7 +81,19 @@ async function ecEntrerEspaceClient(acces, email) {
     dbGet('demandes_transfert', `client_id=eq.${acces.client_id}&select=*&order=created_at.desc&limit=10`).catch(() => []),
   ]);
   window._ec = { client: (clients || [])[0] || null, contrats: contrats || [], vehicules: vehicules || [], rdv: rdv || [], mandats: mandats || [], messages: messages || [], transferts: transferts || [] };
-  try { await dbPatch('acces_clients', acces.id, { dernier_acces: new Date().toISOString() }); } catch (e) { /* sans importance */ }
+  // Trace de connexion. Elle passe par une fonction en base (marquer_acces_client) et non par un
+  // PATCH : la RLS ne donne au client que la LECTURE de sa ligne d'accès, si bien que le PATCH
+  // était refusé en silence et la fiche affichait « jamais connecté » à tort (corrigé le
+  // 20.09.2026). La fonction ne touche qu'à dernier_acces, et seulement pour l'appelant.
+  try {
+    const t = await getValidAccessToken();
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/marquer_acces_client`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${t}`, 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    if (!r.ok) console.warn('Trace de connexion non enregistrée :', r.status);
+  } catch (e) { console.warn('Trace de connexion non enregistrée :', e.message); }
   if (main) main.innerHTML = ecVueEspaceClient();
 }
 

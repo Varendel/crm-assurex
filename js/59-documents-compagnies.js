@@ -134,9 +134,7 @@ function dcxContenu() {
       <strong>Glisse ici les documents reçus</strong>
       <span>PDF, images ou XML. Le numéro de police est lu dans le nom du fichier quand il y figure, et le document part directement sur la bonne fiche client.</span>
     </div>
-    <label class="btn-save dcx-btn-fichier">Choisir des fichiers
-      <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.xml" onchange="dcxImporter(this.files); this.value=''" hidden/>
-    </label>
+    <button type="button" class="btn-save dcx-btn-fichier" onclick="dcxParcourir()">Choisir des fichiers</button>
   </section>
   <div id="dcx-progression"></div>
 
@@ -195,6 +193,26 @@ function dcxLigne(d) {
 }
 
 // ── Dépôt ───────────────────────────────────────────────────────────────────────────────────────
+// Le sélecteur de fichiers est créé à la volée plutôt que posé en HTML dans un <label> : un
+// <input hidden> imbriqué ne réagissait pas au clic dans tous les navigateurs, et le bouton
+// « Déposer » de la fiche restait mort (corrigé le 20.09.2026).
+function dcxParcourir(clientId) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.multiple = true;
+  input.accept = '.pdf,.png,.jpg,.jpeg,.xml';
+  input.style.position = 'fixed';
+  input.style.left = '-9999px';
+  document.body.appendChild(input);
+  input.addEventListener('change', () => {
+    const fichiers = [...input.files];
+    input.remove();
+    if (!fichiers.length) return;
+    if (clientId) dcxDeposerSurFiche(clientId, fichiers); else dcxImporter(fichiers);
+  });
+  input.click();
+}
+
 function dcxDeposer(ev) {
   ev.preventDefault();
   document.getElementById('dcx-depot')?.classList.remove('survol');
@@ -346,10 +364,7 @@ function dcxSectionFiche(clientId) {
     <div class="dcx-fiche-tete">
       <h3>📥 Documents des compagnies</h3>
       <span class="dcx-fiche-compte">${docs.length || 'aucun'}</span>
-      <label class="dcx-fiche-ajout">+ Déposer
-        <input type="file" multiple accept=".pdf,.png,.jpg,.jpeg,.xml" hidden
-          onchange="dcxDeposerSurFiche('${clientId}', this.files); this.value=''"/>
-      </label>
+      <button type="button" class="dcx-fiche-ajout" onclick="dcxParcourir('${clientId}')">+ Déposer</button>
     </div>
     ${docs.length ? `<div class="dcx-fiche-liste">${docs.map(d => {
       const t = DCX_TYPES[d.type] || DCX_TYPES.autre;

@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 440 112" width="440" height="112" role="img" aria-label="REX CLOUD — vos assurances, à jour en permanence">
+<!--
+  REX CLOUD — verrouillage horizontal (nuage + nom), pour fond clair.
+
+  REX est en demi-gras, CLOUD en graisse normale et légèrement espacé : le nom se lit alors en un
+  bloc et non en deux mots égaux. Entre les deux, le point turquoise — le même que celui de
+  REX.CRM. C'est lui qui dit que le CRM du courtier et l'espace du client sont le même monde.
+-->
+<defs>
+  <linearGradient id="rc-deg-l" x1="20" y1="18" x2="112" y2="72" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#1A4A9C"/><stop offset="1" stop-color="#0B2458"/>
+  </linearGradient>
+</defs>
+<g transform="translate(6,8)">
+  <path d="M38 72 A18 18 0 1 1 39.25 36.04 A26 26 0 0 1 87.35 32.55 A20 20 0 1 1 92 72 Z" fill="url(#rc-deg-l)"/>
+  <circle cx="98" cy="66" r="11" fill="#FFFFFF"/>
+  <circle cx="98" cy="66" r="7" fill="#00CFFF"/>
+</g>
+<text x="146" y="62" font-family="Geist, 'Segoe UI', system-ui, sans-serif" font-size="40" fill="#0B2458">
+  <tspan font-weight="600" letter-spacing="1">REX</tspan><tspan fill="#00CFFF" dx="6">·</tspan><tspan dx="6" letter-spacing="3">CLOUD</tspan>
+</text>
+<text x="148" y="88" font-family="Geist, 'Segoe UI', system-ui, sans-serif" font-size="16" fill="#64748B">Vos assurances, à jour en permanence</text>
+</svg>

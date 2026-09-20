@@ -1,0 +1,181 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   ARBORESCENCES — espace client (js/87) et portefeuille CRM (js/86), 20.09.2026
+
+   Les deux reposent sur <details>/<summary> natifs : le clavier fonctionne, les lecteurs d'écran
+   annoncent « développé / réduit », et la recherche du navigateur (Ctrl+F) ouvre d'elle-même un
+   nœud replié qui contient le mot cherché. Aucune de ces trois propriétés ne s'obtient
+   gratuitement avec un pliage fait en JavaScript.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ═══ ESPACE CLIENT ════════════════════════════════════════════════════════════════════════════ */
+
+.eca-carte { margin-top: 18px; }
+.eca-outils { display: flex; gap: 6px; }
+.eca-act {
+  padding: 5px 11px; border-radius: var(--r-s, 10px); cursor: pointer; font-family: inherit;
+  font-size: var(--t-xs, 11px); font-weight: 500; white-space: nowrap;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-muted);
+  transition: color var(--v-court, .15s), border-color var(--v-court, .15s);
+}
+.eca-act:hover { color: var(--text); border-color: var(--accent-border); }
+
+/* ── L'aperçu : la carte de ce qu'on possède ────────────────────────────────────────────────────
+   Six pastilles en tête donnent la vue d'ensemble avant le détail. C'est ce qui manquait : le
+   client arrivait dans une liste sans jamais voir la forme de son portefeuille. */
+.eca-apercu {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(112px, 1fr));
+  gap: var(--e-2, 8px); margin-bottom: var(--e-4, 16px);
+}
+.eca-puce {
+  display: flex; flex-direction: column; align-items: center; gap: 1px;
+  padding: 11px 8px; border-radius: var(--r-s, 10px); cursor: pointer; font-family: inherit;
+  background: var(--surface-alt); border: 1px solid var(--border); text-align: center;
+  transition: border-color var(--v-court, .15s), transform var(--v-court, .15s);
+}
+.eca-puce:hover { border-color: var(--accent-border); transform: translateY(-2px); }
+.eca-puce > span { font-size: 19px; line-height: 1.1; }
+.eca-puce b {
+  font-size: 19px; font-weight: var(--t-moyen, 600); letter-spacing: -0.02em; color: var(--text);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.eca-puce small { font-size: var(--t-xs, 11px); color: var(--text-muted); line-height: 1.25; }
+.eca-puce i { font-style: normal; font-size: 10px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+
+/* ── Les branches ─────────────────────────────────────────────────────────────────────────────── */
+.eca-arbre { display: flex; flex-direction: column; gap: var(--e-2, 8px); }
+.eca-branche { border-radius: var(--r-s, 10px); border: 1px solid var(--border); background: var(--surface-alt); overflow: hidden; }
+.eca-branche[open] { border-color: var(--accent-border); }
+
+.eca-branche > summary {
+  display: flex; align-items: center; gap: var(--e-3, 12px);
+  padding: 12px var(--e-4, 16px); cursor: pointer; list-style: none;
+  transition: background var(--v-court, .15s);
+}
+.eca-branche > summary:hover { background: var(--surface-hover); }
+.eca-branche > summary::-webkit-details-marker { display: none; }
+/* Un chevron dessiné plutôt que le triangle du navigateur : il tourne, et il est de la couleur
+   du texte atténué au lieu du noir système. */
+.eca-branche > summary::after {
+  content: ''; margin-left: 4px; flex-shrink: 0;
+  width: 8px; height: 8px; border-right: 2px solid var(--text-muted); border-bottom: 2px solid var(--text-muted);
+  transform: rotate(-45deg) translate(-2px, -2px); transition: transform var(--v-court, .15s);
+}
+.eca-branche[open] > summary::after { transform: rotate(45deg) translate(-1px, -3px); }
+.eca-branche > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.eca-icone { font-size: 21px; line-height: 1; flex-shrink: 0; }
+.eca-titre { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.eca-titre b { font-size: var(--t-l, 15px); font-weight: var(--t-moyen, 600); color: var(--text); }
+.eca-titre small { font-size: var(--t-xs, 11px); color: var(--text-muted); line-height: 1.4; text-wrap: pretty; }
+.eca-compte {
+  flex-shrink: 0; min-width: 24px; padding: 2px 8px; border-radius: var(--r-rond, 999px);
+  background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-border);
+  font-size: var(--t-xs, 11px); font-weight: 600; text-align: center;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.eca-prime {
+  flex-shrink: 0; font-size: var(--t-m, 13.5px); font-weight: 500; color: var(--text);
+  font-variant-numeric: tabular-nums lining-nums; white-space: nowrap;
+}
+.eca-prime small { font-size: 10px; color: var(--text-muted); font-weight: 400; }
+
+.eca-corps {
+  padding: 0 var(--e-3, 12px) var(--e-3, 12px);
+  display: flex; flex-direction: column; gap: var(--e-2, 8px);
+}
+/* La feuille reprend le dessin de .ec-contrat (css/80) ; on ne change que son fond, pour qu'elle
+   se détache du fond de la branche qui la contient. */
+.eca-feuille { background: var(--surface); }
+
+@media (max-width: 620px) {
+  .eca-titre small { display: none; }
+  .eca-apercu { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); }
+  .eca-outils { display: none; }
+}
+
+/* ═══ PORTEFEUILLE CRM ═════════════════════════════════════════════════════════════════════════ */
+
+.arb-bascule, .arb-axes { display: inline-flex; border-radius: var(--r-s, 10px); overflow: hidden; border: 1px solid var(--border); }
+.arb-bascule button, .arb-axes button {
+  padding: 8px 13px; border: none; background: var(--surface-alt); cursor: pointer;
+  font-family: inherit; font-size: var(--t-s, 12.5px); color: var(--text-muted);
+  border-right: 1px solid var(--border); white-space: nowrap;
+  transition: background var(--v-court, .15s), color var(--v-court, .15s);
+}
+.arb-bascule button:last-child, .arb-axes button:last-child { border-right: none; }
+.arb-bascule button:hover, .arb-axes button:hover { color: var(--text); background: var(--surface-hover); }
+.arb-bascule button.actif, .arb-axes button.actif { background: var(--accent); color: var(--on-accent, #fff); font-weight: 500; }
+
+.arb-barre {
+  display: flex; align-items: center; gap: var(--e-3, 12px); flex-wrap: wrap;
+  padding: var(--e-3, 12px) var(--e-4, 16px); margin-bottom: var(--e-3, 12px);
+  border-radius: var(--r-m, 14px); border: 1px solid var(--border); background: var(--surface);
+}
+.arb-total { font-size: var(--t-s, 12.5px); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.arb-actions { margin-left: auto; display: flex; gap: 6px; }
+.arb-act {
+  padding: 5px 11px; border-radius: var(--r-s, 10px); cursor: pointer; font-family: inherit;
+  font-size: var(--t-xs, 11px); font-weight: 500; white-space: nowrap;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-muted);
+}
+.arb-act:hover { color: var(--text); border-color: var(--accent-border); }
+
+.arb-arbre { display: flex; flex-direction: column; gap: 6px; }
+.arb-n1, .arb-n2 { border-radius: var(--r-s, 10px); border: 1px solid var(--border); background: var(--surface); }
+.arb-n2 { background: var(--surface-alt); margin-top: 6px; }
+.arb-n1 > summary, .arb-n2 > summary {
+  display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+  cursor: pointer; list-style: none;
+}
+.arb-n1 > summary::-webkit-details-marker, .arb-n2 > summary::-webkit-details-marker { display: none; }
+.arb-n1 > summary:hover, .arb-n2 > summary:hover { background: var(--surface-hover); }
+.arb-n1 > summary::after, .arb-n2 > summary::after {
+  content: ''; order: -1; flex-shrink: 0;
+  width: 7px; height: 7px; border-right: 2px solid var(--text-muted); border-bottom: 2px solid var(--text-muted);
+  transform: rotate(-45deg); transition: transform var(--v-court, .15s);
+}
+.arb-n1[open] > summary::after, .arb-n2[open] > summary::after { transform: rotate(45deg); }
+.arb-n1 > summary b, .arb-n2 > summary b { font-size: var(--t-m, 13.5px); font-weight: 500; color: var(--text); }
+.arb-icone { font-size: 17px; line-height: 1; }
+.arb-compte { font-size: var(--t-xs, 11px); color: var(--text-muted); }
+.arb-prime {
+  margin-left: auto; font-size: var(--t-m, 13.5px); font-weight: 500; color: var(--text);
+  font-variant-numeric: tabular-nums lining-nums; white-space: nowrap;
+}
+.arb-prime small { font-size: 10px; color: var(--text-muted); font-weight: 400; }
+.arb-corps { padding: 0 12px 10px; }
+
+.arb-seg {
+  padding: 1px 7px; border-radius: var(--r-rond, 999px); font-size: 10px;
+  border: 1px solid var(--border); color: var(--text-muted); background: var(--surface-alt);
+}
+.arb-seg.ent { color: var(--gold, #f59e0b); border-color: color-mix(in srgb, var(--gold, #f59e0b) 34%, transparent); }
+.arb-seg.priv { color: var(--accent); border-color: var(--accent-border); }
+
+.arb-feuille {
+  display: flex; align-items: center; gap: 10px; cursor: pointer;
+  padding: 8px 10px; border-radius: 8px; margin-top: 4px;
+  border: 1px solid transparent;
+  transition: background var(--v-court, .15s), border-color var(--v-court, .15s);
+}
+.arb-feuille:hover { background: var(--surface-hover); border-color: var(--border); }
+.arb-feuille:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.arb-logo { flex-shrink: 0; display: flex; }
+.arb-feuille-texte { flex: 1 1 auto; min-width: 0; }
+.arb-feuille-texte b { display: block; font-size: var(--t-s, 12.5px); font-weight: 500; color: var(--text); }
+.arb-feuille-texte small { display: block; font-size: var(--t-xs, 11px); color: var(--text-muted); }
+.arb-statut, .arb-echeance {
+  flex-shrink: 0; font-size: 10px; color: var(--text-muted); white-space: nowrap;
+  padding: 1px 7px; border-radius: var(--r-rond, 999px); border: 1px solid var(--border);
+}
+/* Une échéance dans les trois mois est une action à prendre, pas une information. */
+.arb-echeance.proche { color: var(--c-alerte, #F59E0B); border-color: var(--c-alerte, #F59E0B); }
+.arb-feuille-prime {
+  flex-shrink: 0; font-size: var(--t-s, 12.5px); color: var(--text);
+  font-variant-numeric: tabular-nums lining-nums; white-space: nowrap; min-width: 72px; text-align: right;
+}
+
+@media (max-width: 700px) {
+  .arb-actions { margin-left: 0; width: 100%; }
+  .arb-statut, .arb-echeance { display: none; }
+}

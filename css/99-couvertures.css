@@ -1,0 +1,128 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   FICHE CLIENT — LE BLOC COUVERTURES (js/88, 20.09.2026)
+
+   L'ancien bloc écrivait ses couleurs en dur (#4ade80, rgba(74,222,128,…)) dans des attributs
+   style. Il ne suivait donc aucune des sept ambiances, restait vert pomme sur fond papier, et
+   échappait à la correction de graisses de css/96. Tout passe ici par les jetons.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.cou-bloc {
+  margin-bottom: var(--e-4, 16px);
+  padding: var(--e-4, 16px) var(--e-5, 20px);
+  border-radius: var(--r-m, 14px);
+  border: 1px solid var(--border); background: var(--surface-alt);
+}
+
+/* ── L'en-tête ─────────────────────────────────────────────────────────────────────────────────── */
+.cou-tete {
+  display: flex; align-items: center; gap: var(--e-4, 16px); flex-wrap: wrap;
+  padding-bottom: var(--e-3, 12px); margin-bottom: var(--e-3, 12px);
+  border-bottom: 1px solid var(--border);
+}
+.cou-titre { flex: 1 1 200px; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.cou-surtitre {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .09em;
+  color: var(--text-muted); font-weight: 600;
+}
+.cou-titre b { font-size: var(--t-xl, 19px); font-weight: var(--t-moyen, 600); letter-spacing: -0.02em; color: var(--text); }
+.cou-titre small { font-size: var(--t-s, 12.5px); color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+/* Une barre plutôt qu'un « 4/9 » : un ratio écrit demande une division mentale, une barre
+   remplie à moitié ne demande rien. Le pourcentage reste écrit à côté — la couleur seule ne doit
+   jamais porter l'information. */
+.cou-jauge-boite { display: flex; align-items: center; gap: 10px; flex: 0 1 200px; }
+.cou-jauge {
+  flex: 1 1 auto; height: 8px; border-radius: 999px; overflow: hidden;
+  background: var(--surface); border: 1px solid var(--border);
+}
+.cou-jauge i { display: block; height: 100%; border-radius: 999px; transition: width .35s ease-out; }
+.cou-jauge.ton-complet i { background: var(--c-succes, #16A34A); }
+.cou-jauge.ton-partiel i { background: var(--c-alerte, #F59E0B); }
+.cou-jauge.ton-faible i { background: var(--c-danger, #EF4444); }
+.cou-pct {
+  font-size: var(--t-m, 13.5px); font-weight: var(--t-moyen, 600);
+  font-variant-numeric: tabular-nums lining-nums; white-space: nowrap;
+}
+.cou-pct.ton-complet { color: var(--c-succes, #16A34A); }
+.cou-pct.ton-partiel { color: var(--c-alerte, #F59E0B); }
+.cou-pct.ton-faible { color: var(--c-danger, #EF4444); }
+
+.cou-cct {
+  padding: 4px 11px; border-radius: var(--r-rond, 999px); white-space: nowrap;
+  font-size: var(--t-xs, 11px); font-weight: 500;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-muted);
+}
+.cou-cct.oui {
+  background: var(--c-succes-fond); color: var(--c-succes-texte, #15803D);
+  border-color: color-mix(in srgb, var(--c-succes, #16A34A) 30%, transparent);
+}
+
+/* ── Les groupes ───────────────────────────────────────────────────────────────────────────────── */
+.cou-groupe + .cou-groupe { margin-top: var(--e-4, 16px); }
+.cou-sous {
+  display: flex; align-items: center; gap: 7px; margin: 0 0 var(--e-2, 8px);
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--text-muted); font-weight: 600;
+}
+.cou-sous span {
+  padding: 1px 7px; border-radius: var(--r-rond, 999px); font-size: 10px;
+  background: var(--surface); border: 1px solid var(--border); color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.cou-tout { margin: 0; font-size: var(--t-m, 13.5px); color: var(--c-succes, #16A34A); }
+
+/* align-items: start — sans cela, la grille étire toutes les cartes d'une rangée à la hauteur de
+   la plus haute, et une branche à un seul contrat traîne un grand vide sous elle. */
+.cou-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(216px, 1fr));
+  gap: var(--e-2, 8px); align-items: start; }
+/* Les manques sont plus petits : ce sont des absences, ils n'ont rien à détailler. Les serrer
+   permet de tous les voir d'un coup, ce qui est précisément le but. */
+.cou-manque { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+
+.cou-carte { border-radius: var(--r-s, 10px); border: 1px solid var(--border); background: var(--surface); }
+.cou-carte.pleine { padding: 10px 12px; }
+.cou-carte.vide {
+  display: flex; align-items: center; gap: 8px; padding: 9px 11px;
+  border-style: dashed; background: transparent;
+}
+/* Une branche absente ne se crie pas : elle s'estompe. C'est le nombre de cases en pointillé,
+   pas leur couleur, qui doit alerter. */
+.cou-carte.vide .cou-ico { opacity: .45; filter: grayscale(60%); }
+.cou-carte.vide .cou-nom { color: var(--text-muted); }
+
+.cou-carte-tete { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.cou-ico { font-size: 17px; line-height: 1; flex-shrink: 0; }
+.cou-nom { font-size: var(--t-s, 12.5px); font-weight: 500; color: var(--text); flex: 1 1 auto; min-width: 0; }
+.cou-n {
+  padding: 1px 7px; border-radius: var(--r-rond, 999px); font-size: 10px; font-weight: 600;
+  background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-border);
+}
+.cou-prime {
+  font-size: var(--t-xs, 11px); color: var(--text-muted); white-space: nowrap;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+.cou-liste { list-style: none; margin: 7px 0 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.cou-liste li {
+  padding: 5px 7px; border-radius: 7px; cursor: pointer;
+  border-left: 2px solid var(--c-succes, #16A34A);
+  background: var(--surface-alt);
+  transition: background var(--v-court, .15s);
+}
+.cou-liste li:hover { background: var(--surface-hover); }
+.cou-liste li:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.cou-liste b { display: block; font-size: var(--t-xs, 11px); font-weight: 500; color: var(--text); }
+.cou-liste small { display: block; font-size: 10px; color: var(--text-muted); }
+
+.cou-lien {
+  margin-top: var(--e-2, 8px); padding: 0; background: none; border: none; cursor: pointer;
+  font-family: inherit; font-size: var(--t-s, 12.5px); color: var(--accent);
+  text-decoration: underline dotted; text-underline-offset: 3px;
+}
+.cou-lien:hover { text-decoration-style: solid; }
+
+@media (max-width: 620px) {
+  .cou-jauge-boite { flex-basis: 100%; }
+  .cou-grille { grid-template-columns: 1fr; }
+  .cou-manque { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); }
+}

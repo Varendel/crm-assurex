@@ -1,0 +1,122 @@
+// ═══ FICHE CLIENT : LES COUVERTURES, REVUES (20.09.2026) ═══════════════════════════════════════
+// « Est-ce qu'il ne serait pas judicieux de réorganiser le coup d'œil des couvertures ? Ou
+// moderniser, c'est un vestige. »
+//
+// C'en était un, en effet : couleurs écrites en dur (#4ade80, rgba(74,222,128,…)), graisses 800
+// et 900, tout en styles en ligne. Deux conséquences concrètes, pas seulement esthétiques —
+// le bloc ne suivait aucune des sept ambiances ni le thème clair, et il échappait à la correction
+// typographique de css/96 qui ramène les graisses à ce que la police sait vraiment dessiner.
+//
+// MAIS LE VRAI DÉFAUT ÉTAIT AILLEURS : L'ORGANISATION.
+// Les branches couvertes et les branches manquantes étaient mélangées dans une même grille, dans
+// l'ordre du catalogue. Pour savoir ce qui manquait, il fallait parcourir toutes les cartes et
+// repérer celles qui étaient grises. Or la question d'un courtier devant une fiche n'est jamais
+// « qu'est-ce qui est couvert » — ça, le client le sait — mais « QU'EST-CE QUI MANQUE ». C'est
+// elle qui décide du prochain appel.
+//
+// On sépare donc les deux, et on met le manque en premier quand il y en a. Le ratio devient une
+// barre : un « 4/9 » demande une division mentale, une barre remplie à moitié ne demande rien.
+// Chaque branche couverte porte enfin sa prime — c'est le poids de la relation, il n'était nulle
+// part sur cette vue.
+//
+// CE QU'ON NE FAIT PAS : proposer un bouton « créer l'opportunité » sur un manque. L'écran
+// Équipement (js/12) le fait déjà, avec ses propres besoins et son suivi des polices externes.
+// En refaire une version approximative ici créerait deux chemins qui divergeraient. On y renvoie.
+
+function couEsc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+function couCHF(n) { return Math.round(Number(n) || 0).toLocaleString('fr-CH'); }
+
+function couIcone(label) {
+  return (typeof ICONES_CATEGORIE_COUVERTURE !== 'undefined' && ICONES_CATEGORIE_COUVERTURE[label]) || '📄';
+}
+
+function couRendre(client, contrats, isEntreprise) {
+  const segment = isEntreprise ? 'entreprise' : 'prive';
+  const categories = (typeof getCategoriesPourSegment === 'function'
+    ? getCategoriesPourSegment(segment) : []).filter(c => c !== 'Autre');
+  const actifs = (contrats || []).filter(ct => !['résilié', 'annulé', 'mandat_resilie'].includes(ct.statut));
+  const cat = ct => typeof categoriePourProduitLibre === 'function' ? categoriePourProduitLibre(ct.produit) : null;
+
+  const couvertes = [], manquantes = [];
+  for (const c of categories) {
+    const l = actifs.filter(ct => cat(ct) === c);
+    (l.length ? couvertes : manquantes).push({ label: c, contrats: l });
+  }
+  const prime = actifs.reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
+  const pct = categories.length ? Math.round((couvertes.length / categories.length) * 100) : 0;
+  const ton = pct === 100 ? 'complet' : pct >= 50 ? 'partiel' : 'faible';
+
+  // Les contrats qu'aucune branche du segment ne réclame : ils existent, ils se voient ailleurs
+  // sur la fiche, mais les compter dans le ratio fausserait le dénominateur. On les signale.
+  const horsGrille = actifs.filter(ct => !categories.includes(cat(ct))).length;
+
+  const cctBadge = isEntreprise ? `
+    <span class="cou-cct ${client && client.cct ? 'oui' : 'non'}">
+      🤝 ${client && client.cct ? 'Soumise à une CCT' : 'Pas de CCT'}</span>` : '';
+
+  return `
+  <section class="cou-bloc">
+    <header class="cou-tete">
+      <div class="cou-titre">
+        <span class="cou-surtitre">Couvertures</span>
+        <b>${couvertes.length} branche${couvertes.length > 1 ? 's' : ''} sur ${categories.length}</b>
+        <small>${prime ? `CHF ${couCHF(prime)} de primes par an` : 'aucune prime renseignée'}${
+          horsGrille ? ` · ${horsGrille} contrat${horsGrille > 1 ? 's' : ''} hors de ces branches` : ''}</small>
+      </div>
+      <div class="cou-jauge-boite">
+        <div class="cou-jauge ton-${ton}" role="img"
+          aria-label="${pct} % des branches du segment sont couvertes">
+          <i style="width:${pct}%"></i>
+        </div>
+        <span class="cou-pct ton-${ton}">${pct} %</span>
+      </div>
+      ${cctBadge}
+    </header>
+
+    ${manquantes.length ? `
+      <div class="cou-groupe">
+        <h4 class="cou-sous">À découvrir <span>${manquantes.length}</span></h4>
+        <div class="cou-grille cou-manque">${manquantes.map(m => `
+          <div class="cou-carte vide" title="${couEsc(m.label)} — aucun contrat actif dans cette branche">
+            <span class="cou-ico">${couIcone(m.label)}</span>
+            <span class="cou-nom">${couEsc(m.label)}</span>
+          </div>`).join('')}</div>
+        ${typeof navigate === 'function' ? `<button type="button" class="cou-lien"
+          onclick="navigate('equipement')">Ouvrir l’équipement pour en proposer une →</button>` : ''}
+      </div>` : `
+      <p class="cou-tout">✓ Toutes les branches de ce segment sont couvertes.</p>`}
+
+    ${couvertes.length ? `
+      <div class="cou-groupe">
+        <h4 class="cou-sous">En place <span>${couvertes.length}</span></h4>
+        <div class="cou-grille">${couvertes.map(c => couCarteHtml(c)).join('')}</div>
+      </div>` : ''}
+  </section>`;
+}
+
+// Une branche couverte. Quand elle porte plusieurs contrats — c'est courant côté entreprise, où
+// LAA et perte de gain tombent dans la même famille — ils sont tous listés : une version
+// antérieure n'en gardait qu'un et masquait les autres en silence.
+function couCarteHtml(c) {
+  const prime = c.contrats.reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
+  return `<div class="cou-carte pleine">
+    <div class="cou-carte-tete">
+      <span class="cou-ico">${couIcone(c.label)}</span>
+      <span class="cou-nom">${couEsc(c.label)}</span>
+      ${c.contrats.length > 1 ? `<span class="cou-n">${c.contrats.length}</span>` : ''}
+      ${prime ? `<span class="cou-prime">CHF ${couCHF(prime)}</span>` : ''}
+    </div>
+    <ul class="cou-liste">${c.contrats.map(ct => `
+      <li ${typeof showDetailContrat === 'function' ? `onclick="showDetailContrat('${ct.id}')" role="button" tabindex="0"
+        onkeydown="if(event.key==='Enter'){showDetailContrat('${ct.id}')}"` : ''}>
+        <b>${couEsc(ct.produit || 'Contrat')}</b>
+        <small>${couEsc(ct.compagnie || '')}${ct.numero_police ? ' · ' + couEsc(ct.numero_police) : ''}</small>
+      </li>`).join('')}</ul>
+  </div>`;
+}
+
+// On remplace la fonction de js/04 : elle est appelée par son nom depuis la fiche client, donc
+// rien d'autre n'est à toucher, et l'ancienne reste en place si ce fichier n'est pas chargé.
+(function couBrancher() {
+  if (typeof renderVueEnsembleCouvertures === 'function') window.renderVueEnsembleCouvertures = couRendre;
+})();

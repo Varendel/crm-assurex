@@ -1446,6 +1446,10 @@ function renderPortefeuilleTable(filtre) {
     return true;
   });
 
+  // La liste filtrée est exposée pour que la vue en arborescence (js/86) travaille exactement sur
+  // la même population que le tableau : deux filtrages parallèles finiraient par diverger.
+  window._pfFiltres = filtered;
+
   const totalCA = filtered.reduce((s,c) => s + caClient(c.id), 0);
   const actifs = filtered.filter(c => c.statut === 'actif').length;
   const prospects = filtered.filter(c => c.statut === 'prospect').length;

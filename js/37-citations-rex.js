@@ -1,7 +1,8 @@
 // ═══ CITATIONS DE REX (19.09.2026) ══════════════════════════════════════════════════════════
-// Une bulle discrète où Rex, la mascotte, partage une citation motivante : philosophie antique,
-// latin (avec traduction) et tradition chrétienne. Elle change toute seule de temps en temps
-// (toutes les 40 minutes), au clic sur la bulle, et se referme avec × jusqu'à la suivante.
+// Une bulle où Rex, la mascotte, partage une citation motivante : philosophie antique, latin
+// (avec traduction) et tradition chrétienne. Demande de Jonathan (20.09.2026) : Rex s'affiche en
+// grand pendant 15 secondes à la connexion, puis s'efface, et revient toutes les 60 minutes avec
+// une nouvelle citation. Le réservoir est complété par js/57-citations-reservoir.js.
 
 const REX_CITATIONS = [
   { t: 'Per aspera ad astra.', tr: 'Par les difficultés jusqu’aux étoiles.', a: 'Sénèque' },
@@ -90,7 +91,8 @@ function rexCitationRapportHtml(theme) {
     </div></div>`;
 }
 
-const REX_CITATION_INTERVALLE_MS = 40 * 60 * 1000;
+const REX_CITATION_INTERVALLE_MS = 60 * 60 * 1000;   // une nouvelle citation toutes les heures
+const REX_CITATION_DUREE_MS = 15 * 1000;             // ... visible 15 secondes, puis Rex s'efface
 window._rexCit = window._rexCit || { index: null, masquee: false, timer: null };
 
 function rexCitationStyles() {
@@ -108,15 +110,20 @@ function rexCitationStyles() {
   .rex-citation-fermer:hover{background:var(--accent-dim,rgba(37,99,235,.08))}
   .rex-citation img{pointer-events:auto;width:46px;height:46px;object-fit:contain;flex:0 0 auto;filter:drop-shadow(0 4px 8px rgba(0,0,0,.15));cursor:pointer}
   .rex-citation.change .rex-citation-bulle{animation:rexCitChange .45s ease}
-  /* Bulle toujours ouverte : on laisse de la marge en bas du contenu pour pouvoir faire défiler au-dessus d'elle */
-  #main-content{padding-bottom:130px}
+  /* Rex passe : plus grand pendant ses 15 secondes, puis il s'efface en douceur */
+  .rex-citation.grande img{width:96px;height:96px}
+  .rex-citation.grande .rex-citation-bulle{padding:16px 34px 16px 18px;border-radius:22px 22px 4px 22px}
+  .rex-citation.grande .rex-citation-texte{font-size:15px}
+  .rex-citation.grande .rex-citation-trad{font-size:13px}
+  .rex-citation.sortie{animation:rexCitOut .6s ease forwards}
+  @keyframes rexCitOut{to{opacity:0;transform:translateY(16px) scale(.94)}}
   .rex-citation.reduite .rex-citation-bulle{display:none}
   .rex-citation.reduite img{width:40px;height:40px;opacity:.85}
   .rex-citation.reduite img:hover{opacity:1;transform:scale(1.06)}  @keyframes rexCitIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
   @keyframes rexCitChange{0%{opacity:.2;transform:scale(.97)}100%{opacity:1;transform:none}}
-  @media (max-width:768px){.rex-citation{right:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 24px)}.rex-citation img{width:38px;height:38px}}
+  @media (max-width:768px){.rex-citation{right:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 24px)}.rex-citation img{width:38px;height:38px}.rex-citation.grande img{width:68px;height:68px}}
   @media print{.rex-citation{display:none!important}}
-  @media (prefers-reduced-motion: reduce){.rex-citation,.rex-citation.change .rex-citation-bulle{animation:none}}`;
+  @media (prefers-reduced-motion: reduce){.rex-citation,.rex-citation.change .rex-citation-bulle,.rex-citation.sortie{animation:none}}`;
   document.head.appendChild(s);
 }
 
@@ -155,15 +162,25 @@ function rexAfficherCitation(changer) {
       <button type="button" class="rex-citation-fermer" onclick="event.stopPropagation();rexMasquerCitation()" aria-label="Fermer">×</button>
       <div class="rex-citation-texte">« ${rexEsc(c.t)} »</div>
       ${c.tr ? `<div class="rex-citation-trad">${rexEsc(c.tr)}</div>` : ''}
-      <div class="rex-citation-auteur">— ${rexEsc(c.a)}</div>
+      ${c.a ? `<div class="rex-citation-auteur">— ${rexEsc(c.a)}</div>` : ''}
     </div>
     <img src="assets/logos/rex-mascotte-hd.png" alt="Rex" title="Une citation de Rex" onclick="document.getElementById('rex-citation').classList.contains('reduite') ? rexAfficherCitation(false) : rexAfficherCitation(true)"/>`;
   el.style.display = '';
-  el.classList.remove('reduite');
+  el.classList.remove('reduite', 'sortie');
+  el.classList.add('grande');
   el.classList.remove('change'); void el.offsetWidth; if (changer) el.classList.add('change');
   window._rexCit.masquee = false;
-  // Demande de Jonathan (19.09.2026) : la bulle reste toujours ouverte (plus de repli automatique).
+  // Rex ne s'installe pas : il passe 15 secondes, puis s'efface jusqu'à la citation suivante.
   clearTimeout(window._rexCit.repli);
+  window._rexCit.repli = setTimeout(() => rexEffacerCitation(), REX_CITATION_DUREE_MS);
+}
+
+// Sortie en douceur, puis retrait du DOM : l'écran redevient entièrement au conseiller.
+function rexEffacerCitation() {
+  const el = document.getElementById('rex-citation');
+  if (!el) return;
+  el.classList.add('sortie');
+  setTimeout(() => el.remove(), 650);
 }
 
 function rexReduireCitation() {
@@ -177,7 +194,7 @@ function rexMasquerCitation() {
   window._rexCit.masquee = true;
 }
 
-// Démarrage : attend la connexion, puis une nouvelle citation toutes les 40 minutes
+// Démarrage : attend la connexion, Rex passe 15 secondes, puis revient toutes les 60 minutes
 (function rexDemarrerCitations() {
   try { const i = Number(localStorage.getItem('rex-citation-index')); if (Number.isInteger(i) && i >= 0 && i < REX_CITATIONS.length) window._rexCit.index = i; } catch (e) {}
   const attendre = setInterval(() => {

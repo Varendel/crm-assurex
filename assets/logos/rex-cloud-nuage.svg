@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 96" width="128" height="96" role="img" aria-label="REX CLOUD">
+<!--
+  REX CLOUD — la marque du nuage (20.09.2026)
+
+  Deux références assumées, pour que le client reconnaisse un nuage avant de lire quoi que ce soit :
+    OneDrive — base parfaitement plate, trois lobes de tailles différentes, le plus gros décentré.
+               C'est cette silhouette large et posée qui reste lisible à 16 px.
+    iCloud   — des proportions douces et RIEN à l'intérieur. Un nuage qui contient un dessin cesse
+               d'être un nuage et devient un pictogramme de plus.
+
+  La silhouette est un seul tracé, pas trois cercles empilés : trois cercles se trahissent dès
+  qu'on pose un contour ou un dégradé, on voit les jointures. Les points de raccord sont les
+  intersections réelles des trois cercles, calculées :
+    lobe gauche  centre (38,54) rayon 18
+    lobe haut    centre (64,44) rayon 26
+    lobe droit   centre (92,52) rayon 20
+    base plate   y = 72
+
+  Le seul ajout est le point turquoise en bas à droite : c'est le point de REX.CRM, celui qui
+  sépare REX et CRM. Il fait le lien entre l'outil du courtier et l'espace du client, et il est
+  détouré de blanc pour rester visible sur n'importe quel fond.
+-->
+<defs>
+  <linearGradient id="rc-deg" x1="20" y1="18" x2="112" y2="72" gradientUnits="userSpaceOnUse">
+    <stop offset="0" stop-color="#1A4A9C"/>
+    <stop offset="1" stop-color="#0B2458"/>
+  </linearGradient>
+</defs>
+<path d="M38 72 A18 18 0 1 1 39.25 36.04 A26 26 0 0 1 87.35 32.55 A20 20 0 1 1 92 72 Z" fill="url(#rc-deg)"/>
+<circle cx="98" cy="66" r="11" fill="#FFFFFF"/>
+<circle cx="98" cy="66" r="7" fill="#00CFFF"/>
+</svg>

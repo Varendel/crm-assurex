@@ -23,10 +23,13 @@ const PICTOS_COMPAGNIES = {
   // Logos image (fichiers fournis par Jonathan le 19.09.2026, réduits à 128 px dans assets/logos/compagnies)
   'AXA': { img: 'assets/logos/compagnies/axa.png', forme: 'carre' },
   'La Vaudoise': { img: 'assets/logos/compagnies/vaudoise.png', forme: 'rond' },
-  // Logo fourni par Jonathan le 20.09.2026 : le mot + le symbole, en large sur fond blanc. En
-  // « contain » plutot qu'en « cover » : un cover rognerait le texte et ne laisserait qu'un bout
-  // du symbole.
-  'Allianz': { img: 'assets/logos/compagnies/allianz.png', forme: 'carre', ajuste: 'contain', fondImg: '#FFFFFF', bordure: true, abr: 'AL', fond: '#00408B' },
+  // Version RONDE (20.09.2026, second passage) : le logo fourni fait 565 x 353, le mot occupant
+  // les trois quarts de la largeur. Affiche en `contain` dans une pastille de 26 px, l'ensemble
+  // tombait a 8 px de haut — present, mais invisible : « allianz je ne vois toujours pas le logo ».
+  // On decoupe donc le symbole rond de l'original (x 414..553, exactement 140 x 140, meme fichier,
+  // meme bleu 0,55,129), comme Allianz le fait elle-meme pour ses avatars. Le logo complet reste
+  // disponible pour les usages en grand (allianz.png).
+  'Allianz': { img: 'assets/logos/compagnies/allianz-carre.png', forme: 'rond', fondImg: '#FFFFFF', abr: 'AL', fond: '#003781' },
   'Generali': { img: 'assets/logos/compagnies/generali.png', forme: 'carre', bordure: true },
   // Symbole Orion redessiné (deux arcs rouges formant un « O ») d'après le logo fourni le 19.09.2026
   'Orion': { viewBox: '0 0 64 64', fond: '#FFFFFF', bordure: true,

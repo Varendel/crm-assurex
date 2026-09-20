@@ -41,6 +41,7 @@ function apxValeur(nom) {
 
 function apxSectionHtml() {
   const densite = apxDensite();
+  const curseurActif = typeof curActif === 'function' ? curActif() : false;
   const forcee = typeof saisonForcee === 'function' ? saisonForcee() : '';
   const active = typeof saisonActive === 'function' ? saisonActive() : null;
   const courante = typeof saisonCourante === 'function' ? saisonCourante() : null;
@@ -96,6 +97,20 @@ function apxSectionHtml() {
     <div class="apx-cartes">${carteSaison}</div>
     ${apercuRex ? `<div class="apx-rex-ligne">${apercuRex}</div>
       <p class="apx-note">Rex reprend automatiquement sa pose normale tant que la planche de la saison n’a pas été livrée : les poses peuvent arriver une par une.</p>` : ''}
+  </section>
+
+  <section class="dbx-carte apx-section">
+    <header class="dbx-carte-tete"><div><h2>Pointeur de souris</h2>
+      <span class="dbx-carte-sous">Une flèche aux couleurs de l’accent, légèrement assombrie</span></div></header>
+    <div class="apx-curseur">
+      <span class="apx-curseur-apercu">${curseurActif
+        ? '<svg width="26" height="26" viewBox="0 0 26 26"><path d="M5 2 L5 20.5 L9.8 16.1 L12.9 23.2 L16.1 21.8 L13.1 14.9 L19.6 14.4 Z" fill="var(--accent)" stroke="#fff" stroke-width="1.6" stroke-linejoin="round" style="filter:brightness(.72)"/></svg>'
+        : '<span style="opacity:.4">—</span>'}</span>
+      <button type="button" class="apx-carte ${curseurActif ? 'actif' : ''}" style="flex:0 1 240px" onclick="curBasculer(${curseurActif ? 'false' : 'true'})">
+        <b>${curseurActif ? 'Activé ✓' : 'Désactivé'}</b>
+        <small>La main du survol et le curseur de saisie restent ceux du système : ils portent une information, on ne les habille pas.</small>
+      </button>
+    </div>
   </section>
 
   <section class="dbx-carte apx-section">

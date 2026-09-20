@@ -24,6 +24,9 @@
   --m-marine-nuit: #0E1B33;
   --m-turquoise: #00CFFF;
   --m-turquoise-doux: #7DD3FC;
+  /* Version sourde, utilisee comme accent d'interface : le turquoise de marque reste reserve au
+     logo et au point de REX.CRM, ou il doit briller. Sur des boutons et des liens, il fatigue. */
+  --m-turquoise-fonce: #0095B8;
   --m-or: #D4A94A;
 
   /* ── Gris ───────────────────────────────────────────────────────────────────────────────────

@@ -355,3 +355,37 @@
 .apx-pastille i { display: block; height: 34px; border-radius: var(--r-s, 10px); border: 1px solid var(--border); }
 .apx-pastille b { font-size: var(--t-xs, 11px); color: var(--text); }
 .apx-pastille small { font-family: var(--t-mono); font-size: 10px; color: var(--text-muted); }
+
+/* ═══ POINTEUR DE SOURIS (js/65-curseur.js, 20.09.2026) ═══
+   Seule la fleche est teintee. La main du survol, le curseur de saisie, le redimensionnement et
+   l'interdit restent ceux du systeme : ils portent une information que l'utilisateur lit sans y
+   penser, on n'habille que ce qui ne sert qu'a montrer.
+   Le !important est assume : 178 regles « cursor: pointer » existent deja dans le CRM, et cette
+   couche est un habillage global qui doit passer par-dessus sans qu'on les reecrive toutes. */
+body.curseur-rex,
+body.curseur-rex .dbx-carte,
+body.curseur-rex section,
+body.curseur-rex div,
+body.curseur-rex span,
+body.curseur-rex p,
+body.curseur-rex td,
+body.curseur-rex th { cursor: var(--curseur-fleche, auto); }
+
+/* Ce qui garde son curseur systeme, parce qu'il veut dire quelque chose */
+body.curseur-rex a,
+body.curseur-rex button,
+body.curseur-rex label,
+body.curseur-rex select,
+body.curseur-rex summary,
+body.curseur-rex [role="button"],
+body.curseur-rex [onclick] { cursor: pointer !important; }
+body.curseur-rex input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):not([type="submit"]),
+body.curseur-rex textarea { cursor: text !important; }
+body.curseur-rex :disabled,
+body.curseur-rex [disabled] { cursor: not-allowed !important; }
+body.curseur-rex canvas { cursor: crosshair !important; }
+
+/* Reglage du pointeur dans Parametres > Apparence */
+.apx-curseur { display: flex; align-items: center; gap: var(--e-3, 12px); flex-wrap: wrap; }
+.apx-curseur-apercu { width: 46px; height: 46px; border-radius: var(--r-s, 10px);
+  background: var(--bg); border: 1px solid var(--border); display: grid; place-items: center; }

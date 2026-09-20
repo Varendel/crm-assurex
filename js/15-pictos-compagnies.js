@@ -26,7 +26,12 @@ const PICTOS_COMPAGNIES = {
   // Logos complets fournis le 19.09.2026 (soir) : affichés entiers (ajuste: 'contain') sur leur fond
   'Swiss Life': { img: 'assets/logos/compagnies/swisslife.png', forme: 'carre', ajuste: 'contain', fondImg: '#FFFFFF', bordure: true },
   'CSS': { img: 'assets/logos/compagnies/css.png', forme: 'carre', ajuste: 'contain', fondImg: '#FFFFFF', bordure: true },
-  'La Mobilière': { img: 'assets/logos/compagnies/mobiliere.jpg', forme: 'carre', ajuste: 'contain', fondImg: '#DA2323' },
+  // Version CARRÉE (20.09.2026) : le logo complet « la Mobilière » fait 736 x 210 ; affiché en
+  // `contain` dans une pastille de 26 px, le texte tombait sous 4 px de haut et ne se lisait plus.
+  // On découpe donc le « Mo » de l'original — même fichier source, même rouge (220,34,35) — comme
+  // le fait la compagnie elle-même pour ses avatars. Le logo complet reste disponible pour les
+  // usages en grand (mobiliere.jpg).
+  'La Mobilière': { img: 'assets/logos/compagnies/mobiliere-carre.png', forme: 'carre' },
   'goCaution': { img: 'assets/logos/compagnies/gocaution.png', forme: 'carre', ajuste: 'contain', fondImg: '#FFFFFF', bordure: true },
   'HOTELA': { img: 'assets/logos/compagnies/hotela.png', forme: 'carre', bordure: true },
   'Groupe Mutuel': { img: 'assets/logos/compagnies/groupe-mutuel.png', forme: 'carre', bordure: true },

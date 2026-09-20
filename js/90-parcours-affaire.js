@@ -51,9 +51,18 @@ const PAF_ETAPES = [
     requis: ['resiliation', 'contrat'] },
 ];
 
+// Quatre natures, et elles ne déclenchent pas le même travail.
+//
+// « Transfert de portefeuille » (ajouté le 20.09.2026 à la demande de Jonathan) est le cas qu'on
+// confond le plus facilement avec le transfert ordinaire, alors que c'est l'inverse : le client
+// GARDE ses contrats et ses assureurs, il change seulement de courtier. Il n'y a donc rien à
+// résilier — envoyer une résiliation ici ferait perdre au client des couvertures qu'il voulait
+// conserver. Ce qui part, c'est un MANDAT de courtage, adressé à chaque compagnie pour qu'elle
+// nous reconnaisse comme interlocuteur.
 const PAF_TYPES = {
   nouvelle: { nom: 'Nouvelle couverture', aide: 'Le client n’avait rien sur ce risque.' },
-  transfert: { nom: 'Transfert', aide: 'Il quitte un assureur : une résiliation sera due.' },
+  transfert: { nom: 'Changement d’assureur', aide: 'Il quitte une compagnie : une résiliation est due.', resiliation: true },
+  portefeuille: { nom: 'Transfert de portefeuille', aide: 'Il garde ses contrats et change de courtier : un mandat part aux compagnies, rien n’est résilié.', mandat: true },
   complement: { nom: 'Complément', aide: 'Il garde l’existant et ajoute une couverture.' },
 };
 
@@ -191,6 +200,18 @@ function pafOuvrirSituation(oppId) {
           <b>${t.nom}</b><small>${t.aide}</small>
         </label>`).join('')}</div>
 
+      <div id="paf-mandat" style="display:${o.type_affaire === 'portefeuille' ? '' : 'none'}">
+        <div class="paf-rappel">
+          <b>📜 Un mandat, pas une résiliation</b>
+          <p>Le client garde ses contrats : il faut envoyer un mandat de courtage à chaque
+            compagnie concernée pour qu’elle nous reconnaisse comme interlocuteur. Les contrats
+            restent en vigueur — ne rien résilier.</p>
+          ${typeof navigate === 'function' ? `<button type="button" class="paf-act"
+            onclick="document.getElementById('modal-paf-situation').remove();navigate('mandats')">
+            Ouvrir les mandats →</button>` : ''}
+        </div>
+      </div>
+
       <div id="paf-actuel" style="display:${o.type_affaire === 'transfert' ? '' : 'none'}">
         <label class="paf-label">Ce qu’il a aujourd’hui</label>
         <div class="paf-grille">
@@ -225,6 +246,8 @@ function pafOuvrirSituation(oppId) {
 function pafMajTypeUI(valeur) {
   const z = document.getElementById('paf-actuel');
   if (z) z.style.display = valeur === 'transfert' ? '' : 'none';
+  const m = document.getElementById('paf-mandat');
+  if (m) m.style.display = valeur === 'portefeuille' ? '' : 'none';
   document.querySelectorAll('.paf-radio').forEach(l => {
     l.classList.toggle('actif', l.querySelector('input').value === valeur);
   });
@@ -251,8 +274,9 @@ async function pafEnregistrerSituation(oppId) {
     actuel_prime: type === 'transfert' ? pafNombre('paf-a-prime') : null,
     actuel_police: type === 'transfert' ? txt('paf-a-police') : null,
     actuel_echeance: type === 'transfert' ? txt('paf-a-ech') : null,
-    // Un transfert suppose une résiliation. On la pose comme due sans attendre la signature :
-    // c'est la date limite qui compte, et elle se calcule dès maintenant.
+    // Un changement d'assureur suppose une résiliation, et on la pose comme due sans attendre la
+    // signature : c'est la date limite qui compte, et elle se calcule dès maintenant.
+    // Un transfert de PORTEFEUILLE, lui, n'en déclenche aucune — le client garde ses contrats.
     resiliation_requise: type === 'transfert',
   };
   if (maj.resiliation_requise && maj.actuel_echeance) {

@@ -1,0 +1,32 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   LA COMPAGNIE EN COURT (js/101, 20.09.2026)
+
+   Logo + acronyme à la place du nom en toutes lettres, dans la colonne compagnie des tableaux.
+   L'ensemble doit tenir sur une ligne et ne jamais pousser la colonne : c'est tout l'objet.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.cco {
+  display: inline-flex; align-items: center; gap: 7px;
+  white-space: nowrap; vertical-align: middle; cursor: default;
+}
+
+/* L'acronyme se lit, il ne crie pas : le logo porte déjà la reconnaissance. Chiffres et lettres
+   en chasse fixe pour que deux lignes voisines s'alignent à l'œil. */
+.cco b {
+  font-size: var(--t-xs, 11px); font-weight: 600; letter-spacing: .02em;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* La colonne n'a plus besoin de s'étirer. Sans cette limite, le navigateur garderait la largeur
+   que le nom complet réclamait avant. */
+td[data-cco="1"] { width: 1%; white-space: nowrap; }
+
+/* Au survol de la ligne, l'acronyme reprend la couleur du texte : on regarde cette ligne-là. */
+tr:hover .cco b { color: var(--text); }
+
+/* Sous 620 px la place manque pour tout : le logo suffit à repérer, l'acronyme passe à la trappe
+   et le nom complet reste au survol comme partout ailleurs. */
+@media (max-width: 620px) {
+  .cco b { display: none; }
+}

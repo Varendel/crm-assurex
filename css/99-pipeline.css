@@ -1,0 +1,55 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   PIPELINE (js/77, 20.09.2026)
+
+   L'écran traversait cinq blocs de chiffres avant de montrer une seule affaire. Le pipeline
+   remonte ; l'analyse descend dans un volet qu'on déplie quand on veut analyser — c'est-à-dire
+   rarement, et jamais en arrivant.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.pln-actions { display: flex; gap: var(--e-2, 8px); flex-wrap: wrap; margin-bottom: var(--e-4, 16px); }
+.pln-tabs { margin: var(--e-5, 20px) 0 var(--e-4, 16px); }
+
+/* ── Les chiffres à vérifier ──────────────────────────────────────────────────────────────────────
+   Une anomalie se montre, elle ne se corrige pas toute seule : c'est une donnée métier, et deviner
+   laquelle des deux valeurs est fausse n'est pas notre rôle. */
+.pln-anomalies {
+  margin-bottom: var(--e-4, 16px); padding: var(--e-3, 12px) var(--e-4, 16px);
+  border-radius: var(--r-s, 10px);
+  background: var(--c-alerte-fond); border: 1px solid var(--c-alerte);
+  color: var(--c-alerte-texte); font-size: var(--t-m, 13.5px);
+}
+.pln-anomalies b { font-weight: var(--t-moyen, 600); }
+.pln-anomalies ul { margin: var(--e-2, 8px) 0; padding-left: var(--e-5, 20px); display: flex; flex-direction: column; gap: 4px; }
+.pln-anomalies li { line-height: 1.5; }
+.pln-anomalies button {
+  border: none; background: none; padding: 0; cursor: pointer; font: inherit;
+  color: inherit; font-weight: var(--t-moyen, 600); text-decoration: underline; text-underline-offset: 2px;
+}
+.pln-anomalies small { display: block; margin-top: 6px; font-size: var(--t-s, 12.5px); opacity: .85; }
+
+/* ── Le volet d'analyse ───────────────────────────────────────────────────────────────────────── */
+.pln-analyse {
+  margin-top: var(--e-8, 32px); border-top: 1px solid var(--g-200, #E2E8F0); padding-top: var(--e-4, 16px);
+}
+html:not([data-theme="clair"]) .pln-analyse { border-top-color: rgba(255, 255, 255, .08); }
+.pln-analyse > summary {
+  cursor: pointer; list-style: none; display: flex; align-items: center; gap: var(--e-2, 8px);
+  padding: var(--e-2, 8px) 0; font-size: var(--t-m, 13.5px); font-weight: var(--t-moyen, 600);
+  color: var(--text-muted, #64748B);
+}
+.pln-analyse > summary::-webkit-details-marker { display: none; }
+.pln-analyse > summary::before {
+  content: "▸"; display: inline-block; transition: transform var(--v-court, .15s); font-size: 11px;
+}
+.pln-analyse[open] > summary::before { transform: rotate(90deg); }
+.pln-analyse > summary:hover { color: var(--text, #334155); }
+.pln-analyse-corps { padding-top: var(--e-3, 12px); display: flex; flex-direction: column; gap: var(--e-4, 16px); }
+
+/* La couverture : sans cette phrase, un chiffre calculé sur la moitié des affaires se lit comme
+   un total. C'est l'erreur que cet écran commettait. */
+.pln-couverture {
+  padding: var(--e-3, 12px) var(--e-4, 16px); border-radius: var(--r-s, 10px);
+  background: var(--c-info-fond); color: var(--c-info-texte);
+  font-size: var(--t-s, 12.5px); line-height: 1.55; text-wrap: pretty;
+}
+.pln-couverture b { font-weight: var(--t-moyen, 600); }

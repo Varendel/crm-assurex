@@ -35,23 +35,41 @@
    Elle est remplacee par une barre de progression que Rex traverse, et cantonnee a l'ecran
    d'entree ; .loader redevient un simple indicateur d'attente. */
 #ecran-chargement-crm .ecc-logo-bloc { position: relative; display: inline-block; line-height: 0; }
-#ecran-chargement-crm .ecc-logo { width: min(260px, 62vw); height: auto; display: block; }
+/* Le logotype de l'ecran de chargement recoit le meme traitement que celui de la connexion :
+   blanchi (brightness(0) invert(1)) puis retroeclaire par trois halos de rayons croissants, qui
+   respirent. Le PNG d'origine est bleu clair sur fond sombre — il se lisait comme un filigrane,
+   alors que c'est la premiere chose qu'on voit en ouvrant le CRM. Le point turquoise est un
+   element separe (.ecc-point), il garde donc sa couleur. */
+#ecran-chargement-crm .ecc-logo { width: min(440px, 80vw); height: auto; display: block;
+  animation: ecc-lumiere 6.5s ease-in-out infinite; }
+@keyframes ecc-lumiere {
+  0%, 100% { filter: brightness(0) invert(1)
+    drop-shadow(0 0 14px rgba(125,211,252,.55)) drop-shadow(0 0 38px rgba(0,207,255,.45))
+    drop-shadow(0 0 78px rgba(0,149,184,.38)) drop-shadow(0 4px 9px rgba(3,12,30,.55)); }
+  50%      { filter: brightness(0) invert(1)
+    drop-shadow(0 0 18px rgba(125,211,252,.72)) drop-shadow(0 0 52px rgba(0,207,255,.6))
+    drop-shadow(0 0 104px rgba(0,149,184,.5)) drop-shadow(0 4px 9px rgba(3,12,30,.55)); }
+}
 #ecran-chargement-crm .ecc-point { position: absolute; left: 53.48%; top: 70.63%; width: 4.04%; aspect-ratio: 1;
   transform: translate(-50%, -50%); border-radius: 50%; background: #00CFFF;
   animation: lg-point 2.6s ease-in-out infinite; }
-#ecran-chargement-crm .ecc-piste { position: relative; width: min(280px, 66vw); height: 78px; }
-#ecran-chargement-crm .ecc-rex { position: absolute; bottom: 10px; left: 0; height: 62px; width: auto;
+#ecran-chargement-crm .ecc-piste { position: relative; width: min(470px, 84vw); height: 104px; }
+#ecran-chargement-crm .ecc-rex { position: absolute; bottom: 14px; left: 0; height: 84px; width: auto;
   filter: drop-shadow(0 6px 12px rgba(0,0,0,.3)); animation: ecc-avance 2.6s cubic-bezier(.45,0,.55,1) infinite; }
-#ecran-chargement-crm .ecc-barre { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; border-radius: 999px;
+#ecran-chargement-crm .ecc-barre { position: absolute; left: 0; right: 0; bottom: 0; height: 9px; border-radius: 999px;
   background: rgba(255,255,255,.16); overflow: hidden; display: block; }
 #ecran-chargement-crm .ecc-barre span { position: absolute; inset: 0 auto 0 0; width: 40%; border-radius: 999px;
   background: linear-gradient(90deg, #00CFFF, #7DD3FC); animation: ecc-barre 2.6s cubic-bezier(.45,0,.55,1) infinite; }
-#ecran-chargement-crm .ecc-texte { font-size: 13px; color: #D7E6FF; }
-@keyframes ecc-avance { 0% { left: 0; } 100% { left: calc(100% - 62px); } }
+#ecran-chargement-crm .ecc-texte { font-size: 15px; color: #D7E6FF; }
+@keyframes ecc-avance { 0% { left: 0; } 100% { left: calc(100% - 84px); } }
 @keyframes ecc-barre { 0% { width: 6%; } 100% { width: 100%; } }
 @media (prefers-reduced-motion: reduce) {
   #ecran-chargement-crm .ecc-rex, #ecran-chargement-crm .ecc-barre span, #ecran-chargement-crm .ecc-point { animation: none; }
   #ecran-chargement-crm .ecc-barre span { width: 60%; }
+  /* Le halo reste, il cesse seulement de respirer : c'est le mouvement qui gene, pas la lumiere. */
+  #ecran-chargement-crm .ecc-logo { animation: none; filter: brightness(0) invert(1)
+    drop-shadow(0 0 14px rgba(125,211,252,.55)) drop-shadow(0 0 38px rgba(0,207,255,.45))
+    drop-shadow(0 0 78px rgba(0,149,184,.38)) drop-shadow(0 4px 9px rgba(3,12,30,.55)); }
 }
 
 /* ═══ Espace client (js/48, 20.09.2026) ═══ */

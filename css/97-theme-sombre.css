@@ -1,0 +1,154 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   THÈME SOMBRE — les bandeaux s'inversent (20.09.2026, demande de Jonathan)
+
+   Le problème : les bandeaux de tête (tableau de bord, fiche client, conseil, OZ Assure, et le
+   bandeau commun de toutes les pages) sont peints en bleu marine. En thème clair c'est juste :
+   une bande sombre sur une page blanche, on voit où commence la page. En thème sombre, ce marine
+   se pose sur un fond presque noir — deux valeurs sombres l'une sur l'autre : le bandeau disparaît,
+   et avec lui le repère qui dit « vous êtes en haut de cette page-ci ».
+
+   La correction demandée : inverser. En thème sombre, le marine devient un BLEU CIEL TRÈS CLAIR,
+   et les cercles décoratifs — blancs jusqu'ici — passent en bleu ciel. Le texte suit : il devient
+   marine sur ce fond clair. C'est le même bandeau, retourné comme un négatif.
+
+   Une seule palette, déclarée une fois ci-dessous, sert les cinq familles de bandeaux. Changer la
+   nuance se fait sur une ligne.
+
+   Rappel du sélecteur : le thème sombre est l'état PAR DÉFAUT du CRM. C'est le thème clair qui
+   est signalé, par html[data-theme="clair"]. D'où le html:not([data-theme="clair"]) partout ici.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+html:not([data-theme="clair"]) {
+  /* Le bleu ciel du bandeau inversé : trois nuances, du presque blanc au ciel franc. Une seule
+     teinte plate donnerait une étiquette ; trois donnent une surface. */
+  --bnd-clair-1: #F4FBFF;
+  --bnd-clair-2: #DDEFFC;
+  --bnd-clair-3: #C2E4F8;
+  /* Les lignes : ce sont les cercles décoratifs. En bleu ciel, comme demandé. */
+  --bnd-ligne: rgba(0, 149, 184, .32);
+  --bnd-ligne-vive: rgba(0, 183, 230, .55);
+  /* L'encre : marine, la couleur que le fond avait avant l'inversion. */
+  --bnd-encre: #0B2458;
+  --bnd-encre-douce: rgba(11, 36, 88, .64);
+  --bnd-encre-tres-douce: rgba(11, 36, 88, .46);
+  --bnd-verre: rgba(11, 36, 88, .07);
+  --bnd-verre-bord: rgba(11, 36, 88, .14);
+  --bnd-ombre: 0 16px 38px rgba(4, 16, 42, .55);
+}
+
+/* ── Le fond des cinq familles de bandeaux ────────────────────────────────────────────────────── */
+html:not([data-theme="clair"]) .dbx-hero,
+html:not([data-theme="clair"]) .fcx-hero,
+html:not([data-theme="clair"]) .cf-hero,
+html:not([data-theme="clair"]) .ozx-hero,
+html:not([data-theme="clair"]) .rex-bandeau,
+html:not([data-theme="clair"]) .rex-bandeau-hote {
+  background:
+    radial-gradient(120% 150% at 100% 0%, rgba(0, 207, 255, .22) 0%, transparent 58%),
+    linear-gradient(135deg, var(--bnd-clair-1) 0%, var(--bnd-clair-2) 54%, var(--bnd-clair-3) 100%);
+  color: var(--bnd-encre);
+  box-shadow: var(--bnd-ombre);
+  border: 1px solid rgba(0, 149, 184, .22);
+}
+
+/* ── Les lignes ───────────────────────────────────────────────────────────────────────────────── */
+html:not([data-theme="clair"]) .dbx-hero-deco::before,
+html:not([data-theme="clair"]) .fcx-hero-deco::before,
+html:not([data-theme="clair"]) .cf-hero-deco::before,
+html:not([data-theme="clair"]) .ozx-hero-deco::before,
+html:not([data-theme="clair"]) .rex-bandeau-deco::before { border-color: var(--bnd-ligne); }
+
+html:not([data-theme="clair"]) .dbx-hero-deco::after,
+html:not([data-theme="clair"]) .fcx-hero-deco::after,
+html:not([data-theme="clair"]) .cf-hero-deco::after,
+html:not([data-theme="clair"]) .ozx-hero-deco::after,
+html:not([data-theme="clair"]) .rex-bandeau-deco::after { border-color: var(--bnd-ligne-vive); }
+
+/* Le tracé animé de la vue OZ Assure (ozx-hero-spark) est dessiné en blanc : invisible sur clair. */
+html:not([data-theme="clair"]) .ozx-hero-spark { opacity: .55; filter: invert(1) hue-rotate(180deg); }
+
+/* ── L'encre ──────────────────────────────────────────────────────────────────────────────────────
+   Le texte des bandeaux est écrit en blanc dans une trentaine de règles, dont plusieurs en
+   !important. Plutôt que de les recopier une à une — et d'en oublier à la prochaine page — on
+   fait hériter la couleur dans tout le bandeau, en laissant de côté ce qui porte une couleur
+   porteuse de sens : un badge vert veut rester vert, une puce rouge rester rouge. Les surtitres
+   et sous-titres sont écartés eux aussi : ils reçoivent juste en dessous leur marine atténué,
+   dont leurs enfants héritent à leur tour. */
+html:not([data-theme="clair"]) .dbx-hero *:not([class*="badge"]):not([class*="puce"]):not([class*="pastille"]):not([class*="tendance"]):not([class*="chip"]):not([class*="sous"]):not([class*="surtitre"]):not([class*="date"]):not(svg):not(svg *),
+html:not([data-theme="clair"]) .fcx-hero *:not([class*="badge"]):not([class*="puce"]):not([class*="pastille"]):not([class*="tendance"]):not([class*="chip"]):not([class*="sous"]):not([class*="surtitre"]):not([class*="date"]):not(svg):not(svg *),
+html:not([data-theme="clair"]) .cf-hero *:not([class*="badge"]):not([class*="puce"]):not([class*="pastille"]):not([class*="tendance"]):not([class*="chip"]):not([class*="sous"]):not([class*="surtitre"]):not([class*="date"]):not(svg):not(svg *),
+html:not([data-theme="clair"]) .ozx-hero *:not([class*="badge"]):not([class*="puce"]):not([class*="pastille"]):not([class*="tendance"]):not([class*="chip"]):not([class*="sous"]):not([class*="surtitre"]):not([class*="date"]):not(svg):not(svg *),
+html:not([data-theme="clair"]) .rex-bandeau *:not([class*="badge"]):not([class*="puce"]):not([class*="pastille"]):not([class*="tendance"]):not([class*="chip"]):not([class*="sous"]):not([class*="surtitre"]):not([class*="date"]):not(svg):not(svg *),
+html:not([data-theme="clair"]) .rex-bandeau-hote *:not([class*="badge"]):not([class*="puce"]):not([class*="pastille"]):not([class*="tendance"]):not([class*="chip"]):not([class*="sous"]):not([class*="surtitre"]):not([class*="date"]):not(svg):not(svg *) {
+  color: inherit !important;
+}
+
+/* Les surtitres et les sous-titres gardent leur rôle de second plan, en marine atténué. */
+html:not([data-theme="clair"]) .dbx-hero-date,
+html:not([data-theme="clair"]) .rex-bandeau-surtitre,
+html:not([data-theme="clair"]) .rex-bandeau-date,
+html:not([data-theme="clair"]) .rex-bandeau-hote .dx-surtitre,
+html:not([data-theme="clair"]) .ozx-hero .ozx-hero-surtitre { color: var(--bnd-encre-tres-douce) !important; }
+
+html:not([data-theme="clair"]) .rex-bandeau-sous,
+html:not([data-theme="clair"]) .rex-bandeau-sous > *,
+html:not([data-theme="clair"]) .rex-bandeau-hote .dx-sous,
+html:not([data-theme="clair"]) .rex-bandeau-hote p { color: var(--bnd-encre-douce) !important; }
+/* Un mot mis en gras dans un sous-titre reprend l'encre pleine : c'est là son seul moyen de
+   ressortir maintenant que la couleur a changé. */
+html:not([data-theme="clair"]) .rex-bandeau-sous strong,
+html:not([data-theme="clair"]) .rex-bandeau-hote strong { color: var(--bnd-encre) !important; }
+
+/* ── Le verre ─────────────────────────────────────────────────────────────────────────────────────
+   Les boutons, puces et cadres posés sur le bandeau sont en « verre blanc » : rgba(255,255,255,…)
+   sur fond sombre. Sur fond clair, ce verre blanc disparaît. Il passe en verre marine. */
+html:not([data-theme="clair"]) .dbx-hero [class*="verre"],
+html:not([data-theme="clair"]) .rex-bandeau [class*="verre"],
+html:not([data-theme="clair"]) .rb-retour,
+html:not([data-theme="clair"]) .dbx-hero-action,
+html:not([data-theme="clair"]) .cf-hero-actions > *,
+html:not([data-theme="clair"]) .fcx-avatar {
+  background: var(--bnd-verre) !important;
+  border-color: var(--bnd-verre-bord) !important;
+  box-shadow: inset 0 0 0 1px var(--bnd-verre-bord) !important;
+}
+html:not([data-theme="clair"]) .fcx-avatar > * { background-color: #FFFFFF !important; }
+
+/* Les barres de progression posées sur le bandeau : leur rail blanc translucide devient marine. */
+html:not([data-theme="clair"]) .dbx-hero [class*="barre"],
+html:not([data-theme="clair"]) .cf-hero [class*="barre"],
+html:not([data-theme="clair"]) .ozx-hero [class*="barre"] { background: rgba(11, 36, 88, .12) !important; }
+
+/* ── Les intentions, réaccordées au fond clair ────────────────────────────────────────────────────
+   Le vert clair et le rouge clair choisis pour un fond sombre deviennent illisibles sur un fond
+   bleu ciel. Dans le bandeau — et seulement là — ils reprennent leur version foncée. */
+html:not([data-theme="clair"]) .dbx-hero .dbx-tendance.hausse,
+html:not([data-theme="clair"]) .rex-bandeau .dbx-tendance.hausse,
+html:not([data-theme="clair"]) .cf-hero .pos { color: var(--c-succes-texte, #15803D) !important; }
+html:not([data-theme="clair"]) .dbx-hero .dbx-tendance.baisse,
+html:not([data-theme="clair"]) .rex-bandeau .dbx-tendance.baisse,
+html:not([data-theme="clair"]) .cf-hero .neg { color: var(--c-danger-texte, #B91C1C) !important; }
+
+/* ── Le reste de l'inversion ──────────────────────────────────────────────────────────────────────
+   La barre du haut en mobile est peinte du même marine : elle suit. */
+html:not([data-theme="clair"]) .mobile-topbar {
+  background: linear-gradient(135deg, var(--bnd-clair-1) 0%, var(--bnd-clair-2) 60%, var(--bnd-clair-3) 100%);
+  color: var(--bnd-encre);
+  border-bottom: 1px solid rgba(0, 149, 184, .24);
+}
+html:not([data-theme="clair"]) .mobile-topbar * { color: inherit !important; }
+/* Les logos posés dessus sont des PNG blancs : sur fond clair, ils se noircissent. */
+html:not([data-theme="clair"]) .mobile-topbar img { filter: brightness(0) saturate(0) opacity(.85); }
+
+/* Le bandeau des marchés et les pastilles EcoHub vivent DANS le bandeau de tête : leurs séparateurs
+   blancs deviennent marine, sans quoi ils disparaissent. */
+html:not([data-theme="clair"]) .rex-bandeau .bmq,
+html:not([data-theme="clair"]) .dbx-hero .bmq { border-color: var(--bnd-verre-bord) !important; }
+
+@media print { /* à l'impression, on repart du bandeau clair d'origine : l'encre coûte cher. */
+  html:not([data-theme="clair"]) .dbx-hero, html:not([data-theme="clair"]) .fcx-hero,
+  html:not([data-theme="clair"]) .cf-hero, html:not([data-theme="clair"]) .ozx-hero,
+  html:not([data-theme="clair"]) .rex-bandeau, html:not([data-theme="clair"]) .rex-bandeau-hote {
+    background: none !important; box-shadow: none !important; border: none !important;
+  }
+}

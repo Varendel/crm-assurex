@@ -65,7 +65,8 @@ function rexPoseHtml(opts) {
 // au lieu de se replier. C'est la différence entre « cette pose n'est pas encore dessinée » et
 // « ce personnage n'a rien à faire ici en avril ».
 const REX_COMPAGNONS = {
-  rodolphe: { f: 'rodolphe.png', titre: 'Rodolphe', saisons: ['noel', 'halloween'] },
+  // Rodolphe est le renne de Noël : il n'a rien à faire à Halloween. Une seule saison.
+  rodolphe: { f: 'rodolphe.png', titre: 'Rodolphe', saisons: ['noel'] },
 };
 
 function rexCompagnonHtml(nom, opts) {

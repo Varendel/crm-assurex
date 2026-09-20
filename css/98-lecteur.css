@@ -1,0 +1,85 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   LECTEUR DE MUSIQUE (js/67, 20.09.2026)
+
+   Le panneau est posé sur <body> et non dans le bandeau : le bandeau est repeint régulièrement,
+   et un iframe repeint est un iframe rechargé — la musique s'arrêterait d'elle-même. Il est donc
+   fixé en bas à droite, au-dessus du contenu mais sous les fenêtres modales du CRM.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.spo-pastille.actif { box-shadow: inset 0 0 0 1px var(--m-turquoise, #00CFFF); }
+.spo-pastille .bmq-pastille-valeur { font-variant-numeric: normal; letter-spacing: .04em; }
+
+.spo-panneau {
+  position: fixed; right: 18px; bottom: 18px; z-index: 900;
+  width: min(360px, calc(100vw - 32px));
+  display: flex; flex-direction: column; gap: var(--e-2, 8px);
+  padding: var(--e-3, 12px);
+  border-radius: var(--r-l, 18px);
+  background: var(--g-0, #fff);
+  border: 1px solid var(--g-200, #E2E8F0);
+  box-shadow: var(--o-3, 0 14px 34px rgba(15,23,42,.16));
+  transform-origin: 100% 100%;
+  animation: spo-entree .22s var(--v-entree, cubic-bezier(.16,1,.3,1)) both;
+}
+
+/* Fermé, le panneau n'est pas retiré du document : l'iframe reste vivant, donc la lecture
+   continue. Il est seulement sorti de l'écran et rendu inatteignable au clavier. */
+.spo-panneau.ferme {
+  animation: none;
+  opacity: 0; pointer-events: none;
+  transform: translateY(12px) scale(.96);
+  visibility: hidden;
+  transition: opacity var(--v-court, .15s) ease, transform var(--v-court, .15s) ease, visibility 0s .15s;
+}
+
+@keyframes spo-entree {
+  from { opacity: 0; transform: translateY(12px) scale(.96); }
+  to   { opacity: 1; transform: none; }
+}
+
+.spo-tete { display: flex; align-items: center; justify-content: space-between; gap: var(--e-2, 8px); }
+.spo-titre { font-size: var(--t-s, 12.5px); font-weight: var(--t-moyen, 600); color: var(--g-700, #334155); }
+.spo-fermer {
+  border: none; background: transparent; cursor: pointer; line-height: 1;
+  font-size: var(--t-m, 13.5px); color: var(--g-500, #64748B);
+  padding: var(--e-1, 4px) var(--e-2, 8px); border-radius: var(--r-xs, 6px);
+}
+.spo-fermer:hover { background: var(--g-100, #EEF2F7); color: var(--g-900, #0F172A); }
+
+.spo-cadre { width: 100%; border: none; border-radius: var(--r-s, 10px); display: block; background: var(--g-100); }
+
+.spo-reglage { display: flex; gap: var(--e-2, 8px); }
+.spo-champ {
+  flex: 1; min-width: 0;
+  padding: var(--e-2, 8px) var(--e-3, 12px);
+  border: 1px solid var(--g-200, #E2E8F0); border-radius: var(--r-s, 10px);
+  background: var(--g-25, #F8FAFC); color: var(--g-900, #0F172A);
+  font-size: var(--t-s, 12.5px); font-family: inherit; outline: none;
+}
+.spo-champ:focus { border-color: var(--m-turquoise-fonce, #0095B8); background: var(--g-0, #fff); }
+.spo-ok {
+  border: none; cursor: pointer; white-space: nowrap;
+  padding: var(--e-2, 8px) var(--e-3, 12px); border-radius: var(--r-s, 10px);
+  background: var(--m-marine, #113679); color: #fff;
+  font-size: var(--t-s, 12.5px); font-weight: var(--t-moyen, 600); font-family: inherit;
+}
+.spo-ok:hover { background: var(--m-marine-fonce, #0B2458); }
+
+.spo-note { margin: 0; font-size: var(--t-xs, 11px); color: var(--g-500, #64748B); line-height: 1.35; }
+
+/* En thème sombre, le panneau reste une surface sombre : il n'est pas un bandeau, il n'entre pas
+   dans l'inversion décrite dans css/97. */
+html:not([data-theme="clair"]) .spo-panneau {
+  background: #111C33; border-color: #243350;
+}
+html:not([data-theme="clair"]) .spo-titre { color: #CBD5E1; }
+html:not([data-theme="clair"]) .spo-champ { background: #0E1628; border-color: #243350; color: #E2E8F0; }
+html:not([data-theme="clair"]) .spo-note { color: #94A3B8; }
+
+/* Sur un écran de portable, le lecteur prend toute la largeur et se pose au-dessus de la barre
+   d'onglets du bas, sinon il la recouvre. */
+@media (max-width: 720px) {
+  .spo-panneau { right: 12px; left: 12px; bottom: 84px; width: auto; }
+}
+
+@media print { .spo-panneau, .spo-pastille { display: none !important; } }

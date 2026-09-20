@@ -63,6 +63,75 @@ function ehsAudit(compagnie) {
   return { contrats, sansPolice, clientsConcernes, sansIdentifiant, prime, pret };
 }
 
+// ── Journal des synchronisations automatiques (20.09.2026) ──────────────────────────────────────
+// La fonction « ecohub-sync » tourne deux fois par jour (6 h 15 et 18 h 15). Sans trace visible,
+// une synchronisation qui s'arrête ne se remarque que le jour où il manque un document : ce
+// journal est donc affiché en tête de page, pas relégué dans un onglet.
+window._ehsJournal = window._ehsJournal || { lignes: null, enCours: false };
+
+async function ehsChargerJournal() {
+  try {
+    window._ehsJournal.lignes = await dbGet('ecohub_executions', 'select=*&order=demarre_le.desc&limit=8') || [];
+  } catch (e) { window._ehsJournal.lignes = []; }
+}
+
+const EHS_STATUTS = {
+  ok: { libelle: 'Terminée', classe: 'ok' },
+  en_cours: { libelle: 'En cours', classe: 'attente' },
+  en_attente_activation: { libelle: 'En attente d’activation', classe: 'attente' },
+  erreur: { libelle: 'Échec', classe: 'alerte' },
+};
+
+function ehsJournalHtml() {
+  const J = window._ehsJournal;
+  if (J.lignes === null) {
+    if (!J.enCours) { J.enCours = true; ehsChargerJournal().then(() => { J.enCours = false; if (currentView === 'ecohub-sync') navigate('ecohub-sync', { silent: true }); }); }
+    return '<section class="ehs-journal"><h3>Synchronisation automatique</h3><div class="dbx-vide-petit">Chargement du journal…</div></section>';
+  }
+  const derniere = J.lignes[0];
+  const enAttente = derniere && derniere.statut === 'en_attente_activation';
+  return `<section class="ehs-journal">
+    <header><h3>Synchronisation automatique</h3>
+      <span class="ehs-cadence">deux fois par jour · 6 h 15 et 18 h 15</span></header>
+    ${enAttente ? `<div class="ehs-note">Le flux SAF n’est pas encore ouvert par les compagnies : la synchronisation s’exécute, ne trouve rien à lire, et le note. Rien à corriger de notre côté — il n’y a rien à développer non plus le jour où une compagnie ouvrira.</div>` : ''}
+    ${J.lignes.length ? `<div class="ehs-exes">${J.lignes.map(e => {
+      const s = EHS_STATUTS[e.statut] || { libelle: e.statut, classe: '' };
+      const anomalies = (e.detail && e.detail.anomalies) ? e.detail.anomalies.length : 0;
+      return `<div class="ehs-exe ${s.classe}">
+        <span class="ehs-exe-date">${fmtDate(String(e.demarre_le).slice(0, 10))} ${String(e.demarre_le).slice(11, 16)}</span>
+        <span class="ehs-exe-statut">${s.libelle}</span>
+        <span class="ehs-exe-chiffres">${e.messages_lus} message(s) · ${e.documents_deposes} document(s) · ${e.contrats_touches} contrat(s)</span>
+        <span class="ehs-exe-note">${e.erreur ? ehsEsc(String(e.erreur).slice(0, 140)) : anomalies ? `${anomalies} anomalie(s) relevée(s)` : e.declencheur === 'manuel' ? 'lancée à la main' : ''}</span>
+      </div>`;
+    }).join('')}</div>` : '<div class="dbx-vide-petit">Aucune exécution pour l’instant — la première a lieu au prochain passage.</div>'}
+  </section>`;
+}
+
+// Lance la même fonction que la planification, avec la session du conseiller.
+async function ehsSynchroniserMaintenant() {
+  showError('⏳ Synchronisation EcoHub en cours…');
+  try {
+    const token = await getValidAccessToken();
+    const r = await fetch(`${SUPABASE_URL}/functions/v1/ecohub-sync`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ declencheur: 'manuel' }),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (d.statut === 'en_attente_activation') {
+      showError('Le flux EcoHub n’est pas encore ouvert : rien à lire pour l’instant. L’exécution est inscrite au journal.');
+    } else if (d.statut === 'ok') {
+      showError(`✓ ${d.messages_lus} message(s) lus, ${d.documents_deposes} document(s) déposés.`);
+    } else {
+      showError('Synchronisation en échec : ' + (d.erreur || r.status));
+    }
+  } catch (e) {
+    showError('Erreur réseau : ' + e.message);
+  }
+  window._ehsJournal.lignes = null;
+  if (currentView === 'ecohub-sync') navigate('ecohub-sync', { silent: true });
+}
+
 function viewEcohubSync() {
   if (_ehs.partenaires === null) { ehsCharger().then(() => navigate('ecohub-sync', { silent: true })); return '<div class="loader">Chargement…</div>'; }
   const suivies = _ehs.partenaires.filter(p => p.convention !== 'aucune');
@@ -77,8 +146,11 @@ function viewEcohubSync() {
       <p class="dx-sous">Quand une compagnie ouvrira le flux, chaque ligne reçue devra retrouver son client et son contrat. Ici, ce qui manque pour que le rapprochement fonctionne dès le premier jour.</p></div>
       <div class="dx-tete-actions">
         <button type="button" class="btn-secondary" onclick="ehsCharger(true).then(() => navigate('ecohub-sync', { silent: true }))">↻ Actualiser</button>
+        <button type="button" class="btn-secondary" onclick="ehsSynchroniserMaintenant()" title="Lance tout de suite la même synchronisation que celle de 6 h 15 et 18 h 15">⚡ Synchroniser maintenant</button>
         <button type="button" class="btn-save" onclick="ehsPreparerCorrespondances()">🔗 Préparer les correspondances</button>
       </div></header>
+
+    ${ehsJournalHtml()}
 
     <div class="dbx-kpis">
       ${typeof dbxKpi === 'function' ? dbxKpi({ i: 0, label: 'Prêt pour le rapprochement', valeur: pret, suffixe: ' %', sous: `${totContrats} contrat(s) chez les compagnies suivies` }) : ''}

@@ -1,0 +1,144 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   TYPOGRAPHIE — l'échelle appliquée pour de vrai (20.09.2026)
+
+   Les jetons (css/000-jetons.css) décrivaient déjà une échelle. Personne ne s'en servait : la
+   mesure du 20.09 donne 777 déclarations de graisse 700, 800 ou 900 contre 253 en 600, et
+   633 d'entre elles sont écrites en ligne dans le JS.
+
+   Or Geist n'est chargé qu'en 400 / 500 / 600. Autrement dit : 700, 800 et 900 tombent tous
+   sur la MÊME graisse à l'écran. Sept cent soixante-dix-sept décisions de mise en avant qui ne
+   distinguent plus rien — c'est exactement l'impression de « tout est important donc rien ne
+   l'est » qu'on ressent sans pouvoir la nommer.
+
+   Ce fichier ne redessine rien. Il remet quatre choses d'aplomb :
+
+     1. Trois graisses réellement distinctes    400 corps · 500 mise en avant · 600 titre
+     2. Les chiffres alignés                    colonne de francs = colonne, pas un escalier
+     3. L'interlettrage selon la taille         un titre de 30 px ne s'espace pas comme du 11 px
+     4. Des lignes qui se cassent proprement    pas de mot seul sur la dernière ligne d'un titre
+
+   Chargé en dernier : il corrige ce qui existe, il ne redéfinit pas ce qui est déjà juste.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Trois graisses, pas six ──────────────────────────────────────────────────────────────────
+   Le navigateur n'a pas de 700 : il choisit le 600 et, dans certains cas, l'épaissit lui-même en
+   dessinant deux fois le texte avec un décalage. Ce « faux gras » bave et rend les petites tailles
+   sales. On le coupe, et on redescend les graisses écrites en dur sur l'échelle réelle. */
+
+:root { --t-relief: 500; }
+
+html { font-synthesis-weight: none; }
+
+/* Les graisses écrites en ligne dans le JS. 700 devenait un 600 indistinct du titre au-dessus :
+   il redescend à 500, où il se lit comme une mise en avant. 800 et 900 gardent le 600 — ce sont
+   des titres de section, ils sont au sommet de l'échelle. */
+[style*="font-weight:700"], [style*="font-weight: 700"] { font-weight: var(--t-relief, 500) !important; }
+[style*="font-weight:800"], [style*="font-weight: 800"],
+[style*="font-weight:900"], [style*="font-weight: 900"] { font-weight: var(--t-moyen, 600) !important; }
+
+/* Les mêmes graisses écrites dans les feuilles anciennes. */
+.stat-value, .stat-label, .avatar, .badge, .kpi-value,
+.form-input, .form-select { font-weight: var(--t-moyen, 600); }
+
+b, strong { font-weight: var(--t-moyen, 600); }
+
+/* ── 2. Les chiffres ─────────────────────────────────────────────────────────────────────────────
+   Dans une police normale, le 1 est plus étroit que le 8. Une colonne de montants devient donc un
+   escalier, et l'œil ne peut plus comparer deux lignes d'un coup — il doit lire chaque nombre.
+   Les chiffres tabulaires leur donnent tous la même largeur : la colonne redevient une colonne.
+   C'est la correction la plus visible de ce fichier, et celle qui sert le plus ici : ce CRM ne
+   montre presque que des francs, des dates et des pourcentages. */
+
+table, .tbl, .tbl-cellule, .tbl-tete,
+[class*="montant"], [class*="Montant"], [class*="-chf"], [class*="prime"],
+[class*="total"], [class*="Total"], [class*="kpi"], [class*="stat"],
+[class*="valeur"], [class*="chiffre"], [class*="nombre"], [class*="solde"],
+[class*="commission"], [class*="jauge"], [class*="compteur"],
+input[type="number"], .mono, code, kbd {
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* Un montant ne se coupe jamais entre le nombre et sa devise, et ne se casse jamais en deux
+   lignes. « CHF 12 400 » sur deux lignes se lit comme deux informations. */
+[class*="montant"], [class*="prime"], [class*="-chf"] { white-space: nowrap; }
+
+/* Les chiffres d'un tableau se lisent alignés à droite : les unités se superposent d'une ligne à
+   l'autre, et un ordre de grandeur se repère sans lire. */
+.tbl td.nombre, .tbl th.nombre, td.nombre, th.nombre,
+.tbl [data-aligne="droite"] { text-align: right; font-variant-numeric: tabular-nums lining-nums; }
+
+/* ── 3. L'interlettrage selon la taille ──────────────────────────────────────────────────────────
+   Une police est dessinée pour une taille de texte courant. Agrandie, elle paraît lâche ; réduite,
+   serrée. Les imprimeurs corrigeaient cela à la main, caractère par caractère. Ici, trois règles :
+   les grands titres se resserrent, les petites majuscules s'aèrent, le corps ne bouge pas. */
+
+h1, h2, .dbx-hero-titre, .fcx-nom, .cf-hero h1, .tr-titre,
+.dbx-kpi-valeur, .stat-value, [class*="titre"]:not([class*="sous"]) {
+  letter-spacing: -0.02em;
+}
+
+/* Au-delà de 28 px, -0.02em ne suffit plus. */
+.dbx-hero-titre, .fcx-nom, .cf-hero h1, #login-screen .login-card h2 { letter-spacing: -0.028em; }
+
+/* Les micro-étiquettes en capitales : sans respiration, les capitales se collent et deviennent un
+   bloc gris qu'on saute. C'est la seule situation où l'on écarte les lettres. */
+[style*="text-transform:uppercase"], [style*="text-transform: uppercase"],
+.tbl-tete, .section-label {
+  letter-spacing: 0.055em;
+}
+
+/* Les étiquettes de formulaire ne sont pas en capitales : elles n'ont besoin que d'un souffle,
+   celui qui compense la réduction de taille. Au-delà, le mot se délite. */
+.field-label, .stat-label { letter-spacing: 0.018em; }
+
+/* ── 4. Interlignage par rôle ────────────────────────────────────────────────────────────────────
+   Un titre serré tient ensemble ; un paragraphe aéré se lit ; une cellule de tableau doit rester
+   compacte sans devenir illisible. Trois valeurs, pas une valeur unique appliquée partout. */
+
+h1, h2, h3, .dbx-hero-titre, .fcx-nom, .cf-hero h1, .tr-titre { line-height: var(--t-serre, 1.25); }
+p, .apx-note, .dbx-carte-sous, .rexb-bandeau-texte { line-height: var(--t-aere, 1.55); }
+.tbl-cellule, td { line-height: 1.35; }
+
+/* Titres sans classe : sinon le navigateur applique ses tailles d'article de presse (32 px, marges
+   énormes) au milieu d'une interface. */
+.main h1:not([class]), .main h2:not([class]), .main h3:not([class]), .main h4:not([class]) {
+  margin: 0 0 var(--e-2, 8px); font-weight: var(--t-moyen, 600); color: var(--text);
+}
+.main h1:not([class]) { font-size: var(--t-2xl, 26px); }
+.main h2:not([class]) { font-size: var(--t-xl, 19px); }
+.main h3:not([class]) { font-size: var(--t-l, 15px); }
+.main h4:not([class]) { font-size: var(--t-m, 13.5px); }
+
+/* ── 5. Des lignes qui se cassent proprement ─────────────────────────────────────────────────────
+   « text-wrap: balance » répartit un titre sur des lignes de longueur proche au lieu de laisser un
+   mot seul en bas. « pretty » fait la même chose sur la dernière ligne d'un paragraphe. Deux mots
+   de CSS pour l'effet que donnait autrefois un typographe qui reprenait la coupe à la main. */
+
+h1, h2, h3, .dbx-hero-titre, .fcx-nom, .cf-hero h1, .tr-titre,
+.dbx-carte-tete h2, .apx-carte b { text-wrap: balance; }
+
+p, .dbx-carte-sous, .apx-note, .rexb-bandeau-texte { text-wrap: pretty; }
+
+/* Un numéro de police, un IBAN ou une adresse e-mail n'ont pas d'espace où se couper : sans cette
+   règle, ils débordent de leur colonne et poussent le tableau hors de l'écran. */
+.tbl-cellule, td, .fcx-valeur, [class*="email"], [class*="iban"], [class*="police"] {
+  overflow-wrap: anywhere;
+}
+
+/* ── 6. Le plancher de lisibilité ────────────────────────────────────────────────────────────────
+   Quelques étiquettes descendaient à 9 et 10 px. Sur un écran de portable, à bout de bras, ce
+   n'est plus du texte : c'est une texture. Rien ne descend sous 11 px. */
+
+[style*="font-size:9px"], [style*="font-size: 9px"],
+[style*="font-size:10px"], [style*="font-size: 10px"],
+[style*="font-size:10.5px"] { font-size: var(--t-xs, 11px) !important; }
+
+/* ── 7. Ponctuation française ────────────────────────────────────────────────────────────────────
+   Les guillemets d'un <q> doivent être des chevrons, pas des guillemets anglais. */
+:lang(fr) q { quotes: "\00AB\00A0" "\00A0\00BB" "\201C" "\201D"; }
+
+/* À l'impression, le corps repasse en points : un écran se lit à 60 cm, une feuille à 35. */
+@media print {
+  body { font-size: 10.5pt; line-height: 1.4; }
+  h1, h2, h3 { line-height: 1.2; }
+}

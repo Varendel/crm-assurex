@@ -1,0 +1,30 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   LE LOGO DEVANT LE NOM (js/105, 20.09.2026)
+
+   La pastille s'insère dans du texte existant, écrit par vingt-cinq fichiers différents. Elle ne
+   peut donc rien supposer de son entourage : ni la hauteur de ligne, ni l'alignement, ni si elle
+   se trouve dans un titre ou dans une légende de 11 px. D'où une règle unique et prudente —
+   alignée sur le texte, jamais plus haute que lui, et qui ne casse pas le retour à la ligne.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.lgp-logo {
+  display: inline-flex; align-items: center;
+  vertical-align: -0.22em;          /* posée sur la ligne de base du texte, pas au-dessus */
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+/* Dans un conteneur en flex, la pastille deviendrait un élément de la rangée et pousserait le
+   reste. On la maintient collée au texte qu'elle annonce. */
+.lgp-logo + * { min-width: 0; }
+
+/* Un titre porte déjà du poids : la pastille s'y fait discrète plutôt que de rivaliser. */
+h1 > .lgp-logo, h2 > .lgp-logo, h3 > .lgp-logo { margin-right: 8px; vertical-align: -0.18em; }
+
+/* Dans une légende de 11 px, 16 px de logo écraseraient la ligne. */
+small .lgp-logo, .dbx-carte-sous .lgp-logo, em .lgp-logo { vertical-align: -0.25em; margin-right: 5px; }
+small .lgp-logo img, small .lgp-logo > span { width: 14px !important; height: 14px !important; }
+
+@media print {
+  .lgp-logo { display: none; }      /* à l'impression, le nom suffit et l'encre coûte */
+}

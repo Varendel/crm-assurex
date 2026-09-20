@@ -835,6 +835,7 @@ const SECTIONS = [
   { id: 'compta', label: 'Finances', icon: '💰', sub: [
     { id: 'suivi-financier', icon: '🧭', label: 'Cockpit financier', groupe: 'Pilotage' },
     { id: 'tresorerie', icon: '📈', label: 'Plan de trésorerie', groupe: 'Pilotage' },
+    { id: 'entrees-argent', icon: '💰', label: 'Entrées d\'argent', groupe: 'Pilotage' },
     { id: 'production', icon: '🏭', label: 'Production par période', staff: true, groupe: 'Pilotage' },
     { id: 'import-decompte', icon: '📥', label: 'Importer un décompte', groupe: 'Commissions' },
     { id: 'ocr-decomptes', icon: '🔎', label: 'Lire un décompte scanné', staff: true, groupe: 'Commissions' },
@@ -1555,6 +1556,8 @@ async function renderView() {
     case 'demandes-devis': main.innerHTML = typeof viewDemandesDevis === 'function' ? viewDemandesDevis() : ''; break;
     // Le tableau des campagnes, de l'idée à l'analyse (js/70)
     case 'kanban-campagnes': main.innerHTML = typeof viewKanbanCampagnes === 'function' ? viewKanbanCampagnes() : ''; break;
+    // Toutes les entrées d'argent, encaissées et attendues, par contrat (js/72)
+    case 'entrees-argent': main.innerHTML = typeof viewEntreesArgent === 'function' ? viewEntreesArgent() : ''; break;
     // Préparation de l'échange de données EcoHub : qualité des clés de rapprochement (js/54)
     case 'ecohub-sync': main.innerHTML = typeof viewEcohubSync === 'function' ? viewEcohubSync() : ''; break;
     case 'marquage-entites': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); main.innerHTML = typeof viewMarquageEntites === 'function' ? viewMarquageEntites() : ''; break;

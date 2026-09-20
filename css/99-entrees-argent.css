@@ -1,0 +1,52 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   ENTRÉES D'ARGENT (js/72, 20.09.2026)
+   L'écran, puis la feuille A4 — deux mises en page pour le même contenu.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.ea-outils { display: flex; gap: var(--e-2, 8px); align-items: center; flex-wrap: wrap; margin-bottom: var(--e-4, 16px); }
+.ea-outils .form-input { width: auto; min-width: 176px; }
+
+/* Une ligne en retard se signale par un filet, pas par un fond : vingt lignes en retard sur un
+   fond orange deviennent un mur, et on cesse de les voir. */
+.tbl-ligne.ea-retard { box-shadow: inset 3px 0 0 var(--c-alerte, #F59E0B); }
+/* Un montant constaté sur un décompte est en gras ; une estimation reste en graisse normale.
+   C'est la seule différence, et elle suffit à ne pas confondre un chiffre vrai et un chiffre calculé. */
+.tbl-ligne.ea-reel .tbl-cellule:last-child { font-weight: var(--t-moyen, 600); }
+
+/* ── La feuille A4 ─────────────────────────────────────────────────────────────────────────────── */
+#ea-impression { display: none; }
+
+@media print {
+  body.ea-mode-impression > *:not(#ea-impression) { display: none !important; }
+  body.ea-mode-impression #ea-impression { display: block; }
+  @page { size: A4 landscape; margin: 12mm 10mm 14mm; }
+
+  #ea-impression { font-family: 'Geist', 'Segoe UI', sans-serif; color: #111; font-size: 8.4pt; }
+
+  .ea-imp-tete { display: flex; justify-content: space-between; align-items: flex-start;
+    border-bottom: 1.5pt solid #113679; padding-bottom: 5mm; margin-bottom: 5mm; }
+  .ea-imp-tete h1 { margin: 0; font-size: 15pt; font-weight: 600; letter-spacing: -0.02em; color: #113679; }
+  .ea-imp-tete p { margin: 1.5mm 0 0; font-size: 8pt; color: #555; }
+  .ea-imp-tete img { height: 9mm; }
+
+  .ea-imp-synthese { border-collapse: collapse; margin-bottom: 5mm; }
+  .ea-imp-synthese th { text-align: left; font-size: 7.4pt; text-transform: uppercase;
+    letter-spacing: .06em; color: #666; font-weight: 600; padding: 0 10mm 1mm 0; }
+  .ea-imp-synthese td { padding: 0 10mm 0 0; font-size: 11pt; font-variant-numeric: tabular-nums; }
+
+  .ea-imp-table { width: 100%; border-collapse: collapse; }
+  /* L'en-tête se répète en haut de CHAQUE page : sans ça, dès la deuxième feuille on ne sait plus
+     quelle colonne est quoi — le défaut le plus courant des tableaux imprimés. */
+  .ea-imp-table thead { display: table-header-group; }
+  .ea-imp-table tfoot { display: table-footer-group; }
+  .ea-imp-table tr { break-inside: avoid; }
+  .ea-imp-table th { text-align: left; font-size: 7.4pt; text-transform: uppercase; letter-spacing: .05em;
+    color: #333; border-bottom: .8pt solid #113679; padding: 1.6mm 2mm; font-weight: 600; }
+  .ea-imp-table td { padding: 1.3mm 2mm; border-bottom: .3pt solid #DDD; }
+  .ea-imp-table .d { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ea-imp-table tfoot td { border-top: .8pt solid #113679; border-bottom: none;
+    font-weight: 600; padding-top: 2mm; }
+
+  .ea-imp-mois { margin-top: 7mm; width: 90mm; break-before: auto; }
+  .ea-imp-pied { margin-top: 6mm; font-size: 7pt; color: #666; line-height: 1.45; }
+}

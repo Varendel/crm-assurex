@@ -201,16 +201,9 @@ function pafOuvrirSituation(oppId) {
         </label>`).join('')}</div>
 
       <div id="paf-mandat" style="display:${o.type_affaire === 'portefeuille' ? '' : 'none'}">
-        <div class="paf-rappel">
-          <b>📜 Un mandat simple, pas une résiliation</b>
-          <p>Transfert du portefeuille actuel vers Assurex : le client garde ses contrats et ses
-            compagnies. Il faut envoyer un <b>mandat simple</b> à chaque compagnie concernée pour
-            qu’elle nous reconnaisse comme interlocuteur. Les contrats restent en vigueur —
-            ne rien résilier.</p>
-          ${typeof navigate === 'function' ? `<button type="button" class="paf-act"
-            onclick="document.getElementById('modal-paf-situation').remove();navigate('mandats')">
-            Ouvrir les mandats →</button>` : ''}
-        </div>
+        ${typeof navigate === 'function' ? `<button type="button" class="paf-lien-mandats"
+          onclick="document.getElementById('modal-paf-situation').remove();navigate('mandats')">
+          Ouvrir les mandats →</button>` : ''}
       </div>
 
       <div id="paf-actuel" style="display:${o.type_affaire === 'transfert' ? '' : 'none'}">
@@ -483,8 +476,10 @@ function pafResume(o) {
   const jL = pafJours(o.resiliation_limite);
 
   const cartes = [
-    { l: 'Nature', v: o.type_affaire ? PAF_TYPES[o.type_affaire].nom : '—',
-      s: o.type_affaire ? PAF_TYPES[o.type_affaire].aide : 'à préciser' },
+    // Une nature inconnue (valeur ancienne, ou saisie hors de cet écran) ne doit pas faire
+    // disparaître la fiche entière : on l'affiche telle quelle plutôt que de lire un objet absent.
+    { l: 'Nature', v: (PAF_TYPES[o.type_affaire] || {}).nom || o.type_affaire || '—',
+      s: (PAF_TYPES[o.type_affaire] || {}).aide || (o.type_affaire ? '' : 'à préciser') },
     { l: 'Prime visée', v: o.montant_potentiel ? 'CHF ' + pafCHF(o.montant_potentiel) : '—',
       s: o.commission_estimee ? `commission estimée CHF ${pafCHF(o.commission_estimee)}` : 'par an' },
   ];

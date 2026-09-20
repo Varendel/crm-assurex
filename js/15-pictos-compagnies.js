@@ -11,12 +11,14 @@
 const PICTO_FOND_DEFAUT = '#113679';
 
 const PICTOS_COMPAGNIES = {
-  // Symbole Helvetia (logo officiel « helvetia-logo-rgb-white.svg », fourni par Jonathan le 19.09.2026).
+  // Symbole Helvetia (logo officiel, fourni par Jonathan le 19.09.2026).
   // Sans fond, mais AUX COULEURS DE LA MARQUE — corrigé le 20.09.2026. Il suivait la couleur du
   // texte du thème : il s'affichait donc en noir sur fond clair et en blanc sur fond sombre. Un
-  // logo qui change de couleur selon le thème n'est plus le logo de la compagnie ; Helvetia est
-  // rouge, partout et tout le temps.
-  'Helvetia': { viewBox: '0 0 184 208', sansFond: true, couleur: '#E30613',
+  // logo qui change de couleur selon le thème n'est plus le logo de la compagnie.
+  // LE MARINE, PAS LE ROUGE (20.09.2026, second passage) : le fichier « helvetia-logo-rgb.svg »
+  // déposé par Jonathan donne #010D6F, mesuré sur le fichier lui-même. Le rouge que j'avais posé
+  // aurait affiché une identité que la compagnie n'utilise plus.
+  'Helvetia': { viewBox: '0 0 184 208', sansFond: true, couleur: '#010D6F',
     svg: '<path transform="translate(-0.5,2)" d="M2.52,97.92c-3.36,3.36-3.36,8.8,0,12.15l91.41,91.41c3.36,3.36,8.8,3.36,12.15,0l50.72-50.72-30.87-30.87-25.93,25.93-41.81-41.81,41.81-41.81,72.69,72.69,24.8-24.8c3.36-3.36,3.36-8.8,0-12.15L106.08,6.52c-3.36-3.36-8.8-3.36-12.15,0L2.52,97.92Z" fill="currentColor"/>' },
   // Logos image (fichiers fournis par Jonathan le 19.09.2026, réduits à 128 px dans assets/logos/compagnies)
   'AXA': { img: 'assets/logos/compagnies/axa.png', forme: 'carre' },
@@ -43,14 +45,13 @@ const PICTOS_COMPAGNIES = {
   'Groupe Mutuel': { img: 'assets/logos/compagnies/groupe-mutuel.png', forme: 'carre', bordure: true },
   'Zurich': { img: 'assets/logos/compagnies/zurich.png', forme: 'rond' },
   // Monogrammes aux couleurs relevées sur les logos officiels fournis le 19.09.2026
-  // Logo carre reconstruit depuis celui fourni par Jonathan (20.09.2026) : bordeaux officiel
-  // 154,9,65 et lettrage arrondi. Le monogramme « He » qui servait jusque-la disait le nom sans
-  // le montrer — une compagnie se reconnait a sa marque, pas a ses initiales.
-  'Helsana': { img: 'assets/logos/compagnies/helsana.png', forme: 'carre' },
-  // Logo carre reconstruit depuis celui fourni (20.09.2026) : turquoise officiel 1,186,168.
-  // Le « I » est une barre oblique : elle est dessinee, pas tapee, et l'espacement est regle pour
-  // que l'ensemble se lise SWICA et non SW / CA.
-  'SWICA': { img: 'assets/logos/compagnies/swica.png', forme: 'carre' },
+  // Logos déposés par Jonathan le 20.09.2026 : ceux des compagnies, à la place de ceux que
+  // j'avais reconstruits. Un logo redessiné approche la marque ; il ne l'est pas.
+  // Helsana est fourni en pastille ronde sur blanc : on garde la forme du fichier, et `contain`
+  // pour que l'anneau gris ne soit pas rogné par le cadrage.
+  'Helsana': { img: 'assets/logos/compagnies/helsana.jpg', forme: 'rond', ajuste: 'contain', fondImg: '#FFFFFF', abr: 'He', fond: '#9A0941' },
+  // SWICA est fourni en carré plein turquoise, lettrage blanc : il remplit la pastille tel quel.
+  'SWICA': { img: 'assets/logos/compagnies/swica.png', forme: 'carre', abr: 'SW', fond: '#01BAA8' },
   'Sanitas': { abr: 'SA' },
   'Visana': { abr: 'VI' },
   'Gastrosocial': { img: 'assets/logos/compagnies/gastrosocial.jpg', forme: 'rond', ajuste: 'contain', fondImg: '#FFFFFF' },

@@ -164,16 +164,15 @@ html:not([data-theme="clair"]) body:not(.mode-cloud):not(.mode-espace-client) .o
 .paf-radio b { font-size: var(--t-m, 13.5px); font-weight: 500; color: var(--text); }
 .paf-radio small { font-size: var(--t-xs, 11px); color: var(--text-muted); line-height: 1.35; }
 
-/* Le rappel du transfert de portefeuille. C'est une mise en garde, pas une alerte : le risque
-   n'est pas qu'il manque quelque chose, c'est qu'on fasse le geste de trop — résilier des
-   contrats que le client voulait garder. */
-.paf-rappel {
-  margin-top: var(--e-3, 12px); padding: var(--e-3, 12px) var(--e-4, 16px);
-  border-radius: var(--r-s, 10px);
-  background: var(--c-info-fond); border: 1px solid color-mix(in srgb, var(--c-info, #0EA5E9) 30%, transparent);
+/* Le mandat simple mène aux mandats, rien de plus. L'explication qui se trouvait ici disait à
+   Jonathan ce qu'est un mandat : elle occupait le milieu de la fenêtre pour rien. */
+.paf-lien-mandats {
+  margin-top: var(--e-3, 12px); padding: 0;
+  background: none; border: none; cursor: pointer; font: inherit;
+  font-size: var(--t-s, 12.5px); color: var(--accent);
+  text-decoration: underline dotted; text-underline-offset: 3px;
 }
-.paf-rappel b { font-size: var(--t-m, 13.5px); font-weight: var(--t-moyen, 600); color: var(--text); }
-.paf-rappel p { margin: 4px 0 8px; font-size: var(--t-s, 12.5px); color: var(--text); line-height: 1.5; text-wrap: pretty; }
+.paf-lien-mandats:hover { text-decoration-style: solid; }
 
 /* Le compte à rebours de résiliation. Un délai dépassé n'est pas une alerte de plus : c'est un
    client qui paiera deux primes. Il se voit d'abord. */

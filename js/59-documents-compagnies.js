@@ -13,11 +13,11 @@
 // document mal rattaché ne doit jamais se retrouver chez le mauvais client.
 
 const DCX_TYPES = {
-  police:     { label: 'Police',              icone: '📄' },
+  police:     { label: 'Police',      icone: '📄' },
   facture:    { label: 'Facture de prime',    icone: '🧾' },
   commission: { label: 'Décompte de commissions', icone: '💰' },
   rappel:     { label: 'Rappel de prime',     icone: '⏰' },
-  avenant:    { label: 'Avenant',             icone: '✏️' },
+  avenant:    { label: 'Avenant',     icone: '✏️' },
   autre:      { label: 'Autre document',      icone: '📎' },
 };
 
@@ -30,8 +30,8 @@ const DCX_TYPES = {
 // couvre tous les noms de fichiers.
 const DCX_MOTIFS_POLICE = [
   /([A-Z])-?(\d{4})-?(\d{4})(?!\d)/,     // G-1846-4747, G18466747
-  /([TZ]\d{9})(?!\d)/,                    // T308424160
-  /(\d{3}-\d{2}-\d{3})(?!\d)/,            // 833-28-491
+  /([TZ]\d{9})(?!\d)/,    // T308424160
+  /(\d{3}-\d{2}-\d{3})(?!\d)/,    // 833-28-491
 ];
 
 window._dcx = window._dcx || { docs: [], filtre: { texte: '', type: '', etat: '' }, chargement: false };
@@ -160,8 +160,8 @@ function dcxContenu() {
 
   ${liste.length ? `<div class="dcx-liste">${liste.map(dcxLigne).join('')}</div>`
     : `<div class="dbx-vide">${typeof rexBanquierHtml === 'function' ? rexBanquierHtml({ taille: 140 }) : ''}
-        <strong>${docs.length ? 'Aucun document ne correspond au filtre.' : 'Aucun document pour l’instant.'}</strong>
-        <span>${docs.length ? 'Change le filtre pour revoir la liste.' : 'Dépose les PDF reçus des compagnies ci-dessus : ils seront classés par client et consultables sur leur fiche.'}</span></div>`}`;
+<strong>${docs.length ? 'Aucun document ne correspond au filtre.' : 'Aucun document pour l’instant.'}</strong>
+<span>${docs.length ? 'Change le filtre pour revoir la liste.' : 'Dépose les PDF reçus des compagnies ci-dessus : ils seront classés par client et consultables sur leur fiche.'}</span></div>`}`;
 }
 
 function dcxLigne(d) {
@@ -175,23 +175,23 @@ function dcxLigne(d) {
     <div class="dcx-principal">
       <div class="dcx-titre">${dcxEsc(d.titre || d.nom_fichier || t.label)}</div>
       <div class="dcx-meta">
-        ${d.compagnie ? `<span>${dcxEsc(d.compagnie)}</span>` : ''}
-        ${d.numero_police ? `<span class="dcx-police">${dcxEsc(d.numero_police)}</span>` : ''}
-        ${d.date_document ? `<span>${fmtDate(d.date_document)}</span>` : ''}
-        ${periode ? `<span>${periode}</span>` : ''}
-        ${montant ? `<span class="dcx-montant">${montant}</span>` : ''}
-        <span class="dcx-source">${d.source === 'ecohub' ? 'EcoHub' : 'dépôt manuel'}</span>
+${d.compagnie ? `<span>${dcxEsc(d.compagnie)}</span>` : ''}
+${d.numero_police ? `<span class="dcx-police">${dcxEsc(d.numero_police)}</span>` : ''}
+${d.date_document ? `<span>${fmtDate(d.date_document)}</span>` : ''}
+${periode ? `<span>${periode}</span>` : ''}
+${montant ? `<span class="dcx-montant">${montant}</span>` : ''}
+<span class="dcx-source">${d.source === 'ecohub' ? 'EcoHub' : 'dépôt manuel'}</span>
       </div>
     </div>
     <div class="dcx-client">
       ${rattache && d.client_id
-        ? `<a href="?client=${d.client_id}" onclick="return irVersClient(event, '${d.client_id}')">${dcxEsc(nom || 'Fiche client')}</a>`
-        : `<button type="button" class="dcx-rattacher" onclick="dcxOuvrirRattachement('${d.id}')">Rattacher…</button>`}
+? `<a href="?client=${d.client_id}" onclick="return irVersClient(event, '${d.client_id}')">${dcxEsc(nom || 'Fiche client')}</a>`
+: `<button type="button" class="dcx-rattacher" onclick="dcxOuvrirRattachement('${d.id}')">Rattacher…</button>`}
     </div>
     <div class="dcx-actions">
-      <button type="button" class="dcx-oeil ${d.visible_client ? 'on' : ''}" ${rattache ? '' : 'disabled'}
-        title="${d.visible_client ? 'Visible dans l’espace du client — cliquer pour la retirer' : rattache ? 'Publier dans l’espace du client' : 'Rattache d’abord le document à un client'}"
-        onclick="dcxBasculerVisible('${d.id}', ${d.visible_client ? 'false' : 'true'})">${d.visible_client ? '👁️' : '🚫'}</button>
+      <button type="button" class="dcx-publier ${d.visible_client ? 'on' : ''}" ${rattache ? '' : 'disabled'}
+title="${d.visible_client ? 'Ce document est visible dans l’espace du client — cliquer pour le retirer' : rattache ? 'Rendre ce document visible dans l’espace du client' : 'Rattache d’abord le document à un client'}"
+onclick="dcxBasculerVisible('${d.id}', ${d.visible_client ? 'false' : 'true'})">${d.visible_client ? '👁 Visible' : 'Publier'}</button>
       <button type="button" class="btn-secondary" onclick="dcxOuvrir('${dcxEsc(d.chemin)}')">Ouvrir</button>
     </div>
   </div>`;
@@ -300,18 +300,18 @@ function dcxOuvrirRattachement(id) {
       <h3 id="dcx-rat-titre">🔗 Rattacher le document</h3>
       <div class="opx-modale-sous">${dcxEsc(d.titre || d.nom_fichier || '')}</div>
       <div class="form-field"><label class="form-label" for="dcx-contrat">Contrat concerné</label>
-        <select class="form-input" id="dcx-contrat">
-          <option value="">— choisir —</option>
-          ${contrats.map(c => `<option value="${c.id}">${dcxEsc(dcxNomClient(c.client_id))} · ${dcxEsc(c.compagnie)} · ${dcxEsc(c.produit)}${c.numero_police ? ' · ' + dcxEsc(c.numero_police) : ''}</option>`).join('')}
-        </select></div>
+<select class="form-input" id="dcx-contrat">
+  <option value="">— choisir —</option>
+  ${contrats.map(c => `<option value="${c.id}">${dcxEsc(dcxNomClient(c.client_id))} · ${dcxEsc(c.compagnie)} · ${dcxEsc(c.produit)}${c.numero_police ? ' · ' + dcxEsc(c.numero_police) : ''}</option>`).join('')}
+</select></div>
       <div class="form-field"><label class="form-label" for="dcx-type">Type de document</label>
-        <select class="form-input" id="dcx-type">
-          ${Object.entries(DCX_TYPES).map(([k, v]) => `<option value="${k}" ${d.type === k ? 'selected' : ''}>${v.icone} ${v.label}</option>`).join('')}
-        </select></div>
+<select class="form-input" id="dcx-type">
+  ${Object.entries(DCX_TYPES).map(([k, v]) => `<option value="${k}" ${d.type === k ? 'selected' : ''}>${v.icone} ${v.label}</option>`).join('')}
+</select></div>
       <div class="ec-note">Rattacher ne publie rien : le document reste invisible pour le client tant que tu ne l’as pas explicitement publié (bouton 👁️).</div>
       <div class="opx-modale-actions">
-        <button type="button" class="btn-secondary" onclick="document.getElementById('modal-dcx-rattacher').remove()">Annuler</button>
-        <button type="button" class="btn-save" onclick="dcxRattacher('${id}')">✓ Rattacher</button>
+<button type="button" class="btn-secondary" onclick="document.getElementById('modal-dcx-rattacher').remove()">Annuler</button>
+<button type="button" class="btn-save" onclick="dcxRattacher('${id}')">✓ Rattacher</button>
       </div>
     </div>`, { padding: '16px' });
 }
@@ -360,8 +360,8 @@ async function dcxOuvrir(chemin) {
 // endroits.
 //
 // Tout est donc réuni ici, groupé par origine, avec la même ligne pour tous :
-//   Mandats           ce que le client a signé
-//   Polices           les contrats, PDF accroché au contrat
+//   Mandats   ce que le client a signé
+//   Polices   les contrats, PDF accroché au contrat
 //   Reçu des compagnies   EcoHub et dépôts manuels — factures, rappels, décomptes
 //   Pièces jointes    ce qui pend à une tâche
 //
@@ -370,8 +370,8 @@ async function dcxOuvrir(chemin) {
 
 const DCX_ORIGINES = [
   { cle: 'mandat',    titre: 'Mandats et documents signés', icone: '🖊️' },
-  { cle: 'police',    titre: 'Polices',                     icone: '📄' },
-  { cle: 'compagnie', titre: 'Reçu des compagnies',         icone: '📥' },
+  { cle: 'police',    titre: 'Polices',     icone: '📄' },
+  { cle: 'compagnie', titre: 'Reçu des compagnies', icone: '📥' },
   { cle: 'tache',     titre: 'Pièces jointes des tâches',   icone: '📎' },
 ];
 
@@ -392,7 +392,7 @@ function dcxToutDocument(clientId, contrats, mandats, rappels) {
     const t = DCX_TYPES[d.type] || DCX_TYPES.autre;
     out.push({ origine: 'compagnie', icone: t.icone, titre: d.titre || d.nom_fichier || t.label,
       sous: [t.label, d.compagnie, d.numero_police, d.date_document ? fmtDate(d.date_document) : '',
-             d.montant != null && d.montant !== '' ? 'CHF ' + fmtCHF(Number(d.montant)) : ''].filter(Boolean).join(' · '),
+     d.montant != null && d.montant !== '' ? 'CHF ' + fmtCHF(Number(d.montant)) : ''].filter(Boolean).join(' · '),
       etat: d.source === 'ecohub' ? 'EcoHub' : 'déposé à la main',
       publiable: { id: d.id, visible: !!d.visible_client },
       ouvrir: `dcxOuvrir('${dcxEsc(d.chemin)}')` });
@@ -431,9 +431,9 @@ function dcxOngletDocuments(c, contrats, mandats, rappels) {
     </button>
     ${d.etat ? `<span class="dcx-doc-etat ${d.ok ? 'ok' : ''}">${dcxEsc(d.etat)}</span>` : '<span></span>'}
     ${d.publiable
-      ? `<button type="button" class="dcx-oeil ${d.publiable.visible ? 'on' : ''}"
-           title="${d.publiable.visible ? 'Visible dans l’espace du client — cliquer pour retirer' : 'Publier dans l’espace du client'}"
-           onclick="dcxBasculerVisible('${d.publiable.id}', ${d.publiable.visible ? 'false' : 'true'}).then(()=>showClient('${c.id}'))">${d.publiable.visible ? '👁️' : '🚫'}</button>`
+      ? `<button type="button" class="dcx-publier ${d.publiable.visible ? 'on' : ''}"
+   title="${d.publiable.visible ? 'Ce document est visible dans l’espace du client — cliquer pour le retirer' : 'Rendre ce document visible dans l’espace du client'}"
+   onclick="dcxBasculerVisible('${d.publiable.id}', ${d.publiable.visible ? 'false' : 'true'}).then(()=>showClient('${c.id}'))">${d.publiable.visible ? '👁 Visible' : 'Publier'}</button>`
       : '<span></span>'}
   </div>`;
 
@@ -442,17 +442,17 @@ function dcxOngletDocuments(c, contrats, mandats, rappels) {
 
     <section class="dbx-carte dcx-centre-carte">
       <header class="dbx-carte-tete">
-        <div><h2>Tous les documents du client</h2>
-          <span class="dbx-carte-sous">${tout.length} document${tout.length > 1 ? 's' : ''} au total${publies ? ` · ${publies} publié${publies > 1 ? 's' : ''} dans son espace` : ''}</span></div>
-        <button type="button" class="btn-secondary" onclick="dcxParcourir('${c.id}')">📤 Déposer un document</button>
+<div><h2>Tous les documents du client</h2>
+  <span class="dbx-carte-sous">${tout.length} document${tout.length > 1 ? 's' : ''} au total${publies ? ` · ${publies} publié${publies > 1 ? 's' : ''} dans son espace` : ''}</span></div>
+<button type="button" class="btn-secondary" onclick="dcxParcourir('${c.id}')">📤 Déposer un document</button>
       </header>
       ${tout.length ? DCX_ORIGINES.map(o => {
-        const l = tout.filter(d => d.origine === o.cle);
-        if (!l.length) return '';
-        return `<div class="dcx-groupe">
-          <h3>${o.icone} ${o.titre}<span>${l.length}</span></h3>
-          <div class="dcx-docs">${l.map(ligne).join('')}</div>
-        </div>`;
+const l = tout.filter(d => d.origine === o.cle);
+if (!l.length) return '';
+return `<div class="dcx-groupe">
+  <h3>${o.icone} ${o.titre}<span>${l.length}</span></h3>
+  <div class="dcx-docs">${l.map(ligne).join('')}</div>
+</div>`;
       }).join('') : `<div class="dcx-fiche-vide">Aucun document pour ce client. Dépose un fichier ci-dessus, ou attends la prochaine synchronisation EcoHub.</div>`}
       <p class="dcx-centre-note">Un document reçu d’une compagnie n’apparaît dans l’espace du client que si tu l’as publié (bouton 👁️). Les mandats, polices et pièces jointes restent internes.</p>
     </section>

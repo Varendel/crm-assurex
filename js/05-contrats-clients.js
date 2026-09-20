@@ -362,6 +362,8 @@ function lienAppelTeams(c) {
 }
 
 async function showClient(id) {
+  // Mémoire des dernières fiches ouvertes, proposée sous la loupe quand le champ est vide
+  if (typeof noterFicheConsultee === 'function') noterFicheConsultee(id);
   // Empile où on était avant d'ouvrir cette fiche, pour que la flèche retour y ramène précisément
   const etatPrecedent = capturerEtatActuel();
   if (!(etatPrecedent.type === 'client' && etatPrecedent.id === id)) navHistory.push(etatPrecedent);

@@ -1257,12 +1257,67 @@ function onKeydownRechercheGlobale(e) {
   }
 }
 
+// ── Dernières fiches consultées (20.09.2026) ────────────────────────────────────────────────────
+// Dix fiches DIFFÉRENTES, de la plus récente à la plus ancienne : revenir deux fois sur le même
+// client ne doit pas remplir la liste avec une seule personne. Mémorisé sur l'appareil, pas en
+// base : c'est un confort de navigation, pas une donnée du portefeuille.
+const FICHES_RECENTES_CLE = 'rex-fiches-recentes';
+const FICHES_RECENTES_MAX = 10;
+
+function fichesRecentesLire() {
+  try { const v = JSON.parse(localStorage.getItem(FICHES_RECENTES_CLE) || '[]'); return Array.isArray(v) ? v : []; }
+  catch (e) { return []; }
+}
+
+function noterFicheConsultee(clientId) {
+  if (!clientId) return;
+  try {
+    const liste = fichesRecentesLire().filter(id => id !== clientId);
+    liste.unshift(clientId);
+    localStorage.setItem(FICHES_RECENTES_CLE, JSON.stringify(liste.slice(0, FICHES_RECENTES_MAX)));
+  } catch (e) { /* stockage indisponible : on s'en passe */ }
+}
+
+function htmlFichesRecentes() {
+  const clients = typeof allClients !== 'undefined' ? allClients : [];
+  const recents = fichesRecentesLire()
+    .map(id => clients.find(c => c.id === id))
+    .filter(Boolean)
+    .slice(0, FICHES_RECENTES_MAX);
+  if (!recents.length) return '';
+  window._rechercheGlobaleActions = {};
+  let i = 0;
+  const lignes = recents.map(c => {
+    const cle = 'h' + (i++);
+    window._rechercheGlobaleActions[cle] = () => { fermerRechercheGlobale(); showClient(c.id); };
+    const nom = typeof estEntreprise === 'function' && estEntreprise(c) ? c.nom : `${c.prenom || ''} ${c.nom || ''}`.trim();
+    const sous = [c.ville, c.email].filter(Boolean).join(' · ');
+    return `<div onmousedown="window._rechercheGlobaleActions['${cle}']()" style="display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;border-bottom:1px solid var(--border)" onmouseover="this.style.background='rgba(56,189,248,0.06)'" onmouseout="this.style.background='transparent'">
+      <span style="font-size:15px;flex-shrink:0">${typeof estEntreprise === 'function' && estEntreprise(c) ? '🏢' : '👤'}</span>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:12.5px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${String(nom).replace(/</g, '&lt;')}</div>
+        ${sous ? `<div style="font-size:10.5px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${String(sous).replace(/</g, '&lt;')}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+  return `<div style="padding:7px 16px 4px;font-size:10px;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">🕘 Dernières fiches consultées</div>${lignes}`;
+}
+
 function renderResultatsRechercheGlobale() {
   const input = document.getElementById('recherche-globale-input');
   const zone = document.getElementById('recherche-globale-resultats');
   if (!input || !zone) return;
   const q = input.value;
-  if (!q || q.trim().length < 2) { zone.style.display = 'none'; zone.innerHTML = ''; window._rechercheGlobalePremiereAction = null; return; }
+  // Champ vide : on propose les dernières fiches consultées plutôt qu'un panneau vide. Dans une
+  // journée, on revient très souvent sur les mêmes cinq ou six clients (demande de Jonathan,
+  // 20.09.2026).
+  if (!q || q.trim().length < 2) {
+    const html = typeof htmlFichesRecentes === 'function' ? htmlFichesRecentes() : '';
+    zone.innerHTML = html;
+    zone.style.display = html ? 'block' : 'none';
+    window._rechercheGlobalePremiereAction = null;
+    return;
+  }
 
   const { clients, contrats, opportunites, rappels } = rechercheGlobale(q);
   const total = clients.length + contrats.length + opportunites.length + rappels.length;

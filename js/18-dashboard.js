@@ -191,6 +191,8 @@ function viewDashboardV2() {
 
     ${typeof bmqBandeauHtml === 'function' ? bmqBandeauHtml() : ''}
 
+    ${typeof ehmBandeauNouveaux === 'function' ? ehmBandeauNouveaux() : ''}
+
     <div class="dbx-onglets" role="tablist" aria-label="Vue du tableau de bord">
       <button type="button" role="tab" aria-selected="${onglet === 'aujourdhui'}" class="${onglet === 'aujourdhui' ? 'actif' : ''}" onclick="dbxChoisirOnglet('aujourdhui')">Aujourd’hui${nbRetard ? `<span class="dbx-pastille">${nbRetard}</span>` : ''}</button>
       <button type="button" role="tab" aria-selected="${onglet === 'pilotage'}" class="${onglet === 'pilotage' ? 'actif' : ''}" onclick="dbxChoisirOnglet('pilotage')">Pilotage</button>
@@ -517,7 +519,9 @@ function dbxVuePilotage(D) {
       ${[['🔁', 'Renouvellements', 'renouvellements'], ['🧩', 'Équipement', 'equipement'], ['🧭', 'Sources des clients', 'sources'], ['💰', 'Suivi financier', 'suivi-financier'], ['📋', 'Rapport FINMA', 'rapport-finma']]
         .map(([i, l, v]) => `<button type="button" onclick="navigate('${v}')"><span aria-hidden="true">${i}</span>${l}</button>`).join('')}
       <button type="button" onclick="dbxBasculer(true)"><span aria-hidden="true">🗂️</span>Vue classique détaillée</button>
-    </div>`;
+    </div>
+
+    ${typeof ehmCarteDashboard === 'function' ? ehmCarteDashboard() : ''}`;
 }
 
 // ── Après affichage : compteurs animés, nouveautés ────────────────────────────────────────────

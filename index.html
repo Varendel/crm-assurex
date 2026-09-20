@@ -3261,6 +3261,52 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
   opacity: .85; text-decoration: underline; cursor: pointer; }
 .ec-legal h4 { margin: 16px 0 6px; font-size: 13.5px; color: #113679; }
 .ec-legal p { margin: 0 0 8px; font-size: 13px; line-height: 1.55; color: var(--text); }
+/* ═══ Lecture des décomptes scannés (js/53, 20.09.2026) ═══ */
+.ocr { display: flex; flex-direction: column; gap: 14px; }
+.ocr-depot { cursor: pointer; display: inline-flex; align-items: center; }
+.ocr-etat { font-size: 12.5px; color: var(--text-muted); min-height: 18px; }
+.ocr-etat.ok { color: #047857; font-weight: 700; }
+.ocr-etat.alerte { color: #B91C1C; font-weight: 700; }
+.ocr-resume-tete { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.ocr-resume-tete b { font-size: 15px; }
+.ocr-resume-tete small { display: block; font-size: 12px; color: var(--text-muted); }
+.ocr-confiance { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 3px 10px;
+  background: var(--surface-alt); color: var(--text-muted); white-space: nowrap; }
+.ocr-confiance.haute { background: rgba(16,185,129,.14); color: #047857; }
+.ocr-confiance.basse { background: rgba(239,68,68,.12); color: #B91C1C; }
+.ocr-compteurs { display: flex; gap: 8px; flex-wrap: wrap; margin: 12px 0 4px; font-size: 12px; }
+.ocr-compteurs span { background: var(--surface-alt); border-radius: 999px; padding: 4px 12px; color: var(--text-muted); }
+.ocr-compteurs .ok { background: rgba(16,185,129,.14); color: #047857; font-weight: 700; }
+.ocr-compteurs .attention { background: rgba(245,158,11,.16); color: #B45309; font-weight: 700; }
+.ocr-compteurs .total { background: rgba(17,54,121,.12); color: #113679; font-weight: 700; }
+.ocr-remarques { font-size: 12.5px; color: #B45309; margin: 8px 0 0; line-height: 1.5; }
+.ocr-actions-globales { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
+.ocr-lignes { display: flex; flex-direction: column; gap: 6px; }
+.ocr-ligne { display: grid; grid-template-columns: 1.6fr 130px 150px 1fr; gap: 12px; align-items: center;
+  padding: 10px 12px; border-radius: 12px; background: var(--surface-alt); border-left: 3px solid #94A3B8; }
+.ocr-ligne.contrat { border-left-color: #10B981; }
+.ocr-ligne.police_a_completer { border-left-color: #F59E0B; }
+.ocr-ligne.inconnu { border-left-color: #EF4444; }
+.ocr-l-principal b { font-size: 13.5px; }
+.ocr-l-principal small { display: block; font-size: 11.5px; color: var(--text-muted); }
+.ocr-l-lien { color: #113679 !important; font-weight: 700; }
+.ocr-l-montant { text-align: right; font-weight: 700; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+.ocr-l-montant small { display: block; font-weight: 500; font-size: 11px; color: var(--text-muted); }
+.ocr-badge { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 2px 10px;
+  background: var(--surface); color: var(--text-muted); white-space: nowrap; }
+.ocr-badge.ok { background: rgba(16,185,129,.14); color: #047857; }
+.ocr-badge.attention { background: rgba(245,158,11,.16); color: #B45309; }
+.ocr-badge.alerte { background: rgba(239,68,68,.12); color: #B91C1C; }
+.ocr-l-actions { display: flex; gap: 6px; flex-wrap: wrap; justify-content: flex-end; }
+.ocr-l-actions button { border: 1px solid var(--border); background: var(--surface); border-radius: 8px;
+  padding: 4px 10px; font-size: 11.5px; font-weight: 700; color: var(--text-muted); cursor: pointer; }
+.ocr-l-actions button:hover { border-color: #00CFFF; color: var(--text); }
+.ocr-l-actions .ocr-appliquer { color: #B45309; border-color: rgba(245,158,11,.4); }
+@media (max-width: 1000px) {
+  .ocr-ligne { grid-template-columns: 1fr 110px; }
+  .ocr-l-etat, .ocr-l-actions { grid-column: 1 / -1; justify-content: flex-start; }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
@@ -3398,7 +3444,7 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 
 <script src="js/01-prevoyance-immo.js?v=1790350000"></script>
 <script src="js/02-catalogue-session.js?v=1790060000"></script>
-<script src="js/03-auth-navigation.js?v=1791007000"></script>
+<script src="js/03-auth-navigation.js?v=1791015000"></script>
 <script src="js/04-dashboard-finma.js?v=1790700000"></script>
 <script src="js/05-contrats-clients.js?v=1791000000"></script>
 <script src="js/06-signature-opportunites.js?v=1790700000"></script>
@@ -3448,6 +3494,7 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 <script src="js/50-dossier-financement.js?v=1790995000"></script>
 <script src="js/51-messages-transferts.js?v=1791006000"></script>
 <script src="js/52-espace-client-services.js?v=1791013000"></script>
+<script src="js/53-ocr-decomptes.js?v=1791015000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

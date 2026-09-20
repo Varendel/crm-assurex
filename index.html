@@ -3677,6 +3677,30 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 
     @media (prefers-reduced-motion: reduce) { .saison-decor { display: none; } }
     @media print { .saison-decor, .saison-bouton { display: none !important; } }
+    /* ═══ DEMANDES DE POLICES (js/63, 20.09.2026) ═══ */
+    .dp-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 14px 0; }
+    .dp-filtre { flex: 0 1 260px; margin-left: auto; }
+    .dp-liste { display: flex; flex-direction: column; gap: 8px; }
+    .dp-ligne { display: grid; grid-template-columns: 110px 1fr auto; align-items: center; gap: 12px;
+      padding: 11px 14px; border-radius: 14px; background: var(--surface, #fff);
+      border: 1px solid var(--border, rgba(0,0,0,.08)); }
+    .dp-ligne.retard { border-left: 3px solid #F59E0B; }
+    .dp-statut { font-size: 11px; font-weight: 700; text-align: center; white-space: nowrap;
+      color: var(--c); background: color-mix(in srgb, var(--c) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--c) 34%, transparent); border-radius: 999px; padding: 4px 8px; }
+    .dp-titre { font-size: 13.5px; font-weight: 600; color: var(--text, #1e293b); }
+    .dp-titre a { color: var(--accent, #2563eb); text-decoration: none; }
+    .dp-titre a:hover { text-decoration: underline; }
+    .dp-meta { font-size: 11.5px; color: var(--text-muted, #64748b); margin-top: 2px; }
+    .dp-manque { color: #B45309; font-weight: 600; }
+    .dp-boutons { display: flex; gap: 6px; flex-wrap: wrap; }
+    .dp-modale { max-width: 720px; }
+    .dp-corps { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.55; resize: vertical; }
+    @media (max-width: 800px) {
+      .dp-ligne { grid-template-columns: 1fr; }
+      .dp-statut { justify-self: start; }
+      .dp-filtre { margin-left: 0; flex-basis: 100%; }
+    }
 @media (prefers-reduced-motion: reduce) {
       .bmq-defile.anime, .bmq-point, .bmq-entre { animation: none !important; }
     .rex-modale > div, .loader::before { animation: none !important; }
@@ -3825,7 +3849,7 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 
 <script src="js/01-prevoyance-immo.js?v=1790350000"></script>
 <script src="js/02-catalogue-session.js?v=1790060000"></script>
-<script src="js/03-auth-navigation.js?v=1791230000"></script>
+<script src="js/03-auth-navigation.js?v=1791250000"></script>
 <script src="js/04-dashboard-finma.js?v=1790700000"></script>
 <script src="js/05-contrats-clients.js?v=1791220000"></script>
 <script src="js/06-signature-opportunites.js?v=1790700000"></script>
@@ -3885,6 +3909,7 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
   <script src="js/60-bandeau-marches.js?v=1791140000"></script>
   <script src="js/61-ecohub-manometre.js?v=1791220000"></script>
   <script src="js/62-saisons.js?v=1791240000"></script>
+  <script src="js/63-demandes-polices.js?v=1791250000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

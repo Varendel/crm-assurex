@@ -1,0 +1,92 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   LE TRANSFERT EN COURS (js/98, 20.09.2026)
+
+   Le bloc ne paraît que pendant un transfert. Il doit donc se signaler — c'est la seule chose qui
+   bouge sur la page — sans pour autant alarmer : un transfert qui suit son cours est une bonne
+   nouvelle, pas un incident. D'où le bleu de la marque plutôt qu'un ambre d'attente, et une
+   pastille qui respire au lieu de clignoter.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.etr-bloc {
+  margin-top: var(--e-4, 16px);
+  padding: 20px 24px;
+  border-radius: 0 16px 16px 0;
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border-left: 2px solid var(--brand-cyan, #00CFFF);
+}
+
+.etr-tete { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.etr-badge {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 5px 13px 5px 11px; border-radius: var(--r-rond, 999px);
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--brand-cyan, #00CFFF) 40%, transparent);
+  font-size: var(--t-s, 12.5px); font-weight: 500; color: var(--text);
+  letter-spacing: -0.005em;
+}
+/* Une pastille qui respire dit « en cours » sans agiter la page. Un clignotement ferait signal
+   d'alarme, et ce n'en est pas un. */
+.etr-pastille {
+  width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0;
+  background: var(--brand-cyan, #00CFFF);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand-cyan, #00CFFF) 55%, transparent);
+  animation: etr-respire 2.4s ease-out infinite;
+}
+@keyframes etr-respire {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--brand-cyan, #00CFFF) 55%, transparent); }
+  70% { box-shadow: 0 0 0 7px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+/* Un mouvement perpétuel gêne ceux qui y sont sensibles : on le coupe s'ils l'ont demandé. */
+@media (prefers-reduced-motion: reduce) { .etr-pastille { animation: none; } }
+
+.etr-depuis { font-size: var(--t-xs, 11px); color: var(--text-muted); }
+
+.etr-corps b { font-size: var(--t-xl, 19px); font-weight: 600; letter-spacing: -0.022em; color: var(--text); }
+.etr-corps p {
+  margin: 6px 0 0; max-width: 62ch; line-height: 1.65;
+  font-size: var(--t-m, 13.5px); color: var(--text); text-wrap: pretty;
+}
+.etr-corps p b { font-size: inherit; letter-spacing: 0; }
+
+/* ── L'avancement ──────────────────────────────────────────────────────────────────────────────
+   Une attente dont on voit la progression se supporte ; une attente muette inquiète. C'est tout
+   l'objet de cette barre. */
+.etr-avance { display: flex; align-items: center; gap: 12px; margin-top: 18px; }
+.etr-jauge {
+  flex: 1 1 auto; height: 6px; border-radius: 999px; overflow: hidden;
+  background: color-mix(in srgb, var(--text-muted) 18%, transparent);
+}
+.etr-jauge i {
+  display: block; height: 100%; border-radius: 999px;
+  background: var(--brand-cyan, #00CFFF);
+  transition: width .5s ease-out;
+}
+.etr-compte {
+  flex-shrink: 0; font-size: var(--t-s, 12.5px); color: var(--text-muted);
+  font-variant-numeric: tabular-nums lining-nums; white-space: nowrap;
+}
+
+.etr-liste { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.etr-liste li {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 9px 13px; border-radius: 10px;
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  font-size: var(--t-s, 12.5px);
+}
+.etr-ico { display: inline-flex; flex-shrink: 0; color: var(--text-dim); }
+.etr-liste li.recue .etr-ico { color: var(--c-succes, #16A34A); }
+.etr-cie { font-weight: 500; color: var(--text); }
+.etr-produit { color: var(--text-muted); flex: 1 1 auto; min-width: 0; }
+.etr-statut {
+  margin-left: auto; flex-shrink: 0; white-space: nowrap;
+  font-size: var(--t-xs, 11px); color: var(--text-muted);
+}
+.etr-liste li.recue .etr-statut { color: var(--c-succes, #16A34A); }
+
+@media (max-width: 620px) {
+  .etr-bloc { padding: 16px 18px; }
+  .etr-produit { flex-basis: 100%; }
+  .etr-statut { margin-left: 0; }
+}

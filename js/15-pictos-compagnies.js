@@ -37,7 +37,10 @@ const PICTOS_COMPAGNIES = {
   'Groupe Mutuel': { img: 'assets/logos/compagnies/groupe-mutuel.png', forme: 'carre', bordure: true },
   'Zurich': { img: 'assets/logos/compagnies/zurich.png', forme: 'rond' },
   // Monogrammes aux couleurs relevées sur les logos officiels fournis le 19.09.2026
-  'Helsana': { abr: 'He', fond: '#9A0941' },
+  // Logo carre reconstruit depuis celui fourni par Jonathan (20.09.2026) : bordeaux officiel
+  // 154,9,65 et lettrage arrondi. Le monogramme « He » qui servait jusque-la disait le nom sans
+  // le montrer — une compagnie se reconnait a sa marque, pas a ses initiales.
+  'Helsana': { img: 'assets/logos/compagnies/helsana.png', forme: 'carre' },
   'SWICA': { abr: 'SW', fond: '#01BAA8' },
   'Sanitas': { abr: 'SA' },
   'Visana': { abr: 'VI' },

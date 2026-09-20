@@ -10,8 +10,12 @@
 // durée jusqu'à la retraite, la vie et l'IJ par âge d'entrée. Le client est le seul à pouvoir
 // repérer l'erreur, et il ne la repérera que si on la lui montre.
 //
-// PAS POUR LES ENTREPRISES : une société n'a pas de date de naissance. Le bloc ne paraît que
-// lorsque la fiche en porte une.
+// POUR UNE ENTREPRISE, C'EST L'IDE (« pour l'entreprise, CHE-IDE »). Une société n'a pas de date
+// de naissance ; son numéro d'identification joue le même rôle — il la désigne sans ambiguïté, et
+// c'est lui que les compagnies réclament sur chaque annonce LPP ou LAA.
+//
+// Dans les deux cas, rien ne paraît si la fiche ne porte pas la donnée : une ligne vide sous le
+// nom vaudrait moins que pas de ligne du tout.
 //
 // RETOUR EN ARRIÈRE : retirer les deux lignes de index.html (ce fichier + 99-ec-identite.css).
 
@@ -40,9 +44,30 @@ function eciNePrefixe(c) {
   return 'Date de naissance';
 }
 
+// L'IDE, pour une entreprise (20.09.2026). C'est son équivalent : le numéro qui la désigne sans
+// ambiguïté au registre du commerce, à l'AVS, à la TVA — et celui que les compagnies réclament
+// sur chaque annonce LPP et LAA. Une société le reconnaît d'un regard, comme un particulier
+// reconnaît sa date de naissance.
+//
+// La forme officielle est CHE-123.456.789 : elle se lit par groupes de trois, et c'est ainsi
+// qu'elle figure sur les documents. Les fiches le stockent parfois sans ponctuation ; on remet
+// la forme lisible à l'affichage sans toucher à ce qui est enregistré.
+function eciIDE(brut) {
+  const chiffres = String(brut || '').replace(/\D/g, '');
+  if (chiffres.length !== 9) return String(brut || '').trim();   // forme inattendue : on montre tel quel
+  return `CHE-${chiffres.slice(0, 3)}.${chiffres.slice(3, 6)}.${chiffres.slice(6)}`;
+}
+
 function eciBlocHtml(c) {
-  if (!c || !c.date_naissance) return '';
-  if (typeof estEntreprise === 'function' && estEntreprise(c)) return '';
+  if (!c) return '';
+  const entreprise = typeof estEntreprise === 'function' && estEntreprise(c);
+
+  if (entreprise) {
+    if (!c.ide) return '';
+    return `<div class="ec-ident"><span><em>IDE</em> ${eciEsc(eciIDE(c.ide))}</span></div>`;
+  }
+
+  if (!c.date_naissance) return '';
   const d = typeof fmtDate === 'function' ? fmtDate(String(c.date_naissance).slice(0, 10)) : c.date_naissance;
   const age = eciAge(String(c.date_naissance).slice(0, 10));
   const prefixe = eciNePrefixe(c);

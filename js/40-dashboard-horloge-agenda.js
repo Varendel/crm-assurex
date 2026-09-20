@@ -1,9 +1,42 @@
 // ═══ TABLEAU DE BORD : HORLOGE & AGENDA 2 JOURS (19.09.2026) ═══════════════════════════════
 // Demande de Jonathan : une horloge façon montre de luxe (cadran vert soleillé, index dorés,
-// lunette cannelée, guichet date sous loupe à 3 h — signée « REX ») et une vue de l'agenda
+// lunette cannelée, guichet date sous loupe à 3 h — la « Rorëx », couronne comprise) et une vue de l'agenda
 // sur deux jours (aujourd'hui + demain) en tête de la colonne de droite du tableau de bord.
 
 function hlEsc(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+
+// ── La couronne Rorëx (20.09.2026) ──────────────────────────────────────────────────────────────
+// Jonathan a baptisé la montre « Rorëx ». Elle a donc droit à son emblème : une couronne à cinq
+// pointes, dans le même or que les index, posée au-dessus du nom à midi.
+// Forme volontairement générique — une couronne héraldique à cinq perles, pas la reproduction
+// d'un emblème de marque existante. C'est un clin d'œil interne au tableau de bord : il n'a pas
+// vocation à sortir sur un support commercial.
+//
+// Dessinée dans le repère du cadran (200 × 200) : base à y = 52, hauteur 17, largeur 29.
+function htmlCouronneRorex(x, y, echelle) {
+  const cx = x == null ? 100 : x, cy = y == null ? 52 : y, k = echelle || 1;
+  const pointes = [
+    { dx: -14, dy: -8.5 },   // pointe gauche
+    { dx: -7,  dy: -14.5 },
+    { dx: 0,   dy: -17.5 },  // pointe centrale, la plus haute
+    { dx: 7,   dy: -14.5 },
+    { dx: 14,  dy: -8.5 },
+  ];
+  const perles = pointes.map(p => `<circle cx="${(cx + p.dx * k).toFixed(2)}" cy="${(cy + p.dy * k).toFixed(2)}" r="${(2.7 * k).toFixed(2)}" fill="url(#hl-or)" stroke="#6B4E14" stroke-width="${(0.45 * k).toFixed(2)}"/>`).join('');
+  // Le corps : on relie les pointes par des creux, comme les dents d'une couronne
+  const corps = `M ${cx - 14.6 * k} ${cy} L ${cx - 14.6 * k} ${cy - 7.5 * k}
+    L ${cx - 10.5 * k} ${cy - 3.5 * k} L ${cx - 7 * k} ${cy - 13.5 * k}
+    L ${cx - 3.5 * k} ${cy - 4.5 * k} L ${cx} ${cy - 16.5 * k}
+    L ${cx + 3.5 * k} ${cy - 4.5 * k} L ${cx + 7 * k} ${cy - 13.5 * k}
+    L ${cx + 10.5 * k} ${cy - 3.5 * k} L ${cx + 14.6 * k} ${cy - 7.5 * k}
+    L ${cx + 14.6 * k} ${cy} Z`;
+  return `<g class="hl-couronne" aria-hidden="true">
+    ${perles}
+    <path d="${corps}" fill="url(#hl-or)" stroke="#6B4E14" stroke-width="${(0.5 * k).toFixed(2)}" stroke-linejoin="round"/>
+    <rect x="${(cx - 15.4 * k).toFixed(2)}" y="${(cy - 0.6 * k).toFixed(2)}" width="${(30.8 * k).toFixed(2)}" height="${(4 * k).toFixed(2)}" rx="${(1.8 * k).toFixed(2)}" fill="url(#hl-or)" stroke="#6B4E14" stroke-width="${(0.45 * k).toFixed(2)}"/>
+    <path d="M ${cx - 12 * k} ${cy + 1.1 * k} L ${cx + 12 * k} ${cy + 1.1 * k}" stroke="#FFF6D8" stroke-width="${(0.8 * k).toFixed(2)}" opacity=".55"/>
+  </g>`;
+}
 
 function htmlHorlogeLuxe() {
   const R = 100;
@@ -37,8 +70,9 @@ function htmlHorlogeLuxe() {
       <circle cx="100" cy="100" r="88" fill="url(#hl-cadran)"/>
       ${Array.from({ length: 36 }, (_, i) => `<line x1="100" y1="100" x2="${(100 + Math.sin(i * 10 * Math.PI / 180) * 88).toFixed(1)}" y2="${(100 - Math.cos(i * 10 * Math.PI / 180) * 88).toFixed(1)}" stroke="#fff" stroke-opacity=".035" stroke-width="3"/>`).join('')}
       ${index}
-      <text x="100" y="58" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="11" font-weight="700" letter-spacing="2.5" fill="#F3DC9A">REX</text>
-      <text x="100" y="67" text-anchor="middle" font-family="Georgia, serif" font-size="4.6" letter-spacing="1.4" fill="#E9EEF0" opacity=".9">ASSUREX · SWISS</text>
+      ${htmlCouronneRorex(100, 53, 0.88)}
+      <text x="100" y="66" text-anchor="middle" font-family="Georgia, 'Times New Roman', serif" font-size="11" font-weight="700" letter-spacing="2.2" fill="#F3DC9A">RORËX</text>
+      <text x="100" y="74.5" text-anchor="middle" font-family="Georgia, serif" font-size="4.6" letter-spacing="1.4" fill="#E9EEF0" opacity=".9">ASSUREX · SWISS</text>
       <text x="100" y="140" text-anchor="middle" font-family="Georgia, serif" font-size="4.6" letter-spacing="1.4" fill="#E9EEF0" opacity=".85">CHRONOMÈTRE</text>
       <text x="100" y="147" text-anchor="middle" font-family="Georgia, serif" font-size="4.2" letter-spacing="1.4" fill="#E9EEF0" opacity=".75">SWISS MADE</text>
       <rect x="148" y="92" width="22" height="16" rx="2" fill="#FBFAF4" stroke="url(#hl-or)" stroke-width="1.4"/>

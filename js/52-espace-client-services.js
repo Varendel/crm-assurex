@@ -180,7 +180,10 @@ function ecOngletAccueil() {
   const auj = new Date().toISOString().slice(0, 10);
   const dans120 = new Date(Date.now() + 120 * 86400000).toISOString().slice(0, 10);
   const aSurveiller = actifs.filter(ct => { const l = ecDateLimiteResiliation(ct); return l && l >= auj && l <= dans120; });
+  if (typeof bmqApresRenduClient === 'function') setTimeout(bmqApresRenduClient, 0);
   return `
+    ${typeof bmqBlocClient === 'function' ? bmqBlocClient() : ''}
+
     <div class="dbx-kpis" style="margin-top:16px">
       ${typeof dbxKpi === 'function' ? dbxKpi({ i: 0, label: 'Contrats en vigueur', valeur: actifs.length, sous: `${(E.vehicules || []).length} véhicule(s) assuré(s)` }) : ''}
       ${typeof dbxKpi === 'function' ? dbxKpi({ i: 1, label: 'Primes annuelles', valeur: prime, prefixe: 'CHF ', sous: 'total de vos contrats en vigueur' }) : ''}

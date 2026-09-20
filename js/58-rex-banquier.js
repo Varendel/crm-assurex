@@ -53,16 +53,61 @@ function rexBanquierAccessoires() {
   </svg>`;
 }
 
+// ── Postures : le sprite découpé et articulé ────────────────────────────────────────────────────
+// Jonathan : « pourquoi tu ne peux pas extraire le visage et redessiner des postures inspirées ».
+// Réponse honnête : je ne peux pas peindre de nouveaux pixels, mais je peux découper le dessin
+// existant et l'articuler — c'est la technique du découpage articulé, celle des marionnettes 2D.
+//
+// Deux pièces ont été extraites du PNG d'origine par masque polygonal (assets/logos/rex/) :
+//   tete.png   la tête seule, fond transparent
+//   corps.png  le personnage entier, la zone de la tête comblée d'un aplat bleu — sinon on verrait
+//              l'ancienne tête dépasser dès qu'on incline la nouvelle. Le comblement est borné à
+//              la silhouette d'origine, pour ne pas créer de halo autour du personnage.
+//
+// La tête pivote autour de la nuque. Les angles restent faibles : au-delà d'une dizaine de degrés,
+// le dessin trahit qu'il s'agit d'un montage, parce que la pose assise est vue de trois quarts.
+// Une posture debout, elle, n'est pas atteignable depuis ce sprite — il faudrait redessiner les
+// jambes, et là il faut un illustrateur.
+const REXB_PARTS = { corps: 'assets/logos/rex/corps.png', tete: 'assets/logos/rex/tete.png' };
+const REXB_NUQUE = { x: 180, y: 352 };
+
+const REX_POSES = {
+  assis:    { angle: 0,  dx: 0,  dy: 0,  titre: 'Rex' },
+  curieux:  { angle: -7, dx: 4,  dy: 0,  titre: 'Rex, curieux' },
+  attentif: { angle: 4,  dx: -6, dy: 8,  titre: 'Rex, attentif' },
+  ravi:     { angle: -9, dx: 6,  dy: -3, titre: 'Rex, ravi' },
+};
+
 // Bloc complet à insérer dans une page. `taille` est la hauteur en pixels (l'image garde son ratio).
-function rexBanquierHtml(opts) {
+//   pose      : une clé de REX_POSES ; sans pose, on affiche le PNG d'origine intact
+//   banquier  : ajoute le monocle et le nœud papillon
+//   respire   : légère animation de repos (le personnage n'est jamais tout à fait figé)
+function rexPoseHtml(opts) {
   const o = opts || {};
   const taille = Number(o.taille) || 120;
   const largeur = Math.round(taille * REXB_BOITE.w / REXB_BOITE.h);
-  const titre = o.titre || 'Rex, votre conseiller financier';
-  return `<span class="rexb ${o.classe || ''}" style="width:${largeur}px;height:${taille}px" role="img" aria-label="${rexbEsc(titre)}" title="${rexbEsc(titre)}">
-    <img src="${REXB_IMAGE}" alt=""/>
-    ${rexBanquierAccessoires()}
+  const p = REX_POSES[o.pose] || null;
+  const titre = o.titre || (p ? p.titre : 'Rex') + (o.banquier ? ', votre conseiller financier' : '');
+  const classes = ['rexb', o.classe || '', o.respire ? 'respire' : ''].filter(Boolean).join(' ');
+
+  // Sans pose : une seule image, c'est le dessin d'origine, pixel pour pixel.
+  const corps = p
+    ? `<img class="rexb-corps" src="${REXB_PARTS.corps}" alt=""/>
+       <img class="rexb-tete" src="${REXB_PARTS.tete}" alt=""
+            style="transform:translate(${(p.dx / REXB_BOITE.w * 100).toFixed(2)}%, ${(p.dy / REXB_BOITE.h * 100).toFixed(2)}%) rotate(${p.angle}deg);
+                   transform-origin:${(REXB_NUQUE.x / REXB_BOITE.w * 100).toFixed(2)}% ${(REXB_NUQUE.y / REXB_BOITE.h * 100).toFixed(2)}%"/>`
+    : `<img src="${REXB_IMAGE}" alt=""/>`;
+
+  return `<span class="${classes}" style="width:${largeur}px;height:${taille}px" role="img" aria-label="${rexbEsc(titre)}" title="${rexbEsc(titre)}">
+    ${corps}
+    ${o.banquier === false ? '' : rexBanquierAccessoires()}
   </span>`;
+}
+
+// Rex banquier : la tenue, et par défaut la posture attentive — celle qui convient à un conseil.
+function rexBanquierHtml(opts) {
+  const o = opts || {};
+  return rexPoseHtml({ ...o, banquier: true, pose: o.pose === undefined ? 'attentif' : o.pose, respire: o.respire !== false });
 }
 
 // Bandeau d'accueil du conseil financier : Rex banquier + une phrase de contexte.

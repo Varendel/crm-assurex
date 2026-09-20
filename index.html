@@ -3355,6 +3355,12 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
     /* ═══ REX BANQUIER (js/58-rex-banquier.js, 20.09.2026) ═══ */
     .rexb { position: relative; display: inline-block; flex: 0 0 auto; line-height: 0; }
     .rexb img { width: 100%; height: 100%; object-fit: contain; display: block; filter: drop-shadow(0 6px 14px rgba(15,23,42,.18)); }
+    /* Decoupage articule : le corps et la tete se superposent exactement, la tete pivote sur la nuque */
+    .rexb-corps, .rexb-tete { position: absolute; inset: 0; }
+    .rexb-tete { filter: none; }
+    .rexb-corps { filter: drop-shadow(0 6px 14px rgba(15,23,42,.18)); }
+    .rexb.respire .rexb-tete { animation: rexb-respire 5.5s ease-in-out infinite; }
+    @keyframes rexb-respire { 0%, 100% { translate: 0 0; } 50% { translate: 0 -1.1%; } }
     .rexb-couche { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
     .rexb-bandeau { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 14px 18px; margin-bottom: 16px;
       border-radius: 18px; background: linear-gradient(135deg, var(--surface, #fff), var(--accent-dim, rgba(37,99,235,.07)));
@@ -3473,6 +3479,34 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
       .bmq-valeur { font-size: 11.5px; padding: 4px 10px; }
     }
     @media print { .bmq { display: none !important; } }
+    /* Version REX CLOUD du bandeau : reduite, et le client peut la retirer (js/60) */
+    .bmq-client { position: relative; display: flex; align-items: center; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
+    .bmq-client-montre { flex: 0 0 auto; }
+    .bmq-client-montre .hl-montre { gap: 4px; }
+    .bmq-client-montre .hl-montre svg { width: 74px; }
+    .bmq-client-montre .hl-numerique { font-size: 10.5px; text-align: center; }
+    .bmq-client-montre .hl-numerique b { font-size: 13px; }
+    .bmq-client-montre .hl-numerique span { display: block; font-size: 9.5px; opacity: .7; }
+    .bmq-client-marches { flex: 1 1 320px; min-width: 0; }
+    .bmq-client-marches .bmq { margin: 0; padding: 8px 0 5px; border-radius: 14px; }
+    .bmq-client-marches .bmq-actu { padding: 0 12px 7px; gap: 9px; }
+    .bmq-client-marches .bmq-titre { font-size: 11.5px; }
+    .bmq-client-marches .bmq-etiquette { font-size: 9px; padding: 3px 8px; }
+    .bmq-client-marches .bmq-valeur { font-size: 10.5px; padding: 3px 9px; gap: 5px; }
+    .bmq-client-marches .bmq-prix { font-size: 11px; }
+    .bmq-client-marches .bmq-var { font-size: 10px; }
+    .bmq-client-marches .bmq-pied { font-size: 9.5px; padding: 5px 12px 0; }
+    .bmq-client-fermer { position: absolute; top: -6px; right: -4px; width: 22px; height: 22px; border-radius: 50%;
+      border: 1px solid var(--border, rgba(0,0,0,.12)); background: var(--surface, #fff); color: var(--text-muted, #64748b);
+      font-size: 14px; line-height: 1; cursor: pointer; }
+    .bmq-client-fermer:hover { color: var(--text, #1e293b); }
+    .bmq-client-replie { margin-top: 12px; }
+    .bmq-client-replie button { font-size: 11.5px; color: var(--text-muted, #64748b); background: none;
+      border: 1px dashed var(--border, rgba(0,0,0,.16)); border-radius: 999px; padding: 5px 13px; cursor: pointer; }
+    .bmq-client-replie button:hover { color: var(--accent, #2563eb); border-color: var(--accent, #2563eb); }
+    @media (max-width: 620px) { .bmq-client-montre .hl-montre svg { width: 58px; } }
+    .cf-hero-rex { flex: 0 0 auto; align-self: flex-end; margin-left: auto; }
+    @media (max-width: 860px) { .cf-hero-rex { display: none; } }
 @media (prefers-reduced-motion: reduce) {
       .bmq-defile.anime, .bmq-point, .bmq-entre { animation: none !important; }
     .rex-modale > div, .loader::before { animation: none !important; }
@@ -3630,9 +3664,9 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 <script src="js/19-prevision-commissions.js?v=1790760000"></script>
 <script src="js/20-fiche-client-entete.js?v=1791120000"></script>
 <script src="js/21-tresorerie.js?v=1790760000"></script>
-<script src="js/22-conseil-financier.js?v=1791120000"></script>
-<script src="js/23-analyse-prevoyance.js?v=1790330000"></script>
-<script src="js/24-financement-immo.js?v=1790350000"></script>
+<script src="js/22-conseil-financier.js?v=1791150000"></script>
+<script src="js/23-analyse-prevoyance.js?v=1791150000"></script>
+<script src="js/24-financement-immo.js?v=1791150000"></script>
 <script src="js/25-opportunite.js?v=1790820000"></script>
 <script src="js/26-demande-offre.js?v=1790200000"></script>
 <script src="js/27-suivi-affaires.js?v=1790200000"></script>
@@ -3660,15 +3694,15 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 <script src="js/49-nouveau-contrat.js?v=1790920000"></script>
 <script src="js/50-dossier-financement.js?v=1790995000"></script>
 <script src="js/51-messages-transferts.js?v=1791006000"></script>
-<script src="js/52-espace-client-services.js?v=1791013000"></script>
+<script src="js/52-espace-client-services.js?v=1791140000"></script>
 <script src="js/53-ocr-decomptes.js?v=1791015000"></script>
 <script src="js/54-ecohub-sync.js?v=1791020000"></script>
 <script src="js/55-ecohub-commission.js?v=1791022000"></script>
 <script src="js/56-ecohub-crypto.js?v=1791024000"></script>
   <script src="js/57-citations-reservoir.js?v=1791100000"></script>
-  <script src="js/58-rex-banquier.js?v=1791120000"></script>
+  <script src="js/58-rex-banquier.js?v=1791150000"></script>
   <script src="js/59-documents-compagnies.js?v=1791120000"></script>
-  <script src="js/60-bandeau-marches.js?v=1791130000"></script>
+  <script src="js/60-bandeau-marches.js?v=1791140000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

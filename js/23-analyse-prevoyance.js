@@ -478,7 +478,7 @@ function apRafraichir() { const r = document.getElementById('ap-resultats'); if 
 // ── Résultats ───────────────────────────────────────────────────────────────────────────────
 function apResultats() {
   const d = _ap.d;
-  if (!apNum(d.salaire) || !d.naissance) return `<div class="dbx-vide"><img src="assets/logos/rex-mascotte-hd.png" alt=""/><strong>Commence par la date de naissance et le revenu</strong><span>Retraite, invalidité et décès — maladie ou accident — s’affichent et se recalculent au fil de la saisie.</span></div>`;
+  if (!apNum(d.salaire) || !d.naissance) return `<div class="dbx-vide">${typeof rexBanquierHtml === 'function' ? rexBanquierHtml({ taille: 140 }) : '<img src="assets/logos/rex-mascotte-hd.png" alt=""/>'}<strong>Commence par la date de naissance et le revenu</strong><span>Retraite, invalidité et décès — maladie ou accident — s’affichent et se recalculent au fil de la saisie.</span></div>`;
   const A = apCalculer(d);
   if (!A.pers[_ap.personne]) _ap.personne = 1;
   const sel = apScen(A, _ap.scenario, _ap.personne);

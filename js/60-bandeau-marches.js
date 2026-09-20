@@ -151,3 +151,43 @@ function bmqApresRendu() {
   bmqCharger(false);
   bmqRelancerRotation();
 }
+
+// ── Version REX CLOUD (20.09.2026) ──────────────────────────────────────────────────────────────
+// Demande de Jonathan : le même bandeau côté client, mais discret et que le client peut retirer.
+// Il est réduit — l'heure et les cours ne sont pas ce que le client vient chercher — et son choix
+// est retenu sur son appareil. La mention « cours différés, à titre indicatif » reste affichée :
+// devant un client, aucun chiffre ne doit pouvoir passer pour une cotation en direct, et ce
+// bandeau n'est en aucun cas un conseil en placement.
+const BMQ_CLE_CLIENT = 'rexcloud-marches';
+
+function bmqClientVisible() {
+  try { return localStorage.getItem(BMQ_CLE_CLIENT) !== '0'; } catch (e) { return true; }
+}
+
+function bmqClientBasculer(afficher) {
+  try { localStorage.setItem(BMQ_CLE_CLIENT, afficher ? '1' : '0'); } catch (e) {}
+  const z = document.getElementById('bmq-client');
+  if (z) z.outerHTML = bmqBlocClient();
+  if (afficher) bmqApresRenduClient();
+}
+
+function bmqBlocClient() {
+  if (!bmqClientVisible()) {
+    return `<div id="bmq-client" class="bmq-client-replie">
+      <button type="button" onclick="bmqClientBasculer(true)">📈 Afficher l’heure et les marchés</button>
+    </div>`;
+  }
+  return `<div id="bmq-client" class="bmq-client">
+    ${typeof htmlHorlogeLuxe === 'function' ? `<div class="bmq-client-montre">${htmlHorlogeLuxe()}</div>` : ''}
+    <div class="bmq-client-marches">${bmqBandeauHtml()}</div>
+    <button type="button" class="bmq-client-fermer" onclick="bmqClientBasculer(false)" title="Masquer" aria-label="Masquer l’heure et les marchés">×</button>
+  </div>`;
+}
+
+function bmqApresRenduClient() {
+  if (!document.getElementById('bmq-client')) return;
+  if (!bmqClientVisible()) return;
+  bmqPeindre();
+  bmqCharger(false);
+  bmqRelancerRotation();
+}

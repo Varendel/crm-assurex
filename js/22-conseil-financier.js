@@ -58,6 +58,7 @@ function viewConseil() {
           <button type="button" onclick="navigate('calc-immo')">🏠 Simulateur hypothécaire</button>
         </div>
       </div>
+      ${typeof rexBanquierHtml === 'function' ? `<div class="cf-hero-rex">${rexBanquierHtml({ taille: 132 })}</div>` : ''}
     </section>
     <div id="cf-liste"><div class="dbx-chargement"><span></span><span></span><span></span></div></div>
   </div>`;

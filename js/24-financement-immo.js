@@ -169,7 +169,7 @@ function fiMaj(el) {
 // ── Résultats ───────────────────────────────────────────────────────────────────────────────
 function fiResultats() {
   const d = _fi.d;
-  if (!fiNum(d.prix) || !fiNum(d.revenu)) return `<div class="dbx-vide"><img src="assets/logos/rex-mascotte-hd.png" alt=""/><strong>Indique le prix du bien et le revenu du ménage</strong><span>Le financement, le taux d’effort, le coût réel et le prix maximal s’affichent au fil de la saisie.</span></div>`;
+  if (!fiNum(d.prix) || !fiNum(d.revenu)) return `<div class="dbx-vide">${typeof rexBanquierHtml === 'function' ? rexBanquierHtml({ taille: 140 }) : '<img src="assets/logos/rex-mascotte-hd.png" alt=""/>'}<strong>Indique le prix du bien et le revenu du ménage</strong><span>Le financement, le taux d’effort, le coût réel et le prix maximal s’affichent au fil de la saisie.</span></div>`;
   const R = fiCalculer(d), r = R.r;
   const eff = r.tauxEffort * 100, effMax = R.params.tauxEndettementMax * 100;
   const kpi = (l, v, s, ton, i) => `<div class="dbx-kpi tr-kpi ${ton || ''}" style="--i:${i}"><span class="dbx-kpi-label">${l}</span><span class="dbx-kpi-valeur">${v}</span><span class="dbx-kpi-sous">${s}</span></div>`;

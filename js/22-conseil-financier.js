@@ -96,7 +96,7 @@ async function cfChargerListe() {
           <span class="cf-dossier-date">maj ${fmtDate(d.updated_at)}</span>
         </button>`;
       }).join('')}</div></section>`
-    : `<div class="dbx-vide"><img src="assets/logos/rex-mascotte-hd.png" alt=""/><strong>Aucun dossier de conseil pour l’instant.</strong><span>Tape le nom d’un client ci-dessus, ou ouvre son dossier depuis sa fiche (bouton « 💼 Conseil »).</span></div>`}`;
+    : `<div class="dbx-vide">${typeof rexBanquierHtml === 'function' ? rexBanquierHtml({ taille: 150 }) : '<img src="assets/logos/rex-mascotte-hd.png" alt=""/>'}<strong>Aucun dossier de conseil pour l’instant.</strong><span>Tape le nom d’un client ci-dessus, ou ouvre son dossier depuis sa fiche (bouton « 💼 Conseil »).</span></div>`}`;
 }
 
 // ── Ouverture d'un dossier ──────────────────────────────────────────────────────────────────
@@ -360,7 +360,7 @@ function cfRecommandationsAuto(A) {
 function cfOngletSynthese() {
   const A = cfAnalyse();
   const vide = !A.revenus && !A.patrimoine && !_cf.dossier.projets.length;
-  if (vide) return `<div class="dbx-vide"><img src="assets/logos/rex-mascotte-hd.png" alt=""/><strong>Dossier à compléter</strong><span>Commence par la situation du client : revenus, dépenses, patrimoine. Les analyses et recommandations se construisent ensuite automatiquement.</span><button type="button" class="btn-save" style="margin-top:10px" onclick="cfChangerOnglet('situation')">Saisir la situation →</button></div>`;
+  if (vide) return `<div class="dbx-vide">${typeof rexBanquierHtml === 'function' ? rexBanquierHtml({ taille: 150 }) : '<img src="assets/logos/rex-mascotte-hd.png" alt=""/>'}<strong>Dossier à compléter</strong><span>Commence par la situation du client : revenus, dépenses, patrimoine. Les analyses et recommandations se construisent ensuite automatiquement.</span><button type="button" class="btn-save" style="margin-top:10px" onclick="cfChangerOnglet('situation')">Saisir la situation →</button></div>`;
   const kpi = (l, v, s, ton, i, onglet) => `<button type="button" class="dbx-kpi ${ton || ''}" style="--i:${i}" onclick="cfChangerOnglet('${onglet}')"><span class="dbx-kpi-label">${l}</span><span class="dbx-kpi-valeur">${v}</span><span class="dbx-kpi-sous">${s}</span></button>`;
   const recos = cfRecommandationsAuto(A);
   const couvertProjets = A.besoinProjets ? Math.min(1, Math.max(0, A.capacite) / A.besoinProjets) : 1;

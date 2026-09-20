@@ -795,6 +795,7 @@ const SECTIONS = [
     { id: 'courriers', icon: '📨', label: 'Courriers clients', staff: true, groupe: 'Clients' },
     { id: 'dossier-financement', icon: '🏦', label: 'Dossiers financement', staff: true, groupe: 'Clients' },
     { id: 'messages-clients', icon: '💬', label: 'Messages clients', staff: true, groupe: 'Clients' },
+    { id: 'documents-compagnies', icon: '📥', label: 'Documents compagnies', staff: true, groupe: 'Contrats' },
     { id: 'tous-contrats', icon: '📄', label: 'Tous les contrats', rhAllowed: true, groupe: 'Contrats' },
     { id: 'volume-primes', icon: '📦', label: 'Volume de primes', staff: true, rhAllowed: true, groupe: 'Contrats' },
     { id: 'recherche-vehicules', icon: '🚗', label: 'Recherche véhicules', rhAllowed: true, groupe: 'Contrats' },
@@ -1481,6 +1482,7 @@ async function renderView() {
     case 'messages-clients': main.innerHTML = typeof viewMessagesClients === 'function' ? viewMessagesClients() : ''; break;
     // Lecture des décomptes scannés et rapprochement avec les contrats (js/53)
     case 'ocr-decomptes': main.innerHTML = typeof viewOcrDecomptes === 'function' ? viewOcrDecomptes() : ''; break;
+    case 'documents-compagnies': main.innerHTML = typeof viewDocumentsCompagnies === 'function' ? viewDocumentsCompagnies() : ''; break;
     // Préparation de l'échange de données EcoHub : qualité des clés de rapprochement (js/54)
     case 'ecohub-sync': main.innerHTML = typeof viewEcohubSync === 'function' ? viewEcohubSync() : ''; break;
     case 'marquage-entites': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); main.innerHTML = typeof viewMarquageEntites === 'function' ? viewMarquageEntites() : ''; break;

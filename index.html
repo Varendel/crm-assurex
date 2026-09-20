@@ -633,6 +633,9 @@
 
   .dbx-vide { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 6px; padding: 26px 10px; color: var(--text-muted); font-size: 13px; }
   .dbx-vide img { width: 84px; margin-bottom: 6px; animation: dbx-flotte 6s ease-in-out infinite; }
+  /* Rex banquier : c'est le bloc .rexb qui porte la taille et l'animation, pas l'image */
+  .dbx-vide .rexb { margin-bottom: 6px; animation: dbx-flotte 6s ease-in-out infinite; }
+  .dbx-vide .rexb img { width: 100%; margin-bottom: 0; animation: none; }
   .dbx-vide strong { color: var(--text); font-size: 15px; font-weight: 600; }
   .dbx-vide-petit { color: var(--text-dim); font-size: 12.5px; padding: 8px 0; }
   .dbx-chargement { display: flex; gap: 6px; padding: 14px 0; }
@@ -3349,6 +3352,69 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
     .ec-badge.on.attente { background: rgba(245,158,11,0.18); border-color: rgba(251,191,36,0.45); color: #FDE68A; }
     .ec-badge.suspendu { background: rgba(148,163,184,0.16); border-color: rgba(148,163,184,0.35); color: #E2E8F0; }
     .ec-badge-sous { font-weight: 400; opacity: .72; font-size: 10.5px; padding-left: 6px; margin-left: 2px; border-left: 1px solid currentColor; }
+    /* ═══ REX BANQUIER (js/58-rex-banquier.js, 20.09.2026) ═══ */
+    .rexb { position: relative; display: inline-block; flex: 0 0 auto; line-height: 0; }
+    .rexb img { width: 100%; height: 100%; object-fit: contain; display: block; filter: drop-shadow(0 6px 14px rgba(15,23,42,.18)); }
+    .rexb-couche { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .rexb-bandeau { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 14px 18px; margin-bottom: 16px;
+      border-radius: 18px; background: linear-gradient(135deg, var(--surface, #fff), var(--accent-dim, rgba(37,99,235,.07)));
+      border: 1px solid var(--border, rgba(0,0,0,.08)); }
+    .rexb-bandeau-texte { flex: 1 1 260px; min-width: 0; font-size: 13.5px; line-height: 1.5; color: var(--text, #1e293b); }
+    .rexb-bandeau-texte strong { display: block; font-size: 15px; margin-bottom: 3px; }
+    @media (max-width: 640px) { .rexb-bandeau { gap: 12px; padding: 12px 14px; } }
+    /* ═══ DOCUMENTS RECUS DES COMPAGNIES (js/59-documents-compagnies.js, 20.09.2026) ═══ */
+    .dcx-depot { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 18px 20px; margin: 16px 0 10px;
+      border-radius: 18px; border: 2px dashed var(--border, rgba(0,0,0,.14)); background: var(--surface, #fff); transition: all .18s; }
+    .dcx-depot.survol { border-color: var(--accent, #2563eb); background: var(--accent-dim, rgba(37,99,235,.06)); transform: translateY(-1px); }
+    .dcx-depot-icone { font-size: 30px; line-height: 1; }
+    .dcx-depot-texte { flex: 1 1 280px; min-width: 0; font-size: 12.5px; color: var(--text-muted, #64748b); }
+    .dcx-depot-texte strong { display: block; font-size: 14.5px; color: var(--text, #1e293b); margin-bottom: 2px; }
+    .dcx-btn-fichier { cursor: pointer; }
+    .dcx-progress { font-size: 12.5px; padding: 8px 12px; border-radius: 10px; background: var(--accent-dim, rgba(37,99,235,.08)); color: var(--text, #1e293b); margin-bottom: 10px; }
+    .dcx-progress.fini { background: rgba(34,197,94,.14); }
+    .dcx-progress.alerte { background: rgba(245,158,11,.16); }
+    .dcx-filtres { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+    .dcx-filtres input[type="search"] { flex: 1 1 260px; min-width: 0; }
+    .dcx-filtres select { flex: 0 1 200px; }
+    .dcx-liste { display: flex; flex-direction: column; gap: 8px; }
+    .dcx-ligne { display: grid; grid-template-columns: 34px 1fr 190px auto; align-items: center; gap: 12px;
+      padding: 11px 14px; border-radius: 14px; background: var(--surface, #fff); border: 1px solid var(--border, rgba(0,0,0,.08)); }
+    .dcx-ligne.orphelin { border-left: 3px solid #F59E0B; }
+    .dcx-type { font-size: 20px; text-align: center; }
+    .dcx-titre { font-size: 13.5px; font-weight: 600; color: var(--text, #1e293b); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dcx-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 11.5px; color: var(--text-muted, #64748b); margin-top: 2px; }
+    .dcx-police { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .dcx-montant { font-weight: 600; color: var(--text, #1e293b); }
+    .dcx-source { opacity: .7; }
+    .dcx-client a { font-size: 12.5px; font-weight: 600; color: var(--accent, #2563eb); text-decoration: none; }
+    .dcx-client a:hover { text-decoration: underline; }
+    .dcx-rattacher { font-size: 12px; border: 1px solid #F59E0B; color: #B45309; background: rgba(245,158,11,.1);
+      border-radius: 999px; padding: 4px 11px; cursor: pointer; }
+    .dcx-actions { display: flex; gap: 6px; align-items: center; }
+    .dcx-oeil { border: 1px solid var(--border, rgba(0,0,0,.12)); background: none; border-radius: 10px; padding: 5px 9px; cursor: pointer; font-size: 14px; }
+    .dcx-oeil.on { background: rgba(34,197,94,.16); border-color: rgba(34,197,94,.4); }
+    .dcx-oeil:disabled { opacity: .35; cursor: not-allowed; }
+    @media (max-width: 860px) {
+      .dcx-ligne { grid-template-columns: 30px 1fr; grid-template-areas: "i p" ". c" ". a"; }
+      .dcx-type { grid-area: i; } .dcx-principal { grid-area: p; } .dcx-client { grid-area: c; } .dcx-actions { grid-area: a; }
+    }
+    /* Bloc sur la fiche client */
+    .dcx-fiche { margin: 16px 0; padding: 14px 16px; border-radius: 16px; background: var(--surface, #fff); border: 1px solid var(--border, rgba(0,0,0,.08)); }
+    .dcx-fiche-tete { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .dcx-fiche-tete h3 { margin: 0; font-size: 14px; font-weight: 700; color: var(--text, #1e293b); }
+    .dcx-fiche-compte { font-size: 11.5px; color: var(--text-muted, #64748b); background: var(--accent-dim, rgba(37,99,235,.08)); border-radius: 999px; padding: 2px 9px; }
+    .dcx-fiche-ajout { margin-left: auto; font-size: 12px; font-weight: 600; color: var(--accent, #2563eb); cursor: pointer; padding: 4px 10px;
+      border: 1px solid var(--accent, #2563eb); border-radius: 999px; }
+    .dcx-fiche-liste { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+    .dcx-fiche-doc { position: relative; display: grid; grid-template-columns: 26px 1fr; grid-template-areas: "i n" "i s"; gap: 0 8px;
+      text-align: left; padding: 9px 11px; border-radius: 12px; border: 1px solid var(--border, rgba(0,0,0,.08));
+      background: var(--bg, #f8fafc); cursor: pointer; transition: all .15s; }
+    .dcx-fiche-doc:hover { border-color: var(--accent, #2563eb); transform: translateY(-1px); }
+    .dcx-fiche-icone { grid-area: i; font-size: 17px; align-self: center; }
+    .dcx-fiche-nom { grid-area: n; font-size: 12.5px; font-weight: 600; color: var(--text, #1e293b); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dcx-fiche-sous { grid-area: s; font-size: 11px; color: var(--text-muted, #64748b); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dcx-fiche-publie { position: absolute; top: 6px; right: 8px; font-size: 11px; }
+    .dcx-fiche-vide { font-size: 12.5px; color: var(--text-muted, #64748b); }
 @media (prefers-reduced-motion: reduce) {
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
@@ -3486,7 +3552,7 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 
 <script src="js/01-prevoyance-immo.js?v=1790350000"></script>
 <script src="js/02-catalogue-session.js?v=1790060000"></script>
-<script src="js/03-auth-navigation.js?v=1791110000"></script>
+<script src="js/03-auth-navigation.js?v=1791120000"></script>
 <script src="js/04-dashboard-finma.js?v=1790700000"></script>
 <script src="js/05-contrats-clients.js?v=1791000000"></script>
 <script src="js/06-signature-opportunites.js?v=1790700000"></script>
@@ -3503,9 +3569,9 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 <script src="js/17-fiche-activite.js?v=1791006000"></script>
 <script src="js/18-dashboard.js?v=1791009000"></script>
 <script src="js/19-prevision-commissions.js?v=1790760000"></script>
-<script src="js/20-fiche-client-entete.js?v=1791110000"></script>
+<script src="js/20-fiche-client-entete.js?v=1791120000"></script>
 <script src="js/21-tresorerie.js?v=1790760000"></script>
-<script src="js/22-conseil-financier.js?v=1790940000"></script>
+<script src="js/22-conseil-financier.js?v=1791120000"></script>
 <script src="js/23-analyse-prevoyance.js?v=1790330000"></script>
 <script src="js/24-financement-immo.js?v=1790350000"></script>
 <script src="js/25-opportunite.js?v=1790820000"></script>
@@ -3541,6 +3607,8 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 <script src="js/55-ecohub-commission.js?v=1791022000"></script>
 <script src="js/56-ecohub-crypto.js?v=1791024000"></script>
   <script src="js/57-citations-reservoir.js?v=1791100000"></script>
+  <script src="js/58-rex-banquier.js?v=1791120000"></script>
+  <script src="js/59-documents-compagnies.js?v=1791120000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

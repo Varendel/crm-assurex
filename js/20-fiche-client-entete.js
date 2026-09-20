@@ -106,6 +106,8 @@ function htmlEnteteFicheClient(c, ctx) {
 
   ${typeof renderVueEnsembleCouvertures === 'function' ? renderVueEnsembleCouvertures(c, contrats, isEntreprise) : ''}
 
+  ${!rh && typeof dcxSectionFiche === 'function' ? dcxSectionFiche(c.id) : ''}
+
   <section class="fcx-relation" aria-label="Relation client">
     ${signataire ? `<div class="fcx-rel">
       ${avatar(signataire, 34)}

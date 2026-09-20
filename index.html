@@ -3343,6 +3343,12 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
   .ehs-produit, .ehs-prime { grid-column: 1 / -1; }
 }
 
+    /* Badge « espace client » sur la fiche (20.09.2026) : etat de l'acces REX CLOUD en un coup d'oeil */
+    .ec-badge { gap: 6px; }
+    .ec-badge.on { background: rgba(0,207,255,0.18); border-color: rgba(0,207,255,0.5); color: #fff; font-weight: 600; }
+    .ec-badge.on.attente { background: rgba(245,158,11,0.18); border-color: rgba(251,191,36,0.45); color: #FDE68A; }
+    .ec-badge.suspendu { background: rgba(148,163,184,0.16); border-color: rgba(148,163,184,0.35); color: #E2E8F0; }
+    .ec-badge-sous { font-weight: 400; opacity: .72; font-size: 10.5px; padding-left: 6px; margin-left: 2px; border-left: 1px solid currentColor; }
 @media (prefers-reduced-motion: reduce) {
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
@@ -3480,7 +3486,7 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 
 <script src="js/01-prevoyance-immo.js?v=1790350000"></script>
 <script src="js/02-catalogue-session.js?v=1790060000"></script>
-<script src="js/03-auth-navigation.js?v=1791020000"></script>
+<script src="js/03-auth-navigation.js?v=1791110000"></script>
 <script src="js/04-dashboard-finma.js?v=1790700000"></script>
 <script src="js/05-contrats-clients.js?v=1791000000"></script>
 <script src="js/06-signature-opportunites.js?v=1790700000"></script>
@@ -3497,7 +3503,7 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 <script src="js/17-fiche-activite.js?v=1791006000"></script>
 <script src="js/18-dashboard.js?v=1791009000"></script>
 <script src="js/19-prevision-commissions.js?v=1790760000"></script>
-<script src="js/20-fiche-client-entete.js?v=1790020000"></script>
+<script src="js/20-fiche-client-entete.js?v=1791110000"></script>
 <script src="js/21-tresorerie.js?v=1790760000"></script>
 <script src="js/22-conseil-financier.js?v=1790940000"></script>
 <script src="js/23-analyse-prevoyance.js?v=1790330000"></script>
@@ -3525,7 +3531,7 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 <script src="js/45-courriers.js?v=1790640000"></script>
 <script src="js/46-offre-vers-contrat.js?v=1790640000"></script>
 <script src="js/47-profil-investisseur.js?v=1790980000"></script>
-<script src="js/48-espace-client.js?v=1791013000"></script>
+<script src="js/48-espace-client.js?v=1791110000"></script>
 <script src="js/49-nouveau-contrat.js?v=1790920000"></script>
 <script src="js/50-dossier-financement.js?v=1790995000"></script>
 <script src="js/51-messages-transferts.js?v=1791006000"></script>

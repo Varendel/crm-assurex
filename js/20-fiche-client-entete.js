@@ -77,6 +77,7 @@ function htmlEnteteFicheClient(c, ctx) {
           `<button type="button" class="${statut === v ? 'actif' : ''}" aria-pressed="${statut === v}" ${statut === v ? '' : `onclick="changerStatutClient('${c.id}','${v}')"`}>${l}</button>`).join('')}
       </div>
       <span class="fcx-badge ${mandatSigne ? 'ok' : ''}">🖊️ ${mandatSigne ? 'Mandat signé' : 'Mandat non signé'}</span>
+      ${typeof ecBadgeEspaceClient === 'function' ? ecBadgeEspaceClient(c.id) : ''}
       <button type="button" class="fcx-badge ${c.source_oz ? 'on' : ''}" onclick="toggleSourceOz('${c.id}', ${!c.source_oz})" title="${c.source_oz ? 'Client OZ Assure — cliquer pour retirer' : 'Marquer comme client OZ Assure'}">${typeof OZ_LOGO_TERTIAIRE_SVG !== 'undefined' ? `<span class="fcx-logo-oz">${OZ_LOGO_TERTIAIRE_SVG}</span>` : 'OZ'}${c.source_oz ? ' Client OZ Assure' : ' + marquer OZ'}</button>
       <button type="button" class="fcx-badge ${c.source_cofidex ? 'on' : ''}" onclick="toggleSourceCofidex('${c.id}', ${!c.source_cofidex})" title="${c.source_cofidex ? 'Client EX Groupe — cliquer pour retirer' : 'Marquer comme client Cofidex / EX Groupe'}">${c.source_cofidex ? '✓ EX Groupe' : '+ EX'}</button>
     </div>

@@ -201,6 +201,36 @@ async function ecDeconnexion() {
   location.reload();
 }
 
+// ── Badge « espace client » sur la fiche (20.09.2026) ───────────────────────────────────────────
+// On charge une fois la liste des accès au démarrage (cf. chargerDonnees) pour pouvoir dire d'un
+// coup d'œil, sur chaque fiche, si le client a son espace REX CLOUD et s'il s'y est déjà connecté.
+window.EC_ACCES = window.EC_ACCES || {};
+
+async function ecChargerAccesClients() {
+  try {
+    const rows = await dbGet('acces_clients', 'select=client_id,email,actif,cree_le,dernier_acces');
+    const carte = {};
+    for (const r of rows || []) if (r.client_id) carte[r.client_id] = r;
+    window.EC_ACCES = carte;
+  } catch (e) { /* liste indisponible : le badge invite simplement à créer l'accès */ }
+}
+
+function ecAccesDuClient(clientId) { return (window.EC_ACCES || {})[clientId] || null; }
+
+// Trois états : espace créé et déjà utilisé, espace créé mais jamais ouvert, pas d'espace.
+// Le badge est cliquable : il ouvre la même fenêtre que l'onglet Admin.
+function ecBadgeEspaceClient(clientId) {
+  const a = ecAccesDuClient(clientId);
+  const ouvrir = `onclick="ouvrirAccesEspaceClient('${clientId}')"`;
+  if (!a) return `<button type="button" class="fcx-badge ec-badge" ${ouvrir} title="Ce client n’a pas encore d’espace REX CLOUD — cliquer pour le créer">☁️ + espace client</button>`;
+  if (!a.actif) return `<button type="button" class="fcx-badge ec-badge suspendu" ${ouvrir} title="Accès désactivé — cliquer pour le réactiver">☁️ Espace désactivé</button>`;
+  const jamais = !a.dernier_acces;
+  const depuis = a.cree_le ? ` le ${fmtDate(String(a.cree_le).slice(0, 10))}` : '';
+  const vu = jamais ? 'jamais connecté' : `vu le ${fmtDate(String(a.dernier_acces).slice(0, 10))}`;
+  return `<button type="button" class="fcx-badge ec-badge on${jamais ? ' attente' : ''}" ${ouvrir}
+    title="Espace REX CLOUD créé${depuis} · ${vu} — cliquer pour gérer l’accès">☁️ Espace client créé<span class="ec-badge-sous">${vu}</span></button>`;
+}
+
 // ── Côté courtier : créer / réinitialiser / désactiver l'accès d'un client ──────────────────────
 async function ouvrirAccesEspaceClient(clientId) {
   document.getElementById('modal-onglet-admin')?.remove();
@@ -298,6 +328,9 @@ async function ecAction(clientId, action) {
       showError('✓ Accès mis à jour.');
       document.getElementById('modal-acces-client')?.remove();
     }
+    // Le badge de la fiche doit refléter tout de suite le nouvel état
+    await ecChargerAccesClients();
+    if (typeof showClient === 'function' && document.querySelector('.fcx-hero')) showClient(clientId);
   } catch (e) {
     showError('Erreur : ' + e.message);
   }

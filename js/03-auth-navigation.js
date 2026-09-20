@@ -863,7 +863,10 @@ const SECTIONS = [
   ]},
 
   { id: 'compta', label: 'Compta', icon: '💰', sub: [
-    { id: 'commissions-attente', icon: '💸', label: 'Toutes les commissions', groupe: 'Commissions' },
+    // Une seule entree, trois feuilles : js/75 reunit « Toutes les commissions », « Bordereaux »
+    // et « Vue interne » en onglets d'un meme ecran. L'entree porte donc le nom du SUJET, pas
+    // celui du premier onglet — sinon le menu annonce une feuille et en ouvre trois.
+    { id: 'commissions-attente', icon: '💸', label: 'Commissions', groupe: 'Commissions' },
     { id: 'import-decompte', icon: '📥', label: 'Importer un décompte', groupe: 'Commissions' },
     { id: 'controle-coherence', icon: '🧪', label: 'Contrôle contrats × commissions', groupe: 'Commissions' },
     { id: 'rapprochement', icon: '🔗', label: 'Rapprochement bancaire', avance: true, groupe: 'Commissions' },

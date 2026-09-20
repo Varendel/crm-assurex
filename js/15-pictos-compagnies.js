@@ -11,9 +11,12 @@
 const PICTO_FOND_DEFAUT = '#113679';
 
 const PICTOS_COMPAGNIES = {
-  // Symbole Helvetia (logo officiel « helvetia-logo-rgb-white.svg », fourni par Jonathan le 19.09.2026)
-  // Sans fond (demande de Jonathan) : le symbole prend la couleur du texte du thème (clair ou sombre)
-  'Helvetia': { viewBox: '0 0 184 208', sansFond: true,
+  // Symbole Helvetia (logo officiel « helvetia-logo-rgb-white.svg », fourni par Jonathan le 19.09.2026).
+  // Sans fond, mais AUX COULEURS DE LA MARQUE — corrigé le 20.09.2026. Il suivait la couleur du
+  // texte du thème : il s'affichait donc en noir sur fond clair et en blanc sur fond sombre. Un
+  // logo qui change de couleur selon le thème n'est plus le logo de la compagnie ; Helvetia est
+  // rouge, partout et tout le temps.
+  'Helvetia': { viewBox: '0 0 184 208', sansFond: true, couleur: '#E30613',
     svg: '<path transform="translate(-0.5,2)" d="M2.52,97.92c-3.36,3.36-3.36,8.8,0,12.15l91.41,91.41c3.36,3.36,8.8,3.36,12.15,0l50.72-50.72-30.87-30.87-25.93,25.93-41.81-41.81,41.81-41.81,72.69,72.69,24.8-24.8c3.36-3.36,3.36-8.8,0-12.15L106.08,6.52c-3.36-3.36-8.8-3.36-12.15,0L2.52,97.92Z" fill="currentColor"/>' },
   // Logos image (fichiers fournis par Jonathan le 19.09.2026, réduits à 128 px dans assets/logos/compagnies)
   'AXA': { img: 'assets/logos/compagnies/axa.png', forme: 'carre' },
@@ -80,7 +83,7 @@ function pictoCompagnie(nomCompagnie, taille) {
   }
   const base = `display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:${t}px;height:${t}px;border-radius:${Math.round(t * 0.27)}px;background:${fond};color:${def.texte || '#fff'};vertical-align:middle`;
   if (def.svg && def.sansFond) {
-    return `<span title="${_pictoEsc(nom)}" aria-label="${_pictoEsc(nom)}" role="img" style="display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:${t}px;height:${t}px;color:var(--text);vertical-align:middle"><svg width="${Math.round(t * 0.86)}" height="${Math.round(t * 0.86)}" viewBox="${def.viewBox}" aria-hidden="true">${def.svg}</svg></span>`;
+    return `<span title="${_pictoEsc(nom)}" aria-label="${_pictoEsc(nom)}" role="img" style="display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:${t}px;height:${t}px;color:${def.couleur || 'var(--text)'};vertical-align:middle"><svg width="${Math.round(t * 0.86)}" height="${Math.round(t * 0.86)}" viewBox="${def.viewBox}" aria-hidden="true">${def.svg}</svg></span>`;
   }
   if (def.svg) {
     const s = Math.round(t * (def.bordure ? 0.78 : 0.62));

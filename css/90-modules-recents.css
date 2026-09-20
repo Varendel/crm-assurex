@@ -408,3 +408,21 @@ body.curseur-rex canvas { cursor: crosshair !important; }
 .bmq-client-marches .bmq-meteo-icone { font-size: 15px; }
 .bmq-client-marches .bmq-meteo-temp { font-size: 12.5px; }
 .bmq-client-marches .bmq-meteo-detail { display: none; }
+
+/* ═══ PASTILLES ECOHUB DANS LE BANDEAU (js/61, 20.09.2026) ═══ */
+#bmq-pastilles-zone { display: inline-flex; gap: 6px; flex: 0 0 auto; }
+.bmq-pastille { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; cursor: pointer;
+  font-family: inherit; border-radius: var(--r-rond, 999px);
+  background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.13);
+  transition: all var(--v-court, .15s); }
+.bmq-pastille:hover { background: rgba(255,255,255,.16); transform: translateY(-1px); }
+.bmq-pastille-icone { font-size: 15px; line-height: 1; }
+.bmq-pastille-valeur { font-size: 13px; font-weight: 700; color: #fff; font-variant-numeric: tabular-nums; }
+.bmq-pastille.ok .bmq-pastille-valeur { color: #4ADE80; }
+.bmq-pastille.moyen .bmq-pastille-valeur { color: #FBBF24; }
+.bmq-pastille.faible .bmq-pastille-valeur { color: #FB7185; }
+.bmq-pastille.attente .bmq-pastille-valeur { color: #94A8C6; }
+/* Les documents recus depuis la derniere visite : on attire l'oeil une fois, pas en permanence */
+.bmq-pastille.nouveau { background: rgba(0,207,255,.16); border-color: rgba(0,207,255,.42); }
+.bmq-pastille.nouveau .bmq-pastille-valeur { color: #7DD3FC; }
+@media (max-width: 720px) { .bmq-pastille { padding: 4px 9px; } .bmq-pastille-valeur { font-size: 11.5px; } }

@@ -363,7 +363,30 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 .login-rex-piste { position: relative; display: inline-block; will-change: transform; margin-top: 86px; --lg-saut: 48px; }
 /* la place au-dessus de Rex est reservee en permanence : les blocs ne doivent pas sortir de l ecran */
 #login-screen { overflow: hidden; }
-.login-logotype { transform-origin: 8% 85%; }
+/* Le logotype passe en blanc et recoit un retroeclairage : trois ombres portees de rayons
+   croissants simulent une lumiere qui vient de DERRIERE le lettrage et deborde sur les cotes,
+   plus une ombre sombre et courte dessous pour le decoller du fond. C'est l'ecart entre les
+   rayons qui fait l'effet — une seule ombre large donne un flou, trois donnent un halo.
+   brightness(0) invert(1) blanchit le PNG sans qu'on ait a livrer une seconde image ; le point
+   turquoise, lui, est un element separe (.login-point) et garde donc sa couleur. */
+.login-logotype { transform-origin: 8% 85%;
+  filter: brightness(0) invert(1)
+    drop-shadow(0 0 14px rgba(125, 211, 252, .55))
+    drop-shadow(0 0 38px rgba(0, 207, 255, .45))
+    drop-shadow(0 0 78px rgba(0, 149, 184, .38))
+    drop-shadow(0 4px 9px rgba(3, 12, 30, .55));
+  animation: lg-lumiere 6.5s ease-in-out infinite; }
+/* La lumiere respire : une source fixe se lit comme un effet, une source qui varie se lit
+   comme une lumiere. */
+@keyframes lg-lumiere {
+  0%, 100% { filter: brightness(0) invert(1)
+    drop-shadow(0 0 14px rgba(125,211,252,.55)) drop-shadow(0 0 38px rgba(0,207,255,.45))
+    drop-shadow(0 0 78px rgba(0,149,184,.38)) drop-shadow(0 4px 9px rgba(3,12,30,.55)); }
+  50%      { filter: brightness(0) invert(1)
+    drop-shadow(0 0 18px rgba(125,211,252,.72)) drop-shadow(0 0 52px rgba(0,207,255,.6))
+    drop-shadow(0 0 104px rgba(0,149,184,.5)) drop-shadow(0 4px 9px rgba(3,12,30,.55)); }
+}
+@media (prefers-reduced-motion: reduce) { .login-logotype { animation: none; } }
 
 /* Les blocs restent invisibles tant qu'on n'a pas lance la connexion */
 .lg-blocs { position: absolute; left: 50%; bottom: 100%; margin-bottom: var(--lg-saut, 48px); transform: translateX(-50%);

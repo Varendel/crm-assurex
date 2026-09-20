@@ -122,6 +122,7 @@ function bmqBandeauHtml() {
   return `<section class="bmq" id="bmq" aria-label="Marchés et actualité">
     <div class="bmq-actu">
       <span id="bmq-meteo-zone">${bmqMeteoHtml()}</span>
+      <span id="bmq-pastilles-zone">${typeof ehmPastillesBandeau === 'function' ? ehmPastillesBandeau() : ''}</span>
       <span class="bmq-etiquette"><span class="bmq-point" aria-hidden="true"></span>Géopolitique</span>
       <button type="button" class="bmq-titre" id="bmq-titre" onclick="bmqOuvrirActu()">Chargement de l’actualité…</button>
       <button type="button" class="bmq-suivant" onclick="bmqActuSuivante(true)" title="Titre suivant" aria-label="Titre suivant">›</button>
@@ -137,6 +138,10 @@ function bmqPeindre() {
   const B = window._bmq;
   const zoneMeteo = document.getElementById('bmq-meteo-zone');
   if (zoneMeteo) zoneMeteo.innerHTML = bmqMeteoHtml();
+  // Les pastilles EcoHub suivent leur propre chargement : on les repeint à chaque passage,
+  // sinon elles restent vides si l'état arrive après le bandeau.
+  const zoneP = document.getElementById('bmq-pastilles-zone');
+  if (zoneP && typeof ehmPastillesBandeau === 'function') zoneP.innerHTML = ehmPastillesBandeau();
   const defile = document.getElementById('bmq-defile');
   if (defile) {
     if (B.valeurs.length) {

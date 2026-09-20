@@ -95,6 +95,7 @@ function ehmCarteDashboard() {
         // celui où l'on se trouve, sinon la jauge reste vide là où on l'a justement cherchée.
         if (currentView === 'dashboard' && typeof dbxRerendre === 'function') dbxRerendre(true);
         else if (currentView === 'ecohub-sync' && typeof navigate === 'function') navigate('ecohub-sync', { silent: true });
+        if (typeof bmqPeindre === 'function') bmqPeindre();
       });
     }
     return '<section class="dbx-carte ehm-carte"><div class="loader">Lecture de l’état EcoHub…</div></section>';
@@ -126,6 +127,47 @@ function ehmCarteDashboard() {
       </div>
     </div>
   </section>`;
+}
+
+// ── Pastilles du bandeau (20.09.2026) ───────────────────────────────────────────────────────────
+// Demande de Jonathan : voir l'état EcoHub et les derniers documents reçus sans quitter le
+// tableau de bord. Deux pastilles, à côté de la météo, dans le même registre : un pictogramme, un
+// chiffre, et le détail au survol. Elles ne remplacent pas le manomètre — elles y mènent.
+//
+// Le nom des clients concernés est dans l'infobulle et non à l'écran : il n'a pas à s'afficher en
+// permanence sur un poste qu'on peut consulter par-dessus l'épaule.
+function ehmPastillesBandeau() {
+  const E = window._ehm.etat;
+  // Les pastilles vivent dans le bandeau, qui s'affiche sur tous les onglets du tableau de bord —
+  // alors que le manomètre n'est que dans « Pilotage ». Elles doivent donc pouvoir déclencher le
+  // chargement elles-mêmes, sinon elles restent vides pour qui ne va jamais dans Pilotage.
+  if (!E) {
+    if (!window._ehm.chargement) {
+      window._ehm.chargement = true;
+      ehmCharger().then(() => { window._ehm.chargement = false; if (typeof bmqPeindre === 'function') bmqPeindre(); });
+    }
+    return '';
+  }
+  const p = E.preparation;
+  const ton = p == null ? 'attente' : p >= 90 ? 'ok' : p >= 65 ? 'moyen' : 'faible';
+
+  const recents = (E.nouveaux.length ? E.nouveaux : []).slice(0, 6);
+  const noms = [...new Set(recents.map(d => {
+    const c = (typeof allClients !== 'undefined' ? allClients : []).find(x => x.id === d.client_id);
+    return c ? ((c.prenom ? c.prenom + ' ' : '') + c.nom).trim() : 'à rattacher';
+  }))];
+
+  return `
+    <button type="button" class="bmq-pastille ${ton}" onclick="navigate('ecohub-sync')"
+      title="EcoHub · ${E.contrats} contrat(s) chez les compagnies suivies, ${E.sansPolice} sans numéro de police&#10;Cliquer pour ouvrir le manomètre">
+      <span class="bmq-pastille-icone" aria-hidden="true">🎛️</span>
+      <span class="bmq-pastille-valeur">${p == null ? '—' : p + ' %'}</span>
+    </button>
+    ${E.nouveaux.length ? `<button type="button" class="bmq-pastille nouveau" onclick="navigate('documents-compagnies')"
+      title="${E.nouveaux.length} document(s) reçu(s) depuis ta dernière visite :&#10;${noms.map(n => '· ' + n).join('&#10;')}${E.nouveaux.length > 6 ? '&#10;…' : ''}&#10;Cliquer pour les ouvrir">
+      <span class="bmq-pastille-icone" aria-hidden="true">📥</span>
+      <span class="bmq-pastille-valeur">${E.nouveaux.length}</span>
+    </button>` : ''}`;
 }
 
 // ── Le bandeau « nouveaux documents » ───────────────────────────────────────────────────────────

@@ -192,10 +192,59 @@ function viewDashboardV2() {
     <div class="dbx-onglets" role="tablist" aria-label="Vue du tableau de bord">
       <button type="button" role="tab" aria-selected="${onglet === 'aujourdhui'}" class="${onglet === 'aujourdhui' ? 'actif' : ''}" onclick="dbxChoisirOnglet('aujourdhui')">Aujourd’hui${nbRetard ? `<span class="dbx-pastille">${nbRetard}</span>` : ''}</button>
       <button type="button" role="tab" aria-selected="${onglet === 'pilotage'}" class="${onglet === 'pilotage' ? 'actif' : ''}" onclick="dbxChoisirOnglet('pilotage')">Pilotage</button>
+      <button type="button" role="tab" aria-selected="${onglet === 'essentiel'}" class="${onglet === 'essentiel' ? 'actif' : ''}" onclick="dbxChoisirOnglet('essentiel')" title="Vue simplifiée : l’essentiel de la journée, sans le reste">Essentiel</button>
       <button type="button" class="dbx-classique" onclick="dbxBasculer(true)" title="Revenir à l'ancien tableau de bord">Vue classique</button>
     </div>
 
-    ${onglet === 'pilotage' ? dbxVuePilotage(D) : dbxVueAujourdhui(D, actions)}
+    ${onglet === 'pilotage' ? dbxVuePilotage(D) : onglet === 'essentiel' ? dbxVueEssentiel(D, actions) : dbxVueAujourdhui(D, actions)}
+  </div>`;
+}
+
+// ── Vue « Essentiel » (20.09.2026, demande de Jonathan) : une seconde lecture du tableau de bord,
+// simplifiée et aérée. Trois chiffres, les priorités du jour, les rendez-vous — et rien d'autre.
+// Tout le reste (sparklines, signaux, graphiques) reste dans « Aujourd'hui » et « Pilotage ».
+function dbxVueEssentiel(D, actions) {
+  const auj = D.auj;
+  const priorites = actions.filter(a => ['retard', 'aujourdhui', 'equipe'].includes(a.groupe)).slice(0, 6);
+  const rdv = allRendezVous
+    .filter(r => r.statut !== 'annule' && (r.date_heure || '').slice(0, 10) === auj)
+    .sort((a, b) => (a.date_heure || '').localeCompare(b.date_heure || ''));
+  const nbRetard = actions.filter(a => a.groupe === 'retard').length;
+  const carte = (label, valeur, sous, onclick) => `<button type="button" class="dbx-zen-carte" onclick="${onclick}">
+    <span class="dbx-zen-valeur">${dbxEsc(valeur)}</span>
+    <span class="dbx-zen-label">${dbxEsc(label)}</span>
+    <span class="dbx-zen-sous">${dbxEsc(sous)}</span></button>`;
+
+  return `<div class="dbx-zen dbx-anim" style="--i:1">
+    <div class="dbx-zen-cartes">
+      ${carte('À encaisser', dbxCHF(D.totalAttente), `${D.commAttente.length} commission${D.commAttente.length > 1 ? 's' : ''} en attente`, "navigate('commissions-attente')")}
+      ${carte('Affaires en cours', String(D.oppsOuvertes.length), `${dbxCHF(D.pondere)} de pipeline pondéré`, "navigate('opportunites')")}
+      ${carte('Portefeuille annuel', dbxCHF(D.portefeuille), `${D.actifs.length} contrats actifs`, "navigate('tous-contrats')")}
+    </div>
+
+    <section class="dbx-zen-bloc">
+      <h2>Mes priorités${nbRetard ? ` <em>${nbRetard} en retard</em>` : ''}</h2>
+      ${priorites.length ? `<div class="dbx-zen-liste">${priorites.map(dbxLigneAction).join('')}</div>
+        ${actions.length > priorites.length ? `<button type="button" class="dbx-zen-lien" onclick="dbxChoisirOnglet('aujourdhui')">Voir les ${actions.length} actions →</button>` : ''}`
+        : '<p class="dbx-zen-vide">Rien d’urgent. Belle journée pour appeler un client ou préparer un renouvellement.</p>'}
+    </section>
+
+    <section class="dbx-zen-bloc">
+      <h2>Aujourd’hui</h2>
+      ${rdv.length ? `<div class="dbx-zen-rdv">${rdv.map(r => `<div class="dbx-zen-ligne">
+          <span class="dbx-zen-heure">${dbxEsc((r.date_heure || '').slice(11, 16) || '—')}</span>
+          <span class="dbx-zen-corps"><b>${dbxEsc(r.type || 'Rendez-vous')}</b><small>${dbxEsc(dbxNomClient(r.client_id) || r.lieu || r.mode || '')}</small></span>
+          ${r.client_id ? `<button type="button" class="dbx-zen-fleche" onclick="showClient('${r.client_id}')" aria-label="Ouvrir la fiche">→</button>` : ''}
+        </div>`).join('')}</div>`
+        : '<p class="dbx-zen-vide">Aucun rendez-vous aujourd’hui.</p>'}
+    </section>
+
+    <div class="dbx-zen-actions">
+      <button type="button" class="btn-save" onclick="navigate('nouveau-client')">+ Nouveau client</button>
+      <button type="button" class="btn-secondary" onclick="opportuniteEnEditionId=null;navigate('nouvelle-opportunite')">+ Nouvelle opportunité</button>
+      <button type="button" class="btn-secondary" onclick="navigate('renouvellements')">🔁 Renouvellements</button>
+      ${typeof viewMessagesClients === 'function' ? `<button type="button" class="btn-secondary" onclick="navigate('messages-clients')">💬 Messages clients</button>` : ''}
+    </div>
   </div>`;
 }
 

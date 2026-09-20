@@ -46,7 +46,7 @@ function htmlProchaineAction(o) {
   const pa = prochaineAction(o.id);
   if (!pa) {
     return `<button type="button" onclick="event.stopPropagation();ouvrirModaleProchaineAction('${o.id}')" title="Définir la prochaine action"
-      style="display:flex;align-items:center;gap:5px;width:100%;margin:2px 0 8px;background:rgba(248,113,113,0.08);border:1px dashed rgba(248,113,113,0.6);color:#f87171;border-radius:7px;padding:5px 8px;font-size:10.5px;font-weight:700;cursor:pointer;text-align:left">
+      style="display:flex;align-items:center;gap:5px;width:100%;margin:2px 0 8px;background:rgba(248,113,113,0.08);border:1px dashed rgba(248,113,113,0.6);color:var(--c-danger-texte);border-radius:7px;padding:5px 8px;font-size:10.5px;font-weight:700;cursor:pointer;text-align:left">
       ⚠ Aucune prochaine action — définir</button>`;
   }
   const auj = new Date().toISOString().split('T')[0];
@@ -64,8 +64,8 @@ function bandeauSansProchaineAction(OPPS, nomClient) {
   if (!sans.length) return '';
   return `<div style="background:rgba(245,158,11,0.08);border:1.5px solid rgba(245,158,11,0.4);border-radius:12px;padding:14px 16px;margin-bottom:20px">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px">
-      <div style="font-size:12px;font-weight:800;color:#f59e0b;text-transform:uppercase;letter-spacing:0.5px">➜ ${sans.length} opportunité${sans.length > 1 ? 's' : ''} sans prochaine action</div>
-      <button type="button" onclick="ouvrirModaleProchaineAction('${sans[0].id}', 'enchainer')" style="background:none;border:none;color:#f59e0b;font-size:11.5px;font-weight:700;cursor:pointer">Les traiter une par une →</button>
+      <div style="font-size:12px;font-weight:800;color:var(--c-alerte-texte);text-transform:uppercase;letter-spacing:0.5px">➜ ${sans.length} opportunité${sans.length > 1 ? 's' : ''} sans prochaine action</div>
+      <button type="button" onclick="ouvrirModaleProchaineAction('${sans[0].id}', 'enchainer')" style="background:none;border:none;color:var(--c-alerte-texte);font-size:11.5px;font-weight:700;cursor:pointer">Les traiter une par une →</button>
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:6px">
       ${sans.map(o => `<button type="button" onclick="ouvrirModaleProchaineAction('${o.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:11.5px;color:var(--text);cursor:pointer">${paEsc(o.titre)} <span style="color:var(--text-muted)">— ${paEsc(nomClient(o))}</span></button>`).join('')}

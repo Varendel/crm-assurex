@@ -484,7 +484,7 @@ async function importPolicePdfAI(input) {
     if (window._policePdfPreviewUrl) URL.revokeObjectURL(window._policePdfPreviewUrl);
     window._policePdfPreviewUrl = URL.createObjectURL(file);
 
-    statusEl.innerHTML = `<span style="color:#4ade80;font-weight:700">✓ Formulaire pré-rempli depuis le PDF</span> — vérifie les données, précise si le contrat sera commissionné ou non, puis enregistre.
+    statusEl.innerHTML = `<span style="color:var(--c-succes-texte);font-weight:700">✓ Formulaire pré-rempli depuis le PDF</span> — vérifie les données, précise si le contrat sera commissionné ou non, puis enregistre.
       <a href="${window._policePdfPreviewUrl}" target="_blank" rel="noopener" style="margin-left:8px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px;vertical-align:middle">👁 Voir le PDF importé</a>`;
 
   } catch(e) {
@@ -519,7 +519,7 @@ function viewNouveauContrat() {
     ${opp ? `<div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:12.5px;color:var(--text)">
       ✓ Pré-rempli depuis l'opportunité gagnée <strong>"${opp.titre}"</strong> — montant potentiel estimé : <strong>CHF ${fmtCHF((opp.montant_potentiel||0))}</strong>. Vérifie/ajuste la prime exacte ci-dessous avant d'enregistrer.
       ${oppFileAttenteProduits.length ? `<div style="margin-top:6px;color:var(--accent)">📋 ${oppFileAttenteProduits.length} autre(s) contrat(s) à créer ensuite pour cette même opportunité, une fois celui-ci enregistré.</div>` : ''}
-      ${!opp.client_id && opp.prospect_nom ? `<div style="margin-top:8px;color:#f59e0b">⚠ "<strong>${opp.prospect_nom}</strong>" n'a pas encore de fiche client — sélectionne un client existant ci-dessous, ou <a href="#" onclick="navigate('nouveau-client'); return false;" style="color:#f59e0b;text-decoration:underline">crée sa fiche maintenant</a> puis reviens enregistrer ce contrat.</div>` : ''}
+      ${!opp.client_id && opp.prospect_nom ? `<div style="margin-top:8px;color:var(--c-alerte-texte)">⚠ "<strong>${opp.prospect_nom}</strong>" n'a pas encore de fiche client — sélectionne un client existant ci-dessous, ou <a href="#" onclick="navigate('nouveau-client'); return false;" style="color:var(--c-alerte-texte);text-decoration:underline">crée sa fiche maintenant</a> puis reviens enregistrer ce contrat.</div>` : ''}
     </div>` : ''}
     ${sectionCard('Informations contrat', '#4ade80', `<div class="form-grid">
       ${!contratClientId ? `<div class="form-field" style="grid-column:span 2"><label class="form-label">Client *</label><select class="form-select" id="ct-client" onchange="syncSegmentFromClient()"><option value="">— Sélectionner un client —</option>${clientOptions}</select></div>` : ''}
@@ -807,10 +807,10 @@ function ajouterLignePrime(libelle = '', montant = '') {
   const libelleEch = (libelle || '').toString().replace(/"/g, '&quot;');
   ligne.innerHTML = `
     <input class="form-input ct-prime-ligne-libelle" placeholder="Ex: Responsabilité civile privée" value="${libelleEch}" style="flex:1" oninput="refreshCategoriesLignesPrime(); calculerPrimeTotaleLignes()"/>
-    <span class="ct-prime-ligne-badge-taxe" title="Taxes/émoluments légaux — exclus du volume de prime et du calcul de commission" style="display:none;font-size:9.5px;font-weight:700;color:#f59e0b;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:5px;padding:2px 6px;white-space:nowrap">hors commission</span>
+    <span class="ct-prime-ligne-badge-taxe" title="Taxes/émoluments légaux — exclus du volume de prime et du calcul de commission" style="display:none;font-size:9.5px;font-weight:700;color:var(--c-alerte-texte);background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);border-radius:5px;padding:2px 6px;white-space:nowrap">hors commission</span>
     <select class="form-select ct-prime-ligne-categorie" style="display:none;width:190px;font-size:11px" onchange="calculerPrimeTotaleLignes()"></select>
     <input class="form-input ct-prime-ligne-montant" type="number" step="0.01" placeholder="CHF" value="${montant}" style="width:120px" oninput="calculerPrimeTotaleLignes()"/>
-    <button type="button" onclick="this.parentElement.remove(); calculerPrimeTotaleLignes()" style="background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;flex-shrink:0">✕</button>
+    <button type="button" onclick="this.parentElement.remove(); calculerPrimeTotaleLignes()" style="background:rgba(248,113,113,0.12);color:var(--c-danger-texte);border:1px solid rgba(248,113,113,0.3);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;flex-shrink:0">✕</button>
   `;
   list.appendChild(ligne);
   refreshCategoriesLignesPrime();

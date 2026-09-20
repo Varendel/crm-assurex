@@ -214,14 +214,14 @@ function renderOppsEchuesBanner(OPPS, nomClient) {
     .sort((a, b) => new Date(a.date_echeance) - new Date(b.date_echeance));
   if (!echues.length) return '';
   return `<div style="background:rgba(248,113,113,0.08);border:1.5px solid rgba(248,113,113,0.4);border-radius:12px;padding:14px 16px;margin-bottom:20px">
-    <div style="font-size:12px;font-weight:800;color:#f87171;text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">🔴 ${echues.length} opportunité${echues.length !== 1 ? 's' : ''} échue${echues.length !== 1 ? 's' : ''} — à traiter en priorité</div>
+    <div style="font-size:12px;font-weight:800;color:var(--c-danger-texte);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">🔴 ${echues.length} opportunité${echues.length !== 1 ? 's' : ''} échue${echues.length !== 1 ? 's' : ''} — à traiter en priorité</div>
     <div style="display:flex;flex-direction:column;gap:6px">
       ${echues.map(o => `<div onclick="editerOpportunite('${o.id}')" style="display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--surface);border-radius:8px;padding:8px 12px;cursor:pointer">
         <div style="min-width:0">
           <div style="font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${o.titre}</div>
           <div style="font-size:11px;color:var(--text-muted)">${nomClient(o)}</div>
         </div>
-        <div style="font-size:11.5px;font-weight:800;color:#f87171;white-space:nowrap">Échue le ${fmtDate(o.date_echeance)}</div>
+        <div style="font-size:11.5px;font-weight:800;color:var(--c-danger-texte);white-space:nowrap">Échue le ${fmtDate(o.date_echeance)}</div>
       </div>`).join('')}
     </div>
   </div>`;
@@ -252,14 +252,14 @@ function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, to
         ${typeof htmlProchaineAction === 'function' ? htmlProchaineAction(o) : ''}
         ${o.date_echeance ? `<div style="font-size:10px;font-weight:700;color:${echue ? '#f87171' : 'var(--text-muted)'};margin-bottom:6px">${echue ? '🔴 Échue le ' : 'Échéance '}${fmtDate(o.date_echeance)}</div>` : ''}
         <div style="display:flex;justify-content:space-between;align-items:center">
-          ${rhMode ? '<span></span>' : `<span style="font-size:13px;font-weight:800;color:#f59e0b">CHF ${fmtCHF((o.montant_potentiel||0))}</span>`}
+          ${rhMode ? '<span></span>' : `<span style="font-size:13px;font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF((o.montant_potentiel||0))}</span>`}
           ${o.apporteur_id ? avatar(agentById(o.apporteur_id), 22) : ''}
         </div>
         <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:${o.probabilite||0}%;background:${color}"></div></div>
         <div style="font-size:10px;color:var(--text-muted);margin-top:6px;display:flex;justify-content:space-between;align-items:center;gap:6px">
           <span>${o.probabilite||0}%</span>
           <div style="display:flex;gap:4px;align-items:center">
-            ${rhMode ? '' : `<button onclick="event.stopPropagation();ouvrirModaleMotifPerte('${o.id}','kanban')" title="Marquer perdue" style="background:none;border:1px solid rgba(248,113,113,0.35);color:#f87171;border-radius:5px;padding:2px 6px;font-size:10px;font-weight:700;cursor:pointer">✕ Perdu</button>`}
+            ${rhMode ? '' : `<button onclick="event.stopPropagation();ouvrirModaleMotifPerte('${o.id}','kanban')" title="Marquer perdue" style="background:none;border:1px solid rgba(248,113,113,0.35);color:var(--c-danger-texte);border-radius:5px;padding:2px 6px;font-size:10px;font-weight:700;cursor:pointer">✕ Perdu</button>`}
             ${rhMode ? '' : selectStadeOpportunite(o, stade, tousLesStades)}
           </div>
         </div>
@@ -277,17 +277,17 @@ function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, to
     </div>`}
     <div class="kanban">${kanban}</div>
     ${gagnees.length > 0 ? `<div style="margin-top:24px">
-      <div style="font-size:11px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">✓ Gagnées (${gagnees.length})</div>
+      <div style="font-size:11px;font-weight:700;color:var(--c-succes-texte);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">✓ Gagnées (${gagnees.length})</div>
       <div class="table-wrap">${gagnees.map(o => `<div class="table-row" style="grid-template-columns:${rhMode ? '1fr 160px 150px' : '1fr 160px 100px 150px 110px'};${rhMode ? '' : 'cursor:pointer'}" ${rhMode ? '' : `onclick="editerOpportunite('${o.id}')"`}>
         <div style="font-weight:700;font-size:13px;color:var(--text)">${o.titre}</div>
         <div style="font-size:13px;font-weight:800;color:var(--text)">${nomClient(o)}</div>
-        ${rhMode ? '' : `<div style="font-size:12px;font-weight:700;color:#f59e0b">CHF ${fmtCHF((o.montant_potentiel||0))}</div>`}
+        ${rhMode ? '' : `<div style="font-size:12px;font-weight:700;color:var(--c-alerte-texte)">CHF ${fmtCHF((o.montant_potentiel||0))}</div>`}
         ${rhMode ? '' : `<div>${selectStadeOpportunite(o, 'Gagné', tousLesStades)}</div>`}
         <div>${o.contrat_id ? badge('Contrat créé', '#4ade80') : badge('À finaliser', '#f59e0b')}</div>
       </div>`).join('')}</div>
     </div>` : ''}
     ${perdues.length > 0 ? `<div style="margin-top:24px">
-      <div style="font-size:11px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">✕ Perdues (${perdues.length})</div>
+      <div style="font-size:11px;font-weight:700;color:var(--c-danger-texte);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">✕ Perdues (${perdues.length})</div>
       <div class="table-wrap">${perdues.map(o => `<div class="table-row" style="grid-template-columns:${rhMode ? '1fr 160px' : '1fr 160px 100px 150px'};${rhMode ? '' : 'cursor:pointer'}" ${rhMode ? '' : `onclick="editerOpportunite('${o.id}')"`}>
         <div>
           <div style="font-weight:700;font-size:13px;color:var(--text)">${o.titre}</div>
@@ -334,7 +334,7 @@ function renderListeOpportunites(toutes, nomClient, tousLesStades, stadeColor, r
         <div style="font-size:12.5px;color:var(--text-muted)">${o.compagnie || '—'}</div>
         <div>${badge(o.stade, stadeColor[o.stade] || (o.stade === 'Gagné' ? '#4ade80' : '#f87171'))}</div>
         <div style="font-size:12.5px;color:var(--text-muted)">${o.probabilite||0}%</div>
-        ${rhMode ? '' : `<div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF((o.montant_potentiel||0))}</div>`}
+        ${rhMode ? '' : `<div style="font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF((o.montant_potentiel||0))}</div>`}
       </div>`).join('') : '<div class="table-empty">Aucune opportunité.</div>'}
     </div>`;
 }
@@ -362,7 +362,7 @@ function renderEcheancesOpportunites(oppsOuvertes, nomClient, stadeColor, rhMode
         <div style="font-weight:700;font-size:13px;color:var(--text)">${o.cree_par ? PICTO_CREE_EQUIPE + ' ' : ''}${o.titre}</div>
         <div style="font-size:13px;color:var(--text)">${nomClient(o)}</div>
         <div>${badge(o.stade, stadeColor[o.stade] || '#64748b')}</div>
-        ${rhMode ? '' : `<div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF((o.montant_potentiel||0))}</div>`}
+        ${rhMode ? '' : `<div style="font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF((o.montant_potentiel||0))}</div>`}
         <div style="font-size:12px;color:var(--text-muted)">${o.date_echeance ? fmtDate(o.date_echeance) : '—'}</div>
       </div>`).join('')}</div>
     </div>`;
@@ -444,7 +444,7 @@ function renderCartePrioriteOpportunite(s, nomClient, stadeColor, rhMode) {
         <div style="font-size:12.5px;color:var(--text-muted)">${nomClient(o)} · ${badge(o.stade, stadeColor[o.stade] || '#64748b')}</div>
       </div>
       <div style="text-align:right">
-        ${rhMode ? '' : `<div style="font-size:13px;font-weight:800;color:#f59e0b">CHF ${fmtCHF(valeurPonderee)} <span style="font-weight:500;color:var(--text-muted);font-size:10.5px">pondéré</span></div>`}
+        ${rhMode ? '' : `<div style="font-size:13px;font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF(valeurPonderee)} <span style="font-weight:500;color:var(--text-muted);font-size:10.5px">pondéré</span></div>`}
         <div style="font-size:10.5px;color:var(--text-muted)">${o.date_echeance ? `Échéance ${fmtDate(o.date_echeance)}` : 'Sans échéance'}</div>
       </div>
     </div>
@@ -631,7 +631,7 @@ function proposerActionApresGain(opp) {
         <button class="btn-secondary" ${contratsClient.length === 0 ? 'disabled style="opacity:0.5;cursor:not-allowed"' : ''} onclick="${contratsClient.length ? `ouvrirSelectionContratExistant('${opp.id}')` : ''}">🔗 Relier un contrat déjà créé${contratsClient.length ? ` (${contratsClient.length})` : ''}</button>
         <button class="btn-secondary" style="opacity:0.7" onclick="document.getElementById('modal-action-opp-gagnee').remove(); navigate('opportunites')">Plus tard</button>
       </div>
-      ${!opp.client_id ? `<div style="font-size:10.5px;color:#f59e0b;margin-top:12px">⚠️ Cette opportunité n'a pas de fiche client rattachée — impossible de proposer un contrat existant à relier.</div>` : (contratsClient.length === 0 ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:12px">Aucun contrat existant trouvé pour ce client.</div>` : '')}
+      ${!opp.client_id ? `<div style="font-size:10.5px;color:var(--c-alerte-texte);margin-top:12px">⚠️ Cette opportunité n'a pas de fiche client rattachée — impossible de proposer un contrat existant à relier.</div>` : (contratsClient.length === 0 ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:12px">Aucun contrat existant trouvé pour ce client.</div>` : '')}
     </div>`);
 }
 
@@ -695,7 +695,7 @@ function ouvrirModaleMotifPerte(id, mode) {
       <textarea id="motif-perte-texte" class="form-input" rows="3" placeholder="Ex : parti chez la concurrence, budget annulé, plus de nouvelles…" style="resize:vertical;width:100%">${opp.motif_perte || ''}</textarea>
       <div style="display:flex;gap:10px;margin-top:16px">
         <button class="btn-secondary" onclick="document.getElementById('modal-motif-perte').remove()">Annuler</button>
-        <button class="btn-save" style="background:#f87171;border-color:#f87171" onclick="confirmerOpportunitePerdue('${id}', '${mode}')">✕ Confirmer perdue</button>
+        <button class="btn-save" style="background:#f87171;border-color:var(--c-danger-texte)" onclick="confirmerOpportunitePerdue('${id}', '${mode}')">✕ Confirmer perdue</button>
       </div>
     </div>
   `);
@@ -788,7 +788,7 @@ function viewSuivi() {
             return `<div style="padding:6px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between">
               <a href="?client=${ct.client_id}" onclick="return irVersClient(event, '${ct.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${nom}</a>
               <span>${ct.produit||''} · ${ct.compagnie||''}</span>
-              <span style="font-weight:700;color:#f59e0b">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}/an</span>
+              <span style="font-weight:700;color:var(--c-alerte-texte)">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}/an</span>
             </div>`;
           }).join('')}
         </div>` : ''}
@@ -881,16 +881,16 @@ function renderSuiviTables() {
         <div style="font-size:13px;color:var(--text)">${nomClient(ct)}</div>
         <div style="font-size:13px;color:var(--text)">${typeof compagnieAvecPicto === 'function' ? compagnieAvecPicto(ct.compagnie) : ct.compagnie}</div>
         <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ct.date_echeance)}</div>
-        <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}</div>
+        <div style="font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}</div>
         <div>${badge(ct.statut, ct.statut === 'actif' ? '#4ade80' : ct.statut === 'renouveler' ? '#f59e0b' : '#f87171')}${ct.commissionne === false ? ' ' + badge('Non commissionné', '#64748b') : ''}</div>
         ${avecReporter ? `<div><button type="button" onclick="event.stopPropagation();reporterRenouvellementContrat('${ct.id}')" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">↻ Reporter d'un an</button></div>` : ''}
       </div>`).join('')}</div>`;
   }
 
   document.getElementById('su-tables').innerHTML = `
-    <div style="font-size:11px;font-weight:700;color:#f87171;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">⚠ À renouveler (${aRenouveler.length})</div>
+    <div style="font-size:11px;font-weight:700;color:var(--c-danger-texte);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">⚠ À renouveler (${aRenouveler.length})</div>
     ${table(aRenouveler, 'Aucun contrat à renouveler.', true)}
-    <div style="font-size:11px;font-weight:700;color:#fbbf24;text-transform:uppercase;letter-spacing:1px;margin:24px 0 10px">⏳ Échéance dans moins de 60 jours (${echeanceProche.length})</div>
+    <div style="font-size:11px;font-weight:700;color:var(--c-alerte-texte);text-transform:uppercase;letter-spacing:1px;margin:24px 0 10px">⏳ Échéance dans moins de 60 jours (${echeanceProche.length})</div>
     ${table(echeanceProche, 'Aucune échéance proche.')}`;
 }
 
@@ -995,7 +995,7 @@ function viewRappels() {
           <div style="font-size:11px;color:var(--text-muted)">${details.join(' · ')}</div>
           ${r.notes ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:3px;font-style:italic">${r.notes.split('[')[0].substring(0,120)}${r.notes.length>120?'...':''}</div>` : ''}
         </div>
-        ${(!r.outlook_event_id && (r.date_echeance || r.date_planifiee)) ? `<button onclick="event.stopPropagation(); synchroniserRappelOutlook('${r.id}')" title="Absent de l'agenda Outlook — cliquer pour synchroniser" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;border-radius:7px;padding:4px 8px;font-size:11px;cursor:pointer">📅</button>` : ''}
+        ${(!r.outlook_event_id && (r.date_echeance || r.date_planifiee)) ? `<button onclick="event.stopPropagation(); synchroniserRappelOutlook('${r.id}')" title="Absent de l'agenda Outlook — cliquer pour synchroniser" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:var(--c-alerte-texte);border-radius:7px;padding:4px 8px;font-size:11px;cursor:pointer">📅</button>` : ''}
         ${badge(r.type || 'Suivi', '#64748b')}
         <button class="btn-traite" onclick="event.stopPropagation(); traiterRappel('${r.id}')">✓ Traité</button>
       </div>`;
@@ -1077,7 +1077,7 @@ async function viewRendezVous() {
         <div style="font-size:11px;color:var(--text-muted)">${[r.type, r.duree_min ? `${r.duree_min} min` : '', r.prospect_email, r.prospect_tel].filter(Boolean).join(' · ')}</div>
         ${r.notes ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:3px;font-style:italic">${r.notes}</div>` : ''}
       </div>
-      ${!r.outlook_event_id ? `<button onclick="synchroniserRdvOutlook('${r.id}')" title="Absent de l'agenda Outlook — cliquer pour synchroniser" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;border-radius:7px;padding:4px 8px;font-size:11px;cursor:pointer">📅</button>` : `<span title="Synchronisé avec Outlook" style="font-size:13px">✅</span>`}
+      ${!r.outlook_event_id ? `<button onclick="synchroniserRdvOutlook('${r.id}')" title="Absent de l'agenda Outlook — cliquer pour synchroniser" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:var(--c-alerte-texte);border-radius:7px;padding:4px 8px;font-size:11px;cursor:pointer">📅</button>` : `<span title="Synchronisé avec Outlook" style="font-size:13px">✅</span>`}
       <button onclick="annulerRdv('${r.id}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px" title="Annuler">✕</button>
     </div>`;
 
@@ -1087,7 +1087,7 @@ async function viewRendezVous() {
       <button class="btn-add" onclick="ouvrirModaleNouveauRdv()">+ Nouveau RDV</button>
     </div>
     <div style="margin-bottom:22px">
-      <div style="font-size:11px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">À venir (${aVenir.length})</div>
+      <div style="font-size:11px;font-weight:700;color:var(--c-succes-texte);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">À venir (${aVenir.length})</div>
       ${aVenir.length ? aVenir.map(renderItem).join('') : '<div class="table-empty">Aucun rendez-vous à venir.</div>'}
     </div>
     ${passes.length ? `<div style="margin-bottom:22px">
@@ -1462,7 +1462,7 @@ function renderHistoriqueFichesPaie() {
       ${fiches.map(f => `<div class="table-row" style="grid-template-columns:140px 140px 120px 1fr">
         <div style="font-size:12px;color:var(--text)">${fmtDate(f.date_debut)}</div>
         <div style="font-size:12px;color:var(--text)">${fmtDate(f.date_fin)}</div>
-        <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF(Math.round(f.total_montant||0))}</div>
+        <div style="font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF(Math.round(f.total_montant||0))}</div>
         <div style="font-size:11px;color:var(--text-muted)">${fmtDate(f.created_at)}</div>
       </div>`).join('')}
     </div>` : '<div class="table-empty">Aucune fiche de paie générée pour l\'instant.</div>';
@@ -1637,7 +1637,7 @@ function viewImportDecompte() {
           <label><input type="radio" name="imp-encaisse-par" value="oz"/> <span aria-label="OZ Assure" title="OZ Assure"><span class="imp-logo-oz">${typeof OZ_LOGO_TERTIAIRE_SVG !== 'undefined' ? OZ_LOGO_TERTIAIRE_SVG : 'OZ Assure'}</span></span></label>
         </div>
         <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">« OZ Assure » : décompte versé sur le compte d'OZ — les commissions sont enregistrées en « Versé OZ » et le bordereau marqué OZ, <strong>sans compter dans les encaissements Assurex</strong> (tableau de bord, suivi financier, trésorerie).</div>
-        ${typeof ozArchive === 'function' && ozArchive() ? `<div style="font-size:11px;color:#B45309;background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);border-radius:8px;padding:6px 10px;margin-top:6px">🗄️ Données OZ archivées depuis le 01.01.2027 : « OZ Assure » uniquement pour un ancien décompte (période 2026 ou avant) arrivé en retard sur le compte d'OZ.</div>` : ''}
+        ${typeof ozArchive === 'function' && ozArchive() ? `<div style="font-size:11px;color:var(--c-alerte-texte);background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);border-radius:8px;padding:6px 10px;margin-top:6px">🗄️ Données OZ archivées depuis le 01.01.2027 : « OZ Assure » uniquement pour un ancien décompte (période 2026 ou avant) arrivé en retard sur le compte d'OZ.</div>` : ''}
       </div>
     `)}
 
@@ -1690,7 +1690,7 @@ async function impChercherDecomptesOutlook() {
         <span style="font-size:18px">${/\.xml$/i.test(t.nom) ? '🧾' : /\.pdf$/i.test(t.nom) ? '📄' : '📊'}</span>
         <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${String(t.nom).replace(/</g, '&lt;')}</div>
           <div style="font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fmtDate(t.date)} · ${String(t.de).replace(/</g, '&lt;')} · ${String(t.sujet).replace(/</g, '&lt;')}</div></div>
-        ${t.importe ? '<span style="font-size:11px;color:#16A34A;font-weight:700">✓ déjà importé</span>' : ''}
+        ${t.importe ? '<span style="font-size:11px;color:var(--c-succes-texte);font-weight:700">✓ déjà importé</span>' : ''}
         <button class="btn-secondary" style="padding:5px 12px;font-size:12px" onclick="impOuvrirPieceOutlook(${i})">${t.importe ? 'Revoir' : 'Importer'}</button>
       </div>`).join('')}</div>` : '<div class="dbx-vide-petit">Aucun décompte trouvé dans les 90 derniers jours.</div>';
   } catch (e) {
@@ -1771,7 +1771,7 @@ function htmlContratImport(l) {
       ${cands.map(c => `<option value="${c.id}" ${c.id === l.contratId ? 'selected' : ''}>${String(c.produit).replace(/</g, '&lt;')}${c.statut && c.statut !== 'actif' ? ` (${c.statut})` : ''}</option>`).join('')}
     </select>`
     : `<span style="color:var(--text-muted)">${String(l.contratProduit || 'Contrat').replace(/</g, '&lt;')}</span>`;
-  const doublon = l.doublon ? `<div title="${String(l.doublon.detail).replace(/"/g, '&quot;')}" style="margin-top:4px;font-size:11px;font-weight:600;color:#DC2626;white-space:normal;max-width:240px">⛔ ${l.doublon.certain ? 'Déjà importé' : 'Doublon probable'} — ${l.doublon.court}<span style="display:block;font-weight:400;color:var(--text-muted)">ligne décochée ; coche-la si c’est bien un nouveau versement</span></div>` : '';
+  const doublon = l.doublon ? `<div title="${String(l.doublon.detail).replace(/"/g, '&quot;')}" style="margin-top:4px;font-size:11px;font-weight:600;color:var(--c-danger-texte);white-space:normal;max-width:240px">⛔ ${l.doublon.certain ? 'Déjà importé' : 'Doublon probable'} — ${l.doublon.court}<span style="display:block;font-weight:400;color:var(--text-muted)">ligne décochée ; coche-la si c’est bien un nouveau versement</span></div>` : '';
   const attente = l.attenteId ? `<label style="display:flex;align-items:center;gap:5px;margin-top:4px;font-size:11px;color:var(--text-muted);cursor:pointer;white-space:normal;max-width:240px"><input type="checkbox" ${l.imputer ? 'checked' : ''} onchange="_decompteLignes[${l.idx}].imputer=this.checked"/> Déduire de la commission en attente (reste CHF ${fmtCHF2(l.attenteReste)})</label>` : '';
   const parNom = l.parNom ? `<div title="Aucun contrat avec ce n° de police : rattaché d'après le nom de l'assuré et la compagnie" style="margin-top:4px;font-size:11px;font-weight:600;color:#D97706;white-space:normal;max-width:240px">🔎 Rapproché par le nom — vérifie, et complète le n° de police du contrat</div>` : '';
   return contrat + parNom + doublon + attente;
@@ -2424,7 +2424,7 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
             <td style="padding:5px 8px;white-space:nowrap">${l.nomVaudoise}</td>
             <td style="padding:5px 8px;white-space:nowrap;color:var(--text-muted)">${l.npa || '—'}</td>
             <td style="padding:5px 8px;white-space:nowrap;color:var(--text-muted)">${l.localite || '—'}</td>
-            <td style="padding:5px 8px;white-space:nowrap">${l.clientNomCRM ? l.clientNomCRM : (l.clientSuggereNom ? `<span style="color:#f59e0b">≈ ${l.clientSuggereNom}</span>` : '<span style="color:#f87171">Non trouvé</span>')}${!l.clientNomCRM && l.clientSuggereNom ? `<div style="font-size:9.5px;color:var(--text-muted);white-space:normal;max-width:170px;margin-bottom:4px">nom trouvé, pas de contrat avec cette police — vérifie avant de créer</div><div style="display:flex;gap:6px"><button type="button" onclick="document.getElementById('modal-detail-contrat')?.remove(); showClient('${l.clientId}')" style="background:var(--surface-alt);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:10.5px;cursor:pointer;font-weight:700;white-space:nowrap">👁 Voir la fiche</button><button type="button" id="imp-creer-${l.idx}" onclick="creerContratDepuisImport(${l.idx})" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:3px 8px;font-size:10.5px;cursor:pointer;font-weight:700;white-space:nowrap">📝 Créer</button></div>` : ''}</td>
+            <td style="padding:5px 8px;white-space:nowrap">${l.clientNomCRM ? l.clientNomCRM : (l.clientSuggereNom ? `<span style="color:var(--c-alerte-texte)">≈ ${l.clientSuggereNom}</span>` : '<span style="color:var(--c-danger-texte)">Non trouvé</span>')}${!l.clientNomCRM && l.clientSuggereNom ? `<div style="font-size:9.5px;color:var(--text-muted);white-space:normal;max-width:170px;margin-bottom:4px">nom trouvé, pas de contrat avec cette police — vérifie avant de créer</div><div style="display:flex;gap:6px"><button type="button" onclick="document.getElementById('modal-detail-contrat')?.remove(); showClient('${l.clientId}')" style="background:var(--surface-alt);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:10.5px;cursor:pointer;font-weight:700;white-space:nowrap">👁 Voir la fiche</button><button type="button" id="imp-creer-${l.idx}" onclick="creerContratDepuisImport(${l.idx})" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:3px 8px;font-size:10.5px;cursor:pointer;font-weight:700;white-space:nowrap">📝 Créer</button></div>` : ''}</td>
             <td style="padding:5px 8px;color:var(--text-muted);white-space:nowrap">${l.brancheInterne}</td>
             <td id="imp-contrat-${l.idx}" style="padding:5px 8px;white-space:nowrap">${htmlContratImport(l)}</td>
             <td style="padding:5px 8px;text-align:right;white-space:nowrap;color:var(--text-muted)">CHF ${fmtCHF(l.commissionProduction)}</td>
@@ -2433,7 +2433,7 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
           </tr>`).join('')}</tbody>
         <tfoot><tr style="border-top:2px solid var(--border)">
           <td colspan="12" style="padding:8px;text-align:right;font-weight:700;color:var(--text)">Total des lignes ci-dessus</td>
-          <td id="imp-total-cell" style="padding:8px;text-align:right;font-weight:800;color:#4ade80;white-space:nowrap">CHF ${fmtCHF2(_decompteLignes.reduce((s,l)=>s+l.montant,0))}</td>
+          <td id="imp-total-cell" style="padding:8px;text-align:right;font-weight:800;color:var(--c-succes-texte);white-space:nowrap">CHF ${fmtCHF2(_decompteLignes.reduce((s,l)=>s+l.montant,0))}</td>
         </tr></tfoot>
       </table>
       </div>

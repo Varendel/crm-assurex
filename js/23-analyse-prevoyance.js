@@ -679,10 +679,10 @@ function apRapportCorps(A) {
         <tr><td style="color:#56627A;padding:2px 0">Besoin de prévoyance</td><td style="text-align:right">CHF ${chf(s.besoin)}</td></tr>
         ${s.items.map(x => `<tr><td style="padding:2px 0"><span style="display:inline-block;width:9px;height:9px;border-radius:2px;background:${AP_COULEURS[x.src]};margin-right:6px"></span>${x.label}</td><td style="text-align:right">CHF ${chf(x.montant)}</td></tr>`).join('')}
         <tr><td style="padding:3px 0;border-top:1px solid #E2E7EF"><b>Revenus dans cette situation</b></td><td style="text-align:right;border-top:1px solid #E2E7EF"><b>CHF ${chf(s.total)}</b></td></tr>
-        ${s.lacune ? `<tr><td style="padding:3px 0;color:#DC2626"><b>Lacune</b></td><td style="text-align:right;color:#DC2626"><b>CHF ${chf(s.lacune)}</b></td></tr>` : ''}
+        ${s.lacune ? `<tr><td style="padding:3px 0;color:var(--c-danger-texte)"><b>Lacune</b></td><td style="text-align:right;color:var(--c-danger-texte)"><b>CHF ${chf(s.lacune)}</b></td></tr>` : ''}
       </table>
       </div>
-      ${s.lacune && s.besoin ? `<div style="font-size:11px;color:#B91C1C;margin-top:6px">${apConseil(k, s).replace(/<[^>]+>/g, '')}</div>` : ''}
+      ${s.lacune && s.besoin ? `<div style="font-size:11px;color:var(--c-danger-texte);margin-top:6px">${apConseil(k, s).replace(/<[^>]+>/g, '')}</div>` : ''}
       ${s.serie && s.serie.length > 1 ? `<div style="margin-top:10px"><div style="font-size:11.5px;font-weight:bold;color:#113679;margin-bottom:2px">Évolution dans le temps</div>${apSvgTemps(s.serie, s.serieLibelle, true)}</div>` : ''}
     </div>`;
   };

@@ -229,7 +229,7 @@ function viewDashboard() {
   const totalNotifsEquipe = notifsOpp.length + notifsTaches.length;
   const blocNotifsEquipe = totalNotifsEquipe > 0 ? `
     <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);border-radius:14px;padding:18px 22px;margin-bottom:20px">
-      <div style="font-size:13px;font-weight:800;color:#f59e0b;margin-bottom:10px">${PICTO_CREE_EQUIPE} ${totalNotifsEquipe} élément${totalNotifsEquipe > 1 ? 's' : ''} créé${totalNotifsEquipe > 1 ? 's' : ''} par l'équipe pour toi</div>
+      <div style="font-size:13px;font-weight:800;color:var(--c-alerte-texte);margin-bottom:10px">${PICTO_CREE_EQUIPE} ${totalNotifsEquipe} élément${totalNotifsEquipe > 1 ? 's' : ''} créé${totalNotifsEquipe > 1 ? 's' : ''} par l'équipe pour toi</div>
       <div style="display:flex;flex-direction:column;gap:8px">
         ${notifsOpp.map(o => `<div style="display:flex;align-items:center;gap:10px;cursor:pointer;background:var(--surface);border-radius:9px;padding:9px 14px" onclick="editerOpportunite('${o.id}')">
           <span style="font-size:14px">🎯</span>
@@ -282,8 +282,8 @@ function viewDashboard() {
     ${contratsOrphelins.length > 0 ? `
     <div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.3);border-radius:14px;padding:18px 22px;margin-bottom:20px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-size:13px;font-weight:800;color:#f87171">⚠️ ${contratsOrphelins.length} contrat(s) sans aucune commission créée</div>
-        <button onclick="navigate('contrats-orphelins-commission')" style="background:rgba(248,113,113,0.15);border:1px solid rgba(248,113,113,0.4);color:#f87171;border-radius:7px;padding:6px 14px;font-size:11.5px;font-weight:700;cursor:pointer">Voir le détail →</button>
+        <div style="font-size:13px;font-weight:800;color:var(--c-danger-texte)">⚠️ ${contratsOrphelins.length} contrat(s) sans aucune commission créée</div>
+        <button onclick="navigate('contrats-orphelins-commission')" style="background:rgba(248,113,113,0.15);border:1px solid rgba(248,113,113,0.4);color:var(--c-danger-texte);border-radius:7px;padding:6px 14px;font-size:11.5px;font-weight:700;cursor:pointer">Voir le détail →</button>
       </div>
       <div style="font-size:11.5px;color:var(--text-muted)">Ces contrats sont commissionnables et actifs, mais aucune ligne de commission n'existe pour eux — souvent le signe d'un contrat ajouté directement en base de données. Clique sur "Voir le détail" pour les corriger un par un.</div>
     </div>` : ''}
@@ -304,10 +304,10 @@ function viewDashboard() {
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
         <div style="font-size:13px;font-weight:800;color:var(--text)">🎯 Opportunités en cours</div>
-        <div style="font-size:18px;font-weight:900;color:#f59e0b">CHF ${fmtCHF(Math.round(oppTotalPipeline))}</div>
+        <div style="font-size:18px;font-weight:900;color:var(--c-alerte-texte)">CHF ${fmtCHF(Math.round(oppTotalPipeline))}</div>
       </div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:${typeof nbOppsSansProchaineAction === 'function' && nbOppsSansProchaineAction() ? '8px' : '18px'}">${oppsOuvertes.length} opportunité(s) ouverte(s) · CHF ${fmtCHF(Math.round(oppTotalPondere))} pondéré par probabilité${oppsGagneesRecemment.length ? ` · ${oppsGagneesRecemment.length} gagnée(s)` : ''}</div>
-      ${typeof nbOppsSansProchaineAction === 'function' && nbOppsSansProchaineAction() ? `<button type="button" onclick="navigate('opportunites')" style="display:block;width:100%;text-align:left;margin-bottom:16px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.4);color:#f59e0b;border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">➜ ${nbOppsSansProchaineAction()} opportunité(s) sans prochaine action — les planifier</button>` : ''}
+      ${typeof nbOppsSansProchaineAction === 'function' && nbOppsSansProchaineAction() ? `<button type="button" onclick="navigate('opportunites')" style="display:block;width:100%;text-align:left;margin-bottom:16px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.4);color:var(--c-alerte-texte);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">➜ ${nbOppsSansProchaineAction()} opportunité(s) sans prochaine action — les planifier</button>` : ''}
       <div style="display:flex;gap:14px;margin-bottom:18px;flex-wrap:wrap">
         ${oppParStade.map(s => `<div style="flex:1;min-width:90px;text-align:center;background:var(--surface-alt);border-radius:10px;padding:10px 8px">
           <div style="width:8px;height:8px;border-radius:50%;background:${s.couleur};margin:0 auto 6px"></div>
@@ -321,7 +321,7 @@ function viewDashboard() {
         <div style="font-size:12.5px;color:var(--text)"><strong>${o.titre}</strong> — ${nomClientOpp(o)}</div>
         <div style="display:flex;align-items:center;gap:10px">
           <span style="font-size:11px;color:var(--text-muted)">${fmtDate(o.date_echeance)}</span>
-          <span style="font-size:12px;font-weight:800;color:#f59e0b">CHF ${fmtCHF(Number(o.montant_potentiel||0))}</span>
+          <span style="font-size:12px;font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF(Number(o.montant_potentiel||0))}</span>
         </div>
       </div>`).join('')}` : ''}
       <div style="margin-top:14px;text-align:right">
@@ -525,7 +525,7 @@ function renderProduction() {
       <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:14px">Production par agent</div>
       ${agentsTries.map(([nom,val]) => `
         <div style="margin-bottom:10px">
-          <div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--text)">${nom}</span><span style="color:#f59e0b;font-weight:700">CHF ${fmtCHF(Math.round(val))}</span></div>
+          <div style="display:flex;justify-content:space-between;font-size:12.5px"><span style="color:var(--text)">${nom}</span><span style="color:var(--c-alerte-texte);font-weight:700">CHF ${fmtCHF(Math.round(val))}</span></div>
           <div style="height:7px;border-radius:4px;background:var(--border);margin-top:4px;overflow:hidden"><div style="height:100%;width:${Math.round(val/maxAgent*100)}%;background:#38bdf8;border-radius:4px"></div></div>
         </div>`).join('')}
     </div>` : '';
@@ -535,7 +535,7 @@ function renderProduction() {
     <div style="font-size:13px;font-weight:700;color:var(--text)">${nomClient(ct)}</div>
     <div style="font-size:12px;color:var(--text-muted)">${ct.produit || ''} · ${ct.compagnie || ''}</div>
     <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ct.date_debut)}</div>
-    <div style="font-weight:800;color:#f59e0b;text-align:right">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}</div>
+    <div style="font-weight:800;color:var(--c-alerte-texte);text-align:right">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}</div>
     <div>${ct.commissionne === false ? badge('Non comm.', '#64748b') : badge('OK', '#4ade80')}</div>
   </div>`).join('');
 
@@ -598,7 +598,7 @@ function viewRapportFinma() {
             <td style="padding:9px 10px;font-weight:800;color:var(--accent)">${code}</td>
             <td style="padding:9px 10px;color:var(--text)">${v.label}</td>
             <td style="padding:9px 10px;text-align:center;color:var(--text-muted)">${v.nb}</td>
-            <td style="padding:9px 10px;text-align:right;font-weight:700;color:#f59e0b">${chf(v.prime)}</td>
+            <td style="padding:9px 10px;text-align:right;font-weight:700;color:var(--c-alerte-texte)">${chf(v.prime)}</td>
             <td style="padding:9px 10px;text-align:right;color:var(--text-muted)">${totalPrime > 0 ? Math.round(v.prime/totalPrime*100) : 0}%</td>
           </tr>`).join('') || '<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted)">Aucun contrat actif classé.</td></tr>'}
         </tbody>
@@ -735,7 +735,7 @@ function renderTopClientsCompagnie(compagnie, parCompagnieClients, clientsMap) {
       <tr style="border-bottom:1px solid var(--border);cursor:pointer" onclick="showClient('${l.clientId}')">
         <td style="padding:10px;color:var(--text-muted);font-weight:700">${i + 1}</td>
         <td style="padding:10px;color:var(--text);font-weight:600;text-decoration:underline dotted">${l.nom}</td>
-        <td style="padding:10px;text-align:right;font-weight:800;color:#f59e0b">CHF ${Math.round(l.val).toLocaleString('fr-CH')}</td>
+        <td style="padding:10px;text-align:right;font-weight:800;color:var(--c-alerte-texte)">CHF ${Math.round(l.val).toLocaleString('fr-CH')}</td>
         <td style="padding:10px;text-align:right;color:var(--text-muted)">${Math.round(l.val / totalCompagnie * 100)}%</td>
       </tr>`).join('')}
     </tbody>
@@ -899,8 +899,8 @@ function renderVolumePrimesCorps(contrats, clientsMap) {
     <!-- PRIVÉ vs ENTREPRISE -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
       <div style="background:var(--surface);border:2px solid rgba(74,222,128,0.3);border-radius:14px;padding:20px">
-        <div style="font-size:11px;font-weight:700;color:#4ade80;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">👤 Clients privés</div>
-        <div style="font-size:26px;font-weight:900;color:#4ade80">${chf(totalPrive)}</div>
+        <div style="font-size:11px;font-weight:700;color:var(--c-succes-texte);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">👤 Clients privés</div>
+        <div style="font-size:26px;font-weight:900;color:var(--c-succes-texte)">${chf(totalPrive)}</div>
         <div style="font-size:13px;color:var(--text-muted);margin-top:4px">${pct(totalPrive)}% du total</div>
         <div style="height:8px;border-radius:4px;background:var(--border);margin-top:12px;overflow:hidden">
           <div style="height:100%;width:${pct(totalPrive)}%;background:#4ade80;border-radius:4px"></div>
@@ -908,8 +908,8 @@ function renderVolumePrimesCorps(contrats, clientsMap) {
         ${detailHtml(parCategoriePrive, totalPrive, '#4ade80')}
       </div>
       <div style="background:var(--surface);border:2px solid rgba(245,158,11,0.3);border-radius:14px;padding:20px">
-        <div style="font-size:11px;font-weight:700;color:#f59e0b;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🏢 Entreprises</div>
-        <div style="font-size:26px;font-weight:900;color:#f59e0b">${chf(totalEntreprise)}</div>
+        <div style="font-size:11px;font-weight:700;color:var(--c-alerte-texte);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🏢 Entreprises</div>
+        <div style="font-size:26px;font-weight:900;color:var(--c-alerte-texte)">${chf(totalEntreprise)}</div>
         <div style="font-size:13px;color:var(--text-muted);margin-top:4px">${pct(totalEntreprise)}% du total</div>
         <div style="height:8px;border-radius:4px;background:var(--border);margin-top:12px;overflow:hidden">
           <div style="height:100%;width:${pct(totalEntreprise)}%;background:#f59e0b;border-radius:4px"></div>
@@ -945,7 +945,7 @@ function renderVolumePrimesCorps(contrats, clientsMap) {
           <tr data-produit="${prod}" onclick="rechercherContratsProduit(this.dataset.produit)" style="border-bottom:1px solid var(--border);cursor:pointer">
             <td style="padding:10px;color:var(--text-muted);font-weight:700">${i+1}</td>
             <td style="padding:10px;color:var(--text);font-weight:600;text-decoration:underline dotted">${prod}</td>
-            <td style="padding:10px;text-align:right;font-weight:800;color:#f59e0b">${chf(val)}</td>
+            <td style="padding:10px;text-align:right;font-weight:800;color:var(--c-alerte-texte)">${chf(val)}</td>
             <td style="padding:10px;text-align:right;color:var(--text-muted)">${pct(val)}%</td>
           </tr>`).join('')}
         </tbody>
@@ -982,7 +982,7 @@ function showDetailContrat(contratId) {
             <div style="font-size:12px;color:rgba(255,255,255,0.7);margin-top:4px">👤 <span style="cursor:pointer;text-decoration:underline dotted" onclick="document.getElementById('modal-detail-contrat').remove(); showClient('${ct.client_id}')">${nom}</span></div>
           </div>
           <div style="text-align:right">
-            <div style="font-size:20px;font-weight:900;color:#f59e0b">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}</div>
+            <div style="font-size:20px;font-weight:900;color:var(--c-alerte-texte)">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}</div>
             <div style="font-size:10px;color:rgba(255,255,255,0.5)">/an · CHF ${fmtCHF(primenMois)}/mois</div>
             <div style="margin-top:6px">${badge(ct.statut==='annulé'?'❌ Annulé':ct.statut==='mandat_resilie'?'🚫 Mandat résilié':ct.statut, ct.statut==='actif'?'#4ade80':ct.statut==='mandat_resilie'?'#f87171':ct.statut==='résilié'?'#94a3b8':ct.statut==='annulé'?'#f87171':'#f59e0b')}</div>
           </div>
@@ -1019,7 +1019,7 @@ function showDetailContrat(contratId) {
             <div style="font-size:13px;font-weight:700;color:var(--text)">${commission.detail_calcul ? commission.detail_calcul.split('[')[0].trim() : '—'}</div>
           </div>
           <div style="text-align:right">
-            <div style="font-size:16px;font-weight:900;color:#f59e0b">CHF ${fmtCHF(Number(commission.montant_estime||0))}</div>
+            <div style="font-size:16px;font-weight:900;color:var(--c-alerte-texte)">CHF ${fmtCHF(Number(commission.montant_estime||0))}</div>
             <div>${badge(statutCommissionLabel(commission.statut), statutCommissionColor(commission.statut))}</div>
           </div>
         </div>` : `<div style="background:var(--surface-alt);border-radius:10px;padding:10px 14px;font-size:12px;color:var(--text-muted)">${ct.commissionne === false ? '⚠️ Contrat non commissionné (hors convention)' : 'Aucune commission liée à ce contrat'}</div>`)}
@@ -1028,7 +1028,7 @@ function showDetailContrat(contratId) {
         <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface-alt);border-radius:10px">
           <span style="font-size:13px;font-weight:700;color:var(--text)">Police PDF</span>
           ${ct.police_url
-            ? `<button onclick="ouvrirPieceJointe('${ct.police_url}')" style="background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);color:#4ade80;border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;font-weight:700">📄 Ouvrir</button>`
+            ? `<button onclick="ouvrirPieceJointe('${ct.police_url}')" style="background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);color:var(--c-succes-texte);border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;font-weight:700">📄 Ouvrir</button>`
             : `<label style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;font-weight:700">📎 Joindre<input type="file" accept="application/pdf" onchange="uploadPolicePdf('${ct.id}', this); document.getElementById('modal-detail-contrat').remove();" style="display:none"/></label>`
           }
           <span style="font-size:11px;color:var(--text-muted)">${ct.police_nom || (ct.police_url ? '' : 'Aucune police jointe')}</span>
@@ -1094,9 +1094,9 @@ function renderContratsOrphelins() {
         <div style="font-size:11px;color:var(--text-muted)">${ct.produit||''}</div>
       </div>
       <div style="font-size:12px;color:var(--text-muted)">${typeof compagnieAvecPicto === 'function' ? compagnieAvecPicto(ct.compagnie) : (ct.compagnie||'')}</div>
-      <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}</div>
+      <div style="font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}</div>
       <div>${badge(ct.statut, ct.statut==='actif'?'#4ade80':'#f59e0b')}</div>
-      <div><button onclick="creerCommissionManquante('${ct.id}')" style="background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);color:#4ade80;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">+ Créer</button></div>
+      <div><button onclick="creerCommissionManquante('${ct.id}')" style="background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);color:var(--c-succes-texte);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">+ Créer</button></div>
     </div>`;
   }).join('');
 
@@ -1364,7 +1364,7 @@ function renderTousContrats() {
       </div>
       <div style="font-size:12px;color:var(--text-muted)">${ct.compagnie && typeof compagnieAvecPicto === 'function' ? compagnieAvecPicto(ct.compagnie) : (ct.compagnie||'—')}</div>
       <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ct.date_debut)}</div>
-      <div style="font-weight:800;color:#f59e0b;text-align:right">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}</div>
+      <div style="font-weight:800;color:var(--c-alerte-texte);text-align:right">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}</div>
       <div>${badge(ct.statut==='annulé'?'❌ Annulé':ct.statut==='mandat_resilie'?'🚫 Mandat résilié':ct.statut, ct.statut==='actif'?'#4ade80':ct.statut==='mandat_resilie'?'#f87171':ct.statut==='résilié'?'#94a3b8':ct.statut==='annulé'?'#f87171':'#f59e0b')}</div>
       <div>${natureTc === 'gestion' ? badge('Gestion', '#38bdf8') : natureTc === 'acquisition' ? badge('Acquisition', '#f59e0b') : '<span style="font-size:11px;color:var(--text-muted)">—</span>'}</div>
       <div style="font-size:11px;color:var(--text-muted)">${(() => {
@@ -1476,7 +1476,7 @@ function renderPortefeuilleTable(filtre) {
       <div><div style="font-size:11px;color:var(--text)">${c.email || ''}</div><div style="font-size:11px;color:var(--text-muted)">${c.mobile || ''}</div></div>
       <div>${badge(c.statut || '—', statutColor(c.statut))}</div>
       <div>${badge(c.segment || 'Privé', estEntreprise(c) ? '#f59e0b' : '#38bdf8')}</div>
-      <div style="font-size:12px;font-weight:700;color:#f59e0b">${ca ? 'CHF ' + ca.toLocaleString() : '—'}</div>
+      <div style="font-size:12px;font-weight:700;color:var(--c-alerte-texte)">${ca ? 'CHF ' + ca.toLocaleString() : '—'}</div>
       <div>${agent ? avatar(agent, 26) : ''}</div>
     </a>`;
   }).join('') || '<div class="table-empty">Aucun client ne correspond à ces filtres.</div>';
@@ -1569,7 +1569,7 @@ function carteCouverture(label, ok, detail, police) {
       <div style="flex:1;min-width:0">
         <div style="font-size:12.5px;font-weight:700;color:var(--text)">${label}</div>
         ${detail
-          ? `<div style="font-size:10px;color:#4ade80;font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px">${detail}</div>`
+          ? `<div style="font-size:10px;color:var(--c-succes-texte);font-weight:700;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;margin-top:2px">${detail}</div>`
           : `<div style="font-size:10px;color:var(--text-muted);margin-top:2px">Non couvert</div>`}
         ${ok && police ? `<div style="font-size:11px;font-weight:800;color:#fff;margin-top:2px">N° ${police}</div>` : ''}
       </div>
@@ -1830,15 +1830,15 @@ function viewSuiviFinancier() {
 
     ${enRetard.length > 0 ? `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
-      <div style="font-size:13px;font-weight:800;color:#f87171;margin-bottom:14px">🚨 Dossiers en retard de plus de ${SEUIL_RETARD} jours (${enRetard.length})</div>
+      <div style="font-size:13px;font-weight:800;color:var(--c-danger-texte);margin-bottom:14px">🚨 Dossiers en retard de plus de ${SEUIL_RETARD} jours (${enRetard.length})</div>
       <div class="table-wrap">
         <div class="table-header" style="grid-template-columns:1fr 130px 100px 90px 90px"><div>Client</div><div>Compagnie</div><div>Depuis le</div><div>Jours</div><div>Montant</div></div>
         ${enRetard.map(ca => `<div class="table-row" style="grid-template-columns:1fr 130px 100px 90px 90px">
           <div style="font-weight:700;font-size:13px;color:var(--text)">${ca.client_nom || '—'}</div>
           <div style="font-size:12px;color:var(--text-muted)">${ca.compagnie || '—'}</div>
           <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ca.date_creation)}</div>
-          <div style="font-size:12px;font-weight:700;color:#f87171">${joursEntre(ca.date_creation, todayStr)} j</div>
-          <div style="font-size:12px;font-weight:700;color:#f59e0b">CHF ${fmtCHF(Math.round(ca.montant_estime||0))}</div>
+          <div style="font-size:12px;font-weight:700;color:var(--c-danger-texte)">${joursEntre(ca.date_creation, todayStr)} j</div>
+          <div style="font-size:12px;font-weight:700;color:var(--c-alerte-texte)">CHF ${fmtCHF(Math.round(ca.montant_estime||0))}</div>
         </div>`).join('')}
       </div>
     </div>` : ''}

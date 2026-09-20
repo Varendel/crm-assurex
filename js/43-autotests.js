@@ -98,7 +98,7 @@ function ckLancerAutotests() {
   const r = rexAutotests();
   const zone = document.getElementById('ck-autotests');
   const txt = r.echecs.length
-    ? `<b style="color:#DC2626">✗ ${r.echecs.length} test(s) en échec sur ${r.total}</b><ul style="margin:6px 0 0 18px">${r.echecs.map(e => `<li>${e.nom} — ${String(e.detail).replace(/</g, '&lt;')}</li>`).join('')}</ul>`
-    : `<b style="color:#16A34A">✓ ${r.total} tests réussis</b> — dates prévues, fractionnement, HOTELA, compte courant OZ, taux appris, fourchette, ventes.`;
+    ? `<b style="color:var(--c-danger-texte)">✗ ${r.echecs.length} test(s) en échec sur ${r.total}</b><ul style="margin:6px 0 0 18px">${r.echecs.map(e => `<li>${e.nom} — ${String(e.detail).replace(/</g, '&lt;')}</li>`).join('')}</ul>`
+    : `<b style="color:var(--c-succes-texte)">✓ ${r.total} tests réussis</b> — dates prévues, fractionnement, HOTELA, compte courant OZ, taux appris, fourchette, ventes.`;
   if (zone) zone.innerHTML = txt; else showError(r.echecs.length ? `✗ ${r.echecs.length} test(s) en échec` : `✓ ${r.total} tests réussis`);
 }

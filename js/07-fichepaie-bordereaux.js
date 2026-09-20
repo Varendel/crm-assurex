@@ -102,7 +102,7 @@ function renderBordereauxList() {
           <div style="font-size:11px;color:var(--text-muted)">${b.mois}${b.date_reception ? ' · Reçu le ' + fmtDate(b.date_reception) : ''}${tauxCaution > 0 ? ' · Caution ' + tauxCaution + '%' : ''}</div>
         </div>
         <div style="text-align:right">
-          <div style="font-size:16px;font-weight:900;color:#f59e0b">CHF ${fmtCHF((b.montant_brut||0))}</div>
+          <div style="font-size:16px;font-weight:900;color:var(--c-alerte-texte)">CHF ${fmtCHF((b.montant_brut||0))}</div>
           <div style="font-size:10px;color:var(--text-muted)">Brut</div>
         </div>
         ${badge(b.statut, b.statut === 'reçu' ? '#4ade80' : '#f59e0b')}
@@ -123,7 +123,7 @@ function renderBordereauxList() {
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.25);border-radius:9px;padding:12px 16px">
           <div>
             <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px">Montant net total versé (rapproché)</div>
-            <div style="font-size:20px;font-weight:900;color:#4ade80">CHF ${fmtCHF((pJ+pA))}</div>
+            <div style="font-size:20px;font-weight:900;color:var(--c-succes-texte)">CHF ${fmtCHF((pJ+pA))}</div>
           </div>
           <button onclick="event.stopPropagation(); toggleBordereauVerse('${b.id}')" style="background:${b.statut==='reçu' ? 'rgba(74,222,128,0.15)' : 'var(--accent-dim)'};border:1px solid ${b.statut==='reçu' ? 'rgba(74,222,128,0.4)' : 'var(--accent-border)'};color:${b.statut==='reçu' ? '#4ade80' : 'var(--accent)'};border-radius:8px;padding:9px 18px;font-weight:800;font-size:12.5px;cursor:pointer;white-space:nowrap">${b.statut==='reçu' ? '↺ Remettre en attendu' : '✓ Marquer comme versé'}</button>
         </div>
@@ -135,7 +135,7 @@ function renderBordereauxList() {
           </div>
           <div style="flex:1;background:var(--gold-dim);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:10px 14px">
             <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">${apporteurUnique ? 'Part ' + apporteurUnique.prenom : (agentsDistincts.size > 1 ? 'Part apporteurs (mixte)' : 'Part apporteurs')}</div>
-            <div style="font-size:16px;font-weight:900;color:#f59e0b">CHF ${fmtCHF(pA)}</div>
+            <div style="font-size:16px;font-weight:900;color:var(--c-alerte-texte)">CHF ${fmtCHF(pA)}</div>
           </div>
         </div>
 
@@ -157,7 +157,7 @@ function renderBordereauxList() {
             <div style="text-align:right">
               <div style="font-size:12px;color:#38bdf8;font-weight:700">${sig ? sig.prenom : 'Jonathan'}: CHF ${fmtCHF(s.pJ)}</div>
               ${s.agent
-                ? `<div style="font-size:12px;color:#f59e0b;font-weight:700">${s.agent.prenom}: CHF ${fmtCHF(s.pA)}</div>`
+                ? `<div style="font-size:12px;color:var(--c-alerte-texte);font-weight:700">${s.agent.prenom}: CHF ${fmtCHF(s.pA)}</div>`
                 : (c.contrat_id
                     ? `<div onclick="event.stopPropagation(); showEditContrat('${c.contrat_id}', 'bordereaux')" style="font-size:11px;color:var(--accent);font-weight:700;cursor:pointer;text-decoration:underline dotted">🖊️ Cliquer pour renseigner l'apporteur</div>`
                     : `<div style="font-size:10.5px;color:var(--text-dim)">Aucun contrat lié</div>`)
@@ -298,7 +298,7 @@ function showModalEditBordereau(bordereauId) {
         </label>
       </div>
       <div style="display:flex;gap:10px;margin-top:20px">
-        <button onclick="deleteBordereau('${bordereauId}')" style="background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>
+        <button onclick="deleteBordereau('${bordereauId}')" style="background:rgba(248,113,113,0.12);color:var(--c-danger-texte);border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>
         <button class="btn-secondary" onclick="document.getElementById('modal-edit-bordereau').remove()">Annuler</button>
         <button class="btn-save" onclick="saveEditBordereau('${bordereauId}')">✓ Enregistrer</button>
       </div>
@@ -380,7 +380,7 @@ function showModalValidationCommission(bordereauId) {
               <option value="">— Sélectionner —</option>
               ${enAttente.map(c => { const deja = typeof commissionDejaRecu === 'function' ? commissionDejaRecu(c) : 0; const reste = Math.max(0, Number(c.montant_estime || 0) - deja); return `<option value="${c.id}" data-montant="${reste.toFixed(2)}" data-total="${Number(c.montant_estime || 0)}" data-deja="${deja}" data-client="${c.client_nom}">${c.nature === 'gestion' ? '🔄' : '🆕'} ${c.client_nom} — ${c.produit} (CHF ${fmtCHF((c.montant_estime||0))}${deja > 0 ? ` · déjà reçu ${fmtCHF(deja)} · reste ${fmtCHF(reste)}` : ''})</option>`; }).join('')}
             </select>
-            ${enAttente.length === 0 ? `<div style="font-size:11px;color:#f59e0b;margin-top:6px">Aucune commission en attente pour ${b.compagnie}.</div>` : ''}
+            ${enAttente.length === 0 ? `<div style="font-size:11px;color:var(--c-alerte-texte);margin-top:6px">Aucune commission en attente pour ${b.compagnie}.</div>` : ''}
           </div>
 
           <div class="form-field" style="grid-column:span 2">
@@ -657,7 +657,7 @@ function renderImportBordereauSelection() {
           </tr>`).join('')}</tbody>
         <tfoot><tr style="border-top:2px solid var(--border)">
           <td colspan="4" style="padding:8px;text-align:right;font-weight:700;color:var(--text)">Total sélectionné</td>
-          <td id="ib-total-cell" style="padding:8px;text-align:right;font-weight:800;color:#4ade80;white-space:nowrap">CHF ${fmtCHF(Math.round(totalSelectionne))}</td>
+          <td id="ib-total-cell" style="padding:8px;text-align:right;font-weight:800;color:var(--c-succes-texte);white-space:nowrap">CHF ${fmtCHF(Math.round(totalSelectionne))}</td>
         </tr></tfoot>
       </table>
       </div>
@@ -731,14 +731,14 @@ function apercuImportBordereau() {
       <div style="display:flex;gap:10px;margin-bottom:16px">
         <div style="flex:1;background:var(--surface-alt);border-radius:8px;padding:10px 14px">
           <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Montant brut du bordereau</div>
-          <div style="font-size:16px;font-weight:900;color:#f59e0b">CHF ${fmtCHF(montantBrut)}</div>
+          <div style="font-size:16px;font-weight:900;color:var(--c-alerte-texte)">CHF ${fmtCHF(montantBrut)}</div>
         </div>
         <div style="flex:1;background:var(--surface-alt);border-radius:8px;padding:10px 14px">
           <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Total des ${lignesCochees.length} commission(s) cochée(s)</div>
           <div style="font-size:16px;font-weight:900;color:var(--text)">CHF ${fmtCHF(Math.round(totalLignes))}</div>
         </div>
       </div>
-      ${Math.abs(ecart) > 1 ? `<div style="font-size:11.5px;margin-bottom:14px;padding:8px 12px;border-radius:8px;background:var(--surface-alt);color:#f87171">⚠️ Écart de CHF ${fmtCHF(ecart)} entre le montant brut saisi et le total des commissions cochées — vérifie avant de confirmer.</div>` : ''}
+      ${Math.abs(ecart) > 1 ? `<div style="font-size:11.5px;margin-bottom:14px;padding:8px 12px;border-radius:8px;background:var(--surface-alt);color:var(--c-danger-texte)">⚠️ Écart de CHF ${fmtCHF(ecart)} entre le montant brut saisi et le total des commissions cochées — vérifie avant de confirmer.</div>` : ''}
       <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Commissions qui seront rapprochées à ce bordereau</div>
       ${lignesCochees.map((l, i) => `<div style="display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:${i < lignesCochees.length - 1 ? '1px solid var(--border)' : 'none'}">
         <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--text)">${l.client_nom || '—'}</div><div style="font-size:11px;color:var(--text-muted)">${l.produit || ''}</div></div>
@@ -872,7 +872,7 @@ function viewCommissions() {
       <div>${bd ? `<button type="button" onclick="${bd.pdf_url ? `ouvrirPieceJointe('${bd.pdf_url}')` : "navigate('bordereaux')"}" title="${bd.pdf_url ? 'Voir le bordereau uploadé' : 'Aucun fichier joint — ouvrir les bordereaux'} (${(bd.mois || '').replace(/"/g, '')})" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:999px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis">${bd.pdf_url ? '📎' : '🧾'} ${bd.numero || bd.mois || 'Bordereau'}</button>` : '<span style="font-size:11px;color:var(--text-dim)">sans bordereau</span>'}</div>
       <div style="font-weight:800;color:var(--text)">CHF ${fmtCHF(m)}</div>
       <div style="font-weight:800;color:#38bdf8">CHF ${fmtCHF(s.pJ)}</div>
-      <div>${s.pA > 0 ? `<div style="display:flex;align-items:center;gap:6px">${s.agent ? avatar(s.agent, 18) : ''}<span style="font-weight:700;color:#f59e0b">CHF ${fmtCHF(s.pA)}</span></div>` : '<span style="color:var(--text-dim)">—</span>'}</div>
+      <div>${s.pA > 0 ? `<div style="display:flex;align-items:center;gap:6px">${s.agent ? avatar(s.agent, 18) : ''}<span style="font-weight:700;color:var(--c-alerte-texte)">CHF ${fmtCHF(s.pA)}</span></div>` : '<span style="color:var(--text-dim)">—</span>'}</div>
     </div>`;
   }).join('');
 
@@ -888,7 +888,7 @@ function viewCommissions() {
     </div>
 
     <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">🔁 Commissions de gestion (récurrentes)</div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Suivi de ce qui a été reçu — total : <strong style="color:#4ade80">CHF ${fmtCHF(totalGestion)}</strong> sur ${gestion.length} mouvement(s)</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Suivi de ce qui a été reçu — total : <strong style="color:var(--c-succes-texte)">CHF ${fmtCHF(totalGestion)}</strong> sur ${gestion.length} mouvement(s)</div>
     <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:24px">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px">
         <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:14px">Évolution par période</div>
@@ -906,7 +906,7 @@ function viewCommissions() {
         <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:14px">Par compagnie</div>
         ${compGestion.map(([comp,val]) => `
           <div style="margin-bottom:10px">
-            <div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--text)">${comp}</span><span style="color:#4ade80;font-weight:700">CHF ${fmtCHF(Math.round(val))}</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--text)">${comp}</span><span style="color:var(--c-succes-texte);font-weight:700">CHF ${fmtCHF(Math.round(val))}</span></div>
             <div style="height:6px;border-radius:3px;background:var(--border);margin-top:4px;overflow:hidden"><div style="height:100%;width:${compGestion.length?Math.round(val/compGestion[0][1]*100):0}%;background:#4ade80;border-radius:3px"></div></div>
           </div>`).join('') || '<div class="table-empty">—</div>'}
       </div>
@@ -996,14 +996,14 @@ function genererFicheCommission() {
             <td style="padding:7px 10px;color:var(--text-muted)">${d.produit || ''}</td>
             <td style="padding:7px 10px;text-align:right;color:var(--text)">CHF ${fmtCHF(d.montant)}</td>
             <td style="padding:7px 10px;text-align:right;color:var(--text-muted)">${d.tauxAgent}%</td>
-            <td style="padding:7px 10px;text-align:right;font-weight:700;color:#f59e0b">CHF ${fmtCHF(d.part)}</td>
+            <td style="padding:7px 10px;text-align:right;font-weight:700;color:var(--c-alerte-texte)">CHF ${fmtCHF(d.part)}</td>
           </tr>`).join('') || `<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted)">Aucune commission rapprochée pour cet agent sur cette période.</td></tr>`}
         </tbody>
       </table>
 
       <div style="display:flex;justify-content:flex-end;gap:30px;border-top:1px solid var(--border);padding-top:14px">
         <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Total brut</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${fmtCHF(totalBrut)}</div></div>
-        <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Total dû à ${agent.prenom}</div><div style="font-size:20px;font-weight:900;color:#f59e0b">CHF ${fmtCHF(totalPart)}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Total dû à ${agent.prenom}</div><div style="font-size:20px;font-weight:900;color:var(--c-alerte-texte)">CHF ${fmtCHF(totalPart)}</div></div>
       </div>
     </div>`;
 }
@@ -1357,7 +1357,7 @@ function formEntreprise() {
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
       ${['RC/Commerce','Inventaire','Protection juridique','Perte exploitation','Machines','Vol','All Risk','Transports','Cyber','Construction/MO'].map(l => `
       <label style="display:flex;align-items:center;gap:8px;background:var(--surface-alt);border-radius:8px;padding:10px 12px;cursor:pointer">
-        <input type="checkbox" id="e-rcc-${l.replace(/\s/g,'-').toLowerCase()}" style="width:14px;height:14px;accent-color:#f87171"/>
+        <input type="checkbox" id="e-rcc-${l.replace(/\s/g,'-').toLowerCase()}" style="width:14px;height:14px;accent-color:var(--c-danger-texte)"/>
         <span style="font-size:12px;color:var(--text);font-weight:600">${l}</span>
       </label>`).join('')}
     </div>
@@ -1752,8 +1752,8 @@ async function rechercherEmailsOpportunite(oppId) {
     const requete = encodeURIComponent('"' + nomRecherche.replace(/"/g, '') + '"');
     const url = `https://graph.microsoft.com/v1.0/me/messages?$search=${requete}&$top=25&$select=subject,from,toRecipients,receivedDateTime,sentDateTime,webLink`;
     const r = await fetch(url, { headers: { Authorization: `Bearer ${msalAccessToken}`, ConsistencyLevel: 'eventual' } });
-    if (r.status === 401) { zone.innerHTML = '<div style="font-size:12px;color:#f87171">Session Outlook expirée — reconnecte-toi (bouton Microsoft dans le menu) puis réessaie.</div>'; return; }
-    if (!r.ok) { zone.innerHTML = '<div style="font-size:12px;color:#f87171">Erreur lors de la recherche Outlook.</div>'; return; }
+    if (r.status === 401) { zone.innerHTML = '<div style="font-size:12px;color:var(--c-danger-texte)">Session Outlook expirée — reconnecte-toi (bouton Microsoft dans le menu) puis réessaie.</div>'; return; }
+    if (!r.ok) { zone.innerHTML = '<div style="font-size:12px;color:var(--c-danger-texte)">Erreur lors de la recherche Outlook.</div>'; return; }
     const data = await r.json();
     const messages = (data.value || []).slice().sort((a, b) => new Date(b.sentDateTime || b.receivedDateTime || 0) - new Date(a.sentDateTime || a.receivedDateTime || 0));
     if (!messages.length) { zone.innerHTML = `<div style="font-size:12px;color:var(--text-muted)">Aucun email trouvé mentionnant « ${nomRecherche.replace(/</g, '&lt;')} ».</div>`; return; }
@@ -1768,7 +1768,7 @@ async function rechercherEmailsOpportunite(oppId) {
       </a>`;
     }).join('')}</div>`;
   } catch (e) {
-    zone.innerHTML = `<div style="font-size:12px;color:#f87171">Erreur : ${e.message}</div>`;
+    zone.innerHTML = `<div style="font-size:12px;color:var(--c-danger-texte)">Erreur : ${e.message}</div>`;
   }
 }
 
@@ -2090,7 +2090,7 @@ function ouvrirApercuEmailDemandeOffre({ demandeOffreId, cies, emails, sansEmail
       <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">✉️ Aperçu — demande d'offre</div>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:12px">Ce courriel n'est PAS envoyé automatiquement — relis-le, corrige-le si besoin, puis choisis comment le transmettre.</div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px"><strong>Destinataires :</strong> ${emails.length ? emails.join(', ') : '— aucun email connu'}</div>
-      ${sansEmail.length ? `<div style="font-size:11px;color:#f59e0b;margin-bottom:10px">⚠ Pas d'email enregistré pour : ${sansEmail.join(', ')}</div>` : ''}
+      ${sansEmail.length ? `<div style="font-size:11px;color:var(--c-alerte-texte);margin-bottom:10px">⚠ Pas d'email enregistré pour : ${sansEmail.join(', ')}</div>` : ''}
       <div class="form-field" style="margin-bottom:8px"><label class="form-label">Objet</label><input class="form-input" id="apercu-email-sujet" value="${qa(sujet)}"/></div>
       <div class="form-field" style="flex:1;display:flex;flex-direction:column;margin-bottom:14px"><label class="form-label">Corps</label><textarea class="form-input" id="apercu-email-corps" style="flex:1;min-height:260px;font-family:inherit;resize:vertical">${corps}</textarea></div>
       <div style="display:flex;gap:8px;flex-wrap:wrap">
@@ -2347,7 +2347,7 @@ function ouvrirCreationClientDepuisOpportunite() {
           <div class="form-field" style="grid-column:span 2"><label class="form-label">Lieu du risque (si différent de l'adresse)</label><input class="form-input" id="occ-e-risque" placeholder="Laisser vide si identique à l'adresse"/></div>
         </div>
       </div>
-      <div id="occ-erreur" style="display:none;color:#f87171;font-size:11.5px;margin-top:10px"></div>
+      <div id="occ-erreur" style="display:none;color:var(--c-danger-texte);font-size:11.5px;margin-top:10px"></div>
       <div style="display:flex;gap:10px;margin-top:16px">
         <button class="btn-secondary" onclick="document.getElementById('modal-creation-client-opp').remove()">Annuler</button>
         <button class="btn-save" onclick="creerClientDepuisOpportunite()" style="margin-left:auto">✓ Créer et lier à l'opportunité</button>
@@ -2581,7 +2581,7 @@ function viewNouvelleOpportunite() {
       <button type="button" onclick="saveOpportunite('${opp ? opp.id : ''}')" title="Enregistrer l’opportunité" aria-label="Enregistrer l’opportunité" style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:var(--on-accent);border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer">💾 Enregistrer</button>
     </div>
     ${blocStadeRapide}
-    ${(opp && opp.stade === 'Perdu' && opp.motif_perte) ? `<div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.3);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--text)"><strong style="color:#f87171">✕ Motif de la perte :</strong> ${opp.motif_perte}</div>` : ''}
+    ${(opp && opp.stade === 'Perdu' && opp.motif_perte) ? `<div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.3);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--text)"><strong style="color:var(--c-danger-texte)">✕ Motif de la perte :</strong> ${opp.motif_perte}</div>` : ''}
     ${opp ? `<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
       <div style="flex:1;min-width:280px">${blocEtatEmails}</div>
       <div style="flex:1;min-width:280px">${blocHistorique}</div>
@@ -2590,7 +2590,7 @@ function viewNouvelleOpportunite() {
     ${blocContrat}
     <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;align-items:center">
       ${opp ? `<span id="opp-demande-offre-liee" style="display:flex;gap:10px;flex-wrap:wrap"></span>` : ''}
-      ${opp && !rh ? `<button onclick="supprimerOpportunite('${opp.id}')" style="background:rgba(248,113,113,0.12);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>` : ''}
+      ${opp && !rh ? `<button onclick="supprimerOpportunite('${opp.id}')" style="background:rgba(248,113,113,0.12);color:var(--c-danger-texte);border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>` : ''}
       <button class="btn-secondary" onclick="opportuniteEnEditionId=null;navigate('opportunites')">Annuler</button>
       <button class="btn-save" onclick="saveOpportunite('${opp ? opp.id : ''}')">✓ ${opp ? 'Enregistrer les modifications' : 'Enregistrer'}</button>
     </div>`;
@@ -2656,7 +2656,7 @@ function renderTachesOpportunite(opp) {
       <span style="flex:1;font-size:13px;color:${t.statut === 'traité' ? 'var(--text-muted)' : 'var(--text)'};${t.statut === 'traité' ? 'text-decoration:line-through' : ''}">${t.titre}</span>
       ${t.type ? badge(t.type, '#64748b') : ''}
       ${t.date_echeance ? `<span style="font-size:11px;color:var(--text-muted);white-space:nowrap">Échéance : ${fmtDate(t.date_echeance)}</span>` : ''}
-      ${(!t.outlook_event_id && t.date_echeance) ? `<button onclick="synchroniserRappelOutlook('${t.id}')" title="Absent de l'agenda Outlook — cliquer pour synchroniser" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:#f59e0b;border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;flex-shrink:0">📅</button>` : ''}
+      ${(!t.outlook_event_id && t.date_echeance) ? `<button onclick="synchroniserRappelOutlook('${t.id}')" title="Absent de l'agenda Outlook — cliquer pour synchroniser" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:var(--c-alerte-texte);border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;flex-shrink:0">📅</button>` : ''}
       <button onclick="supprimerTacheOpportunite('${t.id}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px">✕</button>
     </div>`).join('') : '<div style="font-size:12.5px;color:var(--text-muted);padding:6px 0">Aucune tâche pour l\u2019instant.</div>';
   // Sélecteur de Type à l'ajout — demande de Jonathan le 10.08.2026 : les catégories
@@ -2782,7 +2782,7 @@ function recalculerCommissionEstimeeOpportunite() {
   const noteDuree = uneLigneUtiliseDureeVie
     ? (dureeEstimee
         ? `<div style="margin-top:4px;font-size:10.5px;color:var(--text-muted)">Durée vie 3a/3B estimée jusqu'à 65 ans (${dureeVie} an${dureeVie>1?'s':''}) depuis la date de naissance du client.</div>`
-        : `<div style="margin-top:4px;font-size:10.5px;color:#f59e0b">⚠️ Date de naissance du client inconnue — durée vie 3a/3B estimée à 1 an seulement (probablement sous-évalué).</div>`)
+        : `<div style="margin-top:4px;font-size:10.5px;color:var(--c-alerte-texte)">⚠️ Date de naissance du client inconnue — durée vie 3a/3B estimée à 1 an seulement (probablement sous-évalué).</div>`)
     : '';
   zone.innerHTML = `💰 <strong style="color:var(--text);font-size:14px">CHF ${fmtCHF(totalCommission)}</strong> de commission estimée <span style="color:var(--text-muted)">(prime totale CHF ${fmtCHF(primeTotale)})</span>
     <div style="margin-top:5px;font-size:11px;color:var(--text-muted)">${details.join(' · ')}</div>${noteDuree}`;

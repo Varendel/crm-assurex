@@ -110,7 +110,7 @@ function htmlObjectifs() {
     return `<div class="obj-ligne">
       <div class="obj-tete"><b>${label}</b><span>${fmt(valeur)}${cible ? ` <small>/ ${fmt(cible)}</small>` : ''}</span></div>
       <div class="obj-piste">${cible ? `<i style="width:${pct}%;background:${enAvance ? '#22C55E' : '#F59E0B'}"></i><em style="left:${Math.round(prorata * 100)}%" title="Où on devrait être aujourd’hui"></em>` : '<i style="width:0"></i>'}</div>
-      <div class="obj-pied">${cible ? `${pct} % · ${enAvance ? `<span style="color:#16A34A">en avance</span>` : `<span style="color:#D97706">retard de ${fmt(attendu - valeur)} sur le rythme</span>`}${sous ? ' · ' + sous : ''}` : `<button type="button" class="dbx-lien" onclick="window._obj.edition=true;ckRerendre()">fixer un objectif</button>${sous ? ' · ' + sous : ''}`}</div>
+      <div class="obj-pied">${cible ? `${pct} % · ${enAvance ? `<span style="color:var(--c-succes-texte)">en avance</span>` : `<span style="color:#D97706">retard de ${fmt(attendu - valeur)} sur le rythme</span>`}${sous ? ' · ' + sous : ''}` : `<button type="button" class="dbx-lien" onclick="window._obj.edition=true;ckRerendre()">fixer un objectif</button>${sous ? ' · ' + sous : ''}`}</div>
     </div>`;
   };
   const chf = v => 'CHF ' + fmtCHF(Math.round(v || 0));
@@ -152,7 +152,7 @@ function htmlObjectifs() {
           <div><span>− Socle récurrent${ozCompte ? ' (Assurex + OZ)' : ' Assurex / EX'}</span><b>${chf(recurrent)}</b></div>
           <div><span>− Ventes déjà signées</span><b>${chf(V.acquisition)}</b></div>
           <div class="total"><span>Reste à vendre</span><b>${chf(resteVentes)}</b></div>
-          ${resteVentes > 0 ? `<p>Soit environ <b>${chf(resteVentes / moisRestants)}</b> par mois${V.panier ? ` — ≈ <b>${Math.ceil(resteVentes / V.panier)}</b> affaires au panier moyen actuel (${chf(V.panier)})` : ''}.</p>` : '<p style="color:#16A34A;font-weight:700">✓ Objectif couvert par le socle et les ventes signées.</p>'}
+          ${resteVentes > 0 ? `<p>Soit environ <b>${chf(resteVentes / moisRestants)}</b> par mois${V.panier ? ` — ≈ <b>${Math.ceil(resteVentes / V.panier)}</b> affaires au panier moyen actuel (${chf(V.panier)})` : ''}.</p>` : '<p style="color:var(--c-succes-texte);font-weight:700">✓ Objectif couvert par le socle et les ventes signées.</p>'}
           ${!ozCompte && R.oz ? `<p style="color:var(--text-muted)">En ${an + 1}, la récurrence OZ (${chf(R.oz)}) s’ajoutera au socle Assurex.</p>` : ''}
         </div>` : '<div class="dbx-vide-petit">Fixe un objectif de revenu pour voir ce qu’il reste à vendre.</div>'}
         <div class="obj-cies"><b>Récurrence sourcée OZ par compagnie</b>${Object.entries(R.parCieOZ).sort((x, y) => y[1] - x[1]).map(([k, v]) => `<div><span>${typeof pictoCompagnie === 'function' ? pictoCompagnie(k, 20) : ''} ${objEsc(k)}</span><b>${chf(v)}</b></div>`).join('') || '<div>—</div>'}</div>

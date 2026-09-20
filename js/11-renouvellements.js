@@ -213,7 +213,7 @@ function rnLigne({ ct, limite, horizon, revue }, cols) {
     </div>
     <div style="font-size:12px;color:var(--text-muted)">${fmtDate(rnEcheance(ct))}</div>
     <div style="font-size:12px;color:var(--text)">${limiteTxt}</div>
-    <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF(Number(ct.prime_annuelle || 0))}</div>
+    <div style="font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF(Number(ct.prime_annuelle || 0))}</div>
     <div>
       <select class="form-select" aria-label="Suivi du renouvellement" style="padding:6px 8px;font-size:12px" onchange="rnChangerStatut('${ct.id}', this.value)">
         ${RN_STATUTS.map(s => `<option value="${s.v}" ${s.v === revue ? 'selected' : ''}>${s.label}</option>`).join('')}
@@ -459,7 +459,7 @@ function renderRelancesLamal() {
           ${x.contrats.length > 1 ? `<div style="font-size:11px;color:var(--text-muted)">${x.contrats.length} contrats LAMal</div>` : ''}</div>
         <div><div style="font-size:12.5px;color:var(--text)">${rnEsc(caisses || '—')}</div>
           <div style="font-size:11px;color:var(--text-muted)">${rnEsc(rlEmailClient(c) || (c.email ? 'e-mail non utilisable (' + c.email + ')' : 'pas d\u2019e-mail'))} · ${rnEsc(c.mobile || c.tel || 'pas de mobile')}</div></div>
-        <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF(Math.round(x.prime))}</div>
+        <div style="font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF(Math.round(x.prime))}</div>
         <div>${badge(statutInfo.label, statutInfo.couleur)}${x.rdv ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px">📅 ${fmtDate(x.rdv.date_heure)}</div>` : ''}</div>
         <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
           ${rlEmailClient(c) ? `<button type="button" onclick="rlEnvoyerEmail('${c.id}', this)" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">✉️ E-mail</button>` : ''}

@@ -220,8 +220,8 @@ function renderSources() {
       <div style="font-size:13px;color:var(--text)">${l.ind.clients}</div>
       <div style="font-size:12.5px;color:var(--text-muted)">${l.ind.clientsAvecContrat} (${l.ind.clients ? Math.round(l.ind.clientsAvecContrat / l.ind.clients * 100) : 0} %)</div>
       <div style="font-size:12.5px;color:var(--text-muted)">${l.ind.contrats}</div>
-      <div style="font-weight:700;color:#f59e0b">CHF ${fmtCHF(Math.round(l.ind.primes))}</div>
-      <div style="font-weight:800;color:#4ade80">CHF ${fmtCHF(Math.round(l.ind.commissions))}</div>
+      <div style="font-weight:700;color:var(--c-alerte-texte)">CHF ${fmtCHF(Math.round(l.ind.primes))}</div>
+      <div style="font-weight:800;color:var(--c-succes-texte)">CHF ${fmtCHF(Math.round(l.ind.commissions))}</div>
       <div style="font-size:12.5px;color:var(--text-muted)">${l.ind.oppsOuvertes}</div>
       <div style="font-size:12.5px;color:var(--text-muted)">${l.ind.tauxGain === null ? '—' : l.ind.tauxGain + ' %'}</div>
     </div>`).join('')}
@@ -244,18 +244,18 @@ function renderSources() {
       ${apporteurs.map(a => `<div class="table-row" style="grid-template-columns:${colsA}">
         <div style="font-size:13px;color:var(--text)"><b>${srcEsc(a.nom)}</b><div style="font-size:11.5px;color:var(--text-muted);margin-top:2px">${a.cl.map(c => `<a href="?client=${c.id}" onclick="return irVersClient(event, '${c.id}')" style="color:inherit">${srcEsc(srcNomClient(c))}</a>`).join(', ')}</div></div>
         <div title="${a.directs} apporté(s) directement, ${a.cl.length - a.directs} par la famille ou une recommandation">${a.ind.clients}</div><div>${a.ind.contrats}</div>
-        <div style="color:#f59e0b;font-weight:700">CHF ${fmtCHF(Math.round(a.ind.primes))}</div><div style="color:#4ade80;font-weight:800">CHF ${fmtCHF(Math.round(a.ind.commissions))}</div></div>`).join('')}
+        <div style="color:var(--c-alerte-texte);font-weight:700">CHF ${fmtCHF(Math.round(a.ind.primes))}</div><div style="color:var(--c-succes-texte);font-weight:800">CHF ${fmtCHF(Math.round(a.ind.commissions))}</div></div>`).join('')}
     </div>` : '';
   const blocRecommandeurs = recommandeurs.length ? `<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px">⭐ Clients qui recommandent</div>
     <div class="table-wrap" style="margin-bottom:24px">
       ${recommandeurs.map(x => `<div class="table-row" style="grid-template-columns:1.6fr 2fr 130px">
         <a href="?client=${x.ref.id}" onclick="return irVersClient(event, '${x.ref.id}')" style="font-weight:700;font-size:13px;color:var(--text);text-decoration:none">${srcEsc(srcNomClient(x.ref))}</a>
         <div style="font-size:12px;color:var(--text-muted)">${x.cl.map(c => srcEsc(srcNomClient(c))).join(', ')}</div>
-        <div style="color:#4ade80;font-weight:800">CHF ${fmtCHF(Math.round(x.ind.commissions))}</div></div>`).join('')}
+        <div style="color:var(--c-succes-texte);font-weight:800">CHF ${fmtCHF(Math.round(x.ind.commissions))}</div></div>`).join('')}
     </div>` : '';
 
   // Clients sans source : attribution rapide
-  const blocSans = sansSource.length ? `<div style="font-size:13px;font-weight:800;color:#f59e0b;margin-bottom:4px">Clients sans source (${sansSource.length})</div>
+  const blocSans = sansSource.length ? `<div style="font-size:13px;font-weight:800;color:var(--c-alerte-texte);margin-bottom:4px">Clients sans source (${sansSource.length})</div>
     <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:10px">Choisis la source directement dans la liste — pour une recommandation, le CRM te demande le nom du client qui a recommandé.</div>
     <div class="table-wrap">
       ${sansSource.sort((a, b) => srcNomClient(a).localeCompare(srcNomClient(b))).map(c => `<div class="table-row" style="grid-template-columns:1.4fr 1fr 260px;align-items:center">

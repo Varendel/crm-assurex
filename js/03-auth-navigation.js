@@ -930,7 +930,7 @@ function renderSidebar() {
     const color = agentColor(a);
     const initials = (a.prenom[0] + a.nom[0]).toUpperCase();
     team += `<div class="team-member ${isMe ? 'me' : ''}">
-      <div class="avatar" style="width:24px;height:24px;font-size:8px;background:${color}18;border:1.5px solid ${color}44;color:${color}">${initials}</div>
+      <div class="avatar" style="width:24px;height:24px;font-size:8px;background:color-mix(in srgb, ${color} 9%, transparent);border:1.5px solid color-mix(in srgb, ${color} 27%, transparent);color:${color}">${initials}</div>
       <div style="font-size:11.5px;font-weight:700;color:${isMe ? color : 'var(--text)'};">${a.prenom}</div>
       ${isMe ? '<div class="online-dot"></div>' : ''}
     </div>`;
@@ -1133,8 +1133,15 @@ function genererBadgeExGroup(hauteurLogo = 34, padding = '14px 18px', display = 
   </div>`;
 }
 
+// L'opacité se faisait en collant « 15 » et « 30 » derrière la couleur, pour former un hexadécimal
+// à huit chiffres. Astuce compacte, mais qui n'accepte QUE de l'hexadécimal : un jeton
+// var(--c-succes-texte) donnait « var(--c-succes-texte)15 », donc rien. C'est ce qui obligeait
+// tous les appels à écrire une couleur en dur — et donc à figer le thème sombre en plein jour.
+// color-mix() accepte n'importe quelle couleur CSS, jeton compris.
 function badge(label, color) {
-  return `<span class="badge" style="background:${color}15;color:${color};border:1px solid ${color}30">${label}</span>`;
+  const fond = `color-mix(in srgb, ${color} 8%, transparent)`;
+  const bord = `color-mix(in srgb, ${color} 19%, transparent)`;
+  return `<span class="badge" style="background:${fond};color:${color};border:1px solid ${bord}">${label}</span>`;
 }
 
 // Badge visuel distinct pour la nature d'une commission — icône + couleur, reconnaissable
@@ -1144,14 +1151,14 @@ function badgeNatureCommission(nature) {
   const couleur = estGestion ? '#60a5fa' : '#a78bfa';
   const icone = estGestion ? '🔄' : '🆕';
   const label = estGestion ? 'Gestion' : 'Acquisition';
-  return `<span title="Commission de ${label.toLowerCase()}" style="display:inline-flex;align-items:center;gap:4px;background:${couleur}18;color:${couleur};border:1px solid ${couleur}40;border-radius:7px;padding:2px 8px 2px 6px;font-size:10.5px;font-weight:800;white-space:nowrap"><span style="font-size:12px;line-height:1">${icone}</span>${label}</span>`;
+  return `<span title="Commission de ${label.toLowerCase()}" style="display:inline-flex;align-items:center;gap:4px;background:color-mix(in srgb, ${couleur} 9%, transparent);color:${couleur};border:1px solid color-mix(in srgb, ${couleur} 25%, transparent);border-radius:7px;padding:2px 8px 2px 6px;font-size:10.5px;font-weight:800;white-space:nowrap"><span style="font-size:12px;line-height:1">${icone}</span>${label}</span>`;
 }
 
 function avatar(agent, size = 28) {
   if (!agent) return '';
   const color = agentColor(agent);
   const initials = (agent.prenom[0] + agent.nom[0]).toUpperCase();
-  return `<div class="avatar" style="width:${size}px;height:${size}px;font-size:${size*0.33}px;background:${color}18;border:1.5px solid ${color}44;color:${color}">${initials}</div>`;
+  return `<div class="avatar" style="width:${size}px;height:${size}px;font-size:${size*0.33}px;background:color-mix(in srgb, ${color} 9%, transparent);border:1.5px solid color-mix(in srgb, ${color} 27%, transparent);color:${color}">${initials}</div>`;
 }
 
 function agentById(id) { return allAgents.find(a => a.id === id); }
@@ -1480,7 +1487,7 @@ function renderEtatDossiers(demandesOffre, refreshType, refreshId) {
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;cursor:pointer" onclick="demandeOffreEnEditionId='${l.demandeOffreId}';navigate('nouvelle-demande-offre')">
           <span style="width:7px;height:7px;border-radius:50%;background:${statutColorDo[l.statut] || '#64748b'};flex-shrink:0"></span>
           <span style="font-size:12.5px;color:var(--text);font-weight:700">${l.compagnie || l.libelle}</span>
-          ${l.idx !== null ? (l.email ? `<span style="font-size:10.5px;color:var(--text-muted)">✉️ destinataire : ${l.email}</span>` : `<span style="font-size:10.5px;color:#f87171">⚠ aucun destinataire enregistré</span>`) : ''}
+          ${l.idx !== null ? (l.email ? `<span style="font-size:10.5px;color:var(--text-muted)">✉️ destinataire : ${l.email}</span>` : `<span style="font-size:10.5px;color:var(--c-danger-texte)">⚠ aucun destinataire enregistré</span>`) : ''}
         </div>
         ${l.idx !== null ? `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px;padding-left:17px">
           ${etape('📤 Envoyée', !!l.envoyeLe, l.envoyeLe, '#f59e0b')}
@@ -1493,9 +1500,12 @@ function renderEtatDossiers(demandesOffre, refreshType, refreshId) {
   </div>`;
 }
 
+// Même correction que badge() : l'alpha en hexadécimal collé interdisait les jetons.
 function sectionCard(title, accentColor, content) {
-  return `<div class="section-card" style="border-color:${accentColor}33">
-    <div class="section-card-header" style="border-color:${accentColor}22">
+  const bord = `color-mix(in srgb, ${accentColor} 20%, transparent)`;
+  const bordDoux = `color-mix(in srgb, ${accentColor} 13%, transparent)`;
+  return `<div class="section-card" style="border-color:${bord}">
+    <div class="section-card-header" style="border-color:${bordDoux}">
       <div style="width:3px;height:14px;border-radius:99px;background:${accentColor}"></div>
       <span style="color:${accentColor}">${title}</span>
     </div>

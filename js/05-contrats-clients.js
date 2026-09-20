@@ -180,11 +180,11 @@ function renderLigneContratClient(ct, estSousCouverture) {
         </div>
         <div style="font-size:13px;color:var(--text)">${typeof compagnieAvecPicto === 'function' ? compagnieAvecPicto(ct.compagnie) : ct.compagnie}</div>
         <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ct.date_echeance)}</div>
-        <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF(Number(ct.prime_annuelle || 0))}</div>
+        <div style="font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF(Number(ct.prime_annuelle || 0))}</div>
         <div>${badge(ct.statut, ct.statut === 'actif' ? '#4ade80' : ct.statut === 'renouveler' ? '#f59e0b' : '#f87171')}${ct.commissionne === false ? ' ' + badge('Non commissionné', '#64748b') : ''}</div>
         <div style="display:flex;gap:4px;align-items:center" onclick="event.stopPropagation()">
           ${ct.police_url
-            ? `<button onclick="ouvrirPieceJointe('${ct.police_url}')" title="Voir la police PDF" style="background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);color:#4ade80;border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer;line-height:1">📄</button>`
+            ? `<button onclick="ouvrirPieceJointe('${ct.police_url}')" title="Voir la police PDF" style="background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);color:var(--c-succes-texte);border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer;line-height:1">📄</button>`
             : `<label title="Joindre la police PDF" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer;line-height:1">📎<input type="file" accept="application/pdf" onchange="uploadPolicePdf('${ct.id}', this)" style="display:none"/></label>`
           }
           <button onclick="showEditContrat('${ct.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer;line-height:1" title="Modifier">✏️</button>
@@ -475,7 +475,7 @@ async function showClient(id) {
             <option value="non" ${c.mandat==='non'?'selected':''}>Non</option>
             <option value="résilié" ${c.mandat==='résilié'?'selected':''}>Résilié</option>
           </select>
-          ${c.mandat === 'résilié' ? `<div style="font-size:10.5px;color:#f87171;margin-top:4px">⚠️ Mandat résilié : tous les contrats de ce client sont exclus du volume de primes et du CA portefeuille.</div>` : ''}
+          ${c.mandat === 'résilié' ? `<div style="font-size:10.5px;color:var(--c-danger-texte);margin-top:4px">⚠️ Mandat résilié : tous les contrats de ce client sont exclus du volume de primes et du CA portefeuille.</div>` : ''}
           </div>
           <div class="form-field"><label class="form-label">NPA</label><input id="ec-npa" class="form-input" value="${c.npa || ''}"></div>
           <div class="form-field"><label class="form-label">Ville</label><input id="ec-ville" class="form-input" value="${c.ville || ''}"></div>
@@ -578,7 +578,7 @@ async function showClient(id) {
                 </div>
                 </div>
                 <div style="text-align:right">
-                  <div style="font-weight:800;color:#f59e0b;font-size:13px">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}/an</div>
+                  <div style="font-weight:800;color:var(--c-alerte-texte);font-size:13px">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}/an</div>
                   <div style="font-size:10px;color:var(--text-muted)">CHF ${fmtCHF(Math.round(Number(ct.prime_annuelle||0)/12*100)/100)}/mois</div>
                   ${badge(ct.statut, ct.statut==='actif'?'#4ade80':'#f59e0b')}
                 </div>
@@ -609,7 +609,7 @@ async function showClient(id) {
           <div style="font-size:13px;color:var(--text)">${f.objet || '—'}</div>
           <div style="font-size:12px;color:var(--text-muted)">${f.date_emission || ''}</div>
           <div style="font-size:12px;color:var(--text-muted)">${fmtDate(f.date_echeance)}</div>
-          <div style="font-weight:800;color:#f59e0b">CHF ${fmtCHF(Number(f.montant||0))}</div>
+          <div style="font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF(Number(f.montant||0))}</div>
           <div>${badge(statutLabel, statutColor2)}</div>
         </div>`;
       }).join('')}</div>` : '<div class="table-empty">Aucune facture.</div>'}
@@ -640,7 +640,7 @@ async function showClient(id) {
             <td style="padding:10px 12px;color:var(--text-muted)">${col.adresse || '—'}</td>
             <td style="padding:10px 12px;color:var(--text-muted);font-family:monospace">${col.avs || '—'}</td>
             <td style="padding:10px 12px;text-align:right">
-              <button onclick="deleteCollaborateur('${col.id}','${c.id}')" style="background:rgba(248,113,113,0.1);color:#f87171;border:1px solid rgba(248,113,113,0.3);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">Supprimer</button>
+              <button onclick="deleteCollaborateur('${col.id}','${c.id}')" style="background:rgba(248,113,113,0.1);color:var(--c-danger-texte);border:1px solid rgba(248,113,113,0.3);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">Supprimer</button>
             </td>
           </tr>`).join('')}
         </tbody>
@@ -832,7 +832,7 @@ function ouvrirModaleRelanceClient(clientId) {
           <input class="form-input" id="relance-delai" placeholder="Ex: d'ici au 30 septembre 2026"/>
         </div>
       </div>
-      <div id="erreur-relance" style="color:#f87171;font-size:11.5px;margin-top:8px;display:none"></div>
+      <div id="erreur-relance" style="color:var(--c-danger-texte);font-size:11.5px;margin-top:8px;display:none"></div>
       <div style="display:flex;gap:10px;margin-top:16px">
         <button class="btn-secondary" onclick="document.getElementById('modal-relance').remove()">Annuler</button>
         <button class="btn-save" onclick="genererCourrierRelance('${clientId}')" style="margin-left:auto">Générer le courrier</button>
@@ -900,7 +900,7 @@ function ouvrirModaleCourrierLibre(clientId) {
           <textarea class="form-input" id="cl-corps" placeholder="Rédige le texte du courrier ici — chaque ligne devient un paragraphe." style="min-height:180px;resize:vertical;font-family:inherit"></textarea>
         </div>
       </div>
-      <div id="erreur-courrier-libre" style="color:#f87171;font-size:11.5px;margin-top:8px;display:none"></div>
+      <div id="erreur-courrier-libre" style="color:var(--c-danger-texte);font-size:11.5px;margin-top:8px;display:none"></div>
       <div style="display:flex;gap:10px;margin-top:16px">
         <button class="btn-secondary" onclick="document.getElementById('modal-courrier-libre').remove()">Annuler</button>
         <button class="btn-save" onclick="genererCourrierLibre('${clientId}')" style="margin-left:auto">Générer le courrier</button>
@@ -996,7 +996,7 @@ function confirmerSuppressionClient(clientId, nomClient) {
   const commissionsLiees = allCommissionsAttente.filter(c => c.client_id === clientId);
   creerModale('modal-suppression-client', `
     <div style="background:var(--surface);border-radius:14px;padding:24px;max-width:440px;width:100%">
-      <div style="font-size:16px;font-weight:800;color:#f87171;margin-bottom:10px">⚠️ Archiver ${nomClient} ?</div>
+      <div style="font-size:16px;font-weight:800;color:var(--c-danger-texte);margin-bottom:10px">⚠️ Archiver ${nomClient} ?</div>
       <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px">Rien n'est effacé (règle du cabinet) : le client passe en <strong>inactif</strong> et disparaît des listes courantes.</div>
       <ul style="font-size:12.5px;color:var(--text);margin:0 0 16px;padding-left:20px">
         <li>${contratsLies.length} contrat(s) → passés en « annulé » (sauf résiliés)</li>
@@ -1298,7 +1298,7 @@ function ouvrirModaleResiliation(clientId) {
           </label>
         </div>
       </div>
-      <div id="erreur-resiliation" style="color:#f87171;font-size:11.5px;margin-top:8px;display:none"></div>
+      <div id="erreur-resiliation" style="color:var(--c-danger-texte);font-size:11.5px;margin-top:8px;display:none"></div>
       <div style="display:flex;gap:10px;margin-top:16px">
         <button class="btn-secondary" onclick="document.getElementById('modal-resiliation').remove()">Annuler</button>
         <button class="btn-secondary" onclick="previsualiserResiliation('${clientId}')" style="margin-left:auto">👁️ Prévisualiser</button>
@@ -1893,7 +1893,7 @@ async function envoyerVersAutreAppareil(clientId, mode) {
     insertOk = resInsert.ok;
   } catch (e) { insertOk = false; }
   if (!insertOk) {
-    document.getElementById('zone-mode-signature').innerHTML = `<div style="color:#f87171;font-size:12.5px">Impossible de créer le lien de signature — réessaie, ou contacte le support si le problème persiste.</div>`;
+    document.getElementById('zone-mode-signature').innerHTML = `<div style="color:var(--c-danger-texte);font-size:12.5px">Impossible de créer le lien de signature — réessaie, ou contacte le support si le problème persiste.</div>`;
     return;
   }
 
@@ -1925,7 +1925,7 @@ async function envoyerVersAutreAppareil(clientId, mode) {
         ${c && c.email ? `
         <div style="font-size:12.5px;color:var(--text);margin-bottom:12px">Envoyer le lien de signature à <strong>${c.email}</strong></div>
         <button class="btn-save" id="btn-envoi-email-signature" onclick="envoyerLienSignatureParEmail('${clientId}', '${lienSignature}', '${c.email}')" style="width:100%">✉️ Envoyer l'e-mail maintenant</button>
-        ` : `<div style="font-size:12px;color:#f87171">Pas d'e-mail enregistré pour ce client — ajoute-en un sur sa fiche pour utiliser cette option.</div>`}
+        ` : `<div style="font-size:12px;color:var(--c-danger-texte)">Pas d'e-mail enregistré pour ce client — ajoute-en un sur sa fiche pour utiliser cette option.</div>`}
         ${contenuAttente}
       </div>`;
   } else if (mode === 'whatsapp') {
@@ -2754,7 +2754,7 @@ function ouvrirUploadContratSignature(clientId) {
       <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">📎 Faire signer un contrat</div>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:16px">Choisis le PDF du contrat à faire signer par le client — il sera enregistré puis tu pourras récupérer la signature (ici, par QR/lien, e-mail ou WhatsApp).</div>
       <input type="file" id="input-contrat-a-signer" accept="application/pdf" class="form-input" style="margin-bottom:16px"/>
-      <div id="erreur-upload-contrat" style="color:#f87171;font-size:11.5px;margin-bottom:8px;display:none"></div>
+      <div id="erreur-upload-contrat" style="color:var(--c-danger-texte);font-size:11.5px;margin-bottom:8px;display:none"></div>
       <div style="display:flex;gap:10px">
         <button class="btn-secondary" onclick="document.getElementById('modal-upload-contrat').remove()">Annuler</button>
         <button class="btn-save" id="btn-continuer-upload-contrat" onclick="confirmerUploadContratPuisSigner('${clientId}')" style="margin-left:auto">Continuer →</button>
@@ -2871,7 +2871,7 @@ function viewCompleterDetailsEntreprise(c) {
     <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:10px">
       ${['RC/Commerce','Inventaire','Protection juridique','Perte exploitation','Machines','Vol','All Risk','Transports','Cyber','Construction/MO'].map(l => `
       <label style="display:flex;align-items:center;gap:8px;background:var(--surface-alt);border-radius:8px;padding:10px 12px;cursor:pointer">
-        <input type="checkbox" id="e-rcc-${slug(l)}" ${rcc[l] ? 'checked' : ''} style="width:14px;height:14px;accent-color:#f87171"/>
+        <input type="checkbox" id="e-rcc-${slug(l)}" ${rcc[l] ? 'checked' : ''} style="width:14px;height:14px;accent-color:var(--c-danger-texte)"/>
         <span style="font-size:12px;color:var(--text);font-weight:600">${l}</span>
       </label>`).join('')}
     </div>

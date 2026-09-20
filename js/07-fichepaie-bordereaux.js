@@ -50,8 +50,14 @@ function renderBordereauxList() {
     return true;
   });
 
-  if (tri === 'recent') BORDS.sort((a,b) => new Date(b.created_at||0) - new Date(a.created_at||0));
-  else if (tri === 'ancien') BORDS.sort((a,b) => new Date(a.created_at||0) - new Date(b.created_at||0));
+  // « Récent » = le plus récemment ENCAISSÉ, pas le plus récemment saisi (20.09.2026).
+  // Le tri se faisait sur created_at, c'est-à-dire le jour où la ligne a été tapée. Le jour où
+  // quarante-neuf bordereaux ont été repris d'un coup, ils se sont tous retrouvés en tête avec
+  // le même horodatage, et les décomptes vraiment récents sont passés dessous. C'est la même
+  // erreur que sur les encaissements : la date de saisie n'est pas la date de l'argent.
+  const quand = b => new Date(b.date_reception || b.created_at || 0);
+  if (tri === 'recent') BORDS.sort((a,b) => quand(b) - quand(a));
+  else if (tri === 'ancien') BORDS.sort((a,b) => quand(a) - quand(b));
   else if (tri === 'montant') BORDS.sort((a,b) => (b.montant_brut||0) - (a.montant_brut||0));
 
   // Les bordereaux encaissés par OZ Assure (encaisse_par = 'oz') sont affichés mais exclus des totaux Assurex
@@ -94,7 +100,7 @@ function renderBordereauxList() {
         ${typeof pictoCompagnie === 'function' ? `<span style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px">${pictoCompagnie(b.compagnie, 40)}</span>` : ''}
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:8px">
-            ${b.numero ? `<span style="background:var(--surface-alt);color:var(--text-muted);border-radius:5px;padding:2px 7px;font-size:10.5px;font-weight: 500;font-family:monospace">${b.numero}</span>` : ''}
+            ${b.numero ? `<span class="bd-numero" title="Numéro du bordereau">${b.numero}</span>` : ''}
             <div style="font-size:14px;font-weight: 600;color:var(--text)">${b.compagnie}</div>
             ${b.encaisse_par === 'oz' ? `<span title="Encaissé par OZ Assure — hors chiffres Assurex" style="display:inline-flex;align-items:center;gap:4px;background:var(--surface-alt);border:1px solid var(--border);border-radius:999px;padding:1px 9px;font-size:10.5px;font-weight: 500;color:var(--text-muted)">${OZ_MINI_LOGO} encaissé par OZ</span>` : ''}
             ${b.pdf_url ? `<button type="button" onclick="event.stopPropagation(); ouvrirPieceJointe('${b.pdf_url}')" title="Ouvrir le décompte uploadé${b.pdf_nom ? ' : ' + String(b.pdf_nom).replace(/["<>]/g, '') : ''}" style="display:inline-flex;align-items:center;gap:5px;background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:999px;padding:3px 11px;font-size:11.5px;font-weight: 500;cursor:pointer;white-space:nowrap">📎 Voir le décompte</button>` : ''}
@@ -912,7 +918,20 @@ function viewCommissions() {
       </div>
     </div>
 
-    <div style="font-size:13px;font-weight: 600;color:var(--text);margin-bottom:10px">Toutes les commissions reçues (${COMMS.length})</div>
+    ${(() => {
+      // Le titre disait « Toutes les commissions reçues », et c'était faux deux fois.
+      // Ce tableau ne contient NI toutes les commissions, NI seulement des commissions reçues :
+      // il réunit celles qu'Assurex a encaissées et celles qu'OZ a encaissées mais dont une part
+      // revient à Assurex (voir le filtre COMMS plus haut). Annoncer « reçues » pour les
+      // secondes fait croire que l'argent est sur le compte — il ne l'est pas, il est à
+      // refacturer. C'est exactement le genre de libellé qui fait douter d'un chiffre juste.
+      const parAssurex = COMMS.filter(c => c.statut === 'reçue').length;
+      const parOz = COMMS.length - parAssurex;
+      return `<div style="margin-bottom:10px">
+        <div style="font-size:var(--t-m);font-weight:600;color:var(--text)">Commissions à répartir (${COMMS.length})</div>
+        <div style="font-size:var(--t-xs);color:var(--text-muted)">${parAssurex} encaissée${parAssurex > 1 ? 's' : ''} par Assurex${parOz ? ` · ${parOz} encaissée${parOz > 1 ? 's' : ''} par OZ, part Assurex à refacturer` : ''}</div>
+      </div>`;
+    })()}
     <div class="table-wrap">
       <div class="table-header" style="grid-template-columns:${cols}"><div>Compagnie · client</div><div>Produit / nature</div><div>Bordereau</div><div>Brut</div><div>Jonathan</div><div>Apporteur</div></div>
       ${rows || '<div class="table-empty">Aucune commission reçue encore rapprochée.</div>'}

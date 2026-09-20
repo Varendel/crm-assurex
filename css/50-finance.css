@@ -610,3 +610,20 @@
     .mdx-doc-actions { width: 100%; }
     .mdx-btn-voir { flex: 1; }
   }
+
+/* ── Le numéro de bordereau (20.09.2026) ──────────────────────────────────────────────────────
+   Il était en 10,5 px, plus petit que tout le reste de la ligne — alors que c'est LUI qu'on
+   cherche quand on compare un décompte papier à l'écran. « BRD 65 » est la clé de recherche, pas
+   une mention secondaire. La place existait : la ligne n'était pleine que sur un tiers.
+   Chasse fixe conservée : un numéro se lit chiffre à chiffre. */
+.bd-numero {
+  display: inline-flex; align-items: center; flex-shrink: 0;
+  padding: 3px 10px; border-radius: var(--r-xs, 6px);
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+  color: var(--accent);
+  font-family: var(--t-mono); font-size: var(--t-m); font-weight: 600;
+  letter-spacing: -0.01em; white-space: nowrap;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+@media (max-width: 620px) { .bd-numero { font-size: var(--t-s); padding: 2px 8px; } }

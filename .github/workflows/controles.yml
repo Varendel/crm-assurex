@@ -1,0 +1,26 @@
+# Contrôles automatiques à chaque envoi (20.09.2026)
+# Indépendant de l'hébergement : que le site soit publié par GitHub Pages ou par Cloudflare Pages,
+# ces contrôles tournent et signalent une erreur avant qu'elle n'arrive chez Jonathan.
+name: Contrôles
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  verifier:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Syntaxe, scripts, doublons, fonctions critiques
+        run: node test/verifier.js
+
+      - name: Tests de calcul des commissions
+        run: |
+          npm install jsdom --no-save --silent
+          for t in test/*.test.js; do echo "— $t"; node "$t" || exit 1; done

@@ -817,6 +817,7 @@ const SECTIONS = [
     { id: 'renouvellements', icon: '🔁', label: 'Renouvellements', groupe: 'Portefeuille' },
     { id: 'relances-lamal', icon: '🩺', label: 'Relances LAMal', groupe: 'Portefeuille' },
     { id: 'equipement', icon: '🧩', label: 'Équipement & ventes croisées', groupe: 'Portefeuille' },
+    { id: 'demandes-devis', icon: '📨', label: 'Demandes de devis', groupe: 'Marketing' },
     { id: 'sources', icon: '🧭', label: 'Sources des clients', groupe: 'Marketing' },
     { id: 'campagnes', icon: '📣', label: 'Campagnes', groupe: 'Marketing' },
   ]},
@@ -1549,6 +1550,8 @@ async function renderView() {
     case 'ocr-decomptes': main.innerHTML = typeof viewOcrDecomptes === 'function' ? viewOcrDecomptes() : ''; break;
     case 'documents-compagnies': main.innerHTML = typeof viewDocumentsCompagnies === 'function' ? viewDocumentsCompagnies() : ''; break;
     case 'demandes-polices': main.innerHTML = typeof viewDemandesPolices === 'function' ? viewDemandesPolices() : ''; break;
+    // Les leads laissés sur la page publique de demande de devis (js/68)
+    case 'demandes-devis': main.innerHTML = typeof viewDemandesDevis === 'function' ? viewDemandesDevis() : ''; break;
     // Préparation de l'échange de données EcoHub : qualité des clés de rapprochement (js/54)
     case 'ecohub-sync': main.innerHTML = typeof viewEcohubSync === 'function' ? viewEcohubSync() : ''; break;
     case 'marquage-entites': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); main.innerHTML = typeof viewMarquageEntites === 'function' ? viewMarquageEntites() : ''; break;

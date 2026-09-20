@@ -1,0 +1,156 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   DEMANDE DE DEVIS (js/68, 20.09.2026)
+
+   La page publique est la seule du projet qu'un inconnu voit avant toute connexion. Elle est donc
+   volontairement calme : une colonne, un fond marine, une carte blanche, et rien qui clignote.
+   Un formulaire de premier contact se juge à une chose — le nombre de gens qui le finissent.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+body.mode-devis #login-screen { display: block !important; overflow: auto; }
+
+.dvp {
+  min-height: 100vh;
+  padding: var(--e-6, 24px) var(--e-4, 16px) var(--e-10, 40px);
+  background:
+    radial-gradient(120% 90% at 100% 0%, rgba(0, 207, 255, .22) 0%, transparent 55%),
+    linear-gradient(160deg, #0B2458 0%, #113679 55%, #1A4A9C 100%);
+  display: flex; flex-direction: column; align-items: center; gap: var(--e-6, 24px);
+}
+
+.dvp-tete {
+  width: 100%; max-width: 760px;
+  display: grid; grid-template-columns: 1fr auto; align-items: end; gap: var(--e-4, 16px);
+  color: #fff;
+}
+.dvp-logo { grid-column: 1 / -1; height: 30px; width: auto; opacity: .95; }
+.dvp-accroche h1 {
+  margin: var(--e-3, 12px) 0 var(--e-2, 8px);
+  font-size: clamp(26px, 5vw, 38px); font-weight: var(--t-moyen, 600);
+  letter-spacing: -0.028em; line-height: 1.12; text-wrap: balance;
+}
+.dvp-accroche p { margin: 0; font-size: var(--t-l, 15px); line-height: 1.55; color: rgba(255,255,255,.82); max-width: 52ch; text-wrap: pretty; }
+.dvp-rex { align-self: end; }
+@media (max-width: 720px) { .dvp-rex { display: none; } }
+
+.dvp-carte {
+  width: 100%; max-width: 760px;
+  background: #fff; border-radius: var(--r-xl, 24px);
+  padding: var(--e-6, 24px);
+  box-shadow: 0 24px 60px rgba(4, 16, 42, .35);
+  display: flex; flex-direction: column; gap: var(--e-4, 16px);
+  color: var(--g-900, #0F172A);
+}
+
+/* ── Pour moi / pour mon entreprise ──────────────────────────────────────────────────────────── */
+.dvp-bascule { display: flex; gap: var(--e-1, 4px); background: var(--g-100, #EEF2F7); padding: 4px; border-radius: var(--r-rond, 999px); }
+.dvp-bascule button {
+  flex: 1; border: none; background: transparent; cursor: pointer;
+  padding: 10px var(--e-3, 12px); border-radius: var(--r-rond, 999px);
+  font-family: inherit; font-size: var(--t-m, 13.5px); font-weight: var(--t-moyen, 600);
+  color: var(--g-500, #64748B); transition: background var(--v-court, .15s), color var(--v-court, .15s);
+}
+.dvp-bascule button.actif { background: #fff; color: var(--m-marine, #113679); box-shadow: var(--o-1); }
+
+/* ── Le besoin ───────────────────────────────────────────────────────────────────────────────── */
+.dvp-besoins { border: none; padding: 0; margin: 0; }
+.dvp-besoins legend { padding: 0; margin-bottom: var(--e-2, 8px); font-size: var(--t-m, 13.5px); font-weight: var(--t-moyen, 600); }
+.dvp-grille { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: var(--e-2, 8px); }
+.dvp-besoin {
+  display: flex; align-items: center; gap: var(--e-2, 8px); cursor: pointer;
+  padding: 12px var(--e-3, 12px); border-radius: var(--r-s, 10px);
+  border: 1px solid var(--g-200, #E2E8F0); background: var(--g-25, #F8FAFC);
+  font-family: inherit; font-size: var(--t-s, 12.5px); font-weight: 500; color: var(--g-700, #334155);
+  text-align: left; transition: border-color var(--v-court, .15s), background var(--v-court, .15s);
+}
+.dvp-besoin span { font-size: 18px; line-height: 1; }
+.dvp-besoin:hover { border-color: var(--m-turquoise-fonce, #0095B8); background: #fff; }
+.dvp-besoin.actif { border-color: var(--m-marine, #113679); background: #fff; color: var(--m-marine, #113679);
+  box-shadow: inset 0 0 0 1px var(--m-marine, #113679); }
+
+/* ── Les champs ──────────────────────────────────────────────────────────────────────────────── */
+.dvp-lignes { display: flex; gap: var(--e-3, 12px); flex-wrap: wrap; }
+.dvp-champ { flex: 1 1 180px; display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.dvp-champ.dvp-court { flex: 0 0 110px; }
+.dvp-champ > span { font-size: var(--t-s, 12.5px); font-weight: 500; color: var(--g-600, #56627A); letter-spacing: .018em; }
+.dvp-champ > span b { color: var(--c-danger, #EF4444); font-weight: inherit; }
+.dvp-champ input, .dvp-champ select, .dvp-champ textarea {
+  width: 100%; box-sizing: border-box;
+  padding: 11px var(--e-3, 12px);
+  border: 1px solid var(--g-200, #E2E8F0); border-radius: var(--r-s, 10px);
+  background: var(--g-25, #F8FAFC); color: var(--g-900, #0F172A);
+  font-family: inherit; font-size: var(--t-l, 15px); outline: none;
+  transition: border-color var(--v-court, .15s), background var(--v-court, .15s);
+}
+.dvp-champ input:focus, .dvp-champ select:focus, .dvp-champ textarea:focus {
+  border-color: var(--m-marine, #113679); background: #fff;
+  box-shadow: 0 0 0 3px rgba(17, 54, 121, .10);
+}
+.dvp-champ textarea { resize: vertical; line-height: 1.5; }
+
+/* Le champ-piège : hors de l'écran, mais pas display:none — certains robots ignorent les champs
+   masqués de cette façon et se méfient du reste. */
+.dvp-piege { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+
+.dvp-accord { display: flex; gap: var(--e-3, 12px); align-items: flex-start; font-size: var(--t-s, 12.5px);
+  line-height: 1.5; color: var(--g-600, #56627A); cursor: pointer; }
+.dvp-accord input { margin-top: 2px; width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--m-marine, #113679); }
+
+.dvp-erreur { padding: 11px var(--e-3, 12px); border-radius: var(--r-s, 10px);
+  background: var(--c-danger-fond, rgba(239,68,68,.12)); color: var(--c-danger-texte, #B91C1C);
+  font-size: var(--t-m, 13.5px); }
+
+.dvp-envoyer {
+  border: none; cursor: pointer; width: 100%;
+  padding: 15px var(--e-4, 16px); border-radius: var(--r-s, 10px);
+  background: linear-gradient(135deg, #113679 0%, #1A4A9C 100%); color: #fff;
+  font-family: inherit; font-size: var(--t-l, 15px); font-weight: var(--t-moyen, 600);
+  box-shadow: 0 8px 20px rgba(17, 54, 121, .30);
+  transition: transform var(--v-court, .15s), box-shadow var(--v-court, .15s);
+}
+.dvp-envoyer:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 12px 26px rgba(17,54,121,.36); }
+.dvp-envoyer:disabled { opacity: .6; cursor: default; }
+
+.dvp-pied { margin: 0; font-size: var(--t-xs, 11px); color: var(--g-500, #64748B); line-height: 1.5; text-align: center; }
+
+.dvp-merci .dvp-carte { align-items: center; text-align: center; }
+.dvp-merci h1 { margin: var(--e-3, 12px) 0 0; font-size: var(--t-2xl, 26px); font-weight: var(--t-moyen, 600); letter-spacing: -0.02em; }
+.dvp-merci p { margin: 0; font-size: var(--t-l, 15px); color: var(--g-600, #56627A); line-height: 1.55; }
+
+/* ═══ Côté CRM : la liste des demandes ═════════════════════════════════════════════════════════ */
+.dvp-outils { display: flex; gap: var(--e-3, 12px); align-items: center; flex-wrap: wrap; margin-bottom: var(--e-4, 16px); }
+.dvp-lien { display: flex; align-items: center; gap: var(--e-2, 8px); flex: 1 1 420px; flex-wrap: wrap;
+  padding: var(--e-2, 8px) var(--e-3, 12px); border-radius: var(--r-s, 10px);
+  background: var(--surface-alt, var(--g-50)); border: 1px solid var(--g-200, #E2E8F0); }
+.dvp-lien > span { font-size: var(--t-xs, 11px); color: var(--text-muted, #64748B); text-transform: uppercase; letter-spacing: .055em; }
+.dvp-lien code { font-family: var(--t-mono); font-size: var(--t-s, 12.5px); color: var(--text, #0F172A); overflow-wrap: anywhere; }
+
+.dvp-liste { display: flex; flex-direction: column; gap: var(--e-2, 8px); }
+.dvp-ligne {
+  display: grid; grid-template-columns: 110px 1fr auto; gap: var(--e-3, 12px); align-items: center;
+  padding: var(--e-3, 12px) var(--e-4, 16px); border-radius: var(--r-m, 14px);
+  background: var(--surface, #fff); border: 1px solid var(--g-200, #E2E8F0);
+}
+.dvp-ligne.retard { border-color: var(--c-alerte, #F59E0B); }
+.dvp-statut { justify-self: start; padding: 4px 10px; border-radius: var(--r-rond, 999px);
+  font-size: var(--t-xs, 11px); font-weight: var(--t-moyen, 600);
+  color: var(--c); background: color-mix(in srgb, var(--c) 14%, transparent); }
+.dvp-titre { font-size: var(--t-l, 15px); font-weight: var(--t-moyen, 600); display: flex; align-items: center; gap: var(--e-2, 8px); flex-wrap: wrap; }
+.dvp-besoin-etiq { font-size: var(--t-xs, 11px); font-weight: 500; padding: 3px 9px; border-radius: var(--r-rond, 999px);
+  background: var(--c-info-fond); color: var(--c-info-texte); }
+.dvp-meta { font-size: var(--t-s, 12.5px); color: var(--text-muted, #64748B); margin-top: 3px; }
+.dvp-message { margin-top: 6px; font-size: var(--t-m, 13.5px); color: var(--text, #334155); line-height: 1.5;
+  padding-left: var(--e-3, 12px); border-left: 2px solid var(--g-200, #E2E8F0); text-wrap: pretty; }
+.dvp-boutons { display: flex; gap: var(--e-2, 8px); align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.dvp-statut-choix { width: auto; min-width: 128px; }
+
+/* Les actions n'apparaissent qu'au survol de la ligne : une liste de vingt demandes montrant
+   soixante boutons ne se lit plus. Au clavier, le focus les révèle aussi. */
+@media (hover: hover) and (min-width: 900px) {
+  .dvp-ligne .dvp-boutons { opacity: 0; transition: opacity var(--v-court, .15s); }
+  .dvp-ligne:hover .dvp-boutons, .dvp-ligne:focus-within .dvp-boutons { opacity: 1; }
+}
+
+@media (max-width: 900px) {
+  .dvp-ligne { grid-template-columns: 1fr; }
+  .dvp-boutons { justify-content: flex-start; }
+}

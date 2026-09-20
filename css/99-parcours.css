@@ -1,0 +1,148 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   LE PARCOURS D'UNE AFFAIRE (js/90, 20.09.2026)
+
+   Retirer ce fichier et js/90 d'index.html rend la fiche d'origine, intacte.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Lisibilité du bandeau de la fiche ─────────────────────────────────────────────────────────
+   L'inversion des bandeaux en thème sombre (css/97) laisse en blanc les éléments qui portaient
+   déjà une couleur claire en dur : le surtitre et les puces de contact deviennent alors blanc sur
+   bleu très pâle. On avait corrigé .cf-surtitre ; .fcx-surtitre et .fcx-chip souffraient du même
+   défaut sur la fiche opportunité. */
+html:not([data-theme="clair"]) body:not(.mode-cloud):not(.mode-espace-client) .opx-hero .fcx-surtitre {
+  color: rgba(11, 36, 88, .52) !important;
+}
+html:not([data-theme="clair"]) body:not(.mode-cloud):not(.mode-espace-client) .opx-hero .fcx-chip {
+  background: rgba(11, 36, 88, .07) !important;
+  border-color: rgba(11, 36, 88, .18) !important;
+  color: #0B2458 !important;
+}
+
+.paf-bloc {
+  margin-bottom: var(--e-4, 16px);
+  padding: var(--e-4, 16px) var(--e-5, 20px);
+  border-radius: var(--r-m, 14px);
+  border: 1px solid var(--border); background: var(--surface);
+}
+
+.paf-tete { display: flex; align-items: center; gap: var(--e-3, 12px); flex-wrap: wrap; margin-bottom: var(--e-3, 12px); }
+.paf-tete h3 { margin: 0; font-size: var(--t-l, 15px); font-weight: var(--t-moyen, 600); color: var(--text); }
+.paf-tete-actions { margin-left: auto; display: flex; gap: 6px; flex-wrap: wrap; }
+
+/* ── Ce qu'il reste à faire ────────────────────────────────────────────────────────────────────
+   Le bloc le plus important de la fiche : c'est lui qui répond à « et maintenant ? ». Il est donc
+   posé avant les colonnes, pas dans une carte parmi d'autres. */
+.paf-suite { display: flex; flex-direction: column; gap: 4px; }
+.paf-suite > b { font-size: var(--t-l, 15px); font-weight: var(--t-moyen, 600); color: var(--text); }
+.paf-suite > small { font-size: var(--t-s, 12.5px); color: var(--text-muted); line-height: 1.5; }
+.paf-suite .btn-save { align-self: flex-start; margin-top: var(--e-2, 8px); }
+.paf-suite.ok > b { color: var(--c-succes, #16A34A); }
+
+.paf-manques { list-style: none; margin: var(--e-2, 8px) 0 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.paf-manques li {
+  display: flex; align-items: center; gap: var(--e-3, 12px); flex-wrap: wrap;
+  padding: 9px 12px; border-radius: var(--r-s, 10px);
+  background: var(--surface-alt); border: 1px solid var(--border);
+  border-left: 3px solid var(--c-alerte, #F59E0B);
+}
+.paf-manques li > span { flex: 1 1 auto; min-width: 0; font-size: var(--t-m, 13.5px); color: var(--text); }
+
+.paf-act {
+  padding: 6px 12px; border-radius: var(--r-s, 10px); cursor: pointer; font-family: inherit;
+  font-size: var(--t-s, 12.5px); font-weight: 500; white-space: nowrap;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-muted);
+  transition: color var(--v-court, .15s), border-color var(--v-court, .15s);
+}
+.paf-act:hover { color: var(--text); border-color: var(--accent-border); }
+.paf-act-fort { background: var(--accent); color: var(--on-accent, #fff); border-color: var(--accent); }
+.paf-act-fort:hover { color: var(--on-accent, #fff); filter: brightness(1.08); }
+
+.paf-perdue { border-left: 3px solid var(--c-danger, #EF4444); }
+.paf-perdue > b { color: var(--c-danger, #EF4444); font-size: var(--t-l, 15px); }
+.paf-perdue p { margin: 4px 0 10px; font-size: var(--t-m, 13.5px); color: var(--text-muted); }
+
+/* ── L'affaire en bref ─────────────────────────────────────────────────────────────────────────
+   Remplace « Produits envisagés » : quatre à cinq chiffres qui commandent la décision, au lieu de
+   cinquante cases à cocher pour une information provisoire. */
+.paf-cartes { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: var(--e-2, 8px); }
+.paf-carte {
+  display: flex; flex-direction: column; gap: 1px;
+  padding: 10px 12px; border-radius: var(--r-s, 10px);
+  background: var(--surface-alt); border: 1px solid var(--border);
+}
+.paf-carte-l { font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--text-muted); font-weight: 600; }
+.paf-carte b {
+  font-size: var(--t-xl, 19px); font-weight: var(--t-moyen, 600); letter-spacing: -0.02em;
+  color: var(--text); font-variant-numeric: tabular-nums lining-nums;
+}
+.paf-carte small { font-size: var(--t-xs, 11px); color: var(--text-muted); line-height: 1.35; }
+.paf-carte.ok { border-color: color-mix(in srgb, var(--c-succes, #16A34A) 34%, transparent); }
+.paf-carte.ok b { color: var(--c-succes, #16A34A); }
+.paf-carte.alerte { border-color: color-mix(in srgb, var(--c-danger, #EF4444) 34%, transparent); }
+.paf-carte.alerte b { color: var(--c-danger, #EF4444); }
+
+.paf-note { margin: var(--e-3, 12px) 0 0; font-size: var(--t-s, 12.5px);
+  color: var(--text-muted); line-height: 1.55; text-wrap: pretty; }
+
+/* ── Les fenêtres ──────────────────────────────────────────────────────────────────────────────── */
+.paf-modale {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-m, 14px); padding: var(--e-5, 20px) var(--e-5, 22px);
+  max-width: 560px; width: 100%; max-height: 88vh; overflow-y: auto;
+  box-shadow: var(--o-3, 0 20px 50px rgba(0, 0, 0, .35));
+}
+.paf-modale h3 { margin: 0 0 4px; font-size: var(--t-xl, 19px); font-weight: var(--t-moyen, 600);
+  letter-spacing: -0.02em; color: var(--text); }
+.paf-sous { margin: 0 0 var(--e-4, 16px); font-size: var(--t-m, 13.5px);
+  color: var(--text-muted); line-height: 1.55; text-wrap: pretty; }
+.paf-label { display: block; margin: var(--e-4, 16px) 0 6px;
+  font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--text-muted); font-weight: 600; }
+
+.paf-grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: var(--e-3, 12px); }
+.paf-grille label { display: block; margin-bottom: 4px; font-size: var(--t-s, 12.5px); color: var(--text-muted); }
+.paf-grille .form-input { width: 100%; }
+
+/* Les trois natures d'affaire en cartes plutôt qu'en menu déroulant : le choix commande tout le
+   reste du formulaire (une résiliation n'est due que sur un transfert), il doit se voir. */
+.paf-choix { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--e-2, 8px); }
+.paf-radio {
+  display: flex; flex-direction: column; gap: 2px; cursor: pointer;
+  padding: 10px 12px; border-radius: var(--r-s, 10px);
+  background: var(--surface-alt); border: 1px solid var(--border);
+  transition: border-color var(--v-court, .15s), background var(--v-court, .15s);
+}
+.paf-radio:hover { border-color: var(--accent-border); }
+.paf-radio.actif { border-color: var(--accent); background: var(--accent-dim); }
+.paf-radio input { position: absolute; opacity: 0; pointer-events: none; }
+.paf-radio b { font-size: var(--t-m, 13.5px); font-weight: 500; color: var(--text); }
+.paf-radio small { font-size: var(--t-xs, 11px); color: var(--text-muted); line-height: 1.35; }
+
+/* Le compte à rebours de résiliation. Un délai dépassé n'est pas une alerte de plus : c'est un
+   client qui paiera deux primes. Il se voit d'abord. */
+.paf-compteur {
+  display: flex; flex-direction: column; gap: 3px;
+  padding: var(--e-3, 12px) var(--e-4, 16px); border-radius: var(--r-s, 10px);
+  background: var(--surface-alt); border: 1px solid var(--border); border-left-width: 3px;
+  margin-bottom: var(--e-3, 12px);
+}
+.paf-compteur b { font-size: var(--t-xl, 19px); font-weight: var(--t-moyen, 600); color: var(--text); }
+.paf-compteur small { font-size: var(--t-s, 12.5px); color: var(--text-muted); line-height: 1.5; text-wrap: pretty; }
+/* Un <b> à l'intérieur d'un petit texte hérite ailleurs d'une couleur d'accent : ici il ne sert
+   qu'à appuyer un mot, il garde donc la couleur de la phrase. */
+.paf-compteur small b, .paf-sous b, .paf-note b { color: inherit; font-weight: 600; }
+.paf-compteur.proche { border-left-color: var(--c-alerte, #F59E0B); }
+.paf-compteur.proche b { color: var(--c-alerte, #F59E0B); }
+.paf-compteur.urgent, .paf-compteur.depasse {
+  border-left-color: var(--c-danger, #EF4444); background: var(--c-danger-fond);
+}
+.paf-compteur.urgent b, .paf-compteur.depasse b { color: var(--c-danger-texte, #B91C1C); }
+
+.paf-actions { display: flex; gap: var(--e-2, 8px); margin-top: var(--e-4, 16px); flex-wrap: wrap; justify-content: flex-end; }
+
+@media (max-width: 620px) {
+  .paf-tete-actions { margin-left: 0; width: 100%; }
+  .paf-cartes { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }
+  .paf-actions > * { flex: 1 1 auto; }
+}

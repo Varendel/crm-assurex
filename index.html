@@ -2782,24 +2782,17 @@
   background-size: 700px 90px; animation: lp-defile 26s linear infinite; }
 .lp-plaine { z-index: 3; position: absolute; left: 0; right: 0; bottom: 0; height: 64px; background: linear-gradient(180deg, #1A4590 0%, #0E2A5E 100%); }
 .lp-plaine::after { content: ''; position: absolute; left: 0; right: 0; top: 0; height: 3px; background: rgba(0,207,255,.55); }
-.lp-rex { z-index: 5; position: absolute; left: 14%; bottom: 44px; width: 96px; height: auto; transform-origin: 50% 100%;
-  filter: drop-shadow(0 8px 14px rgba(0,0,0,.35)); animation: lp-course .52s ease-in-out infinite; }
+/* Le petit Rex du paysage a été retiré le 20.09.2026 (demande de Jonathan) : il n'y a plus qu'un
+   seul Rex à l'écran, celui du logotype, qui bascule puis traverse l'écran à la connexion. */
 @keyframes lp-defile { from { background-position-x: 0; } to { background-position-x: -900px; } }
 .lp-collines { animation-name: lp-defile-collines; }
 @keyframes lp-defile-collines { from { background-position-x: 0; } to { background-position-x: -700px; } }
-@keyframes lp-course {
-  0%, 100% { transform: translateY(0) rotate(-2deg) scaleY(1); }
-  35% { transform: translateY(-16px) rotate(2deg) scaleY(1.04); }
-  70% { transform: translateY(-3px) rotate(0deg) scaleY(.97); }
-}
-/* Connexion lancée : Rex accélère et part vers l'horizon */
-#login-screen.lp-go .lp-rex { animation: lp-course .24s ease-in-out infinite, lp-sprint 1s ease-in forwards; }
+/* Connexion lancée : le paysage défile plus vite pendant que Rex court */
 #login-screen.lp-go .lp-collines { animation-duration: 6s; }
 #login-screen.lp-go .lp-montagnes { animation-duration: 14s; }
-@keyframes lp-sprint { to { left: 108%; width: 70px; opacity: .85; } }
-@media (max-width: 1000px) { .lp-paysage { height: 150px; } .lp-rex { width: 68px; bottom: 34px; } .lp-plaine { height: 48px; } }
+@media (max-width: 1000px) { .lp-paysage { height: 150px; } .lp-plaine { height: 48px; } }
 @media (prefers-reduced-motion: reduce) {
-  .lp-couche, .lp-rex, #login-screen.lp-go .lp-rex { animation: none !important; }
+  .lp-couche { animation: none !important; }
 }
 /* ═══ Chargement : Rex allume une bougie en crachant une petite flamme (20.09.2026) ═══ */
 .loader {
@@ -2977,7 +2970,6 @@ body.mode-cloud .login-marque-cloud { display: flex; flex-direction: column; ali
 .cloud-classeurs { position: absolute; left: 74px; bottom: 34px; width: 86px; height: auto; z-index: 3;
   filter: drop-shadow(0 6px 12px rgba(0,0,0,.28)); animation: cloud-flotte 4.5s ease-in-out infinite; }
 .cloud-rex { z-index: 2; }
-body.mode-cloud .lp-rex { display: none; } /* sinon deux Rex : celui du nuage et celui qui court */
 @media (max-width: 1000px) { .cloud-classeurs { width: 66px; left: 58px; bottom: 26px; } }
 @media (prefers-reduced-motion: reduce) { .cloud-classeurs { animation: none; } }
 /* ═══ Espace client : contacter son conseiller, transférer la gestion (js/51) ═══ */
@@ -3124,6 +3116,42 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
     border: 9px solid transparent; border-bottom-color: #fff; border-top: 0; border-right-color: transparent; }
 }
 
+/* ═══ Connexion : Rex bascule avec le logotype, tombe, puis part en courant (20.09.2026) ═══
+   Un seul Rex à l'écran — celui du haut, un peu réduit. Au clic sur « Se connecter », le mot REX
+   bascule, Rex perd l'équilibre, se relève et traverse l'écran vers la droite ; la connexion
+   n'aboutit qu'une fois la course terminée (attendreFinAnimationRex, js/03). */
+.login-mascotte { width: 138px; }
+.login-rex-piste { display: inline-block; will-change: transform; }
+#login-screen { overflow: hidden; } /* la course de Rex sort de l'ecran : pas de barre de defilement */
+.login-logotype { transform-origin: 8% 85%; }
+#login-screen.lp-go .login-logotype { animation: lg-bascule .52s cubic-bezier(.3,1.5,.5,1) both; }
+#login-screen.lp-go .login-mascotte { animation: lg-chute .55s cubic-bezier(.45,0,.75,1) forwards, lg-trot .2s .55s ease-in-out infinite; }
+#login-screen.lp-go .login-rex-piste { animation: lg-sortie .78s .55s cubic-bezier(.25,.1,.55,1) forwards; }
+@keyframes lg-bascule {
+  0% { transform: rotate(0deg); }
+  28% { transform: rotate(-7deg); }
+  58% { transform: rotate(3.5deg); }
+  100% { transform: rotate(0deg); }
+}
+@keyframes lg-chute {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  18% { transform: translate(-7px, -8px) rotate(-16deg); }
+  46% { transform: translate(10px, 28px) rotate(58deg); }
+  66% { transform: translate(17px, 52px) rotate(87deg); }
+  80% { transform: translate(19px, 42px) rotate(64deg); }
+  100% { transform: translate(22px, 46px) rotate(0deg); }
+}
+@keyframes lg-trot {
+  0%, 100% { transform: translate(22px, 46px) rotate(-2deg); }
+  50% { transform: translate(22px, 32px) rotate(2deg); }
+}
+@keyframes lg-sortie { to { transform: translateX(118vw) scale(.82); opacity: .9; } }
+@media (max-width: 860px) { .login-mascotte { width: 58px; } }
+@media (prefers-reduced-motion: reduce) {
+  #login-screen.lp-go .login-logotype, #login-screen.lp-go .login-mascotte,
+  #login-screen.lp-go .login-rex-piste { animation: none !important; }
+}
+
 @media (prefers-reduced-motion: reduce) {
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
@@ -3184,14 +3212,13 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
         </svg>
       </div>
     </div>    <div class="login-marque">
-      <img src="assets/logos/rex-mascotte-hd.png" alt="Rex, la mascotte du CRM" class="login-mascotte"/>
+      <span class="login-rex-piste"><img src="assets/logos/rex-mascotte-hd.png" alt="Rex, la mascotte du CRM" class="login-mascotte"/></span>
       <img src="assets/logos/rex-logotype.png" alt="REX CRM" class="login-logotype"/>
     </div>
     <div class="lp-paysage" aria-hidden="true">
       <div class="lp-couche lp-montagnes"></div>
       <div class="lp-couche lp-collines"></div>
       <div class="lp-plaine"></div>
-      <img src="assets/logos/rex-mascotte-hd.png" alt="" class="lp-rex"/>
     </div>    <div class="login-pied">
       <img src="assets/logos/assurex.png" alt="Assurex" class="login-assurex"/>
       <svg viewBox="670 488 580 100" xmlns="http://www.w3.org/2000/svg" class="exgroupe-logo">
@@ -3261,7 +3288,7 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 
 <script src="js/01-prevoyance-immo.js?v=1790350000"></script>
 <script src="js/02-catalogue-session.js?v=1790060000"></script>
-<script src="js/03-auth-navigation.js?v=1791000000"></script>
+<script src="js/03-auth-navigation.js?v=1791004000"></script>
 <script src="js/04-dashboard-finma.js?v=1790700000"></script>
 <script src="js/05-contrats-clients.js?v=1791000000"></script>
 <script src="js/06-signature-opportunites.js?v=1790700000"></script>

@@ -641,18 +641,20 @@ async function doLogin() {
   enterApp({ id: email, prenom: userData.prenom, nom: userData.nom, email, role: userData.role, taux: userData.taux });
 }
 
-// Attend la fin du sprint de Rex sur l'écran de connexion (au plus 2 s, et pas d'attente du tout
-// si l'animation est désactivée par le système ou si l'écran n'existe pas).
+// Attend la fin de l'animation de Rex sur l'écran de connexion (20.09.2026, nouvelle version) :
+// le logotype bascule, Rex tombe de son perchoir, se relève et part en courant vers la droite.
+// Au plus 1,4 s, et pas d'attente du tout si l'animation est désactivée par le système.
 function attendreFinAnimationRex(ecran) {
-  const rex = ecran && ecran.querySelector('.lp-rex');
+  const piste = ecran && ecran.querySelector('.login-rex-piste');
   const reduit = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if (!rex || reduit) return Promise.resolve();
+  // Masqué (espace client REX CLOUD) : aucune animation ne joue, on n'attend rien
+  if (!piste || reduit || piste.offsetParent === null) return Promise.resolve();
   return new Promise(resolve => {
     let fini = false;
-    const terminer = () => { if (fini) return; fini = true; rex.removeEventListener('animationend', surFin); resolve(); };
-    const surFin = e => { if (e.animationName === 'lp-sprint') terminer(); };
-    rex.addEventListener('animationend', surFin);
-    setTimeout(terminer, 1300); // filet de sécurité : la connexion n'attend jamais plus de 1,3 s
+    const terminer = () => { if (fini) return; fini = true; piste.removeEventListener('animationend', surFin); resolve(); };
+    const surFin = e => { if (e.animationName === 'lg-sortie') terminer(); };
+    piste.addEventListener('animationend', surFin);
+    setTimeout(terminer, 1400); // filet de sécurité : la connexion n'attend jamais plus de 1,4 s
   });
 }
 

@@ -1,0 +1,116 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   AMBIANCES (20.09.2026)
+
+   Jusqu'ici : deux modes (clair / sombre) et quatre couleurs d'accent. Mais une couleur de bouton
+   n'est pas un thème. Un thème, c'est un fond, des surfaces, une bordure et une encre qui tiennent
+   ensemble — et c'est ce qui change vraiment la sensation d'un outil qu'on garde ouvert huit heures.
+
+   POURQUOI UN SECOND ATTRIBUT PLUTÔT QUE DE NOUVELLES VALEURS DE data-theme.
+   Tout le CSS du CRM distingue clair et sombre par `html:not([data-theme="clair"])`. Ajouter
+   « papier » comme valeur de data-theme aurait fait passer un thème CLAIR par toutes les règles
+   du sombre — bandeaux inversés compris. On garde donc data-theme pour dire clair-ou-sombre
+   (l'interrupteur structurel) et on ajoute data-ambiance pour dire laquelle. Les centaines de
+   règles existantes continuent de fonctionner sans être touchées.
+
+   Chaque ambiance redéfinit les mêmes dix variables, ni plus ni moins.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── ARDOISE — sombre, gris-bleu froid ─────────────────────────────────────────────────────────
+   Le plus neutre des sombres : aucune teinte dominante, donc les couleurs des données (vert,
+   rouge, ambre) s'y lisent pour ce qu'elles sont. C'est l'ambiance d'un outil de travail. */
+html[data-ambiance="ardoise"] {
+  --bg: #0F172A; --surface: #1B263B; --surface-alt: #223049;
+  --surface-hover: #2A3A55; --border: #2E3E58;
+  --text: #E8EDF5; --text-muted: #9AA8BF; --text-dim: #64748B;
+  --sidebar: #131C2E; --navy: #131C2E;
+}
+
+/* ── NUIT — noir profond ───────────────────────────────────────────────────────────────────────
+   Presque noir, pour les écrans OLED : un pixel noir y est éteint, donc la nuit consomme moins et
+   tient mieux le contraste. On ne descend PAS à #000 — un noir absolu sous du texte blanc fatigue
+   l'œil et fait baver les lettres. */
+html[data-ambiance="nuit"] {
+  --bg: #08090B; --surface: #131417; --surface-alt: #1A1B1F;
+  --surface-hover: #212328; --border: #26282E;
+  --text: #EDEEF0; --text-muted: #9B9EA6; --text-dim: #64676E;
+  --sidebar: #0C0D0F; --navy: #0C0D0F;
+}
+
+/* ── MARINE — le sombre d'origine, conservé sous son nom ───────────────────────────────────────
+   Rien à redéfinir : ce sont les valeurs de :root. L'entrée existe pour qu'on puisse y revenir. */
+
+/* ── PAPIER — clair chaud ──────────────────────────────────────────────────────────────────────
+   Un blanc légèrement crème plutôt qu'un blanc pur : à luminosité égale, il renvoie moins de bleu
+   et se lit plus longtemps. L'encre n'est pas noire non plus mais brun très sombre, comme à
+   l'impression. */
+html[data-theme="clair"][data-ambiance="papier"] {
+  --bg: #F7F5F1; --surface: #FFFFFF; --surface-alt: #FBFAF7;
+  --surface-hover: #F1EEE8; --border: #E5E1D8;
+  --text: #1C1917; --text-muted: #57534E; --text-dim: #8A8377;
+  --sidebar: #FFFFFF;
+}
+
+/* ── AURORE — clair froid, bleuté ──────────────────────────────────────────────────────────────
+   La lumière de l'identité : un fond très légèrement bleu qui met le marine de la marque en
+   valeur, sans le gris terne du clair d'origine. */
+html[data-theme="clair"][data-ambiance="aurore"] {
+  --bg: #F2F7FD; --surface: #FFFFFF; --surface-alt: #F7FAFE;
+  --surface-hover: #E8F1FB; --border: #DBE6F3;
+  --text: #0B2458; --text-muted: #4B6285; --text-dim: #8098BC;
+  --sidebar: #FFFFFF;
+}
+
+/* ── CONTRASTE — pour qui a besoin de voir ─────────────────────────────────────────────────────
+   Pas une coquetterie : au-delà d'un certain âge ou avec un écran en plein soleil, les gris
+   moyens disparaissent. Ici l'encre est noire, les bordures franches, et rien n'est « atténué »
+   en dessous d'un gris qui reste lisible. */
+html[data-theme="clair"][data-ambiance="contraste"] {
+  --bg: #FFFFFF; --surface: #FFFFFF; --surface-alt: #F2F2F2;
+  --surface-hover: #E6E6E6; --border: #767676;
+  --text: #000000; --text-muted: #3A3A3A; --text-dim: #4A4A4A;
+  --sidebar: #FFFFFF;
+  --accent: #0B2458; --accent-dim: rgba(11,36,88,.12); --accent-border: #0B2458;
+}
+html[data-ambiance="contraste"] .dbx-carte,
+html[data-ambiance="contraste"] .tbl-ligne,
+html[data-ambiance="contraste"] .plc-carte { border-width: 2px; }
+html[data-ambiance="contraste"] * { text-shadow: none !important; }
+/* Un outil à contraste élevé ne doit pas reposer sur la couleur seule : le focus devient épais. */
+html[data-ambiance="contraste"] :focus-visible { outline: 3px solid #0B2458 !important; outline-offset: 2px; }
+
+/* ── L'aperçu, dans les paramètres ─────────────────────────────────────────────────────────────
+   Chaque vignette montre le vrai fond, la vraie surface et la vraie encre de son ambiance. Un
+   nuancier qui ne montre qu'un rond de couleur ne dit rien de ce qu'on va obtenir. */
+.amb-cartes { display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr)); gap: var(--e-3, 12px); }
+.amb-carte {
+  cursor: pointer; text-align: left; font-family: inherit; overflow: hidden;
+  border-radius: var(--r-m, 14px); border: 2px solid var(--border);
+  background: var(--surface); padding: 0;
+  transition: border-color var(--v-court, .15s), transform var(--v-court, .15s);
+}
+.amb-carte:hover { transform: translateY(-2px); }
+.amb-carte.actif { border-color: var(--accent); }
+.amb-apercu { display: block; height: 76px; padding: 10px; position: relative; }
+.amb-apercu i { display: block; border-radius: 4px; }
+.amb-apercu .amb-barre { height: 7px; margin-bottom: 6px; }
+.amb-apercu .amb-carte-mini { height: 34px; border-radius: 6px; }
+.apx-sous-titre { margin: 0 0 8px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .09em;
+  color: var(--text-muted); font-weight: 600; }
+.amb-nom { display: block; padding: 9px 12px 4px; font-size: var(--t-m, 13.5px); font-weight: var(--t-moyen, 600); color: var(--text); }
+.amb-desc { display: block; padding: 0 12px 11px; font-size: var(--t-xs, 11px); color: var(--text-muted); line-height: 1.4; }
+
+/* ── La flèche retour de la fiche opportunité ──────────────────────────────────────────────────
+   Elle était masquée par css/40 (« le bouton ← global de l'app fait déjà le retour »). Sauf que le
+   ← global est celui que js/44 glisse dans le bandeau QU'IL CRÉE — et la fiche opportunité a son
+   propre hero, donc js/44 ne lui en crée pas. Résultat : le bouton local masqué, le global absent,
+   aucune flèche. On la réaffiche, dessinée comme celle des autres écrans. */
+.opx-lien-retour, .opx .opx-lien-retour {
+  display: inline-flex !important; align-items: center; gap: 6px;
+  margin-bottom: var(--e-3, 12px); padding: 7px 13px 7px 10px;
+  border-radius: var(--r-rond, 999px); cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface);
+  color: var(--text-muted); font-family: inherit; font-size: var(--t-s, 12.5px);
+  font-weight: 500; box-shadow: var(--o-1);
+  transition: color var(--v-court, .15s), border-color var(--v-court, .15s), transform var(--v-court, .15s);
+}
+.opx-lien-retour:hover { color: var(--text); border-color: var(--accent-border); transform: translateX(-2px); }

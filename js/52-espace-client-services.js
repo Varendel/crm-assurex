@@ -140,7 +140,9 @@ function ecVueEspaceClient() {
     <section class="cf-hero">
       <div class="cf-hero-deco" aria-hidden="true"></div>
       <div class="cf-hero-texte">
-        <span class="ec-marque">${EC_NUAGE_SVG}<b>REX</b> CLOUD</span>
+        <span class="ec-marque">${typeof ECP_MINI_LOGO !== 'undefined'
+          ? ECP_MINI_LOGO
+          : `${EC_NUAGE_SVG}<b>REX</b> CLOUD`}</span>
         <span class="cf-surtitre">Mon espace assurances</span>
         <h1>${ecEsc(ecNomClient(c) || 'Bienvenue')}</h1>
         <p>Vos contrats, vos sinistres et vos demandes au même endroit. Votre conseiller reçoit tout directement.</p>
@@ -188,6 +190,7 @@ function ecOngletAccueil() {
     ${typeof saisonDecorHtml === 'function' ? saisonDecorHtml() : ''}
     ${typeof bmqBlocClient === 'function' ? bmqBlocClient() : ''}
     ${typeof filBandeauNotifications === 'function' ? filBandeauNotifications() : ''}
+    ${typeof ecpRassuranceHtml === 'function' ? ecpRassuranceHtml() : ''}
 
     <div class="dbx-kpis" style="margin-top:16px">
       ${typeof dbxKpi === 'function' ? dbxKpi({ i: 0, label: 'Contrats en vigueur', valeur: actifs.length, sous: `${(E.vehicules || []).length} véhicule(s) assuré(s)` }) : ''}

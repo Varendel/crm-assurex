@@ -1,0 +1,103 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   ESPACE CLIENT : PRIMES, CONSEILLER, RÉASSURANCE (js/79, 20.09.2026)
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Le bandeau du client garde son marine ────────────────────────────────────────────────────────
+   L'inversion des bandeaux (css/97) répond à un problème du CRM : un bandeau marine posé sur un
+   fond presque noir disparaît. L'espace client n'a pas ce problème — et c'est la vitrine : le nom
+   du client doit s'y détacher en blanc sur le marine de la marque, pas en marine sur bleu pâle.
+   Jonathan : « nom client en noir, pas lisible ». */
+body.mode-cloud .cf-hero,
+body.mode-espace-client .cf-hero {
+  background:
+    radial-gradient(110% 150% at 100% 0%, rgba(0, 207, 255, .24) 0%, transparent 55%),
+    linear-gradient(135deg, #0B2458 0%, #113679 55%, #1A4A9C 100%) !important;
+  border: none !important;
+  color: #fff !important;
+  box-shadow: 0 18px 40px rgba(17, 54, 121, .26) !important;
+}
+body.mode-cloud .cf-hero *, body.mode-espace-client .cf-hero * { color: #fff !important; }
+body.mode-cloud .cf-hero .cf-surtitre, body.mode-espace-client .cf-hero .cf-surtitre,
+body.mode-cloud .cf-hero p, body.mode-espace-client .cf-hero p { color: rgba(255, 255, 255, .78) !important; }
+body.mode-cloud .cf-hero-deco::before, body.mode-espace-client .cf-hero-deco::before { border-color: rgba(255,255,255,.09) !important; }
+body.mode-cloud .cf-hero-deco::after, body.mode-espace-client .cf-hero-deco::after { border-color: rgba(0,207,255,.22) !important; }
+/* Le bouton blanc garde son encre marine : lui seul ne suit pas la règle ci-dessus. */
+body.mode-cloud .cf-hero .fcx-btn-blanc, body.mode-espace-client .cf-hero .fcx-btn-blanc { color: #113679 !important; }
+body.mode-cloud .cf-hero .fcx-btn-verre, body.mode-espace-client .cf-hero .fcx-btn-verre {
+  background: rgba(255, 255, 255, .13) !important; border-color: rgba(255, 255, 255, .26) !important;
+}
+
+/* Dans le CRM, en revanche, le surtitre du hero conseil était resté blanc sur le bandeau inversé,
+   donc invisible. Il rejoint les autres surtitres atténués. */
+html:not([data-theme="clair"]) body:not(.mode-cloud):not(.mode-espace-client) .cf-hero .cf-surtitre {
+  color: rgba(11, 36, 88, .46) !important;
+}
+html:not([data-theme="clair"]) body:not(.mode-cloud):not(.mode-espace-client) .cf-hero .fcx-btn-verre {
+  background: rgba(11, 36, 88, .07) !important; border-color: rgba(11, 36, 88, .16) !important;
+}
+
+/* ── La marque REX CLOUD, en petit ────────────────────────────────────────────────────────────── */
+.ec-marque { display: inline-flex; align-items: center; gap: 7px; }
+.ec-marque img, .ecp-mini-logo { height: 22px; width: auto; display: block; }
+@media (max-width: 620px) { .ec-marque img, .ecp-mini-logo { height: 18px; } }
+
+/* ── La réassurance ───────────────────────────────────────────────────────────────────────────── */
+.ecp-rassurance {
+  display: flex; gap: var(--e-3, 12px); align-items: flex-start;
+  margin-top: var(--e-4, 16px); padding: var(--e-4, 16px);
+  border-radius: var(--r-m, 14px);
+  background: var(--c-succes-fond, rgba(34, 197, 94, .13));
+  border: 1px solid color-mix(in srgb, var(--c-succes, #16A34A) 26%, transparent);
+}
+.ecp-rassurance-icone { font-size: 22px; line-height: 1; flex-shrink: 0; }
+.ecp-rassurance b { font-size: var(--t-l, 15px); font-weight: var(--t-moyen, 600); color: var(--text, #0F172A); }
+.ecp-rassurance p { margin: 4px 0 0; font-size: var(--t-m, 13.5px); line-height: 1.55; color: var(--text, #334155); text-wrap: pretty; }
+.ecp-rassurance p b { font-size: inherit; }
+
+/* ── Le widget primes ─────────────────────────────────────────────────────────────────────────── */
+.ecp-corps { display: flex; flex-direction: column; gap: var(--e-3, 12px); }
+
+.ecp-etat {
+  display: flex; gap: var(--e-3, 12px); align-items: flex-start;
+  padding: var(--e-3, 12px) var(--e-4, 16px); border-radius: var(--r-s, 10px);
+}
+.ecp-etat.attente { background: var(--c-info-fond); border: 1px solid color-mix(in srgb, var(--c-info) 26%, transparent); }
+.ecp-etat.publiees { background: var(--c-alerte-fond); border: 1px solid var(--c-alerte); }
+.ecp-etat-icone { font-size: 20px; line-height: 1.1; flex-shrink: 0; }
+.ecp-etat b { display: block; font-size: var(--t-m, 13.5px); font-weight: var(--t-moyen, 600); }
+.ecp-etat small { display: block; margin-top: 4px; font-size: var(--t-s, 12.5px); line-height: 1.5;
+  color: var(--text-muted, #64748B); text-wrap: pretty; }
+
+.ecp-grille { display: flex; gap: var(--e-3, 12px); flex-wrap: wrap; }
+.ecp-bloc {
+  flex: 1 1 210px; display: flex; flex-direction: column; gap: 2px;
+  padding: var(--e-3, 12px) var(--e-4, 16px); border-radius: var(--r-s, 10px);
+  background: var(--surface-alt, var(--g-50)); border: 1px solid var(--g-200, #E2E8F0);
+}
+html:not([data-theme="clair"]) .ecp-bloc { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.10); }
+.ecp-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--text-muted, #94A3B8); font-weight: var(--t-moyen, 600); }
+.ecp-bloc b { font-size: var(--t-xl, 19px); font-weight: var(--t-moyen, 600); letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums; }
+.ecp-bloc small { font-size: var(--t-s, 12.5px); color: var(--text-muted, #64748B); line-height: 1.45; text-wrap: pretty; }
+/* Le compte à rebours change de ton en approchant : à trois semaines, c'est une action à prendre. */
+.ecp-bloc.proche { border-color: var(--c-alerte, #F59E0B); }
+.ecp-bloc.proche b { color: var(--c-alerte-texte, #B45309); }
+.ecp-bloc.urgent { border-color: var(--c-danger, #EF4444); background: var(--c-danger-fond); }
+.ecp-bloc.urgent b { color: var(--c-danger-texte, #B91C1C); }
+
+.ecp-actions { display: flex; gap: var(--e-2, 8px); flex-wrap: wrap; }
+.ecp-note { margin: 0; font-size: var(--t-s, 12.5px); color: var(--text-muted, #64748B);
+  line-height: 1.55; text-wrap: pretty; }
+
+/* ── La photo du conseiller ───────────────────────────────────────────────────────────────────── */
+.ecp-photo {
+  position: relative; width: 58px; height: 58px; flex-shrink: 0;
+  border-radius: 50%; overflow: hidden;
+  background: linear-gradient(135deg, #113679, #1A4A9C);
+  display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 0 2px rgba(255, 255, 255, .22), var(--o-1);
+}
+.ecp-photo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center 22%; }
+/* Les initiales sont dessous : si la photo manque ou ne charge pas, elles réapparaissent seules. */
+.ecp-photo-repli { font-size: var(--t-l, 15px); font-weight: var(--t-moyen, 600); color: #fff; letter-spacing: .04em; }

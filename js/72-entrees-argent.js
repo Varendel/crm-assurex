@@ -18,7 +18,14 @@
 // Et les montants y sont des NOMBRES, pas du texte. Un export dont les colonnes ne s'additionnent
 // pas dans Excel ne sert à rien — c'est le défaut le plus courant des exports de CRM.
 
+// L'écran s'ouvrait sur « 12 prochains mois », c'est-à-dire d'aujourd'hui à dans un an. Mais
+// l'encaissé est par nature DERRIÈRE nous : une commission reçue le 27 août tombait hors fenêtre
+// et Jonathan ne la trouvait pas (« pourquoi les contrats Demir Céline ne sortent pas »). Un écran
+// qui s'appelle « Entrées d'argent » et qui masque les entrées d'argent déjà reçues se trompe de
+// vue par défaut. On ouvre donc sur douze mois derrière et douze devant : l'encaissé et l'attendu
+// dans le même cadre, ce qui est précisément le propos de l'écran.
 const EA_PERIODES = [
+  { id: 'glissant', nom: '12 mois passés + 12 à venir' },
   { id: '12mois',   nom: '12 prochains mois' },
   { id: 'annee',    nom: 'Année en cours' },
   { id: 'anneep',   nom: 'Année précédente' },
@@ -26,7 +33,7 @@ const EA_PERIODES = [
   { id: 'tout',     nom: 'Tout' },
 ];
 
-window._ea = window._ea || { periode: '12mois', filtre: 'tous', lignes: [] };
+window._ea = window._ea || { periode: 'glissant', filtre: 'tous', lignes: [] };
 
 function eaEsc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
@@ -38,13 +45,20 @@ function eaNomClient(id, repli) {
 
 function eaBornes() {
   const a = new Date();
-  const iso = d => d.toISOString().slice(0, 10);
+  // toISOString() convertit en UTC : en Suisse (UTC+1/+2) le 1er du mois à minuit local devient le
+  // dernier jour du mois précédent. Les dates comparées ici sont des dates civiles, pas des
+  // instants — on les écrit donc dans le fuseau de l'utilisateur.
+  const iso = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   switch (window._ea.periode) {
     case 'annee':    return { du: `${a.getFullYear()}-01-01`, au: `${a.getFullYear()}-12-31` };
     case 'anneep':   return { du: `${a.getFullYear() - 1}-01-01`, au: `${a.getFullYear() - 1}-12-31` };
     case '12passes': return { du: iso(new Date(a.getFullYear(), a.getMonth() - 11, 1)), au: iso(a) };
     case 'tout':     return { du: '2000-01-01', au: '2099-12-31' };
-    default:         return { du: iso(a), au: iso(new Date(a.getFullYear(), a.getMonth() + 12, 0)) };
+    case '12mois':   return { du: iso(a), au: iso(new Date(a.getFullYear(), a.getMonth() + 12, 0)) };
+    // Bornes sur des mois entiers des deux côtés : une fenêtre qui commencerait le 20 du mois
+    // couperait le mois en cours en deux et ferait disparaître le début de septembre.
+    default:         return { du: iso(new Date(a.getFullYear(), a.getMonth() - 11, 1)),
+                              au: iso(new Date(a.getFullYear(), a.getMonth() + 13, 0)) };
   }
 }
 

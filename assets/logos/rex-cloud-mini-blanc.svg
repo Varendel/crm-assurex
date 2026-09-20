@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 268 60" width="268" height="60" role="img" aria-label="REX CLOUD">
+<!--
+  REX CLOUD — la version MINI, pour un en-tête (20.09.2026).
+
+  Ce n'est pas le verrouillage réduit : à 22 px de haut, l'accroche devient illisible et le nuage
+  perd sa silhouette. On enlève donc l'accroche, on resserre l'écart entre la marque et le nom, et
+  le nuage est agrandi dans son cadre. Un logo qui « marche en petit » n'est jamais le grand mis à
+  l'échelle — c'est un dessin de plus.
+
+  Tout est blanc : cette version vit sur le bandeau marine de l'espace client. Seul le point garde
+  le turquoise, c'est la signature de REX.CRM.
+-->
+<g transform="translate(0,4) scale(0.54)">
+  <path d="M38 72 A18 18 0 1 1 39.25 36.04 A26 26 0 0 1 87.35 32.55 A20 20 0 1 1 92 72 Z" fill="#FFFFFF"/>
+  <circle cx="98" cy="66" r="10.5" fill="#0B2458"/>
+  <circle cx="98" cy="66" r="6.5" fill="#00CFFF"/>
+</g>
+<text x="76" y="40" font-family="Geist, 'Segoe UI', system-ui, sans-serif" font-size="27" fill="#FFFFFF">
+  <tspan font-weight="600" letter-spacing="0.6">REX</tspan><tspan fill="#00CFFF" dx="5">·</tspan><tspan dx="5" letter-spacing="2.4">CLOUD</tspan>
+</text>
+</svg>

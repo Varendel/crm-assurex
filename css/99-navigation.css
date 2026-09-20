@@ -1,0 +1,128 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   NAVIGATION RAPIDE (js/74, 20.09.2026)
+   La palette, les épinglés, les récents, et des groupes enfin lisibles.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Le bouton de recherche, en tête du menu ──────────────────────────────────────────────────── */
+.nav-chercher {
+  display: flex; align-items: center; gap: var(--e-2, 8px); width: 100%; cursor: pointer;
+  margin-bottom: var(--e-2, 8px); padding: 9px var(--e-3, 12px);
+  border-radius: var(--r-s, 10px); border: 1px solid var(--g-200, #E2E8F0);
+  background: var(--surface-alt, var(--g-50)); color: var(--text-muted, #64748B);
+  font-family: inherit; font-size: var(--t-s, 12.5px); text-align: left;
+  transition: border-color var(--v-court, .15s), color var(--v-court, .15s);
+}
+.nav-chercher span:nth-child(2) { flex: 1; }
+.nav-chercher:hover { border-color: var(--m-turquoise-fonce, #0095B8); color: var(--text, #334155); }
+.nav-chercher kbd, .nav-palette kbd {
+  font-family: var(--t-mono); font-size: 9.5px; padding: 2px 5px; border-radius: 4px;
+  background: var(--g-200, #E2E8F0); color: var(--text-muted, #64748B); border: none;
+}
+html:not([data-theme="clair"]) .nav-chercher { background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.10); }
+html:not([data-theme="clair"]) .nav-chercher kbd, html:not([data-theme="clair"]) .nav-palette kbd {
+  background: rgba(255,255,255,.10); color: #CBD5E1; }
+
+/* ── Épinglés et récents ──────────────────────────────────────────────────────────────────────── */
+.nav-intertitre {
+  font-size: 9.5px; text-transform: uppercase; letter-spacing: .09em; font-weight: var(--t-moyen, 600);
+  color: var(--text-muted, #94A3B8); padding: var(--e-3, 12px) var(--e-3, 12px) 5px;
+}
+.nav-separateur { height: 1px; margin: var(--e-3, 12px) var(--e-2, 8px); background: var(--g-200, #E2E8F0); }
+html:not([data-theme="clair"]) .nav-separateur { background: rgba(255,255,255,.08); }
+
+.nav-rapide { position: relative; }
+.nav-etoile, .nav-palette-etoile {
+  margin-left: auto; padding: 0 4px; cursor: pointer; font-size: 13px; line-height: 1;
+  color: var(--text-muted, #94A3B8); opacity: 0; transition: opacity var(--v-court, .15s), color var(--v-court, .15s);
+}
+.nav-etoile.pleine, .nav-palette-etoile.pleine { opacity: 1; color: var(--m-or, #D4A94A); }
+.nav-rapide:hover .nav-etoile, .nav-palette-ligne:hover .nav-palette-etoile,
+.nav-palette-ligne.actif .nav-palette-etoile { opacity: 1; }
+.nav-etoile:hover, .nav-palette-etoile:hover { color: var(--m-or, #D4A94A); }
+
+/* ── Les groupes, enfin lisibles ──────────────────────────────────────────────────────────────────
+   Le groupe était un bouton de la même couleur que ses entrées : on ne le distinguait pas de ce
+   qu'il contient. Il devient un intertitre — capitales espacées, filet au-dessus — et il annonce
+   combien d'entrées il porte, ce qui évite de l'ouvrir pour rien. */
+.nav-groupe {
+  font-size: 9.5px !important; text-transform: uppercase; letter-spacing: .09em;
+  font-weight: var(--t-moyen, 600) !important; color: var(--text-muted, #94A3B8) !important;
+  padding: var(--e-3, 12px) var(--e-3, 12px) 5px !important;
+  border-top: 1px solid var(--g-200, #E2E8F0); margin-top: 4px;
+  display: flex; align-items: center; gap: 6px;
+}
+html:not([data-theme="clair"]) .nav-groupe { border-top-color: rgba(255,255,255,.07); }
+.nav-groupe > span:first-child { flex: 1; }
+.nav-groupe-compte {
+  font-size: 9.5px; font-variant-numeric: tabular-nums;
+  min-width: 15px; text-align: center; padding: 1px 5px; border-radius: var(--r-rond, 999px);
+  background: var(--g-200, #E2E8F0); color: var(--text-muted, #64748B);
+}
+html:not([data-theme="clair"]) .nav-groupe-compte { background: rgba(255,255,255,.10); color: #94A3B8; }
+
+/* ── La palette ───────────────────────────────────────────────────────────────────────────────── */
+.nav-palette-fond {
+  position: fixed; inset: 0; z-index: 10500;
+  background: rgba(4, 12, 28, .48); backdrop-filter: blur(3px);
+  display: flex; justify-content: center; align-items: flex-start;
+  padding: max(9vh, var(--e-8, 32px)) var(--e-4, 16px) var(--e-4, 16px);
+  animation: nav-fondu var(--v-court, .15s) ease both;
+}
+@keyframes nav-fondu { from { opacity: 0; } to { opacity: 1; } }
+
+.nav-palette {
+  width: min(620px, 100%); max-height: 72vh; display: flex; flex-direction: column;
+  border-radius: var(--r-l, 18px); overflow: hidden;
+  background: var(--surface, #fff); border: 1px solid var(--g-200, #E2E8F0);
+  box-shadow: var(--o-3);
+  animation: nav-monte var(--v-moyen, .28s) var(--v-entree) both;
+}
+@keyframes nav-monte { from { opacity: 0; transform: translateY(-10px) scale(.985); } to { opacity: 1; transform: none; } }
+
+.nav-palette-tete { display: flex; align-items: center; gap: var(--e-3, 12px);
+  padding: var(--e-4, 16px) var(--e-5, 20px); border-bottom: 1px solid var(--g-200, #E2E8F0); }
+.nav-palette-tete input {
+  flex: 1; min-width: 0; border: none; background: transparent; outline: none;
+  font-family: inherit; font-size: var(--t-xl, 19px); color: var(--text, #0F172A); letter-spacing: -0.015em;
+}
+.nav-palette-tete input::placeholder { color: var(--text-muted, #94A3B8); }
+
+.nav-palette-liste { flex: 1; overflow-y: auto; padding: var(--e-2, 8px); }
+.nav-palette-section {
+  font-size: 9.5px; text-transform: uppercase; letter-spacing: .09em; font-weight: var(--t-moyen, 600);
+  color: var(--text-muted, #94A3B8); padding: var(--e-3, 12px) var(--e-3, 12px) 5px;
+}
+.nav-palette-ligne {
+  display: flex; align-items: center; gap: var(--e-3, 12px); width: 100%; cursor: pointer; text-align: left;
+  padding: 9px var(--e-3, 12px); border: none; border-radius: var(--r-s, 10px);
+  background: transparent; color: var(--text, #0F172A); font-family: inherit;
+}
+.nav-palette-ligne.actif { background: var(--c-info-fond); }
+.nav-palette-ligne:hover { background: var(--g-50, #F4F6F9); }
+.nav-palette-ligne.actif:hover { background: var(--c-info-fond); }
+.nav-palette-ico { font-size: 16px; line-height: 1; width: 20px; text-align: center; flex-shrink: 0; }
+.nav-palette-lib { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.nav-palette-lib b { font-size: var(--t-m, 13.5px); font-weight: 500; }
+.nav-palette-lib small { font-size: var(--t-xs, 11px); color: var(--text-muted, #64748B); }
+
+.nav-palette-vide { padding: var(--e-8, 32px) var(--e-4, 16px); text-align: center;
+  font-size: var(--t-m, 13.5px); color: var(--text-muted, #64748B); line-height: 1.6; }
+.nav-palette-vide small { display: block; margin-top: 6px; font-size: var(--t-s, 12.5px); }
+
+.nav-palette-pied { display: flex; gap: var(--e-4, 16px); flex-wrap: wrap;
+  padding: 9px var(--e-5, 20px); border-top: 1px solid var(--g-200, #E2E8F0);
+  font-size: var(--t-xs, 11px); color: var(--text-muted, #94A3B8); }
+.nav-palette-pied span { display: flex; align-items: center; gap: 4px; }
+
+html:not([data-theme="clair"]) .nav-palette { background: #111C33; border-color: #243350; }
+html:not([data-theme="clair"]) .nav-palette-tete,
+html:not([data-theme="clair"]) .nav-palette-pied { border-color: #243350; }
+html:not([data-theme="clair"]) .nav-palette-tete input { color: #E2E8F0; }
+html:not([data-theme="clair"]) .nav-palette-ligne { color: #E2E8F0; }
+html:not([data-theme="clair"]) .nav-palette-ligne:hover { background: rgba(255,255,255,.05); }
+
+@media (max-width: 620px) {
+  .nav-palette-fond { padding-top: var(--e-4, 16px); }
+  .nav-palette-tete input { font-size: var(--t-l, 15px); }
+  .nav-palette-pied { display: none; }
+}

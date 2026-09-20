@@ -1,0 +1,64 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   SUPPRIMER OU ARCHIVER UNE FICHE CLIENT (js/89, 20.09.2026)
+
+   Deux issues très différentes derrière le même bouton : une fiche vierge disparaît pour de bon,
+   une fiche pleine est archivée. La fenêtre doit donc dire laquelle avant qu'on clique — d'où le
+   surtitre, et d'où le fait qu'elle interroge le serveur AVANT de proposer quoi que ce soit.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.sc-modale {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-m, 14px); padding: var(--e-5, 20px) var(--e-5, 22px);
+  max-width: 440px; width: 100%;
+  box-shadow: var(--o-3, 0 20px 50px rgba(0, 0, 0, .35));
+}
+.sc-surtitre {
+  display: block; margin-bottom: 3px;
+  font-size: 10px; text-transform: uppercase; letter-spacing: .09em;
+  color: var(--text-muted); font-weight: 600;
+}
+.sc-modale h3 {
+  margin: 0 0 10px; font-size: var(--t-xl, 19px); font-weight: var(--t-moyen, 600);
+  letter-spacing: -0.02em; color: var(--text);
+}
+.sc-modale p { margin: 0 0 10px; font-size: var(--t-m, 13.5px); color: var(--text); line-height: 1.55; text-wrap: pretty; }
+.sc-note { font-size: var(--t-s, 12.5px) !important; color: var(--text-muted) !important; }
+.sc-erreur { color: var(--c-danger-texte, #B91C1C) !important; }
+.sc-liste {
+  margin: 0 0 12px; padding-left: 20px;
+  font-size: var(--t-s, 12.5px); color: var(--text-muted); line-height: 1.7;
+}
+
+/* L'attente n'est pas décorative : la fenêtre interroge vraiment vingt-huit tables avant de
+   décider quoi proposer, et l'utilisateur doit savoir que ça travaille. */
+.sc-attente { display: flex; align-items: center; gap: 9px; color: var(--text-muted) !important; }
+.sc-spin {
+  width: 14px; height: 14px; flex-shrink: 0; border-radius: 50%;
+  border: 2px solid var(--border); border-top-color: var(--accent);
+  animation: sc-tourne .7s linear infinite;
+}
+@keyframes sc-tourne { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .sc-spin { animation-duration: 2.4s; } }
+
+.sc-actions { display: flex; gap: var(--e-2, 8px); margin-top: var(--e-4, 16px); }
+.sc-actions > * { flex: 1; }
+.sc-danger {
+  padding: 10px 14px; border-radius: var(--r-s, 10px); cursor: pointer; font-family: inherit;
+  font-size: var(--t-m, 13.5px); font-weight: 500;
+  background: var(--c-danger, #EF4444); color: #fff;
+  border: 1px solid var(--c-danger, #EF4444);
+  transition: filter var(--v-court, .15s);
+}
+.sc-danger:hover { filter: brightness(1.08); }
+.sc-danger:disabled { opacity: .6; cursor: default; }
+
+/* ── La case « afficher les archivés » ─────────────────────────────────────────────────────────── */
+.sc-case {
+  display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+  padding: 8px 13px; border-radius: var(--r-s, 10px);
+  border: 1px solid var(--border); background: var(--surface-alt);
+  font-size: var(--t-s, 12.5px); color: var(--text-muted); white-space: nowrap;
+  transition: color var(--v-court, .15s), border-color var(--v-court, .15s);
+}
+.sc-case:hover { color: var(--text); border-color: var(--accent-border); }
+.sc-case input { accent-color: var(--accent); cursor: pointer; }

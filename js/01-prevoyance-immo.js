@@ -380,6 +380,30 @@ const TAUX_COMMISSION = {
     // forfaitaires différents (18.70% acquisition / 3.20% portefeuille, hors tableau de courtage) — à
     // clarifier avec Jonathan s'il est toujours actif en parallèle de celui-ci avant de l'intégrer.
   },
+  // LA MOBILIÈRE (20.09.2026) — taux MESURÉS sur les versements réels, pas issus d'une convention.
+  //
+  // Pourquoi mesurés : aucune convention Mobilière n'est enregistrée, et le CRM appliquait donc son
+  // taux de repli de 10 % de la prime. Le rapprochement bancaire a montré l'ampleur de l'erreur :
+  // sept contrats RC entreprise et protection juridique estimés à 10 % ont été payés entre 65 et
+  // 74 %. Un facteur SEPT. Ces branches étaient invisibles dans le prévisionnel.
+  //
+  // Les taux ci-dessous sont la médiane du rapport « commission encaissée / prime annuelle » sur
+  // les versements constatés. Ils restent une ESTIMATION fondée sur l'observation : le jour où la
+  // convention arrive, elle les remplace.
+  //
+  // CE SONT DES TAUX D'ACQUISITION — première année uniquement. La Mobilière ne nous verse
+  // aujourd'hui aucune commission de gestion : tant que la convention ne le prévoit pas, un
+  // contrat Mobilière en gestion rapporterait zéro, et l'inscrire comme tel gonflerait la
+  // trésorerie d'un revenu qui n'existe pas. Le formulaire l'empêche (voir js/95).
+  mobiliere: {
+    acquisition_seulement: true,           // pas de commission de gestion tant qu'aucune convention ne l'accorde
+    rc_entreprise: 72.00,                  // mesuré sur 2 versements (72,2 % médian)
+    protection_juridique_pro: 66.00,       // mesuré sur 2 versements (65,7 % médian)
+    vehicule_rc: 12.70,                    // mesuré sur 6 versements
+    rc_menage: 66.00,                      // aligné sur la PJ professionnelle faute d'assez de cas isolés
+    defaut: 15.00,                         // les branches non observées : la moyenne du marché non-vie,
+                                           // et non les 10 % de repli qui se sont révélés très faux ici
+  },
 };
 
 // ═══ CONSTANTES LÉGALES LPP (état au 01.01.2026 — inchangées depuis 2025, réforme rejetée) ═══

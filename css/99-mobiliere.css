@@ -1,0 +1,9 @@
+﻿/* ═══ LA MOBILIÈRE : NOTE SOUS LE CHAMP NATURE (js/95, 20.09.2026) ═══════════════════════════════
+   Un choix grisé sans explication se lit comme une panne, et finit par être contourné. Le motif
+   s'affiche donc sous le champ, dans le ton d'une information et non d'une erreur. */
+.mob-note {
+  margin-top: 5px; padding: 6px 10px; border-radius: var(--r-s, 10px);
+  background: var(--c-info-fond);
+  border: 1px solid color-mix(in srgb, var(--c-info, #0EA5E9) 26%, transparent);
+  font-size: var(--t-xs, 11px); color: var(--text); line-height: 1.45; text-wrap: pretty;
+}

@@ -812,6 +812,7 @@ const SECTIONS = [
   ]},
   { id: 'vente', label: 'Ventes', icon: '🚀', sub: [
     { id: 'suivi', icon: '📋', label: 'Suivi des affaires', groupe: 'Affaires' },
+    { id: 'resiliations', icon: '✉️', label: 'Résiliations à faire', groupe: 'Affaires' },
     { id: 'nouvelle-demande-offre', icon: '📝', label: 'Demande d\'offre', groupe: 'Affaires' },
     { id: 'nouveau-contrat-direct', icon: '➕', label: 'Nouveau contrat', groupe: 'Affaires' },
     { id: 'renouvellements', icon: '🔁', label: 'Renouvellements', groupe: 'Portefeuille' },
@@ -1566,6 +1567,8 @@ async function renderView() {
     case 'rapprochement': main.innerHTML = typeof viewRapprochement === 'function' ? viewRapprochement() : ''; break;
     // Contrôle croisé : aucun contrat ne doit rester sans commission encaissée, attendue ou close (js/81)
     case 'controle-coherence': main.innerHTML = typeof viewControleCoherence === 'function' ? viewControleCoherence() : ''; break;
+    // Les contrats a quitter, par date limite de reception (js/94)
+    case 'resiliations': main.innerHTML = typeof viewResiliations === 'function' ? viewResiliations() : ''; break;
     // Lien de réservation et rendez-vous pris (js/83)
     case 'calendly': main.innerHTML = typeof viewCalendly === 'function' ? viewCalendly() : ''; break;
     // État de la connexion Brevo et relevé des chiffres de campagne (js/84)

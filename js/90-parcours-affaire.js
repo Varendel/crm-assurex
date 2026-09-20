@@ -539,11 +539,27 @@ function pafCouverturesHtml(o) {
   </div>`;
 }
 
-function pafOuvrirCouvertures(oppId) {
+// Ce qui ne concerne pas ce client-là n'a pas à s'afficher. Un particulier n'a ni LAA, ni LPP
+// collective, ni RC entreprise — lui présenter ces lignes, c'est lui faire lire vingt-huit choix
+// pour en trouver six. Le filtre se fait sur le SEGMENT du client, et il est levé d'un clic :
+// un indépendant assure parfois son activité sur sa fiche privée, et une case masquée qu'on ne
+// peut pas retrouver est pire qu'une case en trop.
+const PAF_RESERVE_ENTREPRISE = /entreprise|collective|\blaa\b|\blpp\b|commercial|professionnel|flotte|exploitation|d&o|perte de gain/i;
+
+function pafPourSegment(cat, produit, entreprise) {
+  if (entreprise) return true;                         // une société peut tout avoir, y compris du privé
+  return !PAF_RESERVE_ENTREPRISE.test(`${cat} ${produit.label}`);
+}
+
+function pafOuvrirCouvertures(oppId, toutVoir) {
   const o = pafOpp(oppId);
   if (!o || typeof creerModale !== 'function') return;
   const groupes = typeof PRODUITS_OPPORTUNITE_GROUPES !== 'undefined' ? PRODUITS_OPPORTUNITE_GROUPES : {};
   const choisis = new Set(Array.isArray(o.produits) ? o.produits : []);
+  const cl = (typeof allClients !== 'undefined' ? allClients : []).find(c => c.id === o.client_id);
+  // Sans fiche client rattachée, on ne sait pas : on montre tout plutôt que de masquer à tort.
+  const entreprise = !cl || !!(typeof estEntreprise === 'function' && estEntreprise(cl));
+  const filtre = !toutVoir && !entreprise;
 
   creerModale('modal-paf-couv', `
     <div class="paf-modale">
@@ -551,21 +567,48 @@ function pafOuvrirCouvertures(oppId) {
       <p class="paf-sous">Plusieurs possibles. Le produit exact, ses modules et sa prime
         définitive se fixeront au contrat, quand la police sera émise — ici on dit seulement de
         quoi il s’agit.</p>
-      <div class="paf-familles">${Object.entries(groupes).map(([cat, produits]) => `
-        <fieldset class="paf-famille">
+      <div class="paf-familles">${Object.entries(groupes).map(([cat, produits]) => {
+        // Une case déjà cochée reste visible même si le filtre l'exclurait : on ne cache jamais
+        // une décision prise, sous peine de la faire disparaître au prochain enregistrement.
+        const visibles = produits.filter(p => choisis.has(p.id) || !filtre || pafPourSegment(cat, p, false));
+        const masques = produits.length - visibles.length;
+        if (!visibles.length) return '';
+        return `<fieldset class="paf-famille">
           <legend>${typeof ICONES_CATEGORIE_PRODUIT !== 'undefined' && ICONES_CATEGORIE_PRODUIT[cat] ? ICONES_CATEGORIE_PRODUIT[cat] : '📌'} ${pafEsc(cat)}</legend>
-          ${produits.map(p => `
+          ${visibles.map(p => `
             <label class="paf-coche ${choisis.has(p.id) ? 'actif' : ''}">
               <input type="checkbox" value="${p.id}" ${choisis.has(p.id) ? 'checked' : ''}
                 onchange="this.closest('label').classList.toggle('actif', this.checked)"/>
               <span>${pafEsc(p.label)}</span>
             </label>`).join('')}
-        </fieldset>`).join('')}</div>
+          ${masques ? `<span class="paf-masques">${masques} couverture${masques > 1 ? 's' : ''} d’entreprise masquée${masques > 1 ? 's' : ''}</span>` : ''}
+        </fieldset>`;
+      }).join('')}</div>
+      ${!entreprise ? `<label class="paf-tout-voir">
+        <input type="checkbox" ${toutVoir ? 'checked' : ''} onchange="pafToutVoir('${oppId}', this.checked)"/>
+        Afficher aussi les couvertures d’entreprise
+        <small>Utile pour un indépendant qui assure son activité sur sa fiche privée.</small>
+      </label>` : ''}
       <div class="paf-actions">
         <button type="button" class="btn-secondary" onclick="document.getElementById('modal-paf-couv').remove()">Annuler</button>
         <button type="button" class="btn-save" onclick="pafEnregistrerCouvertures('${oppId}')">✓ Enregistrer</button>
       </div>
     </div>`, { opacite: .7, padding: '16px' });
+}
+
+// Lever le filtre sans perdre ce qui vient d'être coché : on relit les cases de la fenêtre
+// ouverte, on les enregistre en mémoire, puis on rouvre en montrant tout.
+function pafToutVoir(oppId, tout) {
+  const o = pafOpp(oppId);
+  if (!o) return;
+  // On relit les cases avant de refermer : sans cela, cocher trois couvertures puis lever le
+  // filtre les perdrait toutes. Rien n'est écrit en base ici — seulement gardé en mémoire le
+  // temps de rouvrir.
+  const coches = [...document.querySelectorAll('#modal-paf-couv input[type="checkbox"]:checked')]
+    .map(i => i.value).filter(v => v && v !== 'on');
+  o.produits = coches;
+  document.getElementById('modal-paf-couv')?.remove();
+  pafOuvrirCouvertures(oppId, tout);
 }
 
 async function pafEnregistrerCouvertures(oppId) {

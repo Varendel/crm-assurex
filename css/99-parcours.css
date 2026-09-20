@@ -118,6 +118,18 @@ html:not([data-theme="clair"]) body:not(.mode-cloud):not(.mode-espace-client) .o
 .paf-coche.actif { background: var(--accent-dim); }
 .paf-coche input { margin-top: 2px; accent-color: var(--accent); cursor: pointer; flex-shrink: 0; }
 
+/* Ce qui est masqué se dit, discrètement : une liste tronquée en silence fait douter. */
+.paf-masques { display: block; margin-top: 5px; padding-left: 7px;
+  font-size: 10px; color: var(--text-dim); font-style: italic; }
+.paf-tout-voir {
+  display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; cursor: pointer;
+  margin-top: var(--e-3, 12px); padding: 9px 12px; border-radius: var(--r-s, 10px);
+  background: var(--surface-alt); border: 1px solid var(--border);
+  font-size: var(--t-s, 12.5px); color: var(--text-muted);
+}
+.paf-tout-voir input { accent-color: var(--accent); cursor: pointer; }
+.paf-tout-voir small { flex-basis: 100%; padding-left: 22px; font-size: var(--t-xs, 11px); color: var(--text-dim); }
+
 /* ── Les fenêtres ──────────────────────────────────────────────────────────────────────────────── */
 .paf-modale {
   background: var(--surface); border: 1px solid var(--border);

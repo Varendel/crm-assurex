@@ -23,10 +23,15 @@ const DCX_TYPES = {
 
 // Formats de numéro de police rencontrés chez les compagnies suisses :
 //   La Mobilière  G-1846-4747 / P-2606-0139   Allianz  T308424160   CAP  Z753916287
+//
+// Pas de \b en fin de motif : le souligné est un caractère de mot, si bien que
+// « G-1561-1996_facture.pdf » n'était pas reconnu et le document restait à rattacher
+// (constaté sur le premier import réel, 20.09.2026). Une négation de chiffre suffit et
+// couvre tous les noms de fichiers.
 const DCX_MOTIFS_POLICE = [
-  /\b([A-Z])-?(\d{4})-?(\d{4})\b/,      // G-1846-4747, G18466747
-  /\b([TZ]\d{9})\b/,                     // T308424160
-  /\b(\d{3}-\d{2}-\d{3})\b/,             // 833-28-491
+  /([A-Z])-?(\d{4})-?(\d{4})(?!\d)/,     // G-1846-4747, G18466747
+  /([TZ]\d{9})(?!\d)/,                    // T308424160
+  /(\d{3}-\d{2}-\d{3})(?!\d)/,            // 833-28-491
 ];
 
 window._dcx = window._dcx || { docs: [], filtre: { texte: '', type: '', etat: '' }, chargement: false };

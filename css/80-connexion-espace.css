@@ -187,7 +187,7 @@ body.mode-cloud .login-marque-cloud { display: flex; flex-direction: column; ali
 .df-barre-fond { height: 10px; border-radius: 999px; background: var(--surface-alt); overflow: hidden; }
 .df-barre-fond i { display: block; height: 100%; background: linear-gradient(90deg, #00CFFF, #113679); transition: width .3s ease; }
 .df-avance-txt { display: flex; justify-content: space-between; font-size: 12px; color: var(--text-muted); }
-.df-groupe h3 { margin: 0 0 8px; font-size: 14px; color: #113679; border-bottom: 1px solid var(--border); padding-bottom: 6px; }
+.df-groupe h3 { margin: 0 0 8px; font-size: 14px; color: var(--accent); border-bottom: 1px solid var(--border); padding-bottom: 6px; }
 .df-groupe h3 small { font-weight: 500; color: var(--text-muted); }
 .df-ligne { display: grid; grid-template-columns: 26px 1fr 220px; align-items: start; gap: 10px; padding: 7px 0; border-bottom: 1px dashed var(--border); }
 .df-ligne:last-child { border-bottom: 0; }
@@ -595,7 +595,7 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 .ec-pied-liens { margin: 8px 0 4px; }
 .ec-pied-liens button { background: none; border: 0; padding: 0; font-size: 12px; color: inherit;
   opacity: .85; text-decoration: underline; cursor: pointer; }
-.ec-legal h4 { margin: 16px 0 6px; font-size: 13.5px; color: #113679; }
+.ec-legal h4 { margin: 16px 0 6px; font-size: 13.5px; color: var(--accent); }
 .ec-legal p { margin: 0 0 8px; font-size: 13px; line-height: 1.55; color: var(--text); }
 /* ═══ Lecture des décomptes scannés (js/53, 20.09.2026) ═══ */
 .ocr { display: flex; flex-direction: column; gap: 14px; }

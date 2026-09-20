@@ -402,7 +402,7 @@
     .print-header { display: block !important; }
     .section-card { border: 1px solid #ccc !important; background: white !important; }
     .section-card-header { background: #f5f5f5 !important; }
-    .section-card-header span { color: #0284c7 !important; background: none !important; }
+    .section-card-header span { color: var(--accent) !important; background: none !important; }
     .section-card-header div { background: #7dd3fc !important; }
     .info-block, .form-field { background: #fafafa !important; border: 1px solid #eee !important; }
     .info-value, .info-label, .form-label, .form-input, .stat-value, .stat-label { color: black !important; }

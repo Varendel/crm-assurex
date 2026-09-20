@@ -152,3 +152,20 @@ html:not([data-theme="clair"]) .dbx-hero .bmq { border-color: var(--bnd-verre-bo
     background: none !important; box-shadow: none !important; border: none !important;
   }
 }
+
+/* ── Le titre prend l'encre de SON bandeau (20.09.2026) ───────────────────────────────────────
+   « Contrats × commissions » s'affichait en marine sur un bandeau marine : illisible.
+
+   La cause est une règle d'héritage. Le bandeau porte sa couleur d'encre — blanche quand il est
+   foncé, marine quand il est clair — et le titre en hérite. Mais l'héritage est ce qu'il y a de
+   plus faible en CSS : il suffit d'une règle ciblant h1, ou d'une combinaison thème × ambiance
+   où le fond est redéfini sans l'encre, pour que le titre parte de son côté. Le reste du bandeau,
+   lui, suit — d'où un titre sombre à côté d'un paragraphe blanc.
+
+   On rend donc l'héritage EXPLICITE, dans les deux thèmes et pour les cinq familles de bandeaux.
+   Le titre ne choisit plus sa couleur : il prend celle de la surface sur laquelle il est posé,
+   ce qui est la seule règle qui ne peut pas se tromper. */
+.dbx-hero h1, .dbx-hero h2,
+.fcx-hero h1, .fcx-hero h2,
+.cf-hero h1, .cf-hero h2,
+.ozx-hero h1, .ozx-hero h2 { color: inherit; }

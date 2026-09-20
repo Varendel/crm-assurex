@@ -1,0 +1,91 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   POLICES ET STYLES (js/107, 20.09.2026)
+
+   Quatre réglages posés sur <body>. Chacun ne touche qu'à des JETONS : aucune règle d'écran n'est
+   modifiée, donc aucun écran ne peut casser. C'est ce qui rend ces options sûres à livrer — et
+   c'est aussi la démonstration que le système de jetons sert à quelque chose.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── La police ─────────────────────────────────────────────────────────────────────────────────
+   js/107 pose --police-choisie sur <body>. Tant qu'aucun choix n'est fait, la pile d'origine
+   s'applique : un CRM qu'on n'a jamais réglé doit ressembler à ce qu'il a toujours été. */
+body {
+  font-family: var(--police-choisie, 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif);
+}
+/* Les zones en chasse fixe gardent la leur : un IBAN, un numéro de police et un montant s'alignent
+   en colonne, et c'est cet alignement qui les rend vérifiables d'un coup d'œil. */
+body code, body pre, body .mono, body [class*="mono"] { font-family: var(--t-mono); }
+
+/* ── La taille du texte ────────────────────────────────────────────────────────────────────────
+   Distincte de la densité : celle-ci règle les ESPACES, celle-là les CARACTÈRES. Un écran peut
+   être dense et lisible, ou aéré et trop petit. Les deux gênes sont réelles et différentes. */
+body[data-texte="petit"] {
+  --t-xs: 10px; --t-s: 11.5px; --t-m: 12.5px; --t-l: 14px;
+  --t-xl: 17px; --t-2xl: 23px; --t-titre: 30px;
+}
+body[data-texte="grand"] {
+  --t-xs: 12px; --t-s: 13.5px; --t-m: 15px; --t-l: 16.5px;
+  --t-xl: 21px; --t-2xl: 29px; --t-titre: 38px;
+}
+
+/* ── Les angles ────────────────────────────────────────────────────────────────────────────────
+   Le seul réglage purement esthétique, et celui qui change le plus l'allure : franc pour un outil
+   de travail, rond pour quelque chose de plus souple. --r-rond n'est jamais touché — une pastille
+   ronde doit rester ronde, c'est sa forme et non son style. */
+body[data-coins="francs"] {
+  --r-xs: 2px; --r-s: 3px; --r-m: 4px; --r-l: 6px; --r-xl: 8px;
+}
+body[data-coins="ronds"] {
+  --r-xs: 10px; --r-s: 16px; --r-m: 20px; --r-l: 26px; --r-xl: 32px;
+}
+
+/* ── Les animations ────────────────────────────────────────────────────────────────────────────
+   Le système sait déjà les couper, mais seulement pour qui l'a réglé au niveau du système
+   d'exploitation. Ici c'est à portée de main — et la coupure est nette : les durées tombent à
+   zéro, les animations d'entrée sont supprimées plutôt que raccourcies. Une animation très
+   rapide donne l'impression d'un défaut ; l'absence d'animation, celle de la vitesse. */
+body[data-animations="non"] { --v-court: 0s; --v-moyen: 0s; }
+body[data-animations="non"] *,
+body[data-animations="non"] *::before,
+body[data-animations="non"] *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* ── Les vignettes du panneau ──────────────────────────────────────────────────────────────────
+   Chaque carte montre l'effet du réglage plutôt que de le décrire. Une vignette qui ne montre
+   rien vaut moins qu'une phrase ; celles-ci reproduisent le réglage en miniature. */
+.typo-apercu {
+  display: block; margin-bottom: 8px;
+  font-size: 24px; font-weight: 500; letter-spacing: .01em;
+  color: var(--text); line-height: 1.1;
+  font-variant-numeric: lining-nums;
+}
+.typo-carte small { min-height: 2.6em; }
+
+.typo-vignette {
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+  height: 34px; margin-bottom: 8px;
+}
+.typo-vignette i { display: block; background: var(--text-dim); }
+
+.typo-vignette-texte-petit i { width: 26px; height: 4px; }
+.typo-vignette-texte-petit i:last-child { width: 16px; }
+.typo-vignette-texte-normal i { width: 30px; height: 6px; }
+.typo-vignette-texte-normal i:last-child { width: 18px; }
+.typo-vignette-texte-grand i { width: 34px; height: 9px; }
+.typo-vignette-texte-grand i:last-child { width: 20px; }
+
+.typo-vignette-coins-francs i { width: 22px; height: 22px; border-radius: 2px; }
+.typo-vignette-coins-normal i { width: 22px; height: 22px; border-radius: 7px; }
+.typo-vignette-coins-ronds i  { width: 22px; height: 22px; border-radius: 11px; }
+
+.typo-vignette-anim-oui i { width: 22px; height: 22px; border-radius: 50%;
+  background: var(--accent); animation: typo-pulse 1.6s ease-in-out infinite; }
+.typo-vignette-anim-non i { width: 22px; height: 22px; border-radius: 50%; background: var(--text-dim); }
+@keyframes typo-pulse { 0%, 100% { transform: scale(.75); opacity: .55; } 50% { transform: scale(1); opacity: 1; } }
+
+.typo-note {
+  margin: 12px 0 0; font-size: var(--t-xs, 11px); color: var(--text-muted);
+  line-height: 1.5; text-wrap: pretty;
+}

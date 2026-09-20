@@ -3152,6 +3152,60 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
   #login-screen.lp-go .login-rex-piste { animation: none !important; }
 }
 
+/* ═══ REX CLOUD : navigation par onglets et services du client (js/52, 20.09.2026) ═══ */
+.ec-onglets { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 16px; }
+.ec-onglets button { display: inline-flex; align-items: center; gap: 7px; border: 1px solid var(--border);
+  background: var(--surface); border-radius: 999px; padding: 8px 16px; font-size: 13px; font-weight: 700;
+  color: var(--text-muted); cursor: pointer; }
+.ec-onglets button.actif { background: #113679; border-color: #113679; color: #fff; }
+.ec-onglets button em { font-style: normal; font-size: 11px; font-weight: 800; background: #F59E0B; color: #fff;
+  border-radius: 999px; padding: 1px 7px; }
+.ec-onglets button.actif em { background: #00CFFF; color: #06283F; }
+.ec-tuiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+.ec-tuile { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; text-align: left;
+  border: 1px solid var(--border); border-radius: 14px; background: var(--surface); padding: 14px 16px; cursor: pointer; }
+.ec-tuile:hover { border-color: #00CFFF; box-shadow: 0 6px 18px rgba(17,54,121,.12); transform: translateY(-1px); }
+.ec-tuile span { font-size: 22px; }
+.ec-tuile b { font-size: 14px; color: var(--text); }
+.ec-tuile small { font-size: 12px; color: var(--text-muted); line-height: 1.4; }
+.ec-actions-contrat { grid-column: 1 / -1; display: flex; gap: 14px; flex-wrap: wrap; margin-top: 4px; }
+.ec-actions-contrat button { background: none; border: 0; padding: 2px 0; font-size: 12px; font-weight: 700;
+  color: #113679; cursor: pointer; }
+.ec-actions-contrat button:hover { color: #00A8D6; text-decoration: underline; }
+.ec-deux { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.ec-sinistres { display: flex; flex-direction: column; gap: 10px; }
+.ec-sinistre { border: 1px solid var(--border); border-left: 3px solid #94A3B8; border-radius: 12px; padding: 12px 14px; }
+.ec-sinistre.declare { border-left-color: #F59E0B; }
+.ec-sinistre.transmis, .ec-sinistre.en_cours { border-left-color: #00CFFF; }
+.ec-sinistre.regle { border-left-color: #10B981; }
+.ec-sinistre.refuse, .ec-sinistre.annule { border-left-color: #EF4444; }
+.ec-sin-tete { display: flex; align-items: center; gap: 10px; justify-content: space-between; }
+.ec-sin-tete b { font-size: 14px; }
+.ec-sin-etat { font-size: 11px; font-weight: 800; border-radius: 999px; padding: 2px 10px;
+  background: var(--surface-alt); color: var(--text-muted); }
+.ec-sinistre p { margin: 8px 0 4px; font-size: 13px; line-height: 1.5; white-space: pre-line; }
+.ec-sinistre small { font-size: 11.5px; color: var(--text-muted); display: block; }
+.ec-sin-ref { color: #047857 !important; font-weight: 700; }
+.ec-co-carte { display: flex; flex-direction: column; gap: 14px; }
+.ec-co-ident { display: flex; align-items: center; gap: 14px; }
+.ec-co-initiales { display: inline-flex; align-items: center; justify-content: center; width: 58px; height: 58px;
+  border-radius: 50%; background: linear-gradient(145deg, #113679, #00CFFF); color: #fff; font-weight: 800; font-size: 20px; }
+.ec-co-ident b { display: block; font-size: 16px; }
+.ec-co-ident small { display: block; font-size: 12px; color: var(--text-muted); }
+.ec-co-liens { display: flex; gap: 18px; flex-wrap: wrap; }
+.ec-co-liens a { font-size: 14px; font-weight: 700; color: #113679; text-decoration: none; }
+.ec-co-liens a:hover { text-decoration: underline; }
+.ec-co-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 700px) {
+  .ec-deux { grid-template-columns: 1fr; }
+  .ec-onglets { overflow-x: auto; flex-wrap: nowrap; padding-bottom: 4px; }
+  .ec-onglets button { white-space: nowrap; }
+}
+/* Retour au CRM depuis la page de connexion client (lien discret sous le formulaire) */
+.login-bascule { margin-top: 14px; font-size: 12px; color: #8A94A8; }
+.login-bascule button { background: none; border: 0; padding: 0; font-size: 12px; font-weight: 700;
+  color: #113679; cursor: pointer; text-decoration: underline; }
+
 @media (prefers-reduced-motion: reduce) {
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
@@ -3254,6 +3308,7 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
         <button type="submit" class="btn-primary">Se connecter</button>
       </form>
       <div class="login-footer">🔒 Données hébergées en Suisse · Zurich</div>
+      <div class="login-bascule" id="login-bascule" style="display:none">Vous êtes conseiller ? <button type="button" onclick="ouvrirCoteConseiller()">Ouvrir REX CRM</button></div>
     </div>
   </main>
 </div>
@@ -3288,7 +3343,7 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 
 <script src="js/01-prevoyance-immo.js?v=1790350000"></script>
 <script src="js/02-catalogue-session.js?v=1790060000"></script>
-<script src="js/03-auth-navigation.js?v=1791004000"></script>
+<script src="js/03-auth-navigation.js?v=1791007000"></script>
 <script src="js/04-dashboard-finma.js?v=1790700000"></script>
 <script src="js/05-contrats-clients.js?v=1791000000"></script>
 <script src="js/06-signature-opportunites.js?v=1790700000"></script>
@@ -3302,7 +3357,7 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 <script src="js/14-sources.js?v=1790680000"></script>
 <script src="js/15-pictos-compagnies.js?v=1790240000"></script>
 <script src="js/16-pipeline-kanban.js?v=1789930000"></script>
-<script src="js/17-fiche-activite.js?v=1791000000"></script>
+<script src="js/17-fiche-activite.js?v=1791006000"></script>
 <script src="js/18-dashboard.js?v=1790998000"></script>
 <script src="js/19-prevision-commissions.js?v=1790760000"></script>
 <script src="js/20-fiche-client-entete.js?v=1790020000"></script>
@@ -3333,10 +3388,11 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 <script src="js/45-courriers.js?v=1790640000"></script>
 <script src="js/46-offre-vers-contrat.js?v=1790640000"></script>
 <script src="js/47-profil-investisseur.js?v=1790980000"></script>
-<script src="js/48-espace-client.js?v=1791002000"></script>
+<script src="js/48-espace-client.js?v=1791007000"></script>
 <script src="js/49-nouveau-contrat.js?v=1790920000"></script>
 <script src="js/50-dossier-financement.js?v=1790995000"></script>
-<script src="js/51-messages-transferts.js?v=1791002000"></script>
+<script src="js/51-messages-transferts.js?v=1791006000"></script>
+<script src="js/52-espace-client-services.js?v=1791006000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

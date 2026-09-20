@@ -22,6 +22,11 @@ function ecModeCloud(actif) { document.body.classList.toggle('mode-cloud', actif
     ecModeCloud(true);
     document.title = `${EC_MARQUE} — Espace client`;
     // Logo EX.GROUP : on reprend celui du code (js/15) plutôt qu'une copie du tracé
+    // Sortie de secours (20.09.2026) : une fois qu'un client s'est connecté sur un appareil,
+    // l'adresse garde ?espace=client — le conseiller qui reprend le même téléphone voyait la
+    // page REX CLOUD alors qu'il vient travailler. Ce lien discret le ramène au CRM.
+    const bascule = document.getElementById('login-bascule');
+    if (bascule) bascule.style.display = '';
     const ex = document.querySelector('.cloud-signature .cloud-ex');
     if (ex && typeof LOGO_EXGROUPE_SVG !== 'undefined') {
       const span = document.createElement('span');
@@ -34,6 +39,13 @@ function ecModeCloud(actif) { document.body.classList.toggle('mode-cloud', actif
 })();
 
 function ecEsc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
+
+// Repasser du côté conseiller : on retire ?espace=client et l'identité REX CLOUD, puis on
+// recharge sur la page de connexion normale du CRM.
+function ouvrirCoteConseiller() {
+  try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  location.href = location.pathname;
+}
 
 // ── Connexion : ce compte est-il un accès client ? ──────────────────────────────────────────────
 async function ecAccesDeLEmail(email) {

@@ -682,6 +682,12 @@ async function fermerEcranChargementCrm(t0) {
 
 async function enterApp(user) {
   currentUser = user;
+  // Un conseiller qui se connecte sur un appareil déjà utilisé côté client : on quitte l'identité
+  // REX CLOUD et on nettoie l'adresse, sinon le CRM s'ouvre avec l'habillage de l'espace client.
+  document.body.classList.remove('mode-cloud', 'mode-espace-client');
+  if (/[?&]espace=client/.test(location.search)) {
+    try { history.replaceState(null, '', location.pathname); } catch (e) {}
+  }
   const t0Chargement = ouvrirEcranChargementCrm();
   document.getElementById('login-screen').style.display = 'none';
   document.getElementById('app').classList.add('active');

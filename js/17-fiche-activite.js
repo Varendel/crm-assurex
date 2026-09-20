@@ -73,12 +73,14 @@ async function chargerJournalActivite() {
   const idsContrats = (ctx.contrats || []).map(ct => ct.id);
   const oppsClient = (typeof allOpportunites !== 'undefined' ? allOpportunites : []).filter(o => o.client_id === clientId);
   const idsAudit = [clientId, ...idsContrats, ...oppsClient.map(o => o.id)];
-  const [activites, audits, messages, transferts] = await Promise.all([
+  const [activites, audits, messages, transferts, sinistres, demandesDocs] = await Promise.all([
     dbGet('activites_client', `client_id=eq.${clientId}&select=*&order=created_at.desc&limit=200`),
     dbGet('audit_log', `record_id=in.(${idsAudit.join(',')})&action=not.in.(view_client,login,logout)&select=action,detail,user_email,created_at&order=created_at.desc&limit=150`),
-    // Ce que le client a écrit ou demandé depuis son espace REX CLOUD (js/51)
+    // Ce que le client a écrit ou demandé depuis son espace REX CLOUD (js/51, js/52)
     dbGet('messages_clients', `client_id=eq.${clientId}&select=*&order=created_at.desc&limit=50`).catch(() => []),
     dbGet('demandes_transfert', `client_id=eq.${clientId}&select=*&order=created_at.desc&limit=20`).catch(() => []),
+    dbGet('sinistres', `client_id=eq.${clientId}&select=*&order=created_at.desc&limit=50`).catch(() => []),
+    dbGet('demandes_documents', `client_id=eq.${clientId}&select=*&order=created_at.desc&limit=50`).catch(() => []),
   ]);
   if (_ja.clientId !== clientId) return; // l'utilisateur a changé de fiche entre-temps
 
@@ -99,6 +101,15 @@ async function chargerJournalActivite() {
       titre: `Message du client${m.sujet ? ' : ' + m.sujet : ''}${ct ? ` — ${ct.produit || 'contrat'}${ct.numero_police ? ' (' + ct.numero_police + ')' : ''}` : ''}`,
       detail: m.message + (m.reponse ? `\n↳ Réponse : ${m.reponse}` : m.statut === 'nouveau' ? '\n↳ Sans réponse pour l’instant.' : '') });
   });
+  (sinistres || []).forEach(s => {
+    const ct = (ctx.contrats || []).find(x => x.id === s.contrat_id);
+    items.push({ type: 'message', date: s.created_at, qui: 'Client (REX CLOUD)',
+      titre: `Sinistre déclaré : ${s.type_sinistre || ''}${ct ? ` — ${ct.produit || ''}` : ''}`,
+      detail: [s.date_sinistre ? `Survenu le ${fmtDate(s.date_sinistre)}` : '', s.lieu, s.description,
+        s.reference_assureur ? `Référence assureur : ${s.reference_assureur}` : ''].filter(Boolean).join('\n') });
+  });
+  (demandesDocs || []).forEach(d => items.push({ type: 'message', date: d.created_at, qui: 'Client (REX CLOUD)',
+    titre: `Document demandé : ${d.type_document}`, detail: d.precisions || '' }));
   (transferts || []).forEach(t => items.push({ type: 'message', date: t.created_at, qui: 'Client (REX CLOUD)',
     titre: 'Demande de transfert de gestion',
     detail: (Array.isArray(t.compagnies) ? t.compagnies : []).map(x => `${x.compagnie}${x.produit ? ' · ' + x.produit : ''}${x.police ? ' · ' + x.police : ''}`).join('\n') + (t.message ? `\n${t.message}` : '') }));

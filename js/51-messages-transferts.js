@@ -77,6 +77,8 @@ async function ecEnvoyerMessage() {
 // service lui apporte et qu'il est gratuit, avant de signer (demande de Jonathan, 20.09.2026).
 const EC_TEXTE_TRANSFERT = `En transférant vos contrats chez Assurex, vous bénéficiez d’un accompagnement de qualité et entièrement gratuit pour vos contrats existants, et vous êtes informé à l’échéance de vos contrats, à la recherche d’un meilleur tarif.
 
+Nous nous occupons de récupérer vos polices et de les mettre à votre disposition sur votre cloud personnel, avec le résumé de vos couvertures. Assurance ménage, santé, véhicules : toutes vos polices digitales à portée de main.
+
 De plus, vous pouvez déclarer vos sinistres directement depuis votre espace client : nous nous chargeons de l’enregistrement auprès de l’assureur et revenons vers vous avec une prise en charge.`;
 
 function ecOuvrirTransfert() {
@@ -222,11 +224,13 @@ let _mc = { messages: null, transferts: null, filtre: 'nouveau', onglet: 'messag
 
 async function mcCharger(forcer) {
   if (_mc.messages && !forcer) return;
-  const [m, t] = await Promise.all([
+  const [m, t, s, d] = await Promise.all([
     dbGet('messages_clients', 'select=*&order=created_at.desc&limit=300').catch(() => []),
     dbGet('demandes_transfert', 'select=*&order=created_at.desc&limit=200').catch(() => []),
+    dbGet('sinistres', 'select=*&order=created_at.desc&limit=300').catch(() => []),
+    dbGet('demandes_documents', 'select=*&order=created_at.desc&limit=300').catch(() => []),
   ]);
-  _mc.messages = m || []; _mc.transferts = t || [];
+  _mc.messages = m || []; _mc.transferts = t || []; _mc.sinistres = s || []; _mc.documents = d || [];
 }
 function mcNomClient(id) {
   const c = (typeof allClients !== 'undefined' ? allClients : []).find(x => x.id === id);
@@ -256,11 +260,15 @@ function viewMessagesClients() {
     ${mcTableauDeBord()}
     <div class="mcx-onglets" role="tablist">
       <button type="button" role="tab" class="${_mc.onglet === 'messages' ? 'actif' : ''}" onclick="_mc.onglet='messages';navigate('messages-clients',{silent:true})">💬 Messages <span>${(_mc.messages || []).filter(m => m.statut === 'nouveau').length}</span></button>
+      <button type="button" role="tab" class="${_mc.onglet === 'sinistres' ? 'actif' : ''}" onclick="_mc.onglet='sinistres';navigate('messages-clients',{silent:true})">🛟 Sinistres <span>${(_mc.sinistres || []).filter(s => s.statut === 'declare').length}</span></button>
+      <button type="button" role="tab" class="${_mc.onglet === 'documents' ? 'actif' : ''}" onclick="_mc.onglet='documents';navigate('messages-clients',{silent:true})">📄 Documents <span>${(_mc.documents || []).filter(d => d.statut === 'nouvelle').length}</span></button>
       <button type="button" role="tab" class="${_mc.onglet === 'transferts' ? 'actif' : ''}" onclick="_mc.onglet='transferts';navigate('messages-clients',{silent:true})">🤝 Transferts de gestion <span>${nouveauxT}</span></button>
     </div>
     ${_mc.onglet === 'messages' ? `
       <div class="mcx-filtres">${['nouveau', 'lu', 'traite', 'tout'].map(f => `<button type="button" class="${_mc.filtre === f ? 'actif' : ''}" onclick="_mc.filtre='${f}';navigate('messages-clients',{silent:true})">${f === 'tout' ? 'Tous' : MT_STATUTS_MSG[f]}</button>`).join('')}</div>
       <section class="dbx-carte mcx-liste">${msgs.length ? msgs.map(mcLigneMessage).join('') : '<div class="dbx-vide-petit">Aucun message dans cette vue.</div>'}</section>`
+    : _mc.onglet === 'sinistres' ? `<section class="dbx-carte mcx-liste">${(_mc.sinistres || []).length ? _mc.sinistres.map(mcLigneSinistre).join('') : '<div class="dbx-vide-petit">Aucun sinistre déclaré depuis l’espace client.</div>'}</section>`
+    : _mc.onglet === 'documents' ? `<section class="dbx-carte mcx-liste">${(_mc.documents || []).length ? _mc.documents.map(mcLigneDocument).join('') : '<div class="dbx-vide-petit">Aucune demande de document.</div>'}</section>`
     : `<section class="dbx-carte mcx-liste">${(_mc.transferts || []).length ? _mc.transferts.map(mcLigneTransfert).join('') : '<div class="dbx-vide-petit">Aucune demande de transfert pour l’instant.</div>'}</section>`}
   </div>`;
 }
@@ -282,11 +290,15 @@ function mcTableauDeBord() {
   const k = (i, label, valeur, sous) => typeof dbxKpi === 'function'
     ? dbxKpi({ i, label, valeur, sous })
     : `<div class="dbx-kpi"><b>${valeur}</b><span>${label}</span><small>${sous}</small></div>`;
+  const sinAFaire = (_mc.sinistres || []).filter(s => ['declare', 'transmis', 'en_cours'].includes(s.statut)).length;
+  const sinNeufs = (_mc.sinistres || []).filter(s => s.statut === 'declare').length;
+  const docAFaire = (_mc.documents || []).filter(d => ['nouvelle', 'en_cours'].includes(d.statut)).length;
   return `<div class="dbx-kpis mcx-bord">
     ${k(0, 'Messages à traiter', nouveaux, enRetard ? `${enRetard} en attente depuis plus de 48 h` : 'tout est suivi')}
-    ${k(1, 'Transferts en cours', trAFaire, `${trs.length} demande(s) au total`)}
-    ${k(2, 'Polices attendues', attendues, `${recues} déjà reçue(s) et déposée(s)`)}
-    ${k(3, 'Délai moyen de réponse', delai === null ? '—' : delai, delai === null ? 'aucune réponse enregistrée' : 'heures entre le message et la réponse')}
+    ${k(1, 'Sinistres ouverts', sinAFaire, sinNeufs ? `${sinNeufs} à annoncer à l’assureur` : 'tous annoncés')}
+    ${k(2, 'Documents à envoyer', docAFaire, `${(_mc.documents || []).length} demande(s) au total`)}
+    ${k(3, 'Transferts · polices', trAFaire, `${attendues} police(s) attendue(s) · ${recues} reçue(s)`)}
+    ${k(4, 'Délai moyen de réponse', delai === null ? '—' : delai, delai === null ? 'aucune réponse enregistrée' : 'heures entre le message et la réponse')}
   </div>`;
 }
 
@@ -490,6 +502,79 @@ async function mcEnregistrerReponse(id, envoyer) {
     showError(`✓ Réponse envoyée à ${to.join(', ')}.`);
   } else showError('✓ Réponse enregistrée.');
   document.getElementById('modal-mc-reponse')?.remove();
+  navigate('messages-clients', { silent: true });
+}
+
+// ── Sinistres déclarés depuis l'espace client ───────────────────────────────────────────────────
+const MT_ETATS_SINISTRE = { declare: 'Déclaré', transmis: 'Transmis à l’assureur', en_cours: 'En cours',
+  regle: 'Réglé', refuse: 'Refusé', annule: 'Annulé' };
+
+function mcLigneSinistre(s) {
+  const ct = mcContrat(s.contrat_id);
+  return `<article class="mcx-msg ${s.statut === 'declare' ? 'neuf' : ''}">
+    <div class="mcx-msg-tete">
+      <button type="button" class="mcx-nom" onclick="showClient('${s.client_id}')">${mtEsc(mcNomClient(s.client_id))}</button>
+      <span class="mcx-badge mcx-badge-${s.statut === 'declare' ? 'nouveau' : s.statut === 'regle' ? 'traite' : 'lu'}">${MT_ETATS_SINISTRE[s.statut] || s.statut}</span>
+      <span class="mcx-date">déclaré ${mtEsc(mcQuand(s.created_at))}</span>
+    </div>
+    <div class="mcx-contrat">🛟 <b>${mtEsc(s.type_sinistre || 'Sinistre')}</b>${s.date_sinistre ? ` · survenu le ${fmtDate(s.date_sinistre)}` : ''}${s.lieu ? ' · ' + mtEsc(s.lieu) : ''}
+      ${ct ? ` · ${typeof pictoCompagnie === 'function' ? pictoCompagnie(ct.compagnie, 16) : ''} ${mtEsc(ct.produit || '')}${ct.numero_police ? ' (' + mtEsc(ct.numero_police) + ')' : ''}` : ' · <i>contrat non précisé</i>'}</div>
+    <p class="mcx-texte">${mtEsc(s.description || '').replace(/\n/g, '<br/>')}</p>
+    ${s.tiers ? `<div class="mcx-contrat">Tiers : ${mtEsc(s.tiers)}</div>` : ''}
+    ${s.montant_estime ? `<div class="mcx-contrat">Dommage estimé : CHF ${fmtCHF(Math.round(s.montant_estime))}</div>` : ''}
+    ${s.reference_assureur ? `<div class="mcx-contrat">Référence assureur : <b>${mtEsc(s.reference_assureur)}</b></div>` : ''}
+    <div class="mcx-actions">
+      ${s.statut === 'declare' ? `<button type="button" class="btn-save" onclick="mcStatutSinistre('${s.id}', 'transmis', true)">📨 Transmis à l’assureur…</button>` : ''}
+      ${['declare', 'transmis'].includes(s.statut) ? `<button type="button" class="btn-secondary" onclick="mcStatutSinistre('${s.id}', 'en_cours')">⏳ En cours</button>` : ''}
+      ${s.statut !== 'regle' ? `<button type="button" class="btn-secondary" onclick="mcStatutSinistre('${s.id}', 'regle')">✓ Réglé</button>` : ''}
+      <button type="button" class="btn-secondary" onclick="mcEcrireAuClient('${s.client_id}')">✉️ Écrire au client</button>
+    </div>
+  </article>`;
+}
+
+async function mcStatutSinistre(id, statut, demanderReference) {
+  const s = (_mc.sinistres || []).find(x => x.id === id);
+  if (!s) return;
+  const maj = { statut, traite_par: (typeof crxMoi === 'function' ? crxMoi().nom : '') || null, traite_le: new Date().toISOString() };
+  if (demanderReference) {
+    const ref = prompt('Référence du sinistre chez l’assureur (facultatif) :', s.reference_assureur || '');
+    if (ref === null) return;
+    if (ref.trim()) maj.reference_assureur = ref.trim().slice(0, 100);
+  }
+  const r = await dbPatch('sinistres', id, maj);
+  if (r && r.error) { showError('Mise à jour impossible.'); return; }
+  Object.assign(s, maj);
+  navigate('messages-clients', { silent: true });
+}
+
+// ── Demandes de documents ───────────────────────────────────────────────────────────────────────
+const MT_ETATS_DOC = { nouvelle: 'À traiter', en_cours: 'En cours', envoye: 'Envoyé au client', refuse: 'Non disponible' };
+
+function mcLigneDocument(d) {
+  const ct = mcContrat(d.contrat_id);
+  return `<article class="mcx-msg ${d.statut === 'nouvelle' ? 'neuf' : ''}">
+    <div class="mcx-msg-tete">
+      <button type="button" class="mcx-nom" onclick="showClient('${d.client_id}')">${mtEsc(mcNomClient(d.client_id))}</button>
+      <span class="mcx-badge mcx-badge-${d.statut === 'nouvelle' ? 'nouveau' : d.statut === 'envoye' ? 'traite' : 'lu'}">${MT_ETATS_DOC[d.statut] || d.statut}</span>
+      <span class="mcx-date">${mtEsc(mcQuand(d.created_at))}</span>
+    </div>
+    <div class="mcx-contrat">📄 <b>${mtEsc(d.type_document)}</b>${ct ? ` · ${typeof pictoCompagnie === 'function' ? pictoCompagnie(ct.compagnie, 16) : ''} ${mtEsc(ct.produit || '')}${ct.numero_police ? ' (' + mtEsc(ct.numero_police) + ')' : ''}` : ''}</div>
+    ${d.precisions ? `<p class="mcx-texte">${mtEsc(d.precisions).replace(/\n/g, '<br/>')}</p>` : ''}
+    <div class="mcx-actions">
+      <button type="button" class="btn-secondary" onclick="mcEcrireAuClient('${d.client_id}')">✉️ Envoyer le document…</button>
+      ${d.statut !== 'envoye' ? `<button type="button" class="btn-save" onclick="mcStatutDocument('${d.id}', 'envoye')">✓ Marquer envoyé</button>` : ''}
+      ${d.statut === 'nouvelle' ? `<button type="button" class="btn-secondary" onclick="mcStatutDocument('${d.id}', 'en_cours')">⏳ En cours</button>` : ''}
+    </div>
+  </article>`;
+}
+
+async function mcStatutDocument(id, statut) {
+  const d = (_mc.documents || []).find(x => x.id === id);
+  if (!d) return;
+  const maj = { statut, traite_par: (typeof crxMoi === 'function' ? crxMoi().nom : '') || null, traite_le: new Date().toISOString() };
+  const r = await dbPatch('demandes_documents', id, maj);
+  if (r && r.error) { showError('Mise à jour impossible.'); return; }
+  Object.assign(d, maj);
   navigate('messages-clients', { silent: true });
 }
 

@@ -62,7 +62,7 @@ const PAF_ETAPES = [
 const PAF_TYPES = {
   nouvelle: { nom: 'Nouvelle couverture', aide: 'Le client n’avait rien sur ce risque.' },
   transfert: { nom: 'Changement d’assureur', aide: 'Il quitte une compagnie : une résiliation est due.', resiliation: true },
-  portefeuille: { nom: 'Transfert de portefeuille', aide: 'Il garde ses contrats et change de courtier : un mandat simple part aux compagnies, rien n’est résilié.', mandat: true },
+  portefeuille: { nom: 'Mandat simple', aide: 'Transfert du portefeuille actuel vers Assurex : le client garde ses contrats, rien n’est résilié.', mandat: true },
   complement: { nom: 'Complément', aide: 'Il garde l’existant et ajoute une couverture.' },
 };
 
@@ -203,9 +203,10 @@ function pafOuvrirSituation(oppId) {
       <div id="paf-mandat" style="display:${o.type_affaire === 'portefeuille' ? '' : 'none'}">
         <div class="paf-rappel">
           <b>📜 Un mandat simple, pas une résiliation</b>
-          <p>Le client garde ses contrats : il faut envoyer un <b>mandat simple</b> à chaque
-            compagnie concernée pour qu’elle nous reconnaisse comme interlocuteur. Les contrats
-            restent en vigueur — ne rien résilier.</p>
+          <p>Transfert du portefeuille actuel vers Assurex : le client garde ses contrats et ses
+            compagnies. Il faut envoyer un <b>mandat simple</b> à chaque compagnie concernée pour
+            qu’elle nous reconnaisse comme interlocuteur. Les contrats restent en vigueur —
+            ne rien résilier.</p>
           ${typeof navigate === 'function' ? `<button type="button" class="paf-act"
             onclick="document.getElementById('modal-paf-situation').remove();navigate('mandats')">
             Ouvrir les mandats →</button>` : ''}

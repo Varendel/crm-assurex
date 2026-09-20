@@ -1,0 +1,246 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   REX CLOUD — LE RENDU (js/96 + js/97, 20.09.2026)
+
+   « Trop IA, trop simple. » Ce que cela désigne, quand on le décompose : tous les blocs avaient le
+   même poids, aucune matière, et des émojis en guise d'icônes. Une page dont chaque élément a la
+   même taille se lit comme un formulaire — l'œil n'a aucune prise et rien ne dit par où commencer.
+
+   Le caractère tient ici à cinq choses, aucune spectaculaire :
+     — une hiérarchie franche : ce qui compte est GRAND, le reste devient petit ;
+     — des chiffres en caractères tabulaires, alignés, posés ;
+     — des filets d'un demi-pixel plutôt que des bordures d'un pixel ;
+     — un tracking qui se resserre quand le corps grandit, comme en typographie de presse ;
+     — de la place. Le blanc n'est pas du vide perdu, c'est ce qui fait respirer une page.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── Les icônes dessinées ──────────────────────────────────────────────────────────────────────
+   Elles prennent la couleur du texte courant, donc suivent le thème, l'ambiance et l'accent sans
+   un réglage de plus. `vertical-align` les pose sur la ligne de base du texte qu'elles côtoient. */
+.ico { flex-shrink: 0; vertical-align: -0.18em; }
+.ec-page .ico, body.mode-cloud .ico { stroke-width: 1.5; }
+
+/* Une icône seule dans un bouton n'a pas à coller au libellé. */
+.ec-actions-contrat button, .ec-co-actions button, .ec-co-liens a,
+.ecp-actions a, .ecp-actions button {
+  display: inline-flex; align-items: center; gap: 8px;
+}
+
+/* ═══ L'EN-TÊTE ════════════════════════════════════════════════════════════════════════════════
+   Il disait « Bonjour X » dans la même graisse que tout le reste. Un nom de client est ce qu'il y
+   a de plus personnel sur cette page : il mérite le corps le plus grand, et un tracking resserré
+   qui l'empêche de paraître étalé. */
+body.mode-cloud .cf-hero, body.mode-espace-client .cf-hero {
+  padding: clamp(28px, 5vw, 52px) clamp(22px, 4vw, 44px);
+}
+body.mode-cloud .cf-hero h1, body.mode-espace-client .cf-hero h1 {
+  font-size: clamp(27px, 4.4vw, 44px);
+  letter-spacing: -0.035em;
+  line-height: 1.04;
+  font-weight: 600;
+}
+body.mode-cloud .cf-hero .cf-surtitre, body.mode-espace-client .cf-hero .cf-surtitre {
+  font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; font-weight: 500;
+}
+/* Le texte d'accroche respire : une ligne de 75 caractères se lit, une ligne de 130 se subit. */
+body.mode-cloud .cf-hero p, body.mode-espace-client .cf-hero p {
+  max-width: 54ch; line-height: 1.6; font-size: var(--t-l, 15px);
+}
+
+/* ── Les onglets : un filet, pas des boîtes ──────────────────────────────────────────────────── */
+body.mode-cloud .ec-onglets, body.mode-espace-client .ec-onglets {
+  border-bottom: 1px solid var(--border);
+  gap: 2px; padding-bottom: 0;
+}
+body.mode-cloud .ec-onglet, body.mode-espace-client .ec-onglet {
+  border: none; background: none; border-radius: 0;
+  padding: 13px 18px; margin-bottom: -1px;
+  border-bottom: 2px solid transparent;
+  font-size: var(--t-m, 13.5px); font-weight: 500; letter-spacing: -0.005em;
+  color: var(--text-muted);
+  transition: color var(--v-court, .15s), border-color var(--v-court, .15s);
+}
+body.mode-cloud .ec-onglet:hover, body.mode-espace-client .ec-onglet:hover { color: var(--text); }
+body.mode-cloud .ec-onglet.actif, body.mode-espace-client .ec-onglet.actif {
+  color: var(--text); border-bottom-color: var(--brand-cyan, #00CFFF); background: none;
+}
+
+/* ═══ LES CARTES ═══════════════════════════════════════════════════════════════════════════════
+   Elles étaient toutes identiques. On leur donne un filet plus fin, un rayon plus large et une
+   ombre presque absente — ce qui les sépare, c'est l'espace autour, pas un trait épais. */
+body.mode-cloud .dbx-carte, body.mode-espace-client .dbx-carte {
+  border-radius: 18px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  box-shadow: 0 1px 2px rgba(11, 36, 88, .04), 0 8px 24px -12px rgba(11, 36, 88, .12);
+  padding: clamp(18px, 2.6vw, 26px);
+}
+body.mode-cloud .dbx-carte-tete, body.mode-espace-client .dbx-carte-tete {
+  padding-bottom: 14px; margin-bottom: 18px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+body.mode-cloud .dbx-carte-tete h2, body.mode-espace-client .dbx-carte-tete h2 {
+  font-size: var(--t-xl, 19px); letter-spacing: -0.022em; font-weight: 600;
+}
+body.mode-cloud .dbx-carte-sous, body.mode-espace-client .dbx-carte-sous {
+  font-size: var(--t-s, 12.5px); color: var(--text-muted); font-variant-numeric: tabular-nums;
+}
+
+/* ═══ L'APERÇU DES BRANCHES ════════════════════════════════════════════════════════════════════
+   C'était une rangée de pastilles toutes pareilles. Le CHIFFRE devient l'élément principal — c'est
+   lui qu'on cherche — et l'icône se retire au second plan, à sa juste place : un repère, pas un
+   ornement. */
+body.mode-cloud .eca-puce, body.mode-espace-client .eca-puce {
+  align-items: flex-start; text-align: left;
+  padding: 16px 14px 14px; border-radius: 14px;
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  position: relative; overflow: hidden;
+}
+/* Un filet de couleur en tête de carte : trois pixels qui suffisent à donner une identité sans
+   colorer toute la surface. */
+body.mode-cloud .eca-puce::before, body.mode-espace-client .eca-puce::before {
+  content: ''; position: absolute; inset: 0 0 auto 0; height: 3px;
+  background: linear-gradient(90deg, var(--brand-cyan, #00CFFF), transparent 85%);
+  opacity: .75;
+}
+body.mode-cloud .eca-puce > span, body.mode-espace-client .eca-puce > span {
+  color: var(--text-muted); margin-bottom: 8px;
+}
+body.mode-cloud .eca-puce b, body.mode-espace-client .eca-puce b {
+  font-size: 30px; line-height: 1; letter-spacing: -0.04em; font-weight: 600;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+body.mode-cloud .eca-puce small, body.mode-espace-client .eca-puce small {
+  margin-top: 4px; font-size: var(--t-s, 12.5px); color: var(--text); line-height: 1.3;
+}
+body.mode-cloud .eca-puce i, body.mode-espace-client .eca-puce i {
+  margin-top: 2px; font-size: 10.5px; letter-spacing: .01em;
+}
+
+/* ── Les branches ─────────────────────────────────────────────────────────────────────────────── */
+body.mode-cloud .eca-branche, body.mode-espace-client .eca-branche {
+  border-radius: 14px; background: var(--surface);
+  border-color: color-mix(in srgb, var(--border) 70%, transparent);
+}
+body.mode-cloud .eca-branche > summary, body.mode-espace-client .eca-branche > summary { padding: 16px 20px; }
+body.mode-cloud .eca-titre b, body.mode-espace-client .eca-titre b {
+  font-size: var(--t-l, 15px); letter-spacing: -0.012em;
+}
+body.mode-cloud .eca-icone, body.mode-espace-client .eca-icone {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 38px; height: 38px; border-radius: 11px;
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  color: var(--accent);
+}
+body.mode-cloud .eca-compte, body.mode-espace-client .eca-compte {
+  background: none; border: none; color: var(--text-muted); font-weight: 500; padding: 0;
+}
+body.mode-cloud .eca-prime, body.mode-espace-client .eca-prime {
+  font-size: var(--t-l, 15px); letter-spacing: -0.015em;
+}
+
+/* ── Une ligne de contrat ──────────────────────────────────────────────────────────────────────
+   Elle ressemblait à un bloc de formulaire. On la rend à sa nature : une entrée de liste, avec un
+   logo, un intitulé qui porte, et des actions qui ne se montrent qu'au survol sur grand écran. */
+body.mode-cloud .ec-contrat, body.mode-espace-client .ec-contrat {
+  border-radius: 12px; padding: 15px 17px;
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+  transition: border-color var(--v-court, .15s), box-shadow var(--v-court, .15s);
+}
+body.mode-cloud .ec-contrat:hover, body.mode-espace-client .ec-contrat:hover {
+  border-color: color-mix(in srgb, var(--accent) 34%, transparent);
+  box-shadow: 0 6px 18px -10px rgba(11, 36, 88, .2);
+}
+body.mode-cloud .ec-corps b, body.mode-espace-client .ec-corps b {
+  font-size: var(--t-l, 15px); letter-spacing: -0.012em; font-weight: 500;
+}
+body.mode-cloud .ec-prime, body.mode-espace-client .ec-prime {
+  font-size: 21px; letter-spacing: -0.03em; font-weight: 600;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+body.mode-cloud .ec-prime small, body.mode-espace-client .ec-prime small {
+  font-size: 10.5px; font-weight: 400; color: var(--text-muted);
+}
+body.mode-cloud .ec-dates, body.mode-espace-client .ec-dates {
+  font-variant-numeric: tabular-nums; font-size: var(--t-xs, 11px); line-height: 1.6;
+}
+
+/* Les actions : discrètes au repos, franches au survol. Sur écran tactile elles restent visibles —
+   il n'y a pas de survol sur un téléphone, et une action qu'on ne voit pas n'existe pas. */
+body.mode-cloud .ec-actions-contrat button, body.mode-espace-client .ec-actions-contrat button {
+  padding: 7px 12px; border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  background: var(--surface-alt); color: var(--text-muted);
+  font-size: var(--t-xs, 11px); font-weight: 500;
+  transition: color var(--v-court, .15s), border-color var(--v-court, .15s), background var(--v-court, .15s);
+}
+body.mode-cloud .ec-actions-contrat button:hover, body.mode-espace-client .ec-actions-contrat button:hover {
+  color: var(--text); border-color: var(--accent-border); background: var(--surface);
+}
+@media (hover: hover) and (min-width: 860px) {
+  body.mode-cloud .ec-actions-contrat, body.mode-espace-client .ec-actions-contrat {
+    opacity: .45; transition: opacity var(--v-court, .15s);
+  }
+  body.mode-cloud .ec-contrat:hover .ec-actions-contrat,
+  body.mode-espace-client .ec-contrat:hover .ec-actions-contrat { opacity: 1; }
+}
+
+/* ── La réassurance ───────────────────────────────────────────────────────────────────────────
+   C'était un encadré vert avec une poignée de main. Le vert dit « réussi » ; ici il ne s'agit pas
+   d'une réussite mais d'une promesse. On passe au marine de la marque, avec un filet vertical —
+   la forme d'une citation, ce qu'elle est en réalité. */
+body.mode-cloud .ecp-rassurance, body.mode-espace-client .ecp-rassurance {
+  background: color-mix(in srgb, var(--accent) 6%, transparent);
+  border: none; border-left: 2px solid var(--brand-cyan, #00CFFF);
+  border-radius: 0 14px 14px 0;
+  padding: 20px 24px;
+}
+body.mode-cloud .ecp-rassurance-icone, body.mode-espace-client .ecp-rassurance-icone {
+  color: var(--accent); font-size: 0; /* neutralise la taille d'émoji héritée */
+}
+body.mode-cloud .ecp-rassurance b, body.mode-espace-client .ecp-rassurance b {
+  font-size: var(--t-xl, 19px); letter-spacing: -0.022em; font-weight: 600;
+}
+body.mode-cloud .ecp-rassurance p, body.mode-espace-client .ecp-rassurance p {
+  max-width: 62ch; line-height: 1.65; margin-top: 6px;
+}
+
+/* ── Le widget des primes ─────────────────────────────────────────────────────────────────────── */
+body.mode-cloud .ecp-bloc b, body.mode-espace-client .ecp-bloc b {
+  font-size: 26px; letter-spacing: -0.035em;
+}
+body.mode-cloud .ecp-etat-icone, body.mode-espace-client .ecp-etat-icone {
+  color: var(--accent); font-size: 0;
+}
+body.mode-cloud .ecp-label, body.mode-espace-client .ecp-label { letter-spacing: .13em; }
+
+/* ── Le conseiller ────────────────────────────────────────────────────────────────────────────── */
+body.mode-cloud .ecp-photo, body.mode-espace-client .ecp-photo {
+  width: 72px; height: 72px; border-radius: 16px;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--border) 70%, transparent),
+              0 10px 24px -12px rgba(11, 36, 88, .35);
+}
+body.mode-cloud .ec-co-ident b, body.mode-espace-client .ec-co-ident b {
+  font-size: var(--t-xl, 19px); letter-spacing: -0.022em; font-weight: 600;
+}
+body.mode-cloud .ec-co-liens a, body.mode-espace-client .ec-co-liens a {
+  padding: 8px 13px; border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  background: var(--surface-alt); color: var(--text); text-decoration: none;
+  font-size: var(--t-s, 12.5px);
+}
+body.mode-cloud .ec-co-liens a:hover, body.mode-espace-client .ec-co-liens a:hover {
+  border-color: var(--accent-border);
+}
+
+/* ── Respiration générale ─────────────────────────────────────────────────────────────────────
+   Le blanc n'est pas du vide perdu : c'est ce qui fait qu'une page se lit au lieu de se subir. */
+body.mode-cloud .ec-page > section, body.mode-espace-client .ec-page > section { margin-top: 26px; }
+body.mode-cloud .eca-corps, body.mode-espace-client .eca-corps { padding: 0 16px 16px; gap: 10px; }
+
+@media (max-width: 620px) {
+  body.mode-cloud .ec-actions-contrat button span,
+  body.mode-espace-client .ec-actions-contrat button span { display: none; }
+  body.mode-cloud .ec-actions-contrat button,
+  body.mode-espace-client .ec-actions-contrat button { padding: 9px; }
+  body.mode-cloud .eca-puce b, body.mode-espace-client .eca-puce b { font-size: 24px; }
+}

@@ -65,6 +65,7 @@ function saisonForcee() {
 function saisonImposer(cle) {
   try { localStorage.setItem(SAISON_CLE_FORCEE, cle || ''); } catch (e) {}
   saisonAppliquer();
+  if (typeof saisonPoserCompagnonConnexion === 'function') saisonPoserCompagnonConnexion();
   if (typeof navigate === 'function' && currentView === 'apparence') navigate('apparence');
 }
 
@@ -136,10 +137,45 @@ function saisonBoutonHtml() {
     title="${coupe ? `Réafficher l’habillage ${s.nom}` : `Masquer l’habillage ${s.nom}`}">${s.decors[0]} ${coupe ? 'Activer' : 'Masquer'}</button>`;
 }
 
+// Le compagnon de l'écran de connexion est posé par code : la page de connexion est du HTML
+// statique, et un personnage qui n'existe que deux mois par an n'a pas à y figurer en dur.
+// Il se tient à côté de la piste de Rex et ne saute pas avec lui — il regarde.
+function saisonPoserCompagnonConnexion() {
+  const piste = document.querySelector('.login-rex-piste');
+  if (!piste) return;
+  const s = saisonCourante();
+
+  // Rex prend la tenue de la saison. Le fichier est remplacé plutôt que dupliqué dans le HTML :
+  // la page de connexion est statique, et on ne veut pas y figer une pose qui change deux fois
+  // par an. Repli sur la pose normale si la planche n'existe pas.
+  const rex = piste.querySelector('.login-mascotte');
+  if (rex) {
+    const normal = 'assets/logos/rex/poses/debout.png';
+    const voulu = s ? s.dossierRex + 'debout.png' : normal;
+    if (!rex.getAttribute('src') || rex.getAttribute('src').split('?')[0] !== voulu) {
+      rex.onerror = function () { this.onerror = null; this.src = normal; };
+      rex.src = voulu;
+    }
+  }
+
+  // Le compagnon : posé à côté de Rex, dans sa piste, donc il saute avec lui.
+  piste.querySelector('.login-compagnon')?.remove();
+  if (typeof rexCompagnonHtml !== 'function') return;
+  const html = rexCompagnonHtml('rodolphe', { taille: 84, respire: false });
+  if (!html) return;
+  const zone = document.createElement('span');
+  zone.innerHTML = html;
+  const img = zone.firstElementChild;
+  if (!img) return;
+  img.classList.add('login-compagnon');
+  img.style.height = '';
+  piste.appendChild(img);
+}
+
 // Au chargement, puis une fois par heure : une session ouverte en continu doit basculer le jour
 // venu sans qu'on ait à recharger la page.
 (function saisonDemarrer() {
-  const poser = () => { if (document.body) saisonAppliquer(); };
+  const poser = () => { if (document.body) { saisonAppliquer(); saisonPoserCompagnonConnexion(); } };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', poser);
   else poser();
   setInterval(poser, 60 * 60 * 1000);

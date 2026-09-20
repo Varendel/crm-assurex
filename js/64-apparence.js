@@ -67,9 +67,13 @@ function apxSectionHtml() {
       <b>${s.nom}${forcee === s.cle ? ' ✓' : ''}</b><small>${apxEsc(s.desc)}</small>
     </button>`).join('');
 
-  const poses = ['debout', 'pouce', 'planification', 'joie'];
+  const poses = ['debout', 'pouce', 'planification', 'joie', 'reflexion'];
   const apercuRex = typeof rexPoseHtml === 'function'
     ? poses.map(p => `<span class="apx-rex">${rexPoseHtml({ taille: 92, pose: p, respire: false })}<small>${p}</small></span>`).join('')
+      // Rodolphe n'apparaît que si la saison affichée le prévoit : inutile de montrer une case
+      // vide le reste de l'année.
+      + (typeof rexCompagnonHtml === 'function' && rexCompagnonHtml('rodolphe', { taille: 92, respire: false })
+        ? `<span class="apx-rex apx-rex-compagnon">${rexCompagnonHtml('rodolphe', { taille: 92, respire: false })}<small>rodolphe</small></span>` : '')
     : '';
 
   const palette = APX_JETONS.map(g => `

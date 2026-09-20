@@ -56,6 +56,40 @@ function rexPoseHtml(opts) {
   return `<img class="${classes}" src="${src}"${repli} alt="" role="img" aria-label="${rexbEsc(titre)}" title="${rexbEsc(titre)}" style="height:${taille}px" loading="lazy"/>`;
 }
 
+// ── Les compagnons (20.09.2026) ─────────────────────────────────────────────────────────────────
+// Rodolphe n'est pas une pose de Rex : c'est un second personnage, et il n'existe QUE dans les
+// planches saisonnières. Le mécanisme de repli des poses ne lui convient donc pas — replier vers
+// « assets/logos/rex/poses/rodolphe.png » afficherait une image cassée, ce fichier n'existant pas.
+//
+// Les compagnons déclarent donc les saisons où ils existent, et disparaissent le reste de l'année
+// au lieu de se replier. C'est la différence entre « cette pose n'est pas encore dessinée » et
+// « ce personnage n'a rien à faire ici en avril ».
+const REX_COMPAGNONS = {
+  rodolphe: { f: 'rodolphe.png', titre: 'Rodolphe', saisons: ['noel', 'halloween'] },
+};
+
+function rexCompagnonHtml(nom, opts) {
+  const o = opts || {};
+  const c = REX_COMPAGNONS[nom];
+  const s = typeof saisonCourante === 'function' ? saisonCourante() : null;
+  if (!c || !s || !c.saisons.includes(s.cle)) return '';
+  const taille = Number(o.taille) || 120;
+  const titre = o.titre || `${c.titre} · ${s.nom}`;
+  return `<img class="rexb rexb-compagnon ${o.classe || ''} ${o.respire === false ? '' : 'respire'}"
+    src="${s.dossierRex + c.f}" alt="" role="img" aria-label="${rexbEsc(titre)}" title="${rexbEsc(titre)}"
+    style="height:${taille}px" loading="lazy"/>`;
+}
+
+// Rex et son compagnon côte à côte. Rodolphe est légèrement plus petit et en retrait : il
+// accompagne Rex, il ne le remplace pas — c'est la mascotte du CRM qui doit rester lue en premier.
+function rexDuoHtml(opts) {
+  const o = opts || {};
+  const taille = Number(o.taille) || 120;
+  const compagnon = rexCompagnonHtml(o.compagnon || 'rodolphe', { taille: Math.round(taille * 0.84), respire: o.respire });
+  if (!compagnon) return rexPoseHtml(o);
+  return `<span class="rexb-duo">${rexPoseHtml(o)}${compagnon}</span>`;
+}
+
 // Rex du conseil financier : la pose « planification », celle qui tient le dossier.
 function rexBanquierHtml(opts) {
   const o = opts || {};

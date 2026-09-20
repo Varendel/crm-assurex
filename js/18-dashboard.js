@@ -185,7 +185,7 @@ function viewDashboardV2() {
           <button type="button" class="dbx-btn-blanc" onclick="navigate('nouveau-client')">+ Client</button>
           <button type="button" class="dbx-btn-blanc" onclick="opportuniteEnEditionId=null;navigate('nouvelle-opportunite')">+ Opportunité</button>
         </div>
-        <img src="assets/logos/rex-mascotte-hd.png" alt="" class="dbx-hero-mascotte"/>
+        ${typeof rexDuoHtml === 'function' ? rexDuoHtml({ pose: 'pouce', taille: 148, classe: 'dbx-hero-mascotte' }) : '<img src="assets/logos/rex-mascotte-hd.png" alt="" class="dbx-hero-mascotte"/>'}
       </div>
     </section>
 

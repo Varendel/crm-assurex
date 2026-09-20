@@ -627,7 +627,7 @@ async function doLogin() {
     } catch(e) { /* ignore si non supporté */ }
   }
 
-  // L'animation de Rex (course puis sprint hors de l'écran) va jusqu'au bout avant d'ouvrir le CRM
+  // L'animation de Rex (saut, blocs cognés, pièces) va jusqu'au bout avant d'ouvrir le CRM
   // (demande de Jonathan, 20.09.2026). Les données se chargent pendant ce temps, rien n'est perdu.
   await attendreFinAnimationRex(ecranLogin);
 
@@ -641,9 +641,9 @@ async function doLogin() {
   enterApp({ id: email, prenom: userData.prenom, nom: userData.nom, email, role: userData.role, taux: userData.taux });
 }
 
-// Attend la fin de l'animation de Rex sur l'écran de connexion (20.09.2026, nouvelle version) :
-// le logotype bascule, Rex tombe de son perchoir, se relève et part en courant vers la droite.
-// Au plus 1,4 s, et pas d'attente du tout si l'animation est désactivée par le système.
+// Attend la fin de l'animation de Rex sur l'écran de connexion (20.09.2026) : Rex saute, cogne
+// trois blocs d'où jaillissent des pièces, le logotype bascule au premier impact, puis tout
+// s'efface. Au plus 2 s, et pas d'attente du tout si l'animation est désactivée par le système.
 function attendreFinAnimationRex(ecran) {
   const piste = ecran && ecran.querySelector('.login-rex-piste');
   const reduit = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -654,7 +654,7 @@ function attendreFinAnimationRex(ecran) {
     const terminer = () => { if (fini) return; fini = true; piste.removeEventListener('animationend', surFin); resolve(); };
     const surFin = e => { if (e.animationName === 'lg-sortie') terminer(); };
     piste.addEventListener('animationend', surFin);
-    setTimeout(terminer, 1400); // filet de sécurité : la connexion n'attend jamais plus de 1,4 s
+    setTimeout(terminer, 2000); // filet de sécurité : la connexion n'attend jamais plus de 2 s
   });
 }
 

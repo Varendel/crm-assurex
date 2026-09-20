@@ -3643,6 +3643,40 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
     .dcx-apercu-secours { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
       background: rgba(0,0,0,.65); color: #fff; font-size: 11.5px; padding: 5px 12px; border-radius: 999px; }
     .dcx-apercu-secours button { background: none; border: 0; color: #7DD3FC; cursor: pointer; font: inherit; text-decoration: underline; }
+    /* ═══ HABILLAGES SAISONNIERS (js/62-saisons.js, 20.09.2026) ═══
+       Halloween des le 01.10, Noel des le 01.11. Teinte d'accent, decor flottant en fond, et rien
+       de plus : on habille, on ne deguise pas un outil de travail. */
+    body.saison-halloween { --saison-a: #F97316; --saison-b: #7C3AED; --saison-voile: rgba(249,115,22,.08); }
+    body.saison-noel      { --saison-a: #DC2626; --saison-b: #15803D; --saison-voile: rgba(220,38,38,.07); }
+
+    body.saison.mode-espace-client { position: relative; }
+    body.saison.mode-espace-client .ec-hero,
+    body.saison.mode-espace-client .dbx-carte { border-top: 2px solid var(--saison-a); }
+    body.saison.mode-espace-client .ec-tuile:hover { border-color: var(--saison-a); }
+    body.saison .dbx-kpi-valeur { color: var(--saison-a); }
+
+    .saison-decor { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+    .saison-decor span { position: absolute; top: -8%; left: var(--g); font-size: 20px; opacity: .22;
+      animation: saison-tombe var(--v) linear infinite; animation-delay: calc(var(--r) * -1); }
+    @keyframes saison-tombe {
+      0%   { transform: translateY(-10vh) rotate(0deg); }
+      100% { transform: translateY(112vh) rotate(220deg); }
+    }
+    body.saison-halloween .saison-decor span { animation-name: saison-flotte; opacity: .18; }
+    @keyframes saison-flotte {
+      0%   { transform: translateY(105vh) translateX(0) rotate(-6deg); }
+      50%  { transform: translateY(50vh) translateX(22px) rotate(6deg); }
+      100% { transform: translateY(-12vh) translateX(0) rotate(-6deg); }
+    }
+
+    .saison-bouton { font-size: 11.5px; font-family: inherit; cursor: pointer; white-space: nowrap;
+      border: 1px solid var(--saison-a, var(--border)); color: var(--saison-a, var(--text-muted));
+      background: var(--saison-voile, transparent); border-radius: 999px; padding: 4px 11px; }
+    .saison-bouton.coupe { opacity: .6; }
+    .saison-bouton:hover { opacity: 1; }
+
+    @media (prefers-reduced-motion: reduce) { .saison-decor { display: none; } }
+    @media print { .saison-decor, .saison-bouton { display: none !important; } }
 @media (prefers-reduced-motion: reduce) {
       .bmq-defile.anime, .bmq-point, .bmq-entre { animation: none !important; }
     .rex-modale > div, .loader::before { animation: none !important; }
@@ -3840,16 +3874,17 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 <script src="js/49-nouveau-contrat.js?v=1790920000"></script>
 <script src="js/50-dossier-financement.js?v=1790995000"></script>
 <script src="js/51-messages-transferts.js?v=1791006000"></script>
-<script src="js/52-espace-client-services.js?v=1791140000"></script>
+<script src="js/52-espace-client-services.js?v=1791240000"></script>
 <script src="js/53-ocr-decomptes.js?v=1791015000"></script>
 <script src="js/54-ecohub-sync.js?v=1791200000"></script>
 <script src="js/55-ecohub-commission.js?v=1791022000"></script>
 <script src="js/56-ecohub-crypto.js?v=1791024000"></script>
   <script src="js/57-citations-reservoir.js?v=1791100000"></script>
-  <script src="js/58-rex-banquier.js?v=1791170000"></script>
+  <script src="js/58-rex-banquier.js?v=1791240000"></script>
   <script src="js/59-documents-compagnies.js?v=1791230000"></script>
   <script src="js/60-bandeau-marches.js?v=1791140000"></script>
   <script src="js/61-ecohub-manometre.js?v=1791220000"></script>
+  <script src="js/62-saisons.js?v=1791240000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

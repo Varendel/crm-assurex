@@ -155,6 +155,7 @@ function ecVueEspaceClient() {
     <nav class="ec-onglets" role="tablist" aria-label="Sections de mon espace">
       ${EC_ONGLETS.map(o => `<button type="button" role="tab" class="${_ecUI.onglet === o.id ? 'actif' : ''}" aria-selected="${_ecUI.onglet === o.id}" onclick="ecAllerOnglet('${o.id}')">
         <span aria-hidden="true">${o.icone}</span>${ecEsc(o.label)}${o.id === 'sinistres' && enCoursSin ? `<em>${enCoursSin}</em>` : ''}</button>`).join('')}
+      ${typeof saisonBoutonHtml === 'function' ? saisonBoutonHtml() : ''}
     </nav>
 
     ${_ecUI.onglet === 'accueil' ? ecOngletAccueil()
@@ -182,6 +183,7 @@ function ecOngletAccueil() {
   const aSurveiller = actifs.filter(ct => { const l = ecDateLimiteResiliation(ct); return l && l >= auj && l <= dans120; });
   if (typeof bmqApresRenduClient === 'function') setTimeout(bmqApresRenduClient, 0);
   return `
+    ${typeof saisonDecorHtml === 'function' ? saisonDecorHtml() : ''}
     ${typeof bmqBlocClient === 'function' ? bmqBlocClient() : ''}
 
     <div class="dbx-kpis" style="margin-top:16px">

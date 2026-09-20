@@ -48,7 +48,12 @@ function rexPoseHtml(opts) {
   const taille = Number(o.taille) || 120;
   const titre = o.titre || p.titre;
   const classes = ['rexb', `rexb-${nom}`, o.classe || '', o.respire === false ? '' : 'respire'].filter(Boolean).join(' ');
-  return `<img class="${classes}" src="${rexPoseFichier(nom)}" alt="" role="img" aria-label="${rexbEsc(titre)}" title="${rexbEsc(titre)}" style="height:${taille}px" loading="lazy"/>`;
+  // Habillage saisonnier (js/62) : on tente la planche de la saison, et le navigateur retombe
+  // tout seul sur la pose normale si elle n'a pas encore été livrée.
+  const s = typeof saisonSourceRex === 'function' ? saisonSourceRex(nom) : null;
+  const src = s ? s.src : rexPoseFichier(nom);
+  const repli = s && s.repli ? ` onerror="this.onerror=null;this.src='${s.repli}'"` : '';
+  return `<img class="${classes}" src="${src}"${repli} alt="" role="img" aria-label="${rexbEsc(titre)}" title="${rexbEsc(titre)}" style="height:${taille}px" loading="lazy"/>`;
 }
 
 // Rex du conseil financier : la pose « planification », celle qui tient le dossier.

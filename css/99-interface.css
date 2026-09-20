@@ -1,0 +1,106 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   LES QUATRE DERNIÈRES CORRECTIONS VISUELLES (js/71, 20.09.2026)
+   Messages, états vides, actions au survol, échelle d'ombres.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── 1. Le message ────────────────────────────────────────────────────────────────────────────── */
+.ix-toast {
+  position: fixed; right: var(--e-6, 24px); bottom: var(--e-6, 24px); z-index: 10000;
+  max-width: min(420px, calc(100vw - 48px));
+  padding: 13px var(--e-5, 20px);
+  border-radius: var(--r-m, 14px);
+  background: var(--ix-fond, var(--c-alerte-fond));
+  border: 1px solid var(--ix-bord, var(--c-alerte));
+  color: var(--ix-encre, var(--c-alerte-texte));
+  font-size: var(--t-m, 13.5px); font-weight: 500; line-height: 1.45;
+  box-shadow: var(--o-3);
+  backdrop-filter: blur(10px);
+  opacity: 0; transform: translateY(12px);
+  pointer-events: none;
+}
+.ix-toast.ix-entre { opacity: 1; transform: none;
+  transition: opacity var(--v-moyen, .28s) var(--v-entree), transform var(--v-moyen, .28s) var(--v-entree); }
+.ix-toast.ix-sort { opacity: 0; transform: translateY(8px);
+  transition: opacity var(--v-court, .15s) ease, transform var(--v-court, .15s) ease; }
+
+/* Sur un fond sombre, la version « fond » des intentions est trop discrète pour un message qui
+   doit attraper l'œil : on l'opacifie. */
+html:not([data-theme="clair"]) .ix-toast { background-color: color-mix(in srgb, var(--ix-bord) 22%, #0E1628); }
+
+/* Le rouet d'un bouton occupé. Deux traits, pas une image : il doit démarrer instantanément. */
+.ix-rouet {
+  display: inline-block; width: 13px; height: 13px; margin-right: 7px; vertical-align: -2px;
+  border: 2px solid currentColor; border-right-color: transparent; border-radius: 50%;
+  animation: ix-tourne .7s linear infinite;
+}
+@keyframes ix-tourne { to { transform: rotate(360deg); } }
+.ix-occupe { opacity: .78; cursor: progress; }
+@media (prefers-reduced-motion: reduce) { .ix-rouet { animation-duration: 2s; } }
+
+/* ── 2. L'état vide ───────────────────────────────────────────────────────────────────────────── */
+.ix-vide {
+  display: flex; flex-direction: column; align-items: center; text-align: center;
+  gap: var(--e-2, 8px); padding: var(--e-8, 32px) var(--e-4, 16px);
+  color: var(--text-muted, #64748B);
+}
+.ix-vide strong { font-size: var(--t-l, 15px); font-weight: var(--t-moyen, 600);
+  color: var(--text, #334155); letter-spacing: -0.01em; text-wrap: balance; }
+.ix-vide span { font-size: var(--t-m, 13.5px); line-height: 1.55; max-width: 46ch; text-wrap: pretty; }
+.ix-vide-action { margin-top: var(--e-2, 8px); display: flex; gap: var(--e-2, 8px); flex-wrap: wrap; justify-content: center; }
+.ix-vide .rexb { opacity: .92; margin-bottom: var(--e-1, 4px); }
+.ix-vide-petit { padding: var(--e-5, 20px) var(--e-3, 12px); gap: 5px; }
+.ix-vide-petit strong { font-size: var(--t-m, 13.5px); }
+.ix-vide-petit span { font-size: var(--t-s, 12.5px); }
+
+/* Les états vides déjà en place reprennent la même mise en forme, sans rien réécrire. */
+.dbx-vide { gap: var(--e-2, 8px); }
+.dbx-vide strong { letter-spacing: -0.01em; text-wrap: balance; }
+.dbx-vide span, .dbx-vide-petit { text-wrap: pretty; line-height: 1.55; }
+.tbl-vide { padding: 0; }
+
+/* ── 3. Les actions au survol ─────────────────────────────────────────────────────────────────────
+   Une liste de vingt lignes affichant soixante boutons ne se lit plus. Les actions n'apparaissent
+   qu'au survol — et au clavier dès que le focus entre dans la ligne (:focus-within), sans quoi la
+   page deviendrait inutilisable sans souris.
+
+   Uniquement sur grand écran avec un vrai survol : sur un écran tactile, il n'y a pas de survol,
+   et masquer les boutons reviendrait à les supprimer. */
+@media (hover: hover) and (pointer: fine) and (min-width: 1000px) {
+  .tbl-ligne .tbl-actions,
+  .dp-ligne .dp-boutons,
+  .mcx-msg .mcx-actions,
+  .actions-survol {
+    opacity: .35;
+    transition: opacity var(--v-court, .15s) ease;
+  }
+  .tbl-ligne:hover .tbl-actions, .tbl-ligne:focus-within .tbl-actions,
+  .dp-ligne:hover .dp-boutons,  .dp-ligne:focus-within .dp-boutons,
+  .mcx-msg:hover .mcx-actions,  .mcx-msg:focus-within .mcx-actions,
+  *:hover > .actions-survol, *:focus-within > .actions-survol {
+    opacity: 1;
+  }
+}
+
+/* La ligne survolée se détache légèrement : c'est ce qui dit quelles actions on s'apprête à
+   déclencher. Sans ce repère, révéler les boutons désoriente au lieu d'aider. */
+.tbl-ligne:hover, .dp-ligne:hover, .mcx-msg:hover, .dvp-ligne:hover {
+  background: var(--g-50, #F4F6F9);
+}
+html:not([data-theme="clair"]) .tbl-ligne:hover,
+html:not([data-theme="clair"]) .dp-ligne:hover,
+html:not([data-theme="clair"]) .mcx-msg:hover,
+html:not([data-theme="clair"]) .dvp-ligne:hover { background: rgba(255, 255, 255, .035); }
+
+/* ── 4. Une seule échelle d'ombres ────────────────────────────────────────────────────────────────
+   82 ombres écrites en dur dans les feuilles, contre 3 jetons. On ne peut pas toutes les reprendre
+   à la main sans risque, mais les deux variables qui existaient couvrent une trentaine de cartes :
+   les ramener sur l'échelle aligne d'un coup le tableau de bord et le reste du CRM. */
+.dbx { --dbx-ombre: var(--o-2); }
+:root { --ombre-carte: var(--o-2); }
+html[data-theme="clair"] .dbx { --dbx-ombre: var(--o-2); }
+html[data-theme="clair"] { --ombre-carte: var(--o-2); }
+
+/* Les fenêtres modales et les menus déroulants prennent le niveau « flottant », les cartes le
+   niveau « détaché », les champs le niveau « posé ». Trois niveaux, pas douze. */
+.opx-modale, .rex-modale-feuille, .fil-modale, .kbc-modale { box-shadow: var(--o-3); }
+.dbx-carte, .kbc-carte, .dvp-ligne, .dp-ligne { box-shadow: var(--o-1); }

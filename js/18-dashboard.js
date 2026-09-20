@@ -189,6 +189,8 @@ function viewDashboardV2() {
       </div>
     </section>
 
+    ${typeof bmqBandeauHtml === 'function' ? bmqBandeauHtml() : ''}
+
     <div class="dbx-onglets" role="tablist" aria-label="Vue du tableau de bord">
       <button type="button" role="tab" aria-selected="${onglet === 'aujourdhui'}" class="${onglet === 'aujourdhui' ? 'actif' : ''}" onclick="dbxChoisirOnglet('aujourdhui')">Aujourd’hui${nbRetard ? `<span class="dbx-pastille">${nbRetard}</span>` : ''}</button>
       <button type="button" role="tab" aria-selected="${onglet === 'pilotage'}" class="${onglet === 'pilotage' ? 'actif' : ''}" onclick="dbxChoisirOnglet('pilotage')">Pilotage</button>
@@ -522,6 +524,7 @@ function dbxVuePilotage(D) {
 function dbxApresRendu() {
   if (!document.querySelector('.dbx')) return;
   dbxChargerNouveautes();
+  if (typeof bmqApresRendu === 'function') bmqApresRendu();
   const reduit = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const calme = dbxCalme;
   dbxCalme = false;

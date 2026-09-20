@@ -3415,7 +3415,66 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
     .dcx-fiche-sous { grid-area: s; font-size: 11px; color: var(--text-muted, #64748b); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .dcx-fiche-publie { position: absolute; top: 6px; right: 8px; font-size: 11px; }
     .dcx-fiche-vide { font-size: 12.5px; color: var(--text-muted, #64748b); }
+    /* ═══ BANDEAU MARCHES + ACTUALITE (js/60-bandeau-marches.js, 20.09.2026) ═══ */
+    .bmq { position: relative; margin: 14px 0 18px; padding: 12px 0 8px; border-radius: 20px; overflow: hidden;
+      background: linear-gradient(120deg, #0B1A38 0%, #12294F 45%, #0D1E3F 100%);
+      border: 1px solid rgba(120,170,255,.18); box-shadow: 0 14px 34px rgba(8,18,40,.28); color: #EAF2FF; }
+    .bmq::before { content: ''; position: absolute; inset: -40% -10% auto -10%; height: 180%; pointer-events: none;
+      background: radial-gradient(60% 55% at 12% 0%, rgba(0,207,255,.16), transparent 70%),
+                  radial-gradient(45% 50% at 88% 10%, rgba(124,92,255,.16), transparent 70%); }
+    .bmq > * { position: relative; }
+
+    .bmq-actu { display: flex; align-items: center; gap: 12px; padding: 0 16px 10px; }
+    .bmq-etiquette { display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto;
+      font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #9FD2FF;
+      background: rgba(0,207,255,.12); border: 1px solid rgba(0,207,255,.3); border-radius: 999px; padding: 4px 11px; }
+    .bmq-point { width: 7px; height: 7px; border-radius: 50%; background: #34D399; box-shadow: 0 0 0 0 rgba(52,211,153,.6); animation: bmq-pulse 2.4s ease-out infinite; }
+    @keyframes bmq-pulse { 70% { box-shadow: 0 0 0 9px rgba(52,211,153,0); } 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); } }
+
+    .bmq-titre { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; gap: 10px; text-align: left;
+      background: none; border: 0; color: #EAF2FF; font-size: 13.5px; font-weight: 600; cursor: pointer; padding: 2px 0; }
+    .bmq-actu-texte { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bmq-actu-source { flex: 0 0 auto; font-size: 10.5px; font-weight: 500; color: #8FA9CE; }
+    .bmq-titre:hover .bmq-actu-texte { text-decoration: underline; text-underline-offset: 3px; }
+    .bmq-entre { animation: bmq-monte .45s cubic-bezier(.2,.8,.2,1); }
+    @keyframes bmq-monte { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+    .bmq-suivant { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: 17px; line-height: 1;
+      color: #C8DCFA; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); }
+    .bmq-suivant:hover { background: rgba(255,255,255,.16); color: #fff; }
+
+    .bmq-ruban { position: relative; overflow: hidden; border-top: 1px solid rgba(255,255,255,.08); padding-top: 9px;
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+      mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent); }
+    .bmq-defile { display: flex; align-items: center; gap: 10px; width: max-content; padding: 0 16px; }
+    .bmq-defile.anime { animation: bmq-glisse 64s linear infinite; }
+    .bmq-ruban:hover .bmq-defile.anime { animation-play-state: paused; }
+    @keyframes bmq-glisse { to { transform: translateX(-50%); } }
+    .bmq-attente { font-size: 12px; color: #8FA9CE; padding: 3px 4px; }
+
+    .bmq-valeur { display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; padding: 5px 12px;
+      border-radius: 999px; background: rgba(255,255,255,.055); border: 1px solid rgba(255,255,255,.09); font-size: 12px; }
+    .bmq-valeur.crypto { background: rgba(124,92,255,.14); border-color: rgba(160,135,255,.3); }
+    .bmq-valeur.devise { background: rgba(0,207,255,.1); border-color: rgba(0,207,255,.22); }
+    .bmq-ico { opacity: .55; font-size: 11px; }
+    .bmq-nom { font-weight: 600; color: #DCE9FF; }
+    .bmq-prix { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; color: #fff; }
+    .bmq-var { font-size: 11px; font-weight: 700; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .bmq-var.hausse { color: #4ADE80; }
+    .bmq-var.baisse { color: #FB7185; }
+    .bmq-var.plat { color: #94A8C6; }
+
+    .bmq-pied { padding: 7px 16px 0; font-size: 10.5px; color: #7F98BC; text-align: right; }
+
+    @media (max-width: 720px) {
+      .bmq-actu { flex-wrap: wrap; gap: 8px; padding: 0 12px 9px; }
+      .bmq-titre { font-size: 12.5px; order: 3; flex-basis: 100%; }
+      .bmq-suivant { margin-left: auto; }
+      .bmq-defile { gap: 8px; padding: 0 12px; }
+      .bmq-valeur { font-size: 11.5px; padding: 4px 10px; }
+    }
+    @media print { .bmq { display: none !important; } }
 @media (prefers-reduced-motion: reduce) {
+      .bmq-defile.anime, .bmq-point, .bmq-entre { animation: none !important; }
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
     .cf-hero, .cf-projet, .cf-budget-barre span, .cf-retraite-barre span { animation: none !important; }
@@ -3567,7 +3626,7 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 <script src="js/15-pictos-compagnies.js?v=1790240000"></script>
 <script src="js/16-pipeline-kanban.js?v=1789930000"></script>
 <script src="js/17-fiche-activite.js?v=1791006000"></script>
-<script src="js/18-dashboard.js?v=1791009000"></script>
+<script src="js/18-dashboard.js?v=1791130000"></script>
 <script src="js/19-prevision-commissions.js?v=1790760000"></script>
 <script src="js/20-fiche-client-entete.js?v=1791120000"></script>
 <script src="js/21-tresorerie.js?v=1790760000"></script>
@@ -3609,6 +3668,7 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
   <script src="js/57-citations-reservoir.js?v=1791100000"></script>
   <script src="js/58-rex-banquier.js?v=1791120000"></script>
   <script src="js/59-documents-compagnies.js?v=1791120000"></script>
+  <script src="js/60-bandeau-marches.js?v=1791130000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

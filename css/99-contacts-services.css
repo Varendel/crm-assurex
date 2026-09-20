@@ -1,0 +1,116 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   CONTACTS COMPAGNIES PAR SERVICE (js/100, 20.09.2026)
+
+   Une compagnie = un bloc, ses guichets dedans. Le tableau à plat qui servait jusqu'ici ne
+   pouvait pas montrer qu'une même compagnie a plusieurs interlocuteurs : chaque ligne y semblait
+   une compagnie de plus.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.csv-manque {
+  display: flex; flex-direction: column; gap: 2px;
+  margin-top: 18px; padding: var(--e-3, 12px) var(--e-4, 16px);
+  border-radius: var(--r-s, 10px);
+  background: var(--c-alerte-fond); border: 1px solid var(--c-alerte, #F59E0B);
+}
+.csv-manque b { font-size: var(--t-m, 13.5px); font-weight: var(--t-moyen, 600); color: var(--c-alerte-texte, #B45309); }
+.csv-manque small { font-size: var(--t-s, 12.5px); color: var(--text-muted); }
+
+.csv-liste { display: flex; flex-direction: column; gap: var(--e-3, 12px); margin-top: 18px; }
+.csv-carte { padding: var(--e-4, 16px) var(--e-5, 20px); }
+
+.csv-tete {
+  display: flex; align-items: center; gap: var(--e-3, 12px);
+  padding-bottom: 12px; margin-bottom: 12px;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+.csv-logo { flex-shrink: 0; display: flex; }
+.csv-nom { flex: 1 1 auto; min-width: 0; }
+.csv-nom b { display: block; font-size: var(--t-l, 15px); font-weight: var(--t-moyen, 600);
+  letter-spacing: -0.015em; color: var(--text); }
+.csv-nom small { font-size: var(--t-xs, 11px); color: var(--text-muted); }
+
+/* ── Un service ───────────────────────────────────────────────────────────────────────────────── */
+.csv-services { display: flex; flex-direction: column; gap: 6px; }
+.csv-service {
+  display: flex; align-items: center; gap: var(--e-3, 12px); flex-wrap: wrap;
+  padding: 10px 14px; border-radius: var(--r-s, 10px);
+  background: var(--surface-alt);
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
+}
+/* Sans adresse, la demande d'offre ne peut pas partir : la ligne se signale, sans crier. */
+.csv-service.sans-email { border-left: 3px solid var(--c-alerte, #F59E0B); }
+
+.csv-service-texte { flex: 1 1 180px; min-width: 0; }
+.csv-service-texte b { display: block; font-size: var(--t-m, 13.5px); font-weight: 500; color: var(--text); }
+.csv-service-texte small { display: block; font-size: var(--t-xs, 11px); color: var(--text-muted); }
+.csv-remarque { font-style: italic; }
+
+.csv-coord { flex: 1 1 220px; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.csv-coord a {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: var(--t-s, 12.5px); color: var(--accent); text-decoration: none;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.csv-coord a:hover { text-decoration: underline; }
+.csv-vide { font-size: var(--t-s, 12.5px); color: var(--c-alerte, #F59E0B); font-style: italic; }
+
+.csv-act {
+  flex-shrink: 0; padding: 6px 12px; border-radius: var(--r-s, 10px); cursor: pointer;
+  font-family: inherit; font-size: var(--t-xs, 11px); font-weight: 500; white-space: nowrap;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-muted);
+  transition: color var(--v-court, .15s), border-color var(--v-court, .15s);
+}
+.csv-act:hover { color: var(--text); border-color: var(--accent-border); }
+.csv-act-sup { margin-right: auto; color: var(--c-danger-texte, #B91C1C);
+  border-color: color-mix(in srgb, var(--c-danger, #EF4444) 30%, transparent); }
+
+/* La suggestion : elle ne réclame rien, elle signale qu'un guichet connu manque. */
+.csv-suggestion { margin: 12px 0 0; font-size: var(--t-s, 12.5px); color: var(--text-muted); line-height: 1.6; }
+.csv-lien {
+  padding: 0; background: none; border: none; cursor: pointer; font: inherit;
+  color: var(--accent); text-decoration: underline dotted; text-underline-offset: 3px;
+}
+.csv-lien:hover { text-decoration-style: solid; }
+
+/* ── La fenêtre ────────────────────────────────────────────────────────────────────────────────── */
+.csv-modale {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: var(--r-m, 14px); padding: var(--e-5, 20px) var(--e-5, 22px);
+  max-width: 560px; width: 100%; max-height: 88vh; overflow-y: auto;
+  box-shadow: var(--o-3, 0 20px 50px rgba(0, 0, 0, .35));
+}
+.csv-modale h3 { margin: 0 0 4px; font-size: var(--t-xl, 19px); font-weight: var(--t-moyen, 600);
+  letter-spacing: -0.02em; color: var(--text); }
+.csv-sous { margin: 0 0 var(--e-4, 16px); font-size: var(--t-m, 13.5px);
+  color: var(--text-muted); line-height: 1.55; text-wrap: pretty; }
+.csv-label { display: block; margin: var(--e-4, 16px) 0 6px;
+  font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--text-muted); font-weight: 600; }
+
+/* Les services en cartes plutôt qu'en menu : le choix commande à qui la demande d'offre partira,
+   il doit se voir et non se déplier. */
+.csv-choix { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--e-2, 8px); }
+.csv-radio {
+  display: flex; flex-direction: column; gap: 2px; cursor: pointer;
+  padding: 10px 12px; border-radius: var(--r-s, 10px);
+  background: var(--surface-alt); border: 1px solid var(--border);
+  transition: border-color var(--v-court, .15s), background var(--v-court, .15s);
+}
+.csv-radio:hover { border-color: var(--accent-border); }
+.csv-radio.actif { border-color: var(--accent); background: var(--accent-dim); }
+.csv-radio input { position: absolute; opacity: 0; pointer-events: none; }
+.csv-radio b { font-size: var(--t-s, 12.5px); font-weight: 500; color: var(--text); }
+.csv-radio small { font-size: 10.5px; color: var(--text-muted); line-height: 1.35; }
+
+.csv-grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: var(--e-3, 12px); margin-top: var(--e-3, 12px); }
+.csv-grille label { display: block; margin-bottom: 4px; font-size: var(--t-s, 12.5px); color: var(--text-muted); }
+.csv-grille .form-input { width: 100%; }
+
+.csv-actions { display: flex; gap: var(--e-2, 8px); margin-top: var(--e-4, 16px);
+  justify-content: flex-end; align-items: center; flex-wrap: wrap; }
+
+@media (max-width: 620px) {
+  .csv-service .csv-act { width: 100%; }
+  .csv-actions > .btn-secondary, .csv-actions > .btn-save { flex: 1 1 auto; }
+}

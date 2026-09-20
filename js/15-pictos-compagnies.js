@@ -21,7 +21,10 @@ const PICTOS_COMPAGNIES = {
   // Logos image (fichiers fournis par Jonathan le 19.09.2026, réduits à 128 px dans assets/logos/compagnies)
   'AXA': { img: 'assets/logos/compagnies/axa.png', forme: 'carre' },
   'La Vaudoise': { img: 'assets/logos/compagnies/vaudoise.png', forme: 'rond' },
-  'Allianz': { img: 'assets/logos/compagnies/allianz.png', forme: 'rond' },
+  // Logo fourni par Jonathan le 20.09.2026 : le mot + le symbole, en large sur fond blanc. En
+  // « contain » plutot qu'en « cover » : un cover rognerait le texte et ne laisserait qu'un bout
+  // du symbole.
+  'Allianz': { img: 'assets/logos/compagnies/allianz.png', forme: 'carre', ajuste: 'contain', fondImg: '#FFFFFF', bordure: true, abr: 'AL', fond: '#00408B' },
   'Generali': { img: 'assets/logos/compagnies/generali.png', forme: 'carre', bordure: true },
   // Symbole Orion redessiné (deux arcs rouges formant un « O ») d'après le logo fourni le 19.09.2026
   'Orion': { viewBox: '0 0 64 64', fond: '#FFFFFF', bordure: true,
@@ -54,6 +57,10 @@ const PICTOS_COMPAGNIES = {
   'SUVA': { abr: 'SU' },
   'PAX': { abr: 'PAX' },
   'CAP': { abr: 'CAP' },
+  // Retraites Populaires — caisse vaudoise, partenaire 3e pilier (contact deja enregistre :
+  // 3.pilier@retraitespopulaires.ch). Le fichier est attendu dans assets/logos/compagnies ;
+  // tant qu'il n'y est pas, l'attribut onerror du rendu bascule sur le monogramme vert.
+  'Retraites Populaires': { img: 'assets/logos/compagnies/retraites-populaires.jpg', forme: 'carre', ajuste: 'contain', fondImg: '#FFFFFF', bordure: true, abr: 'RP', fond: '#00A758' },
   'Animalia': { abr: 'AN' },
 };
 
@@ -79,7 +86,12 @@ function pictoCompagnie(nomCompagnie, taille) {
   if (def.img) {
     const rayon = def.forme === 'rond' ? '50%' : `${Math.round(t * 0.27)}px`;
     const ajuste = def.ajuste === 'contain' ? `object-fit:contain;background:${def.fondImg || '#fff'};padding:${Math.max(1, Math.round(t * 0.08))}px;` : 'object-fit:cover;';
-    return `<img src="${def.img}" alt="${_pictoEsc(nom)}" title="${_pictoEsc(nom)}" width="${t}" height="${t}" style="flex-shrink:0;width:${t}px;height:${t}px;border-radius:${rayon};${ajuste}vertical-align:middle;box-sizing:border-box;${def.bordure ? 'border:1px solid rgba(23,52,84,0.25);' : ''}">`;
+    // Repli si le fichier manque (logo pas encore déposé, chemin changé) : l'image cède la place
+    // au monogramme plutôt que de laisser l'icône cassée du navigateur — qui donne l'impression
+    // que l'application est abîmée alors qu'il manque seulement un fichier.
+    const abr = _pictoEsc(def.abr || _pictoAbreviation(nom));
+    const replis = `this.outerHTML='&lt;span title=&quot;${_pictoEsc(nom)}&quot; style=&quot;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:${t}px;height:${t}px;border-radius:${rayon};background:${fond};color:${def.texte || '#fff'};font-size:${Math.round(t * 0.38)}px;font-weight:600;vertical-align:middle&quot;>${abr}&lt;/span>'`;
+    return `<img src="${def.img}" alt="${_pictoEsc(nom)}" title="${_pictoEsc(nom)}" width="${t}" height="${t}" onerror="${replis}" style="flex-shrink:0;width:${t}px;height:${t}px;border-radius:${rayon};${ajuste}vertical-align:middle;box-sizing:border-box;${def.bordure ? 'border:1px solid rgba(23,52,84,0.25);' : ''}">`;
   }
   const base = `display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;width:${t}px;height:${t}px;border-radius:${Math.round(t * 0.27)}px;background:${fond};color:${def.texte || '#fff'};vertical-align:middle`;
   if (def.svg && def.sansFond) {

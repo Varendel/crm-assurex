@@ -1,0 +1,41 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   COMMISSIONS — LES TROIS VUES EN ONGLETS (js/75, 20.09.2026)
+
+   Chaque onglet porte son libellé ET ce qu'il contient. Sans cette seconde ligne, on retombe sur
+   le problème d'origine : trois mots proches entre lesquels il faut deviner.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.cmx-onglets {
+  display: flex; gap: var(--e-2, 8px); flex-wrap: wrap;
+  margin-bottom: var(--e-5, 20px); padding-bottom: var(--e-3, 12px);
+  border-bottom: 1px solid var(--g-200, #E2E8F0);
+}
+html:not([data-theme="clair"]) .cmx-onglets { border-bottom-color: rgba(255, 255, 255, .08); }
+
+.cmx-onglet {
+  display: flex; flex-direction: column; gap: 2px; cursor: pointer; text-align: left;
+  padding: 10px var(--e-4, 16px); border-radius: var(--r-s, 10px);
+  border: 1px solid transparent; background: transparent;
+  color: var(--text-muted, #64748B); font-family: inherit;
+  transition: background var(--v-court, .15s), color var(--v-court, .15s), border-color var(--v-court, .15s);
+}
+.cmx-onglet span { font-size: 15px; line-height: 1; }
+.cmx-onglet b { font-size: var(--t-m, 13.5px); font-weight: var(--t-moyen, 600); }
+.cmx-onglet small { font-size: var(--t-xs, 11px); opacity: .8; }
+
+.cmx-onglet:hover { background: var(--g-50, #F4F6F9); color: var(--text, #334155); }
+html:not([data-theme="clair"]) .cmx-onglet:hover { background: rgba(255, 255, 255, .05); }
+
+.cmx-onglet.actif {
+  background: var(--surface, #fff); color: var(--text, #0F172A);
+  border-color: var(--g-200, #E2E8F0); box-shadow: var(--o-1);
+}
+.cmx-onglet.actif b { color: var(--m-marine, #113679); }
+html:not([data-theme="clair"]) .cmx-onglet.actif { background: rgba(255, 255, 255, .07); border-color: rgba(255,255,255,.14); }
+html:not([data-theme="clair"]) .cmx-onglet.actif b { color: var(--m-turquoise, #00CFFF); }
+
+@media (max-width: 720px) {
+  .cmx-onglet { flex: 1 1 100%; padding: 9px var(--e-3, 12px); }
+  .cmx-onglet small { display: none; }
+}
+@media print { .cmx-onglets { display: none !important; } }

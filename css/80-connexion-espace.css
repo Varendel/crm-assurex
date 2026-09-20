@@ -50,8 +50,8 @@
     drop-shadow(0 0 18px rgba(125,211,252,.72)) drop-shadow(0 0 52px rgba(0,207,255,.6))
     drop-shadow(0 0 104px rgba(0,149,184,.5)) drop-shadow(0 4px 9px rgba(3,12,30,.55)); }
 }
-#ecran-chargement-crm .ecc-point { position: absolute; left: 53.48%; top: 70.63%; width: 4.04%; aspect-ratio: 1;
-  transform: translate(-50%, -50%); border-radius: 50%; background: #00CFFF;
+#ecran-chargement-crm .ecc-point { position: absolute; left: 53.48%; top: 70.39%; width: 4.5%; aspect-ratio: 1;
+  transform: translate(-50%, -50%); border-radius: 7%; background: #00CFFF;
   animation: lg-point 2.6s ease-in-out infinite; }
 #ecran-chargement-crm .ecc-piste { position: relative; width: min(470px, 84vw); height: 104px; }
 #ecran-chargement-crm .ecc-rex { position: absolute; bottom: 14px; left: 0; height: 84px; width: auto;
@@ -361,12 +361,15 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
     border: 9px solid transparent; border-bottom-color: #fff; border-top: 0; border-right-color: transparent; }
 }
 
-/* Le point entre REX et CRM pulse en turquoise. Sa position vient d'une mesure du logotype :
-   centre a 53.48 % / 70.63 %, diametre 4.04 % de la largeur, couleur relevee #00CFFF. La pastille
-   recouvre exactement le point du PNG, elle ne s'ajoute pas a cote. */
+/* Le point entre REX et CRM pulse en turquoise. Sa position ET SA FORME viennent d'une mesure du
+   PNG, pas d'une estimation : la tache occupe x 510..549 et y 125..165 sur une image de 990x206,
+   soit un centre a 53.48 % / 70.39 %, et elle remplit sa boite a 100 %.
+   C'EST DONC UN CARRE, pas un disque. La pastille etait ronde : les quatre coins du carre du PNG,
+   blanchis par brightness(0) invert(1), depassaient tout autour — le blanc vu par Jonathan le
+   20.09.2026. Elle est un peu plus large que la mesure, pour avaler l'anticrenelage du bord. */
 .login-logo-bloc { position: relative; display: inline-block; line-height: 0; }
-.login-point { position: absolute; left: 53.48%; top: 70.63%; width: 4.04%; aspect-ratio: 1;
-  transform: translate(-50%, -50%); border-radius: 50%; background: #00CFFF;
+.login-point { position: absolute; left: 53.48%; top: 70.39%; width: 4.5%; aspect-ratio: 1;
+  transform: translate(-50%, -50%); border-radius: 7%; background: #00CFFF;
   animation: lg-point 2.6s ease-in-out infinite; }
 @keyframes lg-point {
   0%, 100% { box-shadow: 0 0 6px 1px rgba(0,207,255,.55); transform: translate(-50%, -50%) scale(1); }

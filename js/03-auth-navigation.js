@@ -820,6 +820,7 @@ const SECTIONS = [
     { id: 'demandes-devis', icon: '📨', label: 'Demandes de devis', groupe: 'Marketing' },
     { id: 'sources', icon: '🧭', label: 'Sources des clients', groupe: 'Marketing' },
     { id: 'campagnes', icon: '📣', label: 'Campagnes', groupe: 'Marketing' },
+    { id: 'kanban-campagnes', icon: '🗂️', label: 'Tableau des campagnes', groupe: 'Marketing' },
   ]},
   { id: 'conseil-section', label: 'Conseil', icon: '💼', sub: [
     { id: 'conseil', icon: '💼', label: 'Conseil financier' },
@@ -1552,6 +1553,8 @@ async function renderView() {
     case 'demandes-polices': main.innerHTML = typeof viewDemandesPolices === 'function' ? viewDemandesPolices() : ''; break;
     // Les leads laissés sur la page publique de demande de devis (js/68)
     case 'demandes-devis': main.innerHTML = typeof viewDemandesDevis === 'function' ? viewDemandesDevis() : ''; break;
+    // Le tableau des campagnes, de l'idée à l'analyse (js/70)
+    case 'kanban-campagnes': main.innerHTML = typeof viewKanbanCampagnes === 'function' ? viewKanbanCampagnes() : ''; break;
     // Préparation de l'échange de données EcoHub : qualité des clés de rapprochement (js/54)
     case 'ecohub-sync': main.innerHTML = typeof viewEcohubSync === 'function' ? viewEcohubSync() : ''; break;
     case 'marquage-entites': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); main.innerHTML = typeof viewMarquageEntites === 'function' ? viewMarquageEntites() : ''; break;

@@ -49,6 +49,20 @@ sont en bas de ce fichier.
 - **19.09** — **Archivage OZ au 01.01.2027** (automatique) : vue OZ Assure en archive arrêtée au
   31.12.2026, menu « OZ Assure · archives », saisie OZ limitée aux anciens décomptes ; rien supprimé.
 
+- **20.09** — **EcoHub** (js/59, 61) : réception des documents des compagnies, rattachement au client
+  et au contrat par n° de police, manomètre d'état, pastilles de nouveautés dans le bandeau,
+  synchronisation planifiée deux fois par jour.
+- **20.09** — **Chantier visuel** : le CSS sorti de `index.html` (348 Ko → 17 Ko) vers `css/00…95`,
+  **jetons de design** (`css/000-jetons.css`, source unique des couleurs, espacements, rayons,
+  ombres, échelle typographique), **composant tableau** unique (js/66 + css/95), densité
+  confortable / compact, curseur aux couleurs de l'accent, **échelle typographique appliquée**
+  (`css/96-typographie.css` : chiffres tabulaires, faux gras supprimé, interlettrage optique).
+- **20.09** — **Habillages saisonniers** (js/62) : Halloween dès le 01.10, Noël dès le 01.11,
+  Rex et Rodolphe en tenue, neige, décor de l'espace client **et de la page de connexion** ;
+  essayables hors période depuis Paramètres › Apparence (js/64).
+- **20.09** — **Demandes de polices** (js/63) : une lettre par client et par compagnie qui annonce
+  le mandat, demande la police et le transfert de portefeuille, envoi par lot avec relance à 12 jours.
+
 ## 🟡 En attente
 
 - [ ] Signature de test de bout en bout avec le correctif en ligne
@@ -137,6 +151,7 @@ sont en bas de ce fichier.
       base. Reste à faire : accès aux documents (polices), changement de mot de passe côté client,
       et test de bout en bout avec un compte de test avant ouverture à un vrai client.
 - [ ] Espace client, suite : app installable, documents téléchargeables, notifications
+- [ ] **Projet « Rex assistant IA »** (ajouté le 20.09.2026) — voir le détail en bas de ce fichier
 - [ ] Lecture IA des certificats LPP, scénario avant / après, import bancaire, notes de frais
 - [ ] Ouverture à 1–2 cabinets pilotes — prérequis : priorité 1 complète + licence
 - [x] Autotests des calculs de commissions (js/43, 18 tests, bouton dans Cockpit › Contrôle)
@@ -145,6 +160,44 @@ sont en bas de ce fichier.
 ---
 
 # Idées détaillées
+
+## Projet « Rex assistant IA »
+
+**Ajouté le 20.09.2026.**
+
+**Objectif** : que Rex cesse d'être seulement une mascotte et devienne l'assistant du CRM — on lui
+pose une question en français, il répond en s'appuyant sur les données réelles du portefeuille, et
+il prépare le travail au lieu de se contenter de l'afficher.
+
+**Trois niveaux, du plus simple au plus ambitieux** :
+
+1. **Rex qui répond** — « combien de contrats arrivent à échéance en novembre ? », « quel client n'a
+   pas de RC ? », « où en est le dossier Untel ? ». La question est traduite en requête sur la base,
+   la réponse est chiffrée et accompagnée du lien vers l'écran concerné. Rien n'est inventé : si la
+   donnée n'existe pas, Rex le dit.
+2. **Rex qui prépare** — résumé d'une fiche client avant un rendez-vous, brouillon de courrier ou
+   d'e-mail à partir des modèles existants, proposition de la prochaine action sur une opportunité,
+   lecture des documents reçus par EcoHub (certificat LPP, police, avenant) pour en extraire les
+   chiffres et les proposer à la saisie. **Rien n'est envoyé ni enregistré sans validation.**
+3. **Rex qui veille** — le check matinal décrit plus bas dans ce fichier (dossiers sans réponse,
+   échéances qui approchent, incohérences repérées), rendu sous forme de trois phrases sur le
+   tableau de bord plutôt que d'une carte de plus.
+
+**Points à trancher avant de construire** :
+- **Où tourne le modèle** : appel depuis une fonction serveur (edge function) et jamais depuis le
+  navigateur — la clé ne doit pas se trouver dans une page publique.
+- **Ce qui sort du CRM** : par défaut, aucune donnée nominative. Les questions du niveau 1 peuvent
+  se traiter sans jamais transmettre un nom (Rex construit la requête, la base répond). Les niveaux
+  2 et 3 transmettent du contenu client : il faut le consentement, un hébergement acceptable, et
+  une mention dans la politique de confidentialité — nLPD.
+- **Traçabilité** : chaque réponse de Rex est journalisée (question, données consultées, réponse),
+  sinon on ne peut pas expliquer une erreur.
+- **Le garde-fou métier** : Rex ne donne jamais de recommandation de couverture présentée comme un
+  conseil. Il prépare, le conseiller signe — FINMA / FIDLEG.
+
+**Statut** : idée notée, non planifiée. Prérequis : priorité 1 (rôles, cloisonnement) terminée.
+
+---
 
 ## Diffusion WhatsApp — news marchés, assurance & patrimoine
 

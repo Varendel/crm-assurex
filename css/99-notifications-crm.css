@@ -1,0 +1,94 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   CE QUI ATTEND UNE RÉPONSE (js/108, 20.09.2026)
+
+   Un voyant n'est pas une alarme. Il dit un état, et il doit pouvoir être vert — c'est même sa
+   raison d'être : savoir qu'il n'y a rien vaut autant que savoir qu'il y a quelque chose. D'où
+   trois tons seulement, et un vert qui ne crie pas.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.ntf-voyant {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-areas: "lampe texte" ". detail";
+  align-items: center;
+  gap: 4px var(--e-3, 12px);
+  margin: var(--e-4, 16px) 0;
+  padding: var(--e-3, 12px) var(--e-4, 16px);
+  border-radius: var(--r-m, 14px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.ntf-lampe {
+  grid-area: lampe;
+  width: 10px; height: 10px; border-radius: 50%;
+  flex-shrink: 0;
+  background: var(--text-dim);
+}
+
+.ntf-texte { grid-area: texte; min-width: 0; }
+.ntf-texte b { display: block; font-size: var(--t-m); font-weight: 600; color: var(--text); }
+.ntf-texte small { display: block; font-size: var(--t-xs); color: var(--text-muted); }
+
+/* ── Les trois états ───────────────────────────────────────────────────────────────────────────
+   Calme : rien à faire, et on le dit sans fausse joie — pas de vert vif, juste une lampe posée.
+   Actif : quelque chose attend, c'est normal, la lampe respire.
+   Tard  : la plus ancienne demande a plus de deux jours. Là, ce n'est plus une file d'attente. */
+.ntf-voyant.calme .ntf-lampe { background: var(--c-succes); }
+.ntf-voyant.calme { border-color: color-mix(in srgb, var(--c-succes) 25%, transparent); }
+
+.ntf-voyant.actif .ntf-lampe {
+  background: var(--accent);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent);
+  animation: ntf-respire 2.6s ease-out infinite;
+}
+.ntf-voyant.actif { border-color: var(--accent-border, color-mix(in srgb, var(--accent) 30%, transparent)); }
+
+.ntf-voyant.tard .ntf-lampe {
+  background: var(--c-alerte);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--c-alerte) 60%, transparent);
+  animation: ntf-respire 1.9s ease-out infinite;
+}
+.ntf-voyant.tard { border-color: color-mix(in srgb, var(--c-alerte) 45%, transparent); }
+.ntf-voyant.tard .ntf-texte small { color: var(--c-alerte-texte); }
+
+@keyframes ntf-respire {
+  0%   { box-shadow: 0 0 0 0 currentColor; }
+  70%  { box-shadow: 0 0 0 9px transparent; }
+  100% { box-shadow: 0 0 0 0 transparent; }
+}
+/* Un point qui palpite en permanence gêne ceux qui y sont sensibles, et le réglage
+   « Animations » de l'écran Apparence doit pouvoir l'arrêter comme le reste. */
+@media (prefers-reduced-motion: reduce) { .ntf-lampe { animation: none !important; } }
+
+/* ── Le détail ─────────────────────────────────────────────────────────────────────────────────
+   Chaque ligne est un bouton : voir qu'il y a trois sinistres sans pouvoir y aller serait une
+   information qui coûte sans servir. */
+.ntf-detail {
+  grid-area: detail;
+  display: flex; flex-wrap: wrap; gap: 6px;
+  margin-top: 8px;
+}
+.ntf-ligne {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 5px 11px; border-radius: var(--r-rond, 999px);
+  background: var(--surface-alt);
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  font-family: inherit; font-size: var(--t-s); color: var(--text-muted);
+  cursor: pointer;
+  transition: border-color var(--v-court, .15s), color var(--v-court, .15s);
+}
+.ntf-ligne:hover { border-color: var(--accent); color: var(--text); }
+.ntf-ligne b { font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums lining-nums; }
+.ntf-ligne-ico { display: inline-flex; color: var(--text-dim); }
+
+/* ── Le compteur du menu ───────────────────────────────────────────────────────────────────────
+   Il reprend .nav-compteur, qui existe déjà pour les tâches : deux pastilles de formes
+   différentes dans le même menu donneraient deux langages pour une même idée. */
+.nav-item.ntf-actif .nav-lib { color: var(--text); }
+.ntf-pastille { font-variant-numeric: tabular-nums lining-nums; }
+
+@media (max-width: 620px) {
+  .ntf-voyant { grid-template-columns: auto 1fr; }
+  .ntf-detail { gap: 5px; }
+}

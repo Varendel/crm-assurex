@@ -152,6 +152,24 @@ function eafContenu() {
       Les montants attendus sont des estimations tant qu’aucun décompte n’est venu les confirmer.</p>
   </div>
 
+  ${(() => {
+    // Les encaissements sans date (20.09.2026). Ils ne figurent sur aucune courbe — et c'est
+    // voulu : leur donner la date de saisie les empilait tous au jour de la reprise. Mais ils
+    // existent, et un total qui les oublierait serait faux dans l'autre sens. On les annonce
+    // donc, chiffrés, au-dessus des courbes qui ne peuvent pas les montrer.
+    const S = typeof eaSansDate !== 'undefined' ? eaSansDate : [];
+    if (!S.length) return '';
+    const t = S.reduce((s, l) => s + Number(l.montant || 0), 0);
+    const cies = [...new Set(S.map(l => l.compagnie))].filter(x => x && x !== '—');
+    return `<div class="eaf-sansdate">
+      <b>CHF ${eafCHF(t)} encaissés sans date connue</b>
+      <small>${S.length} ligne${S.length > 1 ? 's' : ''}${cies.length ? ` · ${cies.slice(0, 6).join(', ')}${cies.length > 6 ? '…' : ''}` : ''}.
+        Ces montants sont bien encaissés, mais aucune date de réception n’est enregistrée : ils ne
+        peuvent apparaître sur aucun mois. Les dater, c’est rapprocher les décomptes des virements
+        bancaires — jusque-là, les courbes ci-dessous ne montrent qu’une partie du réel.</small>
+    </div>`;
+  })()}
+
   <div class="dbx-kpis">
     ${kpi('Encaissé', somme(encaisse), `${encaisse.length} ligne${encaisse.length > 1 ? 's' : ''}`)}
     ${kpi('Attendu', somme(attendu), `${attendu.length} ligne${attendu.length > 1 ? 's' : ''}`)}

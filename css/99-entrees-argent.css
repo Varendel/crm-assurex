@@ -50,3 +50,16 @@
   .ea-imp-mois { margin-top: 7mm; width: 90mm; break-before: auto; }
   .ea-imp-pied { margin-top: 6mm; font-size: 7pt; color: #666; line-height: 1.45; }
 }
+
+/* ── Les encaissements sans date (20.09.2026) ──────────────────────────────────────────────────
+   Ils ne peuvent figurer sur aucune courbe. Le bloc est posé AU-DESSUS des graphiques, pas en
+   dessous : il faut savoir ce qui manque avant de lire ce qui est montré, pas après. */
+.eaf-sansdate {
+  display: flex; flex-direction: column; gap: 4px;
+  margin-bottom: 14px; padding: 13px 16px;
+  border-radius: var(--r-s, 10px);
+  background: var(--c-alerte-fond);
+  border: 1px solid color-mix(in srgb, var(--c-alerte, #F59E0B) 40%, transparent);
+}
+.eaf-sansdate b { font-size: 14px; font-weight: 600; color: var(--c-alerte-texte, #B45309); }
+.eaf-sansdate small { font-size: 12.5px; color: var(--text-muted); line-height: 1.55; max-width: 92ch; text-wrap: pretty; }

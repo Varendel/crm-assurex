@@ -66,10 +66,16 @@ function eaBornes() {
 // Deux sources, une seule forme de ligne. Ce qui est ENCAISSÉ porte sa date de réception réelle ;
 // ce qui est ATTENDU porte sa date prévue, calculée par le même moteur que la trésorerie — ainsi
 // les deux écrans ne peuvent pas diverger.
+// Les encaissements dont on ne sait pas QUAND ils sont tombés. Ils ne peuvent figurer sur aucune
+// courbe — mais ils existent, et les taire reviendrait à sous-estimer le total encaissé. On les
+// garde donc de côté, à afficher à part.
+let eaSansDate = [];
+
 function eaCollecter() {
   const { du, au } = eaBornes();
   const aujIso = new Date().toISOString().slice(0, 10);
   const lignes = [];
+  eaSansDate = [];
   const CA = typeof allCommissionsAttente !== 'undefined' ? allCommissionsAttente : [];
   const CT = typeof allContrats !== 'undefined' ? allContrats : [];
 
@@ -91,8 +97,19 @@ function eaCollecter() {
 
     const encaisse = ['reçue', 'versé_oz'].includes(ca.statut);
     if (encaisse) {
-      const date = (ca.date_reception || ca.date_creation || '').slice(0, 10);
-      if (!date || date < du || date > au) continue;
+      // LA DATE D'ENCAISSEMENT, ET RIEN D'AUTRE (20.09.2026).
+      // Cette ligne reprenait `date_creation` quand `date_reception` manquait. Or date_creation
+      // est le jour où la ligne a été SAISIE, pas le jour où l'argent est arrivé : à la reprise
+      // des données, 160 commissions ont été créées le même jour. Le graphique montrait donc une
+      // colonne de CHF 70 294 au 1er juillet 2026 et des mois vides autour — une courbe
+      // d'encaissements qui ne décrivait pas des encaissements.
+      // Une date inventée est pire qu'une date absente : elle se lit comme un fait. On sort donc
+      // ces lignes de la série datée, et on les compte à part (eaSansDate) pour qu'elles se
+      // voient au lieu de se fondre.
+      const date = (ca.date_reception || '').slice(0, 10);
+      if (!date) { eaSansDate.push({ ...commun, montant: Number(ca.montant_final ?? ca.montant_estime ?? 0),
+        entite: ca.statut === 'versé_oz' ? 'OZ' : 'Assurex' }); continue; }
+      if (date < du || date > au) continue;
       lignes.push({ ...commun, date, montant: Number(ca.montant_final ?? ca.montant_estime ?? 0),
         etat: ca.statut === 'versé_oz' ? 'Encaissé (OZ)' : 'Encaissé', entite: ca.statut === 'versé_oz' ? 'OZ' : 'Assurex',
         reel: ca.montant_final != null, retard: false });

@@ -202,8 +202,8 @@ function pafOuvrirSituation(oppId) {
 
       <div id="paf-mandat" style="display:${o.type_affaire === 'portefeuille' ? '' : 'none'}">
         <div class="paf-rappel">
-          <b>📜 Un mandat, pas une résiliation</b>
-          <p>Le client garde ses contrats : il faut envoyer un mandat de courtage à chaque
+          <b>📜 Un mandat simple, pas une résiliation</b>
+          <p>Le client garde ses contrats : il faut envoyer un <b>mandat simple</b> à chaque
             compagnie concernée pour qu’elle nous reconnaisse comme interlocuteur. Les contrats
             restent en vigueur — ne rien résilier.</p>
           ${typeof navigate === 'function' ? `<button type="button" class="paf-act"

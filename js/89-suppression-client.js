@@ -35,10 +35,28 @@ const SC_LIBELLES = {
   clients_parraines: 'client parrainé',
 };
 
+// Le pluriel se pose sur le NOM, pas au bout de la phrase : « 2 demande de signatures » se lisait
+// de travers alors que le compte, lui, était juste — et une fenêtre qui écrit mal fait douter de
+// ce qu'elle compte. On pluralise donc jusqu'à la première préposition (« demandes de signature »),
+// en laissant les noms propres et les mots déjà au pluriel.
+const SC_PREPOS = /^(de|d’|d'|à|a|au|aux|du|des|en|sur|pour|l’|l')$/i;
+
+function scPluriel(libelle) {
+  const mots = libelle.split(' ');
+  const out = [];
+  let encore = true;
+  for (const m of mots) {
+    if (!encore || SC_PREPOS.test(m)) { encore = false; out.push(m); continue; }
+    if (/[sx]$/.test(m) || /^[A-ZÉÈÊÀÂÎÔÛ]/.test(m)) { out.push(m); continue; }
+    out.push(m + 's');
+  }
+  return out.join(' ');
+}
+
 function scPhrase(liens) {
   return Object.entries(liens || {}).map(([t, n]) => {
     const l = SC_LIBELLES[t] || t;
-    return `${n} ${l}${n > 1 && !l.endsWith('s') ? 's' : ''}`;
+    return `${n} ${n > 1 ? scPluriel(l) : l}`;
   }).join(', ');
 }
 
@@ -93,8 +111,27 @@ async function scConfirmerSuppression(clientId, nomClient) {
     return;
   }
 
-  const vierge = !Object.keys(liens).length;
-  boite.innerHTML = vierge ? scVierge(clientId, nomClient) : scPleine(clientId, nomClient, liens);
+  // Les traces techniques (20.09.2026). Une fiche de test refusait de partir : elle portait UNE
+  // demande de signature de mandat jamais signée, créée par le test lui-même. La règle « zéro
+  // rattachement » est bonne — c'est elle qui a empêché la suppression d'une vraie cliente — mais
+  // elle comptait sur le même pied une trace de l'application et un contrat.
+  // En cas de doute (le serveur ne répond pas), on ne balaie rien : la liste reste vide et la
+  // fiche est traitée comme si elle portait tout.
+  const resT = await scRpc('client_traces_techniques', { p_client: clientId });
+  const traces = (!resT.erreur && resT.valeur) || {};
+
+  // Ce qui reste une fois les traces mises de côté, clé par clé : une table peut porter à la fois
+  // une trace et une vraie ligne, et elle bloque alors toujours.
+  const reste = {};
+  for (const [k, n] of Object.entries(liens)) {
+    const d = n - (traces[k] || 0);
+    if (d > 0) reste[k] = d;
+  }
+
+  if (Object.keys(reste).length) { boite.innerHTML = scPleine(clientId, nomClient, reste); return; }
+  boite.innerHTML = Object.keys(traces).length
+    ? scViergeAvecTraces(clientId, nomClient, traces)
+    : scVierge(clientId, nomClient);
 }
 
 function scVierge(clientId, nomClient) {
@@ -108,6 +145,24 @@ function scVierge(clientId, nomClient) {
     <div class="sc-actions">
       <button type="button" class="btn-secondary" onclick="document.getElementById('modal-suppression-client').remove()">Annuler</button>
       <button type="button" class="sc-danger" onclick="scSupprimer('${clientId}', this)">Supprimer définitivement</button>
+    </div>`;
+}
+
+// La fiche ne porte que des traces de l'application : une demande de signature jamais honorée,
+// un accès jamais utilisé, un journal. On les nomme avant d'emporter quoi que ce soit — le
+// cabinet doit voir ce qu'il emporte, même quand c'est peu de chose.
+function scViergeAvecTraces(clientId, nomClient, traces) {
+  return `
+    <span class="sc-surtitre">Fiche vierge</span>
+    <h3>Supprimer ${scEsc(nomClient)} ?</h3>
+    <p>Cette fiche ne porte <b>aucun contrat, aucune affaire, aucune commission, aucun document</b>.
+      Il reste seulement <b>${scEsc(scPhrase(traces))}</b> — des traces laissées par l’application,
+      qui ne contiennent aucune donnée du client.</p>
+    <p class="sc-note">Elles seront supprimées avec la fiche. C’est irréversible, mais il n’y a
+      rien à perdre : la vérification vient de l’établir.</p>
+    <div class="sc-actions">
+      <button type="button" class="btn-secondary" onclick="document.getElementById('modal-suppression-client').remove()">Annuler</button>
+      <button type="button" class="sc-danger" onclick="scSupprimer('${clientId}', this, true)">Supprimer définitivement</button>
     </div>`;
 }
 
@@ -130,9 +185,11 @@ function scPleine(clientId, nomClient, liens) {
 }
 
 // ── La suppression réelle ───────────────────────────────────────────────────────────────────────
-async function scSupprimer(clientId, btn) {
+async function scSupprimer(clientId, btn, balayer) {
   btn.textContent = 'Suppression…'; btn.disabled = true;
-  const res = await scRpc('supprimer_client_vierge', { p_client: clientId });
+  // `p_balayer` n'est vrai que si la fenêtre a nommé les traces et que le cabinet a vu la liste.
+  // Le serveur refuse sinon : il ne balaie jamais de son propre chef.
+  const res = await scRpc('supprimer_client_vierge', { p_client: clientId, p_balayer: balayer === true });
   const r = res.valeur;
 
   if (res.erreur || !r || r.ok !== true) {

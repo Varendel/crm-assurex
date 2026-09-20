@@ -1,0 +1,57 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   REX CLOUD — ALIGNEMENT ET IDENTITÉ (js/102, 20.09.2026)
+
+   « Alignement du texte avec le bandeau dans l'espace client. »
+
+   Mesuré avant correction : le titre du bandeau commençait à 31 px du bord, celui des cartes en
+   dessous à 23 px, et l'intitulé des onglets ailleurs encore. Trois marges différentes sur une
+   même page — le bandeau avait 30 px de padding, les cartes 22. L'œil descend le long d'un bord
+   gauche ; trois bords gauches donnent l'impression que la page a été assemblée par morceaux,
+   même quand on ne sait pas dire pourquoi.
+
+   Une seule gouttière, tenue par les trois. C'est tout ce que fait ce fichier.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+body.mode-espace-client, body.mode-cloud {
+  --ec-gouttiere: 26px;
+  /* Le libellé d'un onglet est déjà en retrait dans sa pastille (bordure + padding). On décale
+     donc la rangée de ce que la pastille prend, pour que le MOT tombe sur la gouttière et non
+     la pastille — c'est le mot qu'on lit, pas son cadre. */
+  --ec-retrait-pastille: 17px;
+}
+
+body.mode-espace-client .ec .cf-hero,
+body.mode-cloud .ec .cf-hero {
+  padding-left: var(--ec-gouttiere);
+  padding-right: var(--ec-gouttiere);
+}
+
+body.mode-espace-client .ec .dbx-carte,
+body.mode-cloud .ec .dbx-carte {
+  padding-left: calc(var(--ec-gouttiere) - 1px);   /* la bordure de la carte compte dans le bord */
+  padding-right: calc(var(--ec-gouttiere) - 1px);
+}
+
+body.mode-espace-client .ec .ec-onglets,
+body.mode-cloud .ec .ec-onglets {
+  padding-left: calc(var(--ec-gouttiere) - var(--ec-retrait-pastille));
+}
+
+/* Sous 620 px la gouttière se resserre : garder 26 px de chaque côté sur un écran de 375 px
+   mangerait un septième de la largeur utile. */
+@media (max-width: 620px) {
+  body.mode-espace-client, body.mode-cloud { --ec-gouttiere: 18px; }
+}
+
+/* ── La date de naissance, sous le nom ──────────────────────────────────────────────────────────
+   Elle ne s'annonce pas : c'est une ligne de confirmation, pas une information à lire. Le client
+   la regarde une fois — pour vérifier qu'il est bien chez lui, et que la maison le connaît
+   correctement. Une date fausse ici, ce sont des primes fausses ailleurs. */
+.ec-ident {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-top: 2px;
+  font-size: 12.5px; color: rgba(255, 255, 255, .72);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.ec-ident em { font-style: normal; color: rgba(255, 255, 255, .5); }
+.ec-ident .ec-ident-sep { color: rgba(255, 255, 255, .3); }

@@ -40,7 +40,10 @@ const CCO_ABR = {
   'Protekta': 'PRO', 'Emmental': 'EMM', 'EGK': 'EGK', 'Atupri': 'ATU', 'KPT': 'KPT',
 };
 
+// Même résolution que le logo (js/15) : « Allianz Suisse Crissier » donne ALZ et le losange
+// Allianz, et non l'acronyme « ASC » que personne ne reconnaîtrait.
 function ccoNom(nom) {
+  if (typeof pictoResoudre === 'function') return pictoResoudre(nom);
   return typeof normaliserCompagnie === 'function' ? normaliserCompagnie(nom) : String(nom || '').trim();
 }
 

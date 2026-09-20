@@ -80,11 +80,44 @@ function _pictoAbreviation(nom) {
   return mots.slice(0, 3).map(m => m[0]).join('').toUpperCase();
 }
 
+// ── Reconnaître une agence, pas seulement une compagnie (20.09.2026) ───────────────────────────
+// « Allianz Suisse Crissier » ne ressemble a aucune cle : le contact s'affichait donc avec le
+// monogramme « ASC » au lieu du logo Allianz. Les noms d'agence sont la regle et non l'exception
+// dans le courtage — « Courtiers Riviera », « Agence generale de Crissier », « Lausanne » — et on
+// ne peut pas les enumerer a l'avance.
+//
+// On reconnait donc le nom de compagnie EN TETE du libelle, en prenant la cle la plus longue qui
+// corresponde. Uniquement pour choisir un logo : la normalisation qui sert aux rapprochements
+// financiers (bordereaux contre commissions) n'est pas touchee. Un logo choisi par ressemblance
+// coute un pictogramme errone ; un rapprochement choisi par ressemblance coute un montant.
+const _PICTO_CLES = Object.keys(PICTOS_COMPAGNIES)
+  .filter(k => k.length >= 3)
+  .sort((a, b) => b.length - a.length);
+
+function _pictoSansAccents(s) {
+  return String(s || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+function pictoResoudre(nomCompagnie) {
+  const nom = typeof normaliserCompagnie === 'function' ? normaliserCompagnie(nomCompagnie) : String(nomCompagnie || '');
+  if (PICTOS_COMPAGNIES[nom]) return nom;
+  const cle = _pictoSansAccents(nom).replace(/^(la|le|les)\s+/, '');
+  for (const k of _PICTO_CLES) {
+    // Avec et sans l'article : la cle est « La Vaudoise », mais les libelles d'agence s'ecrivent
+    // « Vaudoise Assurances Courtiers Riviera », sans article.
+    const kc = _pictoSansAccents(k).replace(/^(la|le|les)\s+/, '');
+    // Le nom doit COMMENCER par la cle, et s'arreter la ou finit un mot : « Allianz Suisse »
+    // correspond, « Allianzia » non.
+    if (cle === kc || cle.startsWith(kc + ' ')) return k;
+  }
+  return nom;
+}
+
 // Badge seul. taille en px (22 par défaut)
 function pictoCompagnie(nomCompagnie, taille) {
   if (!nomCompagnie) return '';
   const t = taille || 22;
-  const nom = typeof normaliserCompagnie === 'function' ? normaliserCompagnie(nomCompagnie) : nomCompagnie;
+  const nom = pictoResoudre(nomCompagnie);
   const def = PICTOS_COMPAGNIES[nom] || {};
   const fond = def.fond || PICTO_FOND_DEFAUT;
   if (def.img) {

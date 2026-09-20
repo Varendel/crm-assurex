@@ -137,7 +137,11 @@
       border: 1px solid var(--border, rgba(0,0,0,.12)); background: var(--surface, #fff); color: var(--text-muted, #64748b);
       font-size: 14px; line-height: 1; cursor: pointer; }
     .bmq-client-fermer:hover { color: var(--text, #1e293b); }
-    .bmq-client-replie { margin-top: 12px; }
+    /* Depuis le 20.09.2026, l'espace client ne porte plus que l'heure : le bloc n'a plus a s'etirer
+   sur toute la largeur, il se cale a gauche comme un petit objet pose la. Les regles
+   .bmq-client-marches ci-dessus ne servent plus cote client — elles restent pour le CRM. */
+.bmq-client-heure { display: inline-flex; margin-top: 12px; }
+.bmq-client-replie { margin-top: 12px; }
     .bmq-client-replie button { font-size: 11.5px; color: var(--text-muted, #64748b); background: none;
       border: 1px dashed var(--border, rgba(0,0,0,.16)); border-radius: 999px; padding: 5px 13px; cursor: pointer; }
     .bmq-client-replie button:hover { color: var(--accent, #2563eb); border-color: var(--accent, #2563eb); }

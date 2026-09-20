@@ -215,13 +215,16 @@ function bmqApresRendu() {
   bmqRelancerRotation();
 }
 
-// ── Version REX CLOUD (20.09.2026) ──────────────────────────────────────────────────────────────
-// Demande de Jonathan : le même bandeau côté client, mais discret et que le client peut retirer.
-// Il est réduit — l'heure et les cours ne sont pas ce que le client vient chercher — et son choix
-// est retenu sur son appareil. La mention « cours différés, à titre indicatif » reste affichée :
-// devant un client, aucun chiffre ne doit pouvoir passer pour une cotation en direct, et ce
-// bandeau n'est en aucun cas un conseil en placement.
-const BMQ_CLE_CLIENT = 'rexcloud-marches';
+// ── Version REX CLOUD (20.09.2026, revue le même jour) ──────────────────────────────────────────
+// Correction demandée par Jonathan : les marchés, la météo et le lecteur de musique sont des
+// outils du POSTE DE TRAVAIL du courtier. Ils n'ont rien à faire dans l'espace d'un client venu
+// consulter ses contrats — et les cours boursiers, sur un espace d'assurance, peuvent même se
+// lire comme du conseil en placement.
+//
+// Côté client, il ne reste donc que l'HEURE. Elle est discrète, repliable, et le choix est retenu
+// sur son appareil. Tout le reste (bandeau des marchés, météo, pastilles EcoHub, lecteur) vit
+// dans le tableau de bord du CRM, et nulle part ailleurs.
+const BMQ_CLE_CLIENT = 'rexcloud-heure';
 
 function bmqClientVisible() {
   try { return localStorage.getItem(BMQ_CLE_CLIENT) !== '0'; } catch (e) { return true; }
@@ -235,22 +238,21 @@ function bmqClientBasculer(afficher) {
 }
 
 function bmqBlocClient() {
+  if (typeof htmlHorlogeLuxe !== 'function') return '';
   if (!bmqClientVisible()) {
     return `<div id="bmq-client" class="bmq-client-replie">
-      <button type="button" onclick="bmqClientBasculer(true)">📈 Afficher l’heure et les marchés</button>
+      <button type="button" onclick="bmqClientBasculer(true)">🕰️ Afficher l’heure</button>
     </div>`;
   }
-  return `<div id="bmq-client" class="bmq-client">
-    ${typeof htmlHorlogeLuxe === 'function' ? `<div class="bmq-client-montre">${htmlHorlogeLuxe()}</div>` : ''}
-    <div class="bmq-client-marches">${bmqBandeauHtml()}</div>
-    <button type="button" class="bmq-client-fermer" onclick="bmqClientBasculer(false)" title="Masquer" aria-label="Masquer l’heure et les marchés">×</button>
+  return `<div id="bmq-client" class="bmq-client bmq-client-heure">
+    <div class="bmq-client-montre">${htmlHorlogeLuxe()}</div>
+    <button type="button" class="bmq-client-fermer" onclick="bmqClientBasculer(false)" title="Masquer" aria-label="Masquer l’heure">×</button>
   </div>`;
 }
 
 function bmqApresRenduClient() {
-  if (!document.getElementById('bmq-client')) return;
-  if (!bmqClientVisible()) return;
-  bmqPeindre();
-  bmqCharger(false);
-  bmqRelancerRotation();
+  // Plus de cours à charger côté client : seule la montre reste, et elle démarre toute seule
+  // (hlDemarrerHorloge, js/40).
+  if (!document.getElementById('bmq-client') || !bmqClientVisible()) return;
+  if (typeof hlDemarrerHorloge === 'function') hlDemarrerHorloge();
 }

@@ -1,0 +1,158 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   JOURNAL DES ERREURS (js/91, 20.09.2026)
+
+   Un écran de diagnostic doit faire remonter ce qui est récent et technique, et laisser au repos
+   ce qui est ancien et bénin. La hiérarchie visuelle porte donc la GRAVITÉ, pas la fréquence :
+   une erreur JavaScript apparue ce matin passe avant un message d'écran vu trente fois.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.jev-carte { margin-top: 18px; }
+
+/* ── L'état de santé ───────────────────────────────────────────────────────────────────────────── */
+.jev-sante {
+  padding: 5px 13px; border-radius: var(--r-rond, 999px); white-space: nowrap;
+  font-size: var(--t-s, 12.5px); font-weight: 500;
+  border: 1px solid var(--border); background: var(--surface-alt); color: var(--text-muted);
+}
+.jev-sante.ok { background: var(--c-succes-fond); color: var(--c-succes-texte, #15803D);
+  border-color: color-mix(in srgb, var(--c-succes, #16A34A) 30%, transparent); }
+.jev-sante.moyen { background: var(--c-alerte-fond); color: var(--c-alerte-texte, #B45309);
+  border-color: var(--c-alerte, #F59E0B); }
+.jev-sante.faible { background: var(--c-danger-fond); color: var(--c-danger-texte, #B91C1C);
+  border-color: color-mix(in srgb, var(--c-danger, #EF4444) 34%, transparent); }
+
+/* Un signalement manuel décrit un problème que la technique ne voit pas : il passe devant. */
+.jev-signal {
+  display: flex; flex-direction: column; gap: 2px;
+  padding: var(--e-3, 12px) var(--e-4, 16px); margin-bottom: var(--e-3, 12px);
+  border-radius: var(--r-s, 10px);
+  background: var(--c-info-fond); border: 1px solid color-mix(in srgb, var(--c-info, #0EA5E9) 30%, transparent);
+}
+.jev-signal b { font-size: var(--t-m, 13.5px); font-weight: var(--t-moyen, 600); color: var(--text); }
+.jev-signal small { font-size: var(--t-s, 12.5px); color: var(--text-muted); }
+
+/* ── Les filtres ───────────────────────────────────────────────────────────────────────────────── */
+.jev-outils { display: flex; gap: var(--e-4, 16px); flex-wrap: wrap; align-items: flex-end; }
+.jev-outils > div { display: flex; flex-direction: column; gap: 5px; }
+.jev-label { font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--text-muted); font-weight: 600; }
+.jev-segments { display: inline-flex; border-radius: var(--r-s, 10px); overflow: hidden; border: 1px solid var(--border); }
+.jev-segments button {
+  padding: 7px 12px; border: none; background: var(--surface-alt); cursor: pointer;
+  font-family: inherit; font-size: var(--t-s, 12.5px); color: var(--text-muted);
+  border-right: 1px solid var(--border); white-space: nowrap;
+  transition: background var(--v-court, .15s), color var(--v-court, .15s);
+}
+.jev-segments button:last-child { border-right: none; }
+.jev-segments button:hover { color: var(--text); background: var(--surface-hover); }
+.jev-segments button.actif { background: var(--accent); color: var(--on-accent, #fff); font-weight: 500; }
+
+/* ── La liste ──────────────────────────────────────────────────────────────────────────────────── */
+.jev-liste { display: flex; flex-direction: column; gap: 6px; margin-top: 18px; }
+.jev-groupe {
+  border-radius: var(--r-s, 10px); border: 1px solid var(--border);
+  background: var(--surface); overflow: hidden;
+  border-left: 3px solid var(--border);
+}
+.jev-groupe.ton-grave { border-left-color: var(--c-danger, #EF4444); }
+.jev-groupe.ton-signal { border-left-color: var(--c-info, #0EA5E9); }
+.jev-groupe.ton-info { border-left-color: var(--text-dim); }
+/* Traité : la ligne s'efface sans disparaître — on doit pouvoir vérifier ce qu'on a marqué. */
+.jev-groupe.resolu { opacity: .5; }
+
+.jev-entete {
+  display: flex; align-items: center; gap: var(--e-3, 12px); width: 100%;
+  padding: 11px var(--e-4, 16px); cursor: pointer; font-family: inherit;
+  background: none; border: none; text-align: left;
+  transition: background var(--v-court, .15s);
+}
+.jev-entete:hover { background: var(--surface-hover); }
+.jev-entete:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+
+.jev-badge {
+  flex-shrink: 0; padding: 2px 9px; border-radius: var(--r-rond, 999px);
+  font-size: 10px; font-weight: 600; white-space: nowrap;
+  background: var(--surface-alt); color: var(--text-muted); border: 1px solid var(--border);
+}
+.ton-grave .jev-badge { background: var(--c-danger-fond); color: var(--c-danger-texte, #B91C1C);
+  border-color: color-mix(in srgb, var(--c-danger, #EF4444) 34%, transparent); }
+.ton-signal .jev-badge { background: var(--c-info-fond); color: var(--c-info-texte, #0369A1);
+  border-color: color-mix(in srgb, var(--c-info, #0EA5E9) 30%, transparent); }
+
+/* Le message est tronqué à une ligne : un message d'erreur fait parfois trois cents caractères,
+   et la liste doit rester parcourable. Le détail s'ouvre au clic. */
+.jev-message {
+  flex: 1 1 auto; min-width: 0; font-size: var(--t-m, 13.5px); color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.jev-compte {
+  flex-shrink: 0; font-size: var(--t-s, 12.5px); color: var(--text-muted);
+  font-variant-numeric: tabular-nums lining-nums;
+}
+.jev-quand { flex-shrink: 0; font-size: var(--t-xs, 11px); color: var(--text-dim); white-space: nowrap; }
+.jev-chevron {
+  flex-shrink: 0; width: 7px; height: 7px;
+  border-right: 2px solid var(--text-muted); border-bottom: 2px solid var(--text-muted);
+  transform: rotate(-45deg); transition: transform var(--v-court, .15s);
+}
+.jev-entete[aria-expanded="true"] .jev-chevron { transform: rotate(45deg); }
+
+/* ── Le détail ─────────────────────────────────────────────────────────────────────────────────── */
+.jev-detail { padding: 0 var(--e-4, 16px) var(--e-4, 16px); border-top: 1px solid var(--border); }
+.jev-aide { margin: var(--e-3, 12px) 0; font-size: var(--t-s, 12.5px); color: var(--text-muted);
+  line-height: 1.5; text-wrap: pretty; }
+
+.jev-faits { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: var(--e-2, 8px); margin: 0 0 var(--e-3, 12px); }
+.jev-faits > div {
+  padding: 8px 11px; border-radius: var(--r-s, 10px);
+  background: var(--surface-alt); border: 1px solid var(--border);
+}
+.jev-faits dt { font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--text-muted); font-weight: 600; }
+.jev-faits dd { margin: 2px 0 0; font-size: var(--t-s, 12.5px); color: var(--text); }
+.jev-url { word-break: break-all; font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: 11px; }
+
+/* Le fil d'Ariane : c'est lui qui permet de reproduire. Il se lit du plus récent au plus ancien,
+   comme on remonte une piste. */
+.jev-fil { margin-bottom: var(--e-3, 12px); }
+.jev-fil h4 { margin: 0 0 6px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--text-muted); font-weight: 600; }
+.jev-fil ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+.jev-fil li {
+  display: flex; gap: 9px; padding: 5px 10px; border-radius: 7px;
+  background: var(--surface-alt); font-size: var(--t-s, 12.5px); color: var(--text);
+}
+.jev-h { color: var(--text-dim); font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.jev-fil .jev-aide { margin: 6px 0 0; font-size: var(--t-xs, 11px); }
+
+.jev-pile summary { cursor: pointer; font-size: var(--t-s, 12.5px); color: var(--text-muted); padding: 4px 0; }
+.jev-pile summary:hover { color: var(--text); }
+.jev-pile pre {
+  margin: 6px 0 0; padding: 10px 12px; border-radius: var(--r-s, 10px); overflow-x: auto;
+  background: var(--surface-alt); border: 1px solid var(--border);
+  font-size: 11px; line-height: 1.5; color: var(--text-muted); white-space: pre-wrap; word-break: break-all;
+}
+
+.jev-actions { display: flex; gap: var(--e-2, 8px); margin-top: var(--e-3, 12px); flex-wrap: wrap; align-items: center; }
+.jev-act {
+  padding: 6px 12px; border-radius: var(--r-s, 10px); cursor: pointer; font-family: inherit;
+  font-size: var(--t-s, 12.5px); font-weight: 500; white-space: nowrap;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-muted);
+  transition: color var(--v-court, .15s), border-color var(--v-court, .15s);
+}
+.jev-act:hover { color: var(--text); border-color: var(--accent-border); }
+.jev-act-ok { color: var(--c-succes-texte, #15803D); border-color: color-mix(in srgb, var(--c-succes, #16A34A) 34%, transparent); }
+.jev-act-ok:hover { color: var(--c-succes, #16A34A); border-color: var(--c-succes, #16A34A); }
+.jev-traite { font-size: var(--t-s, 12.5px); color: var(--c-succes, #16A34A); }
+
+.jev-vide { padding: var(--e-5, 20px); text-align: center; }
+.jev-vide b { display: block; font-size: var(--t-l, 15px); font-weight: var(--t-moyen, 600); color: var(--text); }
+.jev-vide p { margin: 6px 0 0; font-size: var(--t-m, 13.5px); color: var(--text-muted); }
+.jev-ok b { color: var(--c-succes, #16A34A); }
+
+@media (max-width: 700px) {
+  .jev-quand { display: none; }
+  .jev-outils { gap: var(--e-3, 12px); }
+  .jev-outils > div { flex: 1 1 140px; }
+}

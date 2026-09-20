@@ -855,6 +855,7 @@ const SECTIONS = [
     { id: 'agents', icon: '🧑‍🤝‍🧑', label: 'Agents' },
     { id: 'contacts-compagnies', icon: '🏢', label: 'Contacts compagnies' },
     { id: 'audit-log', icon: '🔍', label: 'Journal d\'audit' },
+    { id: 'journal-erreurs', icon: '🩺', label: 'Journal des erreurs', staff: true },
     { id: 'apparence', icon: '🎨', label: 'Apparence', rhAllowed: true },
   ]},
 ];
@@ -1569,6 +1570,8 @@ async function renderView() {
     case 'calendly': main.innerHTML = typeof viewCalendly === 'function' ? viewCalendly() : ''; break;
     // État de la connexion Brevo et relevé des chiffres de campagne (js/84)
     case 'brevo': main.innerHTML = typeof viewBrevo === 'function' ? viewBrevo() : ''; break;
+    // Santé de l'application : ce qui part en erreur dans le navigateur (js/91)
+    case 'journal-erreurs': main.innerHTML = typeof viewJournalErreurs === 'function' ? viewJournalErreurs() : ''; break;
     // Diffusion, engagement, retour commercial et rendement des campagnes (js/85)
     case 'campagnes-performance': main.innerHTML = typeof viewCampagnesPerformance === 'function' ? viewCampagnesPerformance() : ''; break;
     // Préparation de l'échange de données EcoHub : qualité des clés de rapprochement (js/54)

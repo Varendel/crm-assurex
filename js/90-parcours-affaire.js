@@ -57,12 +57,12 @@ const PAF_ETAPES = [
 // confond le plus facilement avec le transfert ordinaire, alors que c'est l'inverse : le client
 // GARDE ses contrats et ses assureurs, il change seulement de courtier. Il n'y a donc rien à
 // résilier — envoyer une résiliation ici ferait perdre au client des couvertures qu'il voulait
-// conserver. Ce qui part, c'est un MANDAT de courtage, adressé à chaque compagnie pour qu'elle
-// nous reconnaisse comme interlocuteur.
+// conserver. Ce qui part, c'est un MANDAT SIMPLE, adressé à chaque compagnie pour qu'elle nous
+// reconnaisse comme interlocuteur sur des contrats qui existent déjà.
 const PAF_TYPES = {
   nouvelle: { nom: 'Nouvelle couverture', aide: 'Le client n’avait rien sur ce risque.' },
   transfert: { nom: 'Changement d’assureur', aide: 'Il quitte une compagnie : une résiliation est due.', resiliation: true },
-  portefeuille: { nom: 'Transfert de portefeuille', aide: 'Il garde ses contrats et change de courtier : un mandat part aux compagnies, rien n’est résilié.', mandat: true },
+  portefeuille: { nom: 'Transfert de portefeuille', aide: 'Il garde ses contrats et change de courtier : un mandat simple part aux compagnies, rien n’est résilié.', mandat: true },
   complement: { nom: 'Complément', aide: 'Il garde l’existant et ajoute une couverture.' },
 };
 

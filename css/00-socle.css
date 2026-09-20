@@ -1,0 +1,500 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   Variables, remise a zero, mise en page, menu, formulaires, tableaux, modales
+   Extrait de index.html le 20.09.2026. L'ordre des fichiers compte : la cascade CSS en depend,
+   ne pas les reordonner dans index.html.
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Geist', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; font-weight: 400; -webkit-font-smoothing: antialiased; }
+  /* Charte REX CRM / Assurex (19.09.2026) : bleu marine #113679, cyan #00CFFF */
+  :root {
+    --bg: #0B1220; --surface: #131D32; --surface-alt: #182338;
+    --surface-hover: #1E2A42; --border: #23304A;
+    --accent: #00CFFF; --accent-dim: rgba(0,207,255,0.1); --accent-border: rgba(0,207,255,0.32);
+    --on-accent: #06142C;
+    --text: #E7ECF4; --text-muted: #9AA7BB; --text-dim: #5B6880;
+    --gold: #f59e0b; --gold-dim: rgba(245,158,11,0.1);
+    --red: #f87171; --red-dim: rgba(248,113,113,0.1);
+    --green: #4ade80; --green-dim: rgba(74,222,128,0.1);
+    --purple: #a78bfa; --navy: #0E1628;
+    --sidebar: #0E1628; --brand-navy: #113679; --brand-cyan: #00CFFF;
+    --logo-filter: brightness(0) invert(1);
+  }
+  /* ── Mode Clair — charte REX : fond gris très clair, barre latérale blanche ── */
+  html[data-theme="clair"] {
+    --bg: #F4F6F9; --surface: #ffffff; --surface-alt: #F8FAFC;
+    --surface-hover: #EEF2F7; --border: #E2E7EF;
+    --text: #0E1B33; --text-muted: #56627A; --text-dim: #8A94A8;
+    --sidebar: #ffffff; --logo-filter: none;
+  }
+  /* En clair, l'accent bleu devient le bleu marine de la marque (le cyan n'est pas lisible sur blanc) */
+  html[data-theme="clair"][data-accent="bleu"] {
+    --accent: #113679; --accent-dim: rgba(17,54,121,0.08); --accent-border: rgba(17,54,121,0.28); --on-accent: #ffffff;
+  }
+  .stat-value, .num { font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  /* ── Couleurs d'accent ── */
+  html[data-accent="vert"] { --accent: #4ade80; --accent-dim: rgba(74,222,128,0.12); --accent-border: rgba(74,222,128,0.35); }
+  html[data-accent="or"] { --accent: #f59e0b; --accent-dim: rgba(245,158,11,0.12); --accent-border: rgba(245,158,11,0.35); }
+  html[data-accent="violet"] { --accent: #a78bfa; --accent-dim: rgba(167,139,250,0.12); --accent-border: rgba(167,139,250,0.35); }
+  .theme-swatch { width: 34px; height: 34px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: transform 0.12s, border-color 0.12s; }
+  .theme-swatch:hover { transform: scale(1.08); }
+  .theme-swatch.active { border-color: var(--text); }
+  .theme-mode-card { cursor: pointer; border: 2px solid var(--border); border-radius: 12px; padding: 14px; transition: border-color 0.12s; }
+  .theme-mode-card.active { border-color: var(--accent); }
+  input, select, textarea, button { font-family: inherit; }
+  .hidden { display: none !important; }
+
+  /* LOGIN */
+  #login-screen {
+    min-height: 100vh; background: var(--navy);
+    display: flex; align-items: center; justify-content: center;
+    background-image: radial-gradient(ellipse at 30% 20%, rgba(56,189,248,0.06) 0%, transparent 60%);
+  }
+  .login-box { width: 100%; max-width: 420px; padding: 0 24px; }
+  .login-logo { text-align: center; margin-bottom: 36px; }
+  .login-logo img.assurex-login-logo { width: 200px; filter: brightness(0) invert(1); margin-bottom: 8px; }
+  html[data-theme="clair"] .login-logo img.assurex-login-logo { filter: brightness(0); }
+  .exgroupe-mention-bottom { display: flex; flex-direction: column; align-items: center; gap: 6px; margin-top: 18px; }
+  .exgroupe-mention-bottom span { font-size: 9px; color: var(--text-dim); font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; }
+  .exgroupe-logo { width: 90px; height: auto; opacity: 0.6; }
+  .login-card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; }
+  .login-card h2 { font-size: 17px; font-weight: 800; color: var(--text); text-align: center; margin-bottom: 24px; }
+  .rex-banner { display: flex; flex-direction: column; align-items: center; margin-bottom: 22px; }
+  .rex-mascotte { width: 110px; height: auto; margin-bottom: 14px; filter: drop-shadow(0 8px 18px rgba(0,0,0,0.35)); }
+  .rex-wordmark { width: 220px; height: auto; filter: brightness(0) invert(1); }
+  html[data-theme="clair"] .rex-wordmark { filter: none; }
+  .login-logo img.assurex-login-logo { width: 130px; opacity: 0.85; margin: 0 0 0 0; }
+  .btn-microsoft {
+    width: 100%; display: flex; align-items: center; justify-content: center; gap: 10px;
+    background: #fff; color: #1a1a1a; border: none; border-radius: 10px;
+    padding: 12px 20px; font-size: 14px; font-weight: 600; cursor: pointer; margin-bottom: 20px;
+    transition: opacity 0.15s;
+  }
+  .btn-microsoft:hover { opacity: 0.9; }
+  .divider { display: flex; align-items: center; gap: 12px; margin-bottom: 20px; }
+  .divider hr { flex: 1; border: none; border-top: 1px solid var(--border); }
+  .divider span { font-size: 11px; color: var(--text-muted); font-weight: 600; }
+  .field-label { display: block; font-size: 11px; font-weight: 700; color: var(--text-muted); margin-bottom: 6px; letter-spacing: 0.8px; text-transform: uppercase; }
+  .field-input {
+    width: 100%; background: var(--surface-alt); border: 1px solid var(--border);
+    border-radius: 9px; padding: 10px 14px; color: var(--text); font-size: 13px; outline: none;
+  }
+  .field-input:focus { border-color: var(--accent-border); }
+  .field-wrap { margin-bottom: 14px; }
+  .pass-wrap { position: relative; }
+  .pass-wrap .field-input { padding-right: 40px; }
+  .pass-toggle { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 14px; }
+  .btn-primary {
+    width: 100%; background: var(--accent); color: var(--on-accent); border: none;
+    border-radius: 10px; padding: 12px; font-size: 14px; font-weight: 800; cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn-primary:disabled { opacity: 0.5; cursor: default; }
+  .btn-primary:hover:not(:disabled) { opacity: 0.9; }
+  .error-box { background: var(--red-dim); border: 1px solid rgba(248,113,113,0.3); border-radius: 8px; padding: 8px 12px; font-size: 12px; color: var(--red); margin-bottom: 16px; font-weight: 600; }
+  .demo-box { margin-top: 18px; background: var(--surface-alt); border-radius: 9px; padding: 12px 14px; border: 1px solid var(--border); }
+  .demo-box .demo-title { font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px; }
+  .demo-item { display: flex; justify-content: space-between; padding: 5px 0; cursor: pointer; border: none; background: none; width: 100%; }
+  .demo-item:hover .demo-email { opacity: 0.8; }
+  .demo-email { font-size: 11px; font-weight: 700; }
+  .demo-pass { font-size: 11px; color: var(--text-muted); font-family: monospace; }
+  .login-footer { text-align: center; margin-top: 16px; font-size: 11px; color: var(--text-dim); }
+
+  /* ── Connexion en deux parties (19.09.2026) : panneau bleu marine REX à gauche, formulaire clair à droite,
+        identique quel que soit le thème choisi ── */
+  #login-screen { min-height: 100vh; display: flex; align-items: stretch; justify-content: stretch; background: #F4F6F9; background-image: none; }
+  .login-panneau { position: relative; overflow: hidden; width: 42%; max-width: 620px; min-width: 380px; box-sizing: border-box; padding: 56px 64px; display: flex; flex-direction: column; justify-content: space-between; background: #113679; color: #fff; }
+  .login-deco-cercle { position: absolute; right: -120px; top: 22%; width: 420px; height: 420px; border-radius: 50%; background: #1A4590; }
+  .login-deco-carre { position: absolute; right: 64px; top: 56px; width: 14px; height: 14px; background: #00CFFF; }
+  .login-assurex { position: relative; width: 150px; height: auto; filter: brightness(0) invert(1); }
+  .login-membre { flex: 1; text-align: center; white-space: nowrap; }
+  .login-marque { position: relative; display: flex; flex-direction: column; align-items: flex-start; gap: 26px; margin-top: -8px; }
+  .login-mascotte { width: 170px; height: auto; filter: drop-shadow(0 10px 22px rgba(0,0,0,0.25)); }
+  .login-logotype { width: 280px; height: auto; filter: brightness(0) invert(1); }
+  .login-pied { position: relative; z-index: 2; background: #113679; padding-top: 10px; display: flex; align-items: center; justify-content: space-between; gap: 16px; font-size: 13px; color: #B9CAE8; }
+  .login-pied svg { width: 170px; height: auto; }
+  .login-zone { flex: 1; display: flex; align-items: center; justify-content: center; padding: 40px 24px; }
+  #login-screen .login-card { width: 100%; max-width: 400px; background: transparent; border: 0; padding: 0; border-radius: 0; }
+  #login-screen .login-card h2 { text-align: left; font-size: 28px; font-weight: 600; letter-spacing: -0.02em; color: #0E1B33; margin-bottom: 26px; }
+  .login-sous-titre { font-size: 15px; color: #56627A; margin-bottom: 26px; }
+  #login-screen .field-wrap { margin-bottom: 18px; }
+  #login-screen .field-label { text-transform: none; letter-spacing: 0; font-size: 13px; font-weight: 500; color: #33405A; }
+  #login-screen .field-input { background: #fff; border: 1px solid #D5DCE7; color: #0E1B33; height: 48px; border-radius: 10px; font-size: 15px; padding: 0 14px; }
+  #login-screen .pass-wrap .field-input { padding-right: 44px; }
+  #login-screen .field-input:focus { border-color: #113679; box-shadow: 0 0 0 3px rgba(17,54,121,0.12); }
+  #login-screen .pass-toggle { color: #56627A; }
+  #login-screen .btn-primary { background: #113679; color: #fff; height: 50px; font-size: 15px; font-weight: 600; margin-top: 4px; }
+  #login-screen .login-footer { text-align: left; margin-top: 24px; color: #8A94A8; font-size: 12px; }
+  @media (max-width: 860px) {
+    #login-screen { flex-direction: column; }
+    .login-panneau { width: 100%; max-width: none; min-width: 0; padding: 22px 24px; gap: 14px; }
+    .login-deco-cercle, .login-pied { display: none; }
+    .login-deco-carre { top: 24px; right: 24px; }
+    .login-marque { flex-direction: row; align-items: center; gap: 14px; }
+    .login-mascotte { width: 64px; }
+    .login-logotype { width: 180px; }
+  }
+
+  /* ── Thème clair en deux tons (demande de Jonathan, 19.09.2026) : menu bleu marine, contenu clair.
+        Les couleurs sont redéfinies à l'intérieur du menu seulement : tout ce qui s'y trouve passe en clair sur bleu. ── */
+  html[data-theme="clair"] .sidebar {
+    --sidebar: #113679; --text: #FFFFFF; --text-muted: #C4D2EA; --text-dim: #8FA6CE;
+    --border: rgba(255,255,255,0.14); --surface: rgba(255,255,255,0.08); --surface-alt: rgba(255,255,255,0.06);
+    --accent: #00CFFF; --accent-dim: rgba(0,207,255,0.16); --accent-border: rgba(0,207,255,0.4); --on-accent: #06142C;
+    --logo-filter: brightness(0) invert(1);
+    background: #113679; border-right-color: #113679;
+  }
+  /* ── Thème sombre en deux tons aussi (demande de Jonathan, 19.09.2026) : menu bleu marine de la
+        marque, contenu gris-bleu très sombre — même principe que le thème clair. ── */
+  html:not([data-theme="clair"]) .sidebar {
+    --sidebar: #0F2D66; --text: #FFFFFF; --text-muted: #BFCDE6; --text-dim: #8499C2;
+    --border: rgba(255,255,255,0.12); --surface: rgba(255,255,255,0.07); --surface-alt: rgba(255,255,255,0.05);
+    --accent: #00CFFF; --accent-dim: rgba(0,207,255,0.16); --accent-border: rgba(0,207,255,0.4); --on-accent: #06142C;
+    --logo-filter: brightness(0) invert(1);
+    background: linear-gradient(180deg, #113679 0%, #0B2458 100%); border-right-color: #0B2458;
+  }
+  html:not([data-theme="clair"]) { --bg: #0A0F1C; }
+  html:not([data-theme="clair"]) .mobile-topbar { background: #113679; }
+
+  /* APP */
+  #app { display: none; min-height: 100vh; flex-direction: row; }
+  #app.active { display: flex; }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 215px; background: var(--sidebar); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 18px 10px;
+    position: sticky; top: 0; height: 100vh; overflow-y: auto; flex-shrink: 0;
+  }
+  .sidebar-logo { padding: 2px 6px 22px; }
+  .sidebar-logo .rex-marque { display: flex; align-items: center; gap: 8px; }
+  .sidebar-logo .rex-marque .rex-mascotte-menu { width: 34px; height: 44px; object-fit: contain; flex-shrink: 0; }
+  .sidebar-logo .rex-marque .rex-logotype-menu { width: 130px; height: auto; filter: var(--logo-filter); }
+  .sidebar .assurex-menu { display: block; width: 150px; height: auto; margin: 18px auto 4px; filter: var(--logo-filter); }
+  .exgroupe-entete { width: 118px; height: auto; display: block; }
+  .sidebar-logo .cofidex svg [fill="#fff"] { fill: var(--text); }
+  /* Logo OZ Assure (blanc) : suit la couleur du texte pour rester visible en thème clair */
+  html[data-theme="clair"] .sidebar .oz-logo-svg .st0 { fill: var(--text); stroke: var(--text); }
+  .sidebar-logo .cofidex { font-size: 9px; color: var(--text-muted); font-weight: 700; letter-spacing: 1.5px; margin-top: 4px; }
+  .nav-section-btn {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    padding: 8px 10px; background: none; border: none; cursor: pointer;
+    font-weight: 700; font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+    text-align: left; color: var(--text-muted); transition: color 0.15s;
+  }
+  .nav-section-btn.active { color: var(--accent); }
+  .nav-section-btn .arrow { margin-left: auto; font-size: 9px; }
+  .nav-solo-btn {
+    display: flex; align-items: center; gap: 8px; width: 100%;
+    padding: 10px 10px; background: none; border: none; cursor: pointer;
+    font-weight: 800; font-size: 13.5px; text-align: left; color: var(--text);
+    border-radius: 8px; margin-bottom: 14px; transition: all 0.1s;
+  }
+  .nav-solo-btn:hover { background: var(--surface); }
+  .nav-solo-btn.active { background: var(--accent-dim); color: var(--accent); }
+  .nav-solo-logo { padding: 12px 14px; }
+  .nav-solo-logo.active { background: rgba(255,255,255,0.08); }
+  .nav-solo-logo .oz-logo-svg { height: 16px; width: auto; display: block; }
+  .nav-item {
+    display: flex; align-items: center; width: 100%;
+    padding: 7px 10px 7px 26px; background: none; border: none; cursor: pointer;
+    font-size: 12.5px; font-weight: 700; text-align: left; color: var(--text-muted);
+    border-radius: 7px; margin-bottom: 1px; transition: all 0.1s;
+  }
+  .nav-item:hover { background: var(--surface); color: var(--text); }
+  .nav-item.active { background: var(--accent-dim); color: var(--accent); font-weight: 700; }
+  .nav-dot { width: 3px; height: 3px; border-radius: 50%; background: var(--accent); margin-right: 6px; }
+  .sidebar-team { margin-top: auto; border-top: 1px solid var(--border); padding-top: 14px; }
+  .team-title { font-size: 9px; font-weight: 700; color: var(--text-dim); letter-spacing: 1.5px; text-transform: uppercase; padding-left: 8px; margin-bottom: 8px; }
+  .team-member { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 7px; }
+  .team-member.me { background: var(--accent-dim); }
+  .avatar { border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-family: monospace; flex-shrink: 0; }
+  .online-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); margin-left: auto; }
+  .btn-logout { margin-top: 12px; width: 100%; background: none; border: 1px solid var(--border); border-radius: 8px; padding: 7px 10px; color: var(--text-muted); font-size: 11px; font-weight: 700; cursor: pointer; text-align: left; }
+  .btn-logout:hover { border-color: var(--red); color: var(--red); }
+
+  /* MAIN */
+  .main { flex: 1; padding: 30px 34px; overflow-y: auto; }
+
+  /* CARDS */
+  .stat-grid { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 18px; flex: 1; min-width: 120px; }
+  .stat-label { color: var(--text-muted); font-size: 10px; font-weight: 700; letter-spacing: 1.2px; text-transform: uppercase; margin-bottom: 7px; }
+  .stat-value { font-size: 22px; font-weight: 800; line-height: 1.1; }
+  .stat-sub { color: var(--text-muted); font-size: 11px; margin-top: 4px; }
+
+  /* TABLE */
+  .table-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  .table-header { display: grid; padding: 9px 16px; border-bottom: 1px solid var(--border); font-size: 10px; color: var(--text-muted); font-weight: 700; letter-spacing: 1px; text-transform: uppercase; }
+  .table-row { display: grid; padding: 11px 16px; border-bottom: 1px solid var(--border); align-items: center; transition: background 0.1s; cursor: pointer; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .table-row:last-child { border-bottom: none; }
+  .table-row:hover { background: var(--surface-hover); }
+  .table-empty { padding: 24px 16px; color: var(--text-muted); font-size: 13px; text-align: center; }
+
+  /* BADGE */
+  .badge { border-radius: 5px; padding: 2px 8px; font-size: 11px; font-weight: 700; white-space: nowrap; display: inline-block; }
+
+  /* SECTION CARD */
+  .section-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 14px; }
+  .section-card-header { padding: 12px 18px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 13px; }
+  .section-card-body { padding: 18px; }
+  .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .info-block { background: var(--surface-alt); border-radius: 9px; padding: 10px 14px; }
+  .info-label { color: var(--text-muted); font-size: 10px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 4px; }
+  .info-value { color: var(--text); font-size: 13px; font-weight: 600; }
+
+  /* TABS */
+  .tabs { display: flex; gap: 2px; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
+  .postit-note {
+    position: relative; width: 150px; min-height: 130px; padding: 16px 12px 10px;
+    box-shadow: 2px 4px 10px rgba(0,0,0,0.35), 0 1px 0 rgba(255,255,255,0.4) inset;
+    font-family: 'Comic Sans MS', 'Marker Felt', cursive, sans-serif;
+    flex-shrink: 0; transition: transform 0.15s;
+  }
+  .postit-note:hover { transform: rotate(0deg) scale(1.04) !important; z-index: 5; box-shadow: 3px 6px 16px rgba(0,0,0,0.45); }
+  .postit-note::before {
+    content: ''; position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+    width: 26px; height: 14px; background: rgba(255,255,255,0.55); border-radius: 2px;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+  .postit-text {
+    width: 100%; height: 100px; background: transparent; border: none; resize: none;
+    font-family: inherit; font-size: 13.5px; color: #3a3a1a; line-height: 1.4; outline: none;
+  }
+  .postit-close {
+    position: absolute; top: 2px; right: 6px; background: none; border: none; cursor: pointer;
+    font-size: 15px; color: rgba(0,0,0,0.35); font-weight: 700; line-height: 1; padding: 2px;
+  }
+  .postit-close:hover { color: rgba(0,0,0,0.7); }
+  .postit-add {
+    width: 60px; height: 130px; border: 2px dashed var(--border); background: none; border-radius: 6px;
+    color: var(--text-muted); font-size: 13px; cursor: pointer; flex-shrink: 0;
+  }
+  .postit-add:hover { border-color: var(--accent); color: var(--accent); }
+  .tab-btn { background: none; border: none; cursor: pointer; padding: 9px 14px; font-size: 12.5px; color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; }
+  .tab-btn.active { color: var(--accent); font-weight: 800; border-bottom-color: var(--accent); }
+
+  /* FORM */
+  .form-field { background: var(--surface-alt); border-radius: 9px; padding: 10px 14px; margin-bottom: 10px; }
+  .form-label { color: var(--text-muted); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; display: block; }
+  .form-input { width: 100%; background: transparent; border: none; color: var(--text); font-size: 13px; outline: none; font-family: inherit; font-weight: 700; }
+  .form-select { width: 100%; background: transparent; border: none; color: var(--text); font-size: 13px; outline: none; font-family: inherit; font-weight: 700; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  /* KANBAN */
+  .kanban { display: flex; gap: 12px; overflow-x: auto; padding-bottom: 8px; }
+  .kanban-col { flex: 1; min-width: 170px; }
+  .kanban-col-title { display: flex; align-items: center; gap: 6px; margin-bottom: 10px; }
+  .kanban-dot { width: 8px; height: 8px; border-radius: 50%; }
+  .kanban-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 14px; margin-bottom: 10px; }
+  .kanban-empty { font-size: 11px; color: var(--text-dim); padding: 10px 0; text-align: center; }
+  /* Fiche client : journal d'activité à droite (js/17) */
+  .fiche-grille { display: grid; grid-template-columns: minmax(0, 1fr) 360px; gap: 20px; align-items: start; }
+  .fiche-principale { min-width: 0; }
+  .fiche-activite { position: sticky; top: 12px; max-height: calc(100vh - 24px); overflow-y: auto; background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  @media (max-width: 1280px) { .fiche-grille { grid-template-columns: minmax(0, 1fr); } .fiche-activite { position: static; max-height: none; } }
+  .ja-titre { font-size: 15px; font-weight: 600; color: var(--text); }
+  .ja-compositeur { display: flex; flex-direction: column; gap: 8px; padding: 10px; border-radius: 10px; background: var(--surface-alt); border: 1px solid var(--border); }
+  .ja-compositeur textarea { resize: vertical; min-height: 64px; font-family: inherit; }
+  .ja-modes { display: flex; gap: 4px; flex-wrap: wrap; }
+  .ja-modes button, .ja-filtres button { background: none; border: 1px solid transparent; border-radius: 7px; padding: 5px 9px; font-size: 12px; color: var(--text-muted); cursor: pointer; }
+  .ja-modes button.actif { background: var(--accent-dim); color: var(--accent); border-color: var(--accent-border); }
+  .ja-filtres { display: flex; gap: 6px; flex-wrap: wrap; }
+  .ja-filtres button { border-color: var(--border); border-radius: 999px; }
+  .ja-filtres button.actif { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+  .ja-fil { display: flex; flex-direction: column; }
+  .ja-item { display: flex; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .ja-item:last-child { border-bottom: none; }
+  .ja-icone { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; flex-shrink: 0; }
+  .ja-corps { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+  .ja-item-titre { font-size: 12.5px; font-weight: 600; color: var(--text); }
+  .ja-item-detail { font-size: 12px; color: var(--text-muted); white-space: pre-line; overflow-wrap: anywhere; }
+  .ja-item-meta { font-size: 11px; color: var(--text-dim); }
+  /* Glisser-déposer du pipeline (js/16) */
+  .kanban-col { border-radius: 12px; padding: 6px; margin: -6px; transition: background 0.12s, outline-color 0.12s; outline: 2px dashed transparent; outline-offset: -2px; }
+  .kanban-col.drop-cible { background: var(--accent-dim); outline-color: var(--accent); }
+  .kanban-card[draggable="true"]:active { cursor: grabbing; }
+  .kanban-card.en-deplacement { opacity: 0.4; }
+  .kanban-zones-fin { display: none; gap: 12px; margin-bottom: 12px; }
+  body.kanban-glisse .kanban-zones-fin { display: flex; }
+  .kanban-zone-fin { flex: 1; padding: 14px; border-radius: 12px; border: 2px dashed rgba(74,222,128,0.6); background: rgba(74,222,128,0.08); color: #1F9D6B; font-size: 13px; text-align: center; }
+  .kanban-zone-fin.perdu { border-color: rgba(248,113,113,0.6); background: rgba(248,113,113,0.08); color: #B42318; }
+  .kanban-zone-fin.drop-cible { background: rgba(74,222,128,0.2); }
+  .kanban-zone-fin.perdu.drop-cible { background: rgba(248,113,113,0.2); }
+
+  /* RAPPEL */
+  .rappel-item { display: flex; align-items: center; gap: 14px; padding: 13px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; margin-bottom: 8px; }
+  .urgence-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .btn-traite { background: var(--green-dim); color: var(--green); border: 1px solid rgba(74,222,128,0.3); border-radius: 7px; padding: 5px 12px; font-size: 11px; font-weight: 800; cursor: pointer; }
+
+  /* BORDEREAU */
+  .bordereau-card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; margin-bottom: 10px; }
+  .bordereau-header { display: flex; align-items: center; gap: 16px; padding: 16px 18px; cursor: pointer; transition: background 0.1s; }
+  .bordereau-header:hover { background: var(--surface-hover); }
+  .bordereau-body { border-top: 1px solid var(--border); padding: 14px 18px; }
+
+  /* NOUVEAU CLIENT */
+  .btn-secondary { background: var(--surface); color: var(--text-muted); border: 1px solid var(--border); border-radius: 9px; padding: 10px 20px; font-weight: 700; font-size: 13px; cursor: pointer; }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-save { background: var(--accent); color: var(--on-accent); border: none; border-radius: 9px; padding: 10px 24px; font-weight: 800; font-size: 13px; cursor: pointer; }
+  .btn-save:hover { opacity: 0.9; }
+  .btn-add { background: var(--accent); color: var(--on-accent); border: none; border-radius: 8px; padding: 8px 16px; font-weight: 800; font-size: 13px; cursor: pointer; }
+
+  /* PROGRESS BAR */
+  .progress-bar { height: 4px; background: var(--border); border-radius: 99px; }
+  .progress-fill { height: 100%; border-radius: 99px; }
+
+  /* LOADING */
+  .loader { display: flex; align-items: center; justify-content: center; padding: 40px; color: var(--text-muted); font-size: 13px; }
+
+  /* CONSTELLATION FAMILIALE — arbre visuel père/mère → client → enfants (fiche client privé) */
+  .fam-tree { display: flex; flex-direction: column; align-items: center; padding: 24px 10px; gap: 0; }
+  .fam-row { display: flex; justify-content: center; align-items: flex-start; gap: 28px; flex-wrap: wrap; position: relative; }
+  .fam-connector { width: 2px; height: 26px; background: var(--border); }
+  .fam-connector-h { height: 2px; background: var(--border); align-self: center; }
+  .fam-node {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px;
+    padding: 12px 16px; min-width: 150px; max-width: 210px; text-align: center; cursor: pointer;
+    transition: border-color .15s ease, transform .15s ease;
+  }
+  .fam-node:hover { border-color: var(--accent-border); transform: translateY(-1px); }
+  .fam-node-self { background: var(--accent-dim); border: 2px solid var(--accent-border); cursor: default; }
+  .fam-node-self:hover { transform: none; }
+  .fam-node-vide {
+    background: transparent; border: 1px dashed var(--border); color: var(--text-muted);
+    font-size: 11.5px; padding: 12px 16px; min-width: 150px; text-align: center; cursor: pointer;
+  }
+  .fam-node-icon { font-size: 20px; margin-bottom: 4px; }
+  .fam-node-nom { font-size: 12.5px; font-weight: 800; color: var(--text); }
+  .fam-node-sub { font-size: 10.5px; color: var(--text-muted); margin-top: 2px; }
+  /* Le bouton "Constellation familiale" brille dès qu'au moins un lien (père/mère/enfant) existe */
+  @keyframes fam-glow-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,0.45); }
+    50% { box-shadow: 0 0 10px 3px rgba(245,158,11,0.55); }
+  }
+  .fam-glow {
+    background: var(--gold-dim) !important; border-color: rgba(245,158,11,0.5) !important;
+    color: var(--gold) !important; animation: fam-glow-pulse 2.2s ease-in-out infinite;
+  }
+
+  /* PRINT */
+  @media print {
+    /* Thème clair forcé à l'impression, quel que soit le thème choisi à l'écran (sombre par
+       défaut) — sinon les cartes/tableaux gardent leurs couleurs var(--surface)/var(--text)
+       sombres alors que le fond de page passe au blanc, illisible (fond blanc, texte clair sur
+       cartes sombres). Le !important sur des custom properties est valide et prime sur les blocs
+       html[data-theme=...] qui n'en ont pas. Corrige le rendu "immonde" signalé le 03.09.2026. */
+    html {
+      --bg: #ffffff !important; --surface: #ffffff !important; --surface-alt: #f7f7f8 !important;
+      --surface-hover: #f2f2f3 !important; --border: #d4d4d8 !important; --text: #18181b !important;
+      --text-muted: #52525b !important; --text-dim: #71717a !important;
+    }
+    #login-screen { display: none !important; }
+    .sidebar { display: none !important; }
+    .no-print { display: none !important; }
+    .mobile-topbar { display: none !important; }
+    #sidebar-overlay { display: none !important; }
+    #nav-back-bar { display: none !important; }
+    .btn-save, .btn-secondary, button[onclick*="print"], button[onclick*="navigate"] { display: none !important; }
+    .main { padding: 0 !important; }
+    body { background: white !important; color: black !important; }
+    .print-header { display: block !important; }
+    .section-card { border: 1px solid #ccc !important; background: white !important; }
+    .section-card-header { background: #f5f5f5 !important; }
+    .section-card-header span { color: #0284c7 !important; background: none !important; }
+    .section-card-header div { background: #7dd3fc !important; }
+    .info-block, .form-field { background: #fafafa !important; border: 1px solid #eee !important; }
+    .info-value, .info-label, .form-label, .form-input, .stat-value, .stat-label { color: black !important; }
+    h2 { color: black !important; }
+    [style*="color:#38bdf8"], [style*="color: #38bdf8"] { color: #0284c7 !important; }
+    .oz-screen-only { display: none !important; }
+    .oz-print-report { display: block !important; color: black !important; }
+    .fiche-commission-print { background: white !important; border: 1px solid #ccc !important; }
+    .fiche-commission-print * { color: black !important; }
+    .fiche-commission-print button { display: none !important; }
+
+    /* Cartes de stats : compactes, plusieurs par ligne, fond clair */
+    .stat-grid { gap: 8px !important; margin-bottom: 12px !important; }
+    .stat-card { padding: 8px 10px !important; min-width: 100px !important; border: 1px solid #d4d4d8 !important; background: #fff !important; break-inside: avoid; }
+    .stat-label { font-size: 8.5px !important; margin-bottom: 3px !important; }
+    .stat-value { font-size: 15px !important; }
+    .stat-sub { font-size: 9px !important; margin-top: 2px !important; }
+
+    /* Tableaux "Tous les contrats" (#tc-body) et "Toutes les commissions" (#tc-table) : on
+       resélectionne explicitement, avec ID + classe (spécificité plus forte que la règle mobile
+       @media (max-width:768px) .table-row{grid-template-columns:1fr !important}), pour retrouver
+       la vraie grille en colonnes au lieu de l'empilement 1 colonne — sinon l'impression depuis un
+       écran étroit (téléphone) hérite du layout mobile empilé, illisible en export. */
+    #tc-body .table-header, #tc-body .table-row {
+      display: grid !important;
+      grid-template-columns: 1fr 100px 85px 80px 70px 70px 90px !important;
+      padding: 6px 8px !important; gap: 4px !important; font-size: 10.5px !important;
+    }
+    #tc-body .table-row > div:last-child { display: none !important; }
+    #tc-table .table-header, #tc-table .table-row {
+      display: grid !important;
+      grid-template-columns: 1fr 100px 90px 75px 80px 85px !important;
+      padding: 6px 8px !important; gap: 4px !important; font-size: 10.5px !important;
+    }
+    .table-row { break-inside: avoid; }
+    .table-wrap { border: 1px solid #d4d4d8 !important; }
+  }
+  .oz-print-report { display: none; }
+  /* RESPONSIVE */
+  /* Barre + menu mobile — masqués par défaut (desktop), activés dans le @media ci-dessous.
+     Demande de Jonathan le 11.08.2026 : affichage iPhone "à chier", saisie difficile — la
+     sidebar fixe de 180px+ prenait presque la moitié d'un écran d'iPhone en permanence. */
+  .mobile-topbar { display: none; }
+  #sidebar-overlay { display: none; }
+  @media (max-width: 768px) {
+    /* BUG réel du 11.08.2026 : #app garde flex-direction:row hérité du desktop, donc la barre
+       mobile et le contenu principal se retrouvaient CÔTE À CÔTE au lieu d'empilés — la barre
+       (fond bleu nuit var(--navy)) écrasait visuellement tout l'écran ("écran bleu"). Sur
+       mobile, #app doit empiler ses enfants verticalement ; la sidebar reste en position fixed
+       (donc hors du flux, non affectée par ce changement) pour agir comme un tiroir superposé. */
+    #app { flex-direction: column; }
+    .mobile-topbar {
+      display: flex; align-items: center; gap: 12px; width: 100%;
+      position: sticky; top: 0; z-index: 60;
+      background: var(--navy); border-bottom: 1px solid var(--border);
+      padding: 12px 16px;
+    }
+    .mobile-menu-btn {
+      background: none; border: 1px solid var(--border); border-radius: 8px;
+      width: 40px; height: 40px; flex-shrink: 0; font-size: 18px; line-height: 1;
+      color: var(--text); cursor: pointer;
+    }
+    .mobile-topbar-title { font-size: 14px; font-weight: 800; color: var(--text); }
+    /* Sidebar : tiroir escamotable plutôt que rétrécie-mais-toujours-là — libère tout l'écran
+       pour le contenu, comme une vraie app. */
+    .sidebar {
+      position: fixed; top: 0; left: 0; height: 100vh; width: 260px; max-width: 82vw;
+      z-index: 100; transform: translateX(-100%); transition: transform .2s ease;
+      box-shadow: 8px 0 24px rgba(0,0,0,0.45);
+    }
+    .sidebar.open { transform: translateX(0); }
+    #sidebar-overlay.open {
+      display: block; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 90;
+    }
+    .main { padding: 16px 14px; width: 100%; }
+    .stat-card { min-width: 100px; }
+    .form-grid { grid-template-columns: 1fr; }
+    .info-grid { grid-template-columns: 1fr; }
+    .table-header { display: none !important; }
+    .table-row { grid-template-columns: 1fr !important; gap: 4px !important; padding: 12px !important; }
+    .table-row > div { white-space: normal !important; }
+    /* Listes tâches/RDV/rappels (.rappel-item) : on empile au lieu de couper — pas couvert par
+       les règles .table-row ci-dessus car cette liste utilise un layout flex distinct. */
+    .rappel-item { flex-wrap: wrap; gap: 8px 10px; }
+    /* Saisie : taille ≥16px obligatoire pour éviter le zoom automatique de Safari iOS au focus
+       (la cause n°1 d'une saisie pénible sur iPhone), cibles tactiles ≥42px (recommandation
+       Apple ~44px) plutôt que des champs pensés pour une souris. */
+    input, select, textarea, .form-input, .form-select {
+      font-size: 16px !important; min-height: 42px;
+    }
+    .btn-add, .btn-save, .btn-secondary, button { min-height: 38px; }
+    /* Modales (créées dynamiquement en JS, styles inline — !important nécessaire pour les
+       surclasser) : ne jamais dépasser la hauteur d'écran, toujours scrollables. */
+    [id^="modal-"] > div { max-height: 88vh !important; overflow-y: auto !important; }
+  }

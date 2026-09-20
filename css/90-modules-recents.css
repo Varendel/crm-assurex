@@ -1,0 +1,310 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════
+   Poses de Rex, documents des compagnies, marches, EcoHub, saisons, demandes de polices
+   Extrait de index.html le 20.09.2026. L'ordre des fichiers compte : la cascade CSS en depend,
+   ne pas les reordonner dans index.html.
+   ═══════════════════════════════════════════════════════════════════════════════════ */
+
+/* ═══ REX — GALERIE DE POSES (js/58-rex-banquier.js, 20.09.2026) ═══ */
+    .rexb { display: inline-block; width: auto; max-width: 100%; object-fit: contain; flex: 0 0 auto; vertical-align: bottom;
+      filter: drop-shadow(0 8px 16px rgba(15,23,42,.16)); }
+    .rexb.respire { animation: rexb-respire 5.5s ease-in-out infinite; }
+    @keyframes rexb-respire { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+    .rexb-bandeau { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 14px 18px; margin-bottom: 16px;
+      border-radius: 18px; background: linear-gradient(135deg, var(--surface, #fff), var(--accent-dim, rgba(37,99,235,.07)));
+      border: 1px solid var(--border, rgba(0,0,0,.08)); }
+    .rexb-bandeau-texte { flex: 1 1 260px; min-width: 0; font-size: 13.5px; line-height: 1.5; color: var(--text, #1e293b); }
+    .rexb-bandeau-texte strong { display: block; font-size: 15px; margin-bottom: 3px; }
+    @media (max-width: 640px) { .rexb-bandeau { gap: 12px; padding: 12px 14px; } }
+    /* ═══ DOCUMENTS RECUS DES COMPAGNIES (js/59-documents-compagnies.js, 20.09.2026) ═══ */
+    .dcx-depot { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; padding: 18px 20px; margin: 16px 0 10px;
+      border-radius: 18px; border: 2px dashed var(--border, rgba(0,0,0,.14)); background: var(--surface, #fff); transition: all .18s; }
+    .dcx-depot.survol { border-color: var(--accent, #2563eb); background: var(--accent-dim, rgba(37,99,235,.06)); transform: translateY(-1px); }
+    .dcx-depot-icone { font-size: 30px; line-height: 1; }
+    .dcx-depot-texte { flex: 1 1 280px; min-width: 0; font-size: 12.5px; color: var(--text-muted, #64748b); }
+    .dcx-depot-texte strong { display: block; font-size: 14.5px; color: var(--text, #1e293b); margin-bottom: 2px; }
+    .dcx-btn-fichier { cursor: pointer; }
+    .dcx-progress { font-size: 12.5px; padding: 8px 12px; border-radius: 10px; background: var(--accent-dim, rgba(37,99,235,.08)); color: var(--text, #1e293b); margin-bottom: 10px; }
+    .dcx-progress.fini { background: rgba(34,197,94,.14); }
+    .dcx-progress.alerte { background: rgba(245,158,11,.16); }
+    .dcx-filtres { display: flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+    .dcx-filtres input[type="search"] { flex: 1 1 260px; min-width: 0; }
+    .dcx-filtres select { flex: 0 1 200px; }
+    .dcx-liste { display: flex; flex-direction: column; gap: 8px; }
+    .dcx-ligne { display: grid; grid-template-columns: 34px 1fr 190px auto; align-items: center; gap: 12px;
+      padding: 11px 14px; border-radius: 14px; background: var(--surface, #fff); border: 1px solid var(--border, rgba(0,0,0,.08)); }
+    .dcx-ligne.orphelin { border-left: 3px solid #F59E0B; }
+    .dcx-type { font-size: 20px; text-align: center; }
+    .dcx-titre { font-size: 13.5px; font-weight: 600; color: var(--text, #1e293b); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dcx-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: 11.5px; color: var(--text-muted, #64748b); margin-top: 2px; }
+    .dcx-police { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .dcx-montant { font-weight: 600; color: var(--text, #1e293b); }
+    .dcx-source { opacity: .7; }
+    .dcx-client a { font-size: 12.5px; font-weight: 600; color: var(--accent, #2563eb); text-decoration: none; }
+    .dcx-client a:hover { text-decoration: underline; }
+    .dcx-rattacher { font-size: 12px; border: 1px solid #F59E0B; color: #B45309; background: rgba(245,158,11,.1);
+      border-radius: 999px; padding: 4px 11px; cursor: pointer; }
+    .dcx-actions { display: flex; gap: 6px; align-items: center; }
+    /* « Publier » est un mot, pas un pictogramme : un panneau interdit se lit comme un blocage,
+       alors qu'il s'agit d'une action disponible (remarque de Jonathan, 20.09.2026). */
+    .dcx-publier { font-size: 11px; font-weight: 600; font-family: inherit; white-space: nowrap; cursor: pointer;
+      border: 1px solid var(--border, rgba(0,0,0,.14)); background: var(--surface, #fff); color: var(--text-muted, #64748b);
+      border-radius: 999px; padding: 4px 11px; transition: all .15s; }
+    .dcx-publier:hover:not(:disabled) { border-color: var(--accent, #2563eb); color: var(--accent, #2563eb); }
+    .dcx-publier.on { background: rgba(34,197,94,.14); border-color: rgba(34,197,94,.42); color: #15803D; }
+    .dcx-publier:disabled { opacity: .4; cursor: not-allowed; }
+    @media (max-width: 860px) {
+      .dcx-ligne { grid-template-columns: 30px 1fr; grid-template-areas: "i p" ". c" ". a"; }
+      .dcx-type { grid-area: i; } .dcx-principal { grid-area: p; } .dcx-client { grid-area: c; } .dcx-actions { grid-area: a; }
+    }
+      background: var(--bg, #f8fafc); cursor: pointer; transition: all .15s; }
+    .dcx-fiche-vide { font-size: 12.5px; color: var(--text-muted, #64748b); }
+    /* ═══ BANDEAU MARCHES + ACTUALITE (js/60-bandeau-marches.js, 20.09.2026) ═══ */
+    .bmq { position: relative; margin: 14px 0 18px; padding: 12px 0 8px; border-radius: 20px; overflow: hidden;
+      background: linear-gradient(120deg, #0B1A38 0%, #12294F 45%, #0D1E3F 100%);
+      border: 1px solid rgba(120,170,255,.18); box-shadow: 0 14px 34px rgba(8,18,40,.28); color: #EAF2FF; }
+    .bmq::before { content: ''; position: absolute; inset: -40% -10% auto -10%; height: 180%; pointer-events: none;
+      background: radial-gradient(60% 55% at 12% 0%, rgba(0,207,255,.16), transparent 70%),
+                  radial-gradient(45% 50% at 88% 10%, rgba(124,92,255,.16), transparent 70%); }
+    .bmq > * { position: relative; }
+
+    .bmq-actu { display: flex; align-items: center; gap: 12px; padding: 0 16px 10px; }
+    .bmq-etiquette { display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto;
+      font-size: 10.5px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; color: #9FD2FF;
+      background: rgba(0,207,255,.12); border: 1px solid rgba(0,207,255,.3); border-radius: 999px; padding: 4px 11px; }
+    .bmq-point { width: 7px; height: 7px; border-radius: 50%; background: #34D399; box-shadow: 0 0 0 0 rgba(52,211,153,.6); animation: bmq-pulse 2.4s ease-out infinite; }
+    @keyframes bmq-pulse { 70% { box-shadow: 0 0 0 9px rgba(52,211,153,0); } 100% { box-shadow: 0 0 0 0 rgba(52,211,153,0); } }
+
+    .bmq-titre { flex: 1 1 auto; min-width: 0; display: flex; align-items: baseline; gap: 10px; text-align: left;
+      background: none; border: 0; color: #EAF2FF; font-size: 13.5px; font-weight: 600; cursor: pointer; padding: 2px 0; }
+    .bmq-actu-texte { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .bmq-actu-source { flex: 0 0 auto; font-size: 10.5px; font-weight: 500; color: #8FA9CE; }
+    .bmq-titre:hover .bmq-actu-texte { text-decoration: underline; text-underline-offset: 3px; }
+    .bmq-entre { animation: bmq-monte .45s cubic-bezier(.2,.8,.2,1); }
+    @keyframes bmq-monte { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: none; } }
+    .bmq-suivant { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%; cursor: pointer; font-size: 17px; line-height: 1;
+      color: #C8DCFA; background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.14); }
+    .bmq-suivant:hover { background: rgba(255,255,255,.16); color: #fff; }
+
+    .bmq-ruban { position: relative; overflow: hidden; border-top: 1px solid rgba(255,255,255,.08); padding-top: 9px;
+      -webkit-mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent);
+      mask-image: linear-gradient(90deg, transparent, #000 5%, #000 95%, transparent); }
+    .bmq-defile { display: flex; align-items: center; gap: 10px; width: max-content; padding: 0 16px; }
+    .bmq-defile.anime { animation: bmq-glisse 64s linear infinite; }
+    .bmq-ruban:hover .bmq-defile.anime { animation-play-state: paused; }
+    @keyframes bmq-glisse { to { transform: translateX(-50%); } }
+    .bmq-attente { font-size: 12px; color: #8FA9CE; padding: 3px 4px; }
+
+    .bmq-valeur { display: inline-flex; align-items: center; gap: 7px; flex: 0 0 auto; padding: 5px 12px;
+      border-radius: 999px; background: rgba(255,255,255,.055); border: 1px solid rgba(255,255,255,.09); font-size: 12px; }
+    .bmq-valeur.crypto { background: rgba(124,92,255,.14); border-color: rgba(160,135,255,.3); }
+    .bmq-valeur.devise { background: rgba(0,207,255,.1); border-color: rgba(0,207,255,.22); }
+    .bmq-ico { opacity: .55; font-size: 11px; }
+    .bmq-nom { font-weight: 600; color: #DCE9FF; }
+    .bmq-prix { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12.5px; color: #fff; }
+    .bmq-var { font-size: 11px; font-weight: 700; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .bmq-var.hausse { color: #4ADE80; }
+    .bmq-var.baisse { color: #FB7185; }
+    .bmq-var.plat { color: #94A8C6; }
+
+    .bmq-pied { padding: 7px 16px 0; font-size: 10.5px; color: #7F98BC; text-align: right; }
+
+    @media (max-width: 720px) {
+      .bmq-actu { flex-wrap: wrap; gap: 8px; padding: 0 12px 9px; }
+      .bmq-titre { font-size: 12.5px; order: 3; flex-basis: 100%; }
+      .bmq-suivant { margin-left: auto; }
+      .bmq-defile { gap: 8px; padding: 0 12px; }
+      .bmq-valeur { font-size: 11.5px; padding: 4px 10px; }
+    }
+    @media print { .bmq { display: none !important; } }
+    /* Version REX CLOUD du bandeau : reduite, et le client peut la retirer (js/60) */
+    .bmq-client { position: relative; display: flex; align-items: center; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
+    .bmq-client-montre { flex: 0 0 auto; }
+    .bmq-client-montre .hl-montre { gap: 4px; }
+    .bmq-client-montre .hl-montre svg { width: 74px; }
+    .bmq-client-montre .hl-numerique { font-size: 10.5px; text-align: center; }
+    .bmq-client-montre .hl-numerique b { font-size: 13px; }
+    .bmq-client-montre .hl-numerique span { display: block; font-size: 9.5px; opacity: .7; }
+    .bmq-client-marches { flex: 1 1 320px; min-width: 0; }
+    .bmq-client-marches .bmq { margin: 0; padding: 8px 0 5px; border-radius: 14px; }
+    .bmq-client-marches .bmq-actu { padding: 0 12px 7px; gap: 9px; }
+    .bmq-client-marches .bmq-titre { font-size: 11.5px; }
+    .bmq-client-marches .bmq-etiquette { font-size: 9px; padding: 3px 8px; }
+    .bmq-client-marches .bmq-valeur { font-size: 10.5px; padding: 3px 9px; gap: 5px; }
+    .bmq-client-marches .bmq-prix { font-size: 11px; }
+    .bmq-client-marches .bmq-var { font-size: 10px; }
+    .bmq-client-marches .bmq-pied { font-size: 9.5px; padding: 5px 12px 0; }
+    .bmq-client-fermer { position: absolute; top: -6px; right: -4px; width: 22px; height: 22px; border-radius: 50%;
+      border: 1px solid var(--border, rgba(0,0,0,.12)); background: var(--surface, #fff); color: var(--text-muted, #64748b);
+      font-size: 14px; line-height: 1; cursor: pointer; }
+    .bmq-client-fermer:hover { color: var(--text, #1e293b); }
+    .bmq-client-replie { margin-top: 12px; }
+    .bmq-client-replie button { font-size: 11.5px; color: var(--text-muted, #64748b); background: none;
+      border: 1px dashed var(--border, rgba(0,0,0,.16)); border-radius: 999px; padding: 5px 13px; cursor: pointer; }
+    .bmq-client-replie button:hover { color: var(--accent, #2563eb); border-color: var(--accent, #2563eb); }
+    @media (max-width: 620px) { .bmq-client-montre .hl-montre svg { width: 58px; } }
+    .cf-hero-rex { flex: 0 0 auto; align-self: flex-end; margin-left: auto; }
+    @media (max-width: 860px) { .cf-hero-rex { display: none; } }
+    /* ═══ JOURNAL DE SYNCHRONISATION ECOHUB (js/54, 20.09.2026) ═══ */
+    .ehs-journal { margin: 16px 0; padding: 14px 16px; border-radius: 16px;
+      background: var(--surface, #fff); border: 1px solid var(--border, rgba(0,0,0,.08)); }
+    .ehs-journal header { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+    .ehs-journal h3 { margin: 0; font-size: 14px; font-weight: 700; color: var(--text, #1e293b); }
+    .ehs-cadence { font-size: 11.5px; color: var(--text-muted, #64748b); background: var(--accent-dim, rgba(37,99,235,.08));
+      border-radius: 999px; padding: 2px 10px; }
+    .ehs-note { font-size: 12.5px; line-height: 1.5; color: var(--text-muted, #64748b);
+      background: rgba(245,158,11,.1); border-left: 3px solid #F59E0B; border-radius: 0 10px 10px 0; padding: 9px 12px; margin-bottom: 10px; }
+    .ehs-exes { display: flex; flex-direction: column; gap: 6px; }
+    .ehs-exe { display: grid; grid-template-columns: 116px 150px 1fr; gap: 10px; align-items: baseline;
+      padding: 8px 11px; border-radius: 10px; background: var(--bg, #f8fafc); font-size: 12.5px; border-left: 3px solid transparent; }
+    .ehs-exe.ok { border-left-color: #22C55E; }
+    .ehs-exe.attente { border-left-color: #F59E0B; }
+    .ehs-exe.alerte { border-left-color: #EF4444; }
+    .ehs-exe-date { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11.5px; color: var(--text-muted, #64748b); }
+    .ehs-exe-statut { font-weight: 600; color: var(--text, #1e293b); }
+    .ehs-exe-chiffres { color: var(--text-muted, #64748b); }
+    .ehs-exe-note { grid-column: 1 / -1; font-size: 11.5px; color: var(--text-muted, #64748b); }
+    .ehs-exe-note:empty { display: none; }
+    @media (max-width: 720px) { .ehs-exe { grid-template-columns: 1fr; gap: 2px; } }
+    /* Centre documentaire de la fiche client (js/59, 20.09.2026) : tout au meme endroit */
+    .dcx-centre-carte { margin-top: 16px; }
+    .dcx-groupe { margin-top: 14px; }
+    .dcx-groupe h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 7px; font-size: 12.5px; font-weight: 700;
+      text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted, #64748b); }
+    .dcx-groupe h3 span { font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none;
+      background: var(--accent-dim, rgba(37,99,235,.09)); border-radius: 999px; padding: 1px 8px; color: var(--accent, #2563eb); }
+    .dcx-docs { display: flex; flex-direction: column; gap: 6px; }
+    .dcx-doc { display: grid; grid-template-columns: 28px 1fr 34px auto auto; align-items: center; gap: 10px;
+      padding: 8px 11px; border-radius: 12px; background: var(--bg, #f8fafc); border: 1px solid transparent; transition: all .15s; }
+    .dcx-doc:hover { border-color: var(--border, rgba(0,0,0,.1)); background: var(--surface, #fff); }
+    .dcx-doc-icone { font-size: 17px; text-align: center; }
+    .dcx-doc-corps { display: flex; flex-direction: column; gap: 1px; text-align: left; min-width: 0;
+      background: none; border: 0; cursor: pointer; padding: 0; font-family: inherit; }
+    .dcx-doc-titre { font-size: 13px; font-weight: 600; color: var(--text, #1e293b); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dcx-doc-corps:hover .dcx-doc-titre { text-decoration: underline; text-underline-offset: 3px; }
+    .dcx-doc-sous { font-size: 11.5px; color: var(--text-muted, #64748b); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dcx-doc-etat { font-size: 11px; color: var(--text-muted, #64748b); background: var(--surface, #fff);
+      border: 1px solid var(--border, rgba(0,0,0,.08)); border-radius: 999px; padding: 2px 9px; white-space: nowrap; }
+    .dcx-doc-etat.ok { color: #15803D; background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.3); }
+    .dcx-centre-note { margin: 14px 0 0; font-size: 11.5px; line-height: 1.5; color: var(--text-muted, #64748b); }
+    @media (max-width: 720px) {
+      .dcx-doc { grid-template-columns: 24px 1fr 30px auto; }
+      .dcx-doc-etat { grid-column: 2 / -1; justify-self: start; }
+    }
+    /* ═══ MANOMETRE ECOHUB ET NOUVEAUX DOCUMENTS (js/61, 20.09.2026) ═══ */
+    .ehm-carte { margin-top: 16px; }
+    .ehm-corps { display: flex; gap: 22px; align-items: center; flex-wrap: wrap; padding: 6px 2px 2px; }
+    .ehm-jauge { flex: 0 0 auto; padding: 10px 14px 4px; border-radius: 16px;
+      background: linear-gradient(140deg, #0B1A38, #12294F); box-shadow: inset 0 1px 0 rgba(255,255,255,.08); }
+    .ehm-cadran { display: block; height: auto; }
+    .ehm-infos { flex: 1 1 260px; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+    .ehm-ligne { font-size: 13px; color: var(--text, #1e293b); }
+    .ehm-ligne b { font-size: 15px; }
+    .ehm-ligne.alerte { color: #B45309; }
+    .ehm-etats { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+    .ehm-pastille { font-size: 11px; border-radius: 999px; padding: 3px 10px; border: 1px solid transparent; }
+    .ehm-pastille.ok { background: rgba(34,197,94,.13); border-color: rgba(34,197,94,.35); color: #15803D; }
+    .ehm-pastille.attente { background: rgba(245,158,11,.13); border-color: rgba(245,158,11,.35); color: #B45309; }
+    .ehm-pastille.alerte { background: rgba(239,68,68,.12); border-color: rgba(239,68,68,.35); color: #B91C1C; }
+    .ehm-btn { align-self: flex-start; margin-top: 6px; }
+
+    .ehm-bandeau { position: relative; display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+      margin: 14px 0 0; padding: 12px 40px 12px 16px; border-radius: 16px;
+      background: linear-gradient(135deg, rgba(0,207,255,.14), rgba(37,99,235,.10));
+      border: 1px solid rgba(0,207,255,.3); }
+    .ehm-bandeau-icone { font-size: 22px; }
+    .ehm-bandeau-texte { flex: 1 1 240px; min-width: 0; }
+    .ehm-bandeau-texte strong { display: block; font-size: 13.5px; color: var(--text, #1e293b); }
+    .ehm-bandeau-texte span { font-size: 11.5px; color: var(--text-muted, #64748b); }
+    .ehm-bandeau-fermer { position: absolute; top: 8px; right: 10px; width: 22px; height: 22px; border-radius: 50%;
+      border: 0; background: rgba(255,255,255,.55); color: var(--text-muted, #64748b); font-size: 14px; line-height: 1; cursor: pointer; }
+    .ehm-bandeau-fermer:hover { background: #fff; color: var(--text, #1e293b); }
+    @media (max-width: 640px) { .ehm-corps { gap: 14px; } .ehm-jauge { margin: 0 auto; } }
+    /* Loupe d'apercu : on jette un oeil sans quitter la liste (js/59, 20.09.2026) */
+    .dcx-loupe { border: 1px solid var(--border, rgba(0,0,0,.12)); background: var(--surface, #fff);
+      border-radius: 9px; padding: 4px 7px; font-size: 13px; cursor: pointer; line-height: 1; }
+    .dcx-loupe:hover { border-color: var(--accent, #2563eb); background: var(--accent-dim, rgba(37,99,235,.08)); }
+    .dcx-apercu { display: flex; flex-direction: column; width: min(940px, 94vw); height: min(84vh, 900px);
+      background: var(--surface, #fff); border-radius: 16px; overflow: hidden; }
+    .dcx-apercu header { display: flex; align-items: center; gap: 10px; padding: 11px 14px;
+      border-bottom: 1px solid var(--border, rgba(0,0,0,.08)); }
+    .dcx-apercu-titre { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 600; color: var(--text, #1e293b);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dcx-apercu-fermer { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border, rgba(0,0,0,.12));
+      background: none; font-size: 16px; line-height: 1; cursor: pointer; color: var(--text-muted, #64748b); }
+    .dcx-apercu-corps { flex: 1; position: relative; background: #525659; display: flex; align-items: center; justify-content: center; }
+    .dcx-apercu-corps iframe { width: 100%; height: 100%; border: 0; }
+    .dcx-apercu-corps img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .dcx-apercu-vide { color: #fff; font-size: 13px; padding: 20px; }
+    .dcx-apercu-secours { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,.65); color: #fff; font-size: 11.5px; padding: 5px 12px; border-radius: 999px; }
+    .dcx-apercu-secours button { background: none; border: 0; color: #7DD3FC; cursor: pointer; font: inherit; text-decoration: underline; }
+    /* ═══ HABILLAGES SAISONNIERS (js/62-saisons.js, 20.09.2026) ═══
+       Halloween des le 01.10, Noel des le 01.11. Teinte d'accent, decor flottant en fond, et rien
+       de plus : on habille, on ne deguise pas un outil de travail. */
+    body.saison-halloween { --saison-a: #F97316; --saison-b: #7C3AED; --saison-voile: rgba(249,115,22,.08); }
+    body.saison-noel      { --saison-a: #DC2626; --saison-b: #15803D; --saison-voile: rgba(220,38,38,.07); }
+
+    body.saison.mode-espace-client { position: relative; }
+    body.saison.mode-espace-client .ec-hero,
+    body.saison.mode-espace-client .dbx-carte { border-top: 2px solid var(--saison-a); }
+    body.saison.mode-espace-client .ec-tuile:hover { border-color: var(--saison-a); }
+    body.saison .dbx-kpi-valeur { color: var(--saison-a); }
+
+    .saison-decor { position: fixed; inset: 0; pointer-events: none; z-index: 0; overflow: hidden; }
+    .saison-decor span { position: absolute; top: -8%; left: var(--g); font-size: 20px; opacity: .22;
+      animation: saison-tombe var(--v) linear infinite; animation-delay: calc(var(--r) * -1); }
+    @keyframes saison-tombe {
+      0%   { transform: translateY(-10vh) rotate(0deg); }
+      100% { transform: translateY(112vh) rotate(220deg); }
+    }
+    body.saison-halloween .saison-decor span { animation-name: saison-flotte; opacity: .18; }
+    @keyframes saison-flotte {
+      0%   { transform: translateY(105vh) translateX(0) rotate(-6deg); }
+      50%  { transform: translateY(50vh) translateX(22px) rotate(6deg); }
+      100% { transform: translateY(-12vh) translateX(0) rotate(-6deg); }
+    }
+
+    .saison-bouton { font-size: 11.5px; font-family: inherit; cursor: pointer; white-space: nowrap;
+      border: 1px solid var(--saison-a, var(--border)); color: var(--saison-a, var(--text-muted));
+      background: var(--saison-voile, transparent); border-radius: 999px; padding: 4px 11px; }
+    .saison-bouton.coupe { opacity: .6; }
+    .saison-bouton:hover { opacity: 1; }
+
+    @media (prefers-reduced-motion: reduce) { .saison-decor { display: none; } }
+    @media print { .saison-decor, .saison-bouton { display: none !important; } }
+    /* ═══ DEMANDES DE POLICES (js/63, 20.09.2026) ═══ */
+    .dp-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin: 14px 0; }
+    .dp-filtre { flex: 0 1 260px; margin-left: auto; }
+    .dp-liste { display: flex; flex-direction: column; gap: 8px; }
+    .dp-ligne { display: grid; grid-template-columns: 110px 1fr auto; align-items: center; gap: 12px;
+      padding: 11px 14px; border-radius: 14px; background: var(--surface, #fff);
+      border: 1px solid var(--border, rgba(0,0,0,.08)); }
+    .dp-ligne.retard { border-left: 3px solid #F59E0B; }
+    .dp-statut { font-size: 11px; font-weight: 700; text-align: center; white-space: nowrap;
+      color: var(--c); background: color-mix(in srgb, var(--c) 12%, transparent);
+      border: 1px solid color-mix(in srgb, var(--c) 34%, transparent); border-radius: 999px; padding: 4px 8px; }
+    .dp-titre { font-size: 13.5px; font-weight: 600; color: var(--text, #1e293b); }
+    .dp-titre a { color: var(--accent, #2563eb); text-decoration: none; }
+    .dp-titre a:hover { text-decoration: underline; }
+    .dp-meta { font-size: 11.5px; color: var(--text-muted, #64748b); margin-top: 2px; }
+    .dp-manque { color: #B45309; font-weight: 600; }
+    .dp-boutons { display: flex; gap: 6px; flex-wrap: wrap; }
+    .dp-modale { max-width: 720px; }
+    .dp-corps { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; line-height: 1.55; resize: vertical; }
+    @media (max-width: 800px) {
+      .dp-ligne { grid-template-columns: 1fr; }
+      .dp-statut { justify-self: start; }
+      .dp-filtre { margin-left: 0; flex-basis: 100%; }
+    }
+@media (prefers-reduced-motion: reduce) {
+      .bmq-defile.anime, .bmq-point, .bmq-entre { animation: none !important; }
+    .rex-modale > div, .loader::before { animation: none !important; }
+    .ap-graph-piste span { animation: none !important; }
+    .cf-hero, .cf-projet, .cf-budget-barre span, .cf-retraite-barre span { animation: none !important; }
+    .tr-ligne { animation: none !important; stroke-dashoffset: 0; }
+    .fcx-hero, .fcx-kpi { animation: none !important; opacity: 1; }
+    .dbx *, .dbx { animation: none !important; transition: none !important; }
+    .dbx-anim, .dbx-nouveaute, .dbx-signal, .dbx-hbarre { opacity: 1; transform: none; }
+    .opc-carte, .dx-rub, .sux-ligne, .opx-micro.ecoute, .rex-micro.ecoute { animation: none !important; }
+    .dbx-barre { transform: none; } .dbx-hbarre-piste > span { width: var(--w); } .dbx-spark path:last-child { stroke-dashoffset: 0; }
+  }

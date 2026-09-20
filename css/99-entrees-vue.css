@@ -107,7 +107,7 @@
    cellule anonyme — trois en-têtes se retrouvent alors empilés dans la même colonne. */
 .eaf-table th > button, .eaf-table th > span {
   display: block; width: 100%; padding: 8px 10px;
-  font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em;
+  font-size: var(--t-xs); text-transform: uppercase; letter-spacing: .07em;
   color: var(--text-muted); font-weight: 600; white-space: nowrap;
 }
 .eaf-table th > button {
@@ -134,7 +134,7 @@
 .eaf-table .d { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums lining-nums; }
 .eaf-table .d.reel { color: var(--text); font-weight: 500; }
 .eaf-table .d.estime { color: var(--text-muted); }
-.eaf-tilde { margin-left: 3px; opacity: .6; font-size: 11px; }
+.eaf-tilde { margin-left: 3px; opacity: .6; font-size: var(--t-xs); }
 
 .eaf-tag, .eaf-etat {
   display: inline-block; padding: 2px 8px; border-radius: var(--r-rond, 999px);

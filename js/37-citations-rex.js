@@ -84,10 +84,10 @@ function rexCitationRapportHtml(theme) {
   return `<div style="display:flex;align-items:center;gap:14px;margin:22px 0 4px;padding:14px 18px;border-radius:14px;background:linear-gradient(135deg,#F4F7FC,#EAF6FF);border:1px solid #DCE6F5;break-inside:avoid;-webkit-print-color-adjust:exact;print-color-adjust:exact">
     <img src="${img}" alt="Rex" style="width:58px;height:58px;object-fit:contain;flex:0 0 auto"/>
     <div style="flex:1;min-width:0">
-      <div style="font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#1A4A9C;font-weight:700;margin-bottom:3px">Le mot de Rex</div>
+      <div style="font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#1A4A9C;font-weight: 600;margin-bottom:3px">Le mot de Rex</div>
       <div style="font-size:13px;font-style:italic;font-weight:600;color:#0E1B33;line-height:1.45">« ${rexEsc(c.t)} »</div>
       ${c.tr ? `<div style="font-size:11px;color:#56627A;margin-top:2px">${rexEsc(c.tr)}</div>` : ''}
-      <div style="font-size:10.5px;color:#1A4A9C;font-weight:700;margin-top:4px">— ${rexEsc(c.a)}</div>
+      <div style="font-size:10.5px;color:#1A4A9C;font-weight: 600;margin-top:4px">— ${rexEsc(c.a)}</div>
     </div></div>`;
 }
 
@@ -105,7 +105,7 @@ function rexCitationStyles() {
   .rex-citation-bulle:hover{transform:translateY(-2px);box-shadow:0 16px 38px rgba(15,23,42,.2)}
   .rex-citation-texte{font-size:13px;line-height:1.45;font-style:italic;font-weight:600}
   .rex-citation-trad{font-size:12px;line-height:1.4;color:var(--text-muted,#64748b);margin-top:4px}
-  .rex-citation-auteur{font-size:11px;color:var(--accent,#2563eb);font-weight:700;margin-top:6px;letter-spacing:.02em}
+  .rex-citation-auteur{font-size:11px;color:var(--accent,#2563eb);font-weight: 600;margin-top:6px;letter-spacing:.02em}
   .rex-citation-fermer{position:absolute;top:6px;right:8px;border:0;background:none;color:var(--text-muted,#64748b);font-size:15px;line-height:1;cursor:pointer;padding:2px 4px;border-radius:6px}
   .rex-citation-fermer:hover{background:var(--accent-dim,rgba(37,99,235,.08))}
   .rex-citation img{pointer-events:auto;width:46px;height:46px;object-fit:contain;flex:0 0 auto;filter:drop-shadow(0 4px 8px rgba(0,0,0,.15));cursor:pointer}

@@ -127,7 +127,7 @@ function _showAddrDropdown(results, input, onSelect) {
     if (!label) return;
     const item = document.createElement('div');
     item.style.cssText = 'padding:10px 14px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid var(--border);line-height:1.4;transition:background 0.1s';
-    item.innerHTML = `<div style="font-weight:700">${label}</div>${parsed.canton ? `<div style="font-size:11px;color:var(--text-muted)">Canton ${parsed.canton}</div>` : ''}`;
+    item.innerHTML = `<div style="font-weight: 600">${label}</div>${parsed.canton ? `<div style="font-size:11px;color:var(--text-muted)">Canton ${parsed.canton}</div>` : ''}`;
     item.addEventListener('mousedown', () => { onSelect(parsed); _closeAddrDropdown(); });
     item.addEventListener('mouseover', () => item.style.background = 'var(--surface-hover)');
     item.addEventListener('mouseout', () => item.style.background = 'transparent');
@@ -247,7 +247,7 @@ function printHeaderCorporate(titre, sousTitre) {
     <div style="display:flex;justify-content:space-between;align-items:flex-end;border-bottom:2px solid #7dd3fc;padding-bottom:10px;margin-bottom:18px">
       <img src="${ASSUREX_LOGO_B64}" alt="Assurex" style="height:34px"/>
       <div style="text-align:right">
-        <div style="font-size:15px;font-weight:800;color:#0f2244">${titre}</div>
+        <div style="font-size:15px;font-weight: 600;color:#0f2244">${titre}</div>
         ${sousTitre ? `<div style="font-size:10.5px;color:#52525b;margin-top:2px">${sousTitre}</div>` : ''}
         <div style="font-size:9.5px;color:#71717a;margin-top:2px">Édité le ${dateStr} — Assurex CRM</div>
       </div>

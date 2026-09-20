@@ -71,7 +71,7 @@
 
 .jev-badge {
   flex-shrink: 0; padding: 2px 9px; border-radius: var(--r-rond, 999px);
-  font-size: 10px; font-weight: 600; white-space: nowrap;
+  font-size: 10px; font-weight: 500; white-space: nowrap;
   background: var(--surface-alt); color: var(--text-muted); border: 1px solid var(--border);
 }
 .ton-grave .jev-badge { background: var(--c-danger-fond); color: var(--c-danger-texte, #B91C1C);
@@ -111,12 +111,12 @@
 .jev-faits dt { font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
   color: var(--text-muted); font-weight: 600; }
 .jev-faits dd { margin: 2px 0 0; font-size: var(--t-s, 12.5px); color: var(--text); }
-.jev-url { word-break: break-all; font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: 11px; }
+.jev-url { word-break: break-all; font-family: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; font-size: var(--t-xs); }
 
 /* Le fil d'Ariane : c'est lui qui permet de reproduire. Il se lit du plus récent au plus ancien,
    comme on remonte une piste. */
 .jev-fil { margin-bottom: var(--e-3, 12px); }
-.jev-fil h4 { margin: 0 0 6px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em;
+.jev-fil h4 { margin: 0 0 6px; font-size: var(--t-xs); text-transform: uppercase; letter-spacing: .08em;
   color: var(--text-muted); font-weight: 600; }
 .jev-fil ol { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
 .jev-fil li {
@@ -131,7 +131,7 @@
 .jev-pile pre {
   margin: 6px 0 0; padding: 10px 12px; border-radius: var(--r-s, 10px); overflow-x: auto;
   background: var(--surface-alt); border: 1px solid var(--border);
-  font-size: 11px; line-height: 1.5; color: var(--text-muted); white-space: pre-wrap; word-break: break-all;
+  font-size: var(--t-xs); line-height: 1.5; color: var(--text-muted); white-space: pre-wrap; word-break: break-all;
 }
 
 .jev-actions { display: flex; gap: var(--e-2, 8px); margin-top: var(--e-3, 12px); flex-wrap: wrap; align-items: center; }

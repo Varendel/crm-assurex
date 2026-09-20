@@ -19,20 +19,20 @@
 
   /* Menu : rubriques par métier, une icône par entrée */
   .sidebar { width: 238px; padding: 18px 12px; }
-  .nav-solo-btn { gap: 10px; padding: 7px 8px; font-weight: 600; font-size: 13.5px; border-radius: 12px; margin-bottom: 4px; }
+  .nav-solo-btn { gap: 10px; padding: 7px 8px; font-weight: 600; font-size: var(--t-m); border-radius: 12px; margin-bottom: 4px; }
   .nav-solo-logo { padding: 12px 14px; margin-top: 4px; }
   .nav-ico { width: 28px; height: 28px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; font-size: 14px; flex-shrink: 0; transition: background .15s; }
   .nav-lib { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .nav-solo-btn.active .nav-ico, .nav-item.active .nav-ico { background: var(--accent-dim); }
-  .nav-section-btn { margin-top: 12px; padding: 6px 10px; font-size: 10.5px; font-weight: 600; letter-spacing: 1.3px; color: var(--text-dim); border-radius: 8px; }
+  .nav-section-btn { margin-top: 12px; padding: 6px 10px; font-size: var(--t-xs); font-weight: 500; letter-spacing: 1.3px; color: var(--text-dim); border-radius: 8px; }
   .nav-section-btn:hover { color: var(--text); }
-  .nav-section-btn .arrow { font-size: 15px; letter-spacing: 0; transition: transform .2s; }
+  .nav-section-btn .arrow { font-size: var(--t-l); letter-spacing: 0; transition: transform .2s; }
   .nav-section-btn.ouverte .arrow { transform: rotate(90deg); }
-  .nav-item { gap: 8px; padding: 4px 8px; font-size: 13px; font-weight: 500; border-radius: 11px; margin-bottom: 2px; }
+  .nav-item { gap: 8px; padding: 4px 8px; font-size: var(--t-m); font-weight: 500; border-radius: 11px; margin-bottom: 2px; }
   .nav-item:hover { background: var(--surface); }
   .nav-item.active { font-weight: 600; background: var(--accent-dim); color: var(--accent); }
   .nav-item.staff .nav-lib::after { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #FB923C; margin-left: 6px; vertical-align: middle; }
-  .nav-compteur { margin-left: auto; background: #EF4444; color: #fff; border-radius: 999px; padding: 1px 7px; font-size: 10.5px; font-weight: 600; }
+  .nav-compteur { margin-left: auto; background: #EF4444; color: #fff; border-radius: 999px; padding: 1px 7px; font-size: var(--t-xs); font-weight: 500; }
 
   /* Menu : nuances de couleur (19.09.2026) — dégradé bleu marine avec halo cyan et reflet indigo,
      une teinte par rubrique sur les pastilles d'icônes, entrée active en dégradé cyan (deux thèmes) */
@@ -70,12 +70,12 @@
   .stat-grid { gap: 14px; }
   .stat-card { border-radius: 16px; padding: 16px 18px; box-shadow: var(--ombre-carte); transition: transform .2s, box-shadow .2s; }
   .stat-card:hover { transform: translateY(-2px); }
-  .stat-label { font-size: 11.5px; font-weight: 500; letter-spacing: 0; text-transform: none; margin-bottom: 6px; }
+  .stat-label { font-size: var(--t-xs); font-weight: 500; letter-spacing: 0; text-transform: none; margin-bottom: 6px; }
   .stat-value { font-size: 23px; font-weight: 600; letter-spacing: -0.02em; }
 
   /* Cartes de section : titre sobre, trait d'accent conservé */
   .section-card { border-radius: var(--r-carte); box-shadow: var(--ombre-carte); border-color: var(--border) !important; margin-bottom: 16px; }
-  .section-card-header { padding: 16px 20px 2px; border-bottom: none; font-size: 14.5px; font-weight: 600; gap: 10px; }
+  .section-card-header { padding: 16px 20px 2px; border-bottom: none; font-size: var(--t-l); font-weight: 600; gap: 10px; }
   .section-card-header span { color: var(--text) !important; }
   .section-card-header > div:first-child { width: 4px !important; height: 16px !important; }
   .section-card-body { padding: 14px 20px 20px; }
@@ -84,8 +84,8 @@
   .form-grid { gap: 14px 16px; }
   .form-field { background: transparent; padding: 0; border-radius: 0; margin-bottom: 14px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
   .form-grid > .form-field { margin-bottom: 0; }
-  .form-label { font-size: 12px; font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--text-muted); margin-bottom: 0; }
-  .form-input, .form-select { background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--r-champ); padding: 10px 12px; font-size: 13.5px; font-weight: 500; min-height: 40px; transition: border-color .15s, box-shadow .15s, background .15s; }
+  .form-label { font-size: var(--t-s); font-weight: 500; text-transform: none; letter-spacing: 0; color: var(--text-muted); margin-bottom: 0; }
+  .form-input, .form-select { background: var(--surface-alt); border: 1px solid var(--border); border-radius: var(--r-champ); padding: 10px 12px; font-size: var(--t-m); font-weight: 500; min-height: 40px; transition: border-color .15s, box-shadow .15s, background .15s; }
   .form-input:hover, .form-select:hover { border-color: var(--accent-border); }
   .form-input:focus, .form-select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); background: var(--surface); }
   .form-input::placeholder { color: var(--text-dim); font-weight: 400; }
@@ -105,20 +105,20 @@
 
   /* Tableaux & listes */
   .table-wrap { border-radius: var(--r-carte); box-shadow: var(--ombre-carte); }
-  .table-header { padding: 11px 18px; font-size: 11px; font-weight: 600; letter-spacing: .4px; background: var(--surface-alt); }
+  .table-header { padding: 11px 18px; font-size: var(--t-xs); font-weight: 500; letter-spacing: .4px; background: var(--surface-alt); }
   .table-row { padding: 12px 18px; }
   .table-row:hover { background: color-mix(in srgb, var(--accent) 6%, var(--surface)); }
   .rappel-item, .bordereau-card { border-radius: 14px; box-shadow: var(--ombre-carte); }
   .kanban-card { border-radius: 14px; box-shadow: var(--ombre-carte); }
   .badge { border-radius: 999px; padding: 3px 10px; font-weight: 600; }
   .info-block { border-radius: 12px; padding: 11px 14px; border: 1px solid var(--border); }
-  .info-label { font-size: 11px; font-weight: 500; text-transform: none; letter-spacing: 0; }
+  .info-label { font-size: var(--t-xs); font-weight: 500; text-transform: none; letter-spacing: 0; }
   .info-value { font-weight: 500; }
   .progress-bar { height: 6px; background: var(--surface-alt); }
 
   /* Onglets en pastilles, partout (plus seulement sur la fiche client) */
   .tabs { flex-wrap: wrap; gap: 4px; padding: 4px; border: 1px solid var(--border); background: var(--surface); border-radius: 14px; width: fit-content; max-width: 100%; margin-bottom: 16px; }
-  .tab-btn { border: none; margin: 0; border-radius: 10px; padding: 8px 14px; font-size: 12.5px; font-weight: 500; color: var(--text-muted); transition: background .15s, color .15s; }
+  .tab-btn { border: none; margin: 0; border-radius: 10px; padding: 8px 14px; font-size: var(--t-s); font-weight: 500; color: var(--text-muted); transition: background .15s, color .15s; }
   .tab-btn:hover { color: var(--text); background: var(--surface-alt); }
   .tab-btn.active { background: var(--accent); color: var(--on-accent); font-weight: 600; border: none; }
 

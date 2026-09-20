@@ -302,8 +302,8 @@ function dfVueDossier() {
 }
 
 // ── Check-list imprimable sur le papier à en-tête (même mécanique que les courriers, js/45) ─────
-const DF_CSS_IMPRESSION = `.df-p-titre{font-weight:700;font-size:13pt;margin:0 0 2mm}.df-p-sous{color:#334155;margin:0 0 6mm;font-size:10pt}
-.df-p-groupe{font-weight:700;color:#113679;border-bottom:1px solid #00CFFF;margin:5mm 0 2mm;padding-bottom:1mm;font-size:10.5pt}
+const DF_CSS_IMPRESSION = `.df-p-titre{font-weight: 600;font-size:13pt;margin:0 0 2mm}.df-p-sous{color:#334155;margin:0 0 6mm;font-size:10pt}
+.df-p-groupe{font-weight: 600;color:#113679;border-bottom:1px solid #00CFFF;margin:5mm 0 2mm;padding-bottom:1mm;font-size:10.5pt}
 .df-p-item{display:flex;gap:3mm;align-items:flex-start;margin:0 0 1.8mm;font-size:9.5pt;line-height:1.35}
 .df-p-case{flex:0 0 4mm;font-size:11pt;line-height:1}.df-p-src{color:#475569;font-size:8.5pt}
 .df-p-note{color:#113679;font-size:8.5pt;font-style:italic}`;

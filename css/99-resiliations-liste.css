@@ -50,7 +50,7 @@
 .rsx-table { width: 100%; border-collapse: collapse; font-size: var(--t-m, 13.5px); }
 .rsx-table th { text-align: left; border-bottom: 1px solid var(--border); padding: 0; }
 .rsx-table th > span {
-  display: block; padding: 8px 10px; font-size: 10.5px; text-transform: uppercase;
+  display: block; padding: 8px 10px; font-size: var(--t-xs); text-transform: uppercase;
   letter-spacing: .07em; color: var(--text-muted); font-weight: 600; white-space: nowrap;
 }
 .rsx-table th.d > span { text-align: right; }

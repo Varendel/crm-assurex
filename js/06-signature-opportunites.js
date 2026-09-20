@@ -74,7 +74,7 @@ function viewOpportunites() {
 
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Pipeline — Opportunités</h2>
+      <h2 style="margin:0;font-size:18px;font-weight: 600;color:var(--text)">Pipeline — Opportunités</h2>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn-add" onclick="opportuniteEnEditionId=null;navigate('nouvelle-opportunite')">${rhMode ? PICTO_CREE_EQUIPE + ' Créer une opportunité pour Jonathan' : '+ Nouvelle opportunité'}</button>
         ${rhMode ? `<button class="btn-secondary" onclick="navigate('nouveau-rappel')">${PICTO_CREE_EQUIPE} Créer une tâche pour Jonathan</button>` : ''}
@@ -120,10 +120,10 @@ function renderStatsBranchesPipeline(OPPS) {
   });
   if (!volumeEntreprise && !commissionSante && !commissionVie) return '';
   return `<div style="display:flex;gap:12px;flex-wrap:wrap;margin-bottom:20px;background:var(--surface-alt);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
-    <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;width:100%;margin-bottom:2px">📊 Pipeline par branche (selon produits sélectionnés)</div>
-    <div style="flex:1;min-width:160px"><div style="font-size:10.5px;color:var(--text-muted)">Volume prime entreprises</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${fmtCHF(volumeEntreprise)}</div></div>
-    <div style="flex:1;min-width:160px"><div style="font-size:10.5px;color:var(--text-muted)">Santé — privés</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${fmtCHF(commissionSante)}</div></div>
-    <div style="flex:1;min-width:160px"><div style="font-size:10.5px;color:var(--text-muted)">Vie / LPP — privés</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${fmtCHF(commissionVie)}</div></div>
+    <div style="font-size:11px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;width:100%;margin-bottom:2px">📊 Pipeline par branche (selon produits sélectionnés)</div>
+    <div style="flex:1;min-width:160px"><div style="font-size:10.5px;color:var(--text-muted)">Volume prime entreprises</div><div style="font-size:16px;font-weight: 600;color:var(--text)">CHF ${fmtCHF(volumeEntreprise)}</div></div>
+    <div style="flex:1;min-width:160px"><div style="font-size:10.5px;color:var(--text-muted)">Santé — privés</div><div style="font-size:16px;font-weight: 600;color:var(--text)">CHF ${fmtCHF(commissionSante)}</div></div>
+    <div style="flex:1;min-width:160px"><div style="font-size:10.5px;color:var(--text-muted)">Vie / LPP — privés</div><div style="font-size:16px;font-weight: 600;color:var(--text)">CHF ${fmtCHF(commissionVie)}</div></div>
   </div>`;
 }
 
@@ -167,11 +167,11 @@ function renderCamembertsPipeline(OPPS) {
 
   return `<div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:20px">
     <div style="flex:1;min-width:300px;background:var(--surface-alt);border:1px solid var(--border);border-radius:12px;padding:16px">
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">🥧 Pipeline par segment</div>
+      <div style="font-size:11px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">🥧 Pipeline par segment</div>
       ${svgCamembertPipeline(segData, OPPS.length)}
     </div>
     <div style="flex:1;min-width:300px;background:var(--surface-alt);border:1px solid var(--border);border-radius:12px;padding:16px">
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">🥧 Pipeline par type de produit</div>
+      <div style="font-size:11px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">🥧 Pipeline par type de produit</div>
       ${svgCamembertPipeline(catData, OPPS.length)}
     </div>
   </div>`;
@@ -214,14 +214,14 @@ function renderOppsEchuesBanner(OPPS, nomClient) {
     .sort((a, b) => new Date(a.date_echeance) - new Date(b.date_echeance));
   if (!echues.length) return '';
   return `<div style="background:color-mix(in srgb, var(--c-danger) 8%, transparent);border:1.5px solid color-mix(in srgb, var(--c-danger) 40%, transparent);border-radius:12px;padding:14px 16px;margin-bottom:20px">
-    <div style="font-size:12px;font-weight:800;color:var(--c-danger-texte);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">🔴 ${echues.length} opportunité${echues.length !== 1 ? 's' : ''} échue${echues.length !== 1 ? 's' : ''} — à traiter en priorité</div>
+    <div style="font-size:12px;font-weight: 500;color:var(--c-danger-texte);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">🔴 ${echues.length} opportunité${echues.length !== 1 ? 's' : ''} échue${echues.length !== 1 ? 's' : ''} — à traiter en priorité</div>
     <div style="display:flex;flex-direction:column;gap:6px">
       ${echues.map(o => `<div onclick="editerOpportunite('${o.id}')" style="display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--surface);border-radius:8px;padding:8px 12px;cursor:pointer">
         <div style="min-width:0">
-          <div style="font-size:12.5px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${o.titre}</div>
+          <div style="font-size:12.5px;font-weight: 500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${o.titre}</div>
           <div style="font-size:11px;color:var(--text-muted)">${nomClient(o)}</div>
         </div>
-        <div style="font-size:11.5px;font-weight:800;color:var(--c-danger-texte);white-space:nowrap">Échue le ${fmtDate(o.date_echeance)}</div>
+        <div style="font-size:11.5px;font-weight: 500;color:var(--c-danger-texte);white-space:nowrap">Échue le ${fmtDate(o.date_echeance)}</div>
       </div>`).join('')}
     </div>
   </div>`;
@@ -237,7 +237,7 @@ function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, to
     return `<div class="kanban-col" data-stade="${stade}">
       <div class="kanban-col-title">
         <div class="kanban-dot" style="background:${color}"></div>
-        <div style="font-size:11px;font-weight:700;color:${color};text-transform:uppercase;letter-spacing:0.8px">${stade}</div>
+        <div style="font-size:11px;font-weight: 500;color:${color};text-transform:uppercase;letter-spacing:0.8px">${stade}</div>
         <div style="font-size:10px;color:var(--text-muted);margin-left:auto">${opps.length}${rhMode ? '' : ` · CHF ${fmtCHF(Math.round(opps.reduce((s, o) => s + Number(o.montant_potentiel || 0), 0)))}`}</div>
       </div>
       ${opps.map(o => {
@@ -245,21 +245,21 @@ function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, to
         const echue = o.date_echeance && new Date(o.date_echeance) < new Date(new Date().setHours(0,0,0,0));
         return `<div class="kanban-card" data-opp-id="${o.id}" ${rhMode ? '' : 'draggable="true" title="Glisser vers un autre stade"'} onclick="editerOpportunite('${o.id}')" style="cursor:${rhMode ? 'pointer' : 'grab'};position:relative;${echue ? 'border-left:3px solid #f87171' : ''}">
         ${o.cree_par ? `<div title="Créée par ${o.cree_par}" style="position:absolute;top:8px;right:8px;font-size:13px">${PICTO_CREE_EQUIPE}${o.notif_vue ? '' : ' 🔴'}</div>` : ''}
-        <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:4px">${o.titre}</div>
-        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:1px">${nomClient(o)}</div>
+        <div style="font-size:12.5px;font-weight: 500;color:var(--text);margin-bottom:4px">${o.titre}</div>
+        <div style="font-size:13px;font-weight: 600;color:var(--text);margin-bottom:1px">${nomClient(o)}</div>
         <div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px">${tachesOuvertes > 0 ? `☑ ${tachesOuvertes} tâche${tachesOuvertes > 1 ? 's' : ''}` : '&nbsp;'}</div>
         <div class="opp-offres" data-opp="${o.id}" data-compagnie="${(o.compagnie || '').replace(/"/g, '&quot;')}">${o.compagnie && typeof compagnieAvecPicto === 'function' ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">${compagnieAvecPicto(o.compagnie, 20)}</div>` : ''}</div>
         ${typeof htmlProchaineAction === 'function' ? htmlProchaineAction(o) : ''}
-        ${o.date_echeance ? `<div style="font-size:10px;font-weight:700;color:${echue ? '#f87171' : 'var(--text-muted)'};margin-bottom:6px">${echue ? '🔴 Échue le ' : 'Échéance '}${fmtDate(o.date_echeance)}</div>` : ''}
+        ${o.date_echeance ? `<div style="font-size:10px;font-weight: 500;color:${echue ? '#f87171' : 'var(--text-muted)'};margin-bottom:6px">${echue ? '🔴 Échue le ' : 'Échéance '}${fmtDate(o.date_echeance)}</div>` : ''}
         <div style="display:flex;justify-content:space-between;align-items:center">
-          ${rhMode ? '<span></span>' : `<span style="font-size:13px;font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF((o.montant_potentiel||0))}</span>`}
+          ${rhMode ? '<span></span>' : `<span style="font-size:13px;font-weight: 600;color:var(--c-alerte-texte)">CHF ${fmtCHF((o.montant_potentiel||0))}</span>`}
           ${o.apporteur_id ? avatar(agentById(o.apporteur_id), 22) : ''}
         </div>
         <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:${o.probabilite||0}%;background:${color}"></div></div>
         <div style="font-size:10px;color:var(--text-muted);margin-top:6px;display:flex;justify-content:space-between;align-items:center;gap:6px">
           <span>${o.probabilite||0}%</span>
           <div style="display:flex;gap:4px;align-items:center">
-            ${rhMode ? '' : `<button onclick="event.stopPropagation();ouvrirModaleMotifPerte('${o.id}','kanban')" title="Marquer perdue" style="background:none;border:1px solid color-mix(in srgb, var(--c-danger) 35%, transparent);color:var(--c-danger-texte);border-radius:5px;padding:2px 6px;font-size:10px;font-weight:700;cursor:pointer">✕ Perdu</button>`}
+            ${rhMode ? '' : `<button onclick="event.stopPropagation();ouvrirModaleMotifPerte('${o.id}','kanban')" title="Marquer perdue" style="background:none;border:1px solid color-mix(in srgb, var(--c-danger) 35%, transparent);color:var(--c-danger-texte);border-radius:5px;padding:2px 6px;font-size:10px;font-weight: 500;cursor:pointer">✕ Perdu</button>`}
             ${rhMode ? '' : selectStadeOpportunite(o, stade, tousLesStades)}
           </div>
         </div>
@@ -277,24 +277,24 @@ function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, to
     </div>`}
     <div class="kanban">${kanban}</div>
     ${gagnees.length > 0 ? `<div style="margin-top:24px">
-      <div style="font-size:11px;font-weight:700;color:var(--c-succes-texte);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">✓ Gagnées (${gagnees.length})</div>
+      <div style="font-size:11px;font-weight: 500;color:var(--c-succes-texte);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">✓ Gagnées (${gagnees.length})</div>
       <div class="table-wrap">${gagnees.map(o => `<div class="table-row" style="grid-template-columns:${rhMode ? '1fr 160px 150px' : '1fr 160px 100px 150px 110px'};${rhMode ? '' : 'cursor:pointer'}" ${rhMode ? '' : `onclick="editerOpportunite('${o.id}')"`}>
-        <div style="font-weight:700;font-size:13px;color:var(--text)">${o.titre}</div>
-        <div style="font-size:13px;font-weight:800;color:var(--text)">${nomClient(o)}</div>
-        ${rhMode ? '' : `<div style="font-size:12px;font-weight:700;color:var(--c-alerte-texte)">CHF ${fmtCHF((o.montant_potentiel||0))}</div>`}
+        <div style="font-weight: 600;font-size:13px;color:var(--text)">${o.titre}</div>
+        <div style="font-size:13px;font-weight: 600;color:var(--text)">${nomClient(o)}</div>
+        ${rhMode ? '' : `<div style="font-size:12px;font-weight: 500;color:var(--c-alerte-texte)">CHF ${fmtCHF((o.montant_potentiel||0))}</div>`}
         ${rhMode ? '' : `<div>${selectStadeOpportunite(o, 'Gagné', tousLesStades)}</div>`}
         <div>${o.contrat_id ? badge('Contrat créé', '#4ade80') : badge('À finaliser', '#f59e0b')}</div>
       </div>`).join('')}</div>
     </div>` : ''}
     ${perdues.length > 0 ? `<div style="margin-top:24px">
-      <div style="font-size:11px;font-weight:700;color:var(--c-danger-texte);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">✕ Perdues (${perdues.length})</div>
+      <div style="font-size:11px;font-weight: 500;color:var(--c-danger-texte);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">✕ Perdues (${perdues.length})</div>
       <div class="table-wrap">${perdues.map(o => `<div class="table-row" style="grid-template-columns:${rhMode ? '1fr 160px' : '1fr 160px 100px 150px'};${rhMode ? '' : 'cursor:pointer'}" ${rhMode ? '' : `onclick="editerOpportunite('${o.id}')"`}>
         <div>
-          <div style="font-weight:700;font-size:13px;color:var(--text)">${o.titre}</div>
+          <div style="font-weight: 600;font-size:13px;color:var(--text)">${o.titre}</div>
           ${o.motif_perte ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:2px;font-style:italic">Motif : ${o.motif_perte}</div>` : ''}
         </div>
-        <div style="font-size:13px;font-weight:800;color:var(--text)">${nomClient(o)}</div>
-        ${rhMode ? '' : `<div style="font-size:12px;font-weight:700;color:var(--text-muted)">CHF ${fmtCHF((o.montant_potentiel||0))}</div>`}
+        <div style="font-size:13px;font-weight: 600;color:var(--text)">${nomClient(o)}</div>
+        ${rhMode ? '' : `<div style="font-size:12px;font-weight: 500;color:var(--text-muted)">CHF ${fmtCHF((o.montant_potentiel||0))}</div>`}
         ${rhMode ? '' : `<div>${selectStadeOpportunite(o, 'Perdu', tousLesStades)}</div>`}
       </div>`).join('')}</div>
     </div>` : ''}`;
@@ -329,12 +329,12 @@ function renderListeOpportunites(toutes, nomClient, tousLesStades, stadeColor, r
     <div class="table-wrap">
       <div class="table-header" style="grid-template-columns:${cols}"><div>Titre</div><div>Client</div><div>Compagnie</div><div>Stade</div><div>Prob.</div>${rhMode ? '' : '<div>Montant</div>'}</div>
       ${liste.length ? liste.map(o => `<div class="table-row" style="grid-template-columns:${cols};cursor:pointer" onclick="editerOpportunite('${o.id}')">
-        <div><div style="font-weight:700;font-size:13px;color:var(--text)">${o.cree_par ? PICTO_CREE_EQUIPE + ' ' : ''}${o.titre}</div>${o.date_echeance ? `<div style="font-size:10.5px;color:var(--text-muted)">Échéance ${fmtDate(o.date_echeance)}</div>` : ''}${typeof htmlProchaineAction === 'function' ? htmlProchaineAction(o) : ''}</div>
+        <div><div style="font-weight: 600;font-size:13px;color:var(--text)">${o.cree_par ? PICTO_CREE_EQUIPE + ' ' : ''}${o.titre}</div>${o.date_echeance ? `<div style="font-size:10.5px;color:var(--text-muted)">Échéance ${fmtDate(o.date_echeance)}</div>` : ''}${typeof htmlProchaineAction === 'function' ? htmlProchaineAction(o) : ''}</div>
         <div style="font-size:13px;color:var(--text)">${nomClient(o)}</div>
         <div style="font-size:12.5px;color:var(--text-muted)">${o.compagnie || '—'}</div>
         <div>${badge(o.stade, stadeColor[o.stade] || (o.stade === 'Gagné' ? '#4ade80' : '#f87171'))}</div>
         <div style="font-size:12.5px;color:var(--text-muted)">${o.probabilite||0}%</div>
-        ${rhMode ? '' : `<div style="font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF((o.montant_potentiel||0))}</div>`}
+        ${rhMode ? '' : `<div style="font-weight: 600;color:var(--c-alerte-texte)">CHF ${fmtCHF((o.montant_potentiel||0))}</div>`}
       </div>`).join('') : '<div class="table-empty">Aucune opportunité.</div>'}
     </div>`;
 }
@@ -357,12 +357,12 @@ function renderEcheancesOpportunites(oppsOuvertes, nomClient, stadeColor, rhMode
     const liste = oppsOuvertes.filter(b.test).sort((a,c) => (a.date_echeance||'9999') < (c.date_echeance||'9999') ? -1 : 1);
     if (!liste.length) return '';
     return `<div style="margin-bottom:22px">
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">${b.label} (${liste.length})</div>
+      <div style="font-size:11px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">${b.label} (${liste.length})</div>
       <div class="table-wrap">${liste.map(o => `<div class="table-row" style="grid-template-columns:${rhMode ? '1fr 160px 110px 120px' : '1fr 160px 110px 100px 120px'};cursor:pointer" onclick="editerOpportunite('${o.id}')">
-        <div style="font-weight:700;font-size:13px;color:var(--text)">${o.cree_par ? PICTO_CREE_EQUIPE + ' ' : ''}${o.titre}</div>
+        <div style="font-weight: 600;font-size:13px;color:var(--text)">${o.cree_par ? PICTO_CREE_EQUIPE + ' ' : ''}${o.titre}</div>
         <div style="font-size:13px;color:var(--text)">${nomClient(o)}</div>
         <div>${badge(o.stade, stadeColor[o.stade] || '#64748b')}</div>
-        ${rhMode ? '' : `<div style="font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF((o.montant_potentiel||0))}</div>`}
+        ${rhMode ? '' : `<div style="font-weight: 600;color:var(--c-alerte-texte)">CHF ${fmtCHF((o.montant_potentiel||0))}</div>`}
         <div style="font-size:12px;color:var(--text-muted)">${o.date_echeance ? fmtDate(o.date_echeance) : '—'}</div>
       </div>`).join('')}</div>
     </div>`;
@@ -421,7 +421,7 @@ function renderPrioritesOpportunites(OPPS, nomClient, stadeColor, rhMode) {
     const items = scored.filter(s => s.tier === t.id);
     if (!items.length) return '';
     return `<div style="margin-bottom:24px">
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">${t.label} (${items.length})</div>
+      <div style="font-size:11px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">${t.label} (${items.length})</div>
       <div style="display:flex;flex-direction:column;gap:10px">
         ${items.map(s => renderCartePrioriteOpportunite(s, nomClient, stadeColor, rhMode)).join('')}
       </div>
@@ -440,11 +440,11 @@ function renderCartePrioriteOpportunite(s, nomClient, stadeColor, rhMode) {
   return `<div style="background:var(--surface-alt);border:1px solid ${borderColor};border-left:3px solid ${borderColor};border-radius:12px;padding:14px 16px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
       <div style="flex:1;min-width:200px;cursor:pointer" onclick="editerOpportunite('${o.id}')">
-        <div style="font-size:13.5px;font-weight:800;color:var(--text)">${o.cree_par ? PICTO_CREE_EQUIPE + ' ' : ''}${o.titre}</div>
+        <div style="font-size:13.5px;font-weight: 600;color:var(--text)">${o.cree_par ? PICTO_CREE_EQUIPE + ' ' : ''}${o.titre}</div>
         <div style="font-size:12.5px;color:var(--text-muted)">${nomClient(o)} · ${badge(o.stade, stadeColor[o.stade] || '#64748b')}</div>
       </div>
       <div style="text-align:right">
-        ${rhMode ? '' : `<div style="font-size:13px;font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF(valeurPonderee)} <span style="font-weight:500;color:var(--text-muted);font-size:10.5px">pondéré</span></div>`}
+        ${rhMode ? '' : `<div style="font-size:13px;font-weight: 600;color:var(--c-alerte-texte)">CHF ${fmtCHF(valeurPonderee)} <span style="font-weight:500;color:var(--text-muted);font-size:10.5px">pondéré</span></div>`}
         <div style="font-size:10.5px;color:var(--text-muted)">${o.date_echeance ? `Échéance ${fmtDate(o.date_echeance)}` : 'Sans échéance'}</div>
       </div>
     </div>
@@ -624,7 +624,7 @@ function proposerActionApresGain(opp) {
   const contratsClient = opp.client_id ? allContrats.filter(ct => ct.client_id === opp.client_id) : [];
   creerModale('modal-action-opp-gagnee', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
-      <h3 style="margin:0 0 8px;font-size:16px;font-weight:800;color:var(--text)">🎉 Opportunité gagnée</h3>
+      <h3 style="margin:0 0 8px;font-size:16px;font-weight: 600;color:var(--text)">🎉 Opportunité gagnée</h3>
       <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:18px">"<strong>${opp.titre}</strong>" — le contrat correspondant a-t-il déjà été créé, ou faut-il le créer maintenant ?</div>
       <div style="display:flex;flex-direction:column;gap:10px">
         <button class="btn-save" onclick="document.getElementById('modal-action-opp-gagnee').remove(); demarrerCreationContratDepuisOpp('${opp.id}')">📝 Créer le contrat maintenant</button>
@@ -657,7 +657,7 @@ function ouvrirSelectionContratExistant(oppId) {
   document.getElementById('modal-action-opp-gagnee')?.remove();
   creerModale('modal-lier-contrat-existant', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:26px;width:100%;max-width:480px">
-      <h3 style="margin:0 0 6px;font-size:15px;font-weight:800;color:var(--text)">🔗 Relier "${opp.titre}" à un contrat existant</h3>
+      <h3 style="margin:0 0 6px;font-size:15px;font-weight: 600;color:var(--text)">🔗 Relier "${opp.titre}" à un contrat existant</h3>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">Sélectionne le contrat déjà créé pour ce client :</div>
       <select class="form-select" id="select-contrat-existant" style="width:100%;margin-bottom:16px">
         <option value="">— Sélectionner —</option>
@@ -690,7 +690,7 @@ function ouvrirModaleMotifPerte(id, mode) {
   if (!opp) return;
   creerModale('modal-motif-perte', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px;width:100%;max-width:440px">
-      <h3 style="margin:0 0 6px;font-size:15px;font-weight:800;color:var(--text)">✕ Marquer "${opp.titre}" comme perdue</h3>
+      <h3 style="margin:0 0 6px;font-size:15px;font-weight: 600;color:var(--text)">✕ Marquer "${opp.titre}" comme perdue</h3>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">Motif (texte libre, optionnel)</div>
       <textarea id="motif-perte-texte" class="form-input" rows="3" placeholder="Ex : parti chez la concurrence, budget annulé, plus de nouvelles…" style="resize:vertical;width:100%">${opp.motif_perte || ''}</textarea>
       <div style="display:flex;gap:10px;margin-top:16px">
@@ -727,7 +727,7 @@ function proposerConversionMultiContrats(opp) {
   const produits = (opp.produits || []).map(id => produitCategorieEtObjetParId(id)).filter(Boolean);
   creerModale('modal-conversion-opp', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
-      <h3 style="margin:0 0 8px;font-size:16px;font-weight:800;color:var(--text)">🎉 Opportunité gagnée</h3>
+      <h3 style="margin:0 0 8px;font-size:16px;font-weight: 600;color:var(--text)">🎉 Opportunité gagnée</h3>
       <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:16px">Plusieurs produits étaient envisagés sur "<strong>${opp.titre}</strong>". Sélectionne ceux réellement signés — un contrat sera créé pour chacun, l'un après l'autre.</div>
       <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:18px">
         ${produits.map(r => `<label style="display:flex;align-items:center;gap:10px;font-size:13px;color:var(--text);cursor:pointer;padding:8px 10px;border-radius:8px;background:var(--surface-alt)">
@@ -763,7 +763,7 @@ function viewSuivi() {
   setTimeout(() => renderDemandesOffreSuivi(), 0);
 
   return `
-    <h2 style="margin:0 0 4px;font-size:18px;font-weight:800;color:var(--text)">Suivi des affaires</h2>
+    <h2 style="margin:0 0 4px;font-size:18px;font-weight: 600;color:var(--text)">Suivi des affaires</h2>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Contrats actifs, échéances proches, polices non commissionnées à reprendre.</div>
 
     <!-- ── Bloc pipeline commissions estimées ── -->
@@ -775,7 +775,7 @@ function viewSuivi() {
       const totalEnCours = enCours.reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0);
       if (!commissionsEstimees.length && !enCours.length) return '';
       return `<div style="background:linear-gradient(135deg,color-mix(in srgb, var(--c-succes) 6%, transparent) 0%,rgba(56,189,248,0.04) 100%);border:1px solid color-mix(in srgb, var(--c-succes) 20%, transparent);border-radius:14px;padding:20px;margin-bottom:24px">
-        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:14px">💰 Pilotage commissions (depuis le 01.06.2026)</div>
+        <div style="font-size:13px;font-weight: 600;color:var(--text);margin-bottom:14px">💰 Pilotage commissions (depuis le 01.06.2026)</div>
         <div class="stat-grid">
           ${statCard('Commissions en attente', 'CHF ' + Math.round(totalComm).toLocaleString(), '#4ade80', `dont CHF ${fmtCHF(Math.round(totalCommGestion))} gestion — ${commissionsEstimees.length} dossiers`)}
           ${statCard('Contrats "en cours"', enCours.length, '#38bdf8', 'CHF ' + Math.round(totalEnCours).toLocaleString() + ' de primes')}
@@ -788,7 +788,7 @@ function viewSuivi() {
             return `<div style="padding:6px 0;border-bottom:1px solid var(--border);display:flex;justify-content:space-between">
               <a href="?client=${ct.client_id}" onclick="return irVersClient(event, '${ct.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${nom}</a>
               <span>${ct.produit||''} · ${ct.compagnie||''}</span>
-              <span style="font-weight:700;color:var(--c-alerte-texte)">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}/an</span>
+              <span style="font-weight: 600;color:var(--c-alerte-texte)">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}/an</span>
             </div>`;
           }).join('')}
         </div>` : ''}
@@ -809,7 +809,7 @@ function viewSuivi() {
     <div id="su-tables"></div>
 
     <div style="margin-top:28px">
-      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px">📝 Demandes d'offre enregistrées</div>
+      <div style="font-size:13px;font-weight: 600;color:var(--text);margin-bottom:10px">📝 Demandes d'offre enregistrées</div>
       <div id="su-demandes-offre" class="table-empty">Chargement...</div>
     </div>`;
 }
@@ -828,9 +828,9 @@ async function renderDemandesOffreSuivi() {
   }
   zone.innerHTML = `<div class="table-wrap">${demandes.map(d => `
     <div class="table-row" style="grid-template-columns:1fr 150px 130px;cursor:pointer" onclick="demandeOffreEnEditionId='${d.id}';navigate('nouvelle-demande-offre')">
-      <div style="font-weight:700;font-size:13px;color:var(--text)">${nomPour(d)}${d.opportunite_id ? ' <span style="color:var(--text-muted);font-weight:400">🎯 liée à une opp.</span>' : ''}</div>
+      <div style="font-weight: 600;font-size:13px;color:var(--text)">${nomPour(d)}${d.opportunite_id ? ' <span style="color:var(--text-muted);font-weight:400">🎯 liée à une opp.</span>' : ''}</div>
       <div style="font-size:12px;color:var(--text-muted)">${fmtDate(d.created_at)}</div>
-      <div><button onclick="event.stopPropagation();demandeOffreEnEditionId='${d.id}';navigate('nouvelle-demande-offre')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 12px;font-size:11.5px;font-weight:700;cursor:pointer">↺ Reprendre / générer l’email</button></div>
+      <div><button onclick="event.stopPropagation();demandeOffreEnEditionId='${d.id}';navigate('nouvelle-demande-offre')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 12px;font-size:11.5px;font-weight: 500;cursor:pointer">↺ Reprendre / générer l’email</button></div>
     </div>`).join('')}</div>`;
 }
 
@@ -877,20 +877,20 @@ function renderSuiviTables() {
     if (!list.length) return `<div class="table-empty">${emptyMsg}</div>`;
     return `<div class="table-wrap"><div class="table-header" style="grid-template-columns:${colsActuelles}"><div>Produit</div><div>Client</div><div>Compagnie</div><div>Échéance</div><div>Prime/an</div><div>Statut</div>${avecReporter ? '<div></div>' : ''}</div>
       ${list.map(ct => `<div class="table-row" style="grid-template-columns:${colsActuelles};cursor:pointer" onclick="showDetailContrat('${ct.id}')">
-        <div><div style="font-weight:700;font-size:13px;color:var(--text)">${ct.produit}</div><div style="font-size:11px;color:var(--text-muted)">${ct.numero_police || ''}</div></div>
+        <div><div style="font-weight: 600;font-size:13px;color:var(--text)">${ct.produit}</div><div style="font-size:11px;color:var(--text-muted)">${ct.numero_police || ''}</div></div>
         <div style="font-size:13px;color:var(--text)">${nomClient(ct)}</div>
         <div style="font-size:13px;color:var(--text)">${typeof compagnieAvecPicto === 'function' ? compagnieAvecPicto(ct.compagnie) : ct.compagnie}</div>
         <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ct.date_echeance)}</div>
-        <div style="font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}</div>
+        <div style="font-weight: 600;color:var(--c-alerte-texte)">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}</div>
         <div>${badge(ct.statut, ct.statut === 'actif' ? '#4ade80' : ct.statut === 'renouveler' ? '#f59e0b' : '#f87171')}${ct.commissionne === false ? ' ' + badge('Non commissionné', '#64748b') : ''}</div>
-        ${avecReporter ? `<div><button type="button" onclick="event.stopPropagation();reporterRenouvellementContrat('${ct.id}')" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">↻ Reporter d'un an</button></div>` : ''}
+        ${avecReporter ? `<div><button type="button" onclick="event.stopPropagation();reporterRenouvellementContrat('${ct.id}')" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:7px;padding:5px 10px;font-size:11px;font-weight: 500;cursor:pointer;white-space:nowrap">↻ Reporter d'un an</button></div>` : ''}
       </div>`).join('')}</div>`;
   }
 
   document.getElementById('su-tables').innerHTML = `
-    <div style="font-size:11px;font-weight:700;color:var(--c-danger-texte);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">⚠ À renouveler (${aRenouveler.length})</div>
+    <div style="font-size:11px;font-weight: 500;color:var(--c-danger-texte);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">⚠ À renouveler (${aRenouveler.length})</div>
     ${table(aRenouveler, 'Aucun contrat à renouveler.', true)}
-    <div style="font-size:11px;font-weight:700;color:var(--c-alerte-texte);text-transform:uppercase;letter-spacing:1px;margin:24px 0 10px">⏳ Échéance dans moins de 60 jours (${echeanceProche.length})</div>
+    <div style="font-size:11px;font-weight: 500;color:var(--c-alerte-texte);text-transform:uppercase;letter-spacing:1px;margin:24px 0 10px">⏳ Échéance dans moins de 60 jours (${echeanceProche.length})</div>
     ${table(echeanceProche, 'Aucune échéance proche.')}`;
 }
 
@@ -986,12 +986,12 @@ function viewRappels() {
     if (r.piece_jointe_nom) details.push(`📎 ${r.piece_jointe_nom}`);
     return `<div class="rappel-item" style="cursor:pointer;align-items:center" onclick="showRappel('${r.id}')">
         <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:60px;text-align:center;flex-shrink:0">
-          <div style="font-size:14px;font-weight:800;color:${enRetardItem ? '#f87171' : 'var(--text)'}">${r.date_echeance ? fmtDate(r.date_echeance) : '—'}</div>
+          <div style="font-size:14px;font-weight: 600;color:${enRetardItem ? '#f87171' : 'var(--text)'}">${r.date_echeance ? fmtDate(r.date_echeance) : '—'}</div>
           <div style="font-size:8px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;margin-top:1px">Échéance</div>
         </div>
         <div class="urgence-dot" style="background:${uc(r.urgence||'basse')}"></div>
         <div style="flex:1">
-          <div style="font-size:13px;font-weight:700;color:var(--text)">${r.cree_par ? PICTO_CREE_EQUIPE + ' ' : ''}${r.nature === 'tache' ? '📋' : (r.tache_parent_id ? '🔗🔔' : '🔔')} ${r.titre}</div>
+          <div style="font-size:13px;font-weight: 600;color:var(--text)">${r.cree_par ? PICTO_CREE_EQUIPE + ' ' : ''}${r.nature === 'tache' ? '📋' : (r.tache_parent_id ? '🔗🔔' : '🔔')} ${r.titre}</div>
           <div style="font-size:11px;color:var(--text-muted)">${details.join(' · ')}</div>
           ${r.notes ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:3px;font-style:italic">${r.notes.split('[')[0].substring(0,120)}${r.notes.length>120?'...':''}</div>` : ''}
         </div>
@@ -1004,7 +1004,7 @@ function viewRappels() {
   const renderGroupes = () => groups.map(g => {
     if (!g.items.length) return '';
     return `<div style="margin-bottom:20px">
-      <div style="font-size:11px;font-weight:700;color:${g.color};text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">${g.label} (${g.items.length})</div>
+      <div style="font-size:11px;font-weight: 500;color:${g.color};text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">${g.label} (${g.items.length})</div>
       ${g.items.map(renderItem).join('')}
     </div>`;
   }).join('');
@@ -1032,14 +1032,14 @@ function viewRappels() {
   else if (filtreRappelsActuel === 'mois') corps = renderListeSimple(ceMois, 'Aucune échéance ce mois-ci.');
   else if (filtreRappelsActuel === 'fermes') corps = fermesHtml;
 
-  const filtreBtn = (id, label, count, couleur) => `<button onclick="filtrerVueRappels('${id}')" style="flex:1;min-width:110px;background:${filtreRappelsActuel===id?couleur:'var(--surface-alt)'};color:${filtreRappelsActuel===id?'#0a0e1a':'var(--text)'};border:1px solid ${filtreRappelsActuel===id?couleur:'var(--border)'};border-radius:9px;padding:12px 14px;cursor:pointer;font-weight:800;text-align:left;transition:all .15s">
+  const filtreBtn = (id, label, count, couleur) => `<button onclick="filtrerVueRappels('${id}')" style="flex:1;min-width:110px;background:${filtreRappelsActuel===id?couleur:'var(--surface-alt)'};color:${filtreRappelsActuel===id?'#0a0e1a':'var(--text)'};border:1px solid ${filtreRappelsActuel===id?couleur:'var(--border)'};border-radius:9px;padding:12px 14px;cursor:pointer;font-weight: 600;text-align:left;transition:all .15s">
     <div style="font-size:20px;line-height:1">${count}</div>
     <div style="font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;opacity:.85;margin-top:2px">${label}</div>
   </button>`;
 
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Tâches & Rappels</h2>
+      <h2 style="margin:0;font-size:18px;font-weight: 600;color:var(--text)">Tâches & Rappels</h2>
       <button class="btn-add" onclick="navigate('nouveau-rappel')">+ Nouvelle tâche / rappel</button>
     </div>
     <div style="display:flex;gap:10px;margin-bottom:22px;flex-wrap:wrap">
@@ -1069,11 +1069,11 @@ async function viewRendezVous() {
   const renderItem = r => `
     <div class="rappel-item" style="align-items:center">
       <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:60px;text-align:center;flex-shrink:0">
-        <div style="font-size:14px;font-weight:800;color:var(--text)">${fmtDate(r.date_heure)}</div>
-        <div style="font-size:12px;font-weight:700;color:var(--accent)">${heureRdv(r.date_heure)}</div>
+        <div style="font-size:14px;font-weight: 600;color:var(--text)">${fmtDate(r.date_heure)}</div>
+        <div style="font-size:12px;font-weight: 500;color:var(--accent)">${heureRdv(r.date_heure)}</div>
       </div>
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:700;color:var(--text)">${r.cree_par === 'client' ? '🌐 ' : ''}${r.client_id ? `<span onclick="showClient('${r.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${nomRdv(r)}</span>` : nomRdv(r)}</div>
+        <div style="font-size:13px;font-weight: 600;color:var(--text)">${r.cree_par === 'client' ? '🌐 ' : ''}${r.client_id ? `<span onclick="showClient('${r.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${nomRdv(r)}</span>` : nomRdv(r)}</div>
         <div style="font-size:11px;color:var(--text-muted)">${[r.type, r.duree_min ? `${r.duree_min} min` : '', r.prospect_email, r.prospect_tel].filter(Boolean).join(' · ')}</div>
         ${r.notes ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:3px;font-style:italic">${r.notes}</div>` : ''}
       </div>
@@ -1083,19 +1083,19 @@ async function viewRendezVous() {
 
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Rendez-vous</h2>
+      <h2 style="margin:0;font-size:18px;font-weight: 600;color:var(--text)">Rendez-vous</h2>
       <button class="btn-add" onclick="ouvrirModaleNouveauRdv()">+ Nouveau RDV</button>
     </div>
     <div style="margin-bottom:22px">
-      <div style="font-size:11px;font-weight:700;color:var(--c-succes-texte);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">À venir (${aVenir.length})</div>
+      <div style="font-size:11px;font-weight: 500;color:var(--c-succes-texte);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">À venir (${aVenir.length})</div>
       ${aVenir.length ? aVenir.map(renderItem).join('') : '<div class="table-empty">Aucun rendez-vous à venir.</div>'}
     </div>
     ${passes.length ? `<div style="margin-bottom:22px">
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Passés (${passes.length})</div>
+      <div style="font-size:11px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Passés (${passes.length})</div>
       ${passes.slice(0, 20).map(renderItem).join('')}
     </div>` : ''}
     ${annules.length ? `<div>
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Annulés (${annules.length})</div>
+      <div style="font-size:11px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Annulés (${annules.length})</div>
       ${annules.slice(0, 10).map(r => `<div class="rappel-item" style="opacity:.6"><div style="flex:1"><div style="font-size:13px;color:var(--text)">${fmtDate(r.date_heure)} ${heureRdv(r.date_heure)} — ${nomRdv(r)}</div></div></div>`).join('')}
     </div>` : ''}`;
 }
@@ -1117,7 +1117,7 @@ function ouvrirModaleNouveauRdv(clientIdPrefill) {
   const nomClientPrefille = clientPrefille ? (estEntreprise(clientPrefille) ? clientPrefille.nom : `${clientPrefille.prenom} ${clientPrefille.nom}`) : '';
   creerModale('modal-nouveau-rdv', `
     <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:480px;width:100%">
-      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:14px">📅 Nouveau rendez-vous</div>
+      <div style="font-size:16px;font-weight: 600;color:var(--text);margin-bottom:14px">📅 Nouveau rendez-vous</div>
       <div class="form-field" style="margin-bottom:10px;position:relative">
         <label class="form-label">Client (ou laisse vide pour un prospect)</label>
         <input class="form-input" id="rdv-modal-client-recherche" placeholder="Rechercher un client..." value="${nomClientPrefille.replace(/"/g, '&quot;')}" oninput="rechercheClientRdvModal(this.value)" autocomplete="off"/>
@@ -1269,7 +1269,7 @@ function repousserRappelRapide(id, valeur) {
 function ouvrirModaleDateSpecifiqueRappel(id) {
   creerModale('modal-date-specifique-rappel', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:26px;width:100%;max-width:360px">
-      <h3 style="margin:0 0 14px;font-size:15px;font-weight:800;color:var(--text)">📅 Repousser à une date précise</h3>
+      <h3 style="margin:0 0 14px;font-size:15px;font-weight: 600;color:var(--text)">📅 Repousser à une date précise</h3>
       <input class="form-input" id="date-report-specifique-rappel" type="date"/>
       <div style="display:flex;gap:10px;margin-top:18px">
         <button class="btn-secondary" onclick="document.getElementById('modal-date-specifique-rappel').remove()">Annuler</button>
@@ -1348,7 +1348,7 @@ function viewFichePaie() {
   const debutMois = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0];
   setTimeout(() => renderFichePaieApercu(), 0);
   return `
-    <h2 style="margin:0 0 4px;font-size:18px;font-weight:800;color:var(--text)">Fiche de paie — répartition entre agents</h2>
+    <h2 style="margin:0 0 4px;font-size:18px;font-weight: 600;color:var(--text)">Fiche de paie — répartition entre agents</h2>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Les commissions <strong>reçues</strong> (argent réellement entré dans Assurex via un bordereau) sont réparties selon le taux fixe de chaque agent défini dans Paramètres → Agents. Une fois générée, une fiche de paie marque les commissions comme payées — elles ne seront plus proposées une seconde fois.</div>
 
     <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:flex-end">
@@ -1360,7 +1360,7 @@ function viewFichePaie() {
     <div id="fp-detail"></div>
 
     <div style="margin-top:28px">
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Historique des fiches de paie générées</div>
+      <div style="font-size:11px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Historique des fiches de paie générées</div>
       <div id="fp-historique"></div>
     </div>`;
 }
@@ -1429,11 +1429,11 @@ function renderFichePaieApercu() {
     const sig = allAgents.find(a => a.role === 'signataire');
     return `<div class="table-row" style="grid-template-columns:${cols}">
       <div>
-        <div style="font-size:13px;font-weight:700;color:var(--text)">${nom}</div>
+        <div style="font-size:13px;font-weight: 600;color:var(--text)">${nom}</div>
         <div style="font-size:11px;color:var(--text-muted)">${l.ca.produit||''} · ${l.ca.compagnie||''}</div>
       </div>
       <div style="font-size:12px;color:var(--text-muted)">${fmtDate(commissionDateReception(l.ca))}</div>
-      <div style="font-weight:800;color:var(--text);text-align:right">CHF ${fmtCHF(l.montant)}</div>
+      <div style="font-weight: 600;color:var(--text);text-align:right">CHF ${fmtCHF(l.montant)}</div>
       <div style="text-align:right">${sig ? `<div style="font-size:11px;color:${agentColor(sig)}">${sig.prenom}: CHF ${fmtCHF(l.pJ)}</div>` : ''}</div>
       <div style="text-align:right">${l.agent ? `<div style="font-size:11px;color:${agentColor(l.agent)}">${l.agent.prenom}: CHF ${fmtCHF(l.pA)}</div>` : `<div style="font-size:11px;color:var(--text-muted)">—</div>`}</div>
       <div style="text-align:right;font-size:10px;color:var(--text-muted)">${l.agent ? (l.agent.taux||0)+'%' : '0%'}</div>
@@ -1462,7 +1462,7 @@ function renderHistoriqueFichesPaie() {
       ${fiches.map(f => `<div class="table-row" style="grid-template-columns:140px 140px 120px 1fr">
         <div style="font-size:12px;color:var(--text)">${fmtDate(f.date_debut)}</div>
         <div style="font-size:12px;color:var(--text)">${fmtDate(f.date_fin)}</div>
-        <div style="font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF(Math.round(f.total_montant||0))}</div>
+        <div style="font-weight: 600;color:var(--c-alerte-texte)">CHF ${fmtCHF(Math.round(f.total_montant||0))}</div>
         <div style="font-size:11px;color:var(--text-muted)">${fmtDate(f.created_at)}</div>
       </div>`).join('')}
     </div>` : '<div class="table-empty">Aucune fiche de paie générée pour l\'instant.</div>';
@@ -1536,11 +1536,11 @@ function imprimerBordereau(bordereauId) {
       .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
       .box{border:1px solid #ddd;border-radius:8px;padding:10px 14px}
       .box .l{font-size:9px;text-transform:uppercase;color:#888;margin-bottom:3px}
-      .box .v{font-size:16px;font-weight:800}
+      .box .v{font-size:16px;font-weight: 600}
       table{width:100%;border-collapse:collapse;margin-top:10px;font-size:12px}
       th,td{padding:8px;border-bottom:1px solid #ddd;text-align:left}
       th{background:#0f2244;color:#fff;text-transform:uppercase;font-size:10px}
-      .total{font-size:15px;font-weight:800;margin-top:16px;text-align:right}
+      .total{font-size:15px;font-weight: 600;margin-top:16px;text-align:right}
       @media print{ button{display:none} }
     </style></head><body>
     <script>
@@ -1587,7 +1587,7 @@ function imprimerFichePaie(ficheId, lignesCommissions, debut, fin, totalMontant)
       h1{font-size:18px} table{width:100%;border-collapse:collapse;margin-top:16px;font-size:12px}
       th,td{padding:8px;border-bottom:1px solid #ddd;text-align:left}
       th{background:#0f2244;color:#fff;text-transform:uppercase;font-size:10px}
-      .total{font-size:15px;font-weight:800;margin-top:16px;text-align:right}
+      .total{font-size:15px;font-weight: 600;margin-top:16px;text-align:right}
       @media print{ button{display:none} }
     </style></head><body>
     <script>
@@ -1610,7 +1610,7 @@ function imprimerFichePaie(ficheId, lignesCommissions, debut, fin, totalMontant)
 function viewImportDecompte() {
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">📥 Importer un décompte compagnie (PDF ou Excel)</h2>
+      <h2 style="margin:0;font-size:18px;font-weight: 600;color:var(--text)">📥 Importer un décompte compagnie (PDF ou Excel)</h2>
     </div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Lit directement le fichier envoyé par une compagnie — Excel norme IG B2B (testé avec La Vaudoise) ou PDF lu automatiquement par l'IA (pour les compagnies comme AXA qui n'envoient que du PDF). Réconcilie automatiquement les contrats par n° de police, propose un client probable par le nom quand le contrat n'est pas trouvé, reprend directement le taux et le montant déjà calculés par la compagnie dans le fichier, puis crée en un clic le bordereau numéroté (BRD 001, 002…) avec les commissions déjà rapprochées dessus.</div>
 
@@ -1688,9 +1688,9 @@ async function impChercherDecomptesOutlook() {
     zone.innerHTML = trouves.length ? `<div style="display:flex;flex-direction:column;gap:6px">${trouves.map((t, i) => `
       <div style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:10px;background:var(--surface)${t.importe ? ';opacity:.6' : ''}">
         <span style="font-size:18px">${/\.xml$/i.test(t.nom) ? '🧾' : /\.pdf$/i.test(t.nom) ? '📄' : '📊'}</span>
-        <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${String(t.nom).replace(/</g, '&lt;')}</div>
+        <div style="flex:1;min-width:0"><div style="font-size:13px;font-weight: 600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${String(t.nom).replace(/</g, '&lt;')}</div>
           <div style="font-size:11px;color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${fmtDate(t.date)} · ${String(t.de).replace(/</g, '&lt;')} · ${String(t.sujet).replace(/</g, '&lt;')}</div></div>
-        ${t.importe ? '<span style="font-size:11px;color:var(--c-succes-texte);font-weight:700">✓ déjà importé</span>' : ''}
+        ${t.importe ? '<span style="font-size:11px;color:var(--c-succes-texte);font-weight: 600">✓ déjà importé</span>' : ''}
         <button class="btn-secondary" style="padding:5px 12px;font-size:12px" onclick="impOuvrirPieceOutlook(${i})">${t.importe ? 'Revoir' : 'Importer'}</button>
       </div>`).join('')}</div>` : '<div class="dbx-vide-petit">Aucun décompte trouvé dans les 90 derniers jours.</div>';
   } catch (e) {
@@ -1771,9 +1771,9 @@ function htmlContratImport(l) {
       ${cands.map(c => `<option value="${c.id}" ${c.id === l.contratId ? 'selected' : ''}>${String(c.produit).replace(/</g, '&lt;')}${c.statut && c.statut !== 'actif' ? ` (${c.statut})` : ''}</option>`).join('')}
     </select>`
     : `<span style="color:var(--text-muted)">${String(l.contratProduit || 'Contrat').replace(/</g, '&lt;')}</span>`;
-  const doublon = l.doublon ? `<div title="${String(l.doublon.detail).replace(/"/g, '&quot;')}" style="margin-top:4px;font-size:11px;font-weight:600;color:var(--c-danger-texte);white-space:normal;max-width:240px">⛔ ${l.doublon.certain ? 'Déjà importé' : 'Doublon probable'} — ${l.doublon.court}<span style="display:block;font-weight:400;color:var(--text-muted)">ligne décochée ; coche-la si c’est bien un nouveau versement</span></div>` : '';
+  const doublon = l.doublon ? `<div title="${String(l.doublon.detail).replace(/"/g, '&quot;')}" style="margin-top:4px;font-size:11px;font-weight: 500;color:var(--c-danger-texte);white-space:normal;max-width:240px">⛔ ${l.doublon.certain ? 'Déjà importé' : 'Doublon probable'} — ${l.doublon.court}<span style="display:block;font-weight:400;color:var(--text-muted)">ligne décochée ; coche-la si c’est bien un nouveau versement</span></div>` : '';
   const attente = l.attenteId ? `<label style="display:flex;align-items:center;gap:5px;margin-top:4px;font-size:11px;color:var(--text-muted);cursor:pointer;white-space:normal;max-width:240px"><input type="checkbox" ${l.imputer ? 'checked' : ''} onchange="_decompteLignes[${l.idx}].imputer=this.checked"/> Déduire de la commission en attente (reste CHF ${fmtCHF2(l.attenteReste)})</label>` : '';
-  const parNom = l.parNom ? `<div title="Aucun contrat avec ce n° de police : rattaché d'après le nom de l'assuré et la compagnie" style="margin-top:4px;font-size:11px;font-weight:600;color:#D97706;white-space:normal;max-width:240px">🔎 Rapproché par le nom — vérifie, et complète le n° de police du contrat</div>` : '';
+  const parNom = l.parNom ? `<div title="Aucun contrat avec ce n° de police : rattaché d'après le nom de l'assuré et la compagnie" style="margin-top:4px;font-size:11px;font-weight: 500;color:#D97706;white-space:normal;max-width:240px">🔎 Rapproché par le nom — vérifie, et complète le n° de police du contrat</div>` : '';
   return contrat + parNom + doublon + attente;
 }
 
@@ -2424,7 +2424,7 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
             <td style="padding:5px 8px;white-space:nowrap">${l.nomVaudoise}</td>
             <td style="padding:5px 8px;white-space:nowrap;color:var(--text-muted)">${l.npa || '—'}</td>
             <td style="padding:5px 8px;white-space:nowrap;color:var(--text-muted)">${l.localite || '—'}</td>
-            <td style="padding:5px 8px;white-space:nowrap">${l.clientNomCRM ? l.clientNomCRM : (l.clientSuggereNom ? `<span style="color:var(--c-alerte-texte)">≈ ${l.clientSuggereNom}</span>` : '<span style="color:var(--c-danger-texte)">Non trouvé</span>')}${!l.clientNomCRM && l.clientSuggereNom ? `<div style="font-size:9.5px;color:var(--text-muted);white-space:normal;max-width:170px;margin-bottom:4px">nom trouvé, pas de contrat avec cette police — vérifie avant de créer</div><div style="display:flex;gap:6px"><button type="button" onclick="document.getElementById('modal-detail-contrat')?.remove(); showClient('${l.clientId}')" style="background:var(--surface-alt);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:10.5px;cursor:pointer;font-weight:700;white-space:nowrap">👁 Voir la fiche</button><button type="button" id="imp-creer-${l.idx}" onclick="creerContratDepuisImport(${l.idx})" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:3px 8px;font-size:10.5px;cursor:pointer;font-weight:700;white-space:nowrap">📝 Créer</button></div>` : ''}</td>
+            <td style="padding:5px 8px;white-space:nowrap">${l.clientNomCRM ? l.clientNomCRM : (l.clientSuggereNom ? `<span style="color:var(--c-alerte-texte)">≈ ${l.clientSuggereNom}</span>` : '<span style="color:var(--c-danger-texte)">Non trouvé</span>')}${!l.clientNomCRM && l.clientSuggereNom ? `<div style="font-size:9.5px;color:var(--text-muted);white-space:normal;max-width:170px;margin-bottom:4px">nom trouvé, pas de contrat avec cette police — vérifie avant de créer</div><div style="display:flex;gap:6px"><button type="button" onclick="document.getElementById('modal-detail-contrat')?.remove(); showClient('${l.clientId}')" style="background:var(--surface-alt);color:var(--text-muted);border:1px solid var(--border);border-radius:6px;padding:3px 8px;font-size:10.5px;cursor:pointer;font-weight: 600;white-space:nowrap">👁 Voir la fiche</button><button type="button" id="imp-creer-${l.idx}" onclick="creerContratDepuisImport(${l.idx})" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:3px 8px;font-size:10.5px;cursor:pointer;font-weight: 600;white-space:nowrap">📝 Créer</button></div>` : ''}</td>
             <td style="padding:5px 8px;color:var(--text-muted);white-space:nowrap">${l.brancheInterne}</td>
             <td id="imp-contrat-${l.idx}" style="padding:5px 8px;white-space:nowrap">${htmlContratImport(l)}</td>
             <td style="padding:5px 8px;text-align:right;white-space:nowrap;color:var(--text-muted)">CHF ${fmtCHF(l.commissionProduction)}</td>
@@ -2432,8 +2432,8 @@ function renderImportDecompte(nomAssureur, commissionTotaleAnnoncee) {
             <td style="padding:5px 8px;text-align:right;white-space:nowrap"><input type="number" step="0.01" value="${l.montant}" class="imp-montant-input" data-idx="${l.idx}" style="width:75px;background:var(--surface-alt);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 5px;text-align:right" onchange="_decompteLignes[${l.idx}].montant = nombreCH(this.value)||0; recalculerTotalImport(); recalculerEcartBordereauImport();"/></td>
           </tr>`).join('')}</tbody>
         <tfoot><tr style="border-top:2px solid var(--border)">
-          <td colspan="12" style="padding:8px;text-align:right;font-weight:700;color:var(--text)">Total des lignes ci-dessus</td>
-          <td id="imp-total-cell" style="padding:8px;text-align:right;font-weight:800;color:var(--c-succes-texte);white-space:nowrap">CHF ${fmtCHF2(_decompteLignes.reduce((s,l)=>s+l.montant,0))}</td>
+          <td colspan="12" style="padding:8px;text-align:right;font-weight: 600;color:var(--text)">Total des lignes ci-dessus</td>
+          <td id="imp-total-cell" style="padding:8px;text-align:right;font-weight: 600;color:var(--c-succes-texte);white-space:nowrap">CHF ${fmtCHF2(_decompteLignes.reduce((s,l)=>s+l.montant,0))}</td>
         </tr></tfoot>
       </table>
       </div>
@@ -2485,7 +2485,7 @@ function renderBlocBordereauImportDecompte() {
   const numeroApercu = genererNumeroBordereau(normaliserCompagnie(_decompteNomAssureur || ''), MOIS_LISTE_IB[per.mois], per.annee, allBordereaux);
   const retenueCaution = -Math.round(_decompteLignes.filter(l => l.estCaution).reduce((s, l) => s + l.montant, 0) * 100) / 100;
   return `
-    <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">Numéro attribué automatiquement à la création — actuellement <span id="imp-bd-numero-apercu" style="font-family:monospace;font-weight:700;color:var(--accent)">${numeroApercu}</span>. Le mois est celui de la <strong>période du décompte</strong> (lu dans le nom du fichier), pas celui de l'import — vérifie-le.</div>
+    <div style="font-size:11px;color:var(--text-muted);margin-bottom:12px">Numéro attribué automatiquement à la création — actuellement <span id="imp-bd-numero-apercu" style="font-family:monospace;font-weight: 600;color:var(--accent)">${numeroApercu}</span>. Le mois est celui de la <strong>période du décompte</strong> (lu dans le nom du fichier), pas celui de l'import — vérifie-le.</div>
     <div class="form-grid">
       <div class="form-field"><label class="form-label">Mois du décompte *</label>
         <select class="form-select" id="imp-bd-mois" onchange="majApercuNumeroBordereauImport()">

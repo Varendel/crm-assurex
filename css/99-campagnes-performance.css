@@ -75,7 +75,7 @@
 .cpf-table { width: 100%; border-collapse: collapse; font-size: var(--t-m, 13.5px); }
 .cpf-table th { text-align: left; border-bottom: 1px solid var(--border); padding: 0; }
 .cpf-table th > span {
-  display: block; padding: 8px 10px; font-size: 10.5px; text-transform: uppercase;
+  display: block; padding: 8px 10px; font-size: var(--t-xs); text-transform: uppercase;
   letter-spacing: .07em; color: var(--text-muted); font-weight: 600; white-space: nowrap;
 }
 .cpf-table th.d > span { text-align: right; }

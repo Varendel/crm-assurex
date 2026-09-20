@@ -32,9 +32,9 @@ html { font-synthesis-weight: none; }
 /* Les graisses écrites en ligne dans le JS. 700 devenait un 600 indistinct du titre au-dessus :
    il redescend à 500, où il se lit comme une mise en avant. 800 et 900 gardent le 600 — ce sont
    des titres de section, ils sont au sommet de l'échelle. */
-[style*="font-weight:700"], [style*="font-weight: 700"] { font-weight: var(--t-relief, 500) !important; }
-[style*="font-weight:800"], [style*="font-weight: 800"],
-[style*="font-weight:900"], [style*="font-weight: 900"] { font-weight: var(--t-moyen, 600) !important; }
+[style*="font-weight: 600"], [style*="font-weight: 600"] { font-weight: var(--t-relief, 500) !important; }
+[style*="font-weight: 600"], [style*="font-weight: 600"],
+[style*="font-weight: 600"], [style*="font-weight: 600"] { font-weight: var(--t-moyen, 600) !important; }
 
 /* Les mêmes graisses écrites dans les feuilles anciennes. */
 .stat-value, .stat-label, .avatar, .badge, .kpi-value,
@@ -131,7 +131,7 @@ p, .dbx-carte-sous, .apx-note, .rexb-bandeau-texte { text-wrap: pretty; }
 
 [style*="font-size:9px"], [style*="font-size: 9px"],
 [style*="font-size:10px"], [style*="font-size: 10px"],
-[style*="font-size:10.5px"] { font-size: var(--t-xs, 11px) !important; }
+[style*="font-size: var(--t-xs)"] { font-size: var(--t-xs, 11px) !important; }
 
 /* ── 7. Ponctuation française ────────────────────────────────────────────────────────────────────
    Les guillemets d'un <q> doivent être des chevrons, pas des guillemets anglais. */

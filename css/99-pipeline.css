@@ -39,7 +39,7 @@ html:not([data-theme="clair"]) .pln-analyse { border-top-color: rgba(255, 255, 2
 }
 .pln-analyse > summary::-webkit-details-marker { display: none; }
 .pln-analyse > summary::before {
-  content: "▸"; display: inline-block; transition: transform var(--v-court, .15s); font-size: 11px;
+  content: "▸"; display: inline-block; transition: transform var(--v-court, .15s); font-size: var(--t-xs);
 }
 .pln-analyse[open] > summary::before { transform: rotate(90deg); }
 .pln-analyse > summary:hover { color: var(--text, #334155); }

@@ -218,7 +218,7 @@ const CRX_CSS_IMPRESSION = `@page{size:A4;margin:0}body{margin:0;background:#fff
 .crx-page{width:210mm;min-height:297mm;box-sizing:border-box;padding:14mm 20mm 12mm 25mm;position:relative;display:flex;flex-direction:column}
 .crx-entete{display:flex;justify-content:space-between;align-items:center;margin-bottom:14mm}.crx-entete img{height:9.5mm;width:auto}
 .crx-corps-lettre{flex:1;font-size:11pt;line-height:1.45;text-align:justify}.crx-droite{margin-left:84mm}
-.crx-adresse{margin-top:22mm;margin-bottom:20mm}.crx-refs{font-weight:700}.crx-objet{font-weight:700;margin:4mm 0 6mm}
+.crx-adresse{margin-top:22mm;margin-bottom:20mm}.crx-refs{font-weight: 600}.crx-objet{font-weight: 600;margin:4mm 0 6mm}
 .crx-corps-lettre p{margin:0 0 4mm}.crx-signature{text-align:center;margin-top:8mm}
 .crx-pied{text-align:center;font-size:7.5pt;color:#113679;line-height:1.5;border-top:1px solid #00CFFF;padding-top:3mm;margin-top:8mm}
 @media screen{body{background:#e5e7eb}.crx-page{margin:10mm auto;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.15)}}`;

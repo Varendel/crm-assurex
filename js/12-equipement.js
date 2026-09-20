@@ -93,7 +93,7 @@ function eqOppOuverte(clientId, besoinId) {
 function viewEquipement() {
   setTimeout(renderEquipement, 0);
   return `
-    <h2 style="margin:0 0 4px;font-size:18px;font-weight:800;color:var(--text)">Équipement &amp; ventes croisées</h2>
+    <h2 style="margin:0 0 4px;font-size:18px;font-weight: 600;color:var(--text)">Équipement &amp; ventes croisées</h2>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Ce que chaque client a déjà chez nous et ce qui lui manque. Les meilleures cibles sont les clients qui ont déjà un contrat : la relation existe.</div>
     <div id="eq-stats" class="stat-grid" style="margin-bottom:20px"></div>
     <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center">
@@ -152,7 +152,7 @@ function renderEquipement() {
       return `<button type="button" onclick="eqFiltres.manque=eqFiltres.manque==='${b.id}'?'':'${b.id}';eqFiltres.vue='croisees';renderEquipement()"
         style="text-align:left;background:${actif ? 'var(--accent-dim)' : 'var(--surface)'};border:1px solid ${actif ? 'var(--accent-border)' : 'var(--border)'};border-radius:12px;padding:12px 14px;cursor:pointer;color:var(--text)">
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:6px">${b.label}</div>
-        <div style="font-size:20px;font-weight:800">${pct} %</div>
+        <div style="font-size:20px;font-weight: 600">${pct} %</div>
         <div style="height:6px;border-radius:3px;background:var(--surface-alt);margin:6px 0"><div style="height:6px;border-radius:3px;width:${pct}%;background:#4ade80"></div></div>
         <div style="font-size:11.5px;color:${manquent ? '#f59e0b' : 'var(--text-muted)'}">${manquent} client${manquent > 1 ? 's' : ''} sans</div>
       </button>`;
@@ -186,11 +186,11 @@ function renderEquipementListe() {
         const c = a.client;
         const passes = allContrats.filter(ct => ct.client_id === c.id).length;
         return `<div class="table-row" style="grid-template-columns:${cols};align-items:center">
-          <a href="?client=${c.id}" onclick="return irVersClient(event, '${c.id}')" style="font-weight:700;font-size:13px;color:var(--text);text-decoration:none">${eqEsc(estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`)}</a>
+          <a href="?client=${c.id}" onclick="return irVersClient(event, '${c.id}')" style="font-weight: 600;font-size:13px;color:var(--text);text-decoration:none">${eqEsc(estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`)}</a>
           <div style="font-size:11.5px;color:var(--text-muted)">${eqEsc(c.email || '—')}<br>${eqEsc(c.mobile || c.tel || '')}</div>
           <div>${badge(c.statut || 'actif', c.statut === 'prospect' ? '#a78bfa' : '#64748b')}</div>
           <div style="font-size:12px;color:var(--text-muted)">${passes ? `${passes} contrat(s) résilié(s) ou annulé(s)` : 'Aucun contrat enregistré'}</div>
-          <div style="text-align:right"><button type="button" onclick="eqCreerTacheContact('${c.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">+ Tâche de contact</button></div>
+          <div style="text-align:right"><button type="button" onclick="eqCreerTacheContact('${c.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 10px;font-size:11px;font-weight: 500;cursor:pointer">+ Tâche de contact</button></div>
         </div>`;
       }).join('')}
     </div>`;
@@ -205,9 +205,9 @@ function renderEquipementListe() {
       const c = a.client;
       const age = eqAge(c);
       return `<div class="table-row" style="grid-template-columns:${cols};align-items:center">
-        <div><a href="?client=${c.id}" onclick="return irVersClient(event, '${c.id}')" style="font-weight:700;font-size:13px;color:var(--text);text-decoration:none">${eqEsc(estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`)}</a>
+        <div><a href="?client=${c.id}" onclick="return irVersClient(event, '${c.id}')" style="font-weight: 600;font-size:13px;color:var(--text);text-decoration:none">${eqEsc(estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`)}</a>
           <div style="font-size:11px;color:var(--text-muted)">${a.contrats.length} contrat${a.contrats.length > 1 ? 's' : ''}${age !== null && !estEntreprise(c) ? ` · ${age} ans` : ''}</div></div>
-        <div style="font-size:13px;font-weight:800;color:var(--text)">${a.couverts}/${a.besoins.length}</div>
+        <div style="font-size:13px;font-weight: 600;color:var(--text)">${a.couverts}/${a.besoins.length}</div>
         <div style="display:flex;gap:6px;flex-wrap:wrap">
           ${a.besoins.map(b => {
             const opp = eqOppOuverte(c.id, b.id);
@@ -221,7 +221,7 @@ function renderEquipementListe() {
             return `<span style="display:inline-flex"><button type="button" onclick="eqCreerOpportunite('${c.id}', '${b.id}')" title="Créer une opportunité : ${eqEsc(b.label)}" style="font-size:11px;padding:3px 8px;border-radius:999px 0 0 999px;background:transparent;color:var(--c-alerte-texte);border:1px dashed color-mix(in srgb, var(--c-alerte) 60%, transparent);cursor:pointer">+ ${b.court}</button><button type="button" onclick="eqMarquerAilleurs('${c.id}', '${b.id}')" title="Déjà assuré ailleurs : saisir la police externe (compagnie, échéance)" style="font-size:11px;padding:3px 7px;border-radius:0 999px 999px 0;background:transparent;color:var(--text-muted);border:1px dashed var(--border);border-left:none;cursor:pointer">ailleurs</button></span>`;
           }).join('')}
         </div>
-        <div style="font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF(Math.round(a.prime))}</div>
+        <div style="font-weight: 600;color:var(--c-alerte-texte)">CHF ${fmtCHF(Math.round(a.prime))}</div>
       </div>`;
     }).join('')}
   </div>`;
@@ -246,7 +246,7 @@ function eqMarquerAilleurs(clientId, besoinId) {
   const cies = [...new Set((allContrats || []).map(ct => ct.compagnie).filter(Boolean))].sort();
   creerModale('modal-eq-ailleurs', `
     <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:420px;width:100%">
-      <div style="font-size:16px;font-weight:800;margin-bottom:4px">${eqEsc(besoin.label)} — assuré ailleurs</div>
+      <div style="font-size:16px;font-weight: 600;margin-bottom:4px">${eqEsc(besoin.label)} — assuré ailleurs</div>
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">${eqEsc(estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`)} · la police est enregistrée comme contrat <strong>non commissionné</strong>, pour préparer un transfert à l'échéance.</div>
       <div class="form-field"><label class="form-label">Compagnie actuelle</label><input class="form-input" id="eqa-cie" list="eqa-cies" placeholder="ex. Helsana, AXA…"/><datalist id="eqa-cies">${cies.map(n => `<option value="${eqEsc(n)}">`).join('')}</datalist></div>
       <div class="form-field" style="margin-top:10px"><label class="form-label">Échéance (si connue)</label><input class="form-input" id="eqa-ech" type="date"/></div>

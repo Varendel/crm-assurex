@@ -18,8 +18,8 @@ function blocVersementsPartiels(c) {
   return `
     <div style="background:var(--surface-alt);border-radius:10px;padding:12px 14px;margin-bottom:14px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
-        <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Versements partiels ${tranches.length > 0 ? `(${tranches.length})` : ''}</div>
-        ${tranches.length > 0 ? `<div style="font-size:11.5px;font-weight:700;color:${solde ? '#4ade80' : '#f59e0b'}">Reçu CHF ${fmtCHF(recu)} / ${cible.toLocaleString()} — ${solde ? 'soldé ✓' : `reste CHF ${fmtCHF(reste)}`}</div>` : ''}
+        <div style="font-size:10px;font-weight: 500;color:var(--text-muted);text-transform:uppercase">Versements partiels ${tranches.length > 0 ? `(${tranches.length})` : ''}</div>
+        ${tranches.length > 0 ? `<div style="font-size:11.5px;font-weight: 500;color:${solde ? '#4ade80' : '#f59e0b'}">Reçu CHF ${fmtCHF(recu)} / ${cible.toLocaleString()} — ${solde ? 'soldé ✓' : `reste CHF ${fmtCHF(reste)}`}</div>` : ''}
       </div>
       ${tranches.length > 0 ? tranches.map(t => `
         <div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;font-size:11.5px;color:var(--text)">
@@ -30,7 +30,7 @@ function blocVersementsPartiels(c) {
         <input class="form-input" id="vp-montant" type="number" step="0.01" placeholder="Montant CHF" style="max-width:130px"/>
         <input class="form-input" id="vp-date" type="date" value="${new Date().toISOString().split('T')[0]}" style="max-width:150px"/>
         <input class="form-input" id="vp-note" placeholder="Note (optionnel)" style="flex:1"/>
-        <button type="button" onclick="ajouterVersementCommission('${c.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:0 14px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">+ Ajouter</button>
+        <button type="button" onclick="ajouterVersementCommission('${c.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:0 14px;font-size:12px;font-weight: 500;cursor:pointer;white-space:nowrap">+ Ajouter</button>
       </div>
     </div>`;
 }
@@ -68,20 +68,20 @@ function showModalEditCommission(commId) {
   const nomResolu = cl ? (estEntreprise(cl) ? cl.nom : `${cl.prenom || ''} ${cl.nom || ''}`.trim()) : '';
   creerModale('modal-edit-commission', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:500px">
-      <h3 style="margin:0 0 6px;font-size:16px;font-weight:800;color:var(--text)">Commission — ${c.client_nom || nomResolu || '—'}</h3>
+      <h3 style="margin:0 0 6px;font-size:16px;font-weight: 600;color:var(--text)">Commission — ${c.client_nom || nomResolu || '—'}</h3>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">${b ? `Rapprochée du bordereau ${b.numero || ''}` : "Pas encore rapprochée d'un bordereau"}</div>
 
       ${cl ? `<div style="background:var(--surface-alt);border-radius:10px;padding:12px 14px;margin-bottom:14px">
         <div style="display:flex;justify-content:space-between;align-items:center">
-          <div style="font-size:12.5px;color:var(--text);font-weight:700">👤 ${nomResolu || '—'}</div>
-          <button type="button" onclick="document.getElementById('modal-edit-commission').remove(); showClient('${cl.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:3px 10px;font-size:10.5px;cursor:pointer;font-weight:700">Voir la fiche client →</button>
+          <div style="font-size:12.5px;color:var(--text);font-weight: 600">👤 ${nomResolu || '—'}</div>
+          <button type="button" onclick="document.getElementById('modal-edit-commission').remove(); showClient('${cl.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:3px 10px;font-size:10.5px;cursor:pointer;font-weight: 600">Voir la fiche client →</button>
         </div>
       </div>` : `<div style="background:color-mix(in srgb, var(--c-danger) 8%, transparent);border:1px solid color-mix(in srgb, var(--c-danger) 20%, transparent);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:11.5px;color:var(--c-danger-texte)">⚠ Aucun client identifiable pour cette commission (ni contrat lié, ni client_id) — corrige le champ "Client" ci-dessous à la main si tu sais de qui il s'agit.</div>`}
 
       ${ct ? `<div style="background:var(--surface-alt);border-radius:10px;padding:12px 14px;margin-bottom:14px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Contrat lié</div>
-          <button type="button" onclick="document.getElementById('modal-edit-commission').remove(); showDetailContrat('${ct.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:3px 10px;font-size:10.5px;cursor:pointer;font-weight:700">Voir le contrat →</button>
+          <div style="font-size:10px;font-weight: 500;color:var(--text-muted);text-transform:uppercase">Contrat lié</div>
+          <button type="button" onclick="document.getElementById('modal-edit-commission').remove(); showDetailContrat('${ct.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:3px 10px;font-size:10.5px;cursor:pointer;font-weight: 500">Voir le contrat →</button>
         </div>
         <div style="font-size:12.5px;color:var(--text)">${ct.produit} · ${ct.compagnie}</div>
         <div style="font-size:11px;color:var(--text-muted)">Prime CHF ${fmtCHF(Number(ct.prime_annuelle||0))}/an${ct.date_debut ? ' · Signé le ' + fmtDate(ct.date_debut) : ''}${ct.numero_police ? ' · № ' + ct.numero_police : ''}</div>
@@ -119,7 +119,7 @@ function showModalEditCommission(commId) {
       ${blocVersementsPartiels(c)}
 
       <div style="display:flex;gap:10px;margin-top:20px">
-        <button onclick="deleteCommission('${commId}')" style="background:color-mix(in srgb, var(--c-danger) 12%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>
+        <button onclick="deleteCommission('${commId}')" style="background:color-mix(in srgb, var(--c-danger) 12%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:9px;padding:10px 16px;font-weight: 600;font-size:13px;cursor:pointer">🗑️ Supprimer</button>
         <button class="btn-secondary" onclick="document.getElementById('modal-edit-commission').remove()">Annuler</button>
         <button class="btn-save" onclick="saveEditCommission('${commId}')">✓ Enregistrer</button>
       </div>
@@ -505,10 +505,10 @@ function viewAgenda() {
 
   if (!isConnected) {
     return `
-      <h2 style="margin:0 0 18px;font-size:18px;font-weight:800;color:var(--text)">Agenda</h2>
+      <h2 style="margin:0 0 18px;font-size:18px;font-weight: 600;color:var(--text)">Agenda</h2>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:40px;text-align:center">
         <div style="font-size:36px;margin-bottom:12px">📅</div>
-        <div style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px">Agenda Outlook non connecté</div>
+        <div style="font-size:14px;font-weight: 600;color:var(--text);margin-bottom:8px">Agenda Outlook non connecté</div>
         <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px;max-width:380px;margin-left:auto;margin-right:auto">
           Connecte ton compte Outlook pour afficher tes rendez-vous et synchroniser tes rappels.
         </div>
@@ -522,7 +522,7 @@ function viewAgenda() {
   if (calendarEvents.length === 0) {
     refreshAgenda();
     return `
-      <h2 style="margin:0 0 18px;font-size:18px;font-weight:800;color:var(--text)">Agenda</h2>
+      <h2 style="margin:0 0 18px;font-size:18px;font-weight: 600;color:var(--text)">Agenda</h2>
       <div class="loader">Chargement des événements Outlook...</div>`;
   }
 
@@ -535,7 +535,7 @@ function viewAgenda() {
 
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:12px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Agenda — ${currentUser.email}</h2>
+      <h2 style="margin:0;font-size:18px;font-weight: 600;color:var(--text)">Agenda — ${currentUser.email}</h2>
       <div style="display:flex;gap:10px;align-items:center">${toggle}<button class="btn-secondary" onclick="refreshAgenda()">↻ Actualiser</button></div>
     </div>
     ${corps}`;
@@ -554,15 +554,15 @@ function renderAgendaListe() {
       const start = dateEvenementGraph(ev.start.dateTime).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
       const end = dateEvenementGraph(ev.end.dateTime).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
       return `<div style="display:flex;gap:14px;padding:11px 18px;border-bottom:1px solid var(--border)">
-        <div style="font-size:12px;color:var(--accent);font-weight:700;min-width:90px">${start} - ${end}</div>
+        <div style="font-size:12px;color:var(--accent);font-weight: 600;min-width:90px">${start} - ${end}</div>
         <div style="flex:1">
-          <div style="font-size:13px;font-weight:700;color:var(--text)">${ev.subject || 'Sans titre'}</div>
+          <div style="font-size:13px;font-weight: 600;color:var(--text)">${ev.subject || 'Sans titre'}</div>
           ${ev.location && ev.location.displayName ? `<div style="font-size:11px;color:var(--text-muted)">${ev.location.displayName}</div>` : ''}
         </div>
       </div>`;
     }).join('');
     return `<div style="margin-bottom:16px">
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">${day}</div>
+      <div style="font-size:11px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">${day}</div>
       <div class="table-wrap">${events}</div>
     </div>`;
   }).join('');
@@ -591,7 +591,7 @@ function renderAgendaSemaine() {
     <button class="btn-secondary" style="padding:6px 12px" onclick="changerSemaineAgenda(-1)">◀</button>
     <button class="btn-secondary" style="padding:6px 12px" onclick="changerSemaineAgenda(0)">Semaine actuelle</button>
     <button class="btn-secondary" style="padding:6px 12px" onclick="changerSemaineAgenda(1)">▶</button>
-    <div style="font-size:12.5px;color:var(--text-muted);font-weight:700;margin-left:6px">${lundi.toLocaleDateString('fr-CH',{day:'numeric',month:'long'})} — ${jours[6].toLocaleDateString('fr-CH',{day:'numeric',month:'long',year:'numeric'})}</div>
+    <div style="font-size:12.5px;color:var(--text-muted);font-weight: 600;margin-left:6px">${lundi.toLocaleDateString('fr-CH',{day:'numeric',month:'long'})} — ${jours[6].toLocaleDateString('fr-CH',{day:'numeric',month:'long',year:'numeric'})}</div>
   </div>`;
 
   const colonnes = jours.map((jour, idx) => {
@@ -600,7 +600,7 @@ function renderAgendaSemaine() {
     const horaires = evsJour.filter(ev => !ev.isAllDay);
     const estAujourdhui = isSameDay(jour, aujourdhui);
 
-    const badgesJournee = journeeEntiere.map(ev => `<div style="background:var(--accent-dim);color:var(--accent);font-size:10px;font-weight:700;border-radius:5px;padding:2px 6px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${qa(ev.subject || 'Sans titre')}">${ev.subject || 'Sans titre'}</div>`).join('');
+    const badgesJournee = journeeEntiere.map(ev => `<div style="background:var(--accent-dim);color:var(--accent);font-size:10px;font-weight: 500;border-radius:5px;padding:2px 6px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${qa(ev.subject || 'Sans titre')}">${ev.subject || 'Sans titre'}</div>`).join('');
 
     const batons = horaires.map((ev, i) => {
       const start = dateEvenementGraph(ev.start.dateTime);
@@ -614,15 +614,15 @@ function renderAgendaSemaine() {
       const hDeb = start.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
       const hFin = end.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
       return `<div title="${qa(ev.subject || 'Sans titre')} (${hDeb}-${hFin})" style="position:absolute;left:2px;right:2px;top:${top}%;height:${Math.max(height,3)}%;background:${color};border-radius:5px;padding:3px 5px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.25)">
-        <div style="font-size:9.5px;font-weight:800;color:#0b1220;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${hDeb}</div>
-        <div style="font-size:10px;font-weight:700;color:#0b1220;line-height:1.25;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${ev.subject || 'Sans titre'}</div>
+        <div style="font-size:9.5px;font-weight: 500;color:#0b1220;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${hDeb}</div>
+        <div style="font-size:10px;font-weight: 500;color:#0b1220;line-height:1.25;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${ev.subject || 'Sans titre'}</div>
       </div>`;
     }).join('');
 
     return `<div style="flex:1;min-width:110px;display:flex;flex-direction:column">
       <div style="text-align:center;padding:6px 4px;border-bottom:2px solid ${estAujourdhui ? 'var(--accent)' : 'var(--border)'};margin-bottom:4px">
-        <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;font-weight:700;letter-spacing:0.5px">${jour.toLocaleDateString('fr-CH',{weekday:'short'})}</div>
-        <div style="font-size:15px;font-weight:800;color:${estAujourdhui ? 'var(--accent)' : 'var(--text)'}">${jour.getDate()}</div>
+        <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;font-weight: 600;letter-spacing:0.5px">${jour.toLocaleDateString('fr-CH',{weekday:'short'})}</div>
+        <div style="font-size:15px;font-weight: 600;color:${estAujourdhui ? 'var(--accent)' : 'var(--text)'}">${jour.getDate()}</div>
       </div>
       <div style="min-height:16px">${badgesJournee}</div>
       <div style="position:relative;flex:1;background:var(--surface-alt);border-radius:6px;${idx > 0 ? 'border-left:1px solid var(--border);' : ''}">
@@ -636,7 +636,7 @@ function renderAgendaSemaine() {
     <div style="padding:6px 4px;margin-bottom:4px;height:38px"></div>
     <div style="min-height:16px"></div>
     <div style="position:relative;flex:1">
-      ${heures.map(h => `<div style="position:absolute;left:0;top:${((h - AGENDA_HEURE_DEBUT) / plageH) * 100}%;transform:translateY(-50%);font-size:9.5px;color:var(--text-muted);font-weight:700">${h}h</div>`).join('')}
+      ${heures.map(h => `<div style="position:absolute;left:0;top:${((h - AGENDA_HEURE_DEBUT) / plageH) * 100}%;transform:translateY(-50%);font-size:9.5px;color:var(--text-muted);font-weight: 600">${h}h</div>`).join('')}
     </div>
   </div>`;
 
@@ -744,7 +744,7 @@ function ouvrirNouvelleCampagnePersonnalisee() {
   const icones = ['📣', '🎯', '💬', '🎁', '⭐', '🔔', '💼', '🏠', '🚗', '📅'];
   creerModale('modal-nouvelle-campagne', `
     <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:560px;width:100%;max-height:90vh;overflow:auto">
-      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">📣 Nouvelle campagne personnalisée</div>
+      <div style="font-size:16px;font-weight: 600;color:var(--text);margin-bottom:4px">📣 Nouvelle campagne personnalisée</div>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:16px">Une fois créée, tu retrouveras cette campagne dans la liste avec le même ciblage, aperçu et export que les campagnes existantes.</div>
       <div class="form-field" style="margin-bottom:10px"><label class="form-label">Titre</label><input class="form-input" id="ncp-titre" placeholder="Ex. Relance clients véhicule sans casco"/></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
@@ -1034,21 +1034,21 @@ function viewCampagnes() {
     return `<div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;cursor:pointer;transition:border-color .15s;position:relative" onmouseover="this.style.borderColor='${t.color}'" onmouseout="this.style.borderColor='var(--border)'" onclick="showCampagne('${t.id}')">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div style="font-size:28px">${t.icon}</div>
-        <div style="background:color-mix(in srgb, ${t.color} 13%, transparent);color:${t.color};border:1px solid color-mix(in srgb, ${t.color} 33%, transparent);border-radius:7px;padding:3px 10px;font-size:11px;font-weight:700">${t.segment}</div>
+        <div style="background:color-mix(in srgb, ${t.color} 13%, transparent);color:${t.color};border:1px solid color-mix(in srgb, ${t.color} 33%, transparent);border-radius:7px;padding:3px 10px;font-size:11px;font-weight: 500">${t.segment}</div>
       </div>
-      <div style="font-size:15px;font-weight:800;color:var(--text);margin-top:12px">${t.titre}</div>
+      <div style="font-size:15px;font-weight: 600;color:var(--text);margin-top:12px">${t.titre}</div>
       <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${t.periode}</div>
-      <div style="margin-top:14px;font-size:13px;font-weight:700;color:${t.color}">${cibles.length} client${cibles.length !== 1 ? 's' : ''} ciblé${cibles.length !== 1 ? 's' : ''} →</div>
+      <div style="margin-top:14px;font-size:13px;font-weight: 600;color:${t.color}">${cibles.length} client${cibles.length !== 1 ? 's' : ''} ciblé${cibles.length !== 1 ? 's' : ''} →</div>
     </div>`;
   }).join('');
 
   const carteAjout = `<div style="background:var(--surface-alt);border:1.5px dashed var(--border);border-radius:12px;padding:20px;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;min-height:150px;transition:border-color .15s" onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'" onclick="ouvrirNouvelleCampagnePersonnalisee()">
     <div style="font-size:26px">➕</div>
-    <div style="font-size:13px;font-weight:700;color:var(--accent)">Nouvelle campagne personnalisée</div>
+    <div style="font-size:13px;font-weight: 600;color:var(--accent)">Nouvelle campagne personnalisée</div>
   </div>`;
 
   return `
-    <h2 style="margin:0 0 6px;font-size:18px;font-weight:800;color:var(--text)">Campagnes</h2>
+    <h2 style="margin:0 0 6px;font-size:18px;font-weight: 600;color:var(--text)">Campagnes</h2>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Sélectionnez un thème pour paramétrer la cible, ajuster le texte et générer vos emails personnalisés — ou créez votre propre campagne depuis zéro.</div>
     <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px">${cards}${carteAjout}</div>`;
 }
@@ -1074,12 +1074,12 @@ function showCampagne(themeId) {
     const texteRecherche = `${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`} ${c.email || ''}`.toLowerCase().replace(/"/g, '&quot;');
     return `<tr data-search="${texteRecherche}" style="opacity:${inclus ? '1' : '0.45'}">
       <td style="padding:10px 8px 10px 14px;width:30px"><input type="checkbox" ${inclus ? 'checked' : ''} onchange="toggleClientExclusionCampagne('${t.id}','${c.id}',this.checked)" style="width:15px;height:15px;accent-color:${t.color};cursor:pointer"/></td>
-      <td style="padding:10px 14px;font-size:13px;font-weight:700;color:var(--text)">${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`}</td>
+      <td style="padding:10px 14px;font-size:13px;font-weight: 600;color:var(--text)">${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`}</td>
       <td style="padding:10px 14px;font-size:12px;color:var(--text-muted)">${c.email || '—'}</td>
       <td style="padding:10px 14px;font-size:12px;color:var(--text-muted)">${c.mobile || c.tel || '—'}</td>
       <td style="padding:10px 14px;text-align:right">
         <div style="display:flex;gap:6px;justify-content:flex-end">
-        ${inclus && c.email ? `<a href="${mailtoHref}" style="background:color-mix(in srgb, ${t.color} 13%, transparent);color:${t.color};border:1px solid color-mix(in srgb, ${t.color} 33%, transparent);border-radius:7px;padding:6px 14px;font-size:11px;font-weight:700;text-decoration:none">✉️ mailto</a>` : (!inclus ? '<span style="font-size:11px;color:var(--text-muted)">Retiré</span>' : '<span style="font-size:11px;color:var(--text-muted)">Pas d\'email</span>')}
+        ${inclus && c.email ? `<a href="${mailtoHref}" style="background:color-mix(in srgb, ${t.color} 13%, transparent);color:${t.color};border:1px solid color-mix(in srgb, ${t.color} 33%, transparent);border-radius:7px;padding:6px 14px;font-size:11px;font-weight: 500;text-decoration:none">✉️ mailto</a>` : (!inclus ? '<span style="font-size:11px;color:var(--text-muted)">Retiré</span>' : '<span style="font-size:11px;color:var(--text-muted)">Pas d\'email</span>')}
         ${inclus ? `<button class="btn-secondary" style="padding:6px 12px;font-size:11px" onclick="ouvrirApercuEmailCampagne('${t.id}','${c.id}')">👁 Aperçu</button>` : `<button class="btn-secondary" style="padding:6px 12px;font-size:11px" onclick="toggleClientExclusionCampagne('${t.id}','${c.id}',true)">↺ Remettre</button>`}
         </div>
       </td>
@@ -1090,7 +1090,7 @@ function showCampagne(themeId) {
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:18px">
       <div style="font-size:32px">${t.icon}</div>
       <div style="flex:1">
-        <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">${t.titre}</h2>
+        <h2 style="margin:0;font-size:18px;font-weight: 600;color:var(--text)">${t.titre}</h2>
         <div style="font-size:12px;color:var(--text-muted)">${t.periode} · ${cibles.length} client${cibles.length !== 1 ? 's' : ''} ciblé${cibles.length !== 1 ? 's' : ''}</div>
       </div>
       ${t.personnalisee ? `<button class="btn-secondary" style="color:var(--c-danger-texte);border-color:var(--c-danger-texte)55" onclick="supprimerCampagnePersonnalisee('${t.id}')">🗑 Supprimer</button>` : ''}
@@ -1136,7 +1136,7 @@ function showCampagne(themeId) {
 
     <div style="margin-top:18px">
       <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:10px">
-        <div style="font-size:13px;font-weight:700;color:var(--text)">Clients ciblés <span style="font-weight:400;color:var(--text-muted)">(${cibles.length} sur ${ciblesEligibles.length} correspondant aux critères)</span></div>
+        <div style="font-size:13px;font-weight: 600;color:var(--text)">Clients ciblés <span style="font-weight:400;color:var(--text-muted)">(${cibles.length} sur ${ciblesEligibles.length} correspondant aux critères)</span></div>
         <div style="display:flex;gap:8px">
           <button class="btn-secondary" style="padding:6px 12px;font-size:11.5px" onclick="toutSelectionnerCampagne('${t.id}')">☑ Tout sélectionner</button>
           <button class="btn-secondary" style="padding:6px 12px;font-size:11.5px" onclick="toutDeselectionnerCampagne('${t.id}')">☐ Tout désélectionner</button>
@@ -1178,7 +1178,7 @@ function ouvrirApercuEmailCampagne(themeId, clientId) {
   const qa = (s) => (s || '').toString().replace(/"/g, '&quot;');
   creerModale('modal-apercu-email-campagne', `
     <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:600px;width:100%;max-height:90vh;display:flex;flex-direction:column">
-      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">✉️ Aperçu — ${t.titre}</div>
+      <div style="font-size:16px;font-weight: 600;color:var(--text);margin-bottom:4px">✉️ Aperçu — ${t.titre}</div>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:12px">Ce courriel n'est PAS envoyé automatiquement — relis-le, corrige-le si besoin, puis choisis comment le transmettre.</div>
       <div class="form-field" style="margin-bottom:10px"><label class="form-label">Client (${cibles.length} ciblé${cibles.length !== 1 ? 's' : ''})</label>
         <select class="form-select" id="apercu-campagne-client" onchange="changerClientApercuCampagne()">${optionsClients}</select>
@@ -1342,10 +1342,10 @@ async function viewRapportFinmaOz() {
   window._finmaOzData = { policesPrive, policesCommercial, nbClientsPrive, nbClientsCommercial, remuneration, annee };
 
   return `
-    <button onclick="navigate('oz-assure')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour OZ Assure</button>
+    <button onclick="navigate('oz-assure')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight: 500;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour OZ Assure</button>
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Recensement FINMA — Exercice ${annee}</h2>
-      <button onclick="exportFinmaOzTxt()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--text);font-size:12px;font-weight:700;cursor:pointer">⬇ Export TXT (question par question)</button>
+      <h2 style="margin:0;font-size:18px;font-weight: 600;color:var(--text)">Recensement FINMA — Exercice ${annee}</h2>
+      <button onclick="exportFinmaOzTxt()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--text);font-size:12px;font-weight: 500;cursor:pointer">⬇ Export TXT (question par question)</button>
     </div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">Calculé automatiquement selon la structure du recensement annuel FINMA (art. 190b OS) — à transcrire sur la plateforme EHP. LAMal est exclue du périmètre, conformément au formulaire officiel.</div>
 
@@ -1353,32 +1353,32 @@ async function viewRapportFinmaOz() {
       ⚠ La distinction client privé/commercial est déduite automatiquement du nom et du titre — vérifie chaque cas avant transmission. Les sections 2, 3.4, 4 et 5 du formulaire (déclarations, adresses, confirmations) ne sont pas calculables depuis les données du CRM — utilise l'export TXT comme aide-mémoire pour les répondre directement sur le site FINMA.
     </div>
 
-    <div style="font-size:13px;font-weight:800;color:var(--text);margin:18px 0 10px">3.3 — Nombre de clients gérés</div>
+    <div style="font-size:13px;font-weight: 600;color:var(--text);margin:18px 0 10px">3.3 — Nombre de clients gérés</div>
     <div class="stat-grid" style="margin-bottom:20px">
       ${statCard('Clients privés', nbClientsPrive, '#38bdf8')}
       ${statCard('Clients commerciaux', nbClientsCommercial, '#f59e0b')}
     </div>
 
-    <div style="font-size:13px;font-weight:800;color:var(--text);margin:18px 0 10px">3.2 — Polices intermédiées (hors LAMal)</div>
+    <div style="font-size:13px;font-weight: 600;color:var(--text);margin:18px 0 10px">3.2 — Polices intermédiées (hors LAMal)</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px">
-        <div style="font-size:11px;font-weight:700;color:#38bdf8;text-transform:uppercase;margin-bottom:10px">Clients privés</div>
-        ${Object.entries(policesPrive).map(([k,v]) => `<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text-muted)">${CAT_LABELS[k]}</span><span style="font-weight:800;color:var(--text)">${v}</span></div>`).join('')}
+        <div style="font-size:11px;font-weight: 500;color:#38bdf8;text-transform:uppercase;margin-bottom:10px">Clients privés</div>
+        ${Object.entries(policesPrive).map(([k,v]) => `<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text-muted)">${CAT_LABELS[k]}</span><span style="font-weight: 600;color:var(--text)">${v}</span></div>`).join('')}
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px">
-        <div style="font-size:11px;font-weight:700;color:var(--c-alerte-texte);text-transform:uppercase;margin-bottom:10px">Clients commerciaux</div>
-        ${Object.entries(policesCommercial).map(([k,v]) => `<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text-muted)">${CAT_LABELS[k]}</span><span style="font-weight:800;color:var(--text)">${v}</span></div>`).join('')}
+        <div style="font-size:11px;font-weight: 500;color:var(--c-alerte-texte);text-transform:uppercase;margin-bottom:10px">Clients commerciaux</div>
+        ${Object.entries(policesCommercial).map(([k,v]) => `<div style="display:flex;justify-content:space-between;font-size:12.5px;padding:5px 0;border-bottom:1px solid var(--border)"><span style="color:var(--text-muted)">${CAT_LABELS[k]}</span><span style="font-weight: 600;color:var(--text)">${v}</span></div>`).join('')}
       </div>
     </div>
 
-    <div style="font-size:13px;font-weight:800;color:var(--text);margin:18px 0 10px">3.5 — Rémunérations par compagnie</div>
+    <div style="font-size:13px;font-weight: 600;color:var(--text);margin:18px 0 10px">3.5 — Rémunérations par compagnie</div>
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px">
       ${Object.entries(remuneration).map(([compagnie, cats]) => `
         <div style="margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid var(--border)">
-          <div style="font-size:13px;font-weight:800;color:var(--accent);margin-bottom:8px">${compagnie}</div>
+          <div style="font-size:13px;font-weight: 600;color:var(--accent);margin-bottom:8px">${compagnie}</div>
           <table style="width:100%;font-size:11.5px;border-collapse:collapse">
             <thead><tr style="color:var(--text-muted)"><th style="text-align:left;padding:3px 6px">Catégorie</th><th style="text-align:right;padding:3px 6px">Souscription</th><th style="text-align:right;padding:3px 6px">Portefeuille</th></tr></thead>
-            <tbody>${Object.entries(cats).map(([cat, v]) => `<tr><td style="padding:3px 6px;color:var(--text)">${CAT_LABELS[cat]}</td><td style="text-align:right;padding:3px 6px;color:var(--c-alerte-texte);font-weight:700">${chf(v.acquisition)}</td><td style="text-align:right;padding:3px 6px;color:var(--c-succes-texte);font-weight:700">${chf(v.gestion)}</td></tr>`).join('')}</tbody>
+            <tbody>${Object.entries(cats).map(([cat, v]) => `<tr><td style="padding:3px 6px;color:var(--text)">${CAT_LABELS[cat]}</td><td style="text-align:right;padding:3px 6px;color:var(--c-alerte-texte);font-weight: 600">${chf(v.acquisition)}</td><td style="text-align:right;padding:3px 6px;color:var(--c-succes-texte);font-weight: 600">${chf(v.gestion)}</td></tr>`).join('')}</tbody>
           </table>
         </div>`).join('') || '<div class="table-empty">Aucune donnée de commission.</div>'}
     </div>`;
@@ -1443,8 +1443,8 @@ function viewOzCommissionsAssurex() {
   const totalARefacturer = aRefacturer.reduce((s,c) => s + Number(c.montant_final != null ? c.montant_final : (c.montant_estime||0)), 0);
 
   return `
-    <button onclick="navigate('oz-assure')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour OZ Assure</button>
-    <h2 style="margin:0 0 4px;font-size:18px;font-weight:800;color:var(--text)">Commissions Assurex versées à OZ Assure</h2>
+    <button onclick="navigate('oz-assure')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight: 500;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour OZ Assure</button>
+    <h2 style="margin:0 0 4px;font-size:18px;font-weight: 600;color:var(--text)">Commissions Assurex versées à OZ Assure</h2>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Historique privé : commissions gérées dans le CRM mais réglées directement sur le compte OZ Assure (portefeuille pré-fusion, ou conventions d'assureurs pas encore basculées vers Assurex). Ces montants n'apparaissent plus dans "Toutes les commissions" ni dans les statistiques Assurex — cette page est visible uniquement par toi.</div>
     <div class="stat-grid" style="margin-bottom:20px">
       ${statCard('Dossiers', lignes.length, '#38bdf8')}
@@ -1454,10 +1454,10 @@ function viewOzCommissionsAssurex() {
     <div class="table-wrap">
       <div class="table-header" style="grid-template-columns:1fr 130px 110px 130px 90px"><div>Client / Produit</div><div>Compagnie</div><div>Montant</div><div>Refacturation</div><div></div></div>
       ${lignes.map(c => `<div class="table-row" style="grid-template-columns:1fr 130px 110px 130px 90px">
-        <div><div style="font-size:13px;font-weight:700;color:var(--text)">${c.client_nom||'—'}</div><div style="font-size:11px;color:var(--text-muted)">${c.produit||''}</div></div>
+        <div><div style="font-size:13px;font-weight: 600;color:var(--text)">${c.client_nom||'—'}</div><div style="font-size:11px;color:var(--text-muted)">${c.produit||''}</div></div>
         <div style="font-size:12px;color:var(--text-muted)">${c.compagnie||''}</div>
-        <div style="font-weight:800;color:#1a56db">CHF ${fmtCHF(Number(c.montant_final != null ? c.montant_final : (c.montant_estime||0)))}</div>
-        <div>${c.refacture_le ? `<span style="color:var(--c-succes-texte);font-size:11.5px;font-weight:700">✓ Faite le ${fmtDate(c.refacture_le)}</span>` : `<span style="color:var(--c-alerte-texte);font-size:11.5px;font-weight:700">⏳ À refacturer</span>`}</div>
+        <div style="font-weight: 600;color:#1a56db">CHF ${fmtCHF(Number(c.montant_final != null ? c.montant_final : (c.montant_estime||0)))}</div>
+        <div>${c.refacture_le ? `<span style="color:var(--c-succes-texte);font-size:11.5px;font-weight: 500">✓ Faite le ${fmtDate(c.refacture_le)}</span>` : `<span style="color:var(--c-alerte-texte);font-size:11.5px;font-weight: 500">⏳ À refacturer</span>`}</div>
         <div><button onclick="showModalEditCommission('${c.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:4px 10px;font-size:11px;cursor:pointer">✏️</button></div>
       </div>`).join('') || '<div class="table-empty">Aucune commission versée à OZ Assure enregistrée.</div>'}
     </div>`;
@@ -1580,7 +1580,7 @@ async function viewOzAssure() {
       ${items.map(([label, val]) => `
         <div style="display:flex;justify-content:space-between;align-items:baseline;font-size:11px;margin-bottom:5px">
           <div style="color:var(--text-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:60%">${label}</div>
-          <div style="color:${color};font-weight:700;white-space:nowrap">${Math.round(val).toLocaleString('fr-CH')} CHF · ${segTotal>0?Math.round(val/segTotal*100):0}%</div>
+          <div style="color:${color};font-weight: 600;white-space:nowrap">${Math.round(val).toLocaleString('fr-CH')} CHF · ${segTotal>0?Math.round(val/segTotal*100):0}%</div>
         </div>`).join('')}
     </div>`;
   }
@@ -1630,9 +1630,9 @@ async function viewOzAssure() {
   return `
     <div class="oz-screen-only">
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-bottom:-10px">
-      <button onclick="navigate('oz-commissions-assurex')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:9px;padding:9px 18px;font-weight:700;font-size:12.5px;cursor:pointer;color:var(--accent);display:flex;align-items:center;gap:6px">💼 Commissions Assurex versées à OZ</button>
-      <button onclick="navigate('rapport-finma-oz')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:9px;padding:9px 18px;font-weight:700;font-size:12.5px;cursor:pointer;color:var(--accent);display:flex;align-items:center;gap:6px">📋 Recensement FINMA</button>
-      <button onclick="window.print()" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:9px 18px;font-weight:700;font-size:12.5px;cursor:pointer;color:var(--text-muted);display:flex;align-items:center;gap:6px">🖨️ Imprimer / Export PDF</button>
+      <button onclick="navigate('oz-commissions-assurex')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:9px;padding:9px 18px;font-weight: 500;font-size:12.5px;cursor:pointer;color:var(--accent);display:flex;align-items:center;gap:6px">💼 Commissions Assurex versées à OZ</button>
+      <button onclick="navigate('rapport-finma-oz')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:9px;padding:9px 18px;font-weight: 500;font-size:12.5px;cursor:pointer;color:var(--accent);display:flex;align-items:center;gap:6px">📋 Recensement FINMA</button>
+      <button onclick="window.print()" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:9px 18px;font-weight: 500;font-size:12.5px;cursor:pointer;color:var(--text-muted);display:flex;align-items:center;gap:6px">🖨️ Imprimer / Export PDF</button>
     </div>
     <div style="display:flex;flex-direction:column;align-items:center;text-align:center;margin-bottom:8px;padding:28px 0 18px;background:radial-gradient(ellipse at 50% 0%, rgba(56,189,248,0.08) 0%, transparent 70%)">
       <div style="background:var(--navy);border-radius:18px;padding:18px 36px;box-shadow:0 8px 30px rgba(0,0,0,0.35)">
@@ -1662,14 +1662,14 @@ async function viewOzAssure() {
     <!-- VIE vs NON-VIE — volume de primes (actif) -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
       <div style="background:var(--surface);border:2px solid rgba(167,139,250,0.3);border-radius:14px;padding:18px 20px">
-        <div style="font-size:11px;font-weight:700;color:#a78bfa;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🫀 VIE & Prévoyance (primes actives)</div>
-        <div style="font-size:22px;font-weight:900;color:#a78bfa">${chf(volumeVie)}</div>
+        <div style="font-size:11px;font-weight: 500;color:#a78bfa;text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🫀 VIE & Prévoyance (primes actives)</div>
+        <div style="font-size:22px;font-weight: 600;color:#a78bfa">${chf(volumeVie)}</div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${volumeActif > 0 ? Math.round(volumeVie/volumeActif*100) : 0}% du volume actif</div>
         ${ozDetailHtml(parProduitPrimeVie, volumeVie, '#a78bfa')}
       </div>
       <div style="background:var(--surface);border:2px solid rgba(56,189,248,0.3);border-radius:14px;padding:18px 20px">
-        <div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🛡️ NON-VIE / IARD (primes actives)</div>
-        <div style="font-size:22px;font-weight:900;color:var(--accent)">${chf(volumeNonVie)}</div>
+        <div style="font-size:11px;font-weight: 500;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">🛡️ NON-VIE / IARD (primes actives)</div>
+        <div style="font-size:22px;font-weight: 600;color:var(--accent)">${chf(volumeNonVie)}</div>
         <div style="font-size:11px;color:var(--text-muted);margin-top:4px">${volumeActif > 0 ? Math.round(volumeNonVie/volumeActif*100) : 0}% du volume actif</div>
         ${ozDetailHtml(parProduitPrimeNonVie, volumeNonVie, 'var(--accent)')}
       </div>
@@ -1677,12 +1677,12 @@ async function viewOzAssure() {
 
     <!-- Répartition du volume de primes par type de produit -->
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
-      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:16px">Volume de primes par type de produit (contrats actifs)</div>
+      <div style="font-size:13px;font-weight: 600;color:var(--text);margin-bottom:16px">Volume de primes par type de produit (contrats actifs)</div>
       ${produitsPrime.map(([cat, val]) => `
         <div style="margin-bottom:12px">
           <div style="display:flex;justify-content:space-between;align-items:baseline">
-            <div style="font-size:13px;font-weight:700;color:var(--text)">${cat}</div>
-            <div style="font-size:13px;font-weight:800;color:var(--c-succes-texte)">${chf(val)}</div>
+            <div style="font-size:13px;font-weight: 600;color:var(--text)">${cat}</div>
+            <div style="font-size:13px;font-weight: 600;color:var(--c-succes-texte)">${chf(val)}</div>
           </div>
           <div style="height:7px;border-radius:4px;background:var(--border);margin-top:5px;overflow:hidden">
             <div style="height:100%;width:${Math.round(val/maxProduitPrime*100)}%;background:#4ade80;border-radius:4px"></div>
@@ -1693,14 +1693,14 @@ async function viewOzAssure() {
     <!-- Répartition des commissions par type de produit -->
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px">
-        <div style="font-size:13px;font-weight:800;color:var(--text)">Commissions par type de produit</div>
+        <div style="font-size:13px;font-weight: 600;color:var(--text)">Commissions par type de produit</div>
         <div style="font-size:11px;color:var(--text-muted)">Vie : ${chf(totalVieComm)} · Non-vie : ${chf(totalNonVieComm)}</div>
       </div>
       ${produitsComm.map(([cat, val]) => `
         <div style="margin-bottom:12px">
           <div style="display:flex;justify-content:space-between;align-items:baseline">
-            <div style="font-size:13px;font-weight:700;color:var(--text)">${cat}</div>
-            <div style="font-size:13px;font-weight:800;color:var(--c-alerte-texte)">${chf(val)}</div>
+            <div style="font-size:13px;font-weight: 600;color:var(--text)">${cat}</div>
+            <div style="font-size:13px;font-weight: 600;color:var(--c-alerte-texte)">${chf(val)}</div>
           </div>
           <div style="height:7px;border-radius:4px;background:var(--border);margin-top:5px;overflow:hidden">
             <div style="height:100%;width:${Math.round(val/(produitsComm.length?produitsComm[0][1]:1)*100)}%;background:#f59e0b;border-radius:4px"></div>
@@ -1710,22 +1710,22 @@ async function viewOzAssure() {
 
     <!-- Acquisition vs Gestion -->
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
-      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">Acquisition vs Gestion</div>
+      <div style="font-size:13px;font-weight: 600;color:var(--text);margin-bottom:4px">Acquisition vs Gestion</div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px">Toutes années confondues — distingue le commissionnement ponctuel (signature) du commissionnement récurrent (gestion du portefeuille), utile pour chiffrer la contribution apportée à la fusion Assurex / Cofidex.</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
         <div style="background:color-mix(in srgb, var(--c-succes) 8%, transparent);border:1px solid color-mix(in srgb, var(--c-succes) 30%, transparent);border-radius:12px;padding:14px 16px">
-          <div style="font-size:10.5px;font-weight:700;color:var(--c-succes-texte);text-transform:uppercase;letter-spacing:.5px">Gestion (récurrent)</div>
-          <div style="font-size:19px;font-weight:900;color:var(--c-succes-texte);margin-top:4px">${chf(totalGestion)}</div>
+          <div style="font-size:10.5px;font-weight: 500;color:var(--c-succes-texte);text-transform:uppercase;letter-spacing:.5px">Gestion (récurrent)</div>
+          <div style="font-size:19px;font-weight: 600;color:var(--c-succes-texte);margin-top:4px">${chf(totalGestion)}</div>
           <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${Math.round(totalGestion/totalTypeSum*100)}% du total</div>
         </div>
         <div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.3);border-radius:12px;padding:14px 16px">
-          <div style="font-size:10.5px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.5px">Acquisition (ponctuel)</div>
-          <div style="font-size:19px;font-weight:900;color:var(--accent);margin-top:4px">${chf(totalAcquisition)}</div>
+          <div style="font-size:10.5px;font-weight: 500;color:var(--accent);text-transform:uppercase;letter-spacing:.5px">Acquisition (ponctuel)</div>
+          <div style="font-size:19px;font-weight: 600;color:var(--accent);margin-top:4px">${chf(totalAcquisition)}</div>
           <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${Math.round(totalAcquisition/totalTypeSum*100)}% du total</div>
         </div>
         <div style="background:var(--surface-alt);border:1px solid var(--border);border-radius:12px;padding:14px 16px">
-          <div style="font-size:10.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Autre (ristournes, régularisations)</div>
-          <div style="font-size:19px;font-weight:900;color:var(--text-muted);margin-top:4px">${chf(totalAutreType)}</div>
+          <div style="font-size:10.5px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px">Autre (ristournes, régularisations)</div>
+          <div style="font-size:19px;font-weight: 600;color:var(--text-muted);margin-top:4px">${chf(totalAutreType)}</div>
           <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${Math.round(totalAutreType/totalTypeSum*100)}% du total</div>
         </div>
       </div>
@@ -1733,7 +1733,7 @@ async function viewOzAssure() {
 
     <!-- Gestion par année -->
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
-      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">Gestion par année</div>
+      <div style="font-size:13px;font-weight: 600;color:var(--text);margin-bottom:4px">Gestion par année</div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px">Pour un calcul de contribution à la fusion, préférer une année <strong>complète</strong> plutôt qu'une année en cours (partielle).</div>
       <table style="width:100%;border-collapse:collapse;font-size:12.5px">
         <thead><tr style="color:var(--text-muted);font-size:10.5px;text-transform:uppercase">
@@ -1747,11 +1747,11 @@ async function viewOzAssure() {
           const v = parAnneeType[a] || { Acquisition: 0, Gestion: 0, Autre: 0 };
           const complete = Number(a) < anneeActuelle;
           return `<tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:8px 10px;font-weight:700;color:var(--text)">${a}</td>
-            <td style="padding:8px 10px;text-align:right;font-weight:800;color:var(--c-succes-texte)">${chf(v.Gestion)}</td>
+            <td style="padding:8px 10px;font-weight: 600;color:var(--text)">${a}</td>
+            <td style="padding:8px 10px;text-align:right;font-weight: 600;color:var(--c-succes-texte)">${chf(v.Gestion)}</td>
             <td style="padding:8px 10px;text-align:right;color:var(--accent)">${chf(v.Acquisition)}</td>
             <td style="padding:8px 10px;text-align:right;color:var(--text-muted)">${chf(v.Gestion + v.Acquisition + v.Autre)}</td>
-            <td style="padding:8px 10px;text-align:right">${complete ? '<span style="font-size:10px;font-weight:700;color:var(--c-succes-texte);background:color-mix(in srgb, var(--c-succes) 12%, transparent);border-radius:6px;padding:2px 8px">✓ Année complète</span>' : '<span style="font-size:10px;font-weight:700;color:var(--c-alerte-texte);background:color-mix(in srgb, var(--c-alerte) 12%, transparent);border-radius:6px;padding:2px 8px">En cours</span>'}</td>
+            <td style="padding:8px 10px;text-align:right">${complete ? '<span style="font-size:10px;font-weight: 500;color:var(--c-succes-texte);background:color-mix(in srgb, var(--c-succes) 12%, transparent);border-radius:6px;padding:2px 8px">✓ Année complète</span>' : '<span style="font-size:10px;font-weight: 500;color:var(--c-alerte-texte);background:color-mix(in srgb, var(--c-alerte) 12%, transparent);border-radius:6px;padding:2px 8px">En cours</span>'}</td>
           </tr>`;
         }).join('') || '<tr><td colspan="5" class="table-empty">Aucune donnée.</td></tr>'}</tbody>
       </table>
@@ -1760,7 +1760,7 @@ async function viewOzAssure() {
     <!-- Gestion & acquisition par client -->
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
       <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:4px">
-        <div style="font-size:13px;font-weight:800;color:var(--text)">Gestion & acquisition par client</div>
+        <div style="font-size:13px;font-weight: 600;color:var(--text)">Gestion & acquisition par client</div>
         <div style="display:flex;gap:8px;align-items:center">
           <select class="form-select" style="font-size:12px;padding:6px 10px" onchange="changerAnneeOzGestionClient(this.value)">
             <option value="tous" ${anneeFiltreEffective === 'tous' ? 'selected' : ''}>Toutes années</option>
@@ -1780,8 +1780,8 @@ async function viewOzAssure() {
         </tr></thead>
         <tbody>${lignesClientGestion.map(l => `
           <tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:8px 10px;font-weight:700;color:var(--text)">${l.client}</td>
-            <td style="padding:8px 10px;text-align:right;font-weight:800;color:var(--c-succes-texte)">${l.ges ? chf(l.ges) : '—'}</td>
+            <td style="padding:8px 10px;font-weight: 600;color:var(--text)">${l.client}</td>
+            <td style="padding:8px 10px;text-align:right;font-weight: 600;color:var(--c-succes-texte)">${l.ges ? chf(l.ges) : '—'}</td>
             <td style="padding:8px 10px;text-align:right;color:var(--accent)">${l.acq ? chf(l.acq) : '—'}</td>
             <td style="padding:8px 10px;text-align:right;color:var(--text-muted)">${chf(l.total)}</td>
           </tr>`).join('') || '<tr><td colspan="4" class="table-empty">Aucune donnée pour cette période.</td></tr>'}
@@ -1793,19 +1793,19 @@ async function viewOzAssure() {
     <div style="display:grid;grid-template-columns:repeat(${Math.min(annees.length,4) || 1},1fr);gap:12px;margin-bottom:24px">
       ${annees.map(a => `
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px">
-          <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">${a}</div>
-          <div style="font-size:20px;font-weight:900;color:var(--c-alerte-texte)">${chf(parAnnee[a])}</div>
+          <div style="font-size:11px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">${a}</div>
+          <div style="font-size:20px;font-weight: 600;color:var(--c-alerte-texte)">${chf(parAnnee[a])}</div>
         </div>`).join('')}
     </div>
 
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
-      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:18px">Évolution mensuelle des commissions nettes</div>
+      <div style="font-size:13px;font-weight: 600;color:var(--text);margin-bottom:18px">Évolution mensuelle des commissions nettes</div>
       <div style="display:flex;align-items:flex-end;gap:4px;height:130px;overflow-x:auto;padding-bottom:4px">${barsHtml}</div>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px">
-        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:16px">Répartition par compagnie (commissions)</div>
+        <div style="font-size:13px;font-weight: 600;color:var(--text);margin-bottom:16px">Répartition par compagnie (commissions)</div>
         <div style="display:flex;align-items:center;gap:20px">
           <svg width="180" height="180" viewBox="0 0 180 180">${donutSegments}
             <text x="90" y="86" text-anchor="middle" font-size="18" font-weight="900" fill="#fff">${compagnies.length}</text>
@@ -1816,26 +1816,26 @@ async function viewOzAssure() {
               <div style="display:flex;align-items:center;gap:7px;margin-bottom:8px;font-size:11.5px">
                 <div style="width:9px;height:9px;border-radius:50%;background:${PALETTE[i % PALETTE.length]};flex-shrink:0"></div>
                 <div style="color:var(--text);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${comp}</div>
-                <div style="color:var(--text-muted);font-weight:700;flex-shrink:0">${Math.round(val/totalCompagnies*100)}%</div>
+                <div style="color:var(--text-muted);font-weight: 600;flex-shrink:0">${Math.round(val/totalCompagnies*100)}%</div>
               </div>`).join('')}
           </div>
         </div>
       </div>
 
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px">
-        <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:16px">Top clients (commissions cumulées)</div>
+        <div style="font-size:13px;font-weight: 600;color:var(--text);margin-bottom:16px">Top clients (commissions cumulées)</div>
         ${topClientsComm.map(([client, val], i) => `
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px">
-            <div style="width:20px;height:20px;border-radius:50%;background:var(--accent-dim);color:var(--accent);font-size:10px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
+            <div style="width:20px;height:20px;border-radius:50%;background:var(--accent-dim);color:var(--accent);font-size:10px;font-weight: 500;display:flex;align-items:center;justify-content:center;flex-shrink:0">${i+1}</div>
             <div style="flex:1;font-size:12.5px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${client}</div>
-            <div style="font-size:12.5px;font-weight:800;color:var(--c-alerte-texte);flex-shrink:0">${chf(val)}</div>
+            <div style="font-size:12.5px;font-weight: 500;color:var(--c-alerte-texte);flex-shrink:0">${chf(val)}</div>
           </div>`).join('') || '<div class="table-empty">Aucune donnée.</div>'}
       </div>
     </div>
 
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:16px">
-        <div style="font-size:13px;font-weight:800;color:var(--text)">Données clients (${clientsList.length})</div>
+        <div style="font-size:13px;font-weight: 600;color:var(--text)">Données clients (${clientsList.length})</div>
         <div style="font-size:11px;color:var(--text-muted)">Triés par volume de prime annuelle</div>
       </div>
       <div style="max-height:480px;overflow-y:auto">
@@ -1850,12 +1850,12 @@ async function viewOzAssure() {
         </tr></thead>
         <tbody>${clientsList.map(c => `
           <tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:8px 10px;font-weight:700;color:var(--text)">${c.titre ? c.titre + ' ' : ''}${c.nom}</td>
+            <td style="padding:8px 10px;font-weight: 600;color:var(--text)">${c.titre ? c.titre + ' ' : ''}${c.nom}</td>
             <td style="padding:8px 10px;color:var(--text-muted)">${c.npa || '—'}</td>
             <td style="padding:8px 10px;color:var(--text-muted)">${dch(c.naissance)}</td>
             <td style="padding:8px 10px;color:var(--text-muted)">${c.tel || '—'}</td>
             <td style="padding:8px 10px;text-align:center;color:var(--text-muted)">${c.nbContrats}</td>
-            <td style="padding:8px 10px;text-align:right;font-weight:800;color:var(--c-alerte-texte)">${c.primeAnnuelle ? chf(c.primeAnnuelle) : '—'}</td>
+            <td style="padding:8px 10px;text-align:right;font-weight: 600;color:var(--c-alerte-texte)">${c.primeAnnuelle ? chf(c.primeAnnuelle) : '—'}</td>
           </tr>`).join('')}
         </tbody>
       </table>
@@ -1866,57 +1866,57 @@ async function viewOzAssure() {
     <!-- ═══ RÉSUMÉ IMPRIMABLE / PDF ═══ -->
     <div class="oz-print-report">
       <div style="text-align:center;margin-bottom:24px">
-        <div style="font-size:20px;font-weight:900;color:black">OZ ASSURE — Résumé d'exploitation</div>
+        <div style="font-size:20px;font-weight: 600;color:black">OZ ASSURE — Résumé d'exploitation</div>
         <div style="font-size:12px;color:#555;margin-top:4px">Entreprise individuelle de Jonathan Özkan · Rapport généré le ${dateRapport}</div>
         <div style="font-size:11px;color:#888;margin-top:2px">Portefeuille virtuellement transféré à Assurex Sàrl depuis le 01.06.2026</div>
       </div>
 
       <table style="width:100%;border-collapse:collapse;margin-bottom:24px">
         <tr>
-          <td style="border:1px solid #ccc;padding:10px;width:25%"><div style="font-size:9px;color:#666;text-transform:uppercase">Volume primes actif</div><div style="font-size:16px;font-weight:800">${chf(volumeActif)}</div></td>
-          <td style="border:1px solid #ccc;padding:10px;width:25%"><div style="font-size:9px;color:#666;text-transform:uppercase">Volume primes total</div><div style="font-size:16px;font-weight:800">${chf(volumeTotal)}</div></td>
-          <td style="border:1px solid #ccc;padding:10px;width:25%"><div style="font-size:9px;color:#666;text-transform:uppercase">Commissions perçues</div><div style="font-size:16px;font-weight:800">${chf(totalNet)}</div></td>
-          <td style="border:1px solid #ccc;padding:10px;width:25%"><div style="font-size:9px;color:#666;text-transform:uppercase">Contrats / Clients</div><div style="font-size:16px;font-weight:800">${contrats.length} / ${clientsList.length}</div></td>
+          <td style="border:1px solid #ccc;padding:10px;width:25%"><div style="font-size:9px;color:#666;text-transform:uppercase">Volume primes actif</div><div style="font-size:16px;font-weight: 600">${chf(volumeActif)}</div></td>
+          <td style="border:1px solid #ccc;padding:10px;width:25%"><div style="font-size:9px;color:#666;text-transform:uppercase">Volume primes total</div><div style="font-size:16px;font-weight: 600">${chf(volumeTotal)}</div></td>
+          <td style="border:1px solid #ccc;padding:10px;width:25%"><div style="font-size:9px;color:#666;text-transform:uppercase">Commissions perçues</div><div style="font-size:16px;font-weight: 600">${chf(totalNet)}</div></td>
+          <td style="border:1px solid #ccc;padding:10px;width:25%"><div style="font-size:9px;color:#666;text-transform:uppercase">Contrats / Clients</div><div style="font-size:16px;font-weight: 600">${contrats.length} / ${clientsList.length}</div></td>
         </tr>
       </table>
 
-      <div style="font-size:13px;font-weight:800;margin-bottom:8px">Commissions par année</div>
+      <div style="font-size:13px;font-weight: 600;margin-bottom:8px">Commissions par année</div>
       <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
         <thead><tr style="background:#f0f0f0"><th style="border:1px solid #ccc;padding:6px 10px;text-align:left;font-size:11px">Année</th><th style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-size:11px">Total net</th></tr></thead>
-        <tbody>${annees.map(a => `<tr><td style="border:1px solid #ccc;padding:6px 10px">${a}</td><td style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-weight:700">${chf(parAnnee[a])}</td></tr>`).join('')}</tbody>
+        <tbody>${annees.map(a => `<tr><td style="border:1px solid #ccc;padding:6px 10px">${a}</td><td style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-weight: 600">${chf(parAnnee[a])}</td></tr>`).join('')}</tbody>
       </table>
 
-      <div style="font-size:13px;font-weight:800;margin-bottom:8px">Gestion vs Acquisition par année</div>
+      <div style="font-size:13px;font-weight: 600;margin-bottom:8px">Gestion vs Acquisition par année</div>
       <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
         <thead><tr style="background:#f0f0f0"><th style="border:1px solid #ccc;padding:6px 10px;text-align:left;font-size:11px">Année</th><th style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-size:11px">Gestion</th><th style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-size:11px">Acquisition</th><th style="border:1px solid #ccc;padding:6px 10px;text-align:center;font-size:11px">Statut</th></tr></thead>
-        <tbody>${annees.map(a => { const v = parAnneeType[a] || {Acquisition:0,Gestion:0,Autre:0}; return `<tr><td style="border:1px solid #ccc;padding:6px 10px">${a}</td><td style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-weight:700">${chf(v.Gestion)}</td><td style="border:1px solid #ccc;padding:6px 10px;text-align:right">${chf(v.Acquisition)}</td><td style="border:1px solid #ccc;padding:6px 10px;text-align:center;font-size:10px">${Number(a) < anneeActuelle ? 'Complète' : 'En cours'}</td></tr>`; }).join('')}</tbody>
+        <tbody>${annees.map(a => { const v = parAnneeType[a] || {Acquisition:0,Gestion:0,Autre:0}; return `<tr><td style="border:1px solid #ccc;padding:6px 10px">${a}</td><td style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-weight: 600">${chf(v.Gestion)}</td><td style="border:1px solid #ccc;padding:6px 10px;text-align:right">${chf(v.Acquisition)}</td><td style="border:1px solid #ccc;padding:6px 10px;text-align:center;font-size:10px">${Number(a) < anneeActuelle ? 'Complète' : 'En cours'}</td></tr>`; }).join('')}</tbody>
       </table>
 
-      <div style="font-size:13px;font-weight:800;margin-bottom:8px">Gestion & acquisition par client — ${window._ozGestionAnneeLabel || 'Toutes années'}</div>
+      <div style="font-size:13px;font-weight: 600;margin-bottom:8px">Gestion & acquisition par client — ${window._ozGestionAnneeLabel || 'Toutes années'}</div>
       <table style="width:100%;border-collapse:collapse;margin-bottom:20px;font-size:10.5px">
         <thead><tr style="background:#f0f0f0"><th style="border:1px solid #ccc;padding:5px 8px;text-align:left">Client</th><th style="border:1px solid #ccc;padding:5px 8px;text-align:right">Gestion</th><th style="border:1px solid #ccc;padding:5px 8px;text-align:right">Acquisition</th><th style="border:1px solid #ccc;padding:5px 8px;text-align:right">Total</th></tr></thead>
-        <tbody>${lignesClientGestion.map(l => `<tr><td style="border:1px solid #ccc;padding:5px 8px">${l.client}</td><td style="border:1px solid #ccc;padding:5px 8px;text-align:right;font-weight:700">${l.ges ? chf(l.ges) : '—'}</td><td style="border:1px solid #ccc;padding:5px 8px;text-align:right">${l.acq ? chf(l.acq) : '—'}</td><td style="border:1px solid #ccc;padding:5px 8px;text-align:right">${chf(l.total)}</td></tr>`).join('')}</tbody>
+        <tbody>${lignesClientGestion.map(l => `<tr><td style="border:1px solid #ccc;padding:5px 8px">${l.client}</td><td style="border:1px solid #ccc;padding:5px 8px;text-align:right;font-weight: 600">${l.ges ? chf(l.ges) : '—'}</td><td style="border:1px solid #ccc;padding:5px 8px;text-align:right">${l.acq ? chf(l.acq) : '—'}</td><td style="border:1px solid #ccc;padding:5px 8px;text-align:right">${chf(l.total)}</td></tr>`).join('')}</tbody>
       </table>
 
-      <div style="font-size:13px;font-weight:800;margin-bottom:8px">Répartition par compagnie</div>
+      <div style="font-size:13px;font-weight: 600;margin-bottom:8px">Répartition par compagnie</div>
       <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
         <thead><tr style="background:#f0f0f0"><th style="border:1px solid #ccc;padding:6px 10px;text-align:left;font-size:11px">Compagnie</th><th style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-size:11px">Commissions</th><th style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-size:11px">Part</th></tr></thead>
         <tbody>${compagnies.map(([comp,val]) => `<tr><td style="border:1px solid #ccc;padding:6px 10px">${comp}</td><td style="border:1px solid #ccc;padding:6px 10px;text-align:right">${chf(val)}</td><td style="border:1px solid #ccc;padding:6px 10px;text-align:right">${Math.round(val/totalCompagnies*100)}%</td></tr>`).join('')}</tbody>
       </table>
 
-      <div style="font-size:13px;font-weight:800;margin-bottom:8px">Volume de primes par type de produit (contrats actifs) — Vie: ${chf(volumeVie)} · Non-vie: ${chf(volumeNonVie)}</div>
+      <div style="font-size:13px;font-weight: 600;margin-bottom:8px">Volume de primes par type de produit (contrats actifs) — Vie: ${chf(volumeVie)} · Non-vie: ${chf(volumeNonVie)}</div>
       <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
         <thead><tr style="background:#f0f0f0"><th style="border:1px solid #ccc;padding:6px 10px;text-align:left;font-size:11px">Type de produit</th><th style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-size:11px">Volume prime/an</th></tr></thead>
         <tbody>${produitsPrime.map(([cat,val]) => `<tr><td style="border:1px solid #ccc;padding:6px 10px">${cat}</td><td style="border:1px solid #ccc;padding:6px 10px;text-align:right">${chf(val)}</td></tr>`).join('')}</tbody>
       </table>
 
-      <div style="font-size:13px;font-weight:800;margin-bottom:8px">Commissions par type de produit</div>
+      <div style="font-size:13px;font-weight: 600;margin-bottom:8px">Commissions par type de produit</div>
       <table style="width:100%;border-collapse:collapse;margin-bottom:20px">
         <thead><tr style="background:#f0f0f0"><th style="border:1px solid #ccc;padding:6px 10px;text-align:left;font-size:11px">Type de produit</th><th style="border:1px solid #ccc;padding:6px 10px;text-align:right;font-size:11px">Commissions</th></tr></thead>
         <tbody>${produitsComm.map(([cat,val]) => `<tr><td style="border:1px solid #ccc;padding:6px 10px">${cat}</td><td style="border:1px solid #ccc;padding:6px 10px;text-align:right">${chf(val)}</td></tr>`).join('')}</tbody>
       </table>
 
-      <div style="font-size:13px;font-weight:800;margin-bottom:8px">Données clients complètes (${clientsList.length})</div>
+      <div style="font-size:13px;font-weight: 600;margin-bottom:8px">Données clients complètes (${clientsList.length})</div>
       <table style="width:100%;border-collapse:collapse;font-size:10.5px">
         <thead><tr style="background:#f0f0f0">
           <th style="border:1px solid #ccc;padding:5px 8px;text-align:left">Client</th>
@@ -1932,7 +1932,7 @@ async function viewOzAssure() {
           <td style="border:1px solid #ccc;padding:5px 8px">${dch(c.naissance)}</td>
           <td style="border:1px solid #ccc;padding:5px 8px">${c.tel || '—'}</td>
           <td style="border:1px solid #ccc;padding:5px 8px;text-align:center">${c.nbContrats}</td>
-          <td style="border:1px solid #ccc;padding:5px 8px;text-align:right;font-weight:700">${c.primeAnnuelle ? chf(c.primeAnnuelle) : '—'}</td>
+          <td style="border:1px solid #ccc;padding:5px 8px;text-align:right;font-weight: 600">${c.primeAnnuelle ? chf(c.primeAnnuelle) : '—'}</td>
         </tr>`).join('')}</tbody>
       </table>
     </div>`;
@@ -1946,7 +1946,7 @@ async function viewContactsCompagnies() {
 
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Contacts compagnies</h2>
+      <h2 style="margin:0;font-size:18px;font-weight: 600;color:var(--text)">Contacts compagnies</h2>
       <button class="btn-add" onclick="showFormContactCompagnie()">+ Ajouter une compagnie</button>
     </div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Utilisés pour générer les emails de demande d'offre depuis le formulaire "Demande d'offre". Le logo est celui affiché partout dans le CRM (contrats, bordereaux, commissions) ; à défaut de logo fourni, un monogramme aux couleurs de la compagnie est utilisé.</div>
@@ -1954,7 +1954,7 @@ async function viewContactsCompagnies() {
       <div class="table-header" style="grid-template-columns:44px 1fr 1fr 1fr 60px"><div></div><div>Compagnie</div><div>Contact</div><div>Email</div><div></div></div>
       ${(contacts||[]).map(c => `<div class="table-row" style="grid-template-columns:44px 1fr 1fr 1fr 60px;align-items:center">
         <div>${typeof pictoCompagnie === 'function' ? pictoCompagnie(c.compagnie, 32) : ''}</div>
-        <div style="font-weight:700;font-size:13px;color:var(--text)">${typeof normaliserCompagnie === 'function' ? normaliserCompagnie(c.compagnie) : c.compagnie}${(typeof normaliserCompagnie === 'function' && normaliserCompagnie(c.compagnie) !== c.compagnie) ? `<div style="font-size:10px;color:var(--text-dim)">saisi : ${c.compagnie}</div>` : ''}${c.convention && c.convention.valable_des ? `<div style="font-size:10px;font-weight:600;color:var(--c-succes-texte);margin-top:2px">📄 Convention active dès ${fmtDate(c.convention.valable_des)}</div>` : ''}</div>
+        <div style="font-weight: 600;font-size:13px;color:var(--text)">${typeof normaliserCompagnie === 'function' ? normaliserCompagnie(c.compagnie) : c.compagnie}${(typeof normaliserCompagnie === 'function' && normaliserCompagnie(c.compagnie) !== c.compagnie) ? `<div style="font-size:10px;color:var(--text-dim)">saisi : ${c.compagnie}</div>` : ''}${c.convention && c.convention.valable_des ? `<div style="font-size:10px;font-weight: 500;color:var(--c-succes-texte);margin-top:2px">📄 Convention active dès ${fmtDate(c.convention.valable_des)}</div>` : ''}</div>
         <div style="font-size:12.5px;color:var(--text-muted)">${c.libelle_contact || '—'}</div>
         <div style="font-size:12.5px;color:${c.email ? 'var(--text)' : '#f87171'}">${c.email || 'Non renseigné'}</div>
         <div><button onclick="showFormContactCompagnie('${c.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:4px 8px;font-size:12px;cursor:pointer">✏️</button></div>
@@ -1967,13 +1967,13 @@ function showFormContactCompagnie(id) {
   const conv = (existant && existant.convention) || {};
   creerModale('modal-contact-cie', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:520px;max-height:85vh;overflow-y:auto">
-      <h3 style="margin:0 0 20px;font-size:16px;font-weight:800;color:var(--text);display:flex;align-items:center;gap:10px">${existant && typeof pictoCompagnie === 'function' ? pictoCompagnie(existant.compagnie, 30) : ''}${existant ? 'Modifier' : 'Ajouter'} une compagnie</h3>
+      <h3 style="margin:0 0 20px;font-size:16px;font-weight: 600;color:var(--text);display:flex;align-items:center;gap:10px">${existant && typeof pictoCompagnie === 'function' ? pictoCompagnie(existant.compagnie, 30) : ''}${existant ? 'Modifier' : 'Ajouter'} une compagnie</h3>
       <div class="form-grid">
         <div class="form-field" style="grid-column:span 2"><label class="form-label">Nom de la compagnie *</label><input class="form-input" id="cc-nom" value="${existant ? existant.compagnie : ''}"/></div>
         <div class="form-field" style="grid-column:span 2"><label class="form-label">Libellé contact (agence/courtier)</label><input class="form-input" id="cc-libelle" value="${existant ? (existant.libelle_contact||'') : ''}"/></div>
         <div class="form-field" style="grid-column:span 2"><label class="form-label">Email</label><input class="form-input" id="cc-email" type="email" value="${existant ? (existant.email||'') : ''}"/></div>
       </div>
-      <div style="font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;margin:18px 0 8px">Convention / contrat de collaboration (facultatif)</div>
+      <div style="font-size:11px;color:var(--text-muted);font-weight: 600;text-transform:uppercase;margin:18px 0 8px">Convention / contrat de collaboration (facultatif)</div>
       <div class="form-grid">
         <div class="form-field"><label class="form-label">Valable dès le</label><input class="form-input" id="cc-conv-valable" type="date" value="${conv.valable_des || ''}"/></div>
         <div class="form-field"><label class="form-label">Signée le</label><input class="form-input" id="cc-conv-signee" type="date" value="${conv.signee_le || ''}"/></div>
@@ -2018,20 +2018,20 @@ async function saveContactCompagnie(id) {
 
 async function viewAuditLog() {
   if (!currentUser || currentUser.role !== 'signataire') {
-    return `<h2 style="margin:0 0 18px;font-size:18px;font-weight:800;color:var(--text)">Journal d'audit</h2>
+    return `<h2 style="margin:0 0 18px;font-size:18px;font-weight: 600;color:var(--text)">Journal d'audit</h2>
       <div class="table-empty">Accès réservé au signataire.</div>`;
   }
   const logs = await dbGet('audit_log', 'select=*&order=created_at.desc&limit=200');
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Journal d'audit</h2>
+      <h2 style="margin:0;font-size:18px;font-weight: 600;color:var(--text)">Journal d'audit</h2>
       <div style="font-size:12px;color:var(--text-muted)">200 dernières actions — traçabilité nLPD</div>
     </div>
     <div class="table-wrap">
       <div class="table-header" style="grid-template-columns:140px 1fr 200px 160px"><div>Date/heure</div><div>Action</div><div>Détail</div><div>Utilisateur</div></div>
       ${(logs || []).map(l => `<div class="table-row" style="grid-template-columns:140px 1fr 200px 160px">
         <div style="font-size:11px;color:var(--text-muted)">${new Date(l.created_at).toLocaleString('fr-CH', { day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit' })}</div>
-        <div style="font-size:12.5px;font-weight:600;color:var(--text)">${ACTION_LABELS[l.action] || l.action}</div>
+        <div style="font-size:12.5px;font-weight: 500;color:var(--text)">${ACTION_LABELS[l.action] || l.action}</div>
         <div style="font-size:12px;color:var(--text-muted)">${l.detail || ''}</div>
         <div style="font-size:12px;color:var(--text-muted)">${l.user_email}</div>
       </div>`).join('') || '<div class="table-empty">Aucune entrée pour le moment.</div>'}
@@ -2041,7 +2041,7 @@ async function viewAuditLog() {
 function viewAgents() {
   const agents = allAgents.length > 0 ? allAgents : [currentUser];
   return `
-    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Paramètres — Agents</h2>
+    <h2 style="margin:0 0 20px;font-size:18px;font-weight: 600;color:var(--text)">Paramètres — Agents</h2>
     ${agents.map(a => {
       const color = agentColor(a);
       const nbClients = allClients.filter(c => c.apporteur_id === a.id).length;
@@ -2063,7 +2063,7 @@ function viewAgents() {
         <div style="display:flex;align-items:center;gap:14px;margin-bottom:16px">
           ${avatar(a, 44)}
           <div>
-            <div style="font-size:15px;font-weight:800;color:var(--text)">${a.prenom} ${a.nom}</div>
+            <div style="font-size:15px;font-weight: 600;color:var(--text)">${a.prenom} ${a.nom}</div>
             <div style="font-size:12px;color:var(--text-muted)">${a.email} · ${a.tel || ''}</div>
           </div>
           ${currentUser.role === 'signataire' ? `<button class="btn-save" style="margin-left:auto" onclick="toggleEditAgent('${a.id}')">${isEditing ? 'Annuler' : 'Modifier'}</button>` : ''}
@@ -2095,23 +2095,23 @@ function viewAgents() {
         <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:10px">
           ${[['Rôle', a.role], ['Taux commission', a.taux + '%'], ['Clients', nbClients]].map(([l,v]) =>
             `<div style="background:var(--surface-alt);border-radius:9px;padding:10px 14px">
-              <div style="color:var(--text-muted);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px">${l}</div>
-              <div style="color:var(--text);font-size:13px;font-weight:700">${v}</div>
+              <div style="color:var(--text-muted);font-size:10px;font-weight: 500;text-transform:uppercase;margin-bottom:4px">${l}</div>
+              <div style="color:var(--text);font-size:13px;font-weight: 600">${v}</div>
             </div>`).join('')}
         </div>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
           <div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);border-radius:9px;padding:10px 14px">
-            <div style="color:var(--text-muted);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px">CA géré</div>
-            <div style="color:#38bdf8;font-size:14px;font-weight:800">CHF ${fmtCHF(ca)}</div>
+            <div style="color:var(--text-muted);font-size:10px;font-weight: 500;text-transform:uppercase;margin-bottom:4px">CA géré</div>
+            <div style="color:#38bdf8;font-size:14px;font-weight: 600">CHF ${fmtCHF(ca)}</div>
           </div>
           <div style="background:color-mix(in srgb, var(--c-succes) 8%, transparent);border:1px solid color-mix(in srgb, var(--c-succes) 20%, transparent);border-radius:9px;padding:10px 14px">
-            <div style="color:var(--text-muted);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px">Commissions générées (via fiche de paie)</div>
-            <div style="color:var(--c-succes-texte);font-size:14px;font-weight:800">CHF ${fmtCHF(Math.round(commGeneree))}</div>
+            <div style="color:var(--text-muted);font-size:10px;font-weight: 500;text-transform:uppercase;margin-bottom:4px">Commissions générées (via fiche de paie)</div>
+            <div style="color:var(--c-succes-texte);font-size:14px;font-weight: 600">CHF ${fmtCHF(Math.round(commGeneree))}</div>
           </div>
         </div>
         ${a.email === currentUser.email ? `
         <div style="margin-top:14px;background:var(--surface-alt);border-radius:10px;padding:16px">
-          <div style="font-size:12px;font-weight:800;color:var(--text);margin-bottom:8px">✍️ Ma signature — reprise automatiquement sur les mandats de courtage</div>
+          <div style="font-size:12px;font-weight: 500;color:var(--text);margin-bottom:8px">✍️ Ma signature — reprise automatiquement sur les mandats de courtage</div>
           ${a.signature_image ? `
             <img src="${a.signature_image}" style="max-height:60px;max-width:220px;background:#fff;border-radius:6px;padding:6px;display:block;margin-bottom:10px"/>
             <button class="btn-secondary" onclick="ouvrirModaleMaSignature('${a.id}')">✏️ Redessiner</button>
@@ -2122,7 +2122,7 @@ function viewAgents() {
         </div>
         <div style="margin-top:14px;background:var(--surface-alt);border-radius:10px;padding:16px">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:${a.rdv_actif ? '12px' : '0'}">
-            <div style="font-size:12px;font-weight:800;color:var(--text)">📅 Prise de RDV en autonomie — reliée aux clients</div>
+            <div style="font-size:12px;font-weight: 500;color:var(--text)">📅 Prise de RDV en autonomie — reliée aux clients</div>
             <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11.5px;color:var(--text-muted)">
               <input type="checkbox" ${a.rdv_actif ? 'checked' : ''} onchange="toggleRdvActif('${a.id}', this.checked)"/> Activer
             </label>
@@ -2153,7 +2153,7 @@ function viewAgents() {
     }).join('')}
     ${currentUser.role === 'signataire' ? `<button class="btn-save" style="margin-top:4px" onclick="navigate('nouveau-agent')">+ Ajouter un agent</button>` : ''}
     <div style="margin-top:20px">
-      <button onclick="logout()" style="background:var(--red-dim);color:var(--red);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer">🚪 Se déconnecter</button>
+      <button onclick="logout()" style="background:var(--red-dim);color:var(--red);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:10px;padding:10px 20px;font-size:13px;font-weight: 600;cursor:pointer">🚪 Se déconnecter</button>
     </div>`;
 }
 
@@ -2164,7 +2164,7 @@ function viewAgents() {
 function ouvrirModaleMaSignature(agentId) {
   creerModale('modal-ma-signature', `
     <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:480px;width:100%">
-      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">✍️ Ma signature</div>
+      <div style="font-size:16px;font-weight: 600;color:var(--text);margin-bottom:6px">✍️ Ma signature</div>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">Dessine ta signature ci-dessous — elle sera reprise automatiquement sur tous les mandats de courtage générés (côté « Le mandataire »), avec la date du jour.</div>
       <canvas id="canvas-signature-agent" width="460" height="200" style="width:100%;height:200px;background:#fff;border-radius:9px;touch-action:none;cursor:crosshair;display:block"></canvas>
       <div style="display:flex;gap:10px;margin-top:12px">
@@ -2273,8 +2273,8 @@ async function saveAgent(id) {
 
 function viewNouvelAgent() {
   return `
-    <button onclick="navigate('agents')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour aux agents</button>
-    <h2 style="margin:0 0 18px;font-size:18px;font-weight:800;color:var(--text)">Nouvel agent</h2>
+    <button onclick="navigate('agents')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight: 500;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour aux agents</button>
+    <h2 style="margin:0 0 18px;font-size:18px;font-weight: 600;color:var(--text)">Nouvel agent</h2>
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px">
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px">
         <div class="form-field"><label class="form-label">Prénom *</label><input id="new-prenom" class="form-input"></div>

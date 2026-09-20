@@ -39,7 +39,7 @@ body.mode-cloud .cf-hero h1, body.mode-espace-client .cf-hero h1 {
   font-weight: 600;
 }
 body.mode-cloud .cf-hero .cf-surtitre, body.mode-espace-client .cf-hero .cf-surtitre {
-  font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; font-weight: 500;
+  font-size: var(--t-xs); letter-spacing: .16em; text-transform: uppercase; font-weight: 500;
 }
 /* Le texte d'accroche respire : une ligne de 75 caractères se lit, une ligne de 130 se subit. */
 body.mode-cloud .cf-hero p, body.mode-espace-client .cf-hero p {
@@ -113,7 +113,7 @@ body.mode-cloud .eca-puce small, body.mode-espace-client .eca-puce small {
   margin-top: 4px; font-size: var(--t-s, 12.5px); color: var(--text); line-height: 1.3;
 }
 body.mode-cloud .eca-puce i, body.mode-espace-client .eca-puce i {
-  margin-top: 2px; font-size: 10.5px; letter-spacing: .01em;
+  margin-top: 2px; font-size: var(--t-xs); letter-spacing: .01em;
 }
 
 /* ── Les branches ─────────────────────────────────────────────────────────────────────────────── */
@@ -158,7 +158,7 @@ body.mode-cloud .ec-prime, body.mode-espace-client .ec-prime {
   font-variant-numeric: tabular-nums lining-nums;
 }
 body.mode-cloud .ec-prime small, body.mode-espace-client .ec-prime small {
-  font-size: 10.5px; font-weight: 400; color: var(--text-muted);
+  font-size: var(--t-xs); font-weight: 400; color: var(--text-muted);
 }
 body.mode-cloud .ec-dates, body.mode-espace-client .ec-dates {
   font-variant-numeric: tabular-nums; font-size: var(--t-xs, 11px); line-height: 1.6;
@@ -206,7 +206,7 @@ body.mode-cloud .ecp-rassurance p, body.mode-espace-client .ecp-rassurance p {
 
 /* ── Le widget des primes ─────────────────────────────────────────────────────────────────────── */
 body.mode-cloud .ecp-bloc b, body.mode-espace-client .ecp-bloc b {
-  font-size: 26px; letter-spacing: -0.035em;
+  font-size: var(--t-2xl); letter-spacing: -0.035em;
 }
 body.mode-cloud .ecp-etat-icone, body.mode-espace-client .ecp-etat-icone {
   color: var(--accent); font-size: 0;

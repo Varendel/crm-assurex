@@ -6,7 +6,7 @@
    ═══════════════════════════════════════════════════════════════════════════════════════════════ */
 
 /* ── La fenêtre du client ──────────────────────────────────────────────────────────────────────── */
-.adr-sous { margin: 0 0 var(--e-4, 16px); font-size: 13.5px; color: var(--text-muted); line-height: 1.55; text-wrap: pretty; }
+.adr-sous { margin: 0 0 var(--e-4, 16px); font-size: var(--t-m); color: var(--text-muted); line-height: 1.55; text-wrap: pretty; }
 
 /* L'adresse actuelle, montrée et non modifiable : le client doit voir ce qu'il remplace avant de
    l'écrire, sinon il recopie ce qu'il croit être là. */
@@ -17,11 +17,11 @@
   background: var(--surface-alt);
   border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
 }
-.adr-avant em { font-style: normal; font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); }
-.adr-avant b { font-size: 13.5px; font-weight: 500; color: var(--text); }
+.adr-avant em { font-style: normal; font-size: var(--t-xs); text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); }
+.adr-avant b { font-size: var(--t-m); font-weight: 500; color: var(--text); }
 
 .adr-grille { display: grid; grid-template-columns: 90px 1fr 80px; gap: var(--e-3, 12px); }
-.adr-aide { display: block; margin-top: 5px; font-size: 11.5px; color: var(--text-muted); line-height: 1.45; }
+.adr-aide { display: block; margin-top: 5px; font-size: var(--t-xs); color: var(--text-muted); line-height: 1.45; }
 
 @media (max-width: 520px) {
   .adr-grille { grid-template-columns: 1fr 1fr; }
@@ -36,7 +36,7 @@
 .adr-cabinet { margin-bottom: 16px; border-left: 3px solid var(--c-alerte, #F59E0B); }
 .adr-rappel {
   margin: 0 0 var(--e-3, 12px);
-  font-size: 12.5px; color: var(--c-alerte-texte, #B45309); line-height: 1.5; text-wrap: pretty;
+  font-size: var(--t-s); color: var(--c-alerte-texte, #B45309); line-height: 1.5; text-wrap: pretty;
 }
 
 .adr-liste { display: flex; flex-direction: column; gap: var(--e-2, 8px); }
@@ -47,14 +47,14 @@
   border: 1px solid color-mix(in srgb, var(--border) 60%, transparent);
 }
 .adr-item-qui b { font-size: 14px; font-weight: 600; color: var(--text); }
-.adr-item-qui small { display: block; font-size: 11.5px; color: var(--text-muted); }
+.adr-item-qui small { display: block; font-size: var(--t-xs); color: var(--text-muted); }
 
 /* L'ancienne adresse barrée, la nouvelle en clair : le changement se lit sans le reconstituer. */
-.adr-item-chg { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: 13px; }
+.adr-item-chg { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; font-size: var(--t-m); }
 .adr-avant-txt { color: var(--text-muted); text-decoration: line-through; text-decoration-thickness: 1px; }
 .adr-fleche { display: inline-flex; color: var(--text-dim); }
 .adr-apres { font-weight: 500; color: var(--text); }
 
-.adr-item-note { margin: 0; font-size: 12.5px; color: var(--text-muted); font-style: italic; line-height: 1.5; }
+.adr-item-note { margin: 0; font-size: var(--t-s); color: var(--text-muted); font-style: italic; line-height: 1.5; }
 .adr-item-actions { display: flex; gap: var(--e-2, 8px); flex-wrap: wrap; }
-.adr-item-actions .btn-save, .adr-item-actions .btn-secondary { padding: 7px 14px; font-size: 12.5px; }
+.adr-item-actions .btn-save, .adr-item-actions .btn-secondary { padding: 7px 14px; font-size: var(--t-s); }

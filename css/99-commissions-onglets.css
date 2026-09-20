@@ -19,7 +19,7 @@ html:not([data-theme="clair"]) .cmx-onglets { border-bottom-color: rgba(255, 255
   color: var(--text-muted, #64748B); font-family: inherit;
   transition: background var(--v-court, .15s), color var(--v-court, .15s), border-color var(--v-court, .15s);
 }
-.cmx-onglet span { font-size: 15px; line-height: 1; }
+.cmx-onglet span { font-size: var(--t-l); line-height: 1; }
 .cmx-onglet b { font-size: var(--t-m, 13.5px); font-weight: var(--t-moyen, 600); }
 .cmx-onglet small { font-size: var(--t-xs, 11px); opacity: .8; }
 

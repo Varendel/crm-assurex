@@ -152,7 +152,7 @@ function htmlObjectifs() {
           <div><span>− Socle récurrent${ozCompte ? ' (Assurex + OZ)' : ' Assurex / EX'}</span><b>${chf(recurrent)}</b></div>
           <div><span>− Ventes déjà signées</span><b>${chf(V.acquisition)}</b></div>
           <div class="total"><span>Reste à vendre</span><b>${chf(resteVentes)}</b></div>
-          ${resteVentes > 0 ? `<p>Soit environ <b>${chf(resteVentes / moisRestants)}</b> par mois${V.panier ? ` — ≈ <b>${Math.ceil(resteVentes / V.panier)}</b> affaires au panier moyen actuel (${chf(V.panier)})` : ''}.</p>` : '<p style="color:var(--c-succes-texte);font-weight:700">✓ Objectif couvert par le socle et les ventes signées.</p>'}
+          ${resteVentes > 0 ? `<p>Soit environ <b>${chf(resteVentes / moisRestants)}</b> par mois${V.panier ? ` — ≈ <b>${Math.ceil(resteVentes / V.panier)}</b> affaires au panier moyen actuel (${chf(V.panier)})` : ''}.</p>` : '<p style="color:var(--c-succes-texte);font-weight: 600">✓ Objectif couvert par le socle et les ventes signées.</p>'}
           ${!ozCompte && R.oz ? `<p style="color:var(--text-muted)">En ${an + 1}, la récurrence OZ (${chf(R.oz)}) s’ajoutera au socle Assurex.</p>` : ''}
         </div>` : '<div class="dbx-vide-petit">Fixe un objectif de revenu pour voir ce qu’il reste à vendre.</div>'}
         <div class="obj-cies"><b>Récurrence sourcée OZ par compagnie</b>${Object.entries(R.parCieOZ).sort((x, y) => y[1] - x[1]).map(([k, v]) => `<div><span>${typeof pictoCompagnie === 'function' ? pictoCompagnie(k, 20) : ''} ${objEsc(k)}</span><b>${chf(v)}</b></div>`).join('') || '<div>—</div>'}</div>

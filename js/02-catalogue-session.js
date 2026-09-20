@@ -83,7 +83,7 @@ function voirBilanSauvegarde(bilanId) {
   const modal = creerModale('modal-bilan-lpp', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:900px;max-height:90vh;overflow-y:auto">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-        <h3 style="margin:0;font-size:16px;font-weight:800;color:var(--text)">Bilan de prévoyance — ${fmtDate(b.created_at)}</h3>
+        <h3 style="margin:0;font-size:16px;font-weight: 600;color:var(--text)">Bilan de prévoyance — ${fmtDate(b.created_at)}</h3>
         <button onclick="document.getElementById('modal-bilan-lpp').remove()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:20px">✕</button>
       </div>
       ${b.html_snapshot}

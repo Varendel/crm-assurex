@@ -61,7 +61,7 @@
 .cou-groupe + .cou-groupe { margin-top: var(--e-4, 16px); }
 .cou-sous {
   display: flex; align-items: center; gap: 7px; margin: 0 0 var(--e-2, 8px);
-  font-size: 10.5px; text-transform: uppercase; letter-spacing: .08em;
+  font-size: var(--t-xs); text-transform: uppercase; letter-spacing: .08em;
   color: var(--text-muted); font-weight: 600;
 }
 .cou-sous span {
@@ -94,7 +94,7 @@
 .cou-ico { font-size: 17px; line-height: 1; flex-shrink: 0; }
 .cou-nom { font-size: var(--t-s, 12.5px); font-weight: 500; color: var(--text); flex: 1 1 auto; min-width: 0; }
 .cou-n {
-  padding: 1px 7px; border-radius: var(--r-rond, 999px); font-size: 10px; font-weight: 600;
+  padding: 1px 7px; border-radius: var(--r-rond, 999px); font-size: 10px; font-weight: 500;
   background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-border);
 }
 .cou-prime {

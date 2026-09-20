@@ -106,7 +106,7 @@ async function importBordereauPdf(input) {
     if (data.lignes && data.lignes.length) {
       zone.innerHTML = `
         <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-bottom:14px">
-          <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:10px">📋 ${data.lignes.length} ligne(s) détectée(s) — à vérifier avant d'enregistrer</div>
+          <div style="font-size:12.5px;font-weight: 500;color:var(--text);margin-bottom:10px">📋 ${data.lignes.length} ligne(s) détectée(s) — à vérifier avant d'enregistrer</div>
           ${data.lignes.map(l => `<div style="font-size:11.5px;color:var(--text-muted);padding:4px 0;border-bottom:1px solid var(--border)">${l.client_nom || '—'} · ${l.produit || ''} · ${l.type_mouvement || ''} · CHF ${fmtCHF(l.credit || l.debit || 0)}</div>`).join('')}
         </div>`;
     }
@@ -132,14 +132,14 @@ async function viewNouveauBordereau() {
   window._bordereauPdfFile = null;
 
   return `
-    <button onclick="navigate('bordereaux')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
+    <button onclick="navigate('bordereaux')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight: 500;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Saisir un bordereau</h2>
-      <span style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:4px 10px;font-size:12px;font-weight:800;font-family:monospace">${prochainNumero}</span>
+      <h2 style="margin:0;font-size:18px;font-weight: 600;color:var(--text)">Saisir un bordereau</h2>
+      <span style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:4px 10px;font-size:12px;font-weight: 500;font-family:monospace">${prochainNumero}</span>
     </div>
 
     <div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:12px;padding:16px 18px;margin-bottom:20px">
-      <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:8px">🤖 Importer le PDF (extraction IA + archivage automatique)</div>
+      <div style="font-size:12.5px;font-weight: 500;color:var(--text);margin-bottom:8px">🤖 Importer le PDF (extraction IA + archivage automatique)</div>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:10px">Le PDF sera lu pour préremplir les champs, ET conservé en pièce jointe sous le numéro ${prochainNumero} — tu pourras le retrouver et le rouvrir plus tard.</div>
       <input type="file" id="bord-pdf-input" accept="application/pdf" onchange="importBordereauPdf(this)" style="font-size:12.5px;color:var(--text-muted)"/>
       <div id="bord-pdf-status" style="font-size:11.5px;color:var(--text-muted);margin-top:8px"></div>
@@ -484,8 +484,8 @@ async function importPolicePdfAI(input) {
     if (window._policePdfPreviewUrl) URL.revokeObjectURL(window._policePdfPreviewUrl);
     window._policePdfPreviewUrl = URL.createObjectURL(file);
 
-    statusEl.innerHTML = `<span style="color:var(--c-succes-texte);font-weight:700">✓ Formulaire pré-rempli depuis le PDF</span> — vérifie les données, précise si le contrat sera commissionné ou non, puis enregistre.
-      <a href="${window._policePdfPreviewUrl}" target="_blank" rel="noopener" style="margin-left:8px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:5px 12px;font-size:12px;font-weight:700;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px;vertical-align:middle">👁 Voir le PDF importé</a>`;
+    statusEl.innerHTML = `<span style="color:var(--c-succes-texte);font-weight: 600">✓ Formulaire pré-rempli depuis le PDF</span> — vérifie les données, précise si le contrat sera commissionné ou non, puis enregistre.
+      <a href="${window._policePdfPreviewUrl}" target="_blank" rel="noopener" style="margin-left:8px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:5px 12px;font-size:12px;font-weight: 500;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px;vertical-align:middle">👁 Voir le PDF importé</a>`;
 
   } catch(e) {
     statusEl.textContent = '✗ ' + e.message + ' — remplis manuellement le formulaire ci-dessous.';
@@ -501,14 +501,14 @@ function viewNouveauContrat() {
   const opp = prefillOpportunite;
   window._policePdfFileFromImport = null; // évite qu'un PDF d'un import précédent (annulé ou d'un autre contrat) ne s'attache par erreur
   return `
-    <h2 style="margin:0 0 16px;font-size:18px;font-weight:800;color:var(--text)">Nouveau contrat</h2>
+    <h2 style="margin:0 0 16px;font-size:18px;font-weight: 600;color:var(--text)">Nouveau contrat</h2>
 
     <!-- ── Zone import IA ─────────────────────────────────────── -->
     <div style="background:linear-gradient(135deg,rgba(0,207,255,0.06) 0%,rgba(56,189,248,0.04) 100%);border:1.5px dashed var(--accent-border);border-radius:14px;padding:16px 20px;margin-bottom:22px">
-      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">🤖 Import automatique depuis une police PDF</div>
+      <div style="font-size:13px;font-weight: 600;color:var(--text);margin-bottom:4px">🤖 Import automatique depuis une police PDF</div>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:12px">REX lit le PDF, extrait les données et pré-remplit le formulaire. Tu n'as plus qu'à confirmer si le contrat est commissionné ou non.</div>
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
-        <label id="police-import-label" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:9px;padding:8px 18px;font-size:13px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:7px">
+        <label id="police-import-label" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:9px;padding:8px 18px;font-size:13px;font-weight: 600;cursor:pointer;display:flex;align-items:center;gap:7px">
           📎 Choisir une police PDF
           <input type="file" accept="application/pdf" onchange="importPolicePdfAI(this)" style="display:none"/>
         </label>
@@ -532,7 +532,7 @@ function viewNouveauContrat() {
       <div class="form-field"><label class="form-label">Produit *</label><select class="form-select" id="ct-produit" onchange="updateModulesOptions(); updateCommissionPreview()"><option value="">— Sélectionner —</option></select></div>
       <div class="form-field" style="grid-column:span 2" id="ct-modules-field"><label class="form-label">Modules complémentaires</label><div id="ct-modules-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div><div style="font-size:10px;color:var(--text-muted);margin-top:4px" id="ct-modules-hint"></div>
         <div id="ct-modules-custom-list" style="margin-top:8px"></div>
-        <button type="button" onclick="ajouterModuleComplementaire()" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;margin-top:6px">+ Ajouter un module complémentaire</button>
+        <button type="button" onclick="ajouterModuleComplementaire()" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight: 500;cursor:pointer;margin-top:6px">+ Ajouter un module complémentaire</button>
         <div style="font-size:10px;color:var(--text-muted);margin-top:4px">Ex: "Assurances complémentaires et services" (AXA) — sert à lister les options incluses dans la police, à titre de détail. Si cette option a sa propre prime à reporter dans le total, ajoute-la plutôt comme "ligne de prime" ci-dessous (section "Lignes de prime").</div>
       </div>
       <div class="form-field" style="grid-column:span 2" id="ct-combinables-field"><label class="form-label">Produits souvent combinés</label><div id="ct-combinables-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div></div>
@@ -545,10 +545,10 @@ function viewNouveauContrat() {
       <div class="form-field" style="grid-column:span 2" id="ct-prime-lignes-field">
         <label class="form-label"><span id="ct-prime-lignes-label-text">Lignes de prime *</span> <span id="ct-prime-lignes-hint" style="font-weight:400;color:var(--text-muted);font-size:10px">(reporte chaque ligne de la police — ex: Responsabilité civile privée, Inventaire du ménage, Assurances complémentaires et services, Taxes légales)</span></label>
         <div id="ct-prime-lignes-list" style="display:flex;flex-direction:column;gap:6px;margin-top:6px"></div>
-        <button type="button" id="ct-prime-lignes-add-btn" onclick="ajouterLignePrime()" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;margin-top:8px">+ Ajouter une ligne</button>
+        <button type="button" id="ct-prime-lignes-add-btn" onclick="ajouterLignePrime()" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight: 500;cursor:pointer;margin-top:8px">+ Ajouter une ligne</button>
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-          <span style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Prime totale <span style="font-weight:400;text-transform:none">(hors taxes — base de commission)</span></span>
-          <span id="ct-prime-total-affiche" style="font-size:17px;font-weight:900;color:var(--accent)">CHF 0</span>
+          <span style="font-size:12px;font-weight: 500;color:var(--text-muted);text-transform:uppercase">Prime totale <span style="font-weight:400;text-transform:none">(hors taxes — base de commission)</span></span>
+          <span id="ct-prime-total-affiche" style="font-size:17px;font-weight: 600;color:var(--accent)">CHF 0</span>
         </div>
         <div id="ct-prime-taxes-note" style="font-size:10px;color:var(--text-muted);margin-top:3px;text-align:right"></div>
         <input type="hidden" id="ct-prime-mensuelle" value=""/>
@@ -602,8 +602,8 @@ function viewNouveauContrat() {
         <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Vie / 3a : % versé par la compagnie sur chaque prime d'épargne payée (Swiss Life : 1 %). Laisse vide si aucune.</div></div>
     </div>`)}
     <div id="commission-preview" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:14px 18px;margin-top:14px">
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px" id="commission-preview-label">Commission d'acquisition estimée</div>
-      <div id="commission-preview-value" style="font-size:20px;font-weight:900;color:var(--accent)">CHF 0</div>
+      <div style="font-size:11px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px" id="commission-preview-label">Commission d'acquisition estimée</div>
+      <div id="commission-preview-value" style="font-size:20px;font-weight: 600;color:var(--accent)">CHF 0</div>
       <div id="commission-preview-detail" style="font-size:11px;color:var(--text-muted);margin-top:2px"></div>
     </div>
     <div style="display:flex;gap:10px;margin-top:14px">
@@ -807,7 +807,7 @@ function ajouterLignePrime(libelle = '', montant = '') {
   const libelleEch = (libelle || '').toString().replace(/"/g, '&quot;');
   ligne.innerHTML = `
     <input class="form-input ct-prime-ligne-libelle" placeholder="Ex: Responsabilité civile privée" value="${libelleEch}" style="flex:1" oninput="refreshCategoriesLignesPrime(); calculerPrimeTotaleLignes()"/>
-    <span class="ct-prime-ligne-badge-taxe" title="Taxes/émoluments légaux — exclus du volume de prime et du calcul de commission" style="display:none;font-size:9.5px;font-weight:700;color:var(--c-alerte-texte);background:color-mix(in srgb, var(--c-alerte) 12%, transparent);border:1px solid color-mix(in srgb, var(--c-alerte) 30%, transparent);border-radius:5px;padding:2px 6px;white-space:nowrap">hors commission</span>
+    <span class="ct-prime-ligne-badge-taxe" title="Taxes/émoluments légaux — exclus du volume de prime et du calcul de commission" style="display:none;font-size:9.5px;font-weight: 500;color:var(--c-alerte-texte);background:color-mix(in srgb, var(--c-alerte) 12%, transparent);border:1px solid color-mix(in srgb, var(--c-alerte) 30%, transparent);border-radius:5px;padding:2px 6px;white-space:nowrap">hors commission</span>
     <select class="form-select ct-prime-ligne-categorie" style="display:none;width:190px;font-size:11px" onchange="calculerPrimeTotaleLignes()"></select>
     <input class="form-input ct-prime-ligne-montant" type="number" step="0.01" placeholder="CHF" value="${montant}" style="width:120px" oninput="calculerPrimeTotaleLignes()"/>
     <button type="button" onclick="this.parentElement.remove(); calculerPrimeTotaleLignes()" style="background:color-mix(in srgb, var(--c-danger) 12%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;flex-shrink:0">✕</button>
@@ -1125,7 +1125,7 @@ function updateModulesOptions() {
         </label>` : '';
       }).join('') + '<div id="ct-combinables-primes" style="width:100%;margin-top:8px"></div>' +
         (!estContexteVehicule ? '' : `<div id="ct-calculette-vehicule" style="display:none;width:100%;margin-top:10px;padding:12px 14px;background:var(--surface-alt);border:1px solid var(--border);border-radius:9px">
-          <div style="font-size:11px;font-weight:800;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px">🧮 Calculette RC + Casco — remplis 2 montants, le 3e se calcule</div>
+          <div style="font-size:11px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px">🧮 Calculette RC + Casco — remplis 2 montants, le 3e se calcule</div>
           <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
             <div><label class="form-label" style="font-size:10.5px">Prime totale (CHF)</label><input class="form-input" id="ct-calc-total" type="number" placeholder="1929.60" oninput="calculerSoldeVehicule('total')"/></div>
             <div><label class="form-label" style="font-size:10.5px">RC (CHF)</label><input class="form-input" id="ct-calc-rc" type="number" placeholder="327.60" oninput="calculerSoldeVehicule('rc')"/></div>
@@ -1176,7 +1176,7 @@ function ajouterModuleComplementaire() {
   ligne.innerHTML = `
     <input class="form-input ct-module-custom-nom" placeholder="Ex: Assurances complémentaires et services" style="flex:1"/>
     <input class="form-input ct-module-custom-prime" type="number" placeholder="Prime CHF/an" style="width:130px"/>
-    <button type="button" onclick="this.parentElement.remove()" style="background:var(--red-dim);color:var(--red);border:none;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">✕</button>
+    <button type="button" onclick="this.parentElement.remove()" style="background:var(--red-dim);color:var(--red);border:none;border-radius:7px;padding:7px 12px;font-size:12px;font-weight: 500;cursor:pointer">✕</button>
   `;
   list.appendChild(ligne);
 }
@@ -1190,7 +1190,7 @@ function ajouterPlaqueFlotte() {
     <input class="form-input ct-plaque-input" placeholder="VD 123456" style="flex:1"/>
     <input class="form-input ct-plaque-marque-input" placeholder="Marque et modèle (optionnel)" style="flex:1"/>
     <select class="form-select ct-plaque-type" style="width:200px;font-size:12px">${typeof vehOptionsType === 'function' ? vehOptionsType('') : '<option value="">—</option>'}</select>
-    <button type="button" onclick="this.parentElement.remove()" style="background:var(--red-dim);color:var(--red);border:none;border-radius:7px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer">✕</button>
+    <button type="button" onclick="this.parentElement.remove()" style="background:var(--red-dim);color:var(--red);border:none;border-radius:7px;padding:7px 12px;font-size:12px;font-weight: 500;cursor:pointer">✕</button>
   `;
   list.appendChild(ligne);
 }
@@ -1231,7 +1231,7 @@ function ajouterLigneLCA() {
       <label class="form-label" style="font-size:10.5px">Prime mensuelle (CHF)</label>
       <input class="form-input ct-lca-prime-input" type="number" placeholder="150" oninput="updateCommissionPreview()"/>
     </div>
-    <button type="button" onclick="this.parentElement.remove(); updateCommissionPreview();" style="background:var(--red-dim);color:var(--red);border:none;border-radius:7px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">✕</button>
+    <button type="button" onclick="this.parentElement.remove(); updateCommissionPreview();" style="background:var(--red-dim);color:var(--red);border:none;border-radius:7px;padding:8px 12px;font-size:12px;font-weight: 500;cursor:pointer">✕</button>
   `;
   container.appendChild(ligne);
 }
@@ -1274,7 +1274,7 @@ function toggleCombinablePrime(produitId) {
       // LCA complémentaire santé : un client peut avoir plusieurs produits LCA (ex: hospitalisation
       // + ambulatoire, ou deux compagnies différentes) — on affiche une liste de lignes dynamiques
       // (nom du produit + prime annuelle), avec un bouton pour en ajouter d'autres.
-      div.innerHTML = `<div id="ct-lca-lignes"></div><button type="button" onclick="ajouterLigneLCA()" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer">+ Ajouter un autre produit LCA</button><div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Une ligne par produit LCA — chacune devient un contrat distinct avec sa propre commission.</div>`;
+      div.innerHTML = `<div id="ct-lca-lignes"></div><button type="button" onclick="ajouterLigneLCA()" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight: 500;cursor:pointer">+ Ajouter un autre produit LCA</button><div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Une ligne par produit LCA — chacune devient un contrat distinct avec sa propre commission.</div>`;
       primesZone.appendChild(div);
       ajouterLigneLCA();
     } else {

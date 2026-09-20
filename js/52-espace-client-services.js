@@ -418,12 +418,12 @@ function ecImprimerResume() {
       </div>`).join('');
   }).join('');
   const css = (typeof CRX_CSS_IMPRESSION !== 'undefined' ? CRX_CSS_IMPRESSION : '') + `
-    .ecr-titre{font-weight:700;font-size:13pt;margin:0 0 2mm}.ecr-sous{color:#334155;font-size:10pt;margin:0 0 6mm}
-    .ecr-groupe{font-weight:700;color:#113679;border-bottom:1px solid #00CFFF;margin:5mm 0 2mm;padding-bottom:1mm;font-size:10.5pt}
+    .ecr-titre{font-weight: 600;font-size:13pt;margin:0 0 2mm}.ecr-sous{color:#334155;font-size:10pt;margin:0 0 6mm}
+    .ecr-groupe{font-weight: 600;color:#113679;border-bottom:1px solid #00CFFF;margin:5mm 0 2mm;padding-bottom:1mm;font-size:10.5pt}
     .ecr-ligne{display:grid;grid-template-columns:1fr 45mm 25mm;gap:3mm;align-items:start;font-size:9.5pt;line-height:1.35;padding:1.5mm 0;border-bottom:1px dotted #CBD5E1}
     .ecr-ligne small{color:#475569;font-size:8.5pt}.ecr-dates{color:#475569;font-size:8.5pt}
-    .ecr-prime{text-align:right;font-weight:700}
-    .ecr-total{display:flex;justify-content:space-between;font-weight:700;font-size:11pt;margin-top:5mm;padding-top:2mm;border-top:2px solid #113679}`;
+    .ecr-prime{text-align:right;font-weight: 600}
+    .ecr-total{display:flex;justify-content:space-between;font-weight: 600;font-size:11pt;margin-top:5mm;padding-top:2mm;border-top:2px solid #113679}`;
   const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Résumé de mes couvertures — ${ecEsc(ecNomClient(c))}</title><style>${css}</style></head><body>
     <div class="crx-page">
       <div class="crx-entete"><img src="${base}assets/logos/courrier-assurex-bleu.png" alt="Assurex"/><img src="${base}assets/logos/courrier-exgroup-bleu.png" alt="EX.GROUP"/></div>

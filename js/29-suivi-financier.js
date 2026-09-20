@@ -200,7 +200,7 @@ function htmlSfxCompagnies() {
         const retard = x.prochain && x.prochain < auj;
         return `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px 14px;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--surface)">
           <div style="display:flex;align-items:center;gap:8px;min-width:0">${typeof pictoCompagnie === 'function' ? pictoCompagnie(x.cie, 30) : ''}<b style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${sfxEsc(x.cie)}</b></div>
-          <div><div style="font-weight:800">CHF ${fmtCHF(Math.round(x.total12))} <small style="color:var(--text-muted);font-weight:500">12 mois</small></div>
+          <div><div style="font-weight: 600">CHF ${fmtCHF(Math.round(x.total12))} <small style="color:var(--text-muted);font-weight:500">12 mois</small></div>
             <div style="height:6px;border-radius:9px;background:var(--surface-alt,rgba(148,163,184,.18));overflow:hidden;margin-top:4px;display:flex"><i style="width:${w - wOz}%;background:#00CFFF"></i><i style="width:${wOz}%;background:#22C55E"></i></div>
             <small style="color:var(--text-muted)">${x.nb12} versement${x.nb12 > 1 ? 's' : ''} · moy. CHF ${fmtCHF(Math.round(x.moyVersement))}</small></div>
           <div><small style="color:var(--text-muted)">Rythme</small><div><b>${x.rythme}</b>${x.gap ? ` <small>(~${Math.round(x.gap)} j)</small>` : ''}</div>
@@ -227,7 +227,7 @@ function sfxBarresEncaisse(D) {
   // Ligne pointillée de la commission mensuelle moyenne (même échelle : 150 px = max, base à 22 px du bas)
   const yMoy = moy ? Math.round(moy / max * 150) + 22 : 0;
   return `<div style="position:relative;display:flex;align-items:flex-end;gap:6px;height:190px;padding-top:18px">
-    ${moy ? `<div title="Commission mensuelle moyenne : CHF ${fmtCHF(Math.round(moy))}" style="position:absolute;left:0;right:0;bottom:${yMoy}px;border-top:2px dashed ${CM};pointer-events:none;z-index:1"><span style="position:absolute;right:0;top:-18px;font-size:10.5px;font-weight:700;color:${CM};background:var(--surface);padding:0 4px;border-radius:4px">moy. ${dbxCompact(moy)}/mois</span></div>` : ''}
+    ${moy ? `<div title="Commission mensuelle moyenne : CHF ${fmtCHF(Math.round(moy))}" style="position:absolute;left:0;right:0;bottom:${yMoy}px;border-top:2px dashed ${CM};pointer-events:none;z-index:1"><span style="position:absolute;right:0;top:-18px;font-size:10.5px;font-weight: 500;color:${CM};background:var(--surface);padding:0 4px;border-radius:4px">moy. ${dbxCompact(moy)}/mois</span></div>` : ''}
     ${D.mois.map((m, i) => {
     const a = Math.max(0, D.parMois[i]), o = Math.max(0, D.parMoisOZ[i] || 0), t = a + o;
     const h = Math.round(t / max * 150);

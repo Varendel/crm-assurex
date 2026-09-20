@@ -50,7 +50,7 @@
    tableau et les en-têtes suivants se regroupent dans une seule cellule. */
 .brv-table th { text-align: left; border-bottom: 1px solid var(--border); padding: 0; }
 .brv-table th > span {
-  display: block; padding: 8px 10px; font-size: 10.5px; text-transform: uppercase;
+  display: block; padding: 8px 10px; font-size: var(--t-xs); text-transform: uppercase;
   letter-spacing: .07em; color: var(--text-muted); font-weight: 600; white-space: nowrap;
 }
 .brv-table th.d > span { text-align: right; }
@@ -70,7 +70,7 @@
   transition: color var(--v-court, .15s), border-color var(--v-court, .15s);
 }
 .brv-act:hover { color: var(--text); border-color: var(--accent-border); }
-.brv-lie { font-size: 13px; }
+.brv-lie { font-size: var(--t-m); }
 
 @media (max-width: 760px) {
   .brv-table th:nth-child(5), .brv-table td:nth-child(5) { display: none; }

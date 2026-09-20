@@ -6,7 +6,7 @@
    champs se referme.
    ═══════════════════════════════════════════════════════════════════════════════════════════════ */
 
-.asl-sous { margin: 0 0 var(--e-4, 16px); font-size: 13.5px; color: var(--text-muted); line-height: 1.55; text-wrap: pretty; }
+.asl-sous { margin: 0 0 var(--e-4, 16px); font-size: var(--t-m); color: var(--text-muted); line-height: 1.55; text-wrap: pretty; }
 
 /* ── À qui l'annonce va partir ─────────────────────────────────────────────────────────────────
    C'est la réponse à « et après ? ». La poser avant le formulaire donne un sens au remplissage. */
@@ -18,14 +18,14 @@
 }
 .asl-destinataires > em {
   display: block; margin-bottom: 7px; font-style: normal;
-  font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted);
+  font-size: var(--t-xs); text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted);
 }
 .asl-destinataires ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
-.asl-destinataires li { display: flex; align-items: center; gap: 9px; font-size: 13px; }
+.asl-destinataires li { display: flex; align-items: center; gap: 9px; font-size: var(--t-m); }
 .asl-destinataires li b { font-weight: 600; color: var(--text); }
 .asl-destinataires li span { color: var(--text-muted); }
 .asl-vide { background: var(--surface-alt); border-color: var(--border); }
-.asl-vide span { display: block; font-size: 12.5px; color: var(--text-muted); line-height: 1.5; }
+.asl-vide span { display: block; font-size: var(--t-s); color: var(--text-muted); line-height: 1.5; }
 
 /* ── Entrée ou sortie ──────────────────────────────────────────────────────────────────────────
    En cartes et non en menu : le choix change ce qu'on demande ensuite, il doit se voir. */
@@ -39,8 +39,8 @@
 .asl-radio:hover { border-color: var(--accent-border); }
 .asl-radio.actif { border-color: var(--accent); background: var(--accent-dim); }
 .asl-radio input { position: absolute; opacity: 0; pointer-events: none; }
-.asl-radio b { font-size: 13px; font-weight: 600; color: var(--text); }
-.asl-radio small { font-size: 11px; color: var(--text-muted); line-height: 1.35; }
+.asl-radio b { font-size: var(--t-m); font-weight: 600; color: var(--text); }
+.asl-radio small { font-size: var(--t-xs); color: var(--text-muted); line-height: 1.35; }
 
 .asl-grille { display: grid; grid-template-columns: 1fr 1fr; gap: var(--e-3, 12px); }
 .asl-grille.asl-trois { grid-template-columns: 110px 1fr 1fr; }
@@ -48,7 +48,7 @@
   .asl-nature, .asl-grille, .asl-grille.asl-trois { grid-template-columns: 1fr; }
 }
 
-.asl-aide { display: block; margin-top: 5px; font-size: 11.5px; color: var(--text-muted); line-height: 1.45; }
+.asl-aide { display: block; margin-top: 5px; font-size: var(--t-xs); color: var(--text-muted); line-height: 1.45; }
 .asl-aide-ok { color: var(--c-succes, #16A34A); }
 .asl-aide-ko { color: var(--c-danger-texte, #B91C1C); }
 
@@ -60,7 +60,7 @@
 /* ── Chez le courtier ──────────────────────────────────────────────────────────────────────────
    Une annonce en attente est un compte à rebours, pas une tâche parmi d'autres. */
 .asl-cabinet { margin-bottom: 16px; border-left: 3px solid var(--accent); }
-.asl-rappel { margin: 0 0 var(--e-3, 12px); font-size: 12.5px; color: var(--text-muted); line-height: 1.5; text-wrap: pretty; }
+.asl-rappel { margin: 0 0 var(--e-3, 12px); font-size: var(--t-s); color: var(--text-muted); line-height: 1.5; text-wrap: pretty; }
 
 .asl-liste { display: flex; flex-direction: column; gap: var(--e-2, 8px); }
 .asl-item {
@@ -76,18 +76,18 @@
 .asl-item-tete b { font-size: 14px; font-weight: 600; color: var(--text); }
 .asl-badge {
   flex-shrink: 0; padding: 2px 9px; border-radius: var(--r-rond, 999px);
-  font-size: 10.5px; font-weight: 600; text-transform: uppercase; letter-spacing: .05em;
+  font-size: var(--t-xs); font-weight: 500; text-transform: uppercase; letter-spacing: .05em;
 }
 .asl-badge.entree { background: color-mix(in srgb, var(--c-succes, #16A34A) 15%, transparent); color: var(--c-succes-texte, #15803D); }
 .asl-badge.sortie { background: color-mix(in srgb, var(--text-muted) 15%, transparent); color: var(--text-muted); }
-.asl-item-cie { font-size: 12.5px; color: var(--text-muted); }
-.asl-item-age { margin-left: auto; font-size: 11.5px; color: var(--text-dim); white-space: nowrap; }
+.asl-item-cie { font-size: var(--t-s); color: var(--text-muted); }
+.asl-item-age { margin-left: auto; font-size: var(--t-xs); color: var(--text-dim); white-space: nowrap; }
 .asl-item.tard .asl-item-age { color: var(--c-alerte, #F59E0B); font-weight: 600; }
 
-.asl-item-faits { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 12.5px; color: var(--text); }
+.asl-item-faits { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--t-s); color: var(--text); }
 .asl-item-faits em { font-style: normal; color: var(--text-muted); }
 .asl-manque { color: var(--c-alerte, #F59E0B); font-style: italic; }
 
-.asl-item-note { margin: 0; font-size: 12.5px; color: var(--text-muted); font-style: italic; line-height: 1.5; }
+.asl-item-note { margin: 0; font-size: var(--t-s); color: var(--text-muted); font-style: italic; line-height: 1.5; }
 .asl-item-actions { display: flex; gap: var(--e-2, 8px); flex-wrap: wrap; }
-.asl-item-actions .btn-save, .asl-item-actions .btn-secondary { padding: 7px 14px; font-size: 12.5px; }
+.asl-item-actions .btn-save, .asl-item-actions .btn-secondary { padding: 7px 14px; font-size: var(--t-s); }

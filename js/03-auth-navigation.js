@@ -492,7 +492,7 @@ async function mountCalendarWidget() {
         <div style="display:flex;align-items:center;gap:10px">
           <span style="font-size:20px">📅</span>
           <div>
-            <div style="font-size:13px;font-weight:700;color:var(--text)">Agenda non connecté</div>
+            <div style="font-size:13px;font-weight: 600;color:var(--text)">Agenda non connecté</div>
             <div style="font-size:11px;color:var(--text-muted)">Connecte Outlook pour voir tes rendez-vous ici</div>
           </div>
         </div>
@@ -523,8 +523,8 @@ function renderCalendarWidget() {
     return `<button onclick="selectDashboardDay('${isoDay(d)}')" style="
       display:flex;flex-direction:column;align-items:center;gap:4px;flex:1;background:none;border:none;cursor:pointer;padding:6px 2px;border-radius:10px;
       ${isFocus ? 'background:var(--accent-dim);' : ''}">
-      <span style="font-size:10px;color:var(--text-muted);font-weight:700">${joursLabels[i]}</span>
-      <span style="width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;
+      <span style="font-size:10px;color:var(--text-muted);font-weight: 600">${joursLabels[i]}</span>
+      <span style="width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight: 600;
         ${isToday ? 'background:var(--accent);color:#fff;' : isFocus ? 'color:var(--accent);' : 'color:var(--text);'}">${d.getDate()}</span>
       ${nbEv > 0 ? `<span style="width:4px;height:4px;border-radius:50%;background:${isFocus?'var(--accent)':'var(--text-muted)'}"></span>` : '<span style="width:4px;height:4px"></span>'}
     </button>`;
@@ -538,14 +538,14 @@ function renderCalendarWidget() {
   function dayCard(date, label) {
     const evs = eventsForDay(date);
     return `<div style="flex:1;min-width:0">
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">${label}</div>
+      <div style="font-size:11px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">${label}</div>
       ${evs.length ? evs.map(ev => {
         const start = dateEvenementGraph(ev.start.dateTime);
         const end = ev.end && ev.end.dateTime ? dateEvenementGraph(ev.end.dateTime) : null;
         const heure = ev.isAllDay ? 'Jour entier' : start.toLocaleTimeString('fr-CH', { hour:'2-digit', minute:'2-digit' }) + (end ? ' – ' + end.toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit'}) : '');
         return `<div style="display:flex;gap:8px;margin-bottom:8px;background:var(--surface-alt);border-left:3px solid var(--accent);border-radius:8px;padding:8px 10px">
           <div style="flex:1;min-width:0">
-            <div style="font-size:12px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ev.subject || 'Sans titre'}</div>
+            <div style="font-size:12px;font-weight: 500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ev.subject || 'Sans titre'}</div>
             <div style="font-size:10.5px;color:var(--text-muted);margin-top:1px">${heure}${ev.location && ev.location.displayName ? ' · ' + ev.location.displayName : ''}</div>
           </div>
         </div>`;
@@ -556,12 +556,12 @@ function renderCalendarWidget() {
   el.innerHTML = `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:18px 20px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-        <div style="font-size:13px;font-weight:800;color:var(--text)">📅 Agenda de la semaine</div>
+        <div style="font-size:13px;font-weight: 600;color:var(--text)">📅 Agenda de la semaine</div>
         <div style="display:flex;align-items:center;gap:10px">
           <button onclick="shiftDashboardWeek(-7)" style="background:var(--surface-alt);border:1px solid var(--border);border-radius:7px;width:26px;height:26px;color:var(--text-muted);cursor:pointer;font-size:13px;line-height:1">‹</button>
-          <button onclick="shiftDashboardWeek(0)" style="background:none;border:none;color:var(--text-muted);font-size:10.5px;font-weight:700;cursor:pointer">Aujourd'hui</button>
+          <button onclick="shiftDashboardWeek(0)" style="background:none;border:none;color:var(--text-muted);font-size:10.5px;font-weight: 500;cursor:pointer">Aujourd'hui</button>
           <button onclick="shiftDashboardWeek(7)" style="background:var(--surface-alt);border:1px solid var(--border);border-radius:7px;width:26px;height:26px;color:var(--text-muted);cursor:pointer;font-size:13px;line-height:1">›</button>
-          <button onclick="navigate('agenda')" style="background:none;border:none;color:var(--accent);font-size:11px;font-weight:700;cursor:pointer;margin-left:4px">Vue complète →</button>
+          <button onclick="navigate('agenda')" style="background:none;border:none;color:var(--accent);font-size:11px;font-weight: 500;cursor:pointer;margin-left:4px">Vue complète →</button>
         </div>
       </div>
       <div style="display:flex;gap:2px;margin-bottom:16px">${dayPills}</div>
@@ -589,7 +589,7 @@ function showError(msg) {
   if (!toast) {
     toast = document.createElement('div');
     toast.id = 'global-error-toast';
-    toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#7f1d1d;border:1px solid #f87171;color:#fecaca;padding:14px 20px;border-radius:10px;font-size:13px;font-weight:700;z-index:9999;max-width:380px;box-shadow:0 8px 24px rgba(0,0,0,0.4)';
+    toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#7f1d1d;border:1px solid #f87171;color:#fecaca;padding:14px 20px;border-radius:10px;font-size:13px;font-weight: 600;z-index:9999;max-width:380px;box-shadow:0 8px 24px rgba(0,0,0,0.4)';
     document.body.appendChild(toast);
   }
   toast.textContent = '⚠ ' + msg;
@@ -931,7 +931,7 @@ function renderSidebar() {
     const initials = (a.prenom[0] + a.nom[0]).toUpperCase();
     team += `<div class="team-member ${isMe ? 'me' : ''}">
       <div class="avatar" style="width:24px;height:24px;font-size:8px;background:color-mix(in srgb, ${color} 9%, transparent);border:1.5px solid color-mix(in srgb, ${color} 27%, transparent);color:${color}">${initials}</div>
-      <div style="font-size:11.5px;font-weight:700;color:${isMe ? color : 'var(--text)'};">${a.prenom}</div>
+      <div style="font-size:11.5px;font-weight: 500;color:${isMe ? color : 'var(--text)'};">${a.prenom}</div>
       ${isMe ? '<div class="online-dot"></div>' : ''}
     </div>`;
   });
@@ -1151,7 +1151,7 @@ function badgeNatureCommission(nature) {
   const couleur = estGestion ? '#60a5fa' : '#a78bfa';
   const icone = estGestion ? '🔄' : '🆕';
   const label = estGestion ? 'Gestion' : 'Acquisition';
-  return `<span title="Commission de ${label.toLowerCase()}" style="display:inline-flex;align-items:center;gap:4px;background:color-mix(in srgb, ${couleur} 9%, transparent);color:${couleur};border:1px solid color-mix(in srgb, ${couleur} 25%, transparent);border-radius:7px;padding:2px 8px 2px 6px;font-size:10.5px;font-weight:800;white-space:nowrap"><span style="font-size:12px;line-height:1">${icone}</span>${label}</span>`;
+  return `<span title="Commission de ${label.toLowerCase()}" style="display:inline-flex;align-items:center;gap:4px;background:color-mix(in srgb, ${couleur} 9%, transparent);color:${couleur};border:1px solid color-mix(in srgb, ${couleur} 25%, transparent);border-radius:7px;padding:2px 8px 2px 6px;font-size:10.5px;font-weight: 500;white-space:nowrap"><span style="font-size:12px;line-height:1">${icone}</span>${label}</span>`;
 }
 
 function avatar(agent, size = 28) {
@@ -1320,12 +1320,12 @@ function htmlFichesRecentes() {
     return `<div onmousedown="window._rechercheGlobaleActions['${cle}']()" style="display:flex;align-items:center;gap:10px;padding:8px 16px;cursor:pointer;border-bottom:1px solid var(--border)" onmouseover="this.style.background='rgba(56,189,248,0.06)'" onmouseout="this.style.background='transparent'">
       <span style="font-size:15px;flex-shrink:0">${typeof estEntreprise === 'function' && estEntreprise(c) ? '🏢' : '👤'}</span>
       <div style="flex:1;min-width:0">
-        <div style="font-size:12.5px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${String(nom).replace(/</g, '&lt;')}</div>
+        <div style="font-size:12.5px;font-weight: 500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${String(nom).replace(/</g, '&lt;')}</div>
         ${sous ? `<div style="font-size:10.5px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${String(sous).replace(/</g, '&lt;')}</div>` : ''}
       </div>
     </div>`;
   }).join('');
-  return `<div style="padding:7px 16px 4px;font-size:10px;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">🕘 Dernières fiches consultées</div>${lignes}`;
+  return `<div style="padding:7px 16px 4px;font-size:10px;font-weight: 500;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">🕘 Dernières fiches consultées</div>${lignes}`;
 }
 
 function renderResultatsRechercheGlobale() {
@@ -1367,12 +1367,12 @@ function renderResultatsRechercheGlobale() {
     return `<div onmousedown="window._rechercheGlobaleActions['${cle}']()" style="display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;border-bottom:1px solid var(--border)" onmouseover="this.style.background='rgba(56,189,248,0.06)'" onmouseout="this.style.background='transparent'">
       <span style="font-size:15px;flex-shrink:0">${icone}</span>
       <div style="flex:1;min-width:0">
-        <div style="font-size:12.5px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${titre}</div>
+        <div style="font-size:12.5px;font-weight: 500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${titre}</div>
         ${sousTitre ? `<div style="font-size:10.5px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${sousTitre}</div>` : ''}
       </div>
     </div>`;
   };
-  const entete = (txt) => `<div style="padding:7px 16px 4px;font-size:10px;font-weight:800;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">${txt}</div>`;
+  const entete = (txt) => `<div style="padding:7px 16px 4px;font-size:10px;font-weight: 500;color:var(--text-dim);text-transform:uppercase;letter-spacing:0.5px">${txt}</div>`;
 
   let html = '';
   if (clients.length) {
@@ -1462,31 +1462,31 @@ function renderEtatDossiers(demandesOffre, refreshType, refreshId) {
     if (l.statut !== 'reçue') {
       // Marquer manuellement comme reçue (repli si la synchro Outlook ne trouve pas la réponse —
       // mauvais domaine, réponse pas encore arrivée, offre reçue par un autre canal, etc.).
-      return `<button type="button" onclick="event.stopPropagation();marquerCompagnieRecue('${l.demandeOffreId}',${l.idx},'${refreshType || ''}','${refreshId || ''}')" style="background:var(--surface);border:1px solid var(--border);color:var(--text-muted);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer">✓ Marquer reçue</button>`;
+      return `<button type="button" onclick="event.stopPropagation();marquerCompagnieRecue('${l.demandeOffreId}',${l.idx},'${refreshType || ''}','${refreshId || ''}')" style="background:var(--surface);border:1px solid var(--border);color:var(--text-muted);border-radius:6px;padding:3px 8px;font-size:10px;font-weight: 500;cursor:pointer">✓ Marquer reçue</button>`;
     }
     const boutons = [];
     boutons.push(l.offrePath
-      ? `<button type="button" onclick="event.stopPropagation();ouvrirPieceJointe('${l.offrePath}')" style="background:var(--surface);border:1px solid var(--border);color:var(--text-muted);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer">📄 Voir l'offre</button>`
-      : `<label onclick="event.stopPropagation()" style="cursor:pointer;background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700">📎 Joindre l'offre
+      ? `<button type="button" onclick="event.stopPropagation();ouvrirPieceJointe('${l.offrePath}')" style="background:var(--surface);border:1px solid var(--border);color:var(--text-muted);border-radius:6px;padding:3px 8px;font-size:10px;font-weight: 500;cursor:pointer">📄 Voir l'offre</button>`
+      : `<label onclick="event.stopPropagation()" style="cursor:pointer;background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:6px;padding:3px 8px;font-size:10px;font-weight: 500">📎 Joindre l'offre
         <input type="file" accept="application/pdf" style="display:none" onclick="event.stopPropagation()" onchange="event.stopPropagation();uploadOffreCompagnie('${l.demandeOffreId}',${l.idx},this,'${refreshType || ''}','${refreshId || ''}')">
       </label>`);
     if (!l.soumisClient) {
-      boutons.push(`<button type="button" onclick="event.stopPropagation();marquerOffreSoumiseClient('${l.demandeOffreId}',${l.idx},'${refreshType || ''}','${refreshId || ''}')" style="background:var(--surface);border:1px solid #60a5fa44;color:#60a5fa;border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer">📨 Marquer soumise au client</button>`);
+      boutons.push(`<button type="button" onclick="event.stopPropagation();marquerOffreSoumiseClient('${l.demandeOffreId}',${l.idx},'${refreshType || ''}','${refreshId || ''}')" style="background:var(--surface);border:1px solid #60a5fa44;color:#60a5fa;border-radius:6px;padding:3px 8px;font-size:10px;font-weight: 500;cursor:pointer">📨 Marquer soumise au client</button>`);
     }
-    boutons.push(`<button type="button" onclick="event.stopPropagation();preparerEnvoiSignatureOffre('${l.clientId}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:6px;padding:3px 8px;font-size:10px;font-weight:700;cursor:pointer">✍️ Préparer signature</button>`);
+    boutons.push(`<button type="button" onclick="event.stopPropagation();preparerEnvoiSignatureOffre('${l.clientId}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:6px;padding:3px 8px;font-size:10px;font-weight: 500;cursor:pointer">✍️ Préparer signature</button>`);
     return boutons.join('');
   };
   // Petite étape de timeline (Envoyée / Reçue / Soumise au client) — pastille pleine + date une
   // fois l'étape franchie, pastille grise en pointillé sinon. Répond directement à la demande de
   // Jonathan de voir clairement à quelle compagnie et à quelle date chaque étape a eu lieu.
-  const etape = (label, fait, date, couleur) => `<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;color:${fait ? couleur : 'var(--text-muted)'};background:${fait ? couleur + '1a' : 'transparent'};border:1px ${fait ? 'solid' : 'dashed'} ${fait ? couleur + '55' : 'var(--border)'};border-radius:99px;padding:2px 8px;white-space:nowrap">${label}${fait && date ? ' · ' + fmtDate(date) : ''}</span>`;
+  const etape = (label, fait, date, couleur) => `<span style="display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight: 500;color:${fait ? couleur : 'var(--text-muted)'};background:${fait ? couleur + '1a' : 'transparent'};border:1px ${fait ? 'solid' : 'dashed'} ${fait ? couleur + '55' : 'var(--border)'};border-radius:99px;padding:2px 8px;white-space:nowrap">${label}${fait && date ? ' · ' + fmtDate(date) : ''}</span>`;
   return `<div style="padding:10px 16px;background:var(--surface-alt);border:1px solid var(--border);border-radius:10px;margin-bottom:16px">
     <div style="font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">📋 État des dossiers (demandes d'offre)</div>
     <div style="display:flex;flex-direction:column;gap:8px">
       ${lignes.map(l => `<div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px">
         <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;cursor:pointer" onclick="demandeOffreEnEditionId='${l.demandeOffreId}';navigate('nouvelle-demande-offre')">
           <span style="width:7px;height:7px;border-radius:50%;background:${statutColorDo[l.statut] || '#64748b'};flex-shrink:0"></span>
-          <span style="font-size:12.5px;color:var(--text);font-weight:700">${l.compagnie || l.libelle}</span>
+          <span style="font-size:12.5px;color:var(--text);font-weight: 600">${l.compagnie || l.libelle}</span>
           ${l.idx !== null ? (l.email ? `<span style="font-size:10.5px;color:var(--text-muted)">✉️ destinataire : ${l.email}</span>` : `<span style="font-size:10.5px;color:var(--c-danger-texte)">⚠ aucun destinataire enregistré</span>`) : ''}
         </div>
         ${l.idx !== null ? `<div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:6px;padding-left:17px">
@@ -1737,27 +1737,27 @@ function viewApparence() {
         <div style="flex:1;height:44px;border-radius:8px;background:${m.bg};border:1px solid ${m.surface}"></div>
         <div style="flex:1;height:44px;border-radius:8px;background:${m.surface};border:1px solid var(--border)"></div>
       </div>
-      <div style="font-size:13px;font-weight:800;color:var(--text)">${m.label} ${modeActuel === m.id ? '✓' : ''}</div>
+      <div style="font-size:13px;font-weight: 600;color:var(--text)">${m.label} ${modeActuel === m.id ? '✓' : ''}</div>
       <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${m.desc}</div>
     </div>`).join('');
 
   const accentsHtml = accents.map(a => `
     <div style="display:flex;flex-direction:column;align-items:center;gap:6px">
       <div class="theme-swatch ${accentActuel === a.id ? 'active' : ''}" style="background:${a.couleur}" onclick="appliquerThemeAccent('${a.id}')" title="${a.label}"></div>
-      <div style="font-size:10.5px;color:var(--text-muted);font-weight:700">${a.label}</div>
+      <div style="font-size:10.5px;color:var(--text-muted);font-weight: 600">${a.label}</div>
     </div>`).join('');
 
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Apparence</h2>
+      <h2 style="margin:0;font-size:18px;font-weight: 600;color:var(--text)">Apparence</h2>
     </div>
     <div style="max-width:640px;margin-bottom:18px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
-      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">Mode</div>
+      <div style="font-size:13px;font-weight: 600;color:var(--text);margin-bottom:4px">Mode</div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px">Le choix est enregistré sur cet appareil et s'applique immédiatement.</div>
       <div style="display:flex;gap:12px;flex-wrap:wrap">${modesHtml}</div>
     </div>
     <div style="max-width:640px;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:18px">
-      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">Couleur d'accent</div>
+      <div style="font-size:13px;font-weight: 600;color:var(--text);margin-bottom:4px">Couleur d'accent</div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px">Boutons, liens et éléments actifs du CRM.</div>
       <div style="display:flex;gap:18px">${accentsHtml}</div>
     </div>

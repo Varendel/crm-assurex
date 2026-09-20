@@ -62,4 +62,4 @@
   border: 1px solid color-mix(in srgb, var(--c-alerte, #F59E0B) 40%, transparent);
 }
 .eaf-sansdate b { font-size: 14px; font-weight: 600; color: var(--c-alerte-texte, #B45309); }
-.eaf-sansdate small { font-size: 12.5px; color: var(--text-muted); line-height: 1.55; max-width: 92ch; text-wrap: pretty; }
+.eaf-sansdate small { font-size: var(--t-s); color: var(--text-muted); line-height: 1.55; max-width: 92ch; text-wrap: pretty; }

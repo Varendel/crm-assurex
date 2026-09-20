@@ -3,7 +3,7 @@ function viewBordereaux() {
   const compagnies = [...new Set(allBordereaux.map(b => b.compagnie).filter(Boolean))].sort();
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Bordereaux — décomptes reçus des compagnies</h2>
+      <h2 style="margin:0;font-size:18px;font-weight: 600;color:var(--text)">Bordereaux — décomptes reçus des compagnies</h2>
       <div style="display:flex;gap:8px">
         <button class="btn-add" onclick="navigate('import-decompte')">📥 Importer (PDF/Excel)</button>
         <button class="btn-secondary" onclick="navigate('nouveau-bordereau')">+ Saisir bordereau</button>
@@ -94,15 +94,15 @@ function renderBordereauxList() {
         ${typeof pictoCompagnie === 'function' ? `<span style="flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px">${pictoCompagnie(b.compagnie, 40)}</span>` : ''}
         <div style="flex:1;min-width:0">
           <div style="display:flex;align-items:center;gap:8px">
-            ${b.numero ? `<span style="background:var(--surface-alt);color:var(--text-muted);border-radius:5px;padding:2px 7px;font-size:10.5px;font-weight:800;font-family:monospace">${b.numero}</span>` : ''}
-            <div style="font-size:14px;font-weight:800;color:var(--text)">${b.compagnie}</div>
-            ${b.encaisse_par === 'oz' ? `<span title="Encaissé par OZ Assure — hors chiffres Assurex" style="display:inline-flex;align-items:center;gap:4px;background:var(--surface-alt);border:1px solid var(--border);border-radius:999px;padding:1px 9px;font-size:10.5px;font-weight:600;color:var(--text-muted)">${OZ_MINI_LOGO} encaissé par OZ</span>` : ''}
-            ${b.pdf_url ? `<button type="button" onclick="event.stopPropagation(); ouvrirPieceJointe('${b.pdf_url}')" title="Ouvrir le décompte uploadé${b.pdf_nom ? ' : ' + String(b.pdf_nom).replace(/["<>]/g, '') : ''}" style="display:inline-flex;align-items:center;gap:5px;background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:999px;padding:3px 11px;font-size:11.5px;font-weight:600;cursor:pointer;white-space:nowrap">📎 Voir le décompte</button>` : ''}
+            ${b.numero ? `<span style="background:var(--surface-alt);color:var(--text-muted);border-radius:5px;padding:2px 7px;font-size:10.5px;font-weight: 500;font-family:monospace">${b.numero}</span>` : ''}
+            <div style="font-size:14px;font-weight: 600;color:var(--text)">${b.compagnie}</div>
+            ${b.encaisse_par === 'oz' ? `<span title="Encaissé par OZ Assure — hors chiffres Assurex" style="display:inline-flex;align-items:center;gap:4px;background:var(--surface-alt);border:1px solid var(--border);border-radius:999px;padding:1px 9px;font-size:10.5px;font-weight: 500;color:var(--text-muted)">${OZ_MINI_LOGO} encaissé par OZ</span>` : ''}
+            ${b.pdf_url ? `<button type="button" onclick="event.stopPropagation(); ouvrirPieceJointe('${b.pdf_url}')" title="Ouvrir le décompte uploadé${b.pdf_nom ? ' : ' + String(b.pdf_nom).replace(/["<>]/g, '') : ''}" style="display:inline-flex;align-items:center;gap:5px;background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:999px;padding:3px 11px;font-size:11.5px;font-weight: 500;cursor:pointer;white-space:nowrap">📎 Voir le décompte</button>` : ''}
           </div>
           <div style="font-size:11px;color:var(--text-muted)">${b.mois}${b.date_reception ? ' · Reçu le ' + fmtDate(b.date_reception) : ''}${tauxCaution > 0 ? ' · Caution ' + tauxCaution + '%' : ''}</div>
         </div>
         <div style="text-align:right">
-          <div style="font-size:16px;font-weight:900;color:var(--c-alerte-texte)">CHF ${fmtCHF((b.montant_brut||0))}</div>
+          <div style="font-size:16px;font-weight: 600;color:var(--c-alerte-texte)">CHF ${fmtCHF((b.montant_brut||0))}</div>
           <div style="font-size:10px;color:var(--text-muted)">Brut</div>
         </div>
         ${badge(b.statut, b.statut === 'reçu' ? '#4ade80' : '#f59e0b')}
@@ -111,40 +111,40 @@ function renderBordereauxList() {
       ${isOpen ? `<div class="bordereau-body">
         ${tauxCaution > 0 ? `<div style="display:flex;gap:10px;margin-bottom:14px">
           <div style="flex:1;background:rgba(167,139,250,0.1);border:1px solid rgba(167,139,250,0.3);border-radius:8px;padding:10px 14px">
-            <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Caution retenue (${tauxCaution}%)</div>
-            <div style="font-size:16px;font-weight:900;color:#a78bfa">CHF ${fmtCHF(montantCaution)}</div>
+            <div style="font-size:10px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Caution retenue (${tauxCaution}%)</div>
+            <div style="font-size:16px;font-weight: 600;color:#a78bfa">CHF ${fmtCHF(montantCaution)}</div>
           </div>
           <div style="flex:1;background:var(--surface-alt);border-radius:8px;padding:10px 14px">
-            <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Net après caution</div>
-            <div style="font-size:16px;font-weight:900;color:var(--text)">CHF ${fmtCHF(montantNetApresCaution)}</div>
+            <div style="font-size:10px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Net après caution</div>
+            <div style="font-size:16px;font-weight: 600;color:var(--text)">CHF ${fmtCHF(montantNetApresCaution)}</div>
           </div>
         </div>` : ''}
 
         <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;background:color-mix(in srgb, var(--c-succes) 8%, transparent);border:1px solid color-mix(in srgb, var(--c-succes) 25%, transparent);border-radius:9px;padding:12px 16px">
           <div>
-            <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px">Montant net total versé (rapproché)</div>
-            <div style="font-size:20px;font-weight:900;color:var(--c-succes-texte)">CHF ${fmtCHF((pJ+pA))}</div>
+            <div style="font-size:10px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px">Montant net total versé (rapproché)</div>
+            <div style="font-size:20px;font-weight: 600;color:var(--c-succes-texte)">CHF ${fmtCHF((pJ+pA))}</div>
           </div>
-          <button onclick="event.stopPropagation(); toggleBordereauVerse('${b.id}')" style="background:${b.statut==='reçu' ? 'color-mix(in srgb, var(--c-succes) 15%, transparent)' : 'var(--accent-dim)'};border:1px solid ${b.statut==='reçu' ? 'color-mix(in srgb, var(--c-succes) 40%, transparent)' : 'var(--accent-border)'};color:${b.statut==='reçu' ? '#4ade80' : 'var(--accent)'};border-radius:8px;padding:9px 18px;font-weight:800;font-size:12.5px;cursor:pointer;white-space:nowrap">${b.statut==='reçu' ? '↺ Remettre en attendu' : '✓ Marquer comme versé'}</button>
+          <button onclick="event.stopPropagation(); toggleBordereauVerse('${b.id}')" style="background:${b.statut==='reçu' ? 'color-mix(in srgb, var(--c-succes) 15%, transparent)' : 'var(--accent-dim)'};border:1px solid ${b.statut==='reçu' ? 'color-mix(in srgb, var(--c-succes) 40%, transparent)' : 'var(--accent-border)'};color:${b.statut==='reçu' ? '#4ade80' : 'var(--accent)'};border-radius:8px;padding:9px 18px;font-weight: 500;font-size:12.5px;cursor:pointer;white-space:nowrap">${b.statut==='reçu' ? '↺ Remettre en attendu' : '✓ Marquer comme versé'}</button>
         </div>
 
         <div style="display:flex;gap:10px;margin-bottom:14px">
           <div style="flex:1;background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:8px;padding:10px 14px">
-            <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Part Jonathan</div>
-            <div style="font-size:16px;font-weight:900;color:#38bdf8">CHF ${fmtCHF(pJ)}</div>
+            <div style="font-size:10px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Part Jonathan</div>
+            <div style="font-size:16px;font-weight: 600;color:#38bdf8">CHF ${fmtCHF(pJ)}</div>
           </div>
           <div style="flex:1;background:var(--gold-dim);border:1px solid color-mix(in srgb, var(--c-alerte) 30%, transparent);border-radius:8px;padding:10px 14px">
-            <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">${apporteurUnique ? 'Part ' + apporteurUnique.prenom : (agentsDistincts.size > 1 ? 'Part apporteurs (mixte)' : 'Part apporteurs')}</div>
-            <div style="font-size:16px;font-weight:900;color:var(--c-alerte-texte)">CHF ${fmtCHF(pA)}</div>
+            <div style="font-size:10px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">${apporteurUnique ? 'Part ' + apporteurUnique.prenom : (agentsDistincts.size > 1 ? 'Part apporteurs (mixte)' : 'Part apporteurs')}</div>
+            <div style="font-size:16px;font-weight: 600;color:var(--c-alerte-texte)">CHF ${fmtCHF(pA)}</div>
           </div>
         </div>
 
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-          <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Commissions rapprochées (${commissions.length})</div>
+          <div style="font-size:11px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px">Commissions rapprochées (${commissions.length})</div>
           <div style="display:flex;gap:8px">
-            <button onclick="event.stopPropagation(); imprimerBordereau('${b.id}')" style="background:var(--surface-alt);color:var(--text-muted);border:1px solid var(--border);border-radius:7px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer">📄 Export PDF</button>
-            <button onclick="event.stopPropagation(); showModalEditBordereau('${b.id}')" style="background:var(--surface-alt);color:var(--text-muted);border:1px solid var(--border);border-radius:7px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer">✏️ Modifier le bordereau</button>
-            <button onclick="event.stopPropagation(); showModalValidationCommission('${b.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer">+ Rapprocher une commission ${enAttentePourCompagnie.length > 0 ? `(${enAttentePourCompagnie.length} en attente)` : ''}</button>
+            <button onclick="event.stopPropagation(); imprimerBordereau('${b.id}')" style="background:var(--surface-alt);color:var(--text-muted);border:1px solid var(--border);border-radius:7px;padding:6px 12px;font-size:11px;font-weight: 500;cursor:pointer">📄 Export PDF</button>
+            <button onclick="event.stopPropagation(); showModalEditBordereau('${b.id}')" style="background:var(--surface-alt);color:var(--text-muted);border:1px solid var(--border);border-radius:7px;padding:6px 12px;font-size:11px;font-weight: 500;cursor:pointer">✏️ Modifier le bordereau</button>
+            <button onclick="event.stopPropagation(); showModalValidationCommission('${b.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 12px;font-size:11px;font-weight: 500;cursor:pointer">+ Rapprocher une commission ${enAttentePourCompagnie.length > 0 ? `(${enAttentePourCompagnie.length} en attente)` : ''}</button>
           </div>
         </div>
 
@@ -153,24 +153,24 @@ function renderBordereauxList() {
           const sig = allAgents.find(a => a.role === 'signataire');
           return `<div style="display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:${i < commissions.length-1 ? '1px solid var(--border)' : 'none'}">
             ${s.agent ? avatar(s.agent, 24) : ''}
-            <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--text)">${c.client_nom}</div><div style="font-size:11px;color:var(--text-muted)">${c.produit}${c.numero_police ? ' · ' + c.numero_police : ''}</div></div>
+            <div style="flex:1"><div style="font-size:12.5px;font-weight: 500;color:var(--text)">${c.client_nom}</div><div style="font-size:11px;color:var(--text-muted)">${c.produit}${c.numero_police ? ' · ' + c.numero_police : ''}</div></div>
             <div style="text-align:right">
-              <div style="font-size:12px;color:#38bdf8;font-weight:700">${sig ? sig.prenom : 'Jonathan'}: CHF ${fmtCHF(s.pJ)}</div>
+              <div style="font-size:12px;color:#38bdf8;font-weight: 600">${sig ? sig.prenom : 'Jonathan'}: CHF ${fmtCHF(s.pJ)}</div>
               ${s.agent
-                ? `<div style="font-size:12px;color:var(--c-alerte-texte);font-weight:700">${s.agent.prenom}: CHF ${fmtCHF(s.pA)}</div>`
+                ? `<div style="font-size:12px;color:var(--c-alerte-texte);font-weight: 600">${s.agent.prenom}: CHF ${fmtCHF(s.pA)}</div>`
                 : (c.contrat_id
-                    ? `<div onclick="event.stopPropagation(); showEditContrat('${c.contrat_id}', 'bordereaux')" style="font-size:11px;color:var(--accent);font-weight:700;cursor:pointer;text-decoration:underline dotted">🖊️ Cliquer pour renseigner l'apporteur</div>`
+                    ? `<div onclick="event.stopPropagation(); showEditContrat('${c.contrat_id}', 'bordereaux')" style="font-size:11px;color:var(--accent);font-weight: 600;cursor:pointer;text-decoration:underline dotted">🖊️ Cliquer pour renseigner l'apporteur</div>`
                     : `<div style="font-size:10.5px;color:var(--text-dim)">Aucun contrat lié</div>`)
               }
             </div>
-            <div style="font-weight:800;color:var(--text);font-size:13px;min-width:70px;text-align:right">CHF ${fmtCHF(s.montant)}</div>
+            <div style="font-weight: 600;color:var(--text);font-size:13px;min-width:70px;text-align:right">CHF ${fmtCHF(s.montant)}</div>
           </div>`;
         }).join('')}
         ${(() => {
           // Versements partiels imputés via ce bordereau (paiements échelonnés, rapprochement automatique)
           const vp = (typeof allCommissionTranches !== 'undefined' ? allCommissionTranches : []).filter(t => t.bordereau_id === b.id);
           if (!vp.length) return '';
-          return `<div style="margin-top:10px;font-size:11px;font-weight:600;color:var(--text-muted)">Versements partiels déduits de commissions en attente (${vp.length})</div>
+          return `<div style="margin-top:10px;font-size:11px;font-weight: 500;color:var(--text-muted)">Versements partiels déduits de commissions en attente (${vp.length})</div>
             ${vp.map(t => { const ca = allCommissionsAttente.find(c => c.id === t.commission_id); const reste = ca && typeof commissionResteAttendu === 'function' ? commissionResteAttendu(ca) : 0;
               return `<div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
                 <div style="flex:1;font-size:12.5px;color:var(--text)">${ca ? (ca.client_nom || '—') + ' — ' + (ca.produit || '') : 'Commission'}<div style="font-size:10.5px;color:var(--text-muted)">${ca && ca.statut === 'reçue' ? 'commission soldée ✓' : `reste en attente : CHF ${fmtCHF2(reste)}`}</div></div>
@@ -269,7 +269,7 @@ function showModalEditBordereau(bordereauId) {
   if (!b) return;
   creerModale('modal-edit-bordereau', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
-      <h3 style="margin:0 0 18px;font-size:16px;font-weight:800;color:var(--text)">Modifier le bordereau ${b.numero || ''}</h3>
+      <h3 style="margin:0 0 18px;font-size:16px;font-weight: 600;color:var(--text)">Modifier le bordereau ${b.numero || ''}</h3>
       <div class="form-grid">
         <div class="form-field"><label class="form-label">Compagnie</label><input class="form-input" id="eb-compagnie" value="${b.compagnie || ''}" list="eb-compagnies-suggestions" autocomplete="off"/><datalist id="eb-compagnies-suggestions">${[...new Set((allCompagniesContacts||[]).map(c => normaliserCompagnie(c.compagnie)).filter(Boolean))].sort().map(nom => `<option value="${nom}">`).join('')}</datalist></div>
         <div class="form-field"><label class="form-label">Mois</label>
@@ -298,7 +298,7 @@ function showModalEditBordereau(bordereauId) {
         </label>
       </div>
       <div style="display:flex;gap:10px;margin-top:20px">
-        <button onclick="deleteBordereau('${bordereauId}')" style="background:color-mix(in srgb, var(--c-danger) 12%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>
+        <button onclick="deleteBordereau('${bordereauId}')" style="background:color-mix(in srgb, var(--c-danger) 12%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:9px;padding:10px 16px;font-weight: 600;font-size:13px;cursor:pointer">🗑️ Supprimer</button>
         <button class="btn-secondary" onclick="document.getElementById('modal-edit-bordereau').remove()">Annuler</button>
         <button class="btn-save" onclick="saveEditBordereau('${bordereauId}')">✓ Enregistrer</button>
       </div>
@@ -366,12 +366,12 @@ function showModalValidationCommission(bordereauId) {
   creerModale('modal-validation', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:0;width:100%;max-width:560px;overflow:hidden">
       <div style="background:#1f2937;padding:18px 24px;display:flex;justify-content:space-between;align-items:center">
-        <div style="font-size:16px;font-weight:800;color:#fff">Validation</div>
+        <div style="font-size:16px;font-weight: 600;color:#fff">Validation</div>
         <button onclick="document.getElementById('modal-validation').remove()" style="background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;line-height:1">✕</button>
       </div>
       <div style="padding:24px">
-        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight:700;margin-bottom:4px">Bordereau</div>
-        <div style="font-size:14px;font-weight:800;color:var(--text);margin-bottom:18px">${b.compagnie} (${b.mois})</div>
+        <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;font-weight: 600;margin-bottom:4px">Bordereau</div>
+        <div style="font-size:14px;font-weight: 600;color:var(--text);margin-bottom:18px">${b.compagnie} (${b.mois})</div>
 
         <div class="form-grid">
           <div class="form-field" style="grid-column:span 2">
@@ -421,7 +421,7 @@ function showModalValidationCommission(bordereauId) {
 
           <div class="form-field" style="grid-column:span 2">
             <label class="form-label">Montant final de la commission (CHF)</label>
-            <input class="form-input" id="val-montant" type="number" step="0.01" style="font-size:22px;font-weight:800;text-align:center" value="0.00"/>
+            <input class="form-input" id="val-montant" type="number" step="0.01" style="font-size:22px;font-weight: 600;text-align:center" value="0.00"/>
             <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Pré-calculé depuis le montant de base et la déduction — modifie-le librement si le montant réel du bordereau diffère.</div>
           </div>
         </div>
@@ -578,9 +578,9 @@ async function viewImporterBordereauIGB2B() {
   const compagnies = Object.keys(parCompagnie).sort();
 
   return `
-    <button onclick="navigate('bordereaux')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
+    <button onclick="navigate('bordereaux')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight: 500;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
     <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">📊 Importer un bordereau depuis les commissions en attente</h2>
+      <h2 style="margin:0;font-size:18px;font-weight: 600;color:var(--text)">📊 Importer un bordereau depuis les commissions en attente</h2>
     </div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Reprend directement les commissions déjà "en attente" pour une compagnie (créées via <span onclick="navigate('import-decompte')" style="color:var(--accent);cursor:pointer;text-decoration:underline">Import décompte</span> ou saisies manuellement) pour construire le bordereau, au lieu de le saisir puis rapprocher chaque commission une par une.</div>
 
@@ -656,8 +656,8 @@ function renderImportBordereauSelection() {
             <td style="padding:5px 8px;text-align:right;white-space:nowrap"><input type="number" step="0.01" value="${l.montantEdite}" style="width:85px;background:var(--surface-alt);border:1px solid var(--border);border-radius:6px;color:var(--text);padding:3px 5px;text-align:right" onchange="window._ibLignes[${i}].montantEdite = parseFloat(this.value)||0; recalculerTotalImportBordereau();"/></td>
           </tr>`).join('')}</tbody>
         <tfoot><tr style="border-top:2px solid var(--border)">
-          <td colspan="4" style="padding:8px;text-align:right;font-weight:700;color:var(--text)">Total sélectionné</td>
-          <td id="ib-total-cell" style="padding:8px;text-align:right;font-weight:800;color:var(--c-succes-texte);white-space:nowrap">CHF ${fmtCHF(Math.round(totalSelectionne))}</td>
+          <td colspan="4" style="padding:8px;text-align:right;font-weight: 600;color:var(--text)">Total sélectionné</td>
+          <td id="ib-total-cell" style="padding:8px;text-align:right;font-weight: 600;color:var(--c-succes-texte);white-space:nowrap">CHF ${fmtCHF(Math.round(totalSelectionne))}</td>
         </tr></tfoot>
       </table>
       </div>
@@ -726,23 +726,23 @@ function apercuImportBordereau() {
   const zone = document.getElementById('ib-zone');
   zone.innerHTML = `
     ${sectionCard(`Aperçu — ${window._ibNumero}`, '#f59e0b', `
-      <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">${compagnie} — ${mois} ${annee}</div>
+      <div style="font-size:13px;font-weight: 600;color:var(--text);margin-bottom:4px">${compagnie} — ${mois} ${annee}</div>
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">${badge(statut, statut === 'reçu' ? '#4ade80' : '#f59e0b')}${date ? ' · Reçu le ' + fmtDate(date) : ''}${caution > 0 ? ' · Caution ' + caution + '%' : ''}</div>
       <div style="display:flex;gap:10px;margin-bottom:16px">
         <div style="flex:1;background:var(--surface-alt);border-radius:8px;padding:10px 14px">
-          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Montant brut du bordereau</div>
-          <div style="font-size:16px;font-weight:900;color:var(--c-alerte-texte)">CHF ${fmtCHF(montantBrut)}</div>
+          <div style="font-size:10px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Montant brut du bordereau</div>
+          <div style="font-size:16px;font-weight: 600;color:var(--c-alerte-texte)">CHF ${fmtCHF(montantBrut)}</div>
         </div>
         <div style="flex:1;background:var(--surface-alt);border-radius:8px;padding:10px 14px">
-          <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Total des ${lignesCochees.length} commission(s) cochée(s)</div>
-          <div style="font-size:16px;font-weight:900;color:var(--text)">CHF ${fmtCHF(Math.round(totalLignes))}</div>
+          <div style="font-size:10px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Total des ${lignesCochees.length} commission(s) cochée(s)</div>
+          <div style="font-size:16px;font-weight: 600;color:var(--text)">CHF ${fmtCHF(Math.round(totalLignes))}</div>
         </div>
       </div>
       ${Math.abs(ecart) > 1 ? `<div style="font-size:11.5px;margin-bottom:14px;padding:8px 12px;border-radius:8px;background:var(--surface-alt);color:var(--c-danger-texte)">⚠️ Écart de CHF ${fmtCHF(ecart)} entre le montant brut saisi et le total des commissions cochées — vérifie avant de confirmer.</div>` : ''}
-      <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Commissions qui seront rapprochées à ce bordereau</div>
+      <div style="font-size:11px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">Commissions qui seront rapprochées à ce bordereau</div>
       ${lignesCochees.map((l, i) => `<div style="display:flex;align-items:center;gap:12px;padding:7px 0;border-bottom:${i < lignesCochees.length - 1 ? '1px solid var(--border)' : 'none'}">
-        <div style="flex:1"><div style="font-size:12.5px;font-weight:600;color:var(--text)">${l.client_nom || '—'}</div><div style="font-size:11px;color:var(--text-muted)">${l.produit || ''}</div></div>
-        <div style="font-weight:800;color:var(--text);font-size:13px">CHF ${fmtCHF(l.montantEdite)}</div>
+        <div style="flex:1"><div style="font-size:12.5px;font-weight: 500;color:var(--text)">${l.client_nom || '—'}</div><div style="font-size:11px;color:var(--text-muted)">${l.produit || ''}</div></div>
+        <div style="font-weight: 600;color:var(--text);font-size:13px">CHF ${fmtCHF(l.montantEdite)}</div>
       </div>`).join('')}
       <div style="font-size:11px;color:var(--text-muted);margin-top:14px">Rien n'est encore créé — vérifie ce récapitulatif puis confirme, ou reviens en arrière pour ajuster la sélection.</div>
       <div style="display:flex;gap:10px;margin-top:16px">
@@ -869,16 +869,16 @@ function viewCommissions() {
     return `<div class="table-row" style="grid-template-columns:${cols}">
       <div style="display:flex;align-items:center;gap:10px;min-width:0">${typeof pictoCompagnie === 'function' ? pictoCompagnie(c.compagnie, 28) : ''}<div style="min-width:0"><div style="font-size:13px;font-weight:600;color:var(--text)">${c.client_nom || '—'}</div><div style="font-size:11px;color:var(--text-dim)">${c.compagnie || ''}${c.date_reception ? ' · ' + fmtDate(c.date_reception) : ''}</div></div></div>
       <div style="font-size:11px;color:var(--text-muted)">${c.produit || ''}${c.nature ? ' · ' + c.nature : ''}${c.mouvement ? ' · ' + c.mouvement : ''}${c.statut === 'versé_oz' ? `<div style="margin-top:3px;color:#1a56db;font-weight:600">🔹 versée à OZ · ${c.refacture_le ? 'refacturée le ' + fmtDate(c.refacture_le) : 'à refacturer'}</div>` : ''}</div>
-      <div>${bd ? `<button type="button" onclick="${bd.pdf_url ? `ouvrirPieceJointe('${bd.pdf_url}')` : "navigate('bordereaux')"}" title="${bd.pdf_url ? 'Voir le bordereau uploadé' : 'Aucun fichier joint — ouvrir les bordereaux'} (${(bd.mois || '').replace(/"/g, '')})" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:999px;padding:3px 10px;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis">${bd.pdf_url ? '📎' : '🧾'} ${bd.numero || bd.mois || 'Bordereau'}</button>` : '<span style="font-size:11px;color:var(--text-dim)">sans bordereau</span>'}</div>
-      <div style="font-weight:800;color:var(--text)">CHF ${fmtCHF(m)}</div>
-      <div style="font-weight:800;color:#38bdf8">CHF ${fmtCHF(s.pJ)}</div>
-      <div>${s.pA > 0 ? `<div style="display:flex;align-items:center;gap:6px">${s.agent ? avatar(s.agent, 18) : ''}<span style="font-weight:700;color:var(--c-alerte-texte)">CHF ${fmtCHF(s.pA)}</span></div>` : '<span style="color:var(--text-dim)">—</span>'}</div>
+      <div>${bd ? `<button type="button" onclick="${bd.pdf_url ? `ouvrirPieceJointe('${bd.pdf_url}')` : "navigate('bordereaux')"}" title="${bd.pdf_url ? 'Voir le bordereau uploadé' : 'Aucun fichier joint — ouvrir les bordereaux'} (${(bd.mois || '').replace(/"/g, '')})" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:999px;padding:3px 10px;font-size:11px;font-weight: 500;cursor:pointer;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis">${bd.pdf_url ? '📎' : '🧾'} ${bd.numero || bd.mois || 'Bordereau'}</button>` : '<span style="font-size:11px;color:var(--text-dim)">sans bordereau</span>'}</div>
+      <div style="font-weight: 600;color:var(--text)">CHF ${fmtCHF(m)}</div>
+      <div style="font-weight: 600;color:#38bdf8">CHF ${fmtCHF(s.pJ)}</div>
+      <div>${s.pA > 0 ? `<div style="display:flex;align-items:center;gap:6px">${s.agent ? avatar(s.agent, 18) : ''}<span style="font-weight: 600;color:var(--c-alerte-texte)">CHF ${fmtCHF(s.pA)}</span></div>` : '<span style="color:var(--text-dim)">—</span>'}</div>
     </div>`;
   }).join('');
 
   return `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">Commissions</h2>
+      <h2 style="margin:0;font-size:18px;font-weight: 600;color:var(--text)">Commissions</h2>
       <button class="btn-add" onclick="navigate('fiche-commission')">📄 Générer une fiche de commission</button>
     </div>
     <div class="stat-grid" style="margin-bottom:24px">
@@ -887,11 +887,11 @@ function viewCommissions() {
       ${statCard('Part apporteurs', 'CHF ' + partA.toLocaleString(), '#f59e0b')}
     </div>
 
-    <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">🔁 Commissions de gestion (récurrentes)</div>
+    <div style="font-size:13px;font-weight: 600;color:var(--text);margin-bottom:4px">🔁 Commissions de gestion (récurrentes)</div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:14px">Suivi de ce qui a été reçu — total : <strong style="color:var(--c-succes-texte)">CHF ${fmtCHF(totalGestion)}</strong> sur ${gestion.length} mouvement(s)</div>
     <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:16px;margin-bottom:24px">
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px">
-        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:14px">Évolution par période</div>
+        <div style="font-size:11px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;margin-bottom:14px">Évolution par période</div>
         ${moisGestionKeys.length ? `<div style="display:flex;align-items:flex-end;gap:6px;height:110px">
           ${moisGestionKeys.map(k => {
             const h = Math.max(Math.round(parMoisGestion[k]/maxMoisGestion*100), 3);
@@ -903,16 +903,16 @@ function viewCommissions() {
         </div>` : '<div class="table-empty">Aucune commission de gestion encore rapprochée.</div>'}
       </div>
       <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:20px">
-        <div style="font-size:11px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:14px">Par compagnie</div>
+        <div style="font-size:11px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;margin-bottom:14px">Par compagnie</div>
         ${compGestion.map(([comp,val]) => `
           <div style="margin-bottom:10px">
-            <div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--text)">${comp}</span><span style="color:var(--c-succes-texte);font-weight:700">CHF ${fmtCHF(Math.round(val))}</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:11.5px"><span style="color:var(--text)">${comp}</span><span style="color:var(--c-succes-texte);font-weight: 600">CHF ${fmtCHF(Math.round(val))}</span></div>
             <div style="height:6px;border-radius:3px;background:var(--border);margin-top:4px;overflow:hidden"><div style="height:100%;width:${compGestion.length?Math.round(val/compGestion[0][1]*100):0}%;background:#4ade80;border-radius:3px"></div></div>
           </div>`).join('') || '<div class="table-empty">—</div>'}
       </div>
     </div>
 
-    <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px">Toutes les commissions reçues (${COMMS.length})</div>
+    <div style="font-size:13px;font-weight: 600;color:var(--text);margin-bottom:10px">Toutes les commissions reçues (${COMMS.length})</div>
     <div class="table-wrap">
       <div class="table-header" style="grid-template-columns:${cols}"><div>Compagnie · client</div><div>Produit / nature</div><div>Bordereau</div><div>Brut</div><div>Jonathan</div><div>Apporteur</div></div>
       ${rows || '<div class="table-empty">Aucune commission reçue encore rapprochée.</div>'}
@@ -925,8 +925,8 @@ function viewFicheCommission() {
   const agentOptions = allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom} (${a.role})</option>`).join('');
 
   return `
-    <button onclick="navigate('commissions')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour aux commissions</button>
-    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Fiche de commission</h2>
+    <button onclick="navigate('commissions')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight: 500;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour aux commissions</button>
+    <h2 style="margin:0 0 20px;font-size:18px;font-weight: 600;color:var(--text)">Fiche de commission</h2>
     ${sectionCard('Sélection', '#38bdf8', `<div class="form-grid">
       <div class="form-field"><label class="form-label">Agent *</label><select class="form-select" id="fs-agent"><option value="">— Sélectionner —</option>${agentOptions}</select></div>
       <div class="form-field"><label class="form-label">Période (mois du bordereau) *</label><select class="form-select" id="fs-mois">
@@ -971,15 +971,15 @@ function genererFicheCommission() {
     <div class="fiche-commission-print" style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px">
       <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px">
         <div>
-          <div style="font-size:16px;font-weight:900;color:var(--text)">FICHE DE COMMISSION</div>
+          <div style="font-size:16px;font-weight: 600;color:var(--text)">FICHE DE COMMISSION</div>
           <div style="font-size:12px;color:var(--text-muted);margin-top:2px">Assurex Sàrl · Rue du Centre 142, 1025 St-Sulpice VD</div>
         </div>
-        <button onclick="window.print()" style="background:var(--surface-alt);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🖨️ Imprimer / PDF</button>
+        <button onclick="window.print()" style="background:var(--surface-alt);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--text-muted);font-size:12px;font-weight: 500;cursor:pointer">🖨️ Imprimer / PDF</button>
       </div>
       <div style="display:flex;gap:30px;margin-bottom:20px;font-size:13px">
-        <div><div style="color:var(--text-muted);font-size:11px;text-transform:uppercase">Bénéficiaire</div><div style="font-weight:700;color:var(--text)">${agent.prenom} ${agent.nom} (${agent.role})</div></div>
-        <div><div style="color:var(--text-muted);font-size:11px;text-transform:uppercase">Période</div><div style="font-weight:700;color:var(--text)">${mois}</div></div>
-        <div><div style="color:var(--text-muted);font-size:11px;text-transform:uppercase">Généré le</div><div style="font-weight:700;color:var(--text)">${dateGen}</div></div>
+        <div><div style="color:var(--text-muted);font-size:11px;text-transform:uppercase">Bénéficiaire</div><div style="font-weight: 600;color:var(--text)">${agent.prenom} ${agent.nom} (${agent.role})</div></div>
+        <div><div style="color:var(--text-muted);font-size:11px;text-transform:uppercase">Période</div><div style="font-weight: 600;color:var(--text)">${mois}</div></div>
+        <div><div style="color:var(--text-muted);font-size:11px;text-transform:uppercase">Généré le</div><div style="font-weight: 600;color:var(--text)">${dateGen}</div></div>
       </div>
 
       <table style="width:100%;border-collapse:collapse;font-size:12.5px;margin-bottom:20px">
@@ -996,14 +996,14 @@ function genererFicheCommission() {
             <td style="padding:7px 10px;color:var(--text-muted)">${d.produit || ''}</td>
             <td style="padding:7px 10px;text-align:right;color:var(--text)">CHF ${fmtCHF(d.montant)}</td>
             <td style="padding:7px 10px;text-align:right;color:var(--text-muted)">${d.tauxAgent}%</td>
-            <td style="padding:7px 10px;text-align:right;font-weight:700;color:var(--c-alerte-texte)">CHF ${fmtCHF(d.part)}</td>
+            <td style="padding:7px 10px;text-align:right;font-weight: 600;color:var(--c-alerte-texte)">CHF ${fmtCHF(d.part)}</td>
           </tr>`).join('') || `<tr><td colspan="5" style="padding:20px;text-align:center;color:var(--text-muted)">Aucune commission rapprochée pour cet agent sur cette période.</td></tr>`}
         </tbody>
       </table>
 
       <div style="display:flex;justify-content:flex-end;gap:30px;border-top:1px solid var(--border);padding-top:14px">
-        <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Total brut</div><div style="font-size:16px;font-weight:800;color:var(--text)">CHF ${fmtCHF(totalBrut)}</div></div>
-        <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Total dû à ${agent.prenom}</div><div style="font-size:20px;font-weight:900;color:var(--c-alerte-texte)">CHF ${fmtCHF(totalPart)}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Total brut</div><div style="font-size:16px;font-weight: 600;color:var(--text)">CHF ${fmtCHF(totalBrut)}</div></div>
+        <div><div style="font-size:11px;color:var(--text-muted);text-transform:uppercase">Total dû à ${agent.prenom}</div><div style="font-size:20px;font-weight: 600;color:var(--c-alerte-texte)">CHF ${fmtCHF(totalPart)}</div></div>
       </div>
     </div>`;
 }
@@ -1011,22 +1011,22 @@ function genererFicheCommission() {
 // NOUVEAU CLIENT
 function viewNouveauClient() {
   return `
-    <button onclick="navigate('clients')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour aux clients</button>
-    <h2 style="margin:0 0 8px;font-size:18px;font-weight:800;color:var(--text)">Nouveau client</h2>
+    <button onclick="navigate('clients')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight: 500;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour aux clients</button>
+    <h2 style="margin:0 0 8px;font-size:18px;font-weight: 600;color:var(--text)">Nouveau client</h2>
     <div style="color:var(--text-muted);font-size:13px;margin-bottom:28px">Choisissez le type de client</div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;max-width:580px">
       <button onclick="showFormClient('prive')" style="background:var(--surface);border:2px solid var(--border);border-radius:14px;padding:32px 24px;cursor:pointer;text-align:center;transition:all 0.15s"
         onmouseover="this.style.borderColor='#38bdf8';this.style.background='rgba(56,189,248,0.05)'"
         onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface)'">
         <div style="font-size:40px;margin-bottom:12px">👤</div>
-        <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">Privé</div>
+        <div style="font-size:16px;font-weight: 600;color:var(--text);margin-bottom:6px">Privé</div>
         <div style="font-size:12px;color:var(--text-muted)">Particulier, famille, indépendant</div>
       </button>
       <button onclick="showFormClient('entreprise')" style="background:var(--surface);border:2px solid var(--border);border-radius:14px;padding:32px 24px;cursor:pointer;text-align:center;transition:all 0.15s"
         onmouseover="this.style.borderColor='#f59e0b';this.style.background='rgba(245,158,11,0.05)'"
         onmouseout="this.style.borderColor='var(--border)';this.style.background='var(--surface)'">
         <div style="font-size:40px;margin-bottom:12px">🏢</div>
-        <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">Entreprise</div>
+        <div style="font-size:16px;font-weight: 600;color:var(--text);margin-bottom:6px">Entreprise</div>
         <div style="font-size:12px;color:var(--text-muted)">PME, SA, Sàrl, association</div>
       </button>
     </div>`;
@@ -1050,10 +1050,10 @@ function showFormClient(type, parentId) {
 function formPrive() {
   const agentOptions = allAgents.map(a => `<option value="${a.id}" ${currentUser && a.email === currentUser.email ? 'selected' : ''}>${a.prenom} ${a.nom}</option>`).join('');
   return `
-    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouveau client — Privé</h2>
+    <h2 style="margin:0 0 20px;font-size:18px;font-weight: 600;color:var(--text)">Nouveau client — Privé</h2>
     ${sectionCard('Identité', '#38bdf8', `<div class="form-grid">
       <div class="form-field" style="grid-column:span 2;background:rgba(244,114,182,0.08);border:1px solid rgba(244,114,182,0.25);border-radius:9px;padding:10px 14px">
-        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);cursor:pointer;font-weight:700">
+        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);cursor:pointer;font-weight: 600">
           <input type="checkbox" id="f-prenatal" style="width:16px;height:16px;cursor:pointer" onchange="togglePrenatalForm()"/>🍼 Assurance prénatale (naissance à venir — la date ci-dessous devient la date prévue d'accouchement)
         </label>
         <div id="f-parent-select-wrap" style="display:none;margin-top:10px">
@@ -1116,7 +1116,7 @@ function formPrive() {
     </div>`)}
     <div style="display:flex;gap:10px;margin-top:8px">
       <button class="btn-secondary" onclick="navigate('clients')">Annuler</button>
-      <button onclick="window.print()" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 20px;font-weight:700;font-size:13px;cursor:pointer;color:var(--text-muted)">🖨️ Imprimer</button>
+      <button onclick="window.print()" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 20px;font-weight: 600;font-size:13px;cursor:pointer;color:var(--text-muted)">🖨️ Imprimer</button>
       <button class="btn-save" onclick="saveClient()">✓ Enregistrer</button>
     </div>`;
 }
@@ -1265,9 +1265,9 @@ async function saveClient() {
 function formEntreprise() {
   const agentOptions = allAgents.map(a => `<option value="${a.id}" ${currentUser && a.email === currentUser.email ? 'selected' : ''}>${a.prenom} ${a.nom}</option>`).join('');
   return `
-    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">Nouveau client — Entreprise</h2>
+    <h2 style="margin:0 0 20px;font-size:18px;font-weight: 600;color:var(--text)">Nouveau client — Entreprise</h2>
     <div style="display:flex;gap:10px;margin-bottom:20px">
-      <button onclick="printForm()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--text-muted);font-size:12px;font-weight:700;cursor:pointer">🖨️ Imprimer</button>
+      <button onclick="printForm()" style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:8px 16px;color:var(--text-muted);font-size:12px;font-weight: 500;cursor:pointer">🖨️ Imprimer</button>
     </div>
     ${sectionCard('Identification', '#f59e0b', `<div class="form-grid">
       <div class="form-field"><label class="form-label">Raison sociale *</label>
@@ -1284,7 +1284,7 @@ function formEntreprise() {
     </div>`)}
     ${sectionCard('Contact & Adresse', '#38bdf8', `<div class="form-grid">
       <div class="form-field" style="grid-column:span 2;background:rgba(167,139,250,0.08);border:1px solid rgba(167,139,250,0.25);border-radius:9px;padding:10px 14px">
-        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);cursor:pointer;font-weight:700">
+        <label style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);cursor:pointer;font-weight: 600">
           <input type="checkbox" id="e-domiciliation-cofidex" style="width:16px;height:16px;cursor:pointer" onchange="toggleDomiciliationCofidex()"/>🏢 Domiciliation Cofidex (remplit automatiquement l'adresse c/o Cofidex SA)
         </label>
       </div>
@@ -1324,7 +1324,7 @@ function formEntreprise() {
       </label>`).join('')}
     </div>
     <div style="margin-top:12px">
-      <div style="font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-bottom:8px">Perte de gain — délai d'attente</div>
+      <div style="font-size:11px;color:var(--text-muted);font-weight: 600;text-transform:uppercase;margin-bottom:8px">Perte de gain — délai d'attente</div>
       <div style="display:flex;gap:8px">
         ${['14j','30j','60j'].map(d => `<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="e-delai" value="${d}" style="accent-color:#38bdf8"/><span style="font-size:12px;color:var(--text)">${d}</span></label>`).join('')}
       </div>
@@ -1380,7 +1380,7 @@ function formEntreprise() {
     </div>`)}
     <div style="display:flex;gap:10px;margin-top:8px">
       <button class="btn-secondary" onclick="navigate('clients')">Annuler</button>
-      <button onclick="printEntreprise()" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 20px;font-weight:700;font-size:13px;cursor:pointer;color:var(--text-muted)">🖨️ Imprimer PDF</button>
+      <button onclick="printEntreprise()" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 20px;font-weight: 600;font-size:13px;cursor:pointer;color:var(--text-muted)">🖨️ Imprimer PDF</button>
       <button class="btn-save" onclick="saveEntreprise()">✓ Enregistrer</button>
     </div>`;
 }
@@ -1582,12 +1582,12 @@ async function viewNouvelleDemandeOffre() {
     <div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:10px 16px;margin-bottom:16px;font-size:12px;color:var(--text)">↺ Demande d'offre du ${fmtDate(existante.created_at)} — modifie/complète si besoin, puis génère l'email en bas de page.</div>` : ''}
     ${oppLiee ? `<input type="hidden" id="do-opportunite-id" value="${oppLiee.id}"/>
     <div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:10px 16px;margin-bottom:16px;font-size:12px;color:var(--text)">🎯 Rattachée à l'opportunité <strong>"${oppLiee.titre}"</strong> — cette demande d'offre sera reliée à son historique.</div>` : ''}
-    <button onclick="navigate('suivi')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
-    <h2 style="margin:0 0 6px;font-size:18px;font-weight:800;color:var(--text)">Demande d'offre</h2>
+    <button onclick="navigate('suivi')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight: 500;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
+    <h2 style="margin:0 0 6px;font-size:18px;font-weight: 600;color:var(--text)">Demande d'offre</h2>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">Version digitale du formulaire papier — à remplir directement en clientèle, sans ressaisie ensuite.</div>
 
     <div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:12px;padding:16px 18px;margin-bottom:24px">
-      <div style="font-size:12.5px;font-weight:700;color:var(--text);margin-bottom:8px">🤖 Remplissage automatique par IA</div>
+      <div style="font-size:12.5px;font-weight: 500;color:var(--text);margin-bottom:8px">🤖 Remplissage automatique par IA</div>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:10px">Décris la situation à l'oral (utilise le micro 🎤 du clavier de ton téléphone) ou par écrit — les cases et champs ci-dessous se rempliront automatiquement. Tu pourras tout vérifier/corriger avant d'enregistrer.</div>
       <textarea id="do-texte-libre" rows="4" placeholder="Ex: Client Dupont SA, 8 employés, CA 1.2 millions, souhaite une perte de gain maladie délai 30 jours, LPP, et une RC commerce. Pas de protection juridique pour l'instant." style="width:100%;background:var(--surface-alt);border:1px solid var(--border);border-radius:8px;padding:10px 12px;color:var(--text);font-size:13px;resize:vertical"></textarea>
       <button type="button" class="btn-add" style="margin-top:10px" onclick="remplirDemandeOffreParIA()">✨ Remplir automatiquement</button>
@@ -1703,7 +1703,7 @@ async function viewNouvelleDemandeOffre() {
     <div style="display:flex;gap:10px;margin-top:20px">
       <button class="btn-secondary" onclick="navigate('suivi')">Annuler</button>
       <button class="btn-save" onclick="saveDemandeOffre('${existante ? existante.id : ''}')">✓ ${existante ? 'Enregistrer les modifications' : "Enregistrer la demande d'offre"}</button>
-      <button onclick="window.print()" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 20px;font-weight:700;font-size:13px;cursor:pointer;color:var(--text-muted)">🖨️ Imprimer</button>
+      <button onclick="window.print()" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 20px;font-weight: 600;font-size:13px;cursor:pointer;color:var(--text-muted)">🖨️ Imprimer</button>
     </div>`;
 }
 
@@ -1716,8 +1716,8 @@ async function renderDemandeOffreLieeOpportunite(oppId) {
   const opp = allOpportunites.find(o => o.id === oppId);
   const existantes = await dbGet('demandes_offre', `opportunite_id=eq.${oppId}&select=*&order=created_at.desc`);
   const derniere = Array.isArray(existantes) && existantes.length ? existantes[0] : null;
-  const boutonNouvelle = `<button type="button" onclick="prefillDemandeOffreOpportuniteId='${oppId}'; prefillDemandeOffreClientId=${opp && opp.client_id ? `'${opp.client_id}'` : 'null'}; navigate('nouvelle-demande-offre')" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 16px;color:var(--text-muted);font-weight:700;font-size:13px;cursor:pointer">📝 ${derniere ? 'Nouvelle demande d\'offre' : 'Demande d\'offre liée'}</button>`;
-  const boutonReprendre = derniere ? `<button type="button" onclick="demandeOffreEnEditionId='${derniere.id}'; navigate('nouvelle-demande-offre')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:9px;padding:10px 16px;color:var(--accent);font-weight:700;font-size:13px;cursor:pointer">↺ Reprendre la demande d'offre (${fmtDate(derniere.created_at)})</button>` : '';
+  const boutonNouvelle = `<button type="button" onclick="prefillDemandeOffreOpportuniteId='${oppId}'; prefillDemandeOffreClientId=${opp && opp.client_id ? `'${opp.client_id}'` : 'null'}; navigate('nouvelle-demande-offre')" style="background:var(--surface);border:1px solid var(--border);border-radius:9px;padding:10px 16px;color:var(--text-muted);font-weight: 600;font-size:13px;cursor:pointer">📝 ${derniere ? 'Nouvelle demande d\'offre' : 'Demande d\'offre liée'}</button>`;
+  const boutonReprendre = derniere ? `<button type="button" onclick="demandeOffreEnEditionId='${derniere.id}'; navigate('nouvelle-demande-offre')" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:9px;padding:10px 16px;color:var(--accent);font-weight: 600;font-size:13px;cursor:pointer">↺ Reprendre la demande d'offre (${fmtDate(derniere.created_at)})</button>` : '';
   // Bouton "Mettre à jour l'avancement (check Outlook)" retiré le 07.08.2026 (demande de
   // Jonathan — jugé inutile depuis l'ajout du relevé "📧 Emails détectés" qui couvre le même
   // besoin plus simplement). synchroniserOutlookOpportunite() reste définie plus bas (inoffensive,
@@ -1763,7 +1763,7 @@ async function rechercherEmailsOpportunite(oppId) {
       const a = ((m.toRecipients && m.toRecipients[0] && m.toRecipients[0].emailAddress && (m.toRecipients[0].emailAddress.name || m.toRecipients[0].emailAddress.address)) || '—').replace(/</g, '&lt;');
       return `<a href="${m.webLink || '#'}" target="_blank" rel="noopener" style="display:flex;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:7px 10px;text-decoration:none;color:inherit;flex-wrap:wrap">
         <span style="font-size:10.5px;color:var(--text-muted);white-space:nowrap;flex-shrink:0">${fmtDate(date)}</span>
-        <span style="font-size:12.5px;font-weight:700;color:var(--text);flex:1;min-width:160px">${(m.subject || '(sans objet)').replace(/</g, '&lt;')}</span>
+        <span style="font-size:12.5px;font-weight: 500;color:var(--text);flex:1;min-width:160px">${(m.subject || '(sans objet)').replace(/</g, '&lt;')}</span>
         <span style="font-size:10.5px;color:var(--text-muted);white-space:nowrap">De : ${de} → À : ${a}</span>
       </a>`;
     }).join('')}</div>`;
@@ -2087,7 +2087,7 @@ function ouvrirApercuEmailDemandeOffre({ demandeOffreId, cies, emails, sansEmail
   const qa = (s) => (s || '').toString().replace(/"/g, '&quot;');
   creerModale('modal-apercu-email-do', `
     <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:600px;width:100%;max-height:90vh;display:flex;flex-direction:column">
-      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">✉️ Aperçu — demande d'offre</div>
+      <div style="font-size:16px;font-weight: 600;color:var(--text);margin-bottom:4px">✉️ Aperçu — demande d'offre</div>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:12px">Ce courriel n'est PAS envoyé automatiquement — relis-le, corrige-le si besoin, puis choisis comment le transmettre.</div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px"><strong>Destinataires :</strong> ${emails.length ? emails.join(', ') : '— aucun email connu'}</div>
       ${sansEmail.length ? `<div style="font-size:11px;color:var(--c-alerte-texte);margin-bottom:10px">⚠ Pas d'email enregistré pour : ${sansEmail.join(', ')}</div>` : ''}
@@ -2263,7 +2263,7 @@ function rechercheClientOpportunite(texte) {
     zone.innerHTML = `<div style="padding:10px 14px;font-size:12.5px;color:var(--text-muted)">Aucun client ne correspond${q ? ' à "' + texte + '"' : ''}.</div>`;
   } else {
     zone.innerHTML = resultats.map(c => `<div onmousedown="selectionnerClientOpportunite('${c.id}')" style="padding:9px 14px;font-size:13px;color:var(--text);cursor:pointer;border-bottom:1px solid var(--border)" onmouseover="this.style.background='var(--surface-alt)'" onmouseout="this.style.background='transparent'">
-      <div style="font-weight:700">${nomAffiche(c)}</div>
+      <div style="font-weight: 600">${nomAffiche(c)}</div>
       <div style="font-size:10.5px;color:var(--text-muted)">${estEntreprise(c) ? 'Entreprise' : 'Privé'}${c.ville ? ' · ' + c.ville : ''}</div>
     </div>`).join('');
   }
@@ -2312,7 +2312,7 @@ function ouvrirCreationClientDepuisOpportunite() {
   const qa = (s) => (s || '').toString().replace(/"/g, '&quot;');
   creerModale('modal-creation-client-opp', `
     <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:480px;width:100%">
-      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">➕ Créer la fiche client</div>
+      <div style="font-size:16px;font-weight: 600;color:var(--text);margin-bottom:4px">➕ Créer la fiche client</div>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">Le reste de l'opportunité en cours (titre, compagnie, produits...) reste intact — tu pourras compléter la fiche client plus tard depuis "✏️ Modifier".</div>
       <div class="form-field" style="margin-bottom:4px"><label class="form-label">Type de client</label><select class="form-select" id="occ-type" onchange="toggleTypeClientOpportunite()">
         <option value="prive" ${ressembleEntreprise ? '' : 'selected'}>Privé</option>
@@ -2508,7 +2508,7 @@ function viewNouvelleOpportunite() {
       <div class="form-field" id="o-prospect-field" style="${clientFiche ? 'display:none' : ''}">
         <label class="form-label">Nom du prospect</label>
         <input class="form-input" id="o-prospect-nom" value="${qa(opp?.prospect_nom)}" placeholder="Ex: Jean Dupont (pas encore client)"/>
-        <div style="margin-top:6px"><button type="button" onclick="ouvrirCreationClientDepuisOpportunite()" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer">➕ Créer la fiche client maintenant</button></div>
+        <div style="margin-top:6px"><button type="button" onclick="ouvrirCreationClientDepuisOpportunite()" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight: 500;cursor:pointer">➕ Créer la fiche client maintenant</button></div>
       </div>
       <div class="form-field" style="${rh ? 'display:none' : ''}">
         <label class="form-label">Compagnie</label>
@@ -2531,7 +2531,7 @@ function viewNouvelleOpportunite() {
         <div id="o-produits-list" style="max-height:340px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:10px 14px;column-count:2;column-gap:20px;background:var(--surface-alt)">
           ${Object.entries(PRODUITS_OPPORTUNITE_GROUPES).map(([cat, produits]) => `
             <div class="o-produit-groupe" style="break-inside:avoid;margin-bottom:12px">
-              <div style="font-size:10.5px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px">${ICONES_CATEGORIE_PRODUIT[cat] || '📌'} ${cat}</div>
+              <div style="font-size:10.5px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:5px">${ICONES_CATEGORIE_PRODUIT[cat] || '📌'} ${cat}</div>
               ${produits.map(p => { const coche = produitsChoisis.includes(p.id); const primeExistante = (opp?.produits_primes || {})[p.id] || ''; return `<label class="o-produit-ligne" style="display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--text);padding:2px 0">
                 <input type="checkbox" class="o-produit-checkbox" value="${p.id}" ${coche ? 'checked' : ''} onchange="toggleProduitPrimeInput(this)" style="width:14px;height:14px;accent-color:var(--accent);flex-shrink:0;cursor:pointer"/>
                 <span style="flex:1;cursor:pointer">${p.label}</span>
@@ -2557,7 +2557,7 @@ function viewNouvelleOpportunite() {
   // automatiquement à l'ouverture (coût d'appel Graph, cohérent avec "Synchroniser Outlook").
   const blocEtatEmails = opp ? sectionCard('📧 Emails détectés', '#38bdf8', `
     <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:10px">Recherche dans Outlook (envoyés et reçus) tout email mentionnant le nom du client/prospect de cette opportunité.</div>
-    <button type="button" onclick="rechercherEmailsOpportunite('${opp.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:8px;padding:8px 16px;font-size:12.5px;font-weight:700;cursor:pointer;margin-bottom:10px">🔍 Chercher les emails</button>
+    <button type="button" onclick="rechercherEmailsOpportunite('${opp.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:8px;padding:8px 16px;font-size:12.5px;font-weight: 500;cursor:pointer;margin-bottom:10px">🔍 Chercher les emails</button>
     <div id="opp-emails-detectes"></div>
   `) : '';
   const blocTaches = opp ? sectionCard('Tâches', '#4ade80', renderTachesOpportunite(opp)) : '';
@@ -2569,14 +2569,14 @@ function viewNouvelleOpportunite() {
       ${stadesOptions.map(s2 => {
         const couleur = STADE_COULEURS_RAPIDES[s2] || '#64748b';
         const actif = opp.stade === s2;
-        return `<button type="button" class="o-stade-rapide-btn" data-stade="${s2}" data-couleur="${couleur}" onclick="changerStadeOpportuniteRapide('${opp.id}', '${s2}')" style="background:${actif ? couleur : 'var(--surface-alt)'};color:${actif ? '#0a0e1a' : 'var(--text-muted)'};border:1px solid ${actif ? couleur : 'var(--border)'};border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s">${s2}</button>`;
+        return `<button type="button" class="o-stade-rapide-btn" data-stade="${s2}" data-couleur="${couleur}" onclick="changerStadeOpportuniteRapide('${opp.id}', '${s2}')" style="background:${actif ? couleur : 'var(--surface-alt)'};color:${actif ? '#0a0e1a' : 'var(--text-muted)'};border:1px solid ${actif ? couleur : 'var(--border)'};border-radius:20px;padding:6px 14px;font-size:12px;font-weight: 500;cursor:pointer;transition:all 0.15s">${s2}</button>`;
       }).join('')}
     </div>` : '';
   return `
-    <button onclick="opportuniteEnEditionId=null;navigate('opportunites')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
+    <button onclick="opportuniteEnEditionId=null;navigate('opportunites')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight: 500;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">${opp ? 'Modifier l’opportunité' : (rh ? 'Nouvelle opportunité pour Jonathan' : 'Nouvelle opportunité')}</h2>
-      ${clientFiche ? `<span onclick="showClient('${clientFiche.id}')" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--surface-alt);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11.5px;font-weight:700;color:var(--accent)">👤 Fiche client : ${estEntreprise(clientFiche) ? clientFiche.nom : `${clientFiche.prenom} ${clientFiche.nom}`} →</span>` : ''}
+      <h2 style="margin:0;font-size:18px;font-weight: 600;color:var(--text)">${opp ? 'Modifier l’opportunité' : (rh ? 'Nouvelle opportunité pour Jonathan' : 'Nouvelle opportunité')}</h2>
+      ${clientFiche ? `<span onclick="showClient('${clientFiche.id}')" style="cursor:pointer;display:inline-flex;align-items:center;gap:6px;background:var(--surface-alt);border:1px solid var(--border);border-radius:20px;padding:4px 12px;font-size:11.5px;font-weight: 500;color:var(--accent)">👤 Fiche client : ${estEntreprise(clientFiche) ? clientFiche.nom : `${clientFiche.prenom} ${clientFiche.nom}`} →</span>` : ''}
       <!-- Accès rapide (demande de Jonathan, 19.09.2026) : enregistrer sans descendre en bas du formulaire -->
       <button type="button" onclick="saveOpportunite('${opp ? opp.id : ''}')" title="Enregistrer l’opportunité" aria-label="Enregistrer l’opportunité" style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:var(--on-accent);border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer">💾 Enregistrer</button>
     </div>
@@ -2590,7 +2590,7 @@ function viewNouvelleOpportunite() {
     ${blocContrat}
     <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;align-items:center">
       ${opp ? `<span id="opp-demande-offre-liee" style="display:flex;gap:10px;flex-wrap:wrap"></span>` : ''}
-      ${opp && !rh ? `<button onclick="supprimerOpportunite('${opp.id}')" style="background:color-mix(in srgb, var(--c-danger) 12%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>` : ''}
+      ${opp && !rh ? `<button onclick="supprimerOpportunite('${opp.id}')" style="background:color-mix(in srgb, var(--c-danger) 12%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:9px;padding:10px 16px;font-weight: 600;font-size:13px;cursor:pointer">🗑️ Supprimer</button>` : ''}
       <button class="btn-secondary" onclick="opportuniteEnEditionId=null;navigate('opportunites')">Annuler</button>
       <button class="btn-save" onclick="saveOpportunite('${opp ? opp.id : ''}')">✓ ${opp ? 'Enregistrer les modifications' : 'Enregistrer'}</button>
     </div>`;
@@ -2874,7 +2874,7 @@ function renderPiecesJointesOpportunite(opp) {
   const liste = fichiers.length ? fichiers.map((f, i) => `
     <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
       <span style="font-size:14px">📎</span>
-      <a href="#" onclick="ouvrirPieceJointe('${f.path}');return false;" style="flex:1;color:var(--accent);font-size:13px;font-weight:700;text-decoration:none">${f.nom}</a>
+      <a href="#" onclick="ouvrirPieceJointe('${f.path}');return false;" style="flex:1;color:var(--accent);font-size:13px;font-weight: 600;text-decoration:none">${f.nom}</a>
       <span style="font-size:10.5px;color:var(--text-muted)">${f.uploaded_par || ''}</span>
       <button onclick="supprimerPieceJointeOpportunite('${opp.id}', ${i})" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px">✕</button>
     </div>`).join('') : '<div style="font-size:12.5px;color:var(--text-muted);padding:6px 0">Aucun fichier déposé pour l\u2019instant.</div>';

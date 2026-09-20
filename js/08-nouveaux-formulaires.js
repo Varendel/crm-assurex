@@ -10,8 +10,8 @@ function viewNouveauRappel() {
   const clientOptions = allClients.map(c => `<option value="${c.id}" ${(prefill && prefill.clientId === c.id) || clientPrefillId === c.id ? 'selected' : ''}>${estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`}</option>`).join('');
   const natureTache = !!clientPrefillId;
   return `
-    <button onclick="navigate('rappels')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
-    <h2 style="margin:0 0 20px;font-size:18px;font-weight:800;color:var(--text)">${rh ? 'Nouvelle tâche pour Jonathan' : 'Nouvelle tâche / rappel'}</h2>
+    <button onclick="navigate('rappels')" style="background:none;border:none;color:var(--accent);cursor:pointer;font-size:12px;font-weight: 500;margin-bottom:16px;display:flex;align-items:center;gap:5px">← Retour</button>
+    <h2 style="margin:0 0 20px;font-size:18px;font-weight: 600;color:var(--text)">${rh ? 'Nouvelle tâche pour Jonathan' : 'Nouvelle tâche / rappel'}</h2>
     ${sectionCard('Nature', '#4ade80', `<div class="form-grid">
       <div class="form-field" style="grid-column:span 2">
         <label class="form-label">Type d'élément *</label>
@@ -507,7 +507,7 @@ async function showEditContrat(contratId, returnTo) {
 
   creerModale('modal-edit-contrat', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto">
-      <h3 style="margin:0 0 20px;font-size:16px;font-weight:800;color:var(--text)">Modifier le contrat</h3>
+      <h3 style="margin:0 0 20px;font-size:16px;font-weight: 600;color:var(--text)">Modifier le contrat</h3>
       <div class="form-grid">
         <div class="form-field"><label class="form-label">Catégorie</label>
           <select class="form-select" id="ect-categorie" onchange="miseAJourProduitEditContrat()">
@@ -538,10 +538,10 @@ async function showEditContrat(contratId, returnTo) {
         <div class="form-field" style="grid-column:span 2" id="ect-prime-lignes-field">
           <label class="form-label">Lignes de prime <span style="font-weight:400;color:var(--text-muted);font-size:10px">(une ligne par poste de la police — corrige, ajoute ou supprime librement)</span></label>
           <div id="ect-prime-lignes-list" style="display:flex;flex-direction:column;gap:6px;margin-top:6px"></div>
-          <button type="button" onclick="ajouterLignePrimeEdit()" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight:700;cursor:pointer;margin-top:8px">+ Ajouter une ligne</button>
+          <button type="button" onclick="ajouterLignePrimeEdit()" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight: 500;cursor:pointer;margin-top:8px">+ Ajouter une ligne</button>
           <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-            <span style="font-size:12px;font-weight:700;color:var(--text-muted);text-transform:uppercase">Total par échéance</span>
-            <span id="ect-prime-total-affiche" style="font-size:17px;font-weight:900;color:var(--accent)">CHF 0</span>
+            <span style="font-size:12px;font-weight: 500;color:var(--text-muted);text-transform:uppercase">Total par échéance</span>
+            <span id="ect-prime-total-affiche" style="font-size:17px;font-weight: 600;color:var(--accent)">CHF 0</span>
           </div>
         </div>
         <div class="form-field"><label class="form-label">Périodicité</label>
@@ -606,7 +606,7 @@ async function showEditContrat(contratId, returnTo) {
         </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:20px">
-        <button onclick="deleteContrat('${ct.id}','${ct.client_id}', window._editContratReturnTo)" title="Passe le contrat en « annulé » — rien n'est effacé" style="background:color-mix(in srgb, var(--c-danger) 12%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">⊘ Annuler le contrat</button>
+        <button onclick="deleteContrat('${ct.id}','${ct.client_id}', window._editContratReturnTo)" title="Passe le contrat en « annulé » — rien n'est effacé" style="background:color-mix(in srgb, var(--c-danger) 12%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:9px;padding:10px 16px;font-weight: 600;font-size:13px;cursor:pointer">⊘ Annuler le contrat</button>
         <button class="btn-secondary" onclick="document.getElementById('modal-edit-contrat').remove()">Annuler</button>
         <button class="btn-save" onclick="saveEditContrat('${ct.id}','${ct.client_id}', window._editContratReturnTo)">✓ Enregistrer</button>
       </div>
@@ -817,7 +817,7 @@ async function saveEditContrat(contratId, clientId, returnTo) {
 function showFormCollaborateur(clientId) {
   creerModale('modal-collaborateur', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
-      <h3 style="margin:0 0 20px;font-size:16px;font-weight:800;color:var(--text)">Nouveau collaborateur</h3>
+      <h3 style="margin:0 0 20px;font-size:16px;font-weight: 600;color:var(--text)">Nouveau collaborateur</h3>
       <div class="form-grid">
         <div class="form-field"><label class="form-label">Nom *</label><input class="form-input" id="col-nom" placeholder="Dupont"/></div>
         <div class="form-field"><label class="form-label">Prénom *</label><input class="form-input" id="col-prenom" placeholder="Jean"/></div>
@@ -905,7 +905,7 @@ async function showFormFacture(clientId) {
 
   creerModale('modal-facture', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
-      <h3 style="margin:0 0 20px;font-size:16px;font-weight:800;color:var(--text)">Nouvelle facture</h3>
+      <h3 style="margin:0 0 20px;font-size:16px;font-weight: 600;color:var(--text)">Nouvelle facture</h3>
       <div class="form-grid">
         <div class="form-field"><label class="form-label">N° de facture</label><input class="form-input" id="fac-numero" value="${prochainNumero}"/></div>
         <div class="form-field"><label class="form-label">Montant (CHF) *</label><input class="form-input" id="fac-montant" type="number" step="0.05" placeholder="250.00"/></div>
@@ -1017,9 +1017,9 @@ function flotteListeHtml(clientId, searchOverride) {
   const totalNet = vehicules.reduce((s,v) => s + Number(v.prime_nette||0), 0);
 
   return `<div style="display:flex;gap:10px;margin-bottom:12px">
-      <div style="background:var(--surface-alt);border-radius:8px;padding:8px 14px"><span style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Véhicules</span><div style="font-weight:800;color:var(--text)">${vehicules.length}</div></div>
-      <div style="background:color-mix(in srgb, var(--c-alerte) 8%, transparent);border:1px solid color-mix(in srgb, var(--c-alerte) 20%, transparent);border-radius:8px;padding:8px 14px"><span style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Total prime brute</span><div style="font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF(totalBrut)}</div></div>
-      <div style="background:color-mix(in srgb, var(--c-succes) 8%, transparent);border:1px solid color-mix(in srgb, var(--c-succes) 20%, transparent);border-radius:8px;padding:8px 14px"><span style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Total prime nette</span><div style="font-weight:800;color:var(--c-succes-texte)">CHF ${fmtCHF(totalNet)}</div></div>
+      <div style="background:var(--surface-alt);border-radius:8px;padding:8px 14px"><span style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Véhicules</span><div style="font-weight: 600;color:var(--text)">${vehicules.length}</div></div>
+      <div style="background:color-mix(in srgb, var(--c-alerte) 8%, transparent);border:1px solid color-mix(in srgb, var(--c-alerte) 20%, transparent);border-radius:8px;padding:8px 14px"><span style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Total prime brute</span><div style="font-weight: 600;color:var(--c-alerte-texte)">CHF ${fmtCHF(totalBrut)}</div></div>
+      <div style="background:color-mix(in srgb, var(--c-succes) 8%, transparent);border:1px solid color-mix(in srgb, var(--c-succes) 20%, transparent);border-radius:8px;padding:8px 14px"><span style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Total prime nette</span><div style="font-weight: 600;color:var(--c-succes-texte)">CHF ${fmtCHF(totalNet)}</div></div>
     </div>
     <table style="width:100%;border-collapse:collapse;font-size:13px">
       <thead><tr style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px">
@@ -1034,16 +1034,16 @@ function flotteListeHtml(clientId, searchOverride) {
       </tr></thead>
       <tbody>${vehicules.map(v => `
         <tr style="border-bottom:1px solid var(--border)">
-          <td style="padding:9px 12px;font-weight:700;color:var(--text)">${v.marque || '—'}</td>
+          <td style="padding:9px 12px;font-weight: 600;color:var(--text)">${v.marque || '—'}</td>
           <td style="padding:9px 12px;color:var(--text)">${v.modele || '—'}</td>
           <td style="padding:9px 12px;color:var(--text-muted)">${v.type_vehicule || '—'}</td>
           <td style="padding:9px 12px;color:var(--text-muted)">${v.cylindree || '—'}</td>
-          <td style="padding:9px 12px;color:var(--text-muted);font-family:monospace;font-weight:700">${v.numero_plaque || '—'}</td>
-          <td style="padding:9px 12px;text-align:right;color:var(--c-alerte-texte);font-weight:700">CHF ${fmtCHF(Number(v.prime_brute||0))}</td>
-          <td style="padding:9px 12px;text-align:right;color:var(--c-succes-texte);font-weight:700">CHF ${fmtCHF(Number(v.prime_nette||0))}</td>
+          <td style="padding:9px 12px;color:var(--text-muted);font-family:monospace;font-weight: 600">${v.numero_plaque || '—'}</td>
+          <td style="padding:9px 12px;text-align:right;color:var(--c-alerte-texte);font-weight: 600">CHF ${fmtCHF(Number(v.prime_brute||0))}</td>
+          <td style="padding:9px 12px;text-align:right;color:var(--c-succes-texte);font-weight: 600">CHF ${fmtCHF(Number(v.prime_nette||0))}</td>
           <td style="padding:9px 12px;text-align:right;display:flex;gap:6px;justify-content:flex-end">
-            <button onclick="showFormVehicule('${clientId}','${v.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">✏️</button>
-            <button onclick="deleteVehicule('${v.id}','${clientId}')" style="background:color-mix(in srgb, var(--c-danger) 10%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">🗑️</button>
+            <button onclick="showFormVehicule('${clientId}','${v.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:4px 10px;font-size:11px;font-weight: 500;cursor:pointer">✏️</button>
+            <button onclick="deleteVehicule('${v.id}','${clientId}')" style="background:color-mix(in srgb, var(--c-danger) 10%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:6px;padding:4px 10px;font-size:11px;font-weight: 500;cursor:pointer">🗑️</button>
           </td>
         </tr>`).join('')}
       </tbody>
@@ -1062,7 +1062,7 @@ function showFormVehicule(clientId, vehiculeId, presetContratId) {
   const contratActuel = v?.contrat_id ? contratsFlotte.find(ct => ct.id === v.contrat_id) : contratPreset;
   creerModale('modal-vehicule', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
-      <h3 style="margin:0 0 18px;font-size:16px;font-weight:800;color:var(--text)">${v ? 'Modifier le véhicule' : '🚗 Nouveau véhicule'}</h3>
+      <h3 style="margin:0 0 18px;font-size:16px;font-weight: 600;color:var(--text)">${v ? 'Modifier le véhicule' : '🚗 Nouveau véhicule'}</h3>
       <div class="form-grid">
         <div class="form-field"><label class="form-label">Marque *</label><input class="form-input" id="veh-marque" value="${v?.marque || ''}" placeholder="Renault, Mercedes..."/></div>
         <div class="form-field"><label class="form-label">Modèle</label><input class="form-input" id="veh-modele" value="${v?.modele || ''}" placeholder="Trafic, Sprinter..."/></div>
@@ -1084,7 +1084,7 @@ function showFormVehicule(clientId, vehiculeId, presetContratId) {
       </div>
       <div style="font-size:10.5px;color:var(--text-muted);margin-top:6px">💡 La prime brute de ce véhicule s'ajoute (ou se retire) automatiquement du montant total de la police flotte liée.</div>
       <div style="display:flex;gap:10px;margin-top:16px">
-        ${v ? `<button onclick="deleteVehicule('${v.id}','${clientId}')" style="background:color-mix(in srgb, var(--c-danger) 12%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>` : ''}
+        ${v ? `<button onclick="deleteVehicule('${v.id}','${clientId}')" style="background:color-mix(in srgb, var(--c-danger) 12%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:9px;padding:10px 16px;font-weight: 600;font-size:13px;cursor:pointer">🗑️ Supprimer</button>` : ''}
         <button class="btn-secondary" onclick="document.getElementById('modal-vehicule').remove()">Annuler</button>
         <button class="btn-save" onclick="saveVehicule('${clientId}'${v ? `,'${v.id}'` : ''})">✓ Enregistrer</button>
       </div>
@@ -1147,7 +1147,7 @@ function showModalVerifFlotte(clientId, vehicules) {
   window._flotteAImporter = vehicules;
   creerModale('modal-verif-flotte', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:26px;width:100%;max-width:720px;max-height:85vh;overflow-y:auto">
-      <h3 style="margin:0 0 6px;font-size:16px;font-weight:800;color:var(--text)">🤖 Vérification avant import — ${vehicules.length} véhicule(s)</h3>
+      <h3 style="margin:0 0 6px;font-size:16px;font-weight: 600;color:var(--text)">🤖 Vérification avant import — ${vehicules.length} véhicule(s)</h3>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">Décoche les lignes incorrectes ou en double avant de confirmer. Rien n'est encore enregistré.</div>
 
       <div class="form-field" style="margin-bottom:14px">
@@ -1169,11 +1169,11 @@ function showModalVerifFlotte(clientId, vehicules) {
           <tbody>${vehicules.map((v,i) => `
             <tr style="border-top:1px solid var(--border)">
               <td style="padding:7px"><input type="checkbox" class="verif-veh-check" data-idx="${i}" checked/></td>
-              <td style="padding:7px;font-weight:700;color:var(--text)">${v.marque||'—'}</td>
+              <td style="padding:7px;font-weight: 600;color:var(--text)">${v.marque||'—'}</td>
               <td style="padding:7px;color:var(--text)">${v.modele||'—'}</td>
               <td style="padding:7px;color:var(--text-muted)">${v.type_vehicule||'—'}</td>
               <td style="padding:7px;color:var(--text-muted)">${v.cylindree||'—'}</td>
-              <td style="padding:7px;font-family:monospace;font-weight:700">${v.numero_plaque||'—'}</td>
+              <td style="padding:7px;font-family:monospace;font-weight: 600">${v.numero_plaque||'—'}</td>
               <td style="padding:7px;text-align:right;color:var(--c-alerte-texte)">${v.prime_brute!=null?'CHF '+v.prime_brute:'—'}</td>
               <td style="padding:7px;text-align:right;color:var(--c-succes-texte)">${v.prime_nette!=null?'CHF '+v.prime_nette:'—'}</td>
             </tr>`).join('')}
@@ -1299,7 +1299,7 @@ async function deleteVehicule(vehiculeId, clientId) {
 function viewRechercheVehicules() {
   setTimeout(() => renderRechercheVehicules(), 0);
   return `
-    <h2 style="margin:0 0 4px;font-size:18px;font-weight:800;color:var(--text)">🚗 Recherche véhicules (toutes flottes)</h2>
+    <h2 style="margin:0 0 4px;font-size:18px;font-weight: 600;color:var(--text)">🚗 Recherche véhicules (toutes flottes)</h2>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Recherche par marque, modèle, cylindrée ou n° de plaque, tous clients confondus.</div>
     <input class="form-input" id="rv-search" placeholder="🔍 Marque, modèle, cylindrée, plaque..." style="margin-bottom:16px" oninput="renderRechercheVehicules()"/>
     <div id="rv-stats" class="stat-grid" style="margin-bottom:16px"></div>
@@ -1340,10 +1340,10 @@ function renderRechercheVehicules() {
   const lignesDetail = vehicules.map(v => {
     const cl = allClients.find(c => c.id === v.client_id);
     return `<a href="?client=${v.client_id}" class="table-row" style="grid-template-columns:${cols};cursor:pointer;text-decoration:none;color:inherit" onclick="return irVersClient(event, '${v.client_id}')">
-      <div style="font-weight:700;color:var(--text)">${v.marque||'—'}</div>
+      <div style="font-weight: 600;color:var(--text)">${v.marque||'—'}</div>
       <div style="color:var(--text-muted)">${v.modele||'—'}</div>
       <div style="color:var(--text-muted);font-size:12px">${v.type_vehicule || v.cylindree || '—'}</div>
-      <div style="font-family:monospace;font-weight:700;color:var(--text)">${v.numero_plaque||'—'}</div>
+      <div style="font-family:monospace;font-weight: 600;color:var(--text)">${v.numero_plaque||'—'}</div>
       <div style="color:var(--accent);text-decoration:underline dotted">${cl ? (estEntreprise(cl) ? cl.nom : `${cl.prenom} ${cl.nom}`) : '—'}</div>
     </a>`;
   }).join('');
@@ -1351,11 +1351,11 @@ function renderRechercheVehicules() {
     const cl = allClients.find(c => c.id === ct.client_id);
     const nomCl = cl ? (estEntreprise(cl) ? cl.nom : `${cl.prenom} ${cl.nom}`) : '—';
     return `<div class="table-row" style="grid-template-columns:${cols};background:color-mix(in srgb, var(--c-alerte) 5%, transparent)">
-      <div style="font-weight:700;color:var(--c-alerte-texte)" colspan="3">⚠️ ${ct.produit || 'Véhicule'} — détails à compléter</div>
+      <div style="font-weight: 600;color:var(--c-alerte-texte)" colspan="3">⚠️ ${ct.produit || 'Véhicule'} — détails à compléter</div>
       <div style="font-family:monospace;color:var(--text-muted)">${ct.numero_police || '—'}</div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
         <span style="color:var(--accent);text-decoration:underline dotted;cursor:pointer" onclick="showClient('${ct.client_id}')">${nomCl}</span>
-        <button onclick="showFormVehicule('${ct.client_id}', null, '${ct.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:3px 9px;font-size:10.5px;font-weight:700;cursor:pointer;white-space:nowrap">+ Compléter</button>
+        <button onclick="showFormVehicule('${ct.client_id}', null, '${ct.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:3px 9px;font-size:10.5px;font-weight: 500;cursor:pointer;white-space:nowrap">+ Compléter</button>
       </div>
     </div>`;
   }).join('');
@@ -1398,10 +1398,10 @@ function showRappel(id) {
 
   document.getElementById('main-content').innerHTML = `
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
-      <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">${isTache ? '📋' : '🔔'} ${r.titre}</h2>
+      <h2 style="margin:0;font-size:18px;font-weight: 600;color:var(--text)">${isTache ? '📋' : '🔔'} ${r.titre}</h2>
       <div style="display:flex;align-items:center;gap:8px">
-        ${(!r.outlook_event_id && (r.date_echeance || r.date_planifiee)) ? `<button onclick="synchroniserRappelOutlook('${r.id}')" style="background:color-mix(in srgb, var(--c-alerte) 12%, transparent);border:1px solid color-mix(in srgb, var(--c-alerte) 30%, transparent);color:var(--c-alerte-texte);border-radius:8px;padding:5px 12px;font-size:11.5px;font-weight:700;cursor:pointer">📅 Absent d'Outlook — synchroniser</button>` : ''}
-        <select id="rd-repousser-select" onchange="repousserRappelRapide('${r.id}', this.value)" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:8px;padding:6px 10px;font-size:11.5px;font-weight:700;cursor:pointer">
+        ${(!r.outlook_event_id && (r.date_echeance || r.date_planifiee)) ? `<button onclick="synchroniserRappelOutlook('${r.id}')" style="background:color-mix(in srgb, var(--c-alerte) 12%, transparent);border:1px solid color-mix(in srgb, var(--c-alerte) 30%, transparent);color:var(--c-alerte-texte);border-radius:8px;padding:5px 12px;font-size:11.5px;font-weight: 500;cursor:pointer">📅 Absent d'Outlook — synchroniser</button>` : ''}
+        <select id="rd-repousser-select" onchange="repousserRappelRapide('${r.id}', this.value)" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:8px;padding:6px 10px;font-size:11.5px;font-weight: 500;cursor:pointer">
           <option value="">⏰ Repousser…</option>
           <option value="7">+ 1 semaine</option>
           <option value="14">+ 2 semaines</option>
@@ -1410,8 +1410,8 @@ function showRappel(id) {
           <option value="specifique">📅 Date spécifique…</option>
         </select>
         <div style="display:flex;gap:6px">
-          <button type="button" onclick="${r.statut === 'ouvert' ? '' : `rouvrirRappelRapide('${r.id}')`}" style="background:${r.statut === 'ouvert' ? '#f59e0b' : 'var(--surface-alt)'};color:${r.statut === 'ouvert' ? '#0a0e1a' : 'var(--text-muted)'};border:1px solid ${r.statut === 'ouvert' ? '#f59e0b' : 'var(--border)'};border-radius:20px;padding:6px 14px;font-size:11.5px;font-weight:800;cursor:pointer">🔓 Ouvert</button>
-          <button type="button" onclick="${r.statut === 'ouvert' ? `traiterRappelRapide('${r.id}')` : ''}" style="background:${r.statut !== 'ouvert' ? '#4ade80' : 'var(--surface-alt)'};color:${r.statut !== 'ouvert' ? '#0a0e1a' : 'var(--text-muted)'};border:1px solid ${r.statut !== 'ouvert' ? '#4ade80' : 'var(--border)'};border-radius:20px;padding:6px 14px;font-size:11.5px;font-weight:800;cursor:pointer">✓ Traité</button>
+          <button type="button" onclick="${r.statut === 'ouvert' ? '' : `rouvrirRappelRapide('${r.id}')`}" style="background:${r.statut === 'ouvert' ? '#f59e0b' : 'var(--surface-alt)'};color:${r.statut === 'ouvert' ? '#0a0e1a' : 'var(--text-muted)'};border:1px solid ${r.statut === 'ouvert' ? '#f59e0b' : 'var(--border)'};border-radius:20px;padding:6px 14px;font-size:11.5px;font-weight: 500;cursor:pointer">🔓 Ouvert</button>
+          <button type="button" onclick="${r.statut === 'ouvert' ? `traiterRappelRapide('${r.id}')` : ''}" style="background:${r.statut !== 'ouvert' ? '#4ade80' : 'var(--surface-alt)'};color:${r.statut !== 'ouvert' ? '#0a0e1a' : 'var(--text-muted)'};border:1px solid ${r.statut !== 'ouvert' ? '#4ade80' : 'var(--border)'};border-radius:20px;padding:6px 14px;font-size:11.5px;font-weight: 500;cursor:pointer">✓ Traité</button>
         </div>
       </div>
     </div>
@@ -1446,8 +1446,8 @@ function showRappel(id) {
         ${(r.piece_jointe_path || r.piece_jointe_url) ? `
           <div style="display:flex;align-items:center;gap:10px;background:var(--surface-alt);border-radius:9px;padding:10px 14px">
             <span style="font-size:18px">📎</span>
-            <a href="#" onclick="ouvrirPieceJointe('${r.piece_jointe_path || ''}'); return false;" style="flex:1;color:var(--accent);font-size:13px;font-weight:700;text-decoration:none">${r.piece_jointe_nom || 'Document joint'}</a>
-            <button onclick="supprimerPieceJointe()" style="background:var(--red-dim);color:var(--red);border:none;border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">Retirer</button>
+            <a href="#" onclick="ouvrirPieceJointe('${r.piece_jointe_path || ''}'); return false;" style="flex:1;color:var(--accent);font-size:13px;font-weight: 600;text-decoration:none">${r.piece_jointe_nom || 'Document joint'}</a>
+            <button onclick="supprimerPieceJointe()" style="background:var(--red-dim);color:var(--red);border:none;border-radius:7px;padding:5px 10px;font-size:11px;font-weight: 500;cursor:pointer">Retirer</button>
           </div>
         ` : `
           <input type="file" id="rd-file-input" style="display:none" onchange="uploadPieceJointe()"/>

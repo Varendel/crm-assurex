@@ -33,9 +33,9 @@
   transition: border-color var(--v-court, .15s), transform var(--v-court, .15s);
 }
 .eca-puce:hover { border-color: var(--accent-border); transform: translateY(-2px); }
-.eca-puce > span { font-size: 19px; line-height: 1.1; }
+.eca-puce > span { font-size: var(--t-xl); line-height: 1.1; }
 .eca-puce b {
-  font-size: 19px; font-weight: var(--t-moyen, 600); letter-spacing: -0.02em; color: var(--text);
+  font-size: var(--t-xl); font-weight: var(--t-moyen, 600); letter-spacing: -0.02em; color: var(--text);
   font-variant-numeric: tabular-nums lining-nums;
 }
 .eca-puce small { font-size: var(--t-xs, 11px); color: var(--text-muted); line-height: 1.25; }

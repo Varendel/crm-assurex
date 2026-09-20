@@ -56,7 +56,7 @@ async function ouvrirAnnonceNaissance(clientId) {
   if (!c) return;
   creerModale('modal-annonce-naissance', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
-      <h3 style="margin:0 0 6px;font-size:16px;font-weight:800;color:var(--text)">🎉 Annoncer la naissance</h3>
+      <h3 style="margin:0 0 6px;font-size:16px;font-weight: 600;color:var(--text)">🎉 Annoncer la naissance</h3>
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">Confirme le prénom et la date de naissance réels — le dossier et les contrats LAMal/LCA basculeront en vigueur, et les commissions liées passeront en suivi normal.</div>
       <div class="form-grid">
         <div class="form-field"><label class="form-label">Prénom de l'enfant</label><input class="form-input" id="an-prenom" value="${c.prenom && c.prenom !== 'Baby' ? c.prenom : ''}" placeholder="Prénom réel"/></div>
@@ -122,12 +122,12 @@ function ouvrirEmailsNaissance(clientId, prenom, dateNaissance) {
     const sujet = `Naissance — ${nomComplet} — régularisation de couverture`;
     const corps = `Bonjour,\n\nNous vous annonçons la naissance de ${nomComplet}, né(e) le ${fmtDate(dateNaissance)}.\n\nMerci de bien vouloir régulariser la/les couverture(s) suivante(s), assurée(s) à titre prénatal :\n${polices}\n\nNous restons à votre disposition pour tout document complémentaire (acte de naissance, etc.).\n\nMeilleures salutations`;
     const mailto = `mailto:?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`;
-    return `<a href="${mailto}" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;background:var(--surface-alt);border:1px solid var(--border);border-radius:9px;text-decoration:none;color:var(--text);font-size:12.5px;font-weight:700;margin-bottom:8px">✉️ Annoncer à ${comp}<span style="color:var(--accent);font-size:11px">Ouvrir l'email →</span></a>`;
+    return `<a href="${mailto}" style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 14px;background:var(--surface-alt);border:1px solid var(--border);border-radius:9px;text-decoration:none;color:var(--text);font-size:12.5px;font-weight: 500;margin-bottom:8px">✉️ Annoncer à ${comp}<span style="color:var(--accent);font-size:11px">Ouvrir l'email →</span></a>`;
   }).join('');
 
   creerModale('modal-emails-naissance', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
-      <h3 style="margin:0 0 6px;font-size:16px;font-weight:800;color:var(--text)">🎉 Naissance confirmée</h3>
+      <h3 style="margin:0 0 6px;font-size:16px;font-weight: 600;color:var(--text)">🎉 Naissance confirmée</h3>
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">${nomComplet}, né(e) le ${fmtDate(dateNaissance)} — les contrats sont maintenant actifs. Choisis la compagnie à annoncer par email (destinataire à compléter toi-même) :</div>
       ${liensMail}
       <div style="display:flex;gap:10px;margin-top:16px">
@@ -172,15 +172,15 @@ function renderLigneContratClient(ct, estSousCouverture) {
         <div style="${estSousCouverture ? 'margin-left:20px;padding-left:10px;border-left:2px dashed var(--border)' : ''}">
           <div style="display:flex;align-items:center;gap:7px">
             ${estSousCouverture ? `<span style="color:var(--text-muted);font-size:12px;flex-shrink:0">↳</span>` : `<span style="width:8px;height:8px;border-radius:50%;background:${couleurCat};flex-shrink:0" title="${nomCat || 'Autre'}"></span>`}
-            <div style="font-weight:700;font-size:13px;color:${estSousCouverture ? 'var(--text-muted)' : 'var(--text)'}">${ct.produit}</div>
+            <div style="font-weight: 600;font-size:13px;color:${estSousCouverture ? 'var(--text-muted)' : 'var(--text)'}">${ct.produit}</div>
           </div>
-          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${estSousCouverture ? `<span style="font-style:italic">même police</span> · ` : (nomCat ? `<span style="color:${couleurCat};font-weight:700">${nomCat}</span> · ` : '')}${ct.numero_police && !estSousCouverture ? '№ ' + ct.numero_police : ''}${ct.date_debut ? ' · Dès le ' + fmtDate(ct.date_debut) : ''}${ct.date_echeance ? ' → ' + fmtDate(ct.date_echeance) : ''}</div>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${estSousCouverture ? `<span style="font-style:italic">même police</span> · ` : (nomCat ? `<span style="color:${couleurCat};font-weight: 600">${nomCat}</span> · ` : '')}${ct.numero_police && !estSousCouverture ? '№ ' + ct.numero_police : ''}${ct.date_debut ? ' · Dès le ' + fmtDate(ct.date_debut) : ''}${ct.date_echeance ? ' → ' + fmtDate(ct.date_echeance) : ''}</div>
           ${ct.modules ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:3px;line-height:1.5">🔗 ${ct.modules.split(', ').join(' · ')}</div>` : ''}
           ${Array.isArray(ct.detail_lignes) && ct.detail_lignes.length > 0 ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:3px;line-height:1.5">🧾 ${ct.detail_lignes.filter(l => l.libelle).map(l => `${l.libelle}${l.montant ? ' : CHF ' + fmtCHF(l.montant) : ''}`).join(' · ')}</div>` : ''}
         </div>
         <div style="font-size:13px;color:var(--text)">${typeof compagnieAvecPicto === 'function' ? compagnieAvecPicto(ct.compagnie) : ct.compagnie}</div>
         <div style="font-size:12px;color:var(--text-muted)">${fmtDate(ct.date_echeance)}</div>
-        <div style="font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF(Number(ct.prime_annuelle || 0))}</div>
+        <div style="font-weight: 600;color:var(--c-alerte-texte)">CHF ${fmtCHF(Number(ct.prime_annuelle || 0))}</div>
         <div>${badge(ct.statut, ct.statut === 'actif' ? '#4ade80' : ct.statut === 'renouveler' ? '#f59e0b' : '#f87171')}${ct.commissionne === false ? ' ' + badge('Non commissionné', '#64748b') : ''}</div>
         <div style="display:flex;gap:4px;align-items:center" onclick="event.stopPropagation()">
           ${ct.police_url
@@ -235,7 +235,7 @@ function voirConstellationFamiliale(clientId) {
   creerModale('modal-constellation', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;max-width:720px;width:100%;max-height:85vh;overflow-y:auto">
       <div style="display:flex;justify-content:space-between;align-items:center;padding:18px 22px;border-bottom:1px solid var(--border)">
-        <h3 style="margin:0;font-size:16px;font-weight:800;color:var(--text)">🌳 Constellation familiale — ${c.prenom || ''} ${c.nom || ''}</h3>
+        <h3 style="margin:0;font-size:16px;font-weight: 600;color:var(--text)">🌳 Constellation familiale — ${c.prenom || ''} ${c.nom || ''}</h3>
         <button onclick="fermerModaleConstellation()" style="background:none;border:none;color:var(--text-muted);font-size:20px;cursor:pointer;line-height:1">✕</button>
       </div>
       <div class="fam-tree">
@@ -275,7 +275,7 @@ function ouvrirLienFamilial(clientId, role) {
   creerModale('modal-lien-famille', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;max-width:420px;width:100%">
       <div style="padding:18px 22px;border-bottom:1px solid var(--border)">
-        <h3 style="margin:0;font-size:15px;font-weight:800;color:var(--text)">${titre}</h3>
+        <h3 style="margin:0;font-size:15px;font-weight: 600;color:var(--text)">${titre}</h3>
         <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Recherche un client déjà présent dans le CRM à relier à ${c.prenom || ''} ${c.nom || ''}.</div>
       </div>
       <div style="padding:18px 22px">
@@ -285,7 +285,7 @@ function ouvrirLienFamilial(clientId, role) {
       </div>
       <div style="padding:14px 22px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px">
         <button onclick="document.getElementById('modal-lien-famille').remove()" class="btn-secondary">Annuler</button>
-        <button onclick="confirmerLienFamilial('${clientId}','${role}')" style="background:var(--accent);border:none;color:#fff;border-radius:8px;padding:8px 18px;font-size:12px;font-weight:700;cursor:pointer">Relier</button>
+        <button onclick="confirmerLienFamilial('${clientId}','${role}')" style="background:var(--accent);border:none;color:#fff;border-radius:8px;padding:8px 18px;font-size:12px;font-weight: 500;cursor:pointer">Relier</button>
       </div>
     </div>
   `);
@@ -404,7 +404,7 @@ async function showClient(id) {
     : (c.prenatal ? iconAvatarClient('bebe', 52)
       : c.civilite === 'Madame' ? iconAvatarClient('femme', 52)
       : c.civilite === 'Monsieur' ? iconAvatarClient('homme', 52)
-      : `<div style="width:52px;height:52px;border-radius:50%;background:var(--accent-dim);border:2px solid var(--accent-border);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:900;color:var(--accent)">${(c.prenom||'?')[0]}${(c.nom||'?')[0]}</div>`);
+      : `<div style="width:52px;height:52px;border-radius:50%;background:var(--accent-dim);border:2px solid var(--accent-border);display:flex;align-items:center;justify-content:center;font-size:20px;font-weight: 600;color:var(--accent)">${(c.prenom||'?')[0]}${(c.nom||'?')[0]}</div>`);
 
   main.innerHTML = `
     <div class="print-header" style="display:none">
@@ -419,7 +419,7 @@ async function showClient(id) {
         <div class="postit-note" style="background:${p.couleur || '#fde047'};transform:rotate(${p.rotation || 0}deg)">
           <button onclick="deletePostit('${p.id}','${c.id}')" class="postit-close">×</button>
           <textarea class="postit-text" onblur="savePostitContenu('${p.id}', this.value)" placeholder="Écris ici...">${p.contenu || ''}</textarea>
-          <button onclick="convertirPostitEnRappel('${p.id}','${c.id}', this)" style="position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,0.12);border:none;border-radius:6px;padding:3px 7px;font-size:10px;font-weight:700;color:#1a1a1a;cursor:pointer">→ Tâche</button>
+          <button onclick="convertirPostitEnRappel('${p.id}','${c.id}', this)" style="position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,0.12);border:none;border-radius:6px;padding:3px 7px;font-size:10px;font-weight: 500;color:#1a1a1a;cursor:pointer">→ Tâche</button>
         </div>`).join('')}
       <button onclick="addPostit('${c.id}')" class="postit-add" title="Ajouter un post-it">📌 +</button>
     </div>
@@ -549,10 +549,10 @@ async function showClient(id) {
           ${bilansPrevoyance.map(b => `
             <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 14px;background:var(--surface-alt);border-radius:9px;border:1px solid var(--border)">
               <div style="flex:1">
-                <div style="font-size:12.5px;font-weight:700;color:var(--text)">${fmtDate(b.created_at)}</div>
+                <div style="font-size:12.5px;font-weight: 500;color:var(--text)">${fmtDate(b.created_at)}</div>
                 <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${b.resume || ''}</div>
               </div>
-              <button onclick="voirBilanSauvegarde('${b.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 14px;font-size:11.5px;font-weight:700;cursor:pointer;white-space:nowrap">👁️ Voir</button>
+              <button onclick="voirBilanSauvegarde('${b.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 14px;font-size:11.5px;font-weight: 500;cursor:pointer;white-space:nowrap">👁️ Voir</button>
             </div>`).join('')}
         </div>
       ` : `<div style="font-size:12px;color:var(--text-muted)">Aucun bilan de prévoyance enregistré pour ce client. Utilise le Calculateur LPP (menu Vente → 🧮 Bilan de prévoyance) pour en créer un.</div>`)}
@@ -572,13 +572,13 @@ async function showClient(id) {
                 <div style="display:flex;align-items:center;gap:12px">
                 ${typeof pictoCompagnie === 'function' ? pictoCompagnie(ct.compagnie, 30) : ''}
                 <div>
-                  <div style="font-size:13px;font-weight:700;color:var(--text)">${ct.produit}</div>
+                  <div style="font-size:13px;font-weight: 600;color:var(--text)">${ct.produit}</div>
                   <div style="font-size:11px;color:var(--text-muted)">${ct.compagnie || ''}${ct.date_debut ? ' · Dès le ' + fmtDate(ct.date_debut) : ''}${ct.date_echeance ? ' → ' + fmtDate(ct.date_echeance) : ''}</div>
                   <div style="font-size:11px;color:var(--text-muted)">${ct.numero_police ? 'Police № ' + ct.numero_police : ''}</div>
                 </div>
                 </div>
                 <div style="text-align:right">
-                  <div style="font-weight:800;color:var(--c-alerte-texte);font-size:13px">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}/an</div>
+                  <div style="font-weight: 600;color:var(--c-alerte-texte);font-size:13px">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}/an</div>
                   <div style="font-size:10px;color:var(--text-muted)">CHF ${fmtCHF(Math.round(Number(ct.prime_annuelle||0)/12*100)/100)}/mois</div>
                   ${badge(ct.statut, ct.statut==='actif'?'#4ade80':'#f59e0b')}
                 </div>
@@ -605,11 +605,11 @@ async function showClient(id) {
         const statutLabel = f.statut === 'payee' ? 'Payée' : enRetard ? 'En retard' : f.statut === 'annulee' ? 'Annulée' : 'Envoyée';
         const statutColor2 = f.statut === 'payee' ? '#4ade80' : enRetard ? '#f87171' : f.statut === 'annulee' ? '#64748b' : '#f59e0b';
         return `<div class="table-row" style="grid-template-columns:120px 1fr 100px 100px 100px 90px;cursor:pointer" onclick="toggleFactureStatut('${f.id}','${f.statut}','${c.id}')" title="Cliquer pour changer le statut">
-          <div style="font-weight:700;font-size:13px;color:var(--text);font-family:monospace">${f.numero}</div>
+          <div style="font-weight: 600;font-size:13px;color:var(--text);font-family:monospace">${f.numero}</div>
           <div style="font-size:13px;color:var(--text)">${f.objet || '—'}</div>
           <div style="font-size:12px;color:var(--text-muted)">${f.date_emission || ''}</div>
           <div style="font-size:12px;color:var(--text-muted)">${fmtDate(f.date_echeance)}</div>
-          <div style="font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF(Number(f.montant||0))}</div>
+          <div style="font-weight: 600;color:var(--c-alerte-texte)">CHF ${fmtCHF(Number(f.montant||0))}</div>
           <div>${badge(statutLabel, statutColor2)}</div>
         </div>`;
       }).join('')}</div>` : '<div class="table-empty">Aucune facture.</div>'}
@@ -617,7 +617,7 @@ async function showClient(id) {
 
     <div id="tab-collaborateurs" class="hidden">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-        <div style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">Collaborateurs (${collaborateurs.length})</div>
+        <div style="font-size:13px;font-weight: 600;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">Collaborateurs (${collaborateurs.length})</div>
         <button class="btn-add" onclick="showFormCollaborateur('${c.id}')" title="Ajouter un collaborateur" style="display:flex;align-items:center;gap:6px">👤+ Ajouter</button>
       </div>
       ${collaborateurs.length > 0 ? `
@@ -633,14 +633,14 @@ async function showClient(id) {
         </tr></thead>
         <tbody>${collaborateurs.map(col => `
           <tr style="border-bottom:1px solid var(--border)">
-            <td style="padding:10px 12px;font-weight:700;color:var(--text)">${col.nom || '—'}</td>
+            <td style="padding:10px 12px;font-weight: 600;color:var(--text)">${col.nom || '—'}</td>
             <td style="padding:10px 12px;color:var(--text)">${col.prenom || '—'}</td>
             <td style="padding:10px 12px;color:var(--text-muted)">${fmtDate(col.date_naissance)}</td>
             <td style="padding:10px 12px;color:var(--text-muted)">${col.mobile || '—'}</td>
             <td style="padding:10px 12px;color:var(--text-muted)">${col.adresse || '—'}</td>
             <td style="padding:10px 12px;color:var(--text-muted);font-family:monospace">${col.avs || '—'}</td>
             <td style="padding:10px 12px;text-align:right">
-              <button onclick="deleteCollaborateur('${col.id}','${c.id}')" style="background:color-mix(in srgb, var(--c-danger) 10%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">Supprimer</button>
+              <button onclick="deleteCollaborateur('${col.id}','${c.id}')" style="background:color-mix(in srgb, var(--c-danger) 10%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:6px;padding:4px 10px;font-size:11px;font-weight: 500;cursor:pointer">Supprimer</button>
             </td>
           </tr>`).join('')}
         </tbody>
@@ -649,9 +649,9 @@ async function showClient(id) {
 
     <div id="tab-flotte" class="hidden">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
-        <div style="font-size:13px;font-weight:700;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">Flotte de véhicules</div>
+        <div style="font-size:13px;font-weight: 600;color:var(--text-muted);text-transform:uppercase;letter-spacing:1px">Flotte de véhicules</div>
         <div style="display:flex;gap:8px">
-          <label style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:9px;padding:8px 14px;font-size:12.5px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px">
+          <label style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:9px;padding:8px 14px;font-size:12.5px;font-weight: 500;cursor:pointer;display:flex;align-items:center;gap:6px">
             🤖 Importer depuis un PDF
             <input type="file" accept="application/pdf" onchange="importFlottePdf('${c.id}', this)" style="display:none"/>
           </label>
@@ -669,7 +669,7 @@ async function showClient(id) {
       </div>
       ${rappels.length > 0 ? rappels.map(r => `<div class="rappel-item" style="cursor:pointer" onclick="showRappel('${r.id}')">
         <div class="urgence-dot" style="background:${r.urgence === 'haute' ? '#f87171' : r.urgence === 'moyenne' ? '#f59e0b' : '#64748b'}"></div>
-        <div style="flex:1"><div style="font-size:13px;font-weight:700;color:var(--text)">${r.titre}</div><div style="font-size:11px;color:var(--text-muted)">${r.type || ''}</div></div>
+        <div style="flex:1"><div style="font-size:13px;font-weight: 600;color:var(--text)">${r.titre}</div><div style="font-size:11px;color:var(--text-muted)">${r.type || ''}</div></div>
         <span style="font-size:12px;color:var(--text-muted)">${fmtDate(r.date_echeance)}</span>
       </div>`).join('') : '<div class="table-empty">Aucun rappel.</div>'}
     </div>
@@ -683,11 +683,11 @@ async function showClient(id) {
         const heure = new Date(r.date_heure).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
         return `<div class="rappel-item" style="${r.statut === 'annule' ? 'opacity:.55' : ''}">
           <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-width:52px;text-align:center;flex-shrink:0">
-            <div style="font-size:13px;font-weight:800;color:var(--text)">${fmtDate(r.date_heure)}</div>
-            <div style="font-size:11px;font-weight:700;color:var(--accent)">${heure}</div>
+            <div style="font-size:13px;font-weight: 600;color:var(--text)">${fmtDate(r.date_heure)}</div>
+            <div style="font-size:11px;font-weight: 500;color:var(--accent)">${heure}</div>
           </div>
           <div style="flex:1">
-            <div style="font-size:13px;font-weight:700;color:var(--text)">${r.cree_par === 'client' ? '🌐 ' : ''}${r.type || 'Rendez-vous'}${r.statut === 'annule' ? ' — annulé' : ''}</div>
+            <div style="font-size:13px;font-weight: 600;color:var(--text)">${r.cree_par === 'client' ? '🌐 ' : ''}${r.type || 'Rendez-vous'}${r.statut === 'annule' ? ' — annulé' : ''}</div>
             <div style="font-size:11px;color:var(--text-muted)">${[r.duree_min ? `${r.duree_min} min` : '', r.notes].filter(Boolean).join(' · ')}</div>
           </div>
           ${passe || r.statut === 'annule' ? '' : `<button onclick="annulerRdv('${r.id}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px" title="Annuler">✕</button>`}
@@ -728,7 +728,7 @@ function boutonOngletAction(idModal, onclickInterieur, label) {
 function ouvrirModaleOnglet(idModal, titre, couleur, boutonsHtml) {
   creerModale(idModal, `
     <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:420px;width:100%">
-      <div style="font-size:16px;font-weight:800;color:${couleur};margin-bottom:16px">${titre}</div>
+      <div style="font-size:16px;font-weight: 600;color:${couleur};margin-bottom:16px">${titre}</div>
       <div style="display:flex;flex-direction:column;gap:8px">
         ${boutonsHtml}
       </div>
@@ -808,7 +808,7 @@ function ouvrirModaleRelanceClient(clientId) {
   document.getElementById('modal-onglet-admin')?.remove();
   creerModale('modal-relance', `
     <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:480px;width:100%">
-      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">📨 Courrier de relance — document manquant</div>
+      <div style="font-size:16px;font-weight: 600;color:var(--text);margin-bottom:6px">📨 Courrier de relance — document manquant</div>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:16px">Coche le(s) document(s) manquant(s) — le courrier reprend automatiquement les coordonnées du client.</div>
       <div class="form-grid">
         <div class="form-field" style="grid-column:span 2">
@@ -888,7 +888,7 @@ function ouvrirModaleCourrierLibre(clientId) {
   document.getElementById('modal-onglet-admin')?.remove();
   creerModale('modal-courrier-libre', `
     <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:520px;width:100%">
-      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">📝 Courrier libre</div>
+      <div style="font-size:16px;font-weight: 600;color:var(--text);margin-bottom:6px">📝 Courrier libre</div>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:16px">Rédige un courrier sur mesure — l'en-tête Assurex et les coordonnées du client sont ajoutés automatiquement.</div>
       <div class="form-grid">
         <div class="form-field" style="grid-column:span 2">
@@ -950,7 +950,7 @@ function construireHtmlCourrierAssurex({ titre, destinataireNom, destinataireAdr
     .entete{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
     .date-ligne{text-align:right;margin-top:10px;font-size:12px}
     .destinataire{margin-top:38px;font-size:12.5px}
-    .objet{margin-top:34px;font-weight:700;font-size:13px}
+    .objet{margin-top:34px;font-weight: 600;font-size:13px}
     p{margin:12px 0}
     ul{margin:12px 0;padding-left:22px}
     li{margin:4px 0}
@@ -996,7 +996,7 @@ function confirmerSuppressionClient(clientId, nomClient) {
   const commissionsLiees = allCommissionsAttente.filter(c => c.client_id === clientId);
   creerModale('modal-suppression-client', `
     <div style="background:var(--surface);border-radius:14px;padding:24px;max-width:440px;width:100%">
-      <div style="font-size:16px;font-weight:800;color:var(--c-danger-texte);margin-bottom:10px">⚠️ Archiver ${nomClient} ?</div>
+      <div style="font-size:16px;font-weight: 600;color:var(--c-danger-texte);margin-bottom:10px">⚠️ Archiver ${nomClient} ?</div>
       <div style="font-size:12.5px;color:var(--text-muted);margin-bottom:14px">Rien n'est effacé (règle du cabinet) : le client passe en <strong>inactif</strong> et disparaît des listes courantes.</div>
       <ul style="font-size:12.5px;color:var(--text);margin:0 0 16px;padding-left:20px">
         <li>${contratsLies.length} contrat(s) → passés en « annulé » (sauf résiliés)</li>
@@ -1005,7 +1005,7 @@ function confirmerSuppressionClient(clientId, nomClient) {
       </ul>
       <div style="display:flex;gap:10px">
         <button class="btn-secondary" onclick="document.getElementById('modal-suppression-client').remove()" style="flex:1">Annuler</button>
-        <button onclick="executerSuppressionClient('${clientId}', this)" style="flex:1;background:#f87171;color:#0a0e1a;border:none;border-radius:8px;padding:10px;font-weight:800;cursor:pointer">Confirmer l'archivage</button>
+        <button onclick="executerSuppressionClient('${clientId}', this)" style="flex:1;background:#f87171;color:#0a0e1a;border:none;border-radius:8px;padding:10px;font-weight: 600;cursor:pointer">Confirmer l'archivage</button>
       </div>
     </div>`, { opacite: 0.8, padding: '16px', overflowY: false });
 }
@@ -1219,7 +1219,7 @@ function renderLignesPolice() {
         ${RESILIATION_TYPES.map(t => `<option value="${t.id}" ${l.type === t.id ? 'selected' : ''}>${t.label.split(' (')[0]}</option>`).join('')}
       </select>
       <input class="form-input res-ligne-police-input" placeholder="N° de police" value="${(l.police || '').replace(/"/g, '&quot;')}" style="flex:1"/>
-      ${lignes.length > 1 ? `<button type="button" onclick="supprimerLignePolice(${i})" title="Retirer cette ligne" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-weight:700;font-size:15px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;padding:0">×</button>` : ''}
+      ${lignes.length > 1 ? `<button type="button" onclick="supprimerLignePolice(${i})" title="Retirer cette ligne" style="flex-shrink:0;width:26px;height:26px;border-radius:50%;border:1px solid var(--border);background:transparent;color:var(--text-muted);font-weight: 600;font-size:15px;cursor:pointer;line-height:1;display:flex;align-items:center;justify-content:center;padding:0">×</button>` : ''}
     </div>`).join('');
 }
 
@@ -1272,7 +1272,7 @@ function ouvrirModaleResiliation(clientId) {
   </div>` : '';
   creerModale('modal-resiliation', `
     <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:480px;width:100%">
-      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">📝 Générer une feuille de résiliation</div>
+      <div style="font-size:16px;font-weight: 600;color:var(--text);margin-bottom:6px">📝 Générer une feuille de résiliation</div>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:16px">Compagnie, numéro(s) de police à résilier, délai souhaité — les coordonnées du client sont reprises automatiquement dans la lettre.</div>
       <div class="form-grid">
         ${membresHtml}
@@ -1288,7 +1288,7 @@ function ouvrirModaleResiliation(clientId) {
         <div class="form-field" style="grid-column:span 2">
           <label class="form-label">2. Numéro(s) de police à résilier *</label>
           <div id="res-lignes-police" style="display:flex;flex-direction:column;gap:8px"></div>
-          <button type="button" onclick="ajouterLignePolice()" style="margin-top:8px;display:flex;align-items:center;gap:6px;background:transparent;border:1px dashed var(--accent);color:var(--accent);border-radius:8px;padding:6px 10px;font-size:12px;font-weight:600;cursor:pointer">+ Ajouter un autre numéro de police</button>
+          <button type="button" onclick="ajouterLignePolice()" style="margin-top:8px;display:flex;align-items:center;gap:6px;background:transparent;border:1px dashed var(--accent);color:var(--accent);border-radius:8px;padding:6px 10px;font-size:12px;font-weight: 500;cursor:pointer">+ Ajouter un autre numéro de police</button>
         </div>
         <div class="form-field" style="grid-column:span 2"><label class="form-label">Adresse de la compagnie (optionnel)</label><input class="form-input" id="res-compagnie-adresse" placeholder="Ex: Case postale, 1001 Lausanne"/></div>
         <div class="form-field"><label class="form-label">3. Délai de résiliation souhaité *</label><input class="form-input" id="res-date-effet" type="date"/></div>
@@ -1332,8 +1332,8 @@ function construireHtmlResiliation(corps, titre, signatureDataUrl) {
     .expediteur{font-size:12px}
     .date-ligne{position:absolute;top:0;left:9.5cm;font-size:12px;white-space:nowrap}
     .destinataire{margin-top:70px;margin-left:9.5cm;font-size:12.5px}
-    .recommandee{font-weight:700;font-size:12px;margin-bottom:2px}
-    .objet{margin-top:55px;font-weight:700;font-size:13px}
+    .recommandee{font-weight: 500;font-size:12px;margin-bottom:2px}
+    .objet{margin-top:55px;font-weight: 600;font-size:13px}
     p{margin:12px 0}
     .signature-zone{margin-top:50px;margin-left:9.5cm}
     .ligne-signature{border-top:1px solid #000;margin-top:46px;padding-top:5px;font-style:italic;font-size:11px;max-width:220px}
@@ -2137,7 +2137,7 @@ async function afficherPageSignatureAutonome(token) {
     return;
   }
   if (demande.statut === 'signe' || demande.signature_data) {
-    zone.innerHTML = `<div style="font-size:40px;margin-bottom:10px">✅</div><p style="color:#333;font-weight:700">Signature déjà transmise, merci !</p><p style="color:#888;font-size:12.5px">Vous pouvez fermer cette page.</p>`;
+    zone.innerHTML = `<div style="font-size:40px;margin-bottom:10px">✅</div><p style="color:#333;font-weight: 500">Signature déjà transmise, merci !</p><p style="color:#888;font-size:12.5px">Vous pouvez fermer cette page.</p>`;
     return;
   }
 
@@ -2150,17 +2150,17 @@ async function afficherPageSignatureAutonome(token) {
   // de la création de la demande (voir confirmerUploadContratPuisSigner), justement pour rester
   // consultable ici sans que ce client, non connecté, ait besoin d'un accès au stockage privé.
   const boutonVoirDocument = demande.document_data
-    ? `<a href="${demande.document_data}" target="_blank" rel="noopener" style="display:block;margin-bottom:14px;padding:10px;border-radius:8px;border:1.5px solid #0f2244;color:#0f2244;font-weight:700;font-size:12.5px;text-decoration:none">📄 Voir le document avant de signer</a>`
+    ? `<a href="${demande.document_data}" target="_blank" rel="noopener" style="display:block;margin-bottom:14px;padding:10px;border-radius:8px;border:1.5px solid #0f2244;color:#0f2244;font-weight: 500;font-size:12.5px;text-decoration:none">📄 Voir le document avant de signer</a>`
     : '';
   zone.innerHTML = `
-    <div style="font-size:15px;font-weight:800;color:#0f2244;margin-bottom:4px">${titreAutonome}</div>
+    <div style="font-size:15px;font-weight: 600;color:#0f2244;margin-bottom:4px">${titreAutonome}</div>
     <div style="font-size:12.5px;color:#666;margin-bottom:16px">${demande.client_nom || ''}</div>
     ${boutonVoirDocument}
     <div style="font-size:11px;color:#888;margin-bottom:10px">Signez ci-dessous avec votre doigt</div>
     <canvas id="canvas-signature" width="340" height="180" style="width:100%;height:180px;background:#f8f8f8;border:1px solid #ddd;border-radius:9px;touch-action:none;display:block"></canvas>
     <div style="display:flex;gap:8px;margin-top:14px">
-      <button onclick="effacerSignature()" style="flex:1;padding:10px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-weight:700;cursor:pointer">Effacer</button>
-      <button onclick="envoyerSignatureAutonome('${token}')" style="flex:2;padding:10px;border-radius:8px;border:none;background:#0f2244;color:#fff;font-weight:700;cursor:pointer">✓ Envoyer ma signature</button>
+      <button onclick="effacerSignature()" style="flex:1;padding:10px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-weight: 600;cursor:pointer">Effacer</button>
+      <button onclick="envoyerSignatureAutonome('${token}')" style="flex:2;padding:10px;border-radius:8px;border:none;background:#0f2244;color:#fff;font-weight: 600;cursor:pointer">✓ Envoyer ma signature</button>
     </div>
     <div style="font-size:9.5px;color:#aaa;margin-top:12px">Signature électronique simple — ASSUREX Sàrl</div>
   `;
@@ -2207,7 +2207,7 @@ async function envoyerSignatureAutonome(token) {
   if ((r.type === 'contrat' || r.type === 'resiliation') && r.document_data) {
     // Document déjà uploadé (contrat/proposition/résiliation) : le PDF original est directement
     // téléchargeable, pas besoin de le reconstruire.
-    boutonCopie = `<a href="${r.document_data}" download="${(r.document_nom || 'document-signe').replace(/[^a-z0-9._-]+/gi, '-')}.pdf" style="display:block;margin-top:16px;padding:10px;border-radius:8px;border:1.5px solid #0f2244;color:#0f2244;font-weight:700;font-size:12.5px;text-decoration:none">📄 Enregistrer ma copie (PDF)</a>`;
+    boutonCopie = `<a href="${r.document_data}" download="${(r.document_nom || 'document-signe').replace(/[^a-z0-9._-]+/gi, '-')}.pdf" style="display:block;margin-top:16px;padding:10px;border-radius:8px;border:1.5px solid #0f2244;color:#0f2244;font-weight: 500;font-size:12.5px;text-decoration:none">📄 Enregistrer ma copie (PDF)</a>`;
   } else if (!r.type || r.type === 'mandat_courtage') {
     // Mandat de courtage à texte fixe : reconstruit le même document que celui généré côté CRM,
     // avec la signature qui vient d'être apposée, à partir des champs renvoyés par la RPC.
@@ -2224,10 +2224,10 @@ async function envoyerSignatureAutonome(token) {
       signatureMandataire: r.agent_signature || null,
       clausesSpeciales: r.clauses_speciales || null,
     };
-    boutonCopie = `<button onclick="ouvrirCopieMandatAutonome()" style="display:block;width:100%;margin-top:16px;padding:10px;border-radius:8px;border:1.5px solid #0f2244;background:#fff;color:#0f2244;font-weight:700;font-size:12.5px;cursor:pointer">📄 Enregistrer ma copie (PDF)</button>`;
+    boutonCopie = `<button onclick="ouvrirCopieMandatAutonome()" style="display:block;width:100%;margin-top:16px;padding:10px;border-radius:8px;border:1.5px solid #0f2244;background:#fff;color:#0f2244;font-weight: 500;font-size:12.5px;cursor:pointer">📄 Enregistrer ma copie (PDF)</button>`;
   }
 
-  zone.innerHTML = `<div style="font-size:40px;margin-bottom:10px">✅</div><p style="color:#333;font-weight:700">Merci, votre signature a été transmise !</p>${boutonCopie}<p style="color:#888;font-size:12.5px;margin-top:10px">Vous pouvez fermer cette page.</p>`;
+  zone.innerHTML = `<div style="font-size:40px;margin-bottom:10px">✅</div><p style="color:#333;font-weight: 600">Merci, votre signature a été transmise !</p>${boutonCopie}<p style="color:#888;font-size:12.5px;margin-top:10px">Vous pouvez fermer cette page.</p>`;
 }
 
 // Ouvre, dans un nouvel onglet sur l'appareil du client, la copie du mandat de courtage tout
@@ -2287,11 +2287,11 @@ async function afficherPageReservationRdv(token, clientIdPrefill) {
 function renderEtapeTypeRdv() {
   const zone = document.getElementById('contenu-rdv-autonome');
   zone.innerHTML = `
-    <div style="font-size:15px;font-weight:800;color:#0f2244;margin-bottom:4px">Prendre rendez-vous</div>
+    <div style="font-size:15px;font-weight: 600;color:#0f2244;margin-bottom:4px">Prendre rendez-vous</div>
     <div style="font-size:12.5px;color:#666;margin-bottom:16px">avec ${_rdvEtat.agent.prenom} ${_rdvEtat.agent.nom}</div>
     <div style="font-size:11px;color:#888;margin-bottom:10px">Choisissez le motif du rendez-vous</div>
     <div style="display:flex;flex-direction:column;gap:8px">
-      ${TYPES_RDV.map(t => `<button onclick="choisirTypeRdv('${t.replace(/'/g, "\\'")}')" style="padding:12px;border-radius:8px;border:1.5px solid #0f2244;background:#fff;color:#0f2244;font-weight:700;font-size:13px;cursor:pointer;text-align:left">${t}</button>`).join('')}
+      ${TYPES_RDV.map(t => `<button onclick="choisirTypeRdv('${t.replace(/'/g, "\\'")}')" style="padding:12px;border-radius:8px;border:1.5px solid #0f2244;background:#fff;color:#0f2244;font-weight: 600;font-size:13px;cursor:pointer;text-align:left">${t}</button>`).join('')}
     </div>`;
 }
 
@@ -2307,16 +2307,16 @@ function renderEtapeCreneaux() {
   _rdvEtat.joursDisponibles = jours;
   if (!jours.length) {
     zone.innerHTML = `<p style="color:#c0392b;text-align:center">Aucun créneau disponible pour le moment — contactez directement ${_rdvEtat.agent.prenom}.</p>
-      <button onclick="renderEtapeTypeRdv()" style="margin-top:14px;width:100%;padding:10px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-weight:700;cursor:pointer">← Retour</button>`;
+      <button onclick="renderEtapeTypeRdv()" style="margin-top:14px;width:100%;padding:10px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-weight: 600;cursor:pointer">← Retour</button>`;
     return;
   }
   const optionsDates = jours.map(j => `<option value="${j.date}">${fmtDateJourLong(j.date)}</option>`).join('');
   zone.innerHTML = `
-    <div style="font-size:15px;font-weight:800;color:#0f2244;margin-bottom:4px">${_rdvEtat.type}</div>
+    <div style="font-size:15px;font-weight: 600;color:#0f2244;margin-bottom:4px">${_rdvEtat.type}</div>
     <div style="font-size:12.5px;color:#666;margin-bottom:16px">Choisissez un jour puis un créneau (${dureeMin} min)</div>
     <select class="form-select" id="rdv-select-jour" onchange="renderCreneauxDuJour()" style="width:100%;margin-bottom:12px">${optionsDates}</select>
     <div id="rdv-creneaux-jour" style="display:flex;flex-wrap:wrap;gap:8px"></div>
-    <button onclick="renderEtapeTypeRdv()" style="margin-top:16px;width:100%;padding:10px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-weight:700;cursor:pointer">← Retour</button>`;
+    <button onclick="renderEtapeTypeRdv()" style="margin-top:16px;width:100%;padding:10px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-weight: 600;cursor:pointer">← Retour</button>`;
   renderCreneauxDuJour();
 }
 
@@ -2325,7 +2325,7 @@ function renderCreneauxDuJour() {
   const zone = document.getElementById('rdv-creneaux-jour');
   if (!sel || !zone) return;
   const jour = _rdvEtat.joursDisponibles.find(j => j.date === sel.value);
-  zone.innerHTML = (jour ? jour.creneaux : []).map(h => `<button onclick="choisirCreneauRdv('${sel.value}','${h}')" style="padding:8px 12px;border-radius:7px;border:1.5px solid #0f2244;background:#fff;color:#0f2244;font-weight:700;font-size:12.5px;cursor:pointer">${h}</button>`).join('') || `<div style="font-size:12px;color:#888">Aucun créneau ce jour-là.</div>`;
+  zone.innerHTML = (jour ? jour.creneaux : []).map(h => `<button onclick="choisirCreneauRdv('${sel.value}','${h}')" style="padding:8px 12px;border-radius:7px;border:1.5px solid #0f2244;background:#fff;color:#0f2244;font-weight: 500;font-size:12.5px;cursor:pointer">${h}</button>`).join('') || `<div style="font-size:12px;color:#888">Aucun créneau ce jour-là.</div>`;
 }
 
 function choisirCreneauRdv(date, heure) {
@@ -2337,7 +2337,7 @@ function renderEtapeCoordonnees() {
   const zone = document.getElementById('contenu-rdv-autonome');
   const cp = _rdvEtat.clientPrefill;
   zone.innerHTML = `
-    <div style="font-size:15px;font-weight:800;color:#0f2244;margin-bottom:4px">${_rdvEtat.type}</div>
+    <div style="font-size:15px;font-weight: 600;color:#0f2244;margin-bottom:4px">${_rdvEtat.type}</div>
     <div style="font-size:12.5px;color:#666;margin-bottom:16px">${fmtDateJourLong(_rdvEtat.date)} à ${_rdvEtat.heure}</div>
     ${cp ? `<div style="font-size:13px;color:#333;margin-bottom:14px">Pour : <strong>${cp.prenom} ${cp.nom}</strong></div>` : `
       <div style="margin-bottom:10px"><input class="form-input" id="rdv-nom" placeholder="Nom complet" style="width:100%"/></div>
@@ -2346,8 +2346,8 @@ function renderEtapeCoordonnees() {
     `}
     <div style="margin-bottom:14px"><textarea class="form-input" id="rdv-notes" rows="2" placeholder="Une précision à ajouter ? (facultatif)" style="width:100%"></textarea></div>
     <div style="display:flex;gap:8px">
-      <button onclick="renderEtapeCreneaux()" style="flex:1;padding:10px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-weight:700;cursor:pointer">← Retour</button>
-      <button onclick="confirmerReservationRdv()" style="flex:2;padding:10px;border-radius:8px;border:none;background:#0f2244;color:#fff;font-weight:700;cursor:pointer">✓ Confirmer le rendez-vous</button>
+      <button onclick="renderEtapeCreneaux()" style="flex:1;padding:10px;border-radius:8px;border:1px solid #ddd;background:#fff;color:#666;font-weight: 600;cursor:pointer">← Retour</button>
+      <button onclick="confirmerReservationRdv()" style="flex:2;padding:10px;border-radius:8px;border:none;background:#0f2244;color:#fff;font-weight: 600;cursor:pointer">✓ Confirmer le rendez-vous</button>
     </div>`;
 }
 
@@ -2412,9 +2412,9 @@ async function confirmerReservationRdv() {
   const icsUrl = genererIcsRdv(_rdvEtat, dureeMin, nom);
   document.getElementById('contenu-rdv-autonome').innerHTML = `
     <div style="font-size:40px;margin-bottom:10px;text-align:center">✅</div>
-    <p style="color:#333;font-weight:700;text-align:center">Rendez-vous confirmé !</p>
+    <p style="color:#333;font-weight: 600;text-align:center">Rendez-vous confirmé !</p>
     <p style="color:#666;font-size:13px;text-align:center;margin-bottom:16px">${_rdvEtat.type}<br>${fmtDateJourLong(_rdvEtat.date)} à ${_rdvEtat.heure}</p>
-    <a href="${icsUrl}" download="rendez-vous.ics" style="display:block;text-align:center;padding:10px;border-radius:8px;border:1.5px solid #0f2244;color:#0f2244;font-weight:700;font-size:12.5px;text-decoration:none">📅 Ajouter à mon calendrier</a>
+    <a href="${icsUrl}" download="rendez-vous.ics" style="display:block;text-align:center;padding:10px;border-radius:8px;border:1.5px solid #0f2244;color:#0f2244;font-weight: 500;font-size:12.5px;text-decoration:none">📅 Ajouter à mon calendrier</a>
     <div style="font-size:9.5px;color:#aaa;margin-top:16px;text-align:center">Vous pouvez fermer cette page.</div>`;
 }
 
@@ -2466,16 +2466,16 @@ function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire, cla
     .entete .logo-assurex{height:44px;width:auto;display:block}
     .entete .logo-exgroup{display:flex;align-items:center;color:#113679}
     .entete .logo-exgroup svg{height:24px;width:auto;display:block}
-    h1{font-size:20px;color:#113679;text-align:center;margin:12px 0 2px;letter-spacing:.14em;font-weight:800}
+    h1{font-size:20px;color:#113679;text-align:center;margin:12px 0 2px;letter-spacing:.14em;font-weight: 600}
     .sous-titre{text-align:center;font-style:italic;color:#56627A;margin-bottom:20px;font-size:12px}
-    h2{font-size:12.5px;color:#113679;margin:18px 0 8px;font-weight:800;letter-spacing:.06em;border-left:3px solid #00CFFF;padding-left:8px}
+    h2{font-size:12.5px;color:#113679;margin:18px 0 8px;font-weight: 600;letter-spacing:.06em;border-left:3px solid #00CFFF;padding-left:8px}
     table{width:100%;border-collapse:collapse;margin-bottom:4px}
     td{border:1px solid #D5DCE8;padding:7px 10px;font-size:11.5px;vertical-align:middle}
-    td.label{background:#F2F5FA;font-weight:700;width:22%;color:#113679}
+    td.label{background:#F2F5FA;font-weight: 600;width:22%;color:#113679}
     td.valeur{width:28%;color:#111827}
     ol{padding-left:22px}
     ol li{margin-bottom:9px;font-size:11.5px;padding-left:2px}
-    ol li::marker{color:#113679;font-weight:700}
+    ol li::marker{color:#113679;font-weight: 600}
     .signatures{display:flex;justify-content:space-between;margin-top:40px}
     .signatures div{width:45%}
     .signatures strong{color:#113679}
@@ -2485,7 +2485,7 @@ function construireHtmlMandat(champs, signatureDataUrl, signatureMandataire, cla
     .art45-table th{background:#113679;color:#fff;padding:8px 10px;font-size:11px;text-align:left}
     .art45-table td{font-size:10.5px;padding:8px 10px}
     .art45-table tr:nth-child(odd) td{background:#F8FAFC}
-    .print-btn{position:fixed;right:24px;bottom:24px;padding:12px 22px;background:#113679;color:#fff;border:none;border-radius:12px;cursor:pointer;font-size:13.5px;font-weight:700;box-shadow:0 10px 26px rgba(17,54,121,0.35);font-family:inherit}
+    .print-btn{position:fixed;right:24px;bottom:24px;padding:12px 22px;background:#113679;color:#fff;border:none;border-radius:12px;cursor:pointer;font-size:13.5px;font-weight: 600;box-shadow:0 10px 26px rgba(17,54,121,0.35);font-family:inherit}
     .print-btn:hover{background:#1A4A9C}
     @media (max-width:700px){body{margin:0;padding:22px 16px;border-radius:0;box-shadow:none}.entete{gap:8px}.entete > *{max-width:48%;box-sizing:border-box;overflow:hidden}.entete .logo-assurex{height:34px;max-width:100%}.entete .logo-exgroup svg{height:18px;max-width:100%}.page-break{margin:28px -16px 24px}.signatures{gap:16px}.print-btn{left:16px;right:16px;bottom:16px}}
     @media print {
@@ -2751,7 +2751,7 @@ async function genererDocumentSigne(clientId, signatureDataUrl, contexte, opts) 
 function ouvrirUploadContratSignature(clientId) {
   creerModale('modal-upload-contrat', `
     <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:420px;width:100%">
-      <div style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:6px">📎 Faire signer un contrat</div>
+      <div style="font-size:16px;font-weight: 600;color:var(--text);margin-bottom:6px">📎 Faire signer un contrat</div>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:16px">Choisis le PDF du contrat à faire signer par le client — il sera enregistré puis tu pourras récupérer la signature (ici, par QR/lien, e-mail ou WhatsApp).</div>
       <input type="file" id="input-contrat-a-signer" accept="application/pdf" class="form-input" style="margin-bottom:16px"/>
       <div id="erreur-upload-contrat" style="color:var(--c-danger-texte);font-size:11.5px;margin-bottom:8px;display:none"></div>
@@ -2811,7 +2811,7 @@ function viewCompleterDetailsEntreprise(c) {
   const rcc = d.rc_assurances_choses || {};
   const veh = d.vehicules || [];
   return `
-    <h2 style="margin:0 0 6px;font-size:18px;font-weight:800;color:var(--text)">Détails entreprise — ${c.nom}</h2>
+    <h2 style="margin:0 0 6px;font-size:18px;font-weight: 600;color:var(--text)">Détails entreprise — ${c.nom}</h2>
     <div style="color:var(--text-muted);font-size:13px;margin-bottom:20px">Masse salariale, assurances envisagées, LPP, RC &amp; assurances choses, véhicules. L'identité, l'adresse et le contact se modifient via "✏️ Modifier" sur la fiche.</div>
     ${sectionCard('Interlocuteur — compléments', '#a78bfa', `<div class="form-grid">
       <div class="form-field"><label class="form-label">Fonction</label><input class="form-input" id="e-contact-fonction" value="${d.contact_fonction || ''}" placeholder="Directeur, RH..."/></div>
@@ -2838,7 +2838,7 @@ function viewCompleterDetailsEntreprise(c) {
       </label>`).join('')}
     </div>
     <div style="margin-top:12px">
-      <div style="font-size:11px;color:var(--text-muted);font-weight:700;text-transform:uppercase;margin-bottom:8px">Perte de gain — délai d'attente</div>
+      <div style="font-size:11px;color:var(--text-muted);font-weight: 600;text-transform:uppercase;margin-bottom:8px">Perte de gain — délai d'attente</div>
       <div style="display:flex;gap:8px">
         ${['14j','30j','60j'].map(dl => `<label style="display:flex;align-items:center;gap:6px;cursor:pointer"><input type="radio" name="e-delai" value="${dl}" ${d.delai_attente===dl?'checked':''} style="accent-color:#38bdf8"/><span style="font-size:12px;color:var(--text)">${dl}</span></label>`).join('')}
       </div>
@@ -3056,17 +3056,17 @@ function genererFicheDemandeOffre(clientId) {
     @media print { .print-btn, .save-btn, .save-note { display:none } @page { margin: 14mm } input, textarea { border-color: #999 !important } }
     body { font-family: Arial, sans-serif; font-size: 11.5px; color: #1a1a1a; max-width: 850px; margin: 20px auto; line-height: 1.45; -webkit-print-color-adjust: exact; print-color-adjust: exact }
     input, textarea { color: #1a1a1a }
-    .raison-sociale { font-size: 25px; font-weight: 900; color: #113679; letter-spacing: 0.3px; margin: 10px 0 2px; text-transform: uppercase }
+    .raison-sociale { font-size: 25px; font-weight: 600; color: #113679; letter-spacing: 0.3px; margin: 10px 0 2px; text-transform: uppercase }
     .sous-titre { color: #555; font-size: 10.5px; margin-bottom: 14px }
     h2 { font-size: 12.5px; background: #113679; color: #fff; padding: 5px 10px; margin: 16px 0 8px; border-radius: 4px }
     .ligne { display: flex; gap: 18px; margin-bottom: 8px; align-items: baseline; flex-wrap: wrap }
     .champ { flex: 1; min-width: 150px }
     .champ label { display: block; font-size: 9.5px; color: #555; text-transform: uppercase; letter-spacing: 0.3px; margin-bottom: 1px }
     .rappel-legal { background: #f3f4f6; border-left: 3px solid #113679; padding: 6px 10px; font-size: 9.5px; color: #444; margin: 6px 0 10px }
-    .print-btn { position: fixed; top: 16px; right: 16px; background: #113679; color: #fff; border: none; border-radius: 8px; padding: 10px 18px; font-weight: 700; cursor: pointer; font-size: 13px }
-    .save-btn { position: fixed; top: 16px; right: 168px; background: #16a34a; color: #fff; border: none; border-radius: 8px; padding: 10px 18px; font-weight: 700; cursor: pointer; font-size: 13px }
+    .print-btn { position: fixed; top: 16px; right: 16px; background: #113679; color: #fff; border: none; border-radius: 8px; padding: 10px 18px; font-weight: 600; cursor: pointer; font-size: 13px }
+    .save-btn { position: fixed; top: 16px; right: 168px; background: #16a34a; color: #fff; border: none; border-radius: 8px; padding: 10px 18px; font-weight: 600; cursor: pointer; font-size: 13px }
     .save-btn:disabled { opacity: 0.6; cursor: wait }
-    .save-note { position: fixed; top: 62px; right: 16px; background: #16a34a; color: #fff; border-radius: 6px; padding: 6px 12px; font-size: 11px; font-weight: 700; display: none }
+    .save-note { position: fixed; top: 62px; right: 16px; background: #16a34a; color: #fff; border-radius: 6px; padding: 6px 12px; font-size: 11px; font-weight: 500; display: none }
     table.plaques { width: 100%; border-collapse: collapse; font-size: 10.5px; margin-top: 6px }
     table.plaques th, table.plaques td { border: 1px solid #ccc; padding: 5px 8px; text-align: left }
     table.plaques input { border: none; width: 100%; font: inherit; background: transparent }
@@ -3249,7 +3249,7 @@ function genererPageGardeTransmission(clientId) {
     .entete{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
     .date-ligne{text-align:right;margin-top:10px;font-size:12px}
     .destinataire{margin-top:38px;font-size:12.5px}
-    .objet{margin-top:34px;font-weight:700;font-size:13px}
+    .objet{margin-top:34px;font-weight: 600;font-size:13px}
     p{margin:12px 0}
     table.polices{width:100%;border-collapse:collapse;margin:14px 0 6px;font-size:12px}
     table.polices th{background:#000;color:#fff;padding:6px 8px;text-align:left;font-size:10.5px;text-transform:uppercase}

@@ -94,7 +94,7 @@ html[data-ambiance="contraste"] :focus-visible { outline: 3px solid #0B2458 !imp
 .amb-apercu i { display: block; border-radius: 4px; }
 .amb-apercu .amb-barre { height: 7px; margin-bottom: 6px; }
 .amb-apercu .amb-carte-mini { height: 34px; border-radius: 6px; }
-.apx-sous-titre { margin: 0 0 8px; font-size: 10.5px; text-transform: uppercase; letter-spacing: .09em;
+.apx-sous-titre { margin: 0 0 8px; font-size: var(--t-xs); text-transform: uppercase; letter-spacing: .09em;
   color: var(--text-muted); font-weight: 600; }
 .amb-nom { display: block; padding: 9px 12px 4px; font-size: var(--t-m, 13.5px); font-weight: var(--t-moyen, 600); color: var(--text); }
 .amb-desc { display: block; padding: 0 12px 11px; font-size: var(--t-xs, 11px); color: var(--text-muted); line-height: 1.4; }

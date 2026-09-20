@@ -112,7 +112,7 @@ function htmlSourceFicheClient(c) {
     <div style="flex:1;min-width:0">
       <div style="font-size:10.5px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px">Source du client</div>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
-        <select aria-label="Source du client" onchange="srcChangerSourceFiche('${c.id}', this.value)" style="background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:5px 8px;color:var(--text);font-size:13px;font-weight:700;max-width:260px">
+        <select aria-label="Source du client" onchange="srcChangerSourceFiche('${c.id}', this.value)" style="background:var(--surface);border:1px solid var(--border);border-radius:7px;padding:5px 8px;color:var(--text);font-size:13px;font-weight: 600;max-width:260px">
           <option value="">— Non renseignée —</option>
           ${SOURCES_CLIENT.map(s => `<option value="${s.v}" ${c.source === s.v ? 'selected' : ''}>${srcEsc(s.label)}</option>`).join('')}
         </select>
@@ -153,7 +153,7 @@ let srcPeriode = 'tout';
 function viewSources() {
   setTimeout(renderSources, 0);
   return `
-    <h2 style="margin:0 0 4px;font-size:18px;font-weight:800;color:var(--text)">Sources des clients</h2>
+    <h2 style="margin:0 0 4px;font-size:18px;font-weight: 600;color:var(--text)">Sources des clients</h2>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">D’où viennent les clients, et lesquels rapportent. Primes et commissions calculées sur les contrats actifs et les commissions non annulées.</div>
     <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
       ${[['tout', 'Tous les clients'], ['annee', 'Créés cette année'], ['12m', 'Créés ces 12 derniers mois'], ['3m', 'Ces 3 derniers mois']].map(([v, l]) =>
@@ -216,12 +216,12 @@ function renderSources() {
   const tableau = `<div class="table-wrap" style="margin-bottom:24px">
     <div class="table-header" style="grid-template-columns:${cols}"><div>Source</div><div>Clients</div><div>Avec contrat</div><div>Contrats</div><div>Primes/an</div><div>Commissions</div><div>Opp. ouvertes</div><div>Taux gain</div></div>
     ${lignes.map(l => `<div class="table-row" style="grid-template-columns:${cols};align-items:center">
-      <div style="font-weight:700;font-size:13px;color:${l.v ? 'var(--text)' : '#f59e0b'}">${srcEsc(l.label)}</div>
+      <div style="font-weight: 600;font-size:13px;color:${l.v ? 'var(--text)' : '#f59e0b'}">${srcEsc(l.label)}</div>
       <div style="font-size:13px;color:var(--text)">${l.ind.clients}</div>
       <div style="font-size:12.5px;color:var(--text-muted)">${l.ind.clientsAvecContrat} (${l.ind.clients ? Math.round(l.ind.clientsAvecContrat / l.ind.clients * 100) : 0} %)</div>
       <div style="font-size:12.5px;color:var(--text-muted)">${l.ind.contrats}</div>
-      <div style="font-weight:700;color:var(--c-alerte-texte)">CHF ${fmtCHF(Math.round(l.ind.primes))}</div>
-      <div style="font-weight:800;color:var(--c-succes-texte)">CHF ${fmtCHF(Math.round(l.ind.commissions))}</div>
+      <div style="font-weight: 600;color:var(--c-alerte-texte)">CHF ${fmtCHF(Math.round(l.ind.primes))}</div>
+      <div style="font-weight: 600;color:var(--c-succes-texte)">CHF ${fmtCHF(Math.round(l.ind.commissions))}</div>
       <div style="font-size:12.5px;color:var(--text-muted)">${l.ind.oppsOuvertes}</div>
       <div style="font-size:12.5px;color:var(--text-muted)">${l.ind.tauxGain === null ? '—' : l.ind.tauxGain + ' %'}</div>
     </div>`).join('')}
@@ -238,28 +238,28 @@ function renderSources() {
   const recommandeurs = Object.entries(parRef).map(([id, cl]) => ({ ref: allClients.find(x => x.id === id), cl, ind: srcIndicateurs(cl) })).filter(x => x.ref).sort((a, b) => b.cl.length - a.cl.length);
 
   const colsA = '1.6fr 80px 90px 130px 130px';
-  const blocApporteurs = apporteurs.length ? `<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px">🤝 Apporteurs externes</div>
+  const blocApporteurs = apporteurs.length ? `<div style="font-size:13px;font-weight: 600;color:var(--text);margin-bottom:10px">🤝 Apporteurs externes</div>
     <div class="table-wrap" style="margin-bottom:24px">
       <div class="table-header" style="grid-template-columns:${colsA}"><div>Apporteur</div><div>Clients</div><div>Contrats</div><div>Primes/an</div><div>Commissions</div></div>
       ${apporteurs.map(a => `<div class="table-row" style="grid-template-columns:${colsA}">
         <div style="font-size:13px;color:var(--text)"><b>${srcEsc(a.nom)}</b><div style="font-size:11.5px;color:var(--text-muted);margin-top:2px">${a.cl.map(c => `<a href="?client=${c.id}" onclick="return irVersClient(event, '${c.id}')" style="color:inherit">${srcEsc(srcNomClient(c))}</a>`).join(', ')}</div></div>
         <div title="${a.directs} apporté(s) directement, ${a.cl.length - a.directs} par la famille ou une recommandation">${a.ind.clients}</div><div>${a.ind.contrats}</div>
-        <div style="color:var(--c-alerte-texte);font-weight:700">CHF ${fmtCHF(Math.round(a.ind.primes))}</div><div style="color:var(--c-succes-texte);font-weight:800">CHF ${fmtCHF(Math.round(a.ind.commissions))}</div></div>`).join('')}
+        <div style="color:var(--c-alerte-texte);font-weight: 600">CHF ${fmtCHF(Math.round(a.ind.primes))}</div><div style="color:var(--c-succes-texte);font-weight: 600">CHF ${fmtCHF(Math.round(a.ind.commissions))}</div></div>`).join('')}
     </div>` : '';
-  const blocRecommandeurs = recommandeurs.length ? `<div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:10px">⭐ Clients qui recommandent</div>
+  const blocRecommandeurs = recommandeurs.length ? `<div style="font-size:13px;font-weight: 600;color:var(--text);margin-bottom:10px">⭐ Clients qui recommandent</div>
     <div class="table-wrap" style="margin-bottom:24px">
       ${recommandeurs.map(x => `<div class="table-row" style="grid-template-columns:1.6fr 2fr 130px">
-        <a href="?client=${x.ref.id}" onclick="return irVersClient(event, '${x.ref.id}')" style="font-weight:700;font-size:13px;color:var(--text);text-decoration:none">${srcEsc(srcNomClient(x.ref))}</a>
+        <a href="?client=${x.ref.id}" onclick="return irVersClient(event, '${x.ref.id}')" style="font-weight: 600;font-size:13px;color:var(--text);text-decoration:none">${srcEsc(srcNomClient(x.ref))}</a>
         <div style="font-size:12px;color:var(--text-muted)">${x.cl.map(c => srcEsc(srcNomClient(c))).join(', ')}</div>
-        <div style="color:var(--c-succes-texte);font-weight:800">CHF ${fmtCHF(Math.round(x.ind.commissions))}</div></div>`).join('')}
+        <div style="color:var(--c-succes-texte);font-weight: 600">CHF ${fmtCHF(Math.round(x.ind.commissions))}</div></div>`).join('')}
     </div>` : '';
 
   // Clients sans source : attribution rapide
-  const blocSans = sansSource.length ? `<div style="font-size:13px;font-weight:800;color:var(--c-alerte-texte);margin-bottom:4px">Clients sans source (${sansSource.length})</div>
+  const blocSans = sansSource.length ? `<div style="font-size:13px;font-weight: 600;color:var(--c-alerte-texte);margin-bottom:4px">Clients sans source (${sansSource.length})</div>
     <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:10px">Choisis la source directement dans la liste — pour une recommandation, le CRM te demande le nom du client qui a recommandé.</div>
     <div class="table-wrap">
       ${sansSource.sort((a, b) => srcNomClient(a).localeCompare(srcNomClient(b))).map(c => `<div class="table-row" style="grid-template-columns:1.4fr 1fr 260px;align-items:center">
-        <a href="?client=${c.id}" onclick="return irVersClient(event, '${c.id}')" style="font-weight:700;font-size:13px;color:var(--text);text-decoration:none">${srcEsc(srcNomClient(c))}</a>
+        <a href="?client=${c.id}" onclick="return irVersClient(event, '${c.id}')" style="font-weight: 600;font-size:13px;color:var(--text);text-decoration:none">${srcEsc(srcNomClient(c))}</a>
         <div style="font-size:11.5px;color:var(--text-muted)">${c.created_at ? 'Créé le ' + fmtDate(c.created_at) : ''}</div>
         <select class="form-select" aria-label="Source de ${srcEsc(srcNomClient(c))}" style="padding:6px 8px;font-size:12px" onchange="srcChangerSourceFiche('${c.id}', this.value)">
           <option value="">— Choisir —</option>

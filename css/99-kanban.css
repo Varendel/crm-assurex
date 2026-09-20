@@ -51,7 +51,7 @@
 .kbc-carte-tete { display: flex; align-items: flex-start; gap: var(--e-2, 8px); }
 .kbc-carte-tete b { font-size: var(--t-m, 13.5px); font-weight: var(--t-moyen, 600); line-height: 1.35;
   color: var(--text, #0F172A); text-wrap: pretty; }
-.kbc-canal { font-size: 15px; line-height: 1.2; flex-shrink: 0; }
+.kbc-canal { font-size: var(--t-l); line-height: 1.2; flex-shrink: 0; }
 .kbc-cible { font-size: var(--t-s, 12.5px); color: var(--text-muted, #64748B); line-height: 1.4; }
 
 .kbc-carte-pied { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; margin-top: 2px; }

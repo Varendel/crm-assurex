@@ -100,7 +100,7 @@
 .csv-radio.actif { border-color: var(--accent); background: var(--accent-dim); }
 .csv-radio input { position: absolute; opacity: 0; pointer-events: none; }
 .csv-radio b { font-size: var(--t-s, 12.5px); font-weight: 500; color: var(--text); }
-.csv-radio small { font-size: 10.5px; color: var(--text-muted); line-height: 1.35; }
+.csv-radio small { font-size: var(--t-xs); color: var(--text-muted); line-height: 1.35; }
 
 .csv-grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
   gap: var(--e-3, 12px); margin-top: var(--e-3, 12px); }

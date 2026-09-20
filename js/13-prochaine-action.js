@@ -46,14 +46,14 @@ function htmlProchaineAction(o) {
   const pa = prochaineAction(o.id);
   if (!pa) {
     return `<button type="button" onclick="event.stopPropagation();ouvrirModaleProchaineAction('${o.id}')" title="Définir la prochaine action"
-      style="display:flex;align-items:center;gap:5px;width:100%;margin:2px 0 8px;background:color-mix(in srgb, var(--c-danger) 8%, transparent);border:1px dashed color-mix(in srgb, var(--c-danger) 60%, transparent);color:var(--c-danger-texte);border-radius:7px;padding:5px 8px;font-size:10.5px;font-weight:700;cursor:pointer;text-align:left">
+      style="display:flex;align-items:center;gap:5px;width:100%;margin:2px 0 8px;background:color-mix(in srgb, var(--c-danger) 8%, transparent);border:1px dashed color-mix(in srgb, var(--c-danger) 60%, transparent);color:var(--c-danger-texte);border-radius:7px;padding:5px 8px;font-size:10.5px;font-weight: 500;cursor:pointer;text-align:left">
       ⚠ Aucune prochaine action — définir</button>`;
   }
   const auj = new Date().toISOString().split('T')[0];
   const enRetard = pa.date_echeance && pa.date_echeance < auj;
   const couleur = enRetard ? '#f87171' : 'var(--text-muted)';
   return `<div title="Prochaine action" style="display:flex;align-items:center;gap:5px;margin:2px 0 8px;font-size:10.5px;color:${couleur}">
-    <span style="font-weight:700">➜</span>
+    <span style="font-weight: 600">➜</span>
     <span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${paEsc(pa.titre)}${pa.date_echeance ? ` · ${enRetard ? 'en retard depuis le ' : ''}${fmtDate(pa.date_echeance)}` : ''}</span>
   </div>`;
 }
@@ -64,8 +64,8 @@ function bandeauSansProchaineAction(OPPS, nomClient) {
   if (!sans.length) return '';
   return `<div style="background:color-mix(in srgb, var(--c-alerte) 8%, transparent);border:1.5px solid color-mix(in srgb, var(--c-alerte) 40%, transparent);border-radius:12px;padding:14px 16px;margin-bottom:20px">
     <div style="display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px">
-      <div style="font-size:12px;font-weight:800;color:var(--c-alerte-texte);text-transform:uppercase;letter-spacing:0.5px">➜ ${sans.length} opportunité${sans.length > 1 ? 's' : ''} sans prochaine action</div>
-      <button type="button" onclick="ouvrirModaleProchaineAction('${sans[0].id}', 'enchainer')" style="background:none;border:none;color:var(--c-alerte-texte);font-size:11.5px;font-weight:700;cursor:pointer">Les traiter une par une →</button>
+      <div style="font-size:12px;font-weight: 500;color:var(--c-alerte-texte);text-transform:uppercase;letter-spacing:0.5px">➜ ${sans.length} opportunité${sans.length > 1 ? 's' : ''} sans prochaine action</div>
+      <button type="button" onclick="ouvrirModaleProchaineAction('${sans[0].id}', 'enchainer')" style="background:none;border:none;color:var(--c-alerte-texte);font-size:11.5px;font-weight: 500;cursor:pointer">Les traiter une par une →</button>
     </div>
     <div style="display:flex;flex-wrap:wrap;gap:6px">
       ${sans.map(o => `<button type="button" onclick="ouvrirModaleProchaineAction('${o.id}')" style="background:var(--surface);border:1px solid var(--border);border-radius:20px;padding:4px 10px;font-size:11.5px;color:var(--text);cursor:pointer">${paEsc(o.titre)} <span style="color:var(--text-muted)">— ${paEsc(nomClient(o))}</span></button>`).join('')}
@@ -95,7 +95,7 @@ function ouvrirModaleProchaineAction(oppId, mode) {
   window._paMode = mode || null;
   creerModale('modal-prochaine-action', `
     <div role="dialog" aria-labelledby="pa-titre-modale" style="background:var(--surface);border-radius:14px;padding:22px;max-width:460px;width:100%">
-      <div id="pa-titre-modale" style="font-size:16px;font-weight:800;color:var(--text);margin-bottom:4px">➜ Prochaine action</div>
+      <div id="pa-titre-modale" style="font-size:16px;font-weight: 600;color:var(--text);margin-bottom:4px">➜ Prochaine action</div>
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">${mode === 'rappel' ? 'Cette opportunité n’a plus d’étape prévue. ' : ''}<strong style="color:var(--text)">${paEsc(o.titre)}</strong>${nomClient ? ' — ' + paEsc(nomClient) : ''} · ${paEsc(o.stade)}</div>
       <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px" id="pa-types">
         ${PA_TYPES.map((t, i) => `<button type="button" data-type="${paEsc(t.v)}" onclick="paChoisirType(this)" class="${i === 0 ? 'btn-save' : 'btn-secondary'}" style="padding:7px 12px;font-size:12px">${t.icone} ${paEsc(t.v)}</button>`).join('')}

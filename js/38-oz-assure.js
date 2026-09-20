@@ -604,7 +604,7 @@ function ozxSectionFusion(D) {
       </div>
       <div class="dbx-carte ozx-f-carte">
         <span class="ozx-f-label">Récurrence sourcée OZ — par an dès le ${ozxDateCH(F.dateFusion)}</span>
-        <b class="ozx-f-valeur ozx-vert">CHF <span data-ozx-compteur="${Math.round(F.bascule)}">${fmtCHF(Math.round(F.bascule))}</span> <small style="font-size:12px;font-weight:600">/ an</small></b>
+        <b class="ozx-f-valeur ozx-vert">CHF <span data-ozx-compteur="${Math.round(F.bascule)}">${fmtCHF(Math.round(F.bascule))}</span> <small style="font-size:12px;font-weight: 500">/ an</small></b>
         <small>Gestion annuelle de ${F.nbBascule} contrat${F.nbBascule > 1 ? 's' : ''} actifs · ${F.clientsBascule} client${F.clientsBascule > 1 ? 's' : ''} OZ — devient production Assurex</small>
         ${F.basculeCies.length ? `<span class="ozx-f-cies">${F.basculeCies.slice(0, 5).map(([c, v]) => `<span title="${ozxEsc(c)} : ${ozxCHF(v)}">${pictoCompagnie(c, 22)}<em>${ozxCompact(v)}</em></span>`).join('')}</span>` : ''}
         ${F.anneeReference ? `<small>Référence : gestion encaissée par OZ en ${F.anneeReference} = <b>${ozxCHF(F.gestionReference)}</b></small>` : ''}
@@ -714,7 +714,7 @@ function ozxRapportImprimable(D, libellePeriode) {
   const th = td + ';background:#f0f0f0;text-align:left;font-size:11px';
   return `<div class="oz-print-report">
     <div style="text-align:center;margin-bottom:20px">
-      <div style="font-size:20px;font-weight:900;color:black">OZ ASSURE — Résumé d'exploitation</div>
+      <div style="font-size:20px;font-weight: 600;color:black">OZ ASSURE — Résumé d'exploitation</div>
       <div style="font-size:12px;color:#555;margin-top:4px">Période : ${ozxEsc(libellePeriode)} · rapport généré le ${new Date().toLocaleDateString('fr-CH', { day: '2-digit', month: 'long', year: 'numeric' })}</div>
       <div style="font-size:11px;color:#888;margin-top:2px">Portefeuille virtuellement transféré à Assurex Sàrl depuis le 01.06.2026 · fusion complète le ${ozxDateCH(D.fusion.dateFusion)}</div>
     </div>
@@ -724,12 +724,12 @@ function ozxRapportImprimable(D, libellePeriode) {
       <td style="${td}"><div style="font-size:9px;color:#666">ACQUISITION</div><b>${ozxCHF(D.tot.Acquisition)}</b></td>
       <td style="${td}"><div style="font-size:9px;color:#666">VOLUME PRIMES ACTIF</div><b>${ozxCHF(D.pf.volumeActif)}</b></td>
     </tr></table>
-    <div style="font-size:13px;font-weight:800;margin-bottom:6px">Par année</div>
+    <div style="font-size:13px;font-weight: 600;margin-bottom:6px">Par année</div>
     <table style="width:100%;border-collapse:collapse;margin-bottom:18px"><thead><tr><th style="${th}">Année</th><th style="${th}">Gestion</th><th style="${th}">Acquisition</th><th style="${th}">Autre</th><th style="${th}">Total</th><th style="${th}">Statut</th></tr></thead>
-      <tbody>${D.annees.map(a => { const p = D.parAn[a]; return `<tr><td style="${td}">${a}</td><td style="${td};text-align:right">${ozxCHF(p.Gestion)}</td><td style="${td};text-align:right">${ozxCHF(p.Acquisition)}</td><td style="${td};text-align:right">${ozxCHF(p.Autre)}</td><td style="${td};text-align:right;font-weight:700">${ozxCHF(p.total)}</td><td style="${td}">${D.estPartielle(a) ? 'En cours' : 'Complète'}</td></tr>`; }).join('')}</tbody></table>
-    <div style="font-size:13px;font-weight:800;margin-bottom:6px">Par compagnie</div>
+      <tbody>${D.annees.map(a => { const p = D.parAn[a]; return `<tr><td style="${td}">${a}</td><td style="${td};text-align:right">${ozxCHF(p.Gestion)}</td><td style="${td};text-align:right">${ozxCHF(p.Acquisition)}</td><td style="${td};text-align:right">${ozxCHF(p.Autre)}</td><td style="${td};text-align:right;font-weight: 600">${ozxCHF(p.total)}</td><td style="${td}">${D.estPartielle(a) ? 'En cours' : 'Complète'}</td></tr>`; }).join('')}</tbody></table>
+    <div style="font-size:13px;font-weight: 600;margin-bottom:6px">Par compagnie</div>
     <table style="width:100%;border-collapse:collapse;margin-bottom:18px"><tbody>${D.parCie.map(([c, x]) => `<tr><td style="${td}">${ozxEsc(c)}</td><td style="${td};text-align:right">${ozxCHF(x.total)}</td></tr>`).join('')}</tbody></table>
-    <div style="font-size:13px;font-weight:800;margin-bottom:6px">Gestion & acquisition par client</div>
+    <div style="font-size:13px;font-weight: 600;margin-bottom:6px">Gestion & acquisition par client</div>
     <table style="width:100%;border-collapse:collapse;font-size:10.5px"><thead><tr><th style="${th}">Client</th><th style="${th}">Gestion</th><th style="${th}">Acquisition</th><th style="${th}">Total</th></tr></thead>
       <tbody>${D.clients.map(l => `<tr><td style="${td}">${ozxEsc(l.client)}</td><td style="${td};text-align:right">${l.ges ? ozxCHF(l.ges) : '—'}</td><td style="${td};text-align:right">${l.acq ? ozxCHF(l.acq) : '—'}</td><td style="${td};text-align:right">${ozxCHF(l.total)}</td></tr>`).join('')}</tbody></table>
   </div>`;

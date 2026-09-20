@@ -385,8 +385,8 @@ function trImprimer() {
     tr.fort td{font-weight:bold;background:#F4F6F9} thead th{color:#56627A;font-size:9.5px;text-transform:uppercase}
     .mention{font-size:9px;color:#8A94A8;margin-top:14px} @page{size:A4 landscape;margin:10mm}
   </style></head><body>
-    <div style="position:fixed;top:42%;left:0;right:0;text-align:center;font-size:92px;font-weight:900;letter-spacing:.2em;color:#113679;opacity:.05;transform:rotate(-18deg);pointer-events:none">PRÉVISIONNEL</div>
-    <header><div><h1>Plan de trésorerie <span style="font-size:10px;font-weight:800;letter-spacing:.12em;color:#fff;background:#F59E0B;border-radius:4px;padding:3px 7px;vertical-align:middle">PRÉVISIONNEL</span></h1><div class="sous">Établi le ${new Date().toLocaleDateString('fr-CH', { day: 'numeric', month: 'long', year: 'numeric' })} · horizon ${_tr.horizon} mois${_tr.pipeline ? ' · pipeline pondéré inclus' : ''}</div></div>${typeof ASSUREX_LOGO_B64 !== 'undefined' ? `<img src="${ASSUREX_LOGO_B64}" alt="Assurex"/>` : ''}</header>
+    <div style="position:fixed;top:42%;left:0;right:0;text-align:center;font-size:92px;font-weight: 600;letter-spacing:.2em;color:#113679;opacity:.05;transform:rotate(-18deg);pointer-events:none">PRÉVISIONNEL</div>
+    <header><div><h1>Plan de trésorerie <span style="font-size:10px;font-weight: 500;letter-spacing:.12em;color:#fff;background:#F59E0B;border-radius:4px;padding:3px 7px;vertical-align:middle">PRÉVISIONNEL</span></h1><div class="sous">Établi le ${new Date().toLocaleDateString('fr-CH', { day: 'numeric', month: 'long', year: 'numeric' })} · horizon ${_tr.horizon} mois${_tr.pipeline ? ' · pipeline pondéré inclus' : ''}</div></div>${typeof ASSUREX_LOGO_B64 !== 'undefined' ? `<img src="${ASSUREX_LOGO_B64}" alt="Assurex"/>` : ''}</header>
     <div class="kpis">
       <div class="kpi"><span>Solde de départ</span><b>${R.solde ? 'CHF ' + trCHF(R.solde.montant) : '—'}</b></div>
       <div class="kpi"><span>Encaissements attendus</span><b>CHF ${trCHF(R.totalEntrees)}</b></div>

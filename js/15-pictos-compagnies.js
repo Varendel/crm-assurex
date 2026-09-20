@@ -147,7 +147,7 @@ function pictoCompagnie(nomCompagnie, taille) {
   }
   const abr = def.abr || _pictoAbreviation(nom);
   const fs = abr.length >= 3 ? Math.round(t * 0.34) : Math.round(t * 0.42);
-  return `<span title="${_pictoEsc(nom)}" aria-label="${_pictoEsc(nom)}" role="img" style="${base};font-size:${fs}px;font-weight:800;letter-spacing:-0.02em;font-family:inherit">${_pictoEsc(abr)}</span>`;
+  return `<span title="${_pictoEsc(nom)}" aria-label="${_pictoEsc(nom)}" role="img" style="${base};font-size:${fs}px;font-weight: 600;letter-spacing:-0.02em;font-family:inherit">${_pictoEsc(abr)}</span>`;
 }
 
 // Badge + nom de la compagnie, alignés (à utiliser à la place du simple nom)

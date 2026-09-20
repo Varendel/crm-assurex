@@ -116,12 +116,12 @@ function viewRenouvellements() {
   const compagnies = [...new Set(allContrats.filter(ct => ct.date_echeance).map(ct => normaliserCompagnie(ct.compagnie)).filter(Boolean))].sort();
   setTimeout(renderRenouvellements, 0);
   return `
-    <h2 style="margin:0 0 4px;font-size:18px;font-weight:800;color:var(--text)">Renouvellements</h2>
+    <h2 style="margin:0 0 4px;font-size:18px;font-weight: 600;color:var(--text)">Renouvellements</h2>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Contrats classés par <strong>date limite de résiliation</strong> (échéance − préavis : 3 mois par défaut, 1 mois pour la LAMal). C'est cette date qui compte pour revoir un client ou reprendre une police.</div>
     <div id="rn-stats" class="stat-grid" style="margin-bottom:20px"></div>
     <div style="display:flex;justify-content:space-between;align-items:center;gap:12px;background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:10px 16px;margin-bottom:18px">
       <span style="font-size:12.5px;color:var(--text)">🩺 LAMal : relance chaque client avec son lien de prise de RDV, depuis une page dédiée.</span>
-      <button type="button" onclick="navigate('relances-lamal')" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap">Relances LAMal →</button>
+      <button type="button" onclick="navigate('relances-lamal')" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight: 500;cursor:pointer;white-space:nowrap">Relances LAMal →</button>
     </div>
     <div style="display:flex;gap:10px;margin-bottom:18px;flex-wrap:wrap;align-items:center">
       <select class="form-select" id="rn-horizon" style="max-width:260px" onchange="rnFiltres.horizon=this.value;renderRenouvellements()">
@@ -183,7 +183,7 @@ function renderRenouvellements() {
     if (!groupe.length) return '';
     return `
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin:22px 0 10px">
-        <div style="font-size:11px;font-weight:700;color:${h.couleur};text-transform:uppercase;letter-spacing:1px">${h.label} (${groupe.length})</div>
+        <div style="font-size:11px;font-weight: 500;color:${h.couleur};text-transform:uppercase;letter-spacing:1px">${h.label} (${groupe.length})</div>
         <div style="font-size:12px;color:var(--text-muted)">CHF ${fmtCHF(Math.round(somme(groupe)))} de primes</div>
       </div>
       <div class="table-wrap">
@@ -201,7 +201,7 @@ function rnLigne({ ct, limite, horizon, revue }, cols) {
   const tache = rnTacheOuverte(ct);
   return `<div class="table-row" style="grid-template-columns:${cols};align-items:center">
     <div>
-      <a href="?client=${ct.client_id}" onclick="return irVersClient(event, '${ct.client_id}')" style="font-weight:700;font-size:13px;color:var(--text);text-decoration:none">${rnEsc(rnNomClient(ct))}</a>
+      <a href="?client=${ct.client_id}" onclick="return irVersClient(event, '${ct.client_id}')" style="font-weight: 600;font-size:13px;color:var(--text);text-decoration:none">${rnEsc(rnNomClient(ct))}</a>
       ${ct.commissionne === false ? `<div>${badge('Non commissionné — à reprendre', '#fb923c')}</div>` : ''}
     </div>
     <div style="cursor:pointer;display:flex;align-items:center;gap:10px" onclick="showDetailContrat('${ct.id}')">
@@ -213,7 +213,7 @@ function rnLigne({ ct, limite, horizon, revue }, cols) {
     </div>
     <div style="font-size:12px;color:var(--text-muted)">${fmtDate(rnEcheance(ct))}</div>
     <div style="font-size:12px;color:var(--text)">${limiteTxt}</div>
-    <div style="font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF(Number(ct.prime_annuelle || 0))}</div>
+    <div style="font-weight: 600;color:var(--c-alerte-texte)">CHF ${fmtCHF(Number(ct.prime_annuelle || 0))}</div>
     <div>
       <select class="form-select" aria-label="Suivi du renouvellement" style="padding:6px 8px;font-size:12px" onchange="rnChangerStatut('${ct.id}', this.value)">
         ${RN_STATUTS.map(s => `<option value="${s.v}" ${s.v === revue ? 'selected' : ''}>${s.label}</option>`).join('')}
@@ -222,9 +222,9 @@ function rnLigne({ ct, limite, horizon, revue }, cols) {
     </div>
     <div style="display:flex;gap:6px;justify-content:flex-end">
       ${tache
-        ? `<button type="button" onclick="showRappel('${tache.id}')" title="Une tâche de revue est déjà ouverte" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">✓ Tâche</button>`
-        : `<button type="button" onclick="rnCreerTache('${ct.id}')" title="Crée une tâche de revue avant la date limite" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">+ Tâche</button>`}
-      ${horizon === 'echu' ? `<button type="button" onclick="reporterRenouvellementContrat('${ct.id}')" title="Échéance +1 an, contrat repasse actif" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap">↻ +1 an</button>` : ''}
+        ? `<button type="button" onclick="showRappel('${tache.id}')" title="Une tâche de revue est déjà ouverte" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:7px;padding:5px 10px;font-size:11px;font-weight: 500;cursor:pointer;white-space:nowrap">✓ Tâche</button>`
+        : `<button type="button" onclick="rnCreerTache('${ct.id}')" title="Crée une tâche de revue avant la date limite" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 10px;font-size:11px;font-weight: 500;cursor:pointer;white-space:nowrap">+ Tâche</button>`}
+      ${horizon === 'echu' ? `<button type="button" onclick="reporterRenouvellementContrat('${ct.id}')" title="Échéance +1 an, contrat repasse actif" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:7px;padding:5px 10px;font-size:11px;font-weight: 500;cursor:pointer;white-space:nowrap">↻ +1 an</button>` : ''}
     </div>
   </div>`;
 }
@@ -312,8 +312,8 @@ function carteRenouvellementsDashboard() {
   return `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:22px;margin-bottom:20px">
       <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:4px">
-        <div style="font-size:13px;font-weight:800;color:var(--text)">🔁 Renouvellements à traiter</div>
-        <div style="font-size:18px;font-weight:900;color:var(--text)">${aTraiter.filter(x => x.horizon !== 'depasse').length}</div>
+        <div style="font-size:13px;font-weight: 600;color:var(--text)">🔁 Renouvellements à traiter</div>
+        <div style="font-size:18px;font-weight: 600;color:var(--text)">${aTraiter.filter(x => x.horizon !== 'depasse').length}</div>
       </div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:14px">${prochaine ? `Prochaine date limite de résiliation : <strong style="color:var(--text)">${fmtDate(prochaine.limite)}</strong> (dans ${rnJoursJusqua(prochaine.limite)} j)` : 'Classés par date limite de résiliation'}</div>
       ${lignes.map(l => `<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="rnFiltres.horizon='${l.h}';navigate('renouvellements')">
@@ -321,7 +321,7 @@ function carteRenouvellementsDashboard() {
         <span style="font-size:12.5px;color:var(--text-muted)"><strong style="color:var(--text)">${l.list.length}</strong> · CHF ${fmtCHF(Math.round(somme(l.list)))}</span>
       </div>`).join('')}
       <div style="margin-top:14px;text-align:right">
-        <button onclick="rnFiltres.horizon='';navigate('renouvellements')" style="background:none;border:none;color:var(--accent);font-size:11px;font-weight:700;cursor:pointer">Ouvrir l'échéancier →</button>
+        <button onclick="rnFiltres.horizon='';navigate('renouvellements')" style="background:none;border:none;color:var(--accent);font-size:11px;font-weight: 500;cursor:pointer">Ouvrir l'échéancier →</button>
       </div>
     </div>`;
 }
@@ -412,11 +412,11 @@ function rlMessage(x) {
 function viewRelancesLamal() {
   setTimeout(renderRelancesLamal, 0);
   return `
-    <h2 style="margin:0 0 4px;font-size:18px;font-weight:800;color:var(--text)">Relances LAMal</h2>
+    <h2 style="margin:0 0 4px;font-size:18px;font-weight: 600;color:var(--text)">Relances LAMal</h2>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:18px">Les nouvelles primes LAMal sont une occasion de recontacter chaque client et de lui proposer un rendez-vous. Le message contient son lien de réservation personnel. Date limite de changement : 30.11 (préavis 1 mois).</div>
     <div id="rl-stats" class="stat-grid" style="margin-bottom:20px"></div>
     <details style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 18px;margin-bottom:18px">
-      <summary style="cursor:pointer;font-size:13px;font-weight:700;color:var(--text)">✏️ Modèle du message</summary>
+      <summary style="cursor:pointer;font-size:13px;font-weight: 600;color:var(--text)">✏️ Modèle du message</summary>
       <div style="font-size:11.5px;color:var(--text-muted);margin:10px 0 8px">Variables : {prenom} · {date_limite} · {lien_rdv} · {conseiller}. Le modèle est gardé sur cet ordinateur.</div>
       <textarea id="rl-modele" class="form-input" rows="11" style="width:100%;font-family:inherit;font-size:12.5px;line-height:1.5" oninput="rlSauverModele(this.value)">${rnEsc(rlModele())}</textarea>
       <div style="margin-top:8px;text-align:right"><button type="button" class="btn-secondary" onclick="rlReinitialiserModele()">Revenir au modèle par défaut</button></div>
@@ -455,17 +455,17 @@ function renderRelancesLamal() {
       const caisses = [...new Set(x.contrats.map(ct => ct.compagnie).filter(Boolean))].join(', ');
       const statutInfo = RN_STATUTS.find(s => s.v === x.statut) || RN_STATUTS[0];
       return `<div class="table-row" style="grid-template-columns:${cols};align-items:center">
-        <div><a href="?client=${c.id}" onclick="return irVersClient(event, '${c.id}')" style="font-weight:700;font-size:13px;color:var(--text);text-decoration:none">${rnEsc(nom)}</a>
+        <div><a href="?client=${c.id}" onclick="return irVersClient(event, '${c.id}')" style="font-weight: 600;font-size:13px;color:var(--text);text-decoration:none">${rnEsc(nom)}</a>
           ${x.contrats.length > 1 ? `<div style="font-size:11px;color:var(--text-muted)">${x.contrats.length} contrats LAMal</div>` : ''}</div>
         <div><div style="font-size:12.5px;color:var(--text)">${rnEsc(caisses || '—')}</div>
           <div style="font-size:11px;color:var(--text-muted)">${rnEsc(rlEmailClient(c) || (c.email ? 'e-mail non utilisable (' + c.email + ')' : 'pas d\u2019e-mail'))} · ${rnEsc(c.mobile || c.tel || 'pas de mobile')}</div></div>
-        <div style="font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF(Math.round(x.prime))}</div>
+        <div style="font-weight: 600;color:var(--c-alerte-texte)">CHF ${fmtCHF(Math.round(x.prime))}</div>
         <div>${badge(statutInfo.label, statutInfo.couleur)}${x.rdv ? `<div style="font-size:11px;color:var(--text-muted);margin-top:3px">📅 ${fmtDate(x.rdv.date_heure)}</div>` : ''}</div>
         <div style="display:flex;gap:6px;justify-content:flex-end;flex-wrap:wrap">
-          ${rlEmailClient(c) ? `<button type="button" onclick="rlEnvoyerEmail('${c.id}', this)" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">✉️ E-mail</button>` : ''}
-          ${(c.mobile || c.tel) ? `<button type="button" onclick="rlOuvrirWhatsapp('${c.id}')" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">📲 WhatsApp</button>` : ''}
-          <button type="button" onclick="rlCopier('${c.id}')" title="Copier le message" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">📋</button>
-          ${x.statut !== 'rdv' ? `<button type="button" onclick="rlMarquer('${c.id}', 'rdv')" title="Le client a pris RDV (téléphone, etc.)" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">✓ RDV</button>` : ''}
+          ${rlEmailClient(c) ? `<button type="button" onclick="rlEnvoyerEmail('${c.id}', this)" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 10px;font-size:11px;font-weight: 500;cursor:pointer">✉️ E-mail</button>` : ''}
+          ${(c.mobile || c.tel) ? `<button type="button" onclick="rlOuvrirWhatsapp('${c.id}')" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:5px 10px;font-size:11px;font-weight: 500;cursor:pointer">📲 WhatsApp</button>` : ''}
+          <button type="button" onclick="rlCopier('${c.id}')" title="Copier le message" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:7px;padding:5px 10px;font-size:11px;font-weight: 500;cursor:pointer">📋</button>
+          ${x.statut !== 'rdv' ? `<button type="button" onclick="rlMarquer('${c.id}', 'rdv')" title="Le client a pris RDV (téléphone, etc.)" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:7px;padding:5px 10px;font-size:11px;font-weight: 500;cursor:pointer">✓ RDV</button>` : ''}
         </div>
       </div>`;
     }).join('')}

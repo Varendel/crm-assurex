@@ -228,7 +228,7 @@ function viewDashboard() {
   const notifsTaches = allRappels.filter(r => r.cree_par && !r.notif_vue && r.statut === 'ouvert');
   const totalNotifsEquipe = notifsOpp.length + notifsTaches.length;
   const blocNotifsEquipe = totalNotifsEquipe > 0 ? `
-    <div style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);border-radius:14px;padding:18px 22px;margin-bottom:20px">
+    <div style="background:color-mix(in srgb, var(--c-alerte) 10%, transparent);border:1px solid color-mix(in srgb, var(--c-alerte) 35%, transparent);border-radius:14px;padding:18px 22px;margin-bottom:20px">
       <div style="font-size:13px;font-weight:800;color:var(--c-alerte-texte);margin-bottom:10px">${PICTO_CREE_EQUIPE} ${totalNotifsEquipe} élément${totalNotifsEquipe > 1 ? 's' : ''} créé${totalNotifsEquipe > 1 ? 's' : ''} par l'équipe pour toi</div>
       <div style="display:flex;flex-direction:column;gap:8px">
         ${notifsOpp.map(o => `<div style="display:flex;align-items:center;gap:10px;cursor:pointer;background:var(--surface);border-radius:9px;padding:9px 14px" onclick="editerOpportunite('${o.id}')">
@@ -280,10 +280,10 @@ function viewDashboard() {
     </div>
 
     ${contratsOrphelins.length > 0 ? `
-    <div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.3);border-radius:14px;padding:18px 22px;margin-bottom:20px">
+    <div style="background:color-mix(in srgb, var(--c-danger) 8%, transparent);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:14px;padding:18px 22px;margin-bottom:20px">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
         <div style="font-size:13px;font-weight:800;color:var(--c-danger-texte)">⚠️ ${contratsOrphelins.length} contrat(s) sans aucune commission créée</div>
-        <button onclick="navigate('contrats-orphelins-commission')" style="background:rgba(248,113,113,0.15);border:1px solid rgba(248,113,113,0.4);color:var(--c-danger-texte);border-radius:7px;padding:6px 14px;font-size:11.5px;font-weight:700;cursor:pointer">Voir le détail →</button>
+        <button onclick="navigate('contrats-orphelins-commission')" style="background:color-mix(in srgb, var(--c-danger) 15%, transparent);border:1px solid color-mix(in srgb, var(--c-danger) 40%, transparent);color:var(--c-danger-texte);border-radius:7px;padding:6px 14px;font-size:11.5px;font-weight:700;cursor:pointer">Voir le détail →</button>
       </div>
       <div style="font-size:11.5px;color:var(--text-muted)">Ces contrats sont commissionnables et actifs, mais aucune ligne de commission n'existe pour eux — souvent le signe d'un contrat ajouté directement en base de données. Clique sur "Voir le détail" pour les corriger un par un.</div>
     </div>` : ''}
@@ -307,7 +307,7 @@ function viewDashboard() {
         <div style="font-size:18px;font-weight:900;color:var(--c-alerte-texte)">CHF ${fmtCHF(Math.round(oppTotalPipeline))}</div>
       </div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:${typeof nbOppsSansProchaineAction === 'function' && nbOppsSansProchaineAction() ? '8px' : '18px'}">${oppsOuvertes.length} opportunité(s) ouverte(s) · CHF ${fmtCHF(Math.round(oppTotalPondere))} pondéré par probabilité${oppsGagneesRecemment.length ? ` · ${oppsGagneesRecemment.length} gagnée(s)` : ''}</div>
-      ${typeof nbOppsSansProchaineAction === 'function' && nbOppsSansProchaineAction() ? `<button type="button" onclick="navigate('opportunites')" style="display:block;width:100%;text-align:left;margin-bottom:16px;background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.4);color:var(--c-alerte-texte);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">➜ ${nbOppsSansProchaineAction()} opportunité(s) sans prochaine action — les planifier</button>` : ''}
+      ${typeof nbOppsSansProchaineAction === 'function' && nbOppsSansProchaineAction() ? `<button type="button" onclick="navigate('opportunites')" style="display:block;width:100%;text-align:left;margin-bottom:16px;background:color-mix(in srgb, var(--c-alerte) 8%, transparent);border:1px solid color-mix(in srgb, var(--c-alerte) 40%, transparent);color:var(--c-alerte-texte);border-radius:8px;padding:8px 12px;font-size:12px;font-weight:700;cursor:pointer">➜ ${nbOppsSansProchaineAction()} opportunité(s) sans prochaine action — les planifier</button>` : ''}
       <div style="display:flex;gap:14px;margin-bottom:18px;flex-wrap:wrap">
         ${oppParStade.map(s => `<div style="flex:1;min-width:90px;text-align:center;background:var(--surface-alt);border-radius:10px;padding:10px 8px">
           <div style="width:8px;height:8px;border-radius:50%;background:${s.couleur};margin:0 auto 6px"></div>
@@ -898,7 +898,7 @@ function renderVolumePrimesCorps(contrats, clientsMap) {
 
     <!-- PRIVÉ vs ENTREPRISE -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px">
-      <div style="background:var(--surface);border:2px solid rgba(74,222,128,0.3);border-radius:14px;padding:20px">
+      <div style="background:var(--surface);border:2px solid color-mix(in srgb, var(--c-succes) 30%, transparent);border-radius:14px;padding:20px">
         <div style="font-size:11px;font-weight:700;color:var(--c-succes-texte);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">👤 Clients privés</div>
         <div style="font-size:26px;font-weight:900;color:var(--c-succes-texte)">${chf(totalPrive)}</div>
         <div style="font-size:13px;color:var(--text-muted);margin-top:4px">${pct(totalPrive)}% du total</div>
@@ -907,7 +907,7 @@ function renderVolumePrimesCorps(contrats, clientsMap) {
         </div>
         ${detailHtml(parCategoriePrive, totalPrive, '#4ade80')}
       </div>
-      <div style="background:var(--surface);border:2px solid rgba(245,158,11,0.3);border-radius:14px;padding:20px">
+      <div style="background:var(--surface);border:2px solid color-mix(in srgb, var(--c-alerte) 30%, transparent);border-radius:14px;padding:20px">
         <div style="font-size:11px;font-weight:700;color:var(--c-alerte-texte);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🏢 Entreprises</div>
         <div style="font-size:26px;font-weight:900;color:var(--c-alerte-texte)">${chf(totalEntreprise)}</div>
         <div style="font-size:13px;color:var(--text-muted);margin-top:4px">${pct(totalEntreprise)}% du total</div>
@@ -1013,7 +1013,7 @@ function showDetailContrat(contratId) {
         </div>
 
         <!-- Commission — masqué pour la session RH (hors périmètre financier) -->
-        ${estRoleRH() ? '' : (commission ? `<div style="background:${commission.statut==='en_attente'?'rgba(245,158,11,0.08)':commission.statut==='annulé'?'rgba(248,113,113,0.08)':'rgba(74,222,128,0.08)'};border:1px solid ${commission.statut==='en_attente'?'rgba(245,158,11,0.2)':commission.statut==='annulé'?'rgba(248,113,113,0.2)':'rgba(74,222,128,0.2)'};border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between">
+        ${estRoleRH() ? '' : (commission ? `<div style="background:${commission.statut==='en_attente'?'color-mix(in srgb, var(--c-alerte) 8%, transparent)':commission.statut==='annulé'?'color-mix(in srgb, var(--c-danger) 8%, transparent)':'color-mix(in srgb, var(--c-succes) 8%, transparent)'};border:1px solid ${commission.statut==='en_attente'?'color-mix(in srgb, var(--c-alerte) 20%, transparent)':commission.statut==='annulé'?'color-mix(in srgb, var(--c-danger) 20%, transparent)':'color-mix(in srgb, var(--c-succes) 20%, transparent)'};border-radius:10px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between">
           <div>
             <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:2px">Commission</div>
             <div style="font-size:13px;font-weight:700;color:var(--text)">${commission.detail_calcul ? commission.detail_calcul.split('[')[0].trim() : '—'}</div>
@@ -1028,7 +1028,7 @@ function showDetailContrat(contratId) {
         <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--surface-alt);border-radius:10px">
           <span style="font-size:13px;font-weight:700;color:var(--text)">Police PDF</span>
           ${ct.police_url
-            ? `<button onclick="ouvrirPieceJointe('${ct.police_url}')" style="background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);color:var(--c-succes-texte);border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;font-weight:700">📄 Ouvrir</button>`
+            ? `<button onclick="ouvrirPieceJointe('${ct.police_url}')" style="background:color-mix(in srgb, var(--c-succes) 12%, transparent);border:1px solid color-mix(in srgb, var(--c-succes) 30%, transparent);color:var(--c-succes-texte);border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;font-weight:700">📄 Ouvrir</button>`
             : `<label style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 12px;font-size:12px;cursor:pointer;font-weight:700">📎 Joindre<input type="file" accept="application/pdf" onchange="uploadPolicePdf('${ct.id}', this); document.getElementById('modal-detail-contrat').remove();" style="display:none"/></label>`
           }
           <span style="font-size:11px;color:var(--text-muted)">${ct.police_nom || (ct.police_url ? '' : 'Aucune police jointe')}</span>
@@ -1096,7 +1096,7 @@ function renderContratsOrphelins() {
       <div style="font-size:12px;color:var(--text-muted)">${typeof compagnieAvecPicto === 'function' ? compagnieAvecPicto(ct.compagnie) : (ct.compagnie||'')}</div>
       <div style="font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF(Number(ct.prime_annuelle||0))}</div>
       <div>${badge(ct.statut, ct.statut==='actif'?'#4ade80':'#f59e0b')}</div>
-      <div><button onclick="creerCommissionManquante('${ct.id}')" style="background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);color:var(--c-succes-texte);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">+ Créer</button></div>
+      <div><button onclick="creerCommissionManquante('${ct.id}')" style="background:color-mix(in srgb, var(--c-succes) 12%, transparent);border:1px solid color-mix(in srgb, var(--c-succes) 30%, transparent);color:var(--c-succes-texte);border-radius:7px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer">+ Créer</button></div>
     </div>`;
   }).join('');
 
@@ -1564,8 +1564,8 @@ const ICONES_CATEGORIE_COUVERTURE = {
 function carteCouverture(label, ok, detail, police) {
   const icone = ICONES_CATEGORIE_COUVERTURE[label] || '📄';
   return `
-    <div style="position:relative;background:${ok ? 'rgba(74,222,128,0.05)' : 'var(--surface)'};border:1px solid ${ok ? 'rgba(74,222,128,0.25)' : 'var(--border)'};border-radius:12px;padding:11px 13px;display:flex;align-items:center;gap:11px;min-height:56px">
-      <div style="width:36px;height:36px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:17px;background:${ok ? 'rgba(74,222,128,0.16)' : 'var(--surface-alt)'};border:1px ${ok ? 'solid rgba(74,222,128,0.35)' : 'dashed var(--border)'};${ok ? '' : 'filter:grayscale(35%);opacity:0.6'}">${icone}</div>
+    <div style="position:relative;background:${ok ? 'color-mix(in srgb, var(--c-succes) 5%, transparent)' : 'var(--surface)'};border:1px solid ${ok ? 'color-mix(in srgb, var(--c-succes) 25%, transparent)' : 'var(--border)'};border-radius:12px;padding:11px 13px;display:flex;align-items:center;gap:11px;min-height:56px">
+      <div style="width:36px;height:36px;border-radius:10px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:17px;background:${ok ? 'color-mix(in srgb, var(--c-succes) 16%, transparent)' : 'var(--surface-alt)'};border:1px ${ok ? 'solid color-mix(in srgb, var(--c-succes) 35%, transparent)' : 'dashed var(--border)'};${ok ? '' : 'filter:grayscale(35%);opacity:0.6'}">${icone}</div>
       <div style="flex:1;min-width:0">
         <div style="font-size:12.5px;font-weight:700;color:var(--text)">${label}</div>
         ${detail
@@ -1660,7 +1660,7 @@ function renderVueEnsembleCouvertures(client, contrats, isEntreprise) {
   const ratioColor = nbCategoriesCouvertes === 0 ? 'var(--text-muted)' : nbCategoriesCouvertes === categories.length ? '#4ade80' : '#f59e0b';
 
   const cctBadge = isEntreprise ? `
-    <div style="display:inline-flex;align-items:center;gap:7px;background:${client.cct ? 'rgba(74,222,128,0.1)' : 'var(--surface)'};border:1px solid ${client.cct ? 'rgba(74,222,128,0.3)' : 'var(--border)'};border-radius:20px;padding:5px 12px;margin-top:12px;font-size:11.5px;font-weight:700;color:${client.cct ? '#4ade80' : 'var(--text-muted)'}">
+    <div style="display:inline-flex;align-items:center;gap:7px;background:${client.cct ? 'color-mix(in srgb, var(--c-succes) 10%, transparent)' : 'var(--surface)'};border:1px solid ${client.cct ? 'color-mix(in srgb, var(--c-succes) 30%, transparent)' : 'var(--border)'};border-radius:20px;padding:5px 12px;margin-top:12px;font-size:11.5px;font-weight:700;color:${client.cct ? '#4ade80' : 'var(--text-muted)'}">
       <span>🤝</span> Soumis à une CCT ${client.cct ? '— oui' : '— non'}
     </div>` : '';
 

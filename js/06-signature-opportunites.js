@@ -213,7 +213,7 @@ function renderOppsEchuesBanner(OPPS, nomClient) {
   const echues = OPPS.filter(o => o.date_echeance && new Date(o.date_echeance) < today)
     .sort((a, b) => new Date(a.date_echeance) - new Date(b.date_echeance));
   if (!echues.length) return '';
-  return `<div style="background:rgba(248,113,113,0.08);border:1.5px solid rgba(248,113,113,0.4);border-radius:12px;padding:14px 16px;margin-bottom:20px">
+  return `<div style="background:color-mix(in srgb, var(--c-danger) 8%, transparent);border:1.5px solid color-mix(in srgb, var(--c-danger) 40%, transparent);border-radius:12px;padding:14px 16px;margin-bottom:20px">
     <div style="font-size:12px;font-weight:800;color:var(--c-danger-texte);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:10px">🔴 ${echues.length} opportunité${echues.length !== 1 ? 's' : ''} échue${echues.length !== 1 ? 's' : ''} — à traiter en priorité</div>
     <div style="display:flex;flex-direction:column;gap:6px">
       ${echues.map(o => `<div onclick="editerOpportunite('${o.id}')" style="display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--surface);border-radius:8px;padding:8px 12px;cursor:pointer">
@@ -259,7 +259,7 @@ function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, to
         <div style="font-size:10px;color:var(--text-muted);margin-top:6px;display:flex;justify-content:space-between;align-items:center;gap:6px">
           <span>${o.probabilite||0}%</span>
           <div style="display:flex;gap:4px;align-items:center">
-            ${rhMode ? '' : `<button onclick="event.stopPropagation();ouvrirModaleMotifPerte('${o.id}','kanban')" title="Marquer perdue" style="background:none;border:1px solid rgba(248,113,113,0.35);color:var(--c-danger-texte);border-radius:5px;padding:2px 6px;font-size:10px;font-weight:700;cursor:pointer">✕ Perdu</button>`}
+            ${rhMode ? '' : `<button onclick="event.stopPropagation();ouvrirModaleMotifPerte('${o.id}','kanban')" title="Marquer perdue" style="background:none;border:1px solid color-mix(in srgb, var(--c-danger) 35%, transparent);color:var(--c-danger-texte);border-radius:5px;padding:2px 6px;font-size:10px;font-weight:700;cursor:pointer">✕ Perdu</button>`}
             ${rhMode ? '' : selectStadeOpportunite(o, stade, tousLesStades)}
           </div>
         </div>
@@ -774,7 +774,7 @@ function viewSuivi() {
       const totalCommGestion = commissionsEstimees.filter(ca => ca.nature === 'gestion').reduce((s,ca) => s + Number(ca.montant_estime||0), 0);
       const totalEnCours = enCours.reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0);
       if (!commissionsEstimees.length && !enCours.length) return '';
-      return `<div style="background:linear-gradient(135deg,rgba(74,222,128,0.06) 0%,rgba(56,189,248,0.04) 100%);border:1px solid rgba(74,222,128,0.2);border-radius:14px;padding:20px;margin-bottom:24px">
+      return `<div style="background:linear-gradient(135deg,color-mix(in srgb, var(--c-succes) 6%, transparent) 0%,rgba(56,189,248,0.04) 100%);border:1px solid color-mix(in srgb, var(--c-succes) 20%, transparent);border-radius:14px;padding:20px;margin-bottom:24px">
         <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:14px">💰 Pilotage commissions (depuis le 01.06.2026)</div>
         <div class="stat-grid">
           ${statCard('Commissions en attente', 'CHF ' + Math.round(totalComm).toLocaleString(), '#4ade80', `dont CHF ${fmtCHF(Math.round(totalCommGestion))} gestion — ${commissionsEstimees.length} dossiers`)}
@@ -995,7 +995,7 @@ function viewRappels() {
           <div style="font-size:11px;color:var(--text-muted)">${details.join(' · ')}</div>
           ${r.notes ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:3px;font-style:italic">${r.notes.split('[')[0].substring(0,120)}${r.notes.length>120?'...':''}</div>` : ''}
         </div>
-        ${(!r.outlook_event_id && (r.date_echeance || r.date_planifiee)) ? `<button onclick="event.stopPropagation(); synchroniserRappelOutlook('${r.id}')" title="Absent de l'agenda Outlook — cliquer pour synchroniser" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:var(--c-alerte-texte);border-radius:7px;padding:4px 8px;font-size:11px;cursor:pointer">📅</button>` : ''}
+        ${(!r.outlook_event_id && (r.date_echeance || r.date_planifiee)) ? `<button onclick="event.stopPropagation(); synchroniserRappelOutlook('${r.id}')" title="Absent de l'agenda Outlook — cliquer pour synchroniser" style="background:color-mix(in srgb, var(--c-alerte) 12%, transparent);border:1px solid color-mix(in srgb, var(--c-alerte) 30%, transparent);color:var(--c-alerte-texte);border-radius:7px;padding:4px 8px;font-size:11px;cursor:pointer">📅</button>` : ''}
         ${badge(r.type || 'Suivi', '#64748b')}
         <button class="btn-traite" onclick="event.stopPropagation(); traiterRappel('${r.id}')">✓ Traité</button>
       </div>`;
@@ -1077,7 +1077,7 @@ async function viewRendezVous() {
         <div style="font-size:11px;color:var(--text-muted)">${[r.type, r.duree_min ? `${r.duree_min} min` : '', r.prospect_email, r.prospect_tel].filter(Boolean).join(' · ')}</div>
         ${r.notes ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:3px;font-style:italic">${r.notes}</div>` : ''}
       </div>
-      ${!r.outlook_event_id ? `<button onclick="synchroniserRdvOutlook('${r.id}')" title="Absent de l'agenda Outlook — cliquer pour synchroniser" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:var(--c-alerte-texte);border-radius:7px;padding:4px 8px;font-size:11px;cursor:pointer">📅</button>` : `<span title="Synchronisé avec Outlook" style="font-size:13px">✅</span>`}
+      ${!r.outlook_event_id ? `<button onclick="synchroniserRdvOutlook('${r.id}')" title="Absent de l'agenda Outlook — cliquer pour synchroniser" style="background:color-mix(in srgb, var(--c-alerte) 12%, transparent);border:1px solid color-mix(in srgb, var(--c-alerte) 30%, transparent);color:var(--c-alerte-texte);border-radius:7px;padding:4px 8px;font-size:11px;cursor:pointer">📅</button>` : `<span title="Synchronisé avec Outlook" style="font-size:13px">✅</span>`}
       <button onclick="annulerRdv('${r.id}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px" title="Annuler">✕</button>
     </div>`;
 
@@ -1637,7 +1637,7 @@ function viewImportDecompte() {
           <label><input type="radio" name="imp-encaisse-par" value="oz"/> <span aria-label="OZ Assure" title="OZ Assure"><span class="imp-logo-oz">${typeof OZ_LOGO_TERTIAIRE_SVG !== 'undefined' ? OZ_LOGO_TERTIAIRE_SVG : 'OZ Assure'}</span></span></label>
         </div>
         <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">« OZ Assure » : décompte versé sur le compte d'OZ — les commissions sont enregistrées en « Versé OZ » et le bordereau marqué OZ, <strong>sans compter dans les encaissements Assurex</strong> (tableau de bord, suivi financier, trésorerie).</div>
-        ${typeof ozArchive === 'function' && ozArchive() ? `<div style="font-size:11px;color:var(--c-alerte-texte);background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.35);border-radius:8px;padding:6px 10px;margin-top:6px">🗄️ Données OZ archivées depuis le 01.01.2027 : « OZ Assure » uniquement pour un ancien décompte (période 2026 ou avant) arrivé en retard sur le compte d'OZ.</div>` : ''}
+        ${typeof ozArchive === 'function' && ozArchive() ? `<div style="font-size:11px;color:var(--c-alerte-texte);background:color-mix(in srgb, var(--c-alerte) 10%, transparent);border:1px solid color-mix(in srgb, var(--c-alerte) 35%, transparent);border-radius:8px;padding:6px 10px;margin-top:6px">🗄️ Données OZ archivées depuis le 01.01.2027 : « OZ Assure » uniquement pour un ancien décompte (période 2026 ou avant) arrivé en retard sur le compte d'OZ.</div>` : ''}
       </div>
     `)}
 
@@ -1767,7 +1767,7 @@ function htmlContratImport(l) {
   if (!l.contratId) return '<span style="color:var(--text-dim)">—</span>';
   const cands = l.candidats || [];
   const contrat = cands.length > 1
-    ? `<select aria-label="Contrat CRM pour cette ligne" onchange="choisirContratImport(${l.idx}, this.value)" title="Plusieurs contrats partagent ce n° de police : choisis celui qui correspond à la branche" style="background:rgba(245,158,11,0.1);border:1px solid rgba(245,158,11,0.45);border-radius:8px;color:var(--text);padding:4px 6px;font-size:12px;max-width:220px">
+    ? `<select aria-label="Contrat CRM pour cette ligne" onchange="choisirContratImport(${l.idx}, this.value)" title="Plusieurs contrats partagent ce n° de police : choisis celui qui correspond à la branche" style="background:color-mix(in srgb, var(--c-alerte) 10%, transparent);border:1px solid color-mix(in srgb, var(--c-alerte) 45%, transparent);border-radius:8px;color:var(--text);padding:4px 6px;font-size:12px;max-width:220px">
       ${cands.map(c => `<option value="${c.id}" ${c.id === l.contratId ? 'selected' : ''}>${String(c.produit).replace(/</g, '&lt;')}${c.statut && c.statut !== 'actif' ? ` (${c.statut})` : ''}</option>`).join('')}
     </select>`
     : `<span style="color:var(--text-muted)">${String(l.contratProduit || 'Contrat').replace(/</g, '&lt;')}</span>`;

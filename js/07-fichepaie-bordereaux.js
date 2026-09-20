@@ -120,12 +120,12 @@ function renderBordereauxList() {
           </div>
         </div>` : ''}
 
-        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.25);border-radius:9px;padding:12px 16px">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:14px;background:color-mix(in srgb, var(--c-succes) 8%, transparent);border:1px solid color-mix(in srgb, var(--c-succes) 25%, transparent);border-radius:9px;padding:12px 16px">
           <div>
             <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:3px">Montant net total versé (rapproché)</div>
             <div style="font-size:20px;font-weight:900;color:var(--c-succes-texte)">CHF ${fmtCHF((pJ+pA))}</div>
           </div>
-          <button onclick="event.stopPropagation(); toggleBordereauVerse('${b.id}')" style="background:${b.statut==='reçu' ? 'rgba(74,222,128,0.15)' : 'var(--accent-dim)'};border:1px solid ${b.statut==='reçu' ? 'rgba(74,222,128,0.4)' : 'var(--accent-border)'};color:${b.statut==='reçu' ? '#4ade80' : 'var(--accent)'};border-radius:8px;padding:9px 18px;font-weight:800;font-size:12.5px;cursor:pointer;white-space:nowrap">${b.statut==='reçu' ? '↺ Remettre en attendu' : '✓ Marquer comme versé'}</button>
+          <button onclick="event.stopPropagation(); toggleBordereauVerse('${b.id}')" style="background:${b.statut==='reçu' ? 'color-mix(in srgb, var(--c-succes) 15%, transparent)' : 'var(--accent-dim)'};border:1px solid ${b.statut==='reçu' ? 'color-mix(in srgb, var(--c-succes) 40%, transparent)' : 'var(--accent-border)'};color:${b.statut==='reçu' ? '#4ade80' : 'var(--accent)'};border-radius:8px;padding:9px 18px;font-weight:800;font-size:12.5px;cursor:pointer;white-space:nowrap">${b.statut==='reçu' ? '↺ Remettre en attendu' : '✓ Marquer comme versé'}</button>
         </div>
 
         <div style="display:flex;gap:10px;margin-bottom:14px">
@@ -133,7 +133,7 @@ function renderBordereauxList() {
             <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">Part Jonathan</div>
             <div style="font-size:16px;font-weight:900;color:#38bdf8">CHF ${fmtCHF(pJ)}</div>
           </div>
-          <div style="flex:1;background:var(--gold-dim);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:10px 14px">
+          <div style="flex:1;background:var(--gold-dim);border:1px solid color-mix(in srgb, var(--c-alerte) 30%, transparent);border-radius:8px;padding:10px 14px">
             <div style="font-size:10px;font-weight:700;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px">${apporteurUnique ? 'Part ' + apporteurUnique.prenom : (agentsDistincts.size > 1 ? 'Part apporteurs (mixte)' : 'Part apporteurs')}</div>
             <div style="font-size:16px;font-weight:900;color:var(--c-alerte-texte)">CHF ${fmtCHF(pA)}</div>
           </div>
@@ -298,7 +298,7 @@ function showModalEditBordereau(bordereauId) {
         </label>
       </div>
       <div style="display:flex;gap:10px;margin-top:20px">
-        <button onclick="deleteBordereau('${bordereauId}')" style="background:rgba(248,113,113,0.12);color:var(--c-danger-texte);border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>
+        <button onclick="deleteBordereau('${bordereauId}')" style="background:color-mix(in srgb, var(--c-danger) 12%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>
         <button class="btn-secondary" onclick="document.getElementById('modal-edit-bordereau').remove()">Annuler</button>
         <button class="btn-save" onclick="saveEditBordereau('${bordereauId}')">✓ Enregistrer</button>
       </div>
@@ -2581,7 +2581,7 @@ function viewNouvelleOpportunite() {
       <button type="button" onclick="saveOpportunite('${opp ? opp.id : ''}')" title="Enregistrer l’opportunité" aria-label="Enregistrer l’opportunité" style="margin-left:auto;display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:var(--on-accent);border:none;border-radius:9px;padding:8px 14px;font-size:13px;font-weight:600;cursor:pointer">💾 Enregistrer</button>
     </div>
     ${blocStadeRapide}
-    ${(opp && opp.stade === 'Perdu' && opp.motif_perte) ? `<div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.3);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--text)"><strong style="color:var(--c-danger-texte)">✕ Motif de la perte :</strong> ${opp.motif_perte}</div>` : ''}
+    ${(opp && opp.stade === 'Perdu' && opp.motif_perte) ? `<div style="background:color-mix(in srgb, var(--c-danger) 8%, transparent);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:10px;padding:10px 14px;margin-bottom:16px;font-size:12px;color:var(--text)"><strong style="color:var(--c-danger-texte)">✕ Motif de la perte :</strong> ${opp.motif_perte}</div>` : ''}
     ${opp ? `<div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
       <div style="flex:1;min-width:280px">${blocEtatEmails}</div>
       <div style="flex:1;min-width:280px">${blocHistorique}</div>
@@ -2590,7 +2590,7 @@ function viewNouvelleOpportunite() {
     ${blocContrat}
     <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;align-items:center">
       ${opp ? `<span id="opp-demande-offre-liee" style="display:flex;gap:10px;flex-wrap:wrap"></span>` : ''}
-      ${opp && !rh ? `<button onclick="supprimerOpportunite('${opp.id}')" style="background:rgba(248,113,113,0.12);color:var(--c-danger-texte);border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>` : ''}
+      ${opp && !rh ? `<button onclick="supprimerOpportunite('${opp.id}')" style="background:color-mix(in srgb, var(--c-danger) 12%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>` : ''}
       <button class="btn-secondary" onclick="opportuniteEnEditionId=null;navigate('opportunites')">Annuler</button>
       <button class="btn-save" onclick="saveOpportunite('${opp ? opp.id : ''}')">✓ ${opp ? 'Enregistrer les modifications' : 'Enregistrer'}</button>
     </div>`;
@@ -2656,7 +2656,7 @@ function renderTachesOpportunite(opp) {
       <span style="flex:1;font-size:13px;color:${t.statut === 'traité' ? 'var(--text-muted)' : 'var(--text)'};${t.statut === 'traité' ? 'text-decoration:line-through' : ''}">${t.titre}</span>
       ${t.type ? badge(t.type, '#64748b') : ''}
       ${t.date_echeance ? `<span style="font-size:11px;color:var(--text-muted);white-space:nowrap">Échéance : ${fmtDate(t.date_echeance)}</span>` : ''}
-      ${(!t.outlook_event_id && t.date_echeance) ? `<button onclick="synchroniserRappelOutlook('${t.id}')" title="Absent de l'agenda Outlook — cliquer pour synchroniser" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:var(--c-alerte-texte);border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;flex-shrink:0">📅</button>` : ''}
+      ${(!t.outlook_event_id && t.date_echeance) ? `<button onclick="synchroniserRappelOutlook('${t.id}')" title="Absent de l'agenda Outlook — cliquer pour synchroniser" style="background:color-mix(in srgb, var(--c-alerte) 12%, transparent);border:1px solid color-mix(in srgb, var(--c-alerte) 30%, transparent);color:var(--c-alerte-texte);border-radius:6px;padding:3px 7px;font-size:11px;cursor:pointer;flex-shrink:0">📅</button>` : ''}
       <button onclick="supprimerTacheOpportunite('${t.id}')" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:14px">✕</button>
     </div>`).join('') : '<div style="font-size:12.5px;color:var(--text-muted);padding:6px 0">Aucune tâche pour l\u2019instant.</div>';
   // Sélecteur de Type à l'ajout — demande de Jonathan le 10.08.2026 : les catégories

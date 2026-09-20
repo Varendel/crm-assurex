@@ -76,7 +76,7 @@ function showModalEditCommission(commId) {
           <div style="font-size:12.5px;color:var(--text);font-weight:700">👤 ${nomResolu || '—'}</div>
           <button type="button" onclick="document.getElementById('modal-edit-commission').remove(); showClient('${cl.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:3px 10px;font-size:10.5px;cursor:pointer;font-weight:700">Voir la fiche client →</button>
         </div>
-      </div>` : `<div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:11.5px;color:var(--c-danger-texte)">⚠ Aucun client identifiable pour cette commission (ni contrat lié, ni client_id) — corrige le champ "Client" ci-dessous à la main si tu sais de qui il s'agit.</div>`}
+      </div>` : `<div style="background:color-mix(in srgb, var(--c-danger) 8%, transparent);border:1px solid color-mix(in srgb, var(--c-danger) 20%, transparent);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:11.5px;color:var(--c-danger-texte)">⚠ Aucun client identifiable pour cette commission (ni contrat lié, ni client_id) — corrige le champ "Client" ci-dessous à la main si tu sais de qui il s'agit.</div>`}
 
       ${ct ? `<div style="background:var(--surface-alt);border-radius:10px;padding:12px 14px;margin-bottom:14px">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
@@ -85,7 +85,7 @@ function showModalEditCommission(commId) {
         </div>
         <div style="font-size:12.5px;color:var(--text)">${ct.produit} · ${ct.compagnie}</div>
         <div style="font-size:11px;color:var(--text-muted)">Prime CHF ${fmtCHF(Number(ct.prime_annuelle||0))}/an${ct.date_debut ? ' · Signé le ' + fmtDate(ct.date_debut) : ''}${ct.numero_police ? ' · № ' + ct.numero_police : ''}</div>
-      </div>` : `<div style="background:rgba(248,113,113,0.08);border:1px solid rgba(248,113,113,0.2);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:11.5px;color:var(--c-danger-texte)">⚠ Aucun contrat lié à cette commission — impossible de vérifier son origine automatiquement.</div>`}
+      </div>` : `<div style="background:color-mix(in srgb, var(--c-danger) 8%, transparent);border:1px solid color-mix(in srgb, var(--c-danger) 20%, transparent);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:11.5px;color:var(--c-danger-texte)">⚠ Aucun contrat lié à cette commission — impossible de vérifier son origine automatiquement.</div>`}
 
       <div class="form-field" style="margin-bottom:14px">
         <label class="form-label">Détail du calcul (visible sur la liste)</label>
@@ -119,7 +119,7 @@ function showModalEditCommission(commId) {
       ${blocVersementsPartiels(c)}
 
       <div style="display:flex;gap:10px;margin-top:20px">
-        <button onclick="deleteCommission('${commId}')" style="background:rgba(248,113,113,0.12);color:var(--c-danger-texte);border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>
+        <button onclick="deleteCommission('${commId}')" style="background:color-mix(in srgb, var(--c-danger) 12%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>
         <button class="btn-secondary" onclick="document.getElementById('modal-edit-commission').remove()">Annuler</button>
         <button class="btn-save" onclick="saveEditCommission('${commId}')">✓ Enregistrer</button>
       </div>
@@ -1349,7 +1349,7 @@ async function viewRapportFinmaOz() {
     </div>
     <div style="font-size:12px;color:var(--text-muted);margin-bottom:20px">Calculé automatiquement selon la structure du recensement annuel FINMA (art. 190b OS) — à transcrire sur la plateforme EHP. LAMal est exclue du périmètre, conformément au formulaire officiel.</div>
 
-    <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:12px 16px;margin-bottom:20px;font-size:12px;color:var(--text)">
+    <div style="background:color-mix(in srgb, var(--c-alerte) 8%, transparent);border:1px solid color-mix(in srgb, var(--c-alerte) 30%, transparent);border-radius:10px;padding:12px 16px;margin-bottom:20px;font-size:12px;color:var(--text)">
       ⚠ La distinction client privé/commercial est déduite automatiquement du nom et du titre — vérifie chaque cas avant transmission. Les sections 2, 3.4, 4 et 5 du formulaire (déclarations, adresses, confirmations) ne sont pas calculables depuis les données du CRM — utilise l'export TXT comme aide-mémoire pour les répondre directement sur le site FINMA.
     </div>
 
@@ -1641,7 +1641,7 @@ async function viewOzAssure() {
       <div style="font-size:12px;color:var(--text-muted);margin-top:14px;max-width:480px">Bilan de 2 ans d'exploitation — entité OZ Assure (entreprise individuelle de Jonathan Özkan)</div>
     </div>
 
-    <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.3);border-radius:10px;padding:12px 16px;margin-bottom:24px;font-size:12.5px;color:var(--text)">
+    <div style="background:color-mix(in srgb, var(--c-alerte) 8%, transparent);border:1px solid color-mix(in srgb, var(--c-alerte) 30%, transparent);border-radius:10px;padding:12px 16px;margin-bottom:24px;font-size:12.5px;color:var(--text)">
       ⚠ Depuis le <strong>01.06.2026</strong>, le portefeuille OZ Assure est considéré comme <strong>virtuellement transféré à Assurex Sàrl</strong> — les mandats principaux seront resignés progressivement sous Assurex. Cette page reste une <strong>archive historique</strong>.
     </div>
 
@@ -1713,7 +1713,7 @@ async function viewOzAssure() {
       <div style="font-size:13px;font-weight:800;color:var(--text);margin-bottom:4px">Acquisition vs Gestion</div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:16px">Toutes années confondues — distingue le commissionnement ponctuel (signature) du commissionnement récurrent (gestion du portefeuille), utile pour chiffrer la contribution apportée à la fusion Assurex / Cofidex.</div>
       <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px">
-        <div style="background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.3);border-radius:12px;padding:14px 16px">
+        <div style="background:color-mix(in srgb, var(--c-succes) 8%, transparent);border:1px solid color-mix(in srgb, var(--c-succes) 30%, transparent);border-radius:12px;padding:14px 16px">
           <div style="font-size:10.5px;font-weight:700;color:var(--c-succes-texte);text-transform:uppercase;letter-spacing:.5px">Gestion (récurrent)</div>
           <div style="font-size:19px;font-weight:900;color:var(--c-succes-texte);margin-top:4px">${chf(totalGestion)}</div>
           <div style="font-size:11px;color:var(--text-muted);margin-top:2px">${Math.round(totalGestion/totalTypeSum*100)}% du total</div>
@@ -1751,7 +1751,7 @@ async function viewOzAssure() {
             <td style="padding:8px 10px;text-align:right;font-weight:800;color:var(--c-succes-texte)">${chf(v.Gestion)}</td>
             <td style="padding:8px 10px;text-align:right;color:var(--accent)">${chf(v.Acquisition)}</td>
             <td style="padding:8px 10px;text-align:right;color:var(--text-muted)">${chf(v.Gestion + v.Acquisition + v.Autre)}</td>
-            <td style="padding:8px 10px;text-align:right">${complete ? '<span style="font-size:10px;font-weight:700;color:var(--c-succes-texte);background:rgba(74,222,128,0.12);border-radius:6px;padding:2px 8px">✓ Année complète</span>' : '<span style="font-size:10px;font-weight:700;color:var(--c-alerte-texte);background:rgba(245,158,11,0.12);border-radius:6px;padding:2px 8px">En cours</span>'}</td>
+            <td style="padding:8px 10px;text-align:right">${complete ? '<span style="font-size:10px;font-weight:700;color:var(--c-succes-texte);background:color-mix(in srgb, var(--c-succes) 12%, transparent);border-radius:6px;padding:2px 8px">✓ Année complète</span>' : '<span style="font-size:10px;font-weight:700;color:var(--c-alerte-texte);background:color-mix(in srgb, var(--c-alerte) 12%, transparent);border-radius:6px;padding:2px 8px">En cours</span>'}</td>
           </tr>`;
         }).join('') || '<tr><td colspan="5" class="table-empty">Aucune donnée.</td></tr>'}</tbody>
       </table>
@@ -2104,7 +2104,7 @@ function viewAgents() {
             <div style="color:var(--text-muted);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px">CA géré</div>
             <div style="color:#38bdf8;font-size:14px;font-weight:800">CHF ${fmtCHF(ca)}</div>
           </div>
-          <div style="background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2);border-radius:9px;padding:10px 14px">
+          <div style="background:color-mix(in srgb, var(--c-succes) 8%, transparent);border:1px solid color-mix(in srgb, var(--c-succes) 20%, transparent);border-radius:9px;padding:10px 14px">
             <div style="color:var(--text-muted);font-size:10px;font-weight:700;text-transform:uppercase;margin-bottom:4px">Commissions générées (via fiche de paie)</div>
             <div style="color:var(--c-succes-texte);font-size:14px;font-weight:800">CHF ${fmtCHF(Math.round(commGeneree))}</div>
           </div>
@@ -2153,7 +2153,7 @@ function viewAgents() {
     }).join('')}
     ${currentUser.role === 'signataire' ? `<button class="btn-save" style="margin-top:4px" onclick="navigate('nouveau-agent')">+ Ajouter un agent</button>` : ''}
     <div style="margin-top:20px">
-      <button onclick="logout()" style="background:var(--red-dim);color:var(--red);border:1px solid rgba(248,113,113,0.3);border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer">🚪 Se déconnecter</button>
+      <button onclick="logout()" style="background:var(--red-dim);color:var(--red);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:10px;padding:10px 20px;font-size:13px;font-weight:700;cursor:pointer">🚪 Se déconnecter</button>
     </div>`;
 }
 

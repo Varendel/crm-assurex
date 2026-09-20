@@ -50,9 +50,16 @@ const PICTOS_COMPAGNIES = {
   // Monogrammes aux couleurs relevées sur les logos officiels fournis le 19.09.2026
   // Logos déposés par Jonathan le 20.09.2026 : ceux des compagnies, à la place de ceux que
   // j'avais reconstruits. Un logo redessiné approche la marque ; il ne l'est pas.
-  // Helsana est fourni en pastille ronde sur blanc : on garde la forme du fichier, et `contain`
-  // pour que l'anneau gris ne soit pas rogné par le cadrage.
-  'Helsana': { img: 'assets/logos/compagnies/helsana.jpg', forme: 'rond', ajuste: 'contain', fondImg: '#FFFFFF', abr: 'He', fond: '#9A0941' },
+  // Version CARRÉE (20.09.2026, second passage) : « Helsana le logo est trop petit ».
+  // Mesure sur le fichier fourni : le lettrage n'occupe que 10,5 % de l'image et fait 5,29 pour 1.
+  // Chercher un fichier plus grand n'y changerait rien — dans une pastille de 26 px, un logo cinq
+  // fois plus large que haut tombe à 5 px de haut quelle que soit sa définition. Le problème est
+  // la PROPORTION, pas la résolution.
+  // On découpe donc le « H » de l'original (x 57..109, y 195..253), y compris sa patte
+  // caractéristique en bas à droite qui appartient bien à la lettre — vérifié : elle est à la même
+  // ligne de base que les hampes. Même fichier source, même bordeaux, même dessin de caractère.
+  // Le lettrage complet reste disponible pour les usages en grand (helsana.jpg).
+  'Helsana': { img: 'assets/logos/compagnies/helsana-carre.png', forme: 'rond', fondImg: '#FFFFFF', abr: 'He', fond: '#9A0941' },
   // SWICA est fourni en carré plein turquoise, lettrage blanc : il remplit la pastille tel quel.
   'SWICA': { img: 'assets/logos/compagnies/swica.png', forme: 'carre', abr: 'SW', fond: '#01BAA8' },
   'Sanitas': { abr: 'SA' },

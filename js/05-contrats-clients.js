@@ -184,7 +184,7 @@ function renderLigneContratClient(ct, estSousCouverture) {
         <div>${badge(ct.statut, ct.statut === 'actif' ? '#4ade80' : ct.statut === 'renouveler' ? '#f59e0b' : '#f87171')}${ct.commissionne === false ? ' ' + badge('Non commissionné', '#64748b') : ''}</div>
         <div style="display:flex;gap:4px;align-items:center" onclick="event.stopPropagation()">
           ${ct.police_url
-            ? `<button onclick="ouvrirPieceJointe('${ct.police_url}')" title="Voir la police PDF" style="background:rgba(74,222,128,0.12);border:1px solid rgba(74,222,128,0.3);color:var(--c-succes-texte);border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer;line-height:1">📄</button>`
+            ? `<button onclick="ouvrirPieceJointe('${ct.police_url}')" title="Voir la police PDF" style="background:color-mix(in srgb, var(--c-succes) 12%, transparent);border:1px solid color-mix(in srgb, var(--c-succes) 30%, transparent);color:var(--c-succes-texte);border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer;line-height:1">📄</button>`
             : `<label title="Joindre la police PDF" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer;line-height:1">📎<input type="file" accept="application/pdf" onchange="uploadPolicePdf('${ct.id}', this)" style="display:none"/></label>`
           }
           <button onclick="showEditContrat('${ct.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:5px 8px;font-size:13px;cursor:pointer;line-height:1" title="Modifier">✏️</button>
@@ -400,7 +400,7 @@ async function showClient(id) {
     ? `${c.profession || 'Entreprise'}${c.prenom ? ' · Contact: ' + c.prenom : ''}`
     : `${c.profession || ''}${c.employeur ? ' · ' + c.employeur : ''}`;
   const headerIcon = isEntreprise
-    ? `<div style="width:52px;height:52px;border-radius:14px;background:rgba(245,158,11,0.12);border:2px solid rgba(245,158,11,0.35);display:flex;align-items:center;justify-content:center;font-size:24px">🏢</div>`
+    ? `<div style="width:52px;height:52px;border-radius:14px;background:color-mix(in srgb, var(--c-alerte) 12%, transparent);border:2px solid color-mix(in srgb, var(--c-alerte) 35%, transparent);display:flex;align-items:center;justify-content:center;font-size:24px">🏢</div>`
     : (c.prenatal ? iconAvatarClient('bebe', 52)
       : c.civilite === 'Madame' ? iconAvatarClient('femme', 52)
       : c.civilite === 'Monsieur' ? iconAvatarClient('homme', 52)
@@ -640,7 +640,7 @@ async function showClient(id) {
             <td style="padding:10px 12px;color:var(--text-muted)">${col.adresse || '—'}</td>
             <td style="padding:10px 12px;color:var(--text-muted);font-family:monospace">${col.avs || '—'}</td>
             <td style="padding:10px 12px;text-align:right">
-              <button onclick="deleteCollaborateur('${col.id}','${c.id}')" style="background:rgba(248,113,113,0.1);color:var(--c-danger-texte);border:1px solid rgba(248,113,113,0.3);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">Supprimer</button>
+              <button onclick="deleteCollaborateur('${col.id}','${c.id}')" style="background:color-mix(in srgb, var(--c-danger) 10%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">Supprimer</button>
             </td>
           </tr>`).join('')}
         </tbody>

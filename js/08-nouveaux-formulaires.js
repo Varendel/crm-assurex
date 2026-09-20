@@ -606,7 +606,7 @@ async function showEditContrat(contratId, returnTo) {
         </div>
       </div>
       <div style="display:flex;gap:10px;margin-top:20px">
-        <button onclick="deleteContrat('${ct.id}','${ct.client_id}', window._editContratReturnTo)" title="Passe le contrat en « annulé » — rien n'est effacé" style="background:rgba(248,113,113,0.12);color:var(--c-danger-texte);border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">⊘ Annuler le contrat</button>
+        <button onclick="deleteContrat('${ct.id}','${ct.client_id}', window._editContratReturnTo)" title="Passe le contrat en « annulé » — rien n'est effacé" style="background:color-mix(in srgb, var(--c-danger) 12%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">⊘ Annuler le contrat</button>
         <button class="btn-secondary" onclick="document.getElementById('modal-edit-contrat').remove()">Annuler</button>
         <button class="btn-save" onclick="saveEditContrat('${ct.id}','${ct.client_id}', window._editContratReturnTo)">✓ Enregistrer</button>
       </div>
@@ -634,7 +634,7 @@ function ajouterLignePrimeEdit(libelle = '', montant = '') {
   ligne.innerHTML = `
     <input class="form-input ect-prime-ligne-libelle" placeholder="Ex: Responsabilité civile privée" value="${libelleEch}" style="flex:1" oninput="calculerPrimeTotaleLignesEdit()"/>
     <input class="form-input ect-prime-ligne-montant" type="number" step="0.01" placeholder="CHF" value="${montant}" style="width:120px" oninput="calculerPrimeTotaleLignesEdit()"/>
-    <button type="button" onclick="this.parentElement.remove(); calculerPrimeTotaleLignesEdit()" style="background:rgba(248,113,113,0.12);color:var(--c-danger-texte);border:1px solid rgba(248,113,113,0.3);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;flex-shrink:0">✕</button>
+    <button type="button" onclick="this.parentElement.remove(); calculerPrimeTotaleLignesEdit()" style="background:color-mix(in srgb, var(--c-danger) 12%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;flex-shrink:0">✕</button>
   `;
   list.appendChild(ligne);
   calculerPrimeTotaleLignesEdit();
@@ -1018,8 +1018,8 @@ function flotteListeHtml(clientId, searchOverride) {
 
   return `<div style="display:flex;gap:10px;margin-bottom:12px">
       <div style="background:var(--surface-alt);border-radius:8px;padding:8px 14px"><span style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Véhicules</span><div style="font-weight:800;color:var(--text)">${vehicules.length}</div></div>
-      <div style="background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.2);border-radius:8px;padding:8px 14px"><span style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Total prime brute</span><div style="font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF(totalBrut)}</div></div>
-      <div style="background:rgba(74,222,128,0.08);border:1px solid rgba(74,222,128,0.2);border-radius:8px;padding:8px 14px"><span style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Total prime nette</span><div style="font-weight:800;color:var(--c-succes-texte)">CHF ${fmtCHF(totalNet)}</div></div>
+      <div style="background:color-mix(in srgb, var(--c-alerte) 8%, transparent);border:1px solid color-mix(in srgb, var(--c-alerte) 20%, transparent);border-radius:8px;padding:8px 14px"><span style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Total prime brute</span><div style="font-weight:800;color:var(--c-alerte-texte)">CHF ${fmtCHF(totalBrut)}</div></div>
+      <div style="background:color-mix(in srgb, var(--c-succes) 8%, transparent);border:1px solid color-mix(in srgb, var(--c-succes) 20%, transparent);border-radius:8px;padding:8px 14px"><span style="font-size:10px;color:var(--text-muted);text-transform:uppercase">Total prime nette</span><div style="font-weight:800;color:var(--c-succes-texte)">CHF ${fmtCHF(totalNet)}</div></div>
     </div>
     <table style="width:100%;border-collapse:collapse;font-size:13px">
       <thead><tr style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px">
@@ -1043,7 +1043,7 @@ function flotteListeHtml(clientId, searchOverride) {
           <td style="padding:9px 12px;text-align:right;color:var(--c-succes-texte);font-weight:700">CHF ${fmtCHF(Number(v.prime_nette||0))}</td>
           <td style="padding:9px 12px;text-align:right;display:flex;gap:6px;justify-content:flex-end">
             <button onclick="showFormVehicule('${clientId}','${v.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">✏️</button>
-            <button onclick="deleteVehicule('${v.id}','${clientId}')" style="background:rgba(248,113,113,0.1);color:var(--c-danger-texte);border:1px solid rgba(248,113,113,0.3);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">🗑️</button>
+            <button onclick="deleteVehicule('${v.id}','${clientId}')" style="background:color-mix(in srgb, var(--c-danger) 10%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:6px;padding:4px 10px;font-size:11px;font-weight:700;cursor:pointer">🗑️</button>
           </td>
         </tr>`).join('')}
       </tbody>
@@ -1084,7 +1084,7 @@ function showFormVehicule(clientId, vehiculeId, presetContratId) {
       </div>
       <div style="font-size:10.5px;color:var(--text-muted);margin-top:6px">💡 La prime brute de ce véhicule s'ajoute (ou se retire) automatiquement du montant total de la police flotte liée.</div>
       <div style="display:flex;gap:10px;margin-top:16px">
-        ${v ? `<button onclick="deleteVehicule('${v.id}','${clientId}')" style="background:rgba(248,113,113,0.12);color:var(--c-danger-texte);border:1px solid rgba(248,113,113,0.3);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>` : ''}
+        ${v ? `<button onclick="deleteVehicule('${v.id}','${clientId}')" style="background:color-mix(in srgb, var(--c-danger) 12%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:9px;padding:10px 16px;font-weight:700;font-size:13px;cursor:pointer">🗑️ Supprimer</button>` : ''}
         <button class="btn-secondary" onclick="document.getElementById('modal-vehicule').remove()">Annuler</button>
         <button class="btn-save" onclick="saveVehicule('${clientId}'${v ? `,'${v.id}'` : ''})">✓ Enregistrer</button>
       </div>
@@ -1350,7 +1350,7 @@ function renderRechercheVehicules() {
   const lignesManquantes = manquantsFiltres.map(ct => {
     const cl = allClients.find(c => c.id === ct.client_id);
     const nomCl = cl ? (estEntreprise(cl) ? cl.nom : `${cl.prenom} ${cl.nom}`) : '—';
-    return `<div class="table-row" style="grid-template-columns:${cols};background:rgba(245,158,11,0.05)">
+    return `<div class="table-row" style="grid-template-columns:${cols};background:color-mix(in srgb, var(--c-alerte) 5%, transparent)">
       <div style="font-weight:700;color:var(--c-alerte-texte)" colspan="3">⚠️ ${ct.produit || 'Véhicule'} — détails à compléter</div>
       <div style="font-family:monospace;color:var(--text-muted)">${ct.numero_police || '—'}</div>
       <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
@@ -1400,7 +1400,7 @@ function showRappel(id) {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px;flex-wrap:wrap;gap:10px">
       <h2 style="margin:0;font-size:18px;font-weight:800;color:var(--text)">${isTache ? '📋' : '🔔'} ${r.titre}</h2>
       <div style="display:flex;align-items:center;gap:8px">
-        ${(!r.outlook_event_id && (r.date_echeance || r.date_planifiee)) ? `<button onclick="synchroniserRappelOutlook('${r.id}')" style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:var(--c-alerte-texte);border-radius:8px;padding:5px 12px;font-size:11.5px;font-weight:700;cursor:pointer">📅 Absent d'Outlook — synchroniser</button>` : ''}
+        ${(!r.outlook_event_id && (r.date_echeance || r.date_planifiee)) ? `<button onclick="synchroniserRappelOutlook('${r.id}')" style="background:color-mix(in srgb, var(--c-alerte) 12%, transparent);border:1px solid color-mix(in srgb, var(--c-alerte) 30%, transparent);color:var(--c-alerte-texte);border-radius:8px;padding:5px 12px;font-size:11.5px;font-weight:700;cursor:pointer">📅 Absent d'Outlook — synchroniser</button>` : ''}
         <select id="rd-repousser-select" onchange="repousserRappelRapide('${r.id}', this.value)" style="background:var(--surface-alt);border:1px solid var(--border);color:var(--text-muted);border-radius:8px;padding:6px 10px;font-size:11.5px;font-weight:700;cursor:pointer">
           <option value="">⏰ Repousser…</option>
           <option value="7">+ 1 semaine</option>

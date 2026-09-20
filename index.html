@@ -2797,39 +2797,31 @@
 @media (prefers-reduced-motion: reduce) {
   .lp-couche { animation: none !important; }
 }
-/* ═══ Chargement : Rex allume une bougie en crachant une petite flamme (20.09.2026) ═══ */
-.loader {
-  position: relative; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
-  min-height: 190px; padding: 118px 0 0; gap: 4px; text-align: center; font-size: 13px; color: var(--text-muted);
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='120' viewBox='0 0 60 120'%3E%3Crect x='20' y='44' width='20' height='64' rx='5' fill='%23EAF6FF' stroke='%23B9D6EA'/%3E%3Crect x='24' y='52' width='4' height='48' rx='2' fill='%23ffffff' opacity='.8'/%3E%3Cpath d='M30 44 L30 34' stroke='%236B7A90' stroke-width='2.5' stroke-linecap='round'/%3E%3Cellipse cx='30' cy='112' rx='18' ry='5' fill='%2300CFFF' opacity='.18'/%3E%3C/svg%3E");
-  background-repeat: no-repeat; background-position: calc(50% + 74px) 6px; background-size: 60px 120px;
+/* ═══ Ecran de chargement du CRM (20.09.2026) ═══
+   L'animation precedente — Rex allumant une bougie — s'appliquait a la classe .loader, donc a
+   TOUS les chargements du CRM : une scene de 190 px de haut s'affichait pour la moindre attente.
+   Elle est remplacee par une barre de progression que Rex traverse, et cantonnee a l'ecran
+   d'entree ; .loader redevient un simple indicateur d'attente. */
+#ecran-chargement-crm .ecc-logo-bloc { position: relative; display: inline-block; line-height: 0; }
+#ecran-chargement-crm .ecc-logo { width: min(260px, 62vw); height: auto; display: block; }
+#ecran-chargement-crm .ecc-point { position: absolute; left: 53.48%; top: 70.63%; width: 4.04%; aspect-ratio: 1;
+  transform: translate(-50%, -50%); border-radius: 50%; background: #00CFFF;
+  animation: lg-point 2.6s ease-in-out infinite; }
+#ecran-chargement-crm .ecc-piste { position: relative; width: min(280px, 66vw); height: 78px; }
+#ecran-chargement-crm .ecc-rex { position: absolute; bottom: 10px; left: 0; height: 62px; width: auto;
+  filter: drop-shadow(0 6px 12px rgba(0,0,0,.3)); animation: ecc-avance 2.6s cubic-bezier(.45,0,.55,1) infinite; }
+#ecran-chargement-crm .ecc-barre { position: absolute; left: 0; right: 0; bottom: 0; height: 4px; border-radius: 999px;
+  background: rgba(255,255,255,.16); overflow: hidden; display: block; }
+#ecran-chargement-crm .ecc-barre span { position: absolute; inset: 0 auto 0 0; width: 40%; border-radius: 999px;
+  background: linear-gradient(90deg, #00CFFF, #7DD3FC); animation: ecc-barre 2.6s cubic-bezier(.45,0,.55,1) infinite; }
+#ecran-chargement-crm .ecc-texte { font-size: 13px; color: #D7E6FF; }
+@keyframes ecc-avance { 0% { left: 0; } 100% { left: calc(100% - 62px); } }
+@keyframes ecc-barre { 0% { width: 6%; } 100% { width: 100%; } }
+@media (prefers-reduced-motion: reduce) {
+  #ecran-chargement-crm .ecc-rex, #ecran-chargement-crm .ecc-barre span, #ecran-chargement-crm .ecc-point { animation: none; }
+  #ecran-chargement-crm .ecc-barre span { width: 60%; }
 }
-.loader::before { /* Rex, tourné vers la bougie */
-  content: ''; position: absolute; top: 4px; left: calc(50% - 128px); width: 104px; height: 120px;
-  background: url('assets/logos/rex-mascotte-hd.png') center/contain no-repeat;
-  filter: drop-shadow(0 8px 14px rgba(17,54,121,.20)); animation: chx-souffle 2.4s ease-in-out infinite;
-}
-.loader::after { /* la petite flamme crachée, qui file vers la mèche */
-  content: ''; position: absolute; top: 46px; left: calc(50% - 34px); width: 16px; height: 20px;
-  border-radius: 50% 50% 50% 50% / 62% 62% 38% 38%;
-  background: radial-gradient(60% 60% at 50% 70%, #FFF3B0 0%, #FFB300 55%, #FF6A00 100%);
-  box-shadow: 0 0 14px rgba(255,150,0,.65); opacity: 0; animation: chx-flamme 2.4s ease-in-out infinite;
-}
-@keyframes chx-souffle {
-  0%, 24% { transform: translateX(0) scaleX(1); }
-  32% { transform: translateX(6px) scaleX(1.04); }
-  46%, 100% { transform: translateX(0) scaleX(1); }
-}
-@keyframes chx-flamme {
-  0%, 26% { opacity: 0; transform: translate(0, 12px) scale(.35); }
-  36% { opacity: 1; transform: translate(22px, 4px) scale(.7); }
-  52% { opacity: 1; transform: translate(66px, -6px) scale(.9); }
-  64% { opacity: .95; transform: translate(86px, -14px) scale(1); }
-  78% { opacity: .9; transform: translate(86px, -18px) scale(.92) rotate(-3deg); }
-  92%, 100% { opacity: 0; transform: translate(86px, -22px) scale(.6); }
-}
-@media (max-width: 700px) { .loader { min-height: 150px; padding-top: 96px; background-size: 48px 96px; background-position: calc(50% + 58px) 6px; } .loader::before { width: 84px; height: 96px; left: calc(50% - 106px); } }
-@media (prefers-reduced-motion: reduce) { .loader::before, .loader::after { animation: none; } .loader::after { opacity: .9; transform: translate(86px, -14px); } }
+
 /* ═══ Espace client (js/48, 20.09.2026) ═══ */
 body.mode-espace-client .sidebar, body.mode-espace-client #rex-tabbar, body.mode-espace-client .rex-bulle, body.mode-espace-client #nav-back-bar { display: none !important; }
 body.mode-espace-client .main, body.mode-espace-client #main-content { margin-left: 0 !important; max-width: 1080px; margin-inline: auto; padding: 24px 20px 60px; }
@@ -2964,10 +2956,10 @@ body.mode-cloud .login-marque-cloud { display: flex; flex-direction: column; ali
 /* ═══ Écran de chargement du CRM — Rex allume sa bougie, 2 s minimum (20.09.2026) ═══ */
 #ecran-chargement-crm { position: fixed; inset: 0; z-index: 9000; display: flex; align-items: center; justify-content: center;
   background: radial-gradient(1200px 600px at 50% 0%, #1A4590 0%, #0B2A5B 55%, #081E44 100%); }
-#ecran-chargement-crm .ecc-boite { display: flex; flex-direction: column; align-items: center; gap: 18px; }
-#ecran-chargement-crm .loader { color: #D7E6FF; }
-#ecran-chargement-crm .ecc-marque { font-size: 26px; font-weight: 300; letter-spacing: -0.01em; color: #fff; }
-#ecran-chargement-crm .ecc-marque b { font-weight: 700; }
+#ecran-chargement-crm .ecc-boite { display: flex; flex-direction: column; align-items: center; gap: 22px; }
+
+
+
 #ecran-chargement-crm.ecc-sort { opacity: 0; transition: opacity .3s ease; pointer-events: none; }
 /* ═══ REX CLOUD : Rex porte les classeurs du client ; un seul Rex à l'écran (20.09.2026) ═══ */
 .cloud-classeurs { position: absolute; left: 74px; bottom: 34px; width: 86px; height: auto; z-index: 3;
@@ -3586,7 +3578,7 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
     .dcx-groupe h3 span { font-size: 11px; font-weight: 600; letter-spacing: 0; text-transform: none;
       background: var(--accent-dim, rgba(37,99,235,.09)); border-radius: 999px; padding: 1px 8px; color: var(--accent, #2563eb); }
     .dcx-docs { display: flex; flex-direction: column; gap: 6px; }
-    .dcx-doc { display: grid; grid-template-columns: 28px 1fr auto auto; align-items: center; gap: 10px;
+    .dcx-doc { display: grid; grid-template-columns: 28px 1fr 34px auto auto; align-items: center; gap: 10px;
       padding: 8px 11px; border-radius: 12px; background: var(--bg, #f8fafc); border: 1px solid transparent; transition: all .15s; }
     .dcx-doc:hover { border-color: var(--border, rgba(0,0,0,.1)); background: var(--surface, #fff); }
     .dcx-doc-icone { font-size: 17px; text-align: center; }
@@ -3600,7 +3592,7 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
     .dcx-doc-etat.ok { color: #15803D; background: rgba(34,197,94,.12); border-color: rgba(34,197,94,.3); }
     .dcx-centre-note { margin: 14px 0 0; font-size: 11.5px; line-height: 1.5; color: var(--text-muted, #64748b); }
     @media (max-width: 720px) {
-      .dcx-doc { grid-template-columns: 24px 1fr auto; }
+      .dcx-doc { grid-template-columns: 24px 1fr 30px auto; }
       .dcx-doc-etat { grid-column: 2 / -1; justify-self: start; }
     }
     /* ═══ MANOMETRE ECOHUB ET NOUVEAUX DOCUMENTS (js/61, 20.09.2026) ═══ */
@@ -3632,6 +3624,25 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
       border: 0; background: rgba(255,255,255,.55); color: var(--text-muted, #64748b); font-size: 14px; line-height: 1; cursor: pointer; }
     .ehm-bandeau-fermer:hover { background: #fff; color: var(--text, #1e293b); }
     @media (max-width: 640px) { .ehm-corps { gap: 14px; } .ehm-jauge { margin: 0 auto; } }
+    /* Loupe d'apercu : on jette un oeil sans quitter la liste (js/59, 20.09.2026) */
+    .dcx-loupe { border: 1px solid var(--border, rgba(0,0,0,.12)); background: var(--surface, #fff);
+      border-radius: 9px; padding: 4px 7px; font-size: 13px; cursor: pointer; line-height: 1; }
+    .dcx-loupe:hover { border-color: var(--accent, #2563eb); background: var(--accent-dim, rgba(37,99,235,.08)); }
+    .dcx-apercu { display: flex; flex-direction: column; width: min(940px, 94vw); height: min(84vh, 900px);
+      background: var(--surface, #fff); border-radius: 16px; overflow: hidden; }
+    .dcx-apercu header { display: flex; align-items: center; gap: 10px; padding: 11px 14px;
+      border-bottom: 1px solid var(--border, rgba(0,0,0,.08)); }
+    .dcx-apercu-titre { flex: 1; min-width: 0; font-size: 13.5px; font-weight: 600; color: var(--text, #1e293b);
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .dcx-apercu-fermer { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--border, rgba(0,0,0,.12));
+      background: none; font-size: 16px; line-height: 1; cursor: pointer; color: var(--text-muted, #64748b); }
+    .dcx-apercu-corps { flex: 1; position: relative; background: #525659; display: flex; align-items: center; justify-content: center; }
+    .dcx-apercu-corps iframe { width: 100%; height: 100%; border: 0; }
+    .dcx-apercu-corps img { max-width: 100%; max-height: 100%; object-fit: contain; }
+    .dcx-apercu-vide { color: #fff; font-size: 13px; padding: 20px; }
+    .dcx-apercu-secours { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,.65); color: #fff; font-size: 11.5px; padding: 5px 12px; border-radius: 999px; }
+    .dcx-apercu-secours button { background: none; border: 0; color: #7DD3FC; cursor: pointer; font: inherit; text-decoration: underline; }
 @media (prefers-reduced-motion: reduce) {
       .bmq-defile.anime, .bmq-point, .bmq-entre { animation: none !important; }
     .rex-modale > div, .loader::before { animation: none !important; }
@@ -3780,7 +3791,7 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 
 <script src="js/01-prevoyance-immo.js?v=1790350000"></script>
 <script src="js/02-catalogue-session.js?v=1790060000"></script>
-<script src="js/03-auth-navigation.js?v=1791220000"></script>
+<script src="js/03-auth-navigation.js?v=1791230000"></script>
 <script src="js/04-dashboard-finma.js?v=1790700000"></script>
 <script src="js/05-contrats-clients.js?v=1791220000"></script>
 <script src="js/06-signature-opportunites.js?v=1790700000"></script>
@@ -3836,7 +3847,7 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 <script src="js/56-ecohub-crypto.js?v=1791024000"></script>
   <script src="js/57-citations-reservoir.js?v=1791100000"></script>
   <script src="js/58-rex-banquier.js?v=1791170000"></script>
-  <script src="js/59-documents-compagnies.js?v=1791220000"></script>
+  <script src="js/59-documents-compagnies.js?v=1791230000"></script>
   <script src="js/60-bandeau-marches.js?v=1791140000"></script>
   <script src="js/61-ecohub-manometre.js?v=1791220000"></script>
 <script>

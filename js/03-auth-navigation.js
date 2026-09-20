@@ -666,8 +666,17 @@ function ouvrirEcranChargementCrm() {
   const d = document.createElement('div');
   d.id = 'ecran-chargement-crm';
   d.setAttribute('aria-live', 'polite');
-  d.innerHTML = `<div class="ecc-boite"><div class="loader">Préparation de votre espace de travail…</div>
-    <div class="ecc-marque"><b>REX</b> CRM</div></div>`;
+  d.innerHTML = `<div class="ecc-boite">
+    <span class="ecc-logo-bloc">
+      <img src="assets/logos/rex-logotype.png" alt="REX CRM" class="ecc-logo"/>
+      <span class="ecc-point" aria-hidden="true"></span>
+    </span>
+    <div class="ecc-piste" aria-hidden="true">
+      <img src="assets/logos/rex/poses/marche.png" alt="" class="ecc-rex"/>
+      <span class="ecc-barre"><span></span></span>
+    </div>
+    <div class="ecc-texte">Préparation de votre espace de travail…</div>
+  </div>`;
   document.body.appendChild(d);
   return Date.now();
 }

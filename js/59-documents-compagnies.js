@@ -189,6 +189,7 @@ ${montant ? `<span class="dcx-montant">${montant}</span>` : ''}
 : `<button type="button" class="dcx-rattacher" onclick="dcxOuvrirRattachement('${d.id}')">Rattacher…</button>`}
     </div>
     <div class="dcx-actions">
+      <button type="button" class="dcx-loupe" onclick="dcxApercu('${dcxEsc(d.chemin)}', '${dcxEsc(d.titre || d.nom_fichier || '')}')" title="Aperçu rapide">🔍</button>
       <button type="button" class="dcx-publier ${d.visible_client ? 'on' : ''}" ${rattache ? '' : 'disabled'}
 title="${d.visible_client ? 'Ce document est visible dans l’espace du client — cliquer pour le retirer' : rattache ? 'Rendre ce document visible dans l’espace du client' : 'Rattache d’abord le document à un client'}"
 onclick="dcxBasculerVisible('${d.id}', ${d.visible_client ? 'false' : 'true'})">${d.visible_client ? '👁 Visible' : 'Publier'}</button>
@@ -352,6 +353,44 @@ async function dcxOuvrir(chemin) {
   showError('Ouverture indisponible.');
 }
 
+// ── Aperçu rapide (20.09.2026) ──────────────────────────────────────────────────────────────────
+// Demande de Jonathan : pouvoir jeter un œil sans ouvrir un onglet. Le document s'affiche dans une
+// fenêtre, au-dessus de la liste, et on enchaîne. L'URL signée dure une minute et n'est jamais
+// écrite ailleurs que dans le cadre : le bucket reste privé.
+async function dcxApercu(chemin, titre) {
+  const nom = titre || 'Document';
+  creerModale('modal-dcx-apercu', `
+    <div class="dcx-apercu" role="dialog" aria-modal="true" aria-label="Aperçu du document">
+      <header>
+        <span class="dcx-apercu-titre">${dcxEsc(nom)}</span>
+        <button type="button" class="btn-secondary" onclick="dcxOuvrir('${dcxEsc(chemin)}')">↗ Ouvrir en grand</button>
+        <button type="button" class="dcx-apercu-fermer" onclick="document.getElementById('modal-dcx-apercu').remove()" aria-label="Fermer">×</button>
+      </header>
+      <div class="dcx-apercu-corps" id="dcx-apercu-corps"><div class="loader">Chargement du document…</div></div>
+    </div>`, { padding: '0' });
+  try {
+    const token = await getValidAccessToken() || SUPABASE_KEY;
+    const r = await fetch(`${SUPABASE_URL}/storage/v1/object/sign/documents/${chemin}`, {
+      method: 'POST',
+      headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ expiresIn: 60 }),
+    });
+    const zone = document.getElementById('dcx-apercu-corps');
+    if (!zone) return;
+    if (!r.ok) { zone.innerHTML = '<div class="dcx-apercu-vide">Document inaccessible.</div>'; return; }
+    const data = await r.json();
+    const url = `${SUPABASE_URL}/storage/v1${data.signedURL}`;
+    const estImage = /\.(png|jpe?g|webp|gif)$/i.test(chemin);
+    zone.innerHTML = estImage
+      ? `<img src="${url}" alt="${dcxEsc(nom)}"/>`
+      : `<iframe src="${url}#toolbar=0&navpanes=0" title="${dcxEsc(nom)}"></iframe>
+         <div class="dcx-apercu-secours">Le document ne s’affiche pas ? <button type="button" onclick="dcxOuvrir('${dcxEsc(chemin)}')">Ouvrir dans un onglet</button></div>`;
+  } catch (e) {
+    const zone = document.getElementById('dcx-apercu-corps');
+    if (zone) zone.innerHTML = '<div class="dcx-apercu-vide">Erreur : ' + dcxEsc(e.message) + '</div>';
+  }
+}
+
 // ── LE CENTRE DOCUMENTAIRE DE LA FICHE CLIENT (20.09.2026) ──────────────────────────────────────
 // Refonte demandée par Jonathan une fois EcoHub opérationnel. Avant, les documents d'un client
 // étaient éparpillés : les mandats dans l'onglet Documents, les polices accrochées à chaque ligne
@@ -386,7 +425,9 @@ function dcxToutDocument(clientId, contrats, mandats, rappels) {
   for (const ct of (contrats || []).filter(x => x.police_url)) {
     out.push({ origine: 'police', icone: '📄', titre: `${ct.compagnie} · ${ct.produit}`,
       sous: `${ct.numero_police || 'sans n° de police'}${ct.date_debut ? ' · dès le ' + fmtDate(ct.date_debut) : ''}`,
-      etat: ct.police_nom || '', ouvrir: `ouvrirPieceJointe('${dcxEsc(ct.police_url)}')` });
+      etat: ct.police_nom || '',
+      ouvrir: `ouvrirPieceJointe('${dcxEsc(ct.police_url)}')`,
+      apercu: `dcxApercu('${dcxEsc(ct.police_url)}', '${dcxEsc(`${ct.compagnie} · ${ct.produit}`)}')` });
   }
   for (const d of window._dcx.docs.filter(x => x.client_id === clientId)) {
     const t = DCX_TYPES[d.type] || DCX_TYPES.autre;
@@ -395,12 +436,14 @@ function dcxToutDocument(clientId, contrats, mandats, rappels) {
      d.montant != null && d.montant !== '' ? 'CHF ' + fmtCHF(Number(d.montant)) : ''].filter(Boolean).join(' · '),
       etat: d.source === 'ecohub' ? 'EcoHub' : 'déposé à la main',
       publiable: { id: d.id, visible: !!d.visible_client },
-      ouvrir: `dcxOuvrir('${dcxEsc(d.chemin)}')` });
+      ouvrir: `dcxOuvrir('${dcxEsc(d.chemin)}')`,
+      apercu: `dcxApercu('${dcxEsc(d.chemin)}', '${dcxEsc(d.titre || d.nom_fichier || '')}')` });
   }
   for (const r of (rappels || []).filter(x => x.piece_jointe_path || x.piece_jointe_url)) {
     out.push({ origine: 'tache', icone: '📎', titre: r.piece_jointe_nom || r.titre || 'Pièce jointe',
       sous: `${r.titre || ''}${r.date_echeance ? ' · ' + fmtDate(r.date_echeance) : ''}`,
-      ouvrir: r.piece_jointe_path ? `ouvrirPieceJointe('${dcxEsc(r.piece_jointe_path)}')` : `window.open('${dcxEsc(r.piece_jointe_url || '')}','_blank')` });
+      ouvrir: r.piece_jointe_path ? `ouvrirPieceJointe('${dcxEsc(r.piece_jointe_path)}')` : `window.open('${dcxEsc(r.piece_jointe_url || '')}','_blank')`,
+      apercu: r.piece_jointe_path ? `dcxApercu('${dcxEsc(r.piece_jointe_path)}', '${dcxEsc(r.piece_jointe_nom || r.titre || '')}')` : null });
   }
   return out;
 }
@@ -425,10 +468,11 @@ function dcxOngletDocuments(c, contrats, mandats, rappels) {
 
   const ligne = d => `<div class="dcx-doc">
     <span class="dcx-doc-icone" aria-hidden="true">${d.icone}</span>
-    <button type="button" class="dcx-doc-corps" onclick="${d.ouvrir}">
+    <button type="button" class="dcx-doc-corps" onclick="${d.apercu || d.ouvrir}">
       <span class="dcx-doc-titre">${dcxEsc(d.titre)}</span>
       <span class="dcx-doc-sous">${dcxEsc(d.sous || '')}</span>
     </button>
+    ${d.apercu ? `<button type="button" class="dcx-loupe" onclick="${d.apercu}" title="Aperçu rapide">🔍</button>` : '<span></span>'}
     ${d.etat ? `<span class="dcx-doc-etat ${d.ok ? 'ok' : ''}">${dcxEsc(d.etat)}</span>` : '<span></span>'}
     ${d.publiable
       ? `<button type="button" class="dcx-publier ${d.publiable.visible ? 'on' : ''}"

@@ -510,8 +510,8 @@ function dbxVuePilotage(D) {
   return `
     <div class="dbx-kpis">${kpis}</div>
     <div class="dbx-grille dbx-grille-egale">
-      <section class="dbx-carte dbx-anim" style="--i:5"><header class="dbx-carte-tete"><h2>Commissions encaissées</h2><span class="dbx-carte-sous">12 derniers mois</span></header>
-        ${dbxBarres(D.mois, D.mois.map(m => D.commMois[m]), '#00CFFF', dbxCHF)}
+      <section class="dbx-carte dbx-anim dbx-carte-large" style="--i:5"><header class="dbx-carte-tete"><h2>Commissions encaissées et attendues</h2><span class="dbx-carte-sous">12 mois passés · 6 mois à venir</span></header>
+        ${typeof dbx18Barres === 'function' ? dbx18Barres() : dbxBarres(D.mois, D.mois.map(m => D.commMois[m]), '#00CFFF', dbxCHF)}
         ${D.nbSansDate ? `<button type="button" class="dbx-non-rapproche" onclick="navigate('rapprochement')">
           <span class="dbx-nr-montant">CHF ${dbxCHF(D.recuSansDate)}</span>
           <span class="dbx-nr-texte"><b>${D.nbSansDate} commission${D.nbSansDate > 1 ? 's' : ''} sans date rapprochée</b>

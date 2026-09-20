@@ -1,0 +1,78 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   COMMISSIONS SUR 18 MOIS (js/76, 20.09.2026)
+
+   Deux signaux distinguent le passé de l'avenir, jamais un seul : la couleur ET la hachure. La
+   couleur seule disparaît à l'impression en noir et blanc et pour une personne daltonienne ; la
+   hachure, elle, survit aux deux.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.dbx18 { display: flex; flex-direction: column; gap: var(--e-3, 12px); }
+
+.dbx18-barres {
+  position: relative;
+  display: flex; align-items: flex-end; gap: 4px;
+  height: 190px; padding-top: 20px;
+}
+
+.dbx18-col {
+  flex: 1; min-width: 0; height: 100%;
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+}
+.dbx18-val {
+  font-size: 9.5px; color: var(--text-muted, #64748B); margin-bottom: 3px;
+  white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+.dbx18-mois {
+  font-size: 9.5px; color: var(--text-muted, #64748B); margin-top: 5px; white-space: nowrap;
+}
+.dbx18-col.courant .dbx18-mois { color: var(--text, #334155); font-weight: var(--t-moyen, 600); }
+
+.dbx18-pile {
+  width: 78%; max-width: 30px; height: var(--h);
+  display: flex; flex-direction: column;
+  border-radius: 5px 5px 2px 2px; overflow: hidden;
+  background: var(--surface-alt, rgba(148, 163, 184, .14));
+  animation: dbx18-pousse .5s var(--v-entree, cubic-bezier(.16,1,.3,1)) both;
+  animation-delay: calc(var(--i) * 22ms);
+}
+@keyframes dbx18-pousse { from { height: 0; opacity: 0; } to { height: var(--h); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .dbx18-pile { animation: none; } }
+
+.dbx18-enc { background: var(--m-turquoise, #00CFFF); }
+
+/* L'attendu : même famille de couleur, mais hachuré et plus pâle. On doit voir en un coup d'œil
+   que ce n'est pas de l'argent arrivé. */
+.dbx18-att {
+  background: repeating-linear-gradient(135deg,
+    rgba(0, 207, 255, .42) 0 4px, rgba(0, 207, 255, .16) 4px 8px);
+}
+
+/* Le trait d'aujourd'hui : c'est lui qui empêche de lire une prévision comme un constat. */
+.dbx18-aujourdhui {
+  position: absolute; top: 12px; bottom: 22px; left: var(--pos);
+  width: 0; border-left: 1px dashed var(--c-alerte, #F59E0B); opacity: .7;
+}
+.dbx18-aujourdhui::after {
+  content: "aujourd’hui"; position: absolute; top: -12px; left: 5px;
+  font-size: 9px; letter-spacing: .04em; color: var(--c-alerte-texte, #B45309); white-space: nowrap;
+}
+
+.dbx18-legende {
+  display: flex; flex-wrap: wrap; gap: 6px var(--e-5, 20px);
+  font-size: var(--t-s, 12.5px); color: var(--text-muted, #64748B);
+}
+.dbx18-legende > span { display: inline-flex; align-items: center; gap: 6px; }
+.dbx18-pastille { width: 11px; height: 11px; border-radius: 3px; flex-shrink: 0; }
+.dbx18-pastille.enc { background: var(--m-turquoise, #00CFFF); }
+.dbx18-pastille.att { background: repeating-linear-gradient(135deg,
+  rgba(0, 207, 255, .42) 0 3px, rgba(0, 207, 255, .16) 3px 6px); }
+.dbx18-note { flex-basis: 100%; font-size: var(--t-xs, 11px); line-height: 1.45; opacity: .9; text-wrap: pretty; }
+
+/* 18 colonnes ne tiennent pas dans une demi-largeur : la carte prend toute la grille. */
+.dbx-carte-large { grid-column: 1 / -1; }
+
+@media (max-width: 860px) {
+  .dbx18-barres { gap: 2px; height: 160px; }
+  .dbx18-val { display: none; }
+  .dbx18-mois { font-size: 8.5px; }
+}

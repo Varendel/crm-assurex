@@ -1,0 +1,72 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   MESSAGERIE : LE FIL ET LES NOTIFICATIONS (js/69, 20.09.2026)
+
+   Le fil est dessiné comme une conversation, parce que c'en est une : deux colonnes implicites,
+   le client à gauche, le conseiller à droite. C'est la convention de toutes les messageries, et
+   s'en écarter obligerait à lire l'étiquette pour savoir qui parle.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.fil-modale { width: min(620px, 94vw); display: flex; flex-direction: column; max-height: 86vh; padding: 0; }
+
+.fil-tete {
+  display: flex; align-items: flex-start; justify-content: space-between; gap: var(--e-3, 12px);
+  padding: var(--e-4, 16px) var(--e-5, 20px);
+  border-bottom: 1px solid var(--g-200, #E2E8F0);
+}
+.fil-tete h3 { margin: 0; font-size: var(--t-xl, 19px); font-weight: var(--t-moyen, 600); letter-spacing: -0.02em; }
+.fil-sous { font-size: var(--t-s, 12.5px); color: var(--text-muted, #64748B); }
+.fil-fermer { border: none; background: transparent; cursor: pointer; font-size: var(--t-l, 15px);
+  color: var(--text-muted, #64748B); padding: var(--e-1, 4px) var(--e-2, 8px); border-radius: var(--r-xs, 6px); }
+.fil-fermer:hover { background: var(--g-100, #EEF2F7); }
+
+.fil-zone { flex: 1; overflow-y: auto; padding: var(--e-4, 16px) var(--e-5, 20px); background: var(--surface-alt, var(--g-50)); }
+.fil-attente { text-align: center; color: var(--text-muted, #64748B); font-size: var(--t-m, 13.5px); padding: var(--e-6, 24px) 0; }
+
+.fil { display: flex; flex-direction: column; gap: var(--e-3, 12px); }
+.fil-bulle { max-width: 78%; padding: 11px var(--e-4, 16px); border-radius: var(--r-l, 18px); }
+.fil-bulle.lui { align-self: flex-start; background: var(--surface, #fff); border: 1px solid var(--g-200, #E2E8F0);
+  border-bottom-left-radius: var(--r-xs, 6px); }
+.fil-bulle.moi { align-self: flex-end; background: var(--m-marine, #113679); color: #fff;
+  border-bottom-right-radius: var(--r-xs, 6px); }
+.fil-corps { font-size: var(--t-m, 13.5px); line-height: 1.5; overflow-wrap: anywhere; text-wrap: pretty; }
+.fil-pied { margin-top: 5px; font-size: var(--t-xs, 11px); opacity: .62; }
+
+.fil-saisie { padding: var(--e-3, 12px) var(--e-5, 20px) var(--e-4, 16px); border-top: 1px solid var(--g-200, #E2E8F0);
+  display: flex; flex-direction: column; gap: var(--e-2, 8px); background: var(--surface, #fff); }
+.fil-saisie textarea {
+  width: 100%; box-sizing: border-box; resize: vertical;
+  padding: 11px var(--e-3, 12px); border-radius: var(--r-s, 10px);
+  border: 1px solid var(--g-200, #E2E8F0); background: var(--g-25, #F8FAFC); color: var(--text, #0F172A);
+  font-family: inherit; font-size: var(--t-m, 13.5px); line-height: 1.5; outline: none;
+}
+.fil-saisie textarea:focus { border-color: var(--m-marine, #113679); background: var(--surface, #fff); }
+.fil-option { display: flex; gap: var(--e-2, 8px); align-items: flex-start; font-size: var(--t-s, 12.5px);
+  color: var(--text-muted, #64748B); line-height: 1.45; cursor: pointer; }
+.fil-option input { margin-top: 1px; width: 16px; height: 16px; flex-shrink: 0; accent-color: var(--m-marine, #113679); }
+.fil-actions { display: flex; gap: var(--e-2, 8px); justify-content: flex-end; flex-wrap: wrap; }
+
+/* ── Les notifications de l'espace client ─────────────────────────────────────────────────────── */
+.fil-notifs { display: flex; flex-direction: column; gap: var(--e-2, 8px); margin-top: var(--e-4, 16px); }
+.fil-notif {
+  display: flex; align-items: center; gap: var(--e-3, 12px); width: 100%; cursor: pointer; text-align: left;
+  padding: var(--e-3, 12px) var(--e-4, 16px); border-radius: var(--r-m, 14px);
+  background: var(--c-succes-fond, rgba(34,197,94,.13));
+  border: 1px solid color-mix(in srgb, var(--c-succes, #16A34A) 26%, transparent);
+  font-family: inherit; color: var(--text, #0F172A);
+  transition: transform var(--v-court, .15s), box-shadow var(--v-court, .15s);
+}
+.fil-notif:hover { transform: translateY(-1px); box-shadow: var(--o-2); }
+.fil-notif-icone { font-size: 20px; line-height: 1; flex-shrink: 0; }
+.fil-notif-texte { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.fil-notif-texte b { font-size: var(--t-m, 13.5px); font-weight: var(--t-moyen, 600); }
+.fil-notif-texte small { font-size: var(--t-s, 12.5px); color: var(--text-muted, #64748B); line-height: 1.4; }
+.fil-notif-quand { font-size: var(--t-xs, 11px); color: var(--text-muted, #64748B); white-space: nowrap; flex-shrink: 0; }
+.fil-notif-reste { font-size: var(--t-s, 12.5px); color: var(--text-muted, #64748B); padding-left: var(--e-2, 8px); }
+
+/* La ligne de message de l'espace client devient cliquable : elle ouvre la conversation. */
+.sfx-ligne-cliquable { border: none; background: none; width: 100%; text-align: left; cursor: pointer;
+  font-family: inherit; color: inherit; }
+.sfx-ligne-cliquable:hover { background: var(--g-50, #F4F6F9); }
+.sfx-ouvrir { display: block; font-size: var(--t-xs, 11px); color: var(--m-turquoise-fonce, #0095B8); margin-top: 2px; }
+
+@media (max-width: 620px) { .fil-bulle { max-width: 90%; } }

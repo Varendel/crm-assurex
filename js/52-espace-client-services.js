@@ -119,6 +119,8 @@ async function ecChargerServices() {
     dbGet('sinistres', `client_id=eq.${E.client.id}&select=*&order=created_at.desc`).catch(() => []),
     dbGet('demandes_documents', `client_id=eq.${E.client.id}&select=*&order=created_at.desc`).catch(() => []),
     dbGet('acces_clients', `client_id=eq.${E.client.id}&select=*`).catch(() => []),
+    // Les notifications (js/69) : ce qui a bougé depuis sa dernière visite.
+    typeof filChargerNotifications === 'function' ? filChargerNotifications() : Promise.resolve([]),
   ]);
   E.sinistres = sinistres || [];
   E.demandesDocs = docs || [];
@@ -185,6 +187,7 @@ function ecOngletAccueil() {
   return `
     ${typeof saisonDecorHtml === 'function' ? saisonDecorHtml() : ''}
     ${typeof bmqBlocClient === 'function' ? bmqBlocClient() : ''}
+    ${typeof filBandeauNotifications === 'function' ? filBandeauNotifications() : ''}
 
     <div class="dbx-kpis" style="margin-top:16px">
       ${typeof dbxKpi === 'function' ? dbxKpi({ i: 0, label: 'Contrats en vigueur', valeur: actifs.length, sous: `${(E.vehicules || []).length} véhicule(s) assuré(s)` }) : ''}
@@ -307,10 +310,12 @@ function ecOngletDemandes() {
     <section class="dbx-carte" style="margin-top:18px">
       <header class="dbx-carte-tete"><h2>Mes messages</h2>
         <button type="button" class="btn-save" onclick="ecOuvrirMessage()">💬 Contacter mon conseiller</button></header>
-      ${msgs.length ? `<div class="sfx-liste">${msgs.map(m => `<div class="sfx-ligne"><span class="sfx-corps"><b>${ecEsc(m.sujet || 'Message')}</b>
+      ${msgs.length ? `<div class="sfx-liste">${msgs.map(m => `<button type="button" class="sfx-ligne sfx-ligne-cliquable" onclick="filOuvrirClient('${m.id}')">
+        <span class="sfx-corps"><b>${ecEsc(m.sujet || 'Message')}</b>
         <small>${ecEsc((m.message || '').slice(0, 140))}${(m.message || '').length > 140 ? '…' : ''}</small>
         ${m.reponse ? `<small class="ec-reponse">Réponse : ${ecEsc(m.reponse.slice(0, 200))}</small>` : ''}</span>
-        <span class="ck-date">${m.statut === 'traite' ? '✓ traité' : m.statut === 'lu' ? 'lu' : 'transmis'} · ${fmtDate((m.created_at || '').slice(0, 10))}</span></div>`).join('')}</div>`
+        <span class="ck-date">${m.statut === 'traite' ? '✓ traité' : m.statut === 'lu' ? 'lu' : 'transmis'} · ${fmtDate((m.created_at || '').slice(0, 10))}
+          <small class="sfx-ouvrir">Ouvrir la conversation →</small></span></button>`).join('')}</div>`
         : '<div class="dbx-vide-petit">Aucun message pour l’instant.</div>'}
     </section>`;
 }

@@ -389,3 +389,22 @@ body.curseur-rex canvas { cursor: crosshair !important; }
 .apx-curseur { display: flex; align-items: center; gap: var(--e-3, 12px); flex-wrap: wrap; }
 .apx-curseur-apercu { width: 46px; height: 46px; border-radius: var(--r-s, 10px);
   background: var(--bg); border: 1px solid var(--border); display: grid; place-items: center; }
+
+/* ═══ METEO DANS LE BANDEAU (js/60, 20.09.2026) ═══ */
+.bmq-meteo { display: inline-flex; align-items: center; gap: 9px; flex: 0 0 auto; padding: 5px 13px 5px 9px;
+  border-radius: var(--r-rond, 999px); background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.13); }
+.bmq-meteo-icone { font-size: 21px; line-height: 1; filter: drop-shadow(0 2px 5px rgba(0,0,0,.35)); }
+.bmq-meteo-temp { font-size: 17px; font-weight: 700; color: #fff; letter-spacing: -.02em; }
+.bmq-meteo-detail { display: flex; flex-direction: column; font-size: 10px; line-height: 1.25; color: #9FD2FF; }
+.bmq-meteo-detail em { font-style: normal; opacity: .68; font-family: var(--t-mono); font-size: 9.5px; }
+@media (max-width: 720px) {
+  .bmq-meteo { padding: 4px 10px 4px 7px; gap: 7px; }
+  .bmq-meteo-icone { font-size: 17px; }
+  .bmq-meteo-temp { font-size: 14px; }
+  .bmq-meteo-detail { display: none; }
+}
+.bmq-client-marches .bmq-meteo { padding: 3px 9px 3px 6px; }
+.bmq-client-marches .bmq-meteo-icone { font-size: 15px; }
+.bmq-client-marches .bmq-meteo-temp { font-size: 12.5px; }
+.bmq-client-marches .bmq-meteo-detail { display: none; }

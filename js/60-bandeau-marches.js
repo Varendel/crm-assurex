@@ -17,7 +17,58 @@ const BMQ_FONCTION = (typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : '') +
 const BMQ_RAFRAICHI_MS = 10 * 60 * 1000;   // on redemande les cours toutes les dix minutes
 const BMQ_ACTU_MS = 11 * 1000;             // ... et on change de titre toutes les onze secondes
 
-window._bmq = window._bmq || { valeurs: [], actus: [], maj: null, charge: 0, i: 0, timerActu: null, enCours: false };
+window._bmq = window._bmq || { valeurs: [], actus: [], maj: null, charge: 0, i: 0, timerActu: null, enCours: false, meteo: null };
+
+// ── Météo (20.09.2026) ──────────────────────────────────────────────────────────────────────────
+// Open-Meteo : gratuit, sans clé, et surtout il répond avec les en-têtes CORS — donc appel direct
+// depuis le navigateur, sans passer par la fonction Supabase comme pour les cours de bourse.
+// Coordonnées de la Riviera vaudoise, là où est le portefeuille.
+const BMQ_METEO_URL = 'https://api.open-meteo.com/v1/forecast?latitude=46.46&longitude=6.84'
+  + '&current=temperature_2m,weather_code,wind_speed_10m&daily=temperature_2m_max,temperature_2m_min'
+  + '&timezone=Europe%2FZurich&forecast_days=1';
+
+// Codes WMO : on regroupe les 28 codes en huit situations lisibles. Distinguer « bruine légère »
+// de « bruine modérée » dans un bandeau de CRM n'apporte rien à personne.
+function bmqMeteoSituation(code) {
+  const c = Number(code);
+  if (c === 0) return { e: '☀️', t: 'Grand soleil' };
+  if (c <= 2) return { e: '🌤️', t: 'Éclaircies' };
+  if (c === 3) return { e: '☁️', t: 'Couvert' };
+  if (c === 45 || c === 48) return { e: '🌫️', t: 'Brouillard' };
+  if (c >= 51 && c <= 57) return { e: '🌦️', t: 'Bruine' };
+  if (c >= 61 && c <= 67) return { e: '🌧️', t: 'Pluie' };
+  if (c >= 71 && c <= 77) return { e: '🌨️', t: 'Neige' };
+  if (c >= 80 && c <= 82) return { e: '🌧️', t: 'Averses' };
+  if (c >= 85 && c <= 86) return { e: '🌨️', t: 'Averses de neige' };
+  if (c >= 95) return { e: '⛈️', t: 'Orage' };
+  return { e: '🌡️', t: 'Temps variable' };
+}
+
+async function bmqChargerMeteo() {
+  try {
+    const r = await fetch(BMQ_METEO_URL);
+    if (!r.ok) return;
+    const d = await r.json();
+    window._bmq.meteo = {
+      temp: Math.round(d.current.temperature_2m),
+      code: d.current.weather_code,
+      vent: Math.round(d.current.wind_speed_10m),
+      min: Math.round(d.daily.temperature_2m_min[0]),
+      max: Math.round(d.daily.temperature_2m_max[0]),
+    };
+  } catch (e) { /* le bandeau vit très bien sans la météo */ }
+}
+
+function bmqMeteoHtml() {
+  const m = window._bmq.meteo;
+  if (!m) return '';
+  const s = bmqMeteoSituation(m.code);
+  return `<span class="bmq-meteo" title="Riviera vaudoise · ${s.t} · vent ${m.vent} km/h">
+    <span class="bmq-meteo-icone" aria-hidden="true">${s.e}</span>
+    <span class="bmq-meteo-temp">${m.temp}°</span>
+    <span class="bmq-meteo-detail">${s.t}<em>${m.min}° / ${m.max}°</em></span>
+  </span>`;
+}
 
 function bmqEsc(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
@@ -44,6 +95,9 @@ async function bmqCharger(force) {
   if (B.enCours) return;
   if (!force && B.maj && Date.now() - B.charge < BMQ_RAFRAICHI_MS) return;
   B.enCours = true;
+  // La météo part en parallèle et sans attendre : elle n'a pas la même source ni le même rythme
+  // que les cours, et le bandeau ne doit pas rester vide si l'une des deux traîne.
+  bmqChargerMeteo().then(() => bmqPeindre());
   try {
     const token = (typeof getValidAccessToken === 'function' ? await getValidAccessToken() : null) || SUPABASE_KEY;
     const r = await fetch(BMQ_FONCTION, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` } });
@@ -67,6 +121,7 @@ async function bmqCharger(force) {
 function bmqBandeauHtml() {
   return `<section class="bmq" id="bmq" aria-label="Marchés et actualité">
     <div class="bmq-actu">
+      <span id="bmq-meteo-zone">${bmqMeteoHtml()}</span>
       <span class="bmq-etiquette"><span class="bmq-point" aria-hidden="true"></span>Géopolitique</span>
       <button type="button" class="bmq-titre" id="bmq-titre" onclick="bmqOuvrirActu()">Chargement de l’actualité…</button>
       <button type="button" class="bmq-suivant" onclick="bmqActuSuivante(true)" title="Titre suivant" aria-label="Titre suivant">›</button>
@@ -80,6 +135,8 @@ function bmqBandeauHtml() {
 
 function bmqPeindre() {
   const B = window._bmq;
+  const zoneMeteo = document.getElementById('bmq-meteo-zone');
+  if (zoneMeteo) zoneMeteo.innerHTML = bmqMeteoHtml();
   const defile = document.getElementById('bmq-defile');
   if (defile) {
     if (B.valeurs.length) {

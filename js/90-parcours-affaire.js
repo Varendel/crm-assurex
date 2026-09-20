@@ -501,10 +501,85 @@ function pafResume(o) {
         <b>${c.v}</b>
         <small>${pafEsc(c.s)}</small>
       </div>`).join('')}</div>
-    <p class="paf-note">Le produit exact, ses modules et sa prime définitive appartiennent au
-      contrat, pas à l’affaire : ils ne sont connus qu’une fois la police émise. Ici on suit le
-      volume et l’échéance, qui sont ce dont dépend la décision.</p>
+
+    ${pafCouverturesHtml(o)}
   </section>`;
+}
+
+// ── Les couvertures visées ──────────────────────────────────────────────────────────────────────
+// Jonathan : « est-ce que ça ferait pas sens quand même de laisser les produits à sélectionner ? »
+// Oui, et j'avais jeté trop large. Ce qui était le vestige, ce n'était PAS de dire quelles
+// couvertures on vise — c'est l'objet même de l'affaire, et c'est ce qui détermine à quelles
+// compagnies on demande des offres. Le vestige, c'étaient les cinquante lignes à plat, chacune
+// avec sa case de prime à remplir : le DÉTAIL, pas la sélection.
+//
+// On garde donc la sélection — même colonne `produits`, mêmes identifiants, les vingt affaires
+// qui en portent déjà s'affichent sans rien changer — mais présentée par famille, et sans saisie
+// de prime ligne à ligne. Le volume total est déjà au-dessus ; le répartir produit par produit
+// avant d'avoir une offre, c'est inventer des chiffres.
+function pafCouverturesHtml(o) {
+  const choisis = Array.isArray(o.produits) ? o.produits : [];
+  const label = id => {
+    for (const l of Object.values(typeof PRODUITS_OPPORTUNITE_GROUPES !== 'undefined' ? PRODUITS_OPPORTUNITE_GROUPES : {})) {
+      const p = l.find(x => x.id === id);
+      if (p) return p.label;
+    }
+    return id;
+  };
+  return `<div class="paf-couvertures">
+    <div class="paf-couv-tete">
+      <span class="paf-carte-l">Couvertures visées</span>
+      <button type="button" class="paf-act" onclick="pafOuvrirCouvertures('${o.id}')">
+        ${choisis.length ? 'Modifier' : 'Choisir'}</button>
+    </div>
+    ${choisis.length
+      ? `<div class="paf-puces">${choisis.map(id => `<span class="paf-puce">${pafEsc(label(id))}</span>`).join('')}</div>`
+      : `<p class="paf-note">Aucune couverture indiquée. C’est elle qui dit à quelles compagnies
+          demander une offre — et ce que le client attend de nous.</p>`}
+  </div>`;
+}
+
+function pafOuvrirCouvertures(oppId) {
+  const o = pafOpp(oppId);
+  if (!o || typeof creerModale !== 'function') return;
+  const groupes = typeof PRODUITS_OPPORTUNITE_GROUPES !== 'undefined' ? PRODUITS_OPPORTUNITE_GROUPES : {};
+  const choisis = new Set(Array.isArray(o.produits) ? o.produits : []);
+
+  creerModale('modal-paf-couv', `
+    <div class="paf-modale">
+      <h3>Quelles couvertures visons-nous ?</h3>
+      <p class="paf-sous">Plusieurs possibles. Le produit exact, ses modules et sa prime
+        définitive se fixeront au contrat, quand la police sera émise — ici on dit seulement de
+        quoi il s’agit.</p>
+      <div class="paf-familles">${Object.entries(groupes).map(([cat, produits]) => `
+        <fieldset class="paf-famille">
+          <legend>${typeof ICONES_CATEGORIE_PRODUIT !== 'undefined' && ICONES_CATEGORIE_PRODUIT[cat] ? ICONES_CATEGORIE_PRODUIT[cat] : '📌'} ${pafEsc(cat)}</legend>
+          ${produits.map(p => `
+            <label class="paf-coche ${choisis.has(p.id) ? 'actif' : ''}">
+              <input type="checkbox" value="${p.id}" ${choisis.has(p.id) ? 'checked' : ''}
+                onchange="this.closest('label').classList.toggle('actif', this.checked)"/>
+              <span>${pafEsc(p.label)}</span>
+            </label>`).join('')}
+        </fieldset>`).join('')}</div>
+      <div class="paf-actions">
+        <button type="button" class="btn-secondary" onclick="document.getElementById('modal-paf-couv').remove()">Annuler</button>
+        <button type="button" class="btn-save" onclick="pafEnregistrerCouvertures('${oppId}')">✓ Enregistrer</button>
+      </div>
+    </div>`, { opacite: .7, padding: '16px' });
+}
+
+async function pafEnregistrerCouvertures(oppId) {
+  const o = pafOpp(oppId);
+  if (!o) return;
+  const produits = [...document.querySelectorAll('#modal-paf-couv input[type="checkbox"]:checked')].map(i => i.value);
+  // On ne touche PAS à produits_primes : les primes déjà saisies par produit restent en base,
+  // intactes, et l'ancienne fiche les retrouvera si ce module est retiré.
+  const r = await dbPatch('opportunites', oppId, { produits });
+  if (r && r.error) { showError('Enregistrement impossible : ' + errMsg(r)); return; }
+  o.produits = produits;
+  document.getElementById('modal-paf-couv')?.remove();
+  showError(`✓ ${produits.length || 'Aucune'} couverture${produits.length > 1 ? 's' : ''} retenue${produits.length > 1 ? 's' : ''}`);
+  pafRafraichir();
 }
 
 function pafRafraichir() {

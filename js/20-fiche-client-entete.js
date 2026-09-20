@@ -95,6 +95,11 @@ function htmlEnteteFicheClient(c, ctx) {
     ${kpi('Tâches ouvertes', ouverts.length, enRetard ? `<span class="fcx-rouge">${enRetard} en retard</span>` : ouverts.length ? 'à jour' : 'rien en cours', 'tab-rappels', enRetard ? 'alerte' : '', 3)}
     ${kpi('Prochain rendez-vous', prochainRdv ? fmtDate(prochainRdv.date_heure) : '—', prochainRdv ? new Date(prochainRdv.date_heure).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' }) : 'aucun planifié', 'tab-rdv', '', 4)}
     ${rh ? '' : kpi('Commissions à recevoir', 'CHF ' + fmtCHF(Math.round(totalCommAttente)), `${commAttente.length} en attente`, 'tab-contrats', '', 5)}
+    ${typeof dcxCompteDocuments === 'function' ? (() => {
+      const nb = dcxCompteDocuments(c.id, contrats, mandatsSignes, rappels);
+      const recus = (window._dcx && window._dcx.docs || []).filter(d => d.client_id === c.id).length;
+      return kpi('Documents', nb, recus ? `dont ${recus} reçu(s) des compagnies` : mandatSigne ? 'mandat signé' : 'aucun mandat signé', 'tab-documents', '', 6);
+    })() : ''}
   </div>
 
   ${oppsClient.length ? `<div class="fcx-opps">
@@ -105,8 +110,6 @@ function htmlEnteteFicheClient(c, ctx) {
   </div>` : ''}
 
   ${typeof renderVueEnsembleCouvertures === 'function' ? renderVueEnsembleCouvertures(c, contrats, isEntreprise) : ''}
-
-  ${!rh && typeof dcxSectionFiche === 'function' ? dcxSectionFiche(c.id) : ''}
 
   <section class="fcx-relation" aria-label="Relation client">
     ${signataire ? `<div class="fcx-rel">

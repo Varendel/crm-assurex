@@ -352,35 +352,111 @@ async function dcxOuvrir(chemin) {
   showError('Ouverture indisponible.');
 }
 
-// ── Bloc « Documents des compagnies » sur la fiche client ───────────────────────────────────────
-// Appelé par la fiche : rend le bloc tout de suite avec ce qu'on a en mémoire, et recharge si
-// la liste n'a jamais été chargée dans cette session.
-function dcxSectionFiche(clientId) {
+// ── LE CENTRE DOCUMENTAIRE DE LA FICHE CLIENT (20.09.2026) ──────────────────────────────────────
+// Refonte demandée par Jonathan une fois EcoHub opérationnel. Avant, les documents d'un client
+// étaient éparpillés : les mandats dans l'onglet Documents, les polices accrochées à chaque ligne
+// de contrat, les pièces jointes au fond des tâches, et les factures des compagnies nulle part.
+// Quand un client appelle et demande « vous avez ma police ? », il ne faut pas chercher à quatre
+// endroits.
+//
+// Tout est donc réuni ici, groupé par origine, avec la même ligne pour tous :
+//   Mandats           ce que le client a signé
+//   Polices           les contrats, PDF accroché au contrat
+//   Reçu des compagnies   EcoHub et dépôts manuels — factures, rappels, décomptes
+//   Pièces jointes    ce qui pend à une tâche
+//
+// Une seule règle transverse : la colonne « visible par le client » n'existe que pour les
+// documents reçus des compagnies, et elle reste fermée par défaut. Publier est une décision.
+
+const DCX_ORIGINES = [
+  { cle: 'mandat',    titre: 'Mandats et documents signés', icone: '🖊️' },
+  { cle: 'police',    titre: 'Polices',                     icone: '📄' },
+  { cle: 'compagnie', titre: 'Reçu des compagnies',         icone: '📥' },
+  { cle: 'tache',     titre: 'Pièces jointes des tâches',   icone: '📎' },
+];
+
+// Rassemble en une liste unique tout ce qui existe pour ce client, quelle qu'en soit la source.
+function dcxToutDocument(clientId, contrats, mandats, rappels) {
+  const out = [];
+  for (const m of mandats || []) {
+    const n = typeof mdxNatureDocument === 'function' ? mdxNatureDocument(m) : { titre: 'Mandat', icone: '🖊️', type: '' };
+    out.push({ origine: 'mandat', icone: n.icone, titre: n.titre, sous: `${fmtDate(m.created_at)}${n.type ? ' · ' + n.type : ''}`,
+      etat: m.signe ? 'signé' : 'non signé', ok: !!m.signe, ouvrir: `voirMandatSauvegarde('${m.id}')` });
+  }
+  for (const ct of (contrats || []).filter(x => x.police_url)) {
+    out.push({ origine: 'police', icone: '📄', titre: `${ct.compagnie} · ${ct.produit}`,
+      sous: `${ct.numero_police || 'sans n° de police'}${ct.date_debut ? ' · dès le ' + fmtDate(ct.date_debut) : ''}`,
+      etat: ct.police_nom || '', ouvrir: `ouvrirPieceJointe('${dcxEsc(ct.police_url)}')` });
+  }
+  for (const d of window._dcx.docs.filter(x => x.client_id === clientId)) {
+    const t = DCX_TYPES[d.type] || DCX_TYPES.autre;
+    out.push({ origine: 'compagnie', icone: t.icone, titre: d.titre || d.nom_fichier || t.label,
+      sous: [t.label, d.compagnie, d.numero_police, d.date_document ? fmtDate(d.date_document) : '',
+             d.montant != null && d.montant !== '' ? 'CHF ' + fmtCHF(Number(d.montant)) : ''].filter(Boolean).join(' · '),
+      etat: d.source === 'ecohub' ? 'EcoHub' : 'déposé à la main',
+      publiable: { id: d.id, visible: !!d.visible_client },
+      ouvrir: `dcxOuvrir('${dcxEsc(d.chemin)}')` });
+  }
+  for (const r of (rappels || []).filter(x => x.piece_jointe_path || x.piece_jointe_url)) {
+    out.push({ origine: 'tache', icone: '📎', titre: r.piece_jointe_nom || r.titre || 'Pièce jointe',
+      sous: `${r.titre || ''}${r.date_echeance ? ' · ' + fmtDate(r.date_echeance) : ''}`,
+      ouvrir: r.piece_jointe_path ? `ouvrirPieceJointe('${dcxEsc(r.piece_jointe_path)}')` : `window.open('${dcxEsc(r.piece_jointe_url || '')}','_blank')` });
+  }
+  return out;
+}
+
+function dcxCompteDocuments(clientId, contrats, mandats, rappels) {
+  return dcxToutDocument(clientId, contrats, mandats, rappels).length;
+}
+
+// L'onglet complet. `htmlDocumentsMandatsClient` (js/05) reste en tête : c'est là qu'on crée un
+// mandat, qu'on l'envoie aux compagnies ou qu'on en téléverse un signé à la main.
+function dcxOngletDocuments(c, contrats, mandats, rappels) {
   if (!window._dcx.docs.length && !window._dcx.chargement) {
     window._dcx.chargement = true;
     dcxCharger().then(() => {
       window._dcx.chargement = false;
-      const z = document.getElementById('dcx-fiche-' + clientId);
-      if (z) z.outerHTML = dcxSectionFiche(clientId);
+      const z = document.getElementById('dcx-centre');
+      if (z && typeof showClient === 'function') showClient(c.id);
     });
   }
-  const docs = window._dcx.docs.filter(d => d.client_id === clientId);
-  return `<section class="dcx-fiche" id="dcx-fiche-${clientId}">
-    <div class="dcx-fiche-tete">
-      <h3>📥 Documents des compagnies</h3>
-      <span class="dcx-fiche-compte">${docs.length || 'aucun'}</span>
-      <button type="button" class="dcx-fiche-ajout" onclick="dcxParcourir('${clientId}')">+ Déposer</button>
-    </div>
-    ${docs.length ? `<div class="dcx-fiche-liste">${docs.map(d => {
-      const t = DCX_TYPES[d.type] || DCX_TYPES.autre;
-      return `<button type="button" class="dcx-fiche-doc" onclick="dcxOuvrir('${dcxEsc(d.chemin)}')" title="${dcxEsc(d.nom_fichier || '')}">
-        <span class="dcx-fiche-icone">${t.icone}</span>
-        <span class="dcx-fiche-nom">${dcxEsc(d.titre || d.nom_fichier || t.label)}</span>
-        <span class="dcx-fiche-sous">${dcxEsc(t.label)}${d.date_document ? ' · ' + fmtDate(d.date_document) : ''}${d.numero_police ? ' · ' + dcxEsc(d.numero_police) : ''}</span>
-        ${d.visible_client ? '<span class="dcx-fiche-publie" title="Visible dans l’espace du client">👁️</span>' : ''}
-      </button>`;
-    }).join('')}</div>` : `<div class="dcx-fiche-vide">Rien reçu pour ce client. Les documents déposés ici apparaissent aussi dans « Documents reçus des compagnies ».</div>`}
-  </section>`;
+  const tout = dcxToutDocument(c.id, contrats, mandats, rappels);
+  const publies = tout.filter(d => d.publiable && d.publiable.visible).length;
+
+  const ligne = d => `<div class="dcx-doc">
+    <span class="dcx-doc-icone" aria-hidden="true">${d.icone}</span>
+    <button type="button" class="dcx-doc-corps" onclick="${d.ouvrir}">
+      <span class="dcx-doc-titre">${dcxEsc(d.titre)}</span>
+      <span class="dcx-doc-sous">${dcxEsc(d.sous || '')}</span>
+    </button>
+    ${d.etat ? `<span class="dcx-doc-etat ${d.ok ? 'ok' : ''}">${dcxEsc(d.etat)}</span>` : '<span></span>'}
+    ${d.publiable
+      ? `<button type="button" class="dcx-oeil ${d.publiable.visible ? 'on' : ''}"
+           title="${d.publiable.visible ? 'Visible dans l’espace du client — cliquer pour retirer' : 'Publier dans l’espace du client'}"
+           onclick="dcxBasculerVisible('${d.publiable.id}', ${d.publiable.visible ? 'false' : 'true'}).then(()=>showClient('${c.id}'))">${d.publiable.visible ? '👁️' : '🚫'}</button>`
+      : '<span></span>'}
+  </div>`;
+
+  return `<div id="dcx-centre">
+    ${typeof htmlDocumentsMandatsClient === 'function' ? htmlDocumentsMandatsClient(c, mandats) : ''}
+
+    <section class="dbx-carte dcx-centre-carte">
+      <header class="dbx-carte-tete">
+        <div><h2>Tous les documents du client</h2>
+          <span class="dbx-carte-sous">${tout.length} document${tout.length > 1 ? 's' : ''} au total${publies ? ` · ${publies} publié${publies > 1 ? 's' : ''} dans son espace` : ''}</span></div>
+        <button type="button" class="btn-secondary" onclick="dcxParcourir('${c.id}')">📤 Déposer un document</button>
+      </header>
+      ${tout.length ? DCX_ORIGINES.map(o => {
+        const l = tout.filter(d => d.origine === o.cle);
+        if (!l.length) return '';
+        return `<div class="dcx-groupe">
+          <h3>${o.icone} ${o.titre}<span>${l.length}</span></h3>
+          <div class="dcx-docs">${l.map(ligne).join('')}</div>
+        </div>`;
+      }).join('') : `<div class="dcx-fiche-vide">Aucun document pour ce client. Dépose un fichier ci-dessus, ou attends la prochaine synchronisation EcoHub.</div>`}
+      <p class="dcx-centre-note">Un document reçu d’une compagnie n’apparaît dans l’espace du client que si tu l’as publié (bouton 👁️). Les mandats, polices et pièces jointes restent internes.</p>
+    </section>
+  </div>`;
 }
 
 // Dépôt depuis la fiche : le client est connu, on rattache au contrat si la police est lisible,

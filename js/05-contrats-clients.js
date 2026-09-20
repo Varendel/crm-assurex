@@ -424,7 +424,7 @@ async function showClient(id) {
 
     <div class="tabs">
       <button class="tab-btn active" onclick="switchTab(this,'tab-identite')">Identité</button>
-      <button class="tab-btn" onclick="switchTab(this,'tab-documents')">📄 Documents (${mandatsSignes.length})</button>
+      <button class="tab-btn" onclick="switchTab(this,'tab-documents')">📄 Documents (${typeof dcxCompteDocuments === 'function' ? dcxCompteDocuments(id, contrats, mandatsSignes, rappels) : mandatsSignes.length})</button>
       ${estRoleRH() ? '' : `<button class="tab-btn" onclick="switchTab(this,'tab-prevoyance')">Prévoyance</button>`}
       ${isEntreprise ? `<button class="tab-btn" onclick="switchTab(this,'tab-collaborateurs')">Collaborateurs (${collaborateurs.length})</button>` : ''}
       ${isEntreprise ? `<button class="tab-btn" onclick="switchTab(this,'tab-flotte')">🚗 Flotte (${allVehicules.filter(v=>v.client_id===c.id).length})</button>` : ''}
@@ -530,7 +530,9 @@ async function showClient(id) {
     </div>
 
     <div id="tab-documents" class="hidden">
-      ${htmlDocumentsMandatsClient(c, mandatsSignes)}
+      ${typeof dcxOngletDocuments === 'function'
+        ? dcxOngletDocuments(c, contrats, mandatsSignes, rappels)
+        : htmlDocumentsMandatsClient(c, mandatsSignes)}
     </div>
 
     <div id="tab-prevoyance" class="hidden">

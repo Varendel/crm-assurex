@@ -62,6 +62,28 @@ sont en bas de ce fichier.
   essayables hors période depuis Paramètres › Apparence (js/64).
 - **20.09** — **Demandes de polices** (js/63) : une lettre par client et par compagnie qui annonce
   le mandat, demande la police et le transfert de portefeuille, envoi par lot avec relance à 12 jours.
+- **20.09** — **REX CLOUD, la marque** : logo nuage (un seul tracé, base plate façon OneDrive,
+  silhouette douce façon iCloud, point turquoise de REX.CRM), SVG + PNG + GIF animé assemblé à la
+  main en GIF89a avec une palette partagée par toutes les images.
+- **20.09** — **Relevés bancaires** (`releves_bancaires`, `releves_lignes`) : 9 relevés BCV du
+  compte OZ (déc. 2025 → août 2026) lus et importés, 63 crédits rattachables aux commissions.
+  Les débits par carte ne sont volontairement pas importés.
+- **20.09** — 🔴 **Correctif de sécurité RLS** : six tables étaient lisibles et écrivables par un
+  visiteur anonyme (règles écrites sans clause `TO`, donc appliquées au rôle `public`, avec une
+  condition `NOT est_client()` vraie pour un anonyme). Toutes réservées à `authenticated`.
+  **La clé publiable a circulé dans un dépôt public pendant cette période — à faire tourner.**
+- **20.09** — **Page publique de demande de devis** (js/68) : formulaire public → lead dans le CRM,
+  via une fonction serveur (validation, champ-piège, limite de débit). Menu Ventes › Demandes de devis.
+- **20.09** — **Messagerie : un vrai fil** (js/69) : `messages_echanges` remplace le champ `reponse`
+  unique ; le client répond depuis REX CLOUD, le conseiller depuis le CRM. Trois déclencheurs en
+  base préviennent le client — réponse, clôture, et **dépôt de la police demandée**.
+- **20.09** — **Kanban des campagnes** (js/70) : six colonnes, glisser-déposer, pont Brevo par
+  numéro de campagne et photographie des chiffres.
+- **20.09** — **Entrées d'argent par contrat** (js/72) : encaissé et attendu, export Excel à trois
+  feuilles (montants numériques, dates réelles) et sortie A4.
+- **20.09** — **Fin du chantier visuel** (js/71) : un succès ne s'affiche plus comme une erreur
+  (showError déduit le ton du message), états vides dessinés une fois, actions révélées au survol
+  et au focus clavier, ombres ramenées sur l'échelle des jetons.
 
 ## 🟡 En attente
 
@@ -91,6 +113,11 @@ sont en bas de ce fichier.
 
 ## 🔴 Priorité 1 — Sécurité & fondations
 
+- [ ] **Faire tourner la clé publiable Supabase** — six tables ont été ouvertes au rôle anonyme
+      pendant que la clé était lisible dans un dépôt public (corrigé le 20.09, voir plus haut).
+      Rien ne prouve qu'elle ait été exploitée, rien ne prouve le contraire.
+- [ ] **Vérifier toute nouvelle règle RLS avec la clé publiable**, pas seulement en lisant le SQL :
+      une lecture anonyme qui renvoie des lignes est le seul test qui compte.
 - [ ] Repo **privé** + hébergement Cloudflare Pages (ou Netlify), déploiement à chaque push
 - [ ] **Rôles** (admin, courtier, RH, client) à la place de « connecté = tout voir » et des
       emails codés en dur dans les règles d'accès

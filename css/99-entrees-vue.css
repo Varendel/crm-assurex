@@ -1,0 +1,168 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   ENTRÉES D'ARGENT — LA VUE (js/82, 20.09.2026)
+
+   Le tableau générique répartissait dix colonnes en grille CSS ; à dix colonnes il ne restait plus
+   assez de place et la date était rognée à 2 px près. Ici les colonnes se dimensionnent d'elles-
+   mêmes et la date est la seule à porter un `white-space: nowrap` : c'est la donnée qui ne doit
+   jamais se couper.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.eaf-carte { margin-top: 18px; }
+
+/* ── Le graphique mensuel cliquable ────────────────────────────────────────────────────────────── */
+.eaf-graph {
+  display: flex; align-items: flex-end; gap: 4px;
+  height: 168px; padding: 4px 2px 0; overflow-x: auto;
+}
+.eaf-barre {
+  flex: 1 1 42px; min-width: 38px; height: 100%;
+  display: flex; flex-direction: column; justify-content: flex-end; align-items: center; gap: 3px;
+  background: none; border: none; padding: 0 1px; cursor: pointer; font-family: inherit;
+  border-radius: var(--r-s, 10px);
+  transition: background var(--v-court, .15s);
+}
+.eaf-barre:hover { background: var(--surface-hover); }
+.eaf-barre.actif { background: var(--accent-dim); box-shadow: inset 0 0 0 1px var(--accent-border); }
+.eaf-barre-val {
+  font-size: var(--t-xs, 11px); color: var(--text-muted); font-variant-numeric: tabular-nums;
+  min-height: 14px; white-space: nowrap;
+}
+.eaf-barre.actif .eaf-barre-val { color: var(--text); font-weight: 500; }
+.eaf-barre-pile {
+  width: 100%; max-width: 30px; flex: 1 1 auto;
+  display: flex; flex-direction: column; justify-content: flex-end;
+}
+.eaf-barre-pile i { display: block; width: 100%; border-radius: 3px 3px 0 0; min-height: 0; }
+.eaf-barre-pile i + i { border-radius: 0; }
+.eaf-encaisse { background: var(--c-succes, #16A34A); }
+/* L'attendu est hachuré : une estimation ne doit pas avoir l'aspect plein d'un fait constaté. */
+.eaf-attendu {
+  background: repeating-linear-gradient(45deg,
+    color-mix(in srgb, var(--c-succes, #16A34A) 52%, transparent) 0 4px,
+    transparent 4px 8px);
+  border: 1px solid color-mix(in srgb, var(--c-succes, #16A34A) 40%, transparent);
+  border-bottom: none;
+}
+.eaf-barre-mois {
+  font-size: 10px; color: var(--text-muted); white-space: nowrap;
+  letter-spacing: .01em; padding-bottom: 2px;
+}
+/* Le mois en cours porte un repère : sur vingt-quatre barres, se situer demande sinon de compter. */
+.eaf-barre.courant .eaf-barre-mois { color: var(--accent); font-weight: 600; }
+
+.eaf-legende {
+  display: flex; flex-wrap: wrap; gap: 6px 18px; margin-top: 12px;
+  font-size: var(--t-xs, 11px); color: var(--text-muted);
+}
+.eaf-legende span { display: inline-flex; align-items: center; gap: 6px; }
+.eaf-legende i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.eaf-pastille-encaisse { background: var(--c-succes, #16A34A); }
+.eaf-pastille-attendu {
+  background: repeating-linear-gradient(45deg,
+    color-mix(in srgb, var(--c-succes, #16A34A) 52%, transparent) 0 3px, transparent 3px 6px);
+  border: 1px solid color-mix(in srgb, var(--c-succes, #16A34A) 40%, transparent);
+}
+.eaf-legende-aide { font-style: italic; opacity: .85; }
+
+/* ── Les filtres ───────────────────────────────────────────────────────────────────────────────── */
+.eaf-outils {
+  display: flex; flex-wrap: wrap; gap: var(--e-3, 12px) var(--e-4, 16px);
+  align-items: flex-end; margin-top: 18px;
+  padding: var(--e-3, 12px) var(--e-4, 16px);
+  border-radius: var(--r-m, 14px); border: 1px solid var(--border); background: var(--surface);
+}
+.eaf-groupe { display: flex; flex-direction: column; gap: 5px; }
+.eaf-groupe-large { flex: 1 1 200px; min-width: 170px; }
+.eaf-groupe-actions { flex-direction: row; gap: var(--e-2, 8px); margin-left: auto; align-items: center; }
+.eaf-label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: .08em;
+  color: var(--text-muted); font-weight: 600;
+}
+.eaf-outils .form-select, .eaf-outils .form-input { min-width: 140px; }
+.eaf-groupe-large .form-input { min-width: 0; width: 100%; }
+
+/* Des segments plutôt qu'un menu déroulant : trois choix dont l'un est toujours actif se lisent
+   mieux côte à côte, et surtout on voit ce qui est sélectionné sans ouvrir quoi que ce soit —
+   c'est précisément ce qui manquait pour comprendre qu'une ligne OZ était affichée. */
+.eaf-segments { display: inline-flex; border-radius: var(--r-s, 10px); overflow: hidden; border: 1px solid var(--border); }
+.eaf-segments button {
+  padding: 7px 12px; border: none; background: var(--surface-alt); cursor: pointer;
+  font-family: inherit; font-size: var(--t-s, 12.5px); color: var(--text-muted);
+  border-right: 1px solid var(--border); white-space: nowrap;
+  transition: background var(--v-court, .15s), color var(--v-court, .15s);
+}
+.eaf-segments button:last-child { border-right: none; }
+.eaf-segments button:hover { color: var(--text); background: var(--surface-hover); }
+.eaf-segments button.actif { background: var(--accent); color: var(--on-accent, #fff); font-weight: 500; }
+
+.eaf-pont { white-space: nowrap; }
+
+/* ── Le tableau ────────────────────────────────────────────────────────────────────────────────── */
+.eaf-table-enveloppe { overflow-x: auto; margin-top: var(--e-3, 12px); }
+.eaf-table { width: 100%; border-collapse: collapse; font-size: var(--t-m, 13.5px); }
+.eaf-table th { text-align: left; border-bottom: 1px solid var(--border); padding: 0; }
+.eaf-table th.d { text-align: right; }
+/* L'habillage va sur le CONTENU de la cellule, jamais sur le <th> lui-même : un th en
+   display:block quitte le flux de tableau et le navigateur regroupe les suivants dans une seule
+   cellule anonyme — trois en-têtes se retrouvent alors empilés dans la même colonne. */
+.eaf-table th > button, .eaf-table th > span {
+  display: block; width: 100%; padding: 8px 10px;
+  font-size: 10.5px; text-transform: uppercase; letter-spacing: .07em;
+  color: var(--text-muted); font-weight: 600; white-space: nowrap;
+}
+.eaf-table th > button {
+  background: none; border: none; cursor: pointer; font-family: inherit; text-align: inherit;
+}
+.eaf-table th > button:hover { color: var(--text); }
+.eaf-table th.trie > button { color: var(--accent); }
+.eaf-table th.d > button, .eaf-table th.d > span { text-align: right; }
+
+.eaf-table td { padding: 8px 10px; border-bottom: 1px solid var(--border); vertical-align: top; }
+.eaf-table tr:last-child td { border-bottom: none; }
+.eaf-table tbody tr { cursor: pointer; }
+.eaf-table tbody tr:hover { background: var(--surface-hover); }
+.eaf-table td b { display: block; font-weight: 500; color: var(--text); }
+.eaf-table td small { display: block; margin-top: 1px; font-size: var(--t-xs, 11px); color: var(--text-muted); }
+
+/* La date : sa propre colonne, assez large pour dd/mm/yyyy en chiffres tabulaires, et jamais
+   rognée. C'est le défaut qui a motivé ce fichier. */
+.eaf-date {
+  white-space: nowrap; font-variant-numeric: tabular-nums lining-nums;
+  color: var(--text); min-width: 92px;
+}
+.eaf-produit { color: var(--text-muted); max-width: 260px; }
+.eaf-table .d { text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums lining-nums; }
+.eaf-table .d.reel { color: var(--text); font-weight: 500; }
+.eaf-table .d.estime { color: var(--text-muted); }
+.eaf-tilde { margin-left: 3px; opacity: .6; font-size: 11px; }
+
+.eaf-tag, .eaf-etat {
+  display: inline-block; padding: 2px 8px; border-radius: var(--r-rond, 999px);
+  font-size: var(--t-xs, 11px); white-space: nowrap;
+  background: var(--surface-alt); color: var(--text-muted); border: 1px solid var(--border);
+}
+.eaf-etat.ton-ok { background: var(--c-succes-fond); color: var(--c-succes-texte, #15803D);
+  border-color: color-mix(in srgb, var(--c-succes, #16A34A) 30%, transparent); }
+.eaf-etat.ton-attente { background: var(--c-info-fond); color: var(--c-info-texte, #0369A1);
+  border-color: color-mix(in srgb, var(--c-info, #0EA5E9) 30%, transparent); }
+.eaf-etat.ton-retard { background: var(--c-danger-fond); color: var(--c-danger-texte, #B91C1C);
+  border-color: color-mix(in srgb, var(--c-danger, #EF4444) 34%, transparent); }
+/* Une ligne OZ reste visible mais se distingue : c'est de l'argent encaissé, ailleurs. */
+.eaf-etat.oz { background: var(--surface-alt); color: var(--text-muted); border-style: dashed; }
+
+.eaf-table tr.ton-retard td:first-child { box-shadow: inset 3px 0 0 var(--c-danger, #EF4444); }
+
+/* ── Le lien de mois dans le plan de trésorerie ────────────────────────────────────────────────── */
+.tr-mois-lien {
+  background: none; border: none; padding: 0; cursor: pointer; font: inherit; color: inherit;
+  text-decoration: underline dotted; text-underline-offset: 3px;
+  transition: color var(--v-court, .15s);
+}
+.tr-mois-lien:hover { color: var(--accent); }
+
+@media (max-width: 820px) {
+  .eaf-table th:nth-child(4), .eaf-table td:nth-child(4),
+  .eaf-table th:nth-child(5), .eaf-table td:nth-child(5) { display: none; }
+  .eaf-groupe-actions { margin-left: 0; width: 100%; }
+  .eaf-graph { height: 140px; }
+}

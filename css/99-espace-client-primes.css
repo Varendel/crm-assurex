@@ -29,10 +29,14 @@ body.mode-cloud .cf-hero .fcx-btn-verre, body.mode-espace-client .cf-hero .fcx-b
 
 /* Dans le CRM, en revanche, le surtitre du hero conseil était resté blanc sur le bandeau inversé,
    donc invisible. Il rejoint les autres surtitres atténués. */
-html:not([data-theme="clair"]) body:not(.mode-cloud):not(.mode-espace-client) .cf-hero .cf-surtitre {
+   Le même surtitre existe sur .fcx-hero (fiches et écrans de contrôle) : il souffrait du même
+   défaut, on les traite ensemble plutôt que d'attendre de le redécouvrir écran par écran. */
+html:not([data-theme="clair"]) body:not(.mode-cloud):not(.mode-espace-client) .cf-hero .cf-surtitre,
+html:not([data-theme="clair"]) body:not(.mode-cloud):not(.mode-espace-client) .fcx-hero .cf-surtitre {
   color: rgba(11, 36, 88, .46) !important;
 }
-html:not([data-theme="clair"]) body:not(.mode-cloud):not(.mode-espace-client) .cf-hero .fcx-btn-verre {
+html:not([data-theme="clair"]) body:not(.mode-cloud):not(.mode-espace-client) .cf-hero .fcx-btn-verre,
+html:not([data-theme="clair"]) body:not(.mode-cloud):not(.mode-espace-client) .fcx-hero .fcx-btn-verre {
   background: rgba(11, 36, 88, .07) !important; border-color: rgba(11, 36, 88, .16) !important;
 }
 

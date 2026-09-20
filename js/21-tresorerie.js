@@ -256,8 +256,15 @@ function trGraphique(R) {
 function trTableau(R) {
   const ligne = (libelle, valeurs, cls, extra) => `<tr class="${cls || ''}"><th scope="row">${libelle}${extra || ''}</th>${valeurs.map(v => `<td class="${v < 0 ? 'neg' : ''}">${Math.round(v) ? trCHF(v) : '<span class="tr-vide">·</span>'}</td>`).join('')}<td class="tr-total">${cls && cls.includes('solde') ? '' : trCHF(valeurs.reduce((s, v) => s + v, 0))}</td></tr>`;
   const m = R.mois;
+  // Chaque en-tête de mois ouvre le détail de ce mois dans « Entrées d'argent ». Une colonne de
+  // trésorerie est une somme ; savoir de quelles lignes elle est faite ne devrait jamais demander
+  // de refaire la recherche à la main dans un autre écran (demande de Jonathan, 20.09.2026).
+  const enTeteMois = k => typeof eafDepuisTresorerie === 'function'
+    ? `<th scope="col"><button type="button" class="tr-mois-lien" onclick="eafDepuisTresorerie('${k}')"
+         title="Voir les entrées d’argent de ${trLibelleMois(k)}">${trLibelleMois(k)}</button></th>`
+    : `<th scope="col">${trLibelleMois(k)}</th>`;
   return `<div class="tr-tableau-wrap"><table class="tr-tableau">
-    <thead><tr><th></th>${m.map(k => `<th scope="col">${trLibelleMois(k)}</th>`).join('')}<th scope="col">Total</th></tr></thead>
+    <thead><tr><th></th>${m.map(enTeteMois).join('')}<th scope="col">Total</th></tr></thead>
     <tbody>
       ${ligne('Solde en début de mois', R.parMois.map(x => x.debut), 'solde')}
       <tr class="tr-section"><td colspan="${m.length + 2}">Encaissements</td></tr>

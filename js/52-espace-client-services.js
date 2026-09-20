@@ -71,11 +71,50 @@ function ecRendre() {
   if (main) main.innerHTML = ecVueEspaceClient();
 }
 
+// ── Documents : les polices déposées par le courtier, servies par la fonction « document-client »
+// Les comptes clients n'ont aucun droit sur le bucket : la fonction vérifie que le contrat leur
+// appartient et renvoie un lien signé valable cinq minutes.
+const EC_FONCTION_DOCS = (typeof SUPABASE_URL !== 'undefined' ? SUPABASE_URL : '') + '/functions/v1/document-client';
+
+async function ecAppelDocuments(corps) {
+  const token = await getValidAccessToken();
+  const r = await fetch(EC_FONCTION_DOCS, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${token}`, apikey: SUPABASE_KEY, 'Content-Type': 'application/json' },
+    body: JSON.stringify(corps),
+  });
+  return r.json().catch(() => ({ error: 'réponse illisible' }));
+}
+
+async function ecChargerPolices() {
+  const E = window._ec;
+  if (!E || E._policesEnCours) return;
+  E._policesEnCours = true;
+  const r = await ecAppelDocuments({ action: 'liste' }).catch(() => ({}));
+  E.polices = Array.isArray(r.documents) ? r.documents : [];
+  E._policesEnCours = false;
+  ecRendre();
+}
+
+async function ecTelechargerPolice(contratId, bouton) {
+  if (bouton) { bouton.disabled = true; bouton.textContent = 'Préparation…'; }
+  const r = await ecAppelDocuments({ action: 'telecharger', contrat_id: contratId }).catch(() => ({}));
+  if (bouton) { bouton.disabled = false; bouton.textContent = '⬇️ Ma police'; }
+  if (!r || !r.url) { showError(r && r.error ? r.error : 'Document indisponible — demandez-le à votre conseiller.'); return; }
+  const a = document.createElement('a');
+  a.href = r.url; a.target = '_blank'; a.rel = 'noopener'; a.download = r.nom || 'police.pdf';
+  document.body.appendChild(a); a.click(); a.remove();
+}
+function ecPoliceDisponible(contratId) {
+  return ((window._ec || {}).polices || []).some(d => d.contrat_id === contratId);
+}
+
 // Chargement complémentaire (sinistres, demandes de documents, coordonnées du conseiller)
 async function ecChargerServices() {
   const E = window._ec;
   if (!E || !E.client || E._servicesEnCours) return;
   E._servicesEnCours = true;
+  ecChargerPolices();
   const [sinistres, docs, acces] = await Promise.all([
     dbGet('sinistres', `client_id=eq.${E.client.id}&select=*&order=created_at.desc`).catch(() => []),
     dbGet('demandes_documents', `client_id=eq.${E.client.id}&select=*&order=created_at.desc`).catch(() => []),
@@ -194,6 +233,7 @@ function ecOngletContrats() {
           </div>
           <div class="ec-prime">${ct.prime_annuelle ? `CHF ${fmtCHF(Math.round(ct.prime_annuelle))}<small>/an</small>` : '—'}</div>
           <div class="ec-actions-contrat">
+            ${ecPoliceDisponible(ct.id) ? `<button type="button" class="ec-doc-dispo" onclick="ecTelechargerPolice('${ct.id}', this)">⬇️ Ma police</button>` : ''}
             <button type="button" onclick="ecOuvrirMessage('${ct.id}')">💬 Contacter mon conseiller</button>
             <button type="button" onclick="ecOuvrirSinistre('${ct.id}')">🛟 Déclarer un sinistre</button>
             <button type="button" onclick="ecOuvrirDemandeDocument('${ct.id}')">📄 Demander un document</button>
@@ -232,8 +272,20 @@ function ecOngletDemandes() {
   const E = window._ec || {};
   const docs = E.demandesDocs || [];
   const msgs = E.messages || [];
+  const polices = E.polices || [];
   const etats = { nouvelle: 'Reçue', en_cours: 'En cours', envoye: 'Envoyé', refuse: 'Non disponible' };
   return `<section class="dbx-carte" style="margin-top:18px">
+      <header class="dbx-carte-tete"><h2>Mes polices</h2>
+        <button type="button" class="btn-secondary" onclick="ecImprimerResume()">🖨️ Résumé de mes couvertures</button></header>
+      ${polices.length ? `<div class="ec-polices">${polices.map(d => `<div class="ec-police">
+          <span class="ec-police-cie">${typeof pictoCompagnie === 'function' ? pictoCompagnie(d.compagnie, 22) : ''}
+            <b>${ecEsc(d.produit || 'Contrat')}</b><small>${ecEsc(d.compagnie || '')}${d.numero_police ? ' · ' + ecEsc(d.numero_police) : ''}</small></span>
+          <button type="button" class="btn-secondary" onclick="ecTelechargerPolice('${d.contrat_id}', this)">⬇️ Ma police</button>
+        </div>`).join('')}</div>`
+        : `<div class="dbx-vide-petit">${E.polices === undefined ? 'Chargement de vos documents…' : 'Vos polices arrivent ici dès que nous les recevons de vos assureurs. Vous pouvez déjà imprimer le résumé de vos couvertures.'}</div>`}
+    </section>
+
+    <section class="dbx-carte" style="margin-top:18px">
       <header class="dbx-carte-tete"><h2>Mes demandes de documents</h2>
         <button type="button" class="btn-save" onclick="ecOuvrirDemandeDocument()">📄 Demander un document</button></header>
       ${docs.length ? `<div class="sfx-liste">${docs.map(d => {
@@ -275,6 +327,52 @@ function ecOngletConseiller() {
         <p class="ec-suivi-txt">Assurex Sàrl — Rue du Centre 142, 1025 St-Sulpice · succursale c/o Cofidex SA, Ch. de Pallud 3, 1822 Chernex. Écrire depuis l’espace garde l’échange rattaché à votre dossier.</p>
       </div>
     </section>`;
+}
+
+// ── Résumé des couvertures : une page A4 à l'en-tête Assurex, imprimable ou enregistrable en PDF
+// (même mécanique d'impression que les courriers, js/45 : un cadre invisible, jamais de popup).
+function ecImprimerResume() {
+  const E = window._ec || {};
+  const c = E.client;
+  const base = location.href.replace(/[#?].*$/, '').replace(/[^/]*$/, '');
+  const actifs = ecContratsActifs();
+  const total = actifs.reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
+  const groupes = EC_TYPES.map(t => {
+    const liste = actifs.filter(ct => ecTypeContrat(ct) === t.id);
+    if (!liste.length) return '';
+    return `<div class="ecr-groupe">${ecEsc(t.label)}</div>` + liste.map(ct => `<div class="ecr-ligne">
+        <span><b>${ecEsc(ct.produit || 'Contrat')}</b><br/><small>${ecEsc(ct.compagnie || '')}${ct.numero_police ? ' · police ' + ecEsc(ct.numero_police) : ''}${ct.modules ? '<br/>' + ecEsc(ct.modules) : ''}</small></span>
+        <span class="ecr-dates">${ct.date_debut ? 'Depuis le ' + fmtDate(ct.date_debut) + '<br/>' : ''}${ct.date_echeance ? 'Échéance ' + fmtDate(ct.date_echeance) : 'Sans échéance'}</span>
+        <span class="ecr-prime">${ct.prime_annuelle ? 'CHF ' + fmtCHF(Math.round(ct.prime_annuelle)) : '—'}</span>
+      </div>`).join('');
+  }).join('');
+  const css = (typeof CRX_CSS_IMPRESSION !== 'undefined' ? CRX_CSS_IMPRESSION : '') + `
+    .ecr-titre{font-weight:700;font-size:13pt;margin:0 0 2mm}.ecr-sous{color:#334155;font-size:10pt;margin:0 0 6mm}
+    .ecr-groupe{font-weight:700;color:#113679;border-bottom:1px solid #00CFFF;margin:5mm 0 2mm;padding-bottom:1mm;font-size:10.5pt}
+    .ecr-ligne{display:grid;grid-template-columns:1fr 45mm 25mm;gap:3mm;align-items:start;font-size:9.5pt;line-height:1.35;padding:1.5mm 0;border-bottom:1px dotted #CBD5E1}
+    .ecr-ligne small{color:#475569;font-size:8.5pt}.ecr-dates{color:#475569;font-size:8.5pt}
+    .ecr-prime{text-align:right;font-weight:700}
+    .ecr-total{display:flex;justify-content:space-between;font-weight:700;font-size:11pt;margin-top:5mm;padding-top:2mm;border-top:2px solid #113679}`;
+  const html = `<!DOCTYPE html><html lang="fr"><head><meta charset="utf-8"><title>Résumé de mes couvertures — ${ecEsc(ecNomClient(c))}</title><style>${css}</style></head><body>
+    <div class="crx-page">
+      <div class="crx-entete"><img src="${base}assets/logos/courrier-assurex-bleu.png" alt="Assurex"/><img src="${base}assets/logos/courrier-exgroup-bleu.png" alt="EX.GROUP"/></div>
+      <div class="crx-corps-lettre">
+        <div class="ecr-titre">Résumé de mes couvertures</div>
+        <div class="ecr-sous">${ecEsc(ecNomClient(c))} — situation au ${fmtDate(new Date().toISOString().slice(0, 10))}</div>
+        ${groupes || '<p>Aucun contrat en vigueur.</p>'}
+        <div class="ecr-total"><span>Total des primes annuelles</span><span>CHF ${fmtCHF(Math.round(total))}</span></div>
+      </div>
+      <div class="crx-pied">${(typeof CRX_PIED !== 'undefined' ? CRX_PIED : []).map(ecEsc).join('<br/>')}</div>
+    </div></body></html>`;
+  document.getElementById('ec-cadre-impression')?.remove();
+  const f = document.createElement('iframe');
+  f.id = 'ec-cadre-impression';
+  f.setAttribute('aria-hidden', 'true');
+  f.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden';
+  document.body.appendChild(f);
+  const d = f.contentDocument; d.open(); d.write(html); d.close();
+  const imprimer = () => { try { f.contentWindow.focus(); f.contentWindow.print(); } catch (e) { showError('Impression impossible : ' + e.message); } };
+  Promise.all([...d.images].map(i => i.complete ? null : new Promise(ok => { i.onload = i.onerror = ok; }))).then(() => setTimeout(imprimer, 150));
 }
 
 // ── Contacter mon conseiller, avec motif (remplace la version simple de js/51) ──────────────────

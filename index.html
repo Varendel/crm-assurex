@@ -3248,6 +3248,13 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
   .dbx-zen-valeur { font-size: 28px; }
 }
 
+/* Polices disponibles dans l'espace client (js/52) */
+.ec-polices { display: flex; flex-direction: column; gap: 8px; }
+.ec-police { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  background: var(--surface-alt); border-radius: 12px; padding: 10px 14px; }
+.ec-police-cie { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 13px; }
+.ec-police-cie small { color: var(--text-muted); font-size: 12px; }
+.ec-doc-dispo { color: #047857 !important; }
 @media (prefers-reduced-motion: reduce) {
     .rex-modale > div, .loader::before { animation: none !important; }
     .ap-graph-piste span { animation: none !important; }
@@ -3434,7 +3441,7 @@ body.mode-espace-client .main-content, body.mode-espace-client #main-content { m
 <script src="js/49-nouveau-contrat.js?v=1790920000"></script>
 <script src="js/50-dossier-financement.js?v=1790995000"></script>
 <script src="js/51-messages-transferts.js?v=1791006000"></script>
-<script src="js/52-espace-client-services.js?v=1791006000"></script>
+<script src="js/52-espace-client-services.js?v=1791011000"></script>
 <script>
   // Enregistrement du service worker — rend le CRM installable comme une vraie application
   // (icône, ouverture en plein écran, hors-ligne minimal). Ne bloque jamais le chargement de

@@ -41,7 +41,10 @@ const PICTOS_COMPAGNIES = {
   // 154,9,65 et lettrage arrondi. Le monogramme « He » qui servait jusque-la disait le nom sans
   // le montrer — une compagnie se reconnait a sa marque, pas a ses initiales.
   'Helsana': { img: 'assets/logos/compagnies/helsana.png', forme: 'carre' },
-  'SWICA': { abr: 'SW', fond: '#01BAA8' },
+  // Logo carre reconstruit depuis celui fourni (20.09.2026) : turquoise officiel 1,186,168.
+  // Le « I » est une barre oblique : elle est dessinee, pas tapee, et l'espacement est regle pour
+  // que l'ensemble se lise SWICA et non SW / CA.
+  'SWICA': { img: 'assets/logos/compagnies/swica.png', forme: 'carre' },
   'Sanitas': { abr: 'SA' },
   'Visana': { abr: 'VI' },
   'Gastrosocial': { img: 'assets/logos/compagnies/gastrosocial.jpg', forme: 'rond', ajuste: 'contain', fondImg: '#FFFFFF' },

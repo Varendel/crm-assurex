@@ -1,0 +1,12 @@
+﻿/* ═══ PRIME MENSUELLE (js/99, 20.09.2026) ═══════════════════════════════════════════════════════
+   Le mois en grand, l'année dessous. Le premier sert à se reconnaître — c'est le montant du
+   bulletin —, le second à comparer avec le reste du portefeuille. */
+.pmn-annuel {
+  display: block; margin-top: 2px;
+  font-size: 10px; font-weight: 400; color: var(--text-dim);
+  font-variant-numeric: tabular-nums lining-nums;
+  white-space: nowrap;
+}
+/* La prime mensuelle porte deux décimales : elle tombe rarement sur un franc rond, et le chiffre
+   doit rester lisible malgré sa longueur. */
+body.mode-cloud .ec-prime, body.mode-espace-client .ec-prime { letter-spacing: -0.035em; }

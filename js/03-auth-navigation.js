@@ -824,6 +824,7 @@ const SECTIONS = [
     { id: 'production', icon: '🏭', label: 'Production par période', staff: true, groupe: 'Pilotage' },
     { id: 'import-decompte', icon: '📥', label: 'Importer un décompte', groupe: 'Commissions' },
     { id: 'ocr-decomptes', icon: '🔎', label: 'Lire un décompte scanné', staff: true, groupe: 'Commissions' },
+    { id: 'ecohub-sync', icon: '🔗', label: 'Synchronisation EcoHub', staff: true, groupe: 'Commissions' },
     { id: 'bordereaux', icon: '🧾', label: 'Bordereaux', groupe: 'Commissions' },
     { id: 'commissions-attente', icon: '💸', label: 'Toutes les commissions', groupe: 'Commissions' },
     { id: 'commissions', icon: '🧮', label: 'Commissions (vue interne)', staff: true, groupe: 'Commissions' },
@@ -1479,6 +1480,8 @@ async function renderView() {
     case 'messages-clients': main.innerHTML = typeof viewMessagesClients === 'function' ? viewMessagesClients() : ''; break;
     // Lecture des décomptes scannés et rapprochement avec les contrats (js/53)
     case 'ocr-decomptes': main.innerHTML = typeof viewOcrDecomptes === 'function' ? viewOcrDecomptes() : ''; break;
+    // Préparation de l'échange de données EcoHub : qualité des clés de rapprochement (js/54)
+    case 'ecohub-sync': main.innerHTML = typeof viewEcohubSync === 'function' ? viewEcohubSync() : ''; break;
     case 'marquage-entites': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); main.innerHTML = typeof viewMarquageEntites === 'function' ? viewMarquageEntites() : ''; break;
     // Factures QR suisses (js/33)
     case 'factures': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = typeof viewFacturesQR === 'function' ? await viewFacturesQR() : '<div class="table-empty">Module factures non chargé.</div>'; break;

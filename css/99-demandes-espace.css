@@ -1,0 +1,76 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   CE QUI VIENT DE L'ESPACE CLIENT (js/109, 20.09.2026)
+
+   L'ORANGE EST UNE ORIGINE, PAS UNE URGENCE.
+
+   La règle ne tient que si on s'y astreint : tout ce qui arrive de REX CLOUD est orange, urgent
+   ou non, et rien d'autre ne l'est. C'est pourquoi le signal de RETARD est passé au rouge en bas
+   de ce fichier — deux oranges voulant dire deux choses différentes, aucun des deux ne voudrait
+   plus rien dire.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+:root { --dsp-orange: #F97316; }
+
+/* ── Le bandeau d'origine ─────────────────────────────────────────────────────────────────────
+   Le logo est celui que le client voit en haut de son espace : le lien entre les deux côtés se
+   comprend sans qu'on l'explique. */
+.dsp-origine {
+  display: inline-flex; align-items: center; gap: 9px;
+  margin-bottom: 8px; padding: 5px 14px 5px 7px;
+  border-radius: var(--r-rond, 999px);
+  background: linear-gradient(100deg, var(--dsp-orange) 0%, #FB923C 100%);
+  color: #fff;
+  box-shadow: 0 2px 8px color-mix(in srgb, var(--dsp-orange) 35%, transparent);
+}
+.dsp-logo {
+  width: 22px; height: 22px; flex-shrink: 0;
+  /* Le fichier est blanc sur transparent : il se pose tel quel sur l'orange. */
+  object-fit: contain;
+}
+.dsp-marque {
+  font-size: var(--t-s); letter-spacing: .06em; text-transform: uppercase;
+  white-space: nowrap;
+}
+.dsp-marque b { font-weight: 600; }
+.dsp-sep { opacity: .5; }
+.dsp-quoi { font-size: var(--t-xs); opacity: .92; }
+
+@media (max-width: 620px) {
+  .dsp-origine { flex-wrap: wrap; border-radius: var(--r-s, 10px); }
+  .dsp-sep { display: none; }
+  .dsp-quoi { flex-basis: 100%; }
+}
+
+/* ── Les demandes non traitées ────────────────────────────────────────────────────────────────
+   `.neuf` est posé par js/51 sur les quatre familles — message, sinistre, document, transfert —
+   dès que la ligne n'a pas été traitée. Une seule règle les couvre donc toutes, y compris celles
+   qu'on ajoutera plus tard. */
+.mcx-msg.neuf {
+  border-left: 3px solid var(--dsp-orange);
+  background: color-mix(in srgb, var(--dsp-orange) 5%, transparent);
+}
+.mcx-msg.neuf:hover { background: color-mix(in srgb, var(--dsp-orange) 9%, transparent); }
+
+/* ── Le compteur du menu ──────────────────────────────────────────────────────────────────────
+   Il était rouge, comme celui des tâches. Rouge veut dire « ça ne va pas » ; or une demande
+   client qui arrive, c'est le fonctionnement normal. Orange dit la provenance sans dramatiser. */
+.nav-item .ntf-pastille {
+  background: var(--dsp-orange);
+  color: #fff;
+}
+
+/* ── Le voyant du tableau de bord ─────────────────────────────────────────────────────────────
+   Ces demandes viennent toutes de l'espace client : le voyant prend donc l'orange dès qu'il y en
+   a. Et le RETARD passe au rouge, pour rester distinct de la provenance. */
+.ntf-voyant.actif .ntf-lampe {
+  background: var(--dsp-orange);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--dsp-orange) 55%, transparent);
+}
+.ntf-voyant.actif { border-color: color-mix(in srgb, var(--dsp-orange) 40%, transparent); }
+
+.ntf-voyant.tard .ntf-lampe {
+  background: var(--c-danger);
+  box-shadow: 0 0 0 0 color-mix(in srgb, var(--c-danger) 60%, transparent);
+}
+.ntf-voyant.tard { border-color: color-mix(in srgb, var(--c-danger) 45%, transparent); }
+.ntf-voyant.tard .ntf-texte small { color: var(--c-danger-texte); }

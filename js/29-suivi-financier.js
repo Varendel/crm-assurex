@@ -78,8 +78,36 @@ function sfxDonnees() {
     dbGet('commissions_oz', 'select=*&order=date_mouvement.asc').then(r => { window._ck.ozLedger = Array.isArray(r) ? r : []; window._ck.ozLedgerEnCours = false; if (typeof ckRerendre === 'function') ckRerendre(); });
   }
   const netOZ = r => Number(r.credit || 0) - Number(r.debit || 0);
-  const parMoisOZ = mois.map(m => (ledger || []).filter(r => String(r.date_mouvement || '').startsWith(m)).reduce((s, r) => s + netOZ(r), 0));
-  const recuAnneeOZ = (ledger || []).filter(r => String(r.date_mouvement || '').startsWith(annee)).reduce((s, r) => s + netOZ(r), 0);
+
+  // ── La banque prime là où elle existe (20.09.2026) ───────────────────────────────────────────
+  // Les montants saisis dans commissions_oz sont datés du DÉCOMPTE, pas de l'encaissement. D'où
+  // des mois décalés : décembre sous-évalué de 2 961, février de 4 013, juillet de 2 969, tandis
+  // que janvier et mars étaient gonflés d'autant. Le total sur neuf mois était pourtant juste à
+  // 5 % près — c'est la répartition qui était fausse, et c'est elle qu'on lit sur un graphique.
+  //
+  // Un relevé bancaire, lui, est daté de l'encaissement par construction. Sur les mois couverts
+  // par un relevé, c'est donc lui qui fait foi ; sur les autres, on garde la saisie, faute de
+  // mieux — et le graphique dit lequel est lequel.
+  const banque = window._ck && window._ck.banque;
+  if (!banque && window._ck && !window._ck.banqueEnCours && typeof dbGet === 'function') {
+    window._ck.banqueEnCours = true;
+    dbGet('releves_lignes', 'categorie=eq.commission&select=date_operation,montant&order=date_operation.asc')
+      .then(r => { window._ck.banque = Array.isArray(r) ? r : []; window._ck.banqueEnCours = false; if (typeof ckRerendre === 'function') ckRerendre(); })
+      .catch(() => { window._ck.banque = []; window._ck.banqueEnCours = false; });
+  }
+  const dates = (banque || []).map(r => String(r.date_operation || '').slice(0, 7)).filter(Boolean).sort();
+  const couvertDu = dates[0] || null, couvertAu = dates[dates.length - 1] || null;
+  const moisCouvert = m => couvertDu && m >= couvertDu && m <= couvertAu;
+
+  const parMoisOZ = mois.map(m => moisCouvert(m)
+    ? (banque || []).filter(r => String(r.date_operation || '').startsWith(m)).reduce((s, r) => s + Number(r.montant || 0), 0)
+    : (ledger || []).filter(r => String(r.date_mouvement || '').startsWith(m)).reduce((s, r) => s + netOZ(r), 0));
+  const moisBanque = mois.filter(moisCouvert).length;
+
+  const recuAnneeOZ = mois.reduce((s, m, i) => s + (m.startsWith(annee) ? parMoisOZ[i] : 0), 0)
+    // les mois de l'année hors des 12 derniers, et hors couverture bancaire
+    + (ledger || []).filter(r => { const m = String(r.date_mouvement || '').slice(0, 7);
+        return m.startsWith(annee) && !mois.includes(m) && !moisCouvert(m); }).reduce((s, r) => s + netOZ(r), 0);
   // Commission mensuelle moyenne (occurrences réelles des 12 derniers mois, Assurex + OZ) :
   // nombre moyen de versements par mois × montant moyen d'un versement = entrée mensuelle type.
   const debut12 = mois[0] + '-01';
@@ -104,7 +132,8 @@ function sfxDonnees() {
     return { l, c, nb: liste.length, total: liste.reduce((s, ca) => s + reste(ca), 0) };
   });
   const oz = allCommissionsAttente.filter(ca => ca.statut === 'versé_oz');
-  return { auj, annee, recuAnnee, totalReste, attente, retards, delaiMoyen, delais, mois, parMois, parMoisOZ, recuAnneeOZ, ozCharge: !!ledger, moyenne, cies, tranchesAge, oz, reste };
+  return { auj, annee, recuAnnee, totalReste, attente, retards, delaiMoyen, delais, mois, parMois, parMoisOZ, recuAnneeOZ,
+    ozCharge: !!ledger, moisBanque, couvertDu, couvertAu, moyenne, cies, tranchesAge, oz, reste };
 }
 
 // ── Pilotage par compagnie (19.09.2026) ─────────────────────────────────────────────────────
@@ -214,6 +243,10 @@ function sfxBarresEncaisse(D) {
     <span style="display:inline-flex;align-items:center;gap:6px"><i style="width:11px;height:11px;border-radius:3px;background:${CA}"></i>Encaissé par Assurex</span>
     <span style="display:inline-flex;align-items:center;gap:6px"><i style="width:11px;height:11px;border-radius:3px;background:${CO}"></i>Encaissé par OZ Assure (compte courant OZ)</span>
     ${moy ? `<span style="display:inline-flex;align-items:center;gap:6px"><i style="width:16px;height:0;border-top:2px dashed ${CM}"></i>Commission mensuelle moyenne</span>` : ''}
+    ${D.moisBanque ? `<span style="flex-basis:100%;font-size:11px;opacity:.85">D'où viennent ces chiffres : les mois de
+      ${dbxLibelleMois(D.couvertDu)} ${D.couvertDu.slice(0, 4)} à ${dbxLibelleMois(D.couvertAu)} ${D.couvertAu.slice(0, 4)}
+      sont lus sur les relevés bancaires — date et montant constatés. Les autres viennent des décomptes saisis,
+      datés de l'émission du décompte et non de l'encaissement.</span>` : ''}
     ${D.ozCharge ? '' : '<span>· chargement du compte courant OZ…</span>'}
   </div>`;
 }

@@ -1,0 +1,96 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   RAPPROCHEMENT BANQUE ↔ COMMISSIONS (js/73, 20.09.2026)
+
+   Un versement bancaire est une carte. Ce qu'on lui a affecté est dessous, la proposition
+   au-dessous encore. On lit de haut en bas : le fait, ce qui en découle, ce qu'on propose.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.rap-outils { display: flex; gap: var(--e-2, 8px); align-items: center; flex-wrap: wrap; margin-bottom: var(--e-4, 16px); }
+.rap-outils .form-input { width: auto; min-width: 250px; }
+
+.rap-liste { display: flex; flex-direction: column; gap: var(--e-3, 12px); }
+
+.rap-credit {
+  padding: var(--e-4, 16px); border-radius: var(--r-m, 14px);
+  background: var(--surface, #fff); border: 1px solid var(--g-200, #E2E8F0);
+  box-shadow: var(--o-1);
+}
+.rap-credit.solde { opacity: .72; }
+
+.rap-credit-tete { display: flex; align-items: baseline; gap: var(--e-3, 12px); flex-wrap: wrap; }
+.rap-date { font-size: var(--t-s, 12.5px); color: var(--text-muted, #64748B); font-variant-numeric: tabular-nums; }
+.rap-cie { font-size: var(--t-l, 15px); font-weight: var(--t-moyen, 600); }
+.rap-montant { font-size: var(--t-xl, 19px); font-weight: var(--t-moyen, 600);
+  font-variant-numeric: tabular-nums; letter-spacing: -0.02em; margin-left: auto; }
+.rap-etiq { font-size: var(--t-xs, 11px); padding: 3px 9px; border-radius: var(--r-rond, 999px);
+  background: var(--c-alerte-fond); color: var(--c-alerte-texte); font-variant-numeric: tabular-nums; }
+.rap-etiq.soldee { background: var(--c-succes-fond); color: var(--c-succes-texte); }
+.rap-libelle { font-size: var(--t-s, 12.5px); color: var(--text-muted, #64748B); margin-top: 3px; overflow-wrap: anywhere; }
+
+.rap-liens { list-style: none; margin: var(--e-3, 12px) 0 0; padding: 0 0 0 var(--e-3, 12px);
+  border-left: 2px solid var(--c-succes, #16A34A); display: flex; flex-direction: column; gap: 5px; }
+.rap-liens li { display: flex; align-items: center; gap: var(--e-2, 8px); font-size: var(--t-m, 13.5px); }
+.rap-liens li span { flex: 1; min-width: 0; }
+.rap-liens li b { font-variant-numeric: tabular-nums; }
+.rap-defaire { border: none; background: transparent; cursor: pointer; color: var(--text-muted, #94A3B8);
+  padding: 2px 6px; border-radius: var(--r-xs, 6px); font-size: var(--t-s, 12.5px); }
+.rap-defaire:hover { background: var(--c-danger-fond); color: var(--c-danger-texte); }
+
+.rap-proposition { margin-top: var(--e-3, 12px); padding: var(--e-3, 12px);
+  border-radius: var(--r-s, 10px); border: 1px dashed var(--g-300, #CBD5E1); }
+.rap-proposition.exacte { border-color: var(--c-succes, #16A34A); background: var(--c-succes-fond); }
+.rap-proposition.approchante { border-color: var(--c-alerte, #F59E0B); background: var(--c-alerte-fond); }
+.rap-prop-tete { font-size: var(--t-s, 12.5px); font-weight: var(--t-moyen, 600); margin-bottom: 6px; }
+.rap-proposition.exacte .rap-prop-tete { color: var(--c-succes-texte); }
+.rap-proposition.approchante .rap-prop-tete { color: var(--c-alerte-texte); }
+.rap-proposition ul { list-style: none; margin: 0 0 var(--e-3, 12px); padding: 0;
+  display: flex; flex-direction: column; gap: 3px; font-size: var(--t-m, 13.5px); }
+.rap-proposition li b { font-variant-numeric: tabular-nums; }
+.rap-prop-actions { display: flex; gap: var(--e-2, 8px); flex-wrap: wrap; }
+
+.rap-rien { margin-top: var(--e-3, 12px); font-size: var(--t-s, 12.5px); color: var(--text-muted, #64748B);
+  display: flex; gap: var(--e-3, 12px); align-items: center; flex-wrap: wrap; }
+
+.rap-soldes { margin-top: var(--e-5, 20px); }
+.rap-soldes summary { cursor: pointer; font-size: var(--t-s, 12.5px); color: var(--text-muted, #64748B);
+  padding: var(--e-2, 8px) 0; }
+.rap-soldes .rap-liste { margin-top: var(--e-2, 8px); }
+
+/* ── Le choix à la main ───────────────────────────────────────────────────────────────────────── */
+.rap-modale { width: min(620px, 94vw); }
+.rap-choix { max-height: 46vh; overflow-y: auto; display: flex; flex-direction: column; gap: 2px;
+  margin: var(--e-3, 12px) 0; }
+.rap-choix-ligne { display: flex; align-items: center; gap: var(--e-3, 12px); cursor: pointer;
+  padding: 9px var(--e-3, 12px); border-radius: var(--r-s, 10px); }
+.rap-choix-ligne:hover { background: var(--g-50, #F4F6F9); }
+.rap-choix-ligne input { width: 17px; height: 17px; flex-shrink: 0; accent-color: var(--m-marine, #113679); }
+.rap-choix-ligne span { flex: 1; min-width: 0; font-size: var(--t-m, 13.5px); display: flex; flex-direction: column; }
+.rap-choix-ligne small { font-size: var(--t-s, 12.5px); color: var(--text-muted, #64748B); }
+.rap-choix-ligne b { font-variant-numeric: tabular-nums; }
+
+/* Le reste à affecter change de couleur quand on tombe juste : c'est le seul retour dont on a
+   besoin pour savoir qu'on peut valider. */
+.opx-modale-sous.rap-juste { color: var(--c-succes-texte); font-weight: var(--t-moyen, 600); }
+.opx-modale-sous.rap-trop { color: var(--c-danger-texte); font-weight: var(--t-moyen, 600); }
+
+/* ── Le bloc « non rapproché », sous le graphique du tableau de bord ───────────────────────────────
+   Il dit ce que la courbe ne montre pas. Un graphique qui tait une partie de la réalité est pire
+   qu'un graphique vide : on le croit complet. */
+.dbx-non-rapproche {
+  display: flex; align-items: center; gap: var(--e-3, 12px); width: 100%; cursor: pointer; text-align: left;
+  margin-top: var(--e-3, 12px); padding: var(--e-3, 12px);
+  border-radius: var(--r-s, 10px); border: 1px dashed var(--c-alerte, #F59E0B);
+  background: var(--c-alerte-fond); color: var(--text, #334155); font-family: inherit;
+  transition: background var(--v-court, .15s);
+}
+.dbx-non-rapproche:hover { background: color-mix(in srgb, var(--c-alerte) 20%, transparent); }
+.dbx-nr-montant { font-size: var(--t-xl, 19px); font-weight: var(--t-moyen, 600);
+  font-variant-numeric: tabular-nums; letter-spacing: -0.02em; color: var(--c-alerte-texte); white-space: nowrap; }
+.dbx-nr-texte { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.dbx-nr-texte b { font-size: var(--t-m, 13.5px); font-weight: var(--t-moyen, 600); }
+.dbx-nr-texte small { font-size: var(--t-s, 12.5px); color: var(--text-muted, #64748B); line-height: 1.4; text-wrap: pretty; }
+
+@media (max-width: 720px) {
+  .rap-montant { margin-left: 0; }
+  .dbx-non-rapproche { flex-direction: column; align-items: flex-start; }
+}

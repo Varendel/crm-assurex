@@ -59,8 +59,18 @@ function dbxDonnees() {
     const d = commissionDateReception(ca);
     return { ca, d, signe: ca.statut === 'extourné' ? -1 : 1 };
   }).filter(x => !x.d || x.d >= DATE_BASCULE_ASSUREX);
+  // Une date conventionnelle n'entre PAS dans la courbe mensuelle (20.09.2026). 104 commissions
+  // ont été marquées reçues sans qu'aucun relevé ne permette de les dater : elles portaient toutes
+  // le 30.09, et dessinaient un pic de CHF 62 016 qui n'a jamais eu lieu. Elles restent comptées
+  // dans le total encaissé — elles ont bien été encaissées — mais elles sont affichées à part,
+  // sous le graphique, tant que le rapprochement bancaire ne leur a pas donné leur vraie date.
   const commMois = Object.fromEntries(mois.map(m => [m, 0]));
-  recues.forEach(x => { if (x.d && commMois[x.d.slice(0, 7)] != null) commMois[x.d.slice(0, 7)] += x.signe * dbxMontant(x.ca); });
+  let recuSansDate = 0, nbSansDate = 0;
+  recues.forEach(x => {
+    const montant = x.signe * dbxMontant(x.ca);
+    if (x.ca.date_reception_estimee) { recuSansDate += montant; nbSansDate++; return; }
+    if (x.d && commMois[x.d.slice(0, 7)] != null) commMois[x.d.slice(0, 7)] += montant;
+  });
   let totalRecu = recues.reduce((s, x) => s + x.signe * dbxMontant(x.ca), 0);
   // Versements partiels déjà encaissés sur des commissions encore en attente (paiement échelonné)
   (typeof allCommissionTranches !== 'undefined' ? allCommissionTranches : []).forEach(t => {
@@ -96,7 +106,7 @@ function dbxDonnees() {
   const perduesAn = allOpportunites.filter(o => o.stade === 'Perdu' && (o.created_at || '').startsWith(anneeCourante)).length;
 
   return {
-    auj, mois, moisCourant, moisPrec, commMois, totalRecu, commAttente, totalAttente, actifs, portefeuille, primesMois,
+    auj, mois, moisCourant, moisPrec, commMois, totalRecu, recuSansDate, nbSansDate, commAttente, totalAttente, actifs, portefeuille, primesMois,
     oppsOuvertes, pondere, nouvellesOpps,
     tauxGain: gagneesAn + perduesAn ? Math.round(gagneesAn / (gagneesAn + perduesAn) * 100) : null, gagneesAn, perduesAn,
   };
@@ -501,7 +511,12 @@ function dbxVuePilotage(D) {
     <div class="dbx-kpis">${kpis}</div>
     <div class="dbx-grille dbx-grille-egale">
       <section class="dbx-carte dbx-anim" style="--i:5"><header class="dbx-carte-tete"><h2>Commissions encaissées</h2><span class="dbx-carte-sous">12 derniers mois</span></header>
-        ${dbxBarres(D.mois, D.mois.map(m => D.commMois[m]), '#00CFFF', dbxCHF)}</section>
+        ${dbxBarres(D.mois, D.mois.map(m => D.commMois[m]), '#00CFFF', dbxCHF)}
+        ${D.nbSansDate ? `<button type="button" class="dbx-non-rapproche" onclick="navigate('rapprochement')">
+          <span class="dbx-nr-montant">CHF ${dbxCHF(D.recuSansDate)}</span>
+          <span class="dbx-nr-texte"><b>${D.nbSansDate} commission${D.nbSansDate > 1 ? 's' : ''} sans date rapprochée</b>
+            <small>Déclarées encaissées, mais aucun relevé ne dit quand. Elles ne figurent pas dans la courbe — les rapprocher →</small></span>
+        </button>` : ''}</section>
       <section class="dbx-carte dbx-anim" style="--i:6"><header class="dbx-carte-tete"><h2>Primes signées</h2><span class="dbx-carte-sous">12 derniers mois</span></header>
         ${dbxBarres(D.mois, D.mois.map(m => D.primesMois[m]), '#5B82C9', dbxCHF)}</section>
       <section class="dbx-carte dbx-anim" style="--i:7"><header class="dbx-carte-tete"><h2>Portefeuille par compagnie</h2><button type="button" class="dbx-lien" onclick="navigate('tous-contrats')">Tous les contrats →</button></header>

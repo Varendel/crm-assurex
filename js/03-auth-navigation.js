@@ -841,6 +841,7 @@ const SECTIONS = [
     { id: 'ocr-decomptes', icon: '🔎', label: 'Lire un décompte scanné', staff: true, groupe: 'Commissions' },
     { id: 'ecohub-sync', icon: '🔗', label: 'Synchronisation EcoHub', staff: true, groupe: 'Commissions' },
     { id: 'bordereaux', icon: '🧾', label: 'Bordereaux', groupe: 'Commissions' },
+    { id: 'rapprochement', icon: '🔗', label: 'Rapprochement bancaire', groupe: 'Commissions' },
     { id: 'commissions-attente', icon: '💸', label: 'Toutes les commissions', groupe: 'Commissions' },
     { id: 'commissions', icon: '🧮', label: 'Commissions (vue interne)', staff: true, groupe: 'Commissions' },
     { id: 'factures', icon: '🧾', label: 'Factures QR', groupe: 'Facturation' },
@@ -1558,6 +1559,8 @@ async function renderView() {
     case 'kanban-campagnes': main.innerHTML = typeof viewKanbanCampagnes === 'function' ? viewKanbanCampagnes() : ''; break;
     // Toutes les entrées d'argent, encaissées et attendues, par contrat (js/72)
     case 'entrees-argent': main.innerHTML = typeof viewEntreesArgent === 'function' ? viewEntreesArgent() : ''; break;
+    // Donner aux commissions la date que dit la banque (js/73)
+    case 'rapprochement': main.innerHTML = typeof viewRapprochement === 'function' ? viewRapprochement() : ''; break;
     // Préparation de l'échange de données EcoHub : qualité des clés de rapprochement (js/54)
     case 'ecohub-sync': main.innerHTML = typeof viewEcohubSync === 'function' ? viewEcohubSync() : ''; break;
     case 'marquage-entites': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); main.innerHTML = typeof viewMarquageEntites === 'function' ? viewMarquageEntites() : ''; break;

@@ -790,74 +790,120 @@ async function tryRestoreSession() {
 // Rubriques réorganisées par métier (19.09.2026) : Clients · Ventes · Conseil · Agenda · Finances ·
 // Paramètres — une icône par entrée pour se repérer d'un coup d'œil. Les droits RH (rhAllowed) et
 // les entrées réservées (staff) sont inchangés.
+// ── LE MENU (réorganisé le 20.09.2026) ────────────────────────────────────────────────────────
+// « Il faut changer les rubriques : vente, admin, RH. Je crois qu'il y a trop de boutons. »
+//
+// Il y en avait 55. Le nombre n'est pas le vrai problème — un courtier a besoin de tout cela —
+// mais leur RÉPARTITION l'était : « Clients » contenait les contrats, « Ventes » contenait le
+// marketing, et « Finances » contenait la fiche de paie et le rapport FINMA. Trois rubriques qui
+// ne répondaient pas à la question qu'on se pose en cherchant : « est-ce que je vends, est-ce que
+// je gère, ou est-ce que je m'occupe de l'équipe ? »
+//
+// Trois rubriques donc, et une quatrième pour l'agenda, qui ne se range nulle part parce qu'il
+// sert à tout.
+//
+// `avance: true` : l'écran reste là, mais il n'encombre plus. Ce sont ceux qu'on ouvre une fois
+// par mois — un import OCR, un journal d'erreurs, un marquage d'entités. Un bouton « voir plus »
+// les révèle par rubrique, et le choix est retenu. 36 boutons visibles au lieu de 55, sans qu'un
+// seul écran ait disparu.
+// ── LE MENU (réorganisé le 20.09.2026) ────────────────────────────────────────────────────────
+// « Il faut changer les rubriques : vente, admin, RH… compta… marketing. Je crois qu'il y a trop
+// de boutons. »
+//
+// Il y en avait 55. Le nombre n'était pas le vrai problème — un courtier a besoin de tout cela —
+// mais leur RÉPARTITION l'était : « Clients » contenait les contrats, « Ventes » contenait le
+// marketing, et « Finances » contenait la fiche de paie et le rapport FINMA. Aucune de ces
+// rubriques ne répondait à la question qu'on se pose en cherchant : est-ce que je vends, est-ce
+// que je compte, est-ce que je prospecte, est-ce que j'administre, ou est-ce que je m'occupe de
+// l'équipe ?
+//
+// Cinq rubriques, donc — celles du métier — et l'agenda à part, parce qu'il sert à toutes.
+//
+// `avance: true` : l'écran reste là mais n'encombre plus. Ce sont ceux qu'on ouvre une fois par
+// mois : un import OCR, un journal d'erreurs, un marquage d'entités. Un bouton « voir plus » les
+// révèle par rubrique, et le choix est retenu. Rien n'a disparu : ce qui était là est toujours
+// là, rangé autrement.
 const SECTIONS = [
   { id: 'dashboard-solo', label: 'Tableau de bord', icon: '📊', solo: true, target: 'dashboard' },
   { id: 'pipeline-solo', label: 'Pipeline', icon: '🎯', solo: true, target: 'opportunites', rhAllowed: true },
   { id: 'oz-assure-solo', label: 'OZ Assure', solo: true, logo: true, target: 'oz-assure', signataireOnly: true },
-  // « groupe » : sous-menu repliable à l'intérieur d'une section (19.09.2026, demande de Jonathan)
-  { id: 'clients', label: 'Clients', icon: '👥', sub: [
-    { id: 'portefeuille', icon: '👥', label: 'Tous les clients', staff: true, rhAllowed: true, groupe: 'Clients' },
+
+  { id: 'vente', label: 'Vente', icon: '🚀', sub: [
     { id: 'clients-prives', icon: '🙂', label: 'Clients privés', rhAllowed: true, groupe: 'Clients' },
     { id: 'clients-entreprises', icon: '🏢', label: 'Entreprises', rhAllowed: true, groupe: 'Clients' },
-    { id: 'clients-oz', icon: '🔹', label: 'Clients OZ Assure', staff: true, groupe: 'Clients' },
-    { id: 'marquage-entites', icon: '🏷️', label: 'Marquage des entités', staff: true, groupe: 'Clients' },
-    { id: 'courriers', icon: '📨', label: 'Courriers clients', staff: true, groupe: 'Clients' },
-    { id: 'dossier-financement', icon: '🏦', label: 'Dossiers financement', staff: true, groupe: 'Clients' },
-    { id: 'messages-clients', icon: '💬', label: 'Messages clients', staff: true, groupe: 'Clients' },
-    { id: 'demandes-polices', icon: '📤', label: 'Demandes de polices', staff: true, groupe: 'Clients' },
-    { id: 'documents-compagnies', icon: '📥', label: 'Documents compagnies', staff: true, groupe: 'Contrats' },
+    { id: 'portefeuille', icon: '👥', label: 'Tous les clients', staff: true, rhAllowed: true, groupe: 'Clients' },
+    { id: 'clients-oz', icon: '🔹', label: 'Clients OZ Assure', staff: true, avance: true, groupe: 'Clients' },
+    { id: 'marquage-entites', icon: '🏷️', label: 'Marquage des entités', staff: true, avance: true, groupe: 'Clients' },
+
     { id: 'tous-contrats', icon: '📄', label: 'Tous les contrats', rhAllowed: true, groupe: 'Contrats' },
-    { id: 'volume-primes', icon: '📦', label: 'Volume de primes', staff: true, rhAllowed: true, groupe: 'Contrats' },
     { id: 'recherche-vehicules', icon: '🚗', label: 'Recherche véhicules', rhAllowed: true, groupe: 'Contrats' },
-  ]},
-  { id: 'vente', label: 'Ventes', icon: '🚀', sub: [
+    { id: 'volume-primes', icon: '📦', label: 'Volume de primes', staff: true, rhAllowed: true, avance: true, groupe: 'Contrats' },
+
     { id: 'suivi', icon: '📋', label: 'Suivi des affaires', groupe: 'Affaires' },
-    { id: 'resiliations', icon: '✉️', label: 'Résiliations à faire', groupe: 'Affaires' },
     { id: 'nouvelle-demande-offre', icon: '📝', label: 'Demande d\'offre', groupe: 'Affaires' },
     { id: 'nouveau-contrat-direct', icon: '➕', label: 'Nouveau contrat', groupe: 'Affaires' },
-    { id: 'renouvellements', icon: '🔁', label: 'Renouvellements', groupe: 'Portefeuille' },
-    { id: 'relances-lamal', icon: '🩺', label: 'Relances LAMal', groupe: 'Portefeuille' },
-    { id: 'equipement', icon: '🧩', label: 'Équipement & ventes croisées', groupe: 'Portefeuille' },
-    { id: 'demandes-devis', icon: '📨', label: 'Demandes de devis', groupe: 'Marketing' },
-    { id: 'sources', icon: '🧭', label: 'Sources des clients', groupe: 'Marketing' },
-    { id: 'campagnes', icon: '📣', label: 'Campagnes', groupe: 'Marketing' },
-    { id: 'kanban-campagnes', icon: '🗂️', label: 'Tableau des campagnes', groupe: 'Marketing' },
-    { id: 'campagnes-performance', icon: '📊', label: 'Performance des campagnes', groupe: 'Marketing' },
-    { id: 'brevo', icon: '📧', label: 'Brevo', groupe: 'Marketing' },
+    { id: 'resiliations', icon: '✉️', label: 'Résiliations à faire', groupe: 'Affaires' },
+
+    { id: 'renouvellements', icon: '🔁', label: 'Renouvellements', groupe: 'Fidélisation' },
+    { id: 'relances-lamal', icon: '🩺', label: 'Relances LAMal', groupe: 'Fidélisation' },
+    { id: 'equipement', icon: '🧩', label: 'Équipement & ventes croisées', groupe: 'Fidélisation' },
+
+    { id: 'conseil', icon: '💼', label: 'Conseil financier', groupe: 'Conseil' },
+    { id: 'analyse-prevoyance', icon: '🧮', label: 'Analyse de prévoyance', groupe: 'Conseil' },
+    { id: 'calc-immo', icon: '🏠', label: 'Financement immobilier', groupe: 'Conseil' },
   ]},
-  { id: 'conseil-section', label: 'Conseil', icon: '💼', sub: [
-    { id: 'conseil', icon: '💼', label: 'Conseil financier' },
-    { id: 'analyse-prevoyance', icon: '🧮', label: 'Analyse de prévoyance' },
-    { id: 'calc-immo', icon: '🏠', label: 'Financement immobilier' },
+
+  { id: 'marketing', label: 'Marketing', icon: '📣', sub: [
+    { id: 'campagnes', icon: '📣', label: 'Campagnes' },
+    { id: 'kanban-campagnes', icon: '🗂️', label: 'Tableau des campagnes' },
+    { id: 'campagnes-performance', icon: '📊', label: 'Performance des campagnes' },
+    { id: 'demandes-devis', icon: '📨', label: 'Demandes de devis' },
+    { id: 'sources', icon: '🧭', label: 'Sources des clients', avance: true },
+    { id: 'brevo', icon: '📧', label: 'Brevo', avance: true },
   ]},
+
+  { id: 'compta', label: 'Compta', icon: '💰', sub: [
+    { id: 'commissions-attente', icon: '💸', label: 'Toutes les commissions', groupe: 'Commissions' },
+    { id: 'import-decompte', icon: '📥', label: 'Importer un décompte', groupe: 'Commissions' },
+    { id: 'controle-coherence', icon: '🧪', label: 'Contrôle contrats × commissions', groupe: 'Commissions' },
+    { id: 'rapprochement', icon: '🔗', label: 'Rapprochement bancaire', avance: true, groupe: 'Commissions' },
+    { id: 'ocr-decomptes', icon: '🔎', label: 'Lire un décompte scanné', staff: true, avance: true, groupe: 'Commissions' },
+    { id: 'ecohub-sync', icon: '🔗', label: 'Synchronisation EcoHub', staff: true, avance: true, groupe: 'Commissions' },
+
+    { id: 'suivi-financier', icon: '🧭', label: 'Cockpit financier', groupe: 'Pilotage' },
+    { id: 'tresorerie', icon: '📈', label: 'Plan de trésorerie', groupe: 'Pilotage' },
+    { id: 'entrees-argent', icon: '💰', label: 'Entrées d\'argent', groupe: 'Pilotage' },
+    { id: 'production', icon: '🏭', label: 'Production par période', staff: true, avance: true, groupe: 'Pilotage' },
+
+    { id: 'factures', icon: '🧾', label: 'Factures QR', groupe: 'Facturation' },
+    { id: 'caution', icon: '🔒', label: 'Comptes de caution', groupe: 'Facturation' },
+  ]},
+
+  { id: 'admin', label: 'Admin', icon: '🗄️', sub: [
+    { id: 'messages-clients', icon: '💬', label: 'Messages clients', staff: true, groupe: 'Relation client' },
+    { id: 'demandes-polices', icon: '📤', label: 'Demandes de polices', staff: true, groupe: 'Relation client' },
+    { id: 'courriers', icon: '📨', label: 'Courriers clients', staff: true, avance: true, groupe: 'Relation client' },
+    { id: 'documents-compagnies', icon: '📥', label: 'Documents compagnies', staff: true, avance: true, groupe: 'Relation client' },
+    { id: 'dossier-financement', icon: '🏦', label: 'Dossiers financement', staff: true, avance: true, groupe: 'Relation client' },
+
+    { id: 'rapport-finma', icon: '🏛️', label: 'Rapport FINMA', groupe: 'Conformité' },
+    { id: 'audit-log', icon: '🔍', label: 'Journal d\'audit', avance: true, groupe: 'Conformité' },
+    { id: 'journal-erreurs', icon: '🩺', label: 'Journal des erreurs', staff: true, avance: true, groupe: 'Conformité' },
+
+    { id: 'contacts-compagnies', icon: '🏢', label: 'Contacts compagnies', groupe: 'Réglages' },
+    { id: 'apparence', icon: '🎨', label: 'Apparence', rhAllowed: true, groupe: 'Réglages' },
+  ]},
+
+  { id: 'rh', label: 'RH', icon: '🧑‍🤝‍🧑', sub: [
+    { id: 'agents', icon: '🧑‍🤝‍🧑', label: 'Agents' },
+    { id: 'fiche-paie', icon: '🧑‍💼', label: 'Fiches de paie' },
+  ]},
+
   { id: 'organisation', label: 'Agenda', icon: '🗓️', sub: [
     { id: 'rappels', icon: '✅', label: 'Tâches & rappels', rhAllowed: true },
     { id: 'agenda', icon: '🗓️', label: 'Agenda', rhAllowed: true },
     { id: 'rendez-vous', icon: '📅', label: 'Rendez-vous', rhAllowed: true },
-    { id: 'calendly', icon: '🔗', label: 'Calendly', rhAllowed: true },
-  ]},
-  { id: 'compta', label: 'Finances', icon: '💰', sub: [
-    { id: 'suivi-financier', icon: '🧭', label: 'Cockpit financier', groupe: 'Pilotage' },
-    { id: 'tresorerie', icon: '📈', label: 'Plan de trésorerie', groupe: 'Pilotage' },
-    { id: 'entrees-argent', icon: '💰', label: 'Entrées d\'argent', groupe: 'Pilotage' },
-    { id: 'production', icon: '🏭', label: 'Production par période', staff: true, groupe: 'Pilotage' },
-    { id: 'import-decompte', icon: '📥', label: 'Importer un décompte', groupe: 'Commissions' },
-    { id: 'ocr-decomptes', icon: '🔎', label: 'Lire un décompte scanné', staff: true, groupe: 'Commissions' },
-    { id: 'ecohub-sync', icon: '🔗', label: 'Synchronisation EcoHub', staff: true, groupe: 'Commissions' },
-    { id: 'rapprochement', icon: '🔗', label: 'Rapprochement bancaire', groupe: 'Commissions' },
-    { id: 'commissions-attente', icon: '💸', label: 'Commissions', groupe: 'Commissions' },
-    { id: 'controle-coherence', icon: '🧪', label: 'Contrôle contrats × commissions', groupe: 'Commissions' },
-    { id: 'factures', icon: '🧾', label: 'Factures QR', groupe: 'Facturation' },
-    { id: 'caution', icon: '🔒', label: 'Comptes de caution', groupe: 'Facturation' },
-    { id: 'fiche-paie', icon: '🧑‍💼', label: 'Fiche de paie (agents)', groupe: 'Administration' },
-    { id: 'rapport-finma', icon: '🏛️', label: 'Rapport FINMA', groupe: 'Administration' },
-  ]},
-  { id: 'settings', label: 'Paramètres', icon: '⚙️', sub: [
-    { id: 'agents', icon: '🧑‍🤝‍🧑', label: 'Agents' },
-    { id: 'contacts-compagnies', icon: '🏢', label: 'Contacts compagnies' },
-    { id: 'audit-log', icon: '🔍', label: 'Journal d\'audit' },
-    { id: 'journal-erreurs', icon: '🩺', label: 'Journal des erreurs', staff: true },
-    { id: 'apparence', icon: '🎨', label: 'Apparence', rhAllowed: true },
+    { id: 'calendly', icon: '🔗', label: 'Calendly', rhAllowed: true, avance: true },
   ]},
 ];
 
@@ -885,10 +931,21 @@ function renderSidebar() {
     }
     // Session RH : liste blanche stricte (RH_VUES_AUTORISEES) — un groupe entier (ex: Comptabilité,
     // Paramètres) disparaît si aucun de ses sous-éléments n'est autorisé.
-    const subVisibles = rh ? sec.sub.filter(s => s.rhAllowed) : sec.sub;
-    if (rh && !subVisibles.length) return;
+    const subAutorises = rh ? sec.sub.filter(s => s.rhAllowed) : sec.sub;
+    if (rh && !subAutorises.length) return;
     // Un dossier de conseil ouvert allume l'entrée « Conseil financier » du menu
     const vueMenu = currentView === 'dossier-conseil' ? 'conseil' : currentView;
+
+    // Les écrans marqués `avance` sont repliés (20.09.2026) : ce sont ceux qu'on ouvre une fois
+    // par mois, et ils faisaient passer le menu de 36 à 55 boutons. Ils ne disparaissent pas —
+    // un bouton « voir plus » les rend, et le choix est retenu d'une visite à l'autre.
+    // La vue OUVERTE reste toujours affichée, même avancée : sinon on se retrouve sur un écran
+    // que le menu prétend ne pas avoir.
+    const toutVoir = !!window._navToutVoir[sec.id];
+    const subVisibles = toutVoir ? subAutorises
+      : subAutorises.filter(s => !s.avance || s.id === vueMenu);
+    const nbCaches = subAutorises.length - subVisibles.length;
+
     const isActive = subVisibles.some(s => s.id === vueMenu);
     nav += `<button class="nav-section-btn ${isActive ? 'active' : ''} ${openSections[sec.id] ? 'ouverte' : ''}" data-sec="${sec.id}" onclick="toggleSection('${sec.id}')" aria-expanded="${!!openSections[sec.id]}">
       <span class="nav-lib">${sec.label}</span>
@@ -918,6 +975,13 @@ function renderSidebar() {
           <span class="nav-ico" aria-hidden="true">${s.icon || '•'}</span><span class="nav-lib">${s.label}</span>${badgeHtml}
         </button>`;
       });
+      // Le reste de la rubrique, à un clic. On annonce COMBIEN : « voir plus » sans nombre laisse
+      // croire qu'il y a peut-être tout le reste du logiciel derrière.
+      if (nbCaches > 0 || toutVoir) {
+        nav += `<button type="button" class="nav-plus" onclick="event.stopPropagation();basculerNavToutVoir('${sec.id}')">
+          ${toutVoir ? 'Voir moins' : `+ ${nbCaches} écran${nbCaches > 1 ? 's' : ''} de plus`}
+        </button>`;
+      }
     }
   });
   document.getElementById('nav').innerHTML = nav;
@@ -945,6 +1009,15 @@ function toggleSection(id) {
 
 // Sous-menus repliables (état mémorisé sur ce navigateur)
 window._navGroupesFermes = (() => { try { return JSON.parse(localStorage.getItem('rex-nav-groupes-fermes') || '{}') || {}; } catch (e) { return {}; } })();
+
+// Les rubriques dont on a demandé à voir tous les écrans. Retenu d'une visite à l'autre : si on
+// a eu besoin du journal d'erreurs une fois, on en aura sans doute besoin encore.
+window._navToutVoir = (() => { try { return JSON.parse(localStorage.getItem('rex-nav-tout-voir') || '{}') || {}; } catch (e) { return {}; } })();
+function basculerNavToutVoir(sectionId) {
+  window._navToutVoir[sectionId] = !window._navToutVoir[sectionId];
+  try { localStorage.setItem('rex-nav-tout-voir', JSON.stringify(window._navToutVoir)); } catch (e) {}
+  if (typeof renderSidebar === 'function') renderSidebar();
+}
 function basculerGroupeNav(cle) {
   window._navGroupesFermes[cle] = !window._navGroupesFermes[cle];
   try { localStorage.setItem('rex-nav-groupes-fermes', JSON.stringify(window._navGroupesFermes)); } catch (e) {}

@@ -131,3 +131,14 @@
     .tabs { flex-wrap: nowrap; overflow-x: auto; width: 100%; } .tab-btn { white-space: nowrap; }
     .main h2[style*="font-size:18px"] { font-size: 20px !important; }
   }
+
+/* « + 4 écrans de plus » (20.09.2026) : le reste d'une rubrique, à un clic. Discret par
+   construction — c'est un accès, pas une action. */
+.nav-plus {
+  display: block; width: 100%; text-align: left;
+  margin: 2px 0 6px; padding: 5px 10px 5px 30px;
+  background: none; border: none; cursor: pointer;
+  font-family: inherit; font-size: var(--t-xs); color: var(--text-dim);
+  border-radius: var(--r-xs, 6px);
+}
+.nav-plus:hover { color: var(--text); background: color-mix(in srgb, currentColor 8%, transparent); }

@@ -329,7 +329,8 @@ function pafOuvrirResiliation(oppId) {
 
       <div class="paf-actions">
         <button type="button" class="btn-secondary" onclick="document.getElementById('modal-paf-resiliation').remove()">Fermer</button>
-        <button type="button" class="btn-secondary" onclick="pafCopierLettre('${oppId}')">📋 Copier le texte de la lettre</button>
+        <button type="button" class="btn-secondary" onclick="pafCopierLettre('${oppId}')">📋 Copier le texte</button>
+        <button type="button" class="btn-secondary" onclick="pafGenererLettreResiliation('${oppId}')" title="Compagnie, membres de la famille, polices et délai — puis prévisualisation et signature du client">📝 Générer la lettre de résiliation</button>
         <button type="button" class="btn-save" onclick="pafEnregistrerResiliation('${oppId}')">✓ Enregistrer</button>
       </div>
     </div>`, { opacite: .7, padding: '16px' });
@@ -355,6 +356,27 @@ async function pafEnregistrerResiliation(oppId) {
   document.getElementById('modal-paf-resiliation')?.remove();
   showError('✓ Résiliation enregistrée');
   pafRafraichir();
+}
+
+// La vraie feuille de résiliation depuis l'opportunité (22.09.2026, demande de Jonathan) : même
+// fenêtre que sur la fiche client (js/05) — compagnie, membres de la constellation familiale à
+// cocher, numéros de police, délai de résiliation, prévisualisation puis signature — pré-remplie
+// avec la situation actuelle saisie sur l'opportunité. Le délai proposé est l'échéance du
+// contrat actuel (date d'effet de la résiliation), pas la date limite d'envoi.
+function pafGenererLettreResiliation(oppId) {
+  const o = pafOpp(oppId);
+  if (!o) return;
+  if (!o.client_id) { showError('Cette affaire concerne un prospect : crée d’abord la fiche client pour générer la lettre (coordonnées et signature).'); return; }
+  if (typeof ouvrirModaleResiliation !== 'function') return;
+  const quoi = `${o.produit || ''} ${o.titre || ''}`.toLowerCase();
+  const type = /lamal|assurance de base|\bbase\b/.test(quoi) ? 'lamal' : /3a|pilier 3a|vie li[ée]e/.test(quoi) ? 'vie3a' : /3b|vie/.test(quoi) ? 'vie3b' : 'lca';
+  document.getElementById('modal-paf-resiliation')?.remove();
+  ouvrirModaleResiliation(o.client_id, {
+    compagnie: o.actuel_compagnie ? (typeof normaliserCompagnie === 'function' ? normaliserCompagnie(o.actuel_compagnie) : o.actuel_compagnie) : '',
+    police: o.actuel_police || '',
+    dateEffet: o.actuel_echeance || '',
+    type,
+  });
 }
 
 // Le texte de la lettre, dans le presse-papiers. Pas d'envoi automatique : une résiliation part

@@ -243,6 +243,7 @@ function viewFicheOpportunite(o) {
         </div>
         <div class="fcx-actions-menus">
           <button type="button" onclick="opComparer('${o.id}')">⚖️ Comparer les offres</button>
+          ${typeof pafGenererLettreResiliation === 'function' ? `<button type="button" onclick="pafGenererLettreResiliation('${o.id}')" title="Lettre de résiliation de l’ancien contrat : compagnie, membres de la famille, polices, délai">📝 Résiliation</button>` : ''}
           <button type="button" onclick="opChangerStade('${o.id}','Perdu')">✕ Perdue</button>
           <button type="button" onclick="supprimerOpportunite('${o.id}')">🗑️ Supprimer</button>
         </div>

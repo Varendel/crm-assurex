@@ -1257,11 +1257,14 @@ function membresConstellation(clientId) {
   return roles;
 }
 
-function ouvrirModaleResiliation(clientId) {
+// prefill (22.09.2026, ouverture depuis une opportunité — js/90) : { compagnie, police, type,
+// dateEffet } repris de la situation actuelle du client, tout reste modifiable.
+function ouvrirModaleResiliation(clientId, prefill) {
   const c = allClients.find(x => x.id === clientId);
   if (!c) return;
+  const pf = prefill || {};
   window._resClientId = clientId;
-  window._resLignesPolice = [ligneResiliationVide()];
+  window._resLignesPolice = [{ ...ligneResiliationVide(pf.type), police: pf.police || '' }];
   const membres = membresConstellation(clientId);
   const membresHtml = membres.length > 1 ? `<div class="form-field" style="grid-column:span 2">
     <label class="form-label">Personnes concernées par cette résiliation</label>
@@ -1309,6 +1312,8 @@ function ouvrirModaleResiliation(clientId) {
       </div>
     </div>`, { opacite: 0.8, padding: '16px' });
   renderLignesPolice();
+  if (pf.compagnie) document.getElementById('res-compagnie').value = pf.compagnie;
+  if (pf.dateEffet) document.getElementById('res-date-effet').value = pf.dateEffet;
 }
 
 // Modèle de lettre commerciale suisse classique (entête société, date/lieu et mention

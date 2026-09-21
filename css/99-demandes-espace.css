@@ -23,8 +23,8 @@
   box-shadow: 0 2px 8px color-mix(in srgb, var(--dsp-orange) 35%, transparent);
 }
 .dsp-logo {
-  width: 22px; height: 22px; flex-shrink: 0;
-  /* Le fichier est blanc sur transparent : il se pose tel quel sur l'orange. */
+  width: 26px; height: 26px; flex-shrink: 0;
+  /* L'emblème REX CLOUD (Rex derrière les classeurs, sur son nuage) : il se pose tel quel sur l'orange. */
   object-fit: contain;
 }
 .dsp-marque {
@@ -67,7 +67,7 @@
 /* ── Journal d'activité : logos REX CLOUD et EcoHub (js/17, 22.09.2026) ────────────────────────────
    Les deux logos sont marine : on les pose sur un rond blanc, lisible dans tous les thèmes. */
 .ja-icone:has(> .ja-logo) { background: #fff !important; border: 1px solid rgba(21, 25, 88, .14); }
-.ja-logo { width: 18px; height: 18px; object-fit: contain; display: block; }
+.ja-logo { width: 22px; height: 22px; object-fit: contain; display: block; }
 .ja-logo-ecohub { width: 15px; height: 16px; }
 
 /* ── Les pastilles EcoHub (js/59, js/61 — 22.09.2026) ─────────────────────────────────────────── */

@@ -16,7 +16,7 @@ const JA_TYPES = {
   courrier:     { label: 'Courriers',     icone: '📨', fond: 'rgba(17,54,121,0.12)' },
   // 22.09.2026 : ce qui vient de REX CLOUD porte le logo REX CLOUD, ce qui arrive par EcoHub le
   // logo EcoHub — on voit d'où vient l'événement sans lire la ligne.
-  message:      { label: 'REX CLOUD',     icone: '<img src="assets/logos/rex-cloud-nuage-64.png" alt="" class="ja-logo"/>', fond: 'rgba(0,207,255,0.14)' },
+  message:      { label: 'REX CLOUD',     icone: '<img src="assets/logos/rex/logo-cloud/embleme-48.png" alt="" class="ja-logo"/>', fond: 'rgba(0,207,255,0.14)' },
   ecohub:       { label: 'EcoHub',        icone: '<img src="assets/logos/ecohub-icone.svg" alt="" class="ja-logo ja-logo-ecohub"/>', fond: 'rgba(21,25,88,0.10)' },
   tache:        { label: 'Tâches',        icone: '☑️', fond: 'rgba(56,189,248,0.14)' },
   rdv:          { label: 'RDV',           icone: '📅', fond: 'rgba(74,222,128,0.14)' },

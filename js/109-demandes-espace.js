@@ -20,7 +20,7 @@
 //
 // RETOUR EN ARRIÈRE : retirer les deux lignes de index.html.
 
-const DSP_LOGO = 'assets/logos/rex-cloud-mini-blanc.svg';
+const DSP_LOGO = 'assets/logos/rex/logo-cloud/embleme-96.png';
 
 function dspBandeauHtml() {
   return `<div class="dsp-origine">

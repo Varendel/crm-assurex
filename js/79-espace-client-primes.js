@@ -144,7 +144,7 @@ function ecpDemanderComparatif() {
 // la vraie marque, en blanc, dans sa version mini — resserrée et sans accroche, parce qu'un logo
 // qui marche à 22 px n'est jamais le grand mis à l'échelle. Le fichier est servi en image plutôt
 // qu'incorporé : le navigateur le met en cache d'une page à l'autre.
-const ECP_MINI_LOGO = '<img src="assets/logos/rex-cloud-mini-blanc.svg" alt="REX CLOUD" class="ecp-mini-logo"/>';
+const ECP_MINI_LOGO = '<img src="assets/logos/rex/logo-cloud/rex-cloud-blanc-96.png" alt="REX CLOUD" class="ecp-mini-logo"/>';
 
 // ── Le conseiller, avec sa photo ────────────────────────────────────────────────────────────────
 // Une photo vaut mieux que deux initiales dans un rond : l'espace client sert aussi à rappeler

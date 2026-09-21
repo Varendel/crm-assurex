@@ -44,6 +44,19 @@ RXA_MOUVEMENTS.splice(0, RXA_MOUVEMENTS.length, 'saut');
 const RXA_REPOS_BANDEAU = [4000, 9000];   // un saut toutes les 4 à 9 secondes, pas en continu
 const RXA_REPOS = 'assets/logos/rex/anim-confiant/1.png';   // pose de repos commune à toutes les séries
 
+// 21.09.2026, nuit : « Ajoute Rex sans fond sur le bandeau supérieur, en remplacement des
+// animations et images actuelles. » La planche « Rex flamme » (60 images) détourée, alignée sur les
+// pieds et à taille constante : Rex marche, salue, souffle sa flamme turquoise, allume sa queue,
+// lève le pouce et fait un clin d'œil. WebP à fond transparent (753 Ko les 60). Le repos est la
+// dernière image de la série (pouce levé, queue allumée) : pas de saut de taille entre deux passages.
+RXA_SEQUENCES.flamme = (() => {
+  const tenir = { 9: 40, 19: 200, 25: 80, 37: 120, 49: 120, 59: 1100 };
+  const ordre = Array.from({ length: 60 }, (_, i) => i);
+  return { n: 60, ext: 'webp', ordre, ms: ordre.map(i => 80 + (tenir[i] || 0)), repos: 'assets/logos/rex/anim-flamme/60.webp' };
+})();
+RXA_MOUVEMENTS.splice(0, RXA_MOUVEMENTS.length, 'flamme');
+RXA_REPOS_BANDEAU.splice(0, 2, 5000, 10000);   // la flamme toutes les 5 à 10 secondes
+
 const RXA_PAR_ECRAN = {
   dashboard: 'salut', 'commissions-attente': 'ordinateur', 'import-decompte': 'ordinateur', 'entrees-argent': 'ordinateur',
   tresorerie: 'concentre', 'suivi-financier': 'concentre', rappels: 'planification', agenda: 'planification',
@@ -56,8 +69,8 @@ window._rxa = window._rxa || { images: {}, pret: false };
 function rxaPrecharger() {
   const promesses = [];
   for (const m of RXA_MOUVEMENTS) {
-    const n = RXA_SEQUENCES[m] ? RXA_SEQUENCES[m].n : 7;
-    if (!window._rxa.images[m]) window._rxa.images[m] = Array.from({ length: n }, (_, i) => { const im = new Image(); im.src = `${RXA_DOSSIER}${m}/${i + 1}.png`; return im; });
+    const n = RXA_SEQUENCES[m] ? RXA_SEQUENCES[m].n : 7, ext = (RXA_SEQUENCES[m] && RXA_SEQUENCES[m].ext) || 'png';
+    if (!window._rxa.images[m]) window._rxa.images[m] = Array.from({ length: n }, (_, i) => { const im = new Image(); im.src = `${RXA_DOSSIER}${m}/${i + 1}.${ext}`; return im; });
     for (const im of window._rxa.images[m]) promesses.push(im.decode ? im.decode().catch(() => {}) : Promise.resolve());
   }
   // decode() peut ne jamais répondre dans un onglet en arrière-plan : on n'attend pas plus de
@@ -84,7 +97,7 @@ async function rxaJouer(mouvement, img) {
     img.src = cadres[ordre[p]].src;
     await rxaAttendre(seq ? seq.ms[p] : RXA_PAS_MS);
   }
-  if (seq) img.src = RXA_REPOS;
+  if (seq) img.src = seq.repos || RXA_REPOS;
   img._rxaJoue = false;
 }
 
@@ -101,7 +114,9 @@ async function rxaVivre(img, repos) {
   if (!img || img._rxaVit) return;
   img._rxaVit = true;
   img.classList.remove('respire', 'rxa-vivant', 'srx-costume');
-  img.src = RXA_REPOS;
+  const premier = RXA_SEQUENCES[RXA_MOUVEMENTS[0]];
+  img.src = (premier && premier.repos) || RXA_REPOS;
+  if (RXA_MOUVEMENTS[0] === 'flamme') { img.classList.add('rxa-flamme'); img.removeAttribute('loading'); img.style.height = ''; }
   let dernier = null;
   await rxaAttendre(400);
   while (document.body.contains(img)) {
@@ -120,7 +135,7 @@ function rxaPoser() {
   // Le bandeau du tableau de bord : le Rex principal (pas le compagnon de saison).
   document.querySelectorAll('img.dbx-hero-mascotte:not(.rexb-compagnon), .dbx-hero-mascotte img.rexb:not(.rexb-compagnon)').forEach(img => {
     if (img._rxaVit) return;
-    img.addEventListener('mouseenter', () => { img._rxaDemande = 'saut'; });
+    img.addEventListener('mouseenter', () => { img._rxaDemande = RXA_MOUVEMENTS[0]; });
     rxaVivre(img, RXA_REPOS_BANDEAU);
   });
   // Plus de flottement ailleurs, ni de Rex animé dans le menu (retirés le 21.09.2026).
@@ -141,7 +156,12 @@ function rxaPoser() {
   const st = document.createElement('style');
   st.textContent = `
     /* Les Rex fixes restent fixes : plus de flottement (bandeaux, compagnon, REX CLOUD). */
-    img.rexb.respire, .rexb-duo .rexb-compagnon.respire, .cloud-rex, img.rxa-vivant { animation: none !important; }`;
+    img.rexb.respire, .rexb-duo .rexb-compagnon.respire, .cloud-rex, img.rxa-vivant { animation: none !important; }
+    /* Rex flamme dans le bandeau : image plus large (la flamme part vers la droite), sans flottement,
+       sans le compagnon de saison à côté. Rex y garde à peu près la taille de l'ancienne pose. */
+    img.dbx-hero-mascotte.rxa-flamme { height: 170px !important; width: auto !important; max-width: none; animation: none !important; filter: drop-shadow(0 10px 18px rgba(0,0,0,.28)); }
+    .dbx-hero-droite .rexb-compagnon { display: none !important; }
+    @media (max-width: 768px) { img.dbx-hero-mascotte.rxa-flamme { height: 96px !important; } }`;
   st.textContent += `
     .sidebar .rex-mascotte-menu, img.dbx-hero-mascotte { object-fit: contain; object-position: center bottom; }
     .sidebar .rex-mascotte-menu:hover, img.dbx-hero-mascotte:hover { cursor: pointer; }

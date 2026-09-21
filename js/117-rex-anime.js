@@ -54,32 +54,25 @@ const RXA_REPOS = 'assets/logos/rex/anim-confiant/1.png';   // pose de repos com
 // — puis tout recommence, en continu. Le trajet est un déplacement de l'image (translateX), en %
 // de sa largeur pour rester juste sur téléphone ; le miroir pivote autour de ses pieds.
 RXA_SEQUENCES.flamme = (() => {
-  const tenir = { 9: 40, 19: 200, 25: 80, 37: 120, 49: 120, 59: 1100 };
-  // Images 55 et 56 écartées (21.09.2026) : la 56 a une paupière à moitié baissée qui fait un trait
-  // en travers de l'œil, et la 55 fait le clin d'œil avec l'autre œil que les images 57 à 59.
-  const ECARTEES = new Set([54, 55]);
-  const etapes = Array.from({ length: 60 }, (_, i) => i).filter(i => !ECARTEES.has(i))
-    .map(i => ({ f: i, ms: 80 + (tenir[i] || 0), x: 0, miroir: false }));
-  // La marche : la planche « marche rex intermédiaire » (8 images, un vrai cycle de pas avec les
-  // positions de passage), détourée et mise à la même échelle et au même point d'appui que la
-  // planche flamme — Rex ne change pas de taille d'une planche à l'autre. Ses images sont rangées
-  // après les 60 de la flamme (indices 60 à 67). Deux cycles par trajet.
-  // Les demi-tours : la planche « rex tourne rond » (8 vues : face, trois-quarts, profil, dos…),
-  // indices 68 à 75. Rex se retourne vraiment au bout de chaque trajet au lieu de basculer en
-  // miroir d'un coup ; au second départ, il fait le tour complet par le dos.
-  // 21.09.2026, soir : la planche « REX demi tour » (profil droite → trois-quarts → face avec un
-  // clignement souriant → trois-quarts → profil gauche), indices 68 à 75, remplace ces demi-tours :
-  // même style que la marche, et Rex se retourne en passant par la face, en regardant l'utilisateur.
-  // 21.09.2026, nuit : « il marche à gauche et crache une longue flamme turquoise » — la planche
-  // « REX flamme gauche » (8 images, Rex tourné vers la gauche, flamme jusqu'à deux fois sa
-  // longueur), indices 76 à 83. Toutes les images ont été élargies de 180 px transparents à gauche
-  // (516 × 234) pour que la flamme tienne : Rex garde exactement sa taille et sa place (voir CSS).
-  // Le trajet D est donc exprimé en % de la nouvelle largeur (36 % ≈ l'ancien 55 %).
-  const PAS = 16, D = 36, DT = 68, FG = 76, tourner = (vues, x, ms = 110) => vues.forEach(v => etapes.push({ f: DT + v, ms: v === 4 ? 220 : ms, x, miroir: false }));
-  const marcher = (deX, aX, miroir, pas = PAS) => { for (let k = 0; k < pas; k++) etapes.push({ f: 60 + (k % 8), ms: 90, x: deX + (aX - deX) * (k + 1) / pas, miroir }); };
-  // Marche en crachant : la première moitié du trajet, la grande flamme tenue un peu plus longtemps.
+  // 21.09.2026, nuit : « Vire les images du début où il fait le clin d'œil et la première flamme,
+  // c'est la séquence la moins bien réussie. Conserve les autres. » La planche des 60 images n'est
+  // plus jouée. Restent les planches du même style, toutes à la même échelle et au même point
+  // d'appui, dans des images de 516 × 234 élargies à gauche pour la longue flamme (voir CSS) :
+  //   · marche (8 images, un vrai pas)         → indices 0 à 7
+  //   · demi-tour par la face (8 images)        → indices 8 à 15
+  //   · marche en crachant vers la gauche (8)   → indices 16 à 23
+  //   · saut (8 images)                         → indices 24 à 31 ; la hauteur de chaque image
+  //     au-dessus du sol est rendue par un déplacement vertical (y, en % de la hauteur).
+  const M = 0, DT = 8, FG = 16, SA = 24, PAS = 16, D = 36;
+  const SAUT_Y = [0, 1.6, -0.5, -27.7, -37, -17.3, 0.8, -0.3], SAUT_MS = [160, 170, 90, 100, 190, 100, 150, 200];
+  const etapes = [];
+  const tourner = (vues, x) => vues.forEach(v => etapes.push({ f: DT + v, ms: v === 4 ? 220 : 110, x, miroir: false }));
+  const marcher = (deX, aX, miroir, pas = PAS) => { for (let k = 0; k < pas; k++) etapes.push({ f: M + (k % 8), ms: 90, x: deX + (aX - deX) * (k + 1) / pas, miroir }); };
   const cracher = (deX, aX) => { const t = [130, 130, 130, 150, 240, 260, 160, 140]; for (let k = 0; k < 8; k++) etapes.push({ f: FG + k, ms: t[k], x: deX + (aX - deX) * (k + 1) / 8, miroir: false }); };
-  tourner([3, 5, 6, 7], 0);                  // de face (fin de la flamme) → profil gauche
+  const sauter = () => SAUT_Y.forEach((y, k) => etapes.push({ f: SA + k, ms: SAUT_MS[k], x: 0, y, miroir: false }));
+  tourner([0, 1, 2, 3], 0);                   // de profil → de face
+  sauter();                                   // un saut de joie, sur place
+  tourner([3, 4, 5, 6, 7], 0);                // sourire en clignant, puis profil gauche
   marcher(0, -D, true);                       // vers la gauche
   tourner([7, 6, 5, 4, 3, 2, 1, 0], -D);      // demi-tour vers la droite, en passant par la face
   marcher(-D, 0, false);                      // revient
@@ -87,13 +80,12 @@ RXA_SEQUENCES.flamme = (() => {
   cracher(0, -D / 2);                         // repart en crachant une longue flamme turquoise
   marcher(-D / 2, -D, true, 8);               // finit le trajet en marchant
   tourner([7, 6, 5, 4, 3, 2, 1, 0], -D);
-  marcher(-D, 0, false);                      // de retour, de profil vers la droite : la flamme reprend à l'image 1
-  const fichiers = [...Array.from({ length: 60 }, (_, i) => `assets/logos/rex/anim-flamme/${i + 1}.webp`),
-                    ...Array.from({ length: 8 }, (_, i) => `assets/logos/rex/anim-marche8/${i + 1}.webp`),
-                    ...Array.from({ length: 8 }, (_, i) => `assets/logos/rex/anim-demitour8/${i + 1}.webp`),
-                    ...Array.from({ length: 8 }, (_, i) => `assets/logos/rex/anim-flammegauche8/${i + 1}.webp`)];
-  return { n: 84, fichiers, etapes, ordre: etapes.map(e => e.f), ms: etapes.map(e => e.ms), repos: 'assets/logos/rex/anim-flamme/1.webp' };
+  marcher(-D, 0, false);                      // de retour, de profil vers la droite : tout recommence
+  const lot = (dossier) => Array.from({ length: 8 }, (_, i) => `assets/logos/rex/${dossier}/${i + 1}.webp`);
+  const fichiers = [...lot('anim-marche8'), ...lot('anim-demitour8'), ...lot('anim-flammegauche8'), ...lot('anim-saut8')];
+  return { n: 32, fichiers, etapes, ordre: etapes.map(e => e.f), ms: etapes.map(e => e.ms), repos: 'assets/logos/rex/anim-demitour8/1.webp' };
 })();
+
 RXA_MOUVEMENTS.splice(0, RXA_MOUVEMENTS.length, 'flamme');
 RXA_REPOS_BANDEAU.splice(0, 2, 0, 0);   // en continu
 

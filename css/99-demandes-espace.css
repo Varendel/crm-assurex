@@ -64,6 +64,12 @@
 @media (prefers-reduced-motion: reduce) { .dsp-doc-alerte, .dsp-doc-feu { animation: none; } }
 @media (max-width: 620px) { .dsp-doc-alerte { flex-wrap: wrap; } .dsp-doc-btn { width: 100%; } }
 
+/* ── Journal d'activité : logos REX CLOUD et EcoHub (js/17, 22.09.2026) ────────────────────────────
+   Les deux logos sont marine : on les pose sur un rond blanc, lisible dans tous les thèmes. */
+.ja-icone:has(> .ja-logo) { background: #fff !important; border: 1px solid rgba(21, 25, 88, .14); }
+.ja-logo { width: 18px; height: 18px; object-fit: contain; display: block; }
+.ja-logo-ecohub { width: 15px; height: 16px; }
+
 /* ── Les pastilles EcoHub (js/59, js/61 — 22.09.2026) ─────────────────────────────────────────── */
 .dcx-pastille { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px;
   font-size: var(--t-xs); font-weight: 600; white-space: nowrap; }

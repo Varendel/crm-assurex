@@ -14,7 +14,10 @@ const JA_TYPES = {
   email:        { label: 'E-mails',       icone: '✉️', fond: 'rgba(167,139,250,0.16)' },
   appel:        { label: 'Appels',        icone: '📞', fond: 'rgba(56,189,248,0.14)' },
   courrier:     { label: 'Courriers',     icone: '📨', fond: 'rgba(17,54,121,0.12)' },
-  message:      { label: 'Espace client', icone: '💬', fond: 'rgba(0,207,255,0.18)' },
+  // 22.09.2026 : ce qui vient de REX CLOUD porte le logo REX CLOUD, ce qui arrive par EcoHub le
+  // logo EcoHub — on voit d'où vient l'événement sans lire la ligne.
+  message:      { label: 'REX CLOUD',     icone: '<img src="assets/logos/rex-cloud-nuage-64.png" alt="" class="ja-logo"/>', fond: 'rgba(0,207,255,0.14)' },
+  ecohub:       { label: 'EcoHub',        icone: '<img src="assets/logos/ecohub-icone.svg" alt="" class="ja-logo ja-logo-ecohub"/>', fond: 'rgba(21,25,88,0.10)' },
   tache:        { label: 'Tâches',        icone: '☑️', fond: 'rgba(56,189,248,0.14)' },
   rdv:          { label: 'RDV',           icone: '📅', fond: 'rgba(74,222,128,0.14)' },
   signature:    { label: 'Signatures',    icone: '✍️', fond: 'rgba(74,222,128,0.14)' },
@@ -73,7 +76,7 @@ async function chargerJournalActivite() {
   const idsContrats = (ctx.contrats || []).map(ct => ct.id);
   const oppsClient = (typeof allOpportunites !== 'undefined' ? allOpportunites : []).filter(o => o.client_id === clientId);
   const idsAudit = [clientId, ...idsContrats, ...oppsClient.map(o => o.id)];
-  const [activites, audits, messages, transferts, sinistres, demandesDocs] = await Promise.all([
+  const [activites, audits, messages, transferts, sinistres, demandesDocs, docsEcohub] = await Promise.all([
     dbGet('activites_client', `client_id=eq.${clientId}&select=*&order=created_at.desc&limit=200`),
     dbGet('audit_log', `record_id=in.(${idsAudit.join(',')})&action=not.in.(view_client,login,logout)&select=action,detail,user_email,created_at&order=created_at.desc&limit=150`),
     // Ce que le client a écrit ou demandé depuis son espace REX CLOUD (js/51, js/52)
@@ -81,6 +84,8 @@ async function chargerJournalActivite() {
     dbGet('demandes_transfert', `client_id=eq.${clientId}&select=*&order=created_at.desc&limit=20`).catch(() => []),
     dbGet('sinistres', `client_id=eq.${clientId}&select=*&order=created_at.desc&limit=50`).catch(() => []),
     dbGet('demandes_documents', `client_id=eq.${clientId}&select=*&order=created_at.desc&limit=50`).catch(() => []),
+    // Documents déposés par la synchronisation EcoHub pour ce client (js/59, source « ecohub »)
+    dbGet('documents_compagnies', `client_id=eq.${clientId}&source=eq.ecohub&select=titre,nom_fichier,compagnie,numero_police,type,created_at,visible_client&order=created_at.desc&limit=50`).catch(() => []),
   ]);
   if (_ja.clientId !== clientId) return; // l'utilisateur a changé de fiche entre-temps
 
@@ -113,6 +118,9 @@ async function chargerJournalActivite() {
   (transferts || []).forEach(t => items.push({ type: 'message', date: t.created_at, qui: 'Client (REX CLOUD)',
     titre: 'Demande de transfert de gestion',
     detail: (Array.isArray(t.compagnies) ? t.compagnies : []).map(x => `${x.compagnie}${x.produit ? ' · ' + x.produit : ''}${x.police ? ' · ' + x.police : ''}`).join('\n') + (t.message ? `\n${t.message}` : '') }));
+  (docsEcohub || []).forEach(d => items.push({ type: 'ecohub', date: d.created_at, qui: 'Synchronisation EcoHub',
+    titre: `Document reçu : ${d.titre || d.nom_fichier || 'document'}`,
+    detail: [d.compagnie, d.numero_police ? 'police ' + d.numero_police : '', d.visible_client ? 'en ligne dans l’espace client' : ''].filter(Boolean).join(' · ') }));
   (audits || []).forEach(a => items.push({ type: 'modification', date: a.created_at, qui: a.user_email || '',
     titre: JA_LIBELLES_AUDIT[a.action] || a.action.replace(/_/g, ' '), detail: a.detail || '' }));
 

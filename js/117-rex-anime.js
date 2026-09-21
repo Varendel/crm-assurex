@@ -72,7 +72,11 @@ RXA_SEQUENCES.flamme = (() => {
   // image (la planche était mélangée) : 16 images pour un pas, classées par écart des pieds et
   // pied levé, alignées sur la tête. Un pas fait ~12 % de la largeur de l'image : 0,8 % par image,
   // pour que le pied posé ne glisse pas.
-  const M = 0, NM = 16, DT = 16, FG = 24, SA = 32, AP = 40, PCT_PAR_IMAGE = 0.8, MS_PAS = 60, D = 36;
+  // 22.09.2026 : nouvelle planche « un pas » (8 images, dont 6 utiles : la 7 et la 8 répètent la
+  // 1 et la 2). Chaque image a son avance propre, mesurée sur le pied posé (en px de la planche),
+  // et une durée qui en dépend : le pied au sol reste immobile, le corps avance.
+  const M = 0, NM = 6, DT = 6, FG = 14, SA = 22, AP = 30, D = 36;
+  const PAS_AVANCE = [13, 12, 25, 74, 57, 5], PAS_TOTAL = 186, FOULEE = 21.8;   // foulée en % de la largeur de l'image
   const SAUT_Y = [0, 1.6, -0.5, -27.7, -37, -17.3, 0.8, -0.3], SAUT_MS = [160, 170, 90, 100, 190, 100, 150, 200];
   // Dans les images de 516 px : bords du corps dans les deux poses adossées (dos à droite, dos à
   // gauche), et pivot du miroir (53,7 %, voir le CSS).
@@ -97,8 +101,16 @@ RXA_SEQUENCES.flamme = (() => {
     const etapes = [];
     const tourner = (vues, x) => vues.forEach(v => etapes.push({ f: DT + v, ms: v === 4 ? 220 : 110, x, miroir: false }));
     const marcher = (deX, aX, miroir) => {
-      const pas = Math.max(NM, Math.round(Math.abs(aX - deX) / PCT_PAR_IMAGE));
-      for (let k = 0; k < pas; k++) etapes.push({ f: M + (k % NM), ms: MS_PAS, x: deX + (aX - deX) * (k + 1) / pas, miroir });
+      const dist = Math.abs(aX - deX), sens = aX < deX ? -1 : 1;
+      if (dist < 0.5) return;
+      // Nombre de pas entier le plus proche, pour finir le trajet sur un appui complet.
+      const pas = Math.max(1, Math.round(dist / FOULEE)), echelle = dist / (pas * FOULEE);
+      let fait = 0;
+      for (let p = 0; p < pas; p++) for (let k = 0; k < NM; k++) {
+        const part = PAS_AVANCE[k] / PAS_TOTAL;
+        fait += part * FOULEE * echelle;
+        etapes.push({ f: M + k, ms: Math.round(55 + 1.5 * PAS_AVANCE[k]), x: deX + sens * Math.min(fait, dist), miroir });
+      }
     };
     const cracher = (deX, aX) => { const t = [130, 130, 130, 150, 240, 260, 160, 140]; for (let k = 0; k < 8; k++) etapes.push({ f: FG + k, ms: t[k], x: deX + (aX - deX) * (k + 1) / 8, miroir: false }); };
     const sauter = () => SAUT_Y.forEach((y, k) => etapes.push({ f: SA + k, ms: SAUT_MS[k], x: 0, y, miroir: false }));
@@ -123,8 +135,8 @@ RXA_SEQUENCES.flamme = (() => {
     return etapes;
   }
   const lot = (dossier, n = 8) => Array.from({ length: n }, (_, i) => `assets/logos/rex/${dossier}/${i + 1}.webp`);
-  const fichiers = [...lot('anim-marchecroisee', NM), ...lot('anim-demitour8'), ...lot('anim-flammegauche8'), ...lot('anim-saut8'), ...lot('anim-appui2', 2)];
-  const seq = { n: 42, fichiers, repos: 'assets/logos/rex/anim-demitour8/1.webp' };
+  const fichiers = [...lot('anim-marchepas', NM), ...lot('anim-demitour8'), ...lot('anim-flammegauche8'), ...lot('anim-saut8'), ...lot('anim-appui2', 2)];
+  const seq = { n: 32, fichiers, repos: 'assets/logos/rex/anim-demitour8/1.webp' };
   seq.construire = img => { seq.etapes = construire(img); seq.ordre = seq.etapes.map(e => e.f); seq.ms = seq.etapes.map(e => e.ms); };
   seq.construire(null);
   return seq;

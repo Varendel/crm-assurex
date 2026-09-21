@@ -925,11 +925,16 @@ function viewCommissions() {
       // revient à Assurex (voir le filtre COMMS plus haut). Annoncer « reçues » pour les
       // secondes fait croire que l'argent est sur le compte — il ne l'est pas, il est à
       // refacturer. C'est exactement le genre de libellé qui fait douter d'un chiffre juste.
+      // Second passage (21.09.2026) : « Commissions à répartir » annonçait une action en suspens,
+      // alors que tout l'argent est encaissé et rapproché. Ce tableau n'est pas une liste de
+      // choses à faire : c'est la liste de ce qui APPARTIENT à Assurex, avec le partage entre
+      // Jonathan et les apporteurs. Le titre dit maintenant ce que la liste est, pas ce qu'il
+      // resterait à faire.
       const parAssurex = COMMS.filter(c => c.statut === 'reçue').length;
       const parOz = COMMS.length - parAssurex;
       return `<div style="margin-bottom:10px">
-        <div style="font-size:var(--t-m);font-weight:600;color:var(--text)">Commissions à répartir (${COMMS.length})</div>
-        <div style="font-size:var(--t-xs);color:var(--text-muted)">${parAssurex} encaissée${parAssurex > 1 ? 's' : ''} par Assurex${parOz ? ` · ${parOz} encaissée${parOz > 1 ? 's' : ''} par OZ, part Assurex à refacturer` : ''}</div>
+        <div style="font-size:var(--t-m);font-weight:600;color:var(--text)">Commissions revenant à Assurex (${COMMS.length})</div>
+        <div style="font-size:var(--t-xs);color:var(--text-muted)">${parAssurex} encaissée${parAssurex > 1 ? 's' : ''} directement${parOz ? ` · ${parOz} encaissée${parOz > 1 ? 's' : ''} par OZ pour le compte d’Assurex` : ''}</div>
       </div>`;
     })()}
     <div class="table-wrap">

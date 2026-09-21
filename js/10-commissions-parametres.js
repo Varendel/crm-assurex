@@ -430,9 +430,22 @@ function renderToutesCommissions() {
   if (zoneStats) zoneStats.innerHTML = [
     kpi({ i: 0, label: 'En attente', valeur: totalAttente, prefixe: 'CHF ', sous: `${baseStats.filter(c => c.statut === 'en_attente').length} commission(s) · reste attendu`, onclick: "tcChoisirStatut('en_attente')" }),
     kpi({ i: 1, label: 'Encaissé par Assurex', valeur: totalRecuNet, prefixe: 'CHF ', sous: `${nbRecues} commission(s) · versements partiels inclus${totalExtourne ? ` · après ${fmtCHF(Math.round(totalExtourne))} d’extournes` : ''}`, onclick: "tcChoisirStatut('reçue')" }),
-    kpi({ i: 2, label: 'Versé à OZ, revient à Assurex', valeur: totalOzRefacturable, prefixe: 'CHF ', sous: dejaRefacture ? `dont ${fmtCHF(Math.round(dejaRefacture))} déjà refacturés` : 'à refacturer à OZ', onclick: "tcChoisirStatut('versé_oz_a_refacturer')" }),
-    kpi({ i: 3, label: 'Produit total', valeur: totalRecuNet + totalOzRefacturable, prefixe: 'CHF ', sous: 'encaissé Assurex + part OZ à refacturer — même total que la vue Commissions' }),
+    kpi({ i: 2, label: 'Versé à OZ, revient à Assurex', valeur: totalOzRefacturable, prefixe: 'CHF ', sous: dejaRefacture ? `dont ${fmtCHF(Math.round(dejaRefacture))} déjà refacturés` : 'encaissé par OZ pour le compte d’Assurex', onclick: "tcChoisirStatut('versé_oz_a_refacturer')" }),
+    // « Produit total » (21.09.2026) : cette carte ne totalisait PAS toutes les commissions, seulement
+    // la part qui revient à Assurex. Avec le mot « total », on la lisait comme le grand total — et
+    // 13 294 francs face à plus de 100 000 encaissés faisait croire à une erreur. Elle dit
+    // maintenant ce qu'elle compte.
+    kpi({ i: 3, label: 'Produit Assurex', valeur: totalRecuNet + totalOzRefacturable, prefixe: 'CHF ', sous: 'encaissé directement + part encaissée par OZ pour Assurex — même total que la vue interne' }),
     kpi({ i: 4, label: 'Acquisition · Gestion', valeur: totalAcquisition + totalGestion, prefixe: 'CHF ', sous: `acquisition CHF ${fmtCHF(Math.round(totalAcquisition))} · gestion CHF ${fmtCHF(Math.round(totalGestion))}` }),
+    // Le vrai grand total, qui manquait : tout ce qui a été encaissé, par les deux entités. Seulement
+    // l'encaissé : additionner du reçu et de l'attendu donnerait un chiffre qui ne correspond à rien.
+    // L'attendu est rappelé à côté, à part.
+    (() => {
+      const encOz = baseTous.filter(c => c.statut === 'versé_oz').reduce((s, c) => s + montantC(c), 0);
+      const totalGeneral = totalRecuNet + encOz;
+      return kpi({ i: 5, label: 'Total encaissé, toutes entités', valeur: totalGeneral, prefixe: 'CHF ',
+        sous: `Assurex CHF ${fmtCHF(Math.round(totalRecuNet))} · OZ CHF ${fmtCHF(Math.round(encOz))} · en attente CHF ${fmtCHF(Math.round(totalAttente))}` });
+    })(),
   ].join('');
 
   // Onglets de statut avec compteurs (mêmes autres filtres)

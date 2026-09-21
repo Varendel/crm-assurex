@@ -35,6 +35,24 @@ const TYPO_POLICES = [
     google: 'IBM+Plex+Sans:wght@400;500;600', desc: 'Chiffres très lisibles, allure d’ingénierie' },
   { cle: 'atkinson', nom: 'Atkinson Hyperlegible', pile: "'Atkinson Hyperlegible', -apple-system, 'Segoe UI', sans-serif",
     google: 'Atkinson+Hyperlegible:wght@400;700', desc: 'Dessinée pour la lisibilité : 0 et O, 1 et l ne se confondent pas' },
+  // Ajouts du 21.09.2026 : des polices d'interface soignées, toutes avec des chiffres tabulaires
+  // (les montants s'alignent en colonne) et un bon rendu en petit corps.
+  { cle: 'manrope', nom: 'Manrope', pile: "'Manrope', -apple-system, 'Segoe UI', sans-serif",
+    google: 'Manrope:wght@400;500;600', desc: 'Moderne et géométrique, très « fintech »' },
+  { cle: 'jakarta', nom: 'Plus Jakarta Sans', pile: "'Plus Jakarta Sans', -apple-system, 'Segoe UI', sans-serif",
+    google: 'Plus+Jakarta+Sans:wght@400;500;600', desc: 'Élégante et ronde, allure d’agence' },
+  { cle: 'dm', nom: 'DM Sans', pile: "'DM Sans', -apple-system, 'Segoe UI', sans-serif",
+    google: 'DM+Sans:wght@400;500;600', desc: 'Nette et compacte, beaucoup d’information par ligne' },
+  { cle: 'figtree', nom: 'Figtree', pile: "'Figtree', -apple-system, 'Segoe UI', sans-serif",
+    google: 'Figtree:wght@400;500;600', desc: 'Claire et amicale, idéale pour l’espace client' },
+  { cle: 'onest', nom: 'Onest', pile: "'Onest', -apple-system, 'Segoe UI', sans-serif",
+    google: 'Onest:wght@400;500;600', desc: 'Sobre et régulière, proche de Geist en plus chaleureux' },
+  { cle: 'instrument', nom: 'Instrument Sans', pile: "'Instrument Sans', -apple-system, 'Segoe UI', sans-serif",
+    google: 'Instrument+Sans:wght@400;500;600', desc: 'Raffinée, un peu condensée, très éditoriale' },
+  { cle: 'albert', nom: 'Albert Sans', pile: "'Albert Sans', -apple-system, 'Segoe UI', sans-serif",
+    google: 'Albert+Sans:wght@400;500;600', desc: 'Scandinave, calme, très professionnelle' },
+  { cle: 'lexend', nom: 'Lexend', pile: "'Lexend', -apple-system, 'Segoe UI', sans-serif",
+    google: 'Lexend:wght@400;500;600', desc: 'Espacée pour la lecture rapide, confortable toute la journée' },
 ];
 
 const TYPO_TAILLES = [

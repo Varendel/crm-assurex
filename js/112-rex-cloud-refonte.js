@@ -186,32 +186,45 @@ function rcVue() {
   const ident = typeof eciBlocHtml === 'function' ? eciBlocHtml(c) : '';
   const notif = typeof filBandeauNotifications === 'function' ? filBandeauNotifications() : '';
 
+  // Sur ordinateur (21.09.2026) : deux colonnes. Les couvertures occupent la grande colonne ; les
+  // gestes, le transfert, l'agenda et le conseiller se rangent à droite. Sur téléphone, la grille
+  // redevient une seule colonne dans cet ordre-là.
   const contenu = onglet === 'accueil'
-    ? `${notif}${rcCouvertures()}${rcBandeauPrimes()}${rcActions()}${rcTransfert()}${rcAgenda()}`
+    ? `${notif}<div class="rc-grille">${rcCouvertures()}${rcBandeauPrimes()}${rcActions()}${rcTransfert()}${rcAgenda()}${rcConseillerPied()}</div>`
     : onglet === 'contrats' ? (typeof ecOngletContrats === 'function' ? ecOngletContrats() : '')
     : onglet === 'sinistres' ? (typeof ecOngletSinistres === 'function' ? ecOngletSinistres() : '')
     : onglet === 'demandes' ? (typeof ecOngletDemandes === 'function' ? ecOngletDemandes() : '')
     : (typeof ecOngletConseiller === 'function' ? ecOngletConseiller() : '');
 
+  const initiales = (nom || '?').split(/\s+/).filter(Boolean).map(m => m[0]).join('').slice(0, 2).toUpperCase();
+  const prenom = c ? (c.prenom || c.nom || '') : '';
   return `<div class="rc" data-lgp-non>
     <header class="rc-barre">
-      <span class="rc-marque">${typeof ECP_MINI_LOGO !== 'undefined' ? ECP_MINI_LOGO : '<b>REX</b> CLOUD'}</span>
-      <button type="button" class="rc-sortie" onclick="ecDeconnexion()">${RC_SORTIE}<span>Se déconnecter</span></button>
+      <span class="rc-marque"><img src="assets/logos/rex/logo-cloud/rex-cloud-blanc.png" alt="REX CLOUD" class="rc-marque-logo"/></span>
+      <div class="rc-compte" role="group" aria-label="Mon compte">
+        <button type="button" class="rc-moi" onclick="rcMenuCompte(event)" aria-haspopup="menu" aria-expanded="false">
+          <span class="rc-avatar" aria-hidden="true">${rcEsc(initiales)}</span>
+          <span class="rc-moi-txt"><b>${rcEsc(prenom)}</b><small>Mon compte</small></span>
+        </button>
+        <button type="button" class="rc-sortie" onclick="ecDeconnexion()" title="Se déconnecter" aria-label="Se déconnecter">${RC_SORTIE}</button>
+      </div>
     </header>
 
     <section class="rc-tete">
-      <span class="rc-surtitre">Mon espace assurances</span>
-      <h1>${rcEsc(nom || 'Bienvenue')}</h1>
-      ${ident}
+      <div class="rc-tete-txt">
+        <span class="rc-surtitre">Mon espace assurances</span>
+        <h1>${rcEsc(nom || 'Bienvenue')}</h1>
+        ${ident}
+      </div>
+      <img class="rc-tete-embleme" src="assets/logos/rex/logo-cloud/embleme.png" alt="" aria-hidden="true"/>
     </section>
 
     <nav class="rc-onglets" role="tablist" aria-label="Sections de mon espace">
-      ${onglets.map(o => `<button type="button" role="tab" id="rc-tab-${o.id}" class="${onglet === o.id ? 'actif' : ''}" aria-selected="${onglet === o.id}" onclick="ecAllerOnglet('${o.id}')">${rcEsc(o.label)}${o.id === 'sinistres' && enCoursSin ? `<em aria-label="${enCoursSin} en cours">${enCoursSin}</em>` : ''}</button>`).join('')}
+      ${onglets.map(o => `<button type="button" role="tab" id="rc-tab-${o.id}" class="${onglet === o.id ? 'actif' : ''}" aria-selected="${onglet === o.id}" onclick="ecAllerOnglet('${o.id}')">${rcPictoOnglet(o.id)}<span>${rcEsc(o.label)}</span>${o.id === 'sinistres' && enCoursSin ? `<em aria-label="${enCoursSin} en cours">${enCoursSin}</em>` : ''}</button>`).join('')}
     </nav>
 
     <main class="rc-corps" role="tabpanel" aria-labelledby="rc-tab-${onglet}">
       ${contenu}
-      ${onglet === 'accueil' ? rcConseillerPied() : ''}
     </main>
 
     <footer class="rc-pied">
@@ -220,6 +233,38 @@ function rcVue() {
       <div class="rc-signature"><span>by</span><img src="assets/logos/assurex.png" alt="Assurex"/>${typeof LOGO_EXGROUPE_SVG !== 'undefined' ? `<span class="rc-ex">${LOGO_EXGROUPE_SVG}</span>` : ''}</div>
     </footer>
   </div>`;
+}
+
+// ── Onglets et compte : la même logique que le menu du CRM (21.09.2026) ─────────────────────────
+// Pictogrammes au trait (js/119) et bouton scindé : à gauche le client et son compte, à droite
+// la sortie.
+function rcPictoOnglet(id) {
+  const cle = { accueil: 'calc-immo', contrats: 'tous-contrats', sinistres: 'analyse-prevoyance', demandes: 'messages-clients', conseiller: 'clients-prives' }[id];
+  return typeof pmnSvg === 'function' && cle ? pmnSvg(cle, 17) : '';
+}
+
+function rcMenuCompte(ev) {
+  if (ev) ev.stopPropagation();
+  const btn = document.querySelector('.rc-moi');
+  const existant = document.getElementById('rc-menu-compte');
+  if (existant) { existant.remove(); btn?.setAttribute('aria-expanded', 'false'); return; }
+  const ligne = (picto, texte, action) => `<button type="button" role="menuitem" onclick="document.getElementById('rc-menu-compte')?.remove(); ${action}">${typeof pmnSvg === 'function' ? pmnSvg(picto, 16) : ''}<span>${texte}</span></button>`;
+  const menu = document.createElement('div');
+  menu.id = 'rc-menu-compte'; menu.className = 'rc-menu-compte'; menu.setAttribute('role', 'menu');
+  menu.innerHTML = [
+    ligne('tous-contrats', 'Mes contrats', "ecAllerOnglet('contrats')"),
+    ligne('messages-clients', 'Mes demandes', "ecAllerOnglet('demandes')"),
+    typeof adrOuvrir === 'function' ? ligne('calc-immo', 'Annoncer un déménagement', 'adrOuvrir()') : '',
+    ligne('clients-prives', 'Mon conseiller', "ecAllerOnglet('conseiller')"),
+    ligne('rapport-finma', 'Informations légales', 'ecInfosLegales()'),
+    `<hr/>`,
+    ligne('_sortie', 'Se déconnecter', 'ecDeconnexion()'),
+  ].join('');
+  document.querySelector('.rc-compte')?.appendChild(menu);
+  btn?.setAttribute('aria-expanded', 'true');
+  setTimeout(() => document.addEventListener('click', function fermer(e) {
+    if (!menu.contains(e.target)) { menu.remove(); btn?.setAttribute('aria-expanded', 'false'); document.removeEventListener('click', fermer); }
+  }), 0);
 }
 
 // ── Branchements ───────────────────────────────────────────────────────────────────────────────

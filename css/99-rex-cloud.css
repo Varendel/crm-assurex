@@ -44,6 +44,8 @@ body.mode-espace-client #main-content { padding: 0 !important; }
 .rc-surtitre { display: block; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); }
 .rc-tete h1 { margin: 6px 0 4px; font-size: clamp(24px, 6vw, 32px); font-weight: 600; letter-spacing: -.02em; line-height: 1.15; text-wrap: balance; }
 .rc-tete .ec-ident { justify-content: center; margin: 0; }
+/* L'emblème REX CLOUD (nuage + Rex + classeurs, une seule image) : sur PC seulement, à droite du nom. */
+.rc-tete-embleme { display: none; }
 
 /* ── Les onglets : une barre défilante, centrée quand elle tient ───────────────────────────────── */
 .rc-onglets {
@@ -203,3 +205,83 @@ html:not([data-theme="clair"]) .rc-signature img { filter: brightness(0) invert(
   #login-screen .login-footer { text-align: center; }
   body.mode-cloud .login-panneau { padding-top: calc(48px + env(safe-area-inset-top)); }
 }
+
+/* ═══ REX CLOUD — logo d'un seul tenant, bouton scindé, deux colonnes sur ordinateur (21.09.2026) ═══ */
+
+/* Le logo : une image, qui ressort sur la barre. */
+.rc-barre { padding-top: calc(12px + env(safe-area-inset-top)); padding-bottom: 12px; }
+.rc-marque-logo { height: 38px; width: auto; display: block; filter: drop-shadow(0 4px 10px rgba(3,14,38,.35)); }
+
+/* Le compte : un bouton scindé, comme le pied du menu du CRM. */
+.rc-compte { position: relative; display: flex; align-items: stretch; border-radius: 12px; overflow: visible;
+  border: 1px solid rgba(255,255,255,.18); background: rgba(255,255,255,.07); }
+.rc-compte > button { border: 0; background: none; color: #E2ECFF; cursor: pointer; font: inherit; }
+.rc-moi { display: flex; align-items: center; gap: 8px; padding: 5px 10px 5px 6px; border-radius: 11px 0 0 11px; text-align: left; }
+.rc-moi:hover { background: rgba(255,255,255,.1); }
+.rc-avatar { width: 30px; height: 30px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0;
+  background: rgba(0,207,255,.18); color: #7FE3FF; font-size: 11.5px; font-weight: 600; box-shadow: inset 0 0 0 1.5px rgba(0,207,255,.45); }
+.rc-moi-txt { display: flex; flex-direction: column; line-height: 1.15; }
+.rc-moi-txt b { font-size: 13px; font-weight: 600; }
+.rc-moi-txt small { font-size: 10.5px; color: #9FB4DA; }
+.rc .rc-sortie { min-height: 0; width: 44px; padding: 0; justify-content: center; border-radius: 0 11px 11px 0;
+  border: 0 !important; border-left: 1px solid rgba(255,255,255,.18) !important; background: none; color: #FFB4B4; }
+.rc .rc-sortie:hover { background: rgba(220,38,38,.28); color: #fff; }
+.rc-menu-compte { position: absolute; right: 0; top: calc(100% + 8px); z-index: 40; min-width: 230px; padding: 6px;
+  border-radius: 14px; background: var(--surface); border: 1px solid var(--border); box-shadow: 0 18px 40px -12px rgba(3,14,38,.5); text-align: left; }
+.rc-menu-compte button { width: 100%; display: flex; align-items: center; gap: 10px; padding: 9px 10px; border: 0; border-radius: 9px;
+  background: none; color: var(--text); font: inherit; font-size: 13.5px; cursor: pointer; text-align: left; }
+.rc-menu-compte button:hover { background: var(--surface-alt); }
+.rc-menu-compte button svg { color: var(--accent); flex-shrink: 0; }
+.rc-menu-compte button:last-child svg { color: #DC2626; }
+.rc-menu-compte hr { border: 0; border-top: 1px solid var(--border); margin: 6px 4px; }
+
+/* Onglets : pictogramme + libellé. */
+.rc-onglets button { display: inline-flex; align-items: center; gap: 7px; }
+.rc-onglets button svg { flex-shrink: 0; opacity: .85; }
+
+/* La grille de l'accueil : une colonne sur téléphone… */
+.rc-grille { display: flex; flex-direction: column; gap: 14px; }
+
+/* … deux sur ordinateur, en profitant de la largeur. */
+@media (min-width: 1024px) {
+  .rc { max-width: 1200px; padding: 0 32px 40px; }
+  .rc-barre { margin: 0 -32px; padding-left: 32px; padding-right: 32px; }
+  .rc-marque-logo { height: 46px; }
+  .rc-tete { padding: 20px 0 6px; text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+  .rc-tete-txt { min-width: 0; }
+  .rc-tete-embleme { display: block; flex-shrink: 0; height: 128px; width: auto;
+    filter: drop-shadow(0 10px 22px rgba(0, 40, 90, .16)); user-select: none; pointer-events: none; }
+  .rc-tete .ec-ident { justify-content: flex-start; }
+  .rc-onglets { justify-content: flex-start; margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; }
+  .rc-grille { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 18px; align-items: start; }
+  .rc-grille > .rc-couv { grid-column: 1; grid-row: 1 / span 8; }
+  .rc-grille > :not(.rc-couv) { grid-column: 2; }
+  .rc-grille .rc-domaines { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rc-grille .rc-tuiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .rc-grille .rc-tuile { min-height: 104px; }
+  .rc-grille .rc-duo { grid-template-columns: 1fr; }
+  .rc-grille .rc-bandeau { justify-content: flex-start; text-align: left; }
+}
+@media (min-width: 1400px) {
+  .rc-grille .rc-domaines { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+}
+
+/* La page de connexion : le logo remplace l'assemblage nuage + Rex + classeurs. */
+body.mode-cloud .cloud-logo { display: block; width: min(440px, 100%); height: auto; filter: drop-shadow(0 12px 26px rgba(3,14,38,.35)); }
+@media (max-width: 860px) { body.mode-cloud .cloud-logo { width: min(300px, 78vw); } }
+
+/* Correctifs de la version ordinateur (21.09.2026) */
+.rc-marque img.rc-marque-logo { height: 38px; width: auto; }
+/* La barre couvre toute la largeur de l'écran, quelle que soit la largeur du contenu. */
+.rc-barre { margin-left: calc(50% - 50vw) !important; margin-right: calc(50% - 50vw) !important;
+  padding-left: max(16px, calc(50vw - 50% + 16px)) !important; padding-right: max(16px, calc(50vw - 50% + 16px)) !important; }
+/* Une tuile seule en dernière ligne prend toute la largeur, sur deux colonnes aussi. */
+.rc-grille .rc-tuile:last-child:nth-child(odd) { grid-column: 1 / -1; min-height: 0; }
+@media (min-width: 1024px) {
+  .rc-marque img.rc-marque-logo { height: 48px; }
+  .rc-barre { padding-left: max(32px, calc(50vw - 50% + 32px)) !important; padding-right: max(32px, calc(50vw - 50% + 32px)) !important; }
+}
+
+/* La zone de contenu du CRM est plafonnée à 1080 px, calée à gauche : pas dans l'espace client. */
+body.mode-espace-client #main-content { max-width: none !important; width: 100%; }
+

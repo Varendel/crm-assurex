@@ -97,12 +97,15 @@ function mnuPoserBarre() {
   main.parentElement.insertBefore(col, main);
   col.innerHTML = `
     <header class="rex-barre" id="rex-barre">
-      <button type="button" class="rex-barre-retour" id="rex-retour" onclick="goBack()" aria-label="Revenir à l’écran précédent" title="Retour">${MNU_RETOUR}</button>
-      <nav class="rex-fil" id="rex-fil" aria-label="Vous êtes ici"></nav>
+      <div class="rex-barre-gauche">
+        <button type="button" class="rex-barre-retour" id="rex-retour" onclick="goBack()" aria-label="Revenir à l’écran précédent" title="Retour">${MNU_RETOUR}</button>
+        <nav class="rex-fil" id="rex-fil" aria-label="Vous êtes ici"></nav>
+      </div>
       <button type="button" class="rex-loupe" id="rex-loupe" onclick="navOuvrir()" aria-keyshortcuts="Control+K /"
         aria-label="Rechercher un écran, un client, un contrat">
         ${MNU_LOUPE}<span class="rex-loupe-txt">Rechercher un écran, un client, une police…</span><kbd>Ctrl K</kbd>
       </button>
+      <span class="rex-barre-droite" aria-hidden="true"></span>
     </header>`;
   col.appendChild(main);
 

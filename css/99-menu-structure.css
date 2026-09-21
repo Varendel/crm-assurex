@@ -14,7 +14,10 @@
 .rex-barre {
   position: sticky; top: 0; z-index: 55;
   height: var(--rex-barre-h); box-sizing: border-box;
-  display: flex; align-items: center; gap: var(--e-3, 12px);
+  /* Trois colonnes égales sur les côtés : la loupe reste au centre de l'écran,
+     quelle que soit la longueur du fil d'Ariane. */
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(240px, 480px) minmax(0, 1fr);
+  align-items: center; gap: var(--e-3, 12px);
   padding: 0 34px;
   background: color-mix(in srgb, var(--bg) 86%, transparent);
   -webkit-backdrop-filter: saturate(1.4) blur(10px); backdrop-filter: saturate(1.4) blur(10px);
@@ -44,8 +47,9 @@ button.rex-fil-etape:hover { color: var(--text); background: var(--surface-alt);
 .rex-fil-ici { color: var(--text); font-weight: 600; font-size: var(--t-m, 13.5px); }
 
 /* LA LOUPE. Grande, à droite, toujours au même endroit : c'est l'entrée principale du logiciel. */
+.rex-barre-gauche { min-width: 0; display: flex; align-items: center; gap: var(--e-3, 12px); }
 .rex-loupe {
-  flex: 0 1 420px; min-width: 200px; height: 38px;
+  width: 100%; min-width: 0; height: 38px;
   display: flex; align-items: center; gap: 10px; padding: 0 10px 0 12px;
   border-radius: var(--r-m, 12px); border: 1px solid var(--border);
   background: var(--surface); color: var(--text-muted);

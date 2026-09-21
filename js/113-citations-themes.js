@@ -190,6 +190,51 @@ function rctAppliquer() { if (typeof rexAfficherCitation === 'function') rexAffi
     .rct-puce:focus-within { outline: 2px solid #00CFFF; outline-offset: 1px; }
     .rct-pied { display: flex; justify-content: space-between; gap: 8px; margin-top: 10px; }
     .rct-pied button { border: 0; background: none; color: #94A3B8; font: inherit; font-size: 11.5px; cursor: pointer; text-decoration: underline; }
-    .rct-pied .rct-ok { text-decoration: none; background: #00CFFF; color: #06243A; border-radius: 999px; padding: 4px 12px; font-weight: 600; }`;
+    .rct-pied .rct-ok { text-decoration: none; background: #00CFFF; color: #06243A; border-radius: 999px; padding: 4px 12px; font-weight: 600; }
+
+    /* ── Le parchemin (21.09.2026) : « les citations s'ouvrent dans un parchemin à l'ancienne,
+       adapté au texte ». La largeur suit la citation (une devise courte donne un rouleau étroit),
+       deux rouleaux en bois clair tiennent le haut et le bas, et la feuille se déroule à
+       l'apparition. Même rendu en thème clair et sombre : c'est un objet, pas un fond d'écran. */
+    #rex-citation .rex-citation-bulle {
+      width: max-content; max-width: min(360px, calc(100vw - 120px));
+      margin: 12px 4px; padding: 24px 32px 22px 26px; border: 0; border-radius: 3px;
+      background:
+        radial-gradient(ellipse at 25% 18%, rgba(255, 251, 236, .85), transparent 55%),
+        radial-gradient(ellipse at 80% 85%, rgba(160, 110, 40, .18), transparent 60%),
+        linear-gradient(180deg, #F5E6BF 0%, #EDD9A8 55%, #E3C88E 100%);
+      color: #3B2A14;
+      font-family: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+      box-shadow: inset 0 0 26px rgba(120, 80, 20, .33), inset 0 0 2px rgba(90, 60, 20, .45), 0 16px 32px rgba(40, 25, 5, .32);
+      animation: rctDerouler .75s cubic-bezier(.2, .8, .2, 1) both;
+    }
+    #rex-citation .rex-citation-bulle:hover { transform: none; box-shadow: inset 0 0 26px rgba(120, 80, 20, .33), inset 0 0 2px rgba(90, 60, 20, .45), 0 18px 36px rgba(40, 25, 5, .38); }
+    #rex-citation .rex-citation-bulle::before, #rex-citation .rex-citation-bulle::after {
+      content: ''; position: absolute; left: -9px; right: -9px; height: 15px; border-radius: 8px; pointer-events: none;
+      background: linear-gradient(180deg, #B98F4A 0%, #F2E0B2 42%, #D9B872 62%, #9C7536 100%);
+      box-shadow: 0 2px 4px rgba(50, 30, 5, .35);
+    }
+    #rex-citation .rex-citation-bulle::before { top: -8px; }
+    #rex-citation .rex-citation-bulle::after { bottom: -8px; }
+    #rex-citation .rex-citation-texte { font-size: 15.5px; line-height: 1.55; font-style: italic; font-weight: 400; text-align: center; text-wrap: balance; }
+    #rex-citation.grande .rex-citation-texte { font-size: 16.5px; }
+    #rex-citation .rex-citation-trad { color: #6B5230; text-align: center; font-size: 13px; }
+    #rex-citation .rex-citation-auteur { color: #7A4A12; font-variant: small-caps; letter-spacing: .04em; font-size: 13px; text-align: right; margin-top: 10px; }
+    #rex-citation .rex-citation-fermer { color: #7A5A2A; }
+    #rex-citation .rex-citation-fermer:hover { background: rgba(122, 74, 18, .12); }
+    #rex-citation .rct-bouton { border-color: rgba(122, 74, 18, .4); background: rgba(122, 74, 18, .08); color: #7A4A12; font-family: system-ui, sans-serif; }
+    #rex-citation .rct-panneau { border-top-color: rgba(122, 74, 18, .25); font-family: system-ui, sans-serif; }
+    #rex-citation .rct-titre { color: #7A5A2A; }
+    #rex-citation .rct-puce { border-color: rgba(122, 74, 18, .3); color: #4A3418; }
+    #rex-citation .rct-puce small { color: #9C7A48; }
+    #rex-citation .rct-puce.on { background: #7A4A12; border-color: #7A4A12; color: #FBEFD2; }
+    #rex-citation .rct-puce.on small { color: #E8CF9A; }
+    #rex-citation .rct-pied button { color: #7A5A2A; }
+    #rex-citation .rct-pied .rct-ok { background: #7A4A12; color: #FBEFD2; }
+    @keyframes rctDerouler {
+      from { clip-path: inset(-14px -14px calc(100% - 8px) -14px); }
+      to { clip-path: inset(-14px -14px -14px -14px); }
+    }
+    @media (prefers-reduced-motion: reduce) { #rex-citation .rex-citation-bulle { animation: none; } }`;
   document.head.appendChild(s);
 })();

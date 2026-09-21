@@ -172,12 +172,12 @@ function ehmPastillesBandeau() {
   return `
     <button type="button" class="bmq-pastille ${ton}" onclick="navigate('ecohub-sync')"
       title="EcoHub · ${E.contrats} contrat(s) chez les compagnies suivies, ${E.sansPolice} sans numéro de police&#10;Cliquer pour ouvrir le manomètre">
-      <span class="bmq-pastille-icone" aria-hidden="true">${ehmLogo({ icone: true, blanc: true, alt: '', h: 15 })}</span>
+      <span class="bmq-pastille-icone" aria-hidden="true">${ehmLogo({ blanc: true, alt: 'EcoHub', h: 12 })}</span>
       <span class="bmq-pastille-valeur">${p == null ? '—' : p + ' %'}</span>
     </button>
     ${E.nouveaux.length ? `<button type="button" class="bmq-pastille nouveau" onclick="navigate('documents-compagnies')"
       title="${E.nouveaux.length} document(s) reçu(s) depuis ta dernière visite :&#10;${noms.map(n => '· ' + n).join('&#10;')}${E.nouveaux.length > 6 ? '&#10;…' : ''}&#10;Cliquer pour les ouvrir">
-      <span class="bmq-pastille-icone" aria-hidden="true">${ehmLogo({ icone: true, blanc: true, alt: '', h: 15 })}📥</span>
+      <span class="bmq-pastille-icone" aria-hidden="true">${ehmLogo({ blanc: true, alt: 'EcoHub', h: 12 })} 📥</span>
       <span class="bmq-pastille-valeur">${E.nouveaux.length}</span>
     </button>` : ''}`;
 }

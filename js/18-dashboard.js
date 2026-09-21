@@ -322,6 +322,8 @@ function dbxVueAujourdhui(D, actions) {
           <header class="dbx-carte-tete"><h2 id="dbx-titre-signaux">À surveiller</h2></header>
           <div class="dbx-signaux">${dbxSignaux(D)}</div>
         </section>
+        ${/* 22.09.2026 : la carte EcoHub (logo, état du flux, synchronisation) aussi sur « Aujourd'hui »,
+             elle n'était que dans « Pilotage » — on ne la voyait jamais. */ typeof ehmCarteDashboard === 'function' ? ehmCarteDashboard() : ''}
         <section class="dbx-carte dbx-carte-agenda dbx-anim" style="--i:6" aria-label="Agenda">
           <div id="calendar-widget-container"></div>
         </section>

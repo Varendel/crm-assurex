@@ -285,6 +285,20 @@ function dbxVueAujourdhui(D, actions) {
 
   return `
     <div class="dbx-kpis">${kpis}</div>
+
+    <!-- 22.09.2026 : « demandes clients en attente, à droite l'horloge, à droite l'agenda sur
+         2 jours ». Une rangée de trois cartes sous les indicateurs. -->
+    <div class="dbx-trio">
+      <section class="dbx-carte dbx-anim dbx-demandes" style="--i:4" aria-labelledby="dbx-titre-demandes">
+        <header class="dbx-carte-tete"><h2 id="dbx-titre-demandes">Demandes clients en attente</h2>
+          <button type="button" class="dbx-lien" onclick="navigate('messages-clients')">Toutes →</button></header>
+        <div id="dbx-demandes">${dbxDemandesListe()}</div>
+      </section>
+      ${typeof htmlHorlogeLuxe === 'function' ? `<section class="dbx-carte dbx-anim dbx-horloge" style="--i:4" aria-label="Horloge">
+        <div class="hl-haut">${htmlHorlogeLuxe()}</div>
+      </section>
+      <section class="dbx-carte dbx-anim dbx-agenda2" style="--i:4" aria-label="Agenda sur deux jours">${htmlAgenda2Jours()}</section>` : ''}
+    </div>
     <!-- Bandeau « Récurrence sourcée OZ » retiré du tableau de bord le 20.09.2026 (demande de
          Jonathan) : il reste dans le cockpit (js/34) et dans les objectifs (js/42). -->
 
@@ -301,10 +315,6 @@ function dbxVueAujourdhui(D, actions) {
         </section>
       </div>
       <div class="dbx-col">
-        ${typeof htmlHorlogeLuxe === 'function' ? `<section class="dbx-carte dbx-anim hl-carte" style="--i:4" aria-label="Horloge et agenda">
-          <div class="hl-haut">${htmlHorlogeLuxe()}</div>
-          ${htmlAgenda2Jours()}
-        </section>` : ''}
         <section class="dbx-carte dbx-anim" style="--i:5" aria-labelledby="dbx-titre-signaux">
           <header class="dbx-carte-tete"><h2 id="dbx-titre-signaux">À surveiller</h2></header>
           <div class="dbx-signaux">${dbxSignaux(D)}</div>
@@ -314,6 +324,41 @@ function dbxVueAujourdhui(D, actions) {
         </section>
       </div>
     </div>`;
+}
+
+// ── Demandes clients en attente (REX CLOUD) ──────────────────────────────────────────────────
+// Tout ce que les clients ont déposé depuis leur espace et qui attend une action : messages non
+// traités, sinistres pas encore réglés, documents à envoyer, transferts de gestion en cours. Les
+// plus anciennes d'abord (c'est le client qui attend). Orange = vient de l'espace client (js/109),
+// rouge = en attente depuis plus de 48 h.
+function dbxDemandesListe() {
+  if (typeof _mc === 'undefined' || typeof mcCharger !== 'function') return '<div class="dbx-vide-petit">Module REX CLOUD indisponible.</div>';
+  if (_mc.messages === null) {
+    mcCharger().then(() => { const el = document.getElementById('dbx-demandes'); if (el) el.innerHTML = dbxDemandesListe(); }).catch(() => {});
+    return '<div class="dbx-chargement"><span></span><span></span><span></span></div>';
+  }
+  const items = [
+    ...(_mc.messages || []).filter(m => m.statut !== 'traite').map(m => ({ o: 'messages', ico: '💬', quoi: 'Message', det: m.sujet || String(m.message || '').slice(0, 70), c: m.client_id, d: m.created_at })),
+    ...(_mc.sinistres || []).filter(s => ['declare', 'transmis', 'en_cours'].includes(s.statut)).map(s => ({ o: 'sinistres', ico: '🛟', quoi: 'Sinistre', det: s.type_sinistre || '', c: s.client_id, d: s.created_at })),
+    ...(_mc.documents || []).filter(x => ['nouvelle', 'en_cours'].includes(x.statut)).map(x => ({ o: 'documents', ico: '📄', quoi: 'Document', det: x.type_document || '', c: x.client_id, d: x.created_at })),
+    ...(_mc.transferts || []).filter(t => ['nouveau', 'mandat_genere', 'envoye'].includes(t.statut)).map(t => ({ o: 'transferts', ico: '🤝', quoi: 'Transfert de gestion', det: `${(t.compagnies || []).length} compagnie(s)`, c: t.client_id, d: t.created_at })),
+  ].sort((a, b) => String(a.d || '').localeCompare(String(b.d || '')));
+  if (!items.length) return '<div class="dbx-vide-petit">Aucune demande en attente. Vos clients sont servis.</div>';
+  const depuis = iso => {
+    const h = Math.max(0, Math.round((Date.now() - new Date(iso || Date.now()).getTime()) / 3600000));
+    return h < 1 ? 'à l’instant' : h < 24 ? `depuis ${h} h` : `depuis ${Math.round(h / 24)} j`;
+  };
+  const nom = id => (typeof mcNomClient === 'function' ? mcNomClient(id) : dbxNomClient(id)) || 'Client';
+  return `<div class="dbx-dem-compte"><b>${items.length}</b> demande${items.length > 1 ? 's' : ''} venue${items.length > 1 ? 's' : ''} de l’espace client</div>
+    <div class="dbx-dem-liste">${items.slice(0, 7).map(x => {
+      const retard = x.d && Date.now() - new Date(x.d).getTime() > 48 * 3600000;
+      return `<button type="button" class="dbx-dem ${retard ? 'retard' : ''}" onclick="_mc.onglet='${x.o}';navigate('messages-clients')">
+        <span class="dbx-dem-ico" aria-hidden="true">${x.ico}</span>
+        <span class="dbx-dem-corps"><b>${dbxEsc(nom(x.c))}</b><small>${dbxEsc(x.quoi)}${x.det ? ' · ' + dbxEsc(x.det) : ''}</small></span>
+        <span class="dbx-dem-age">${depuis(x.d)}</span>
+      </button>`;
+    }).join('')}</div>
+    ${items.length > 7 ? `<button type="button" class="dbx-lien" onclick="navigate('messages-clients')">+ ${items.length - 7} autres…</button>` : ''}`;
 }
 
 // ── Actions à faire ──────────────────────────────────────────────────────────────────────────

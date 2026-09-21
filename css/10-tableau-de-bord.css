@@ -168,6 +168,29 @@
   .dbx-raccourcis button { display: inline-flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); color: var(--text); border-radius: 12px; padding: 10px 16px; font-size: var(--t-s); font-weight: 500; cursor: pointer; transition: all .15s; }
   .dbx-raccourcis button:hover { border-color: var(--accent-border); transform: translateY(-2px); box-shadow: var(--dbx-ombre); }
 
+  /* Rangée « demandes clients · horloge · agenda 2 jours » (22.09.2026) */
+  .dbx-trio { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, .8fr) minmax(0, 1.25fr); gap: 18px; margin-bottom: 18px; align-items: stretch; }
+  .dbx-trio > .dbx-carte { margin: 0; min-width: 0; display: flex; flex-direction: column; }
+  .dbx-horloge { justify-content: center; }
+  .dbx-horloge .hl-haut { padding: 4px 0; }
+  .dbx-horloge .hl-montre svg { width: min(190px, 62vw); }
+  .dbx-agenda2 .hl-agenda { grid-template-columns: 1fr; gap: 10px; max-height: 330px; overflow-y: auto; }
+  .dbx-demandes { border-top: 3px solid #F28C28; }
+  .dbx-dem-compte { font-size: var(--t-s); color: var(--text-muted); margin: -2px 0 10px; }
+  .dbx-dem-compte b { color: #F28C28; font-size: var(--t-m); }
+  .dbx-dem-liste { display: flex; flex-direction: column; gap: 6px; max-height: 300px; overflow-y: auto; }
+  .dbx-dem { display: grid; grid-template-columns: 30px minmax(0, 1fr) auto; align-items: center; gap: 10px; width: 100%; text-align: left; cursor: pointer;
+    background: rgba(242,140,40,0.07); border: 1px solid rgba(242,140,40,0.22); border-left: 3px solid #F28C28; border-radius: 10px; padding: 8px 10px; color: var(--text); transition: background .15s, transform .15s; }
+  .dbx-dem:hover { background: rgba(242,140,40,0.14); transform: translateX(2px); }
+  .dbx-dem-ico { font-size: 18px; text-align: center; }
+  .dbx-dem-corps { display: flex; flex-direction: column; min-width: 0; }
+  .dbx-dem-corps b { font-size: var(--t-s); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dbx-dem-corps small { font-size: var(--t-xs); color: var(--text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .dbx-dem-age { font-size: var(--t-xs); color: var(--text-muted); white-space: nowrap; }
+  .dbx-dem.retard { border-left-color: #E5484D; }
+  .dbx-dem.retard .dbx-dem-age { color: #E5484D; font-weight: 600; }
+  @media (max-width: 1100px) { .dbx-trio { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } .dbx-trio > .dbx-demandes { grid-column: 1 / -1; } }
+  @media (max-width: 768px) { .dbx-trio { grid-template-columns: minmax(0, 1fr); gap: 12px; } .dbx-horloge .hl-montre svg { width: 150px; } }
   @media (max-width: 1100px) { .dbx-kpis { grid-template-columns: repeat(2, 1fr); } .dbx-grille, .dbx-grille-egale { grid-template-columns: 1fr; } }
   @media (max-width: 768px) {
     /* Téléphone (22.09.2026) : bandeau resserré. Titre et résumé, recherche pleine largeur, les

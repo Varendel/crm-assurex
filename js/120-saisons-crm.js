@@ -16,6 +16,56 @@
 
 const SCR_BANDEAUX = '.dbx-hero, .rex-bandeau, .fcx-hero, .cf-hero';
 
+// ── Pâques (21.09.2026) ────────────────────────────────────────────────────────────────────────
+// « Prépare le thème Pâques, on ajoutera les planches plus tard. » Pâques change de date chaque
+// année : elle est calculée (méthode grégorienne, dite de Meeus). La saison court sur les deux
+// semaines qui précèdent et jusqu'au lundi de Pâques, et passe avant le printemps, qui reprend
+// ensuite. Le dossier des planches est déjà prévu : tant qu'il est vide, Rex garde sa tenue.
+function scrPaques(annee) {
+  const a = annee % 19, b = Math.floor(annee / 100), c = annee % 100, d = Math.floor(b / 4), e = b % 4;
+  const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3), h = (19 * a + b - d - g + 15) % 30;
+  const i = Math.floor(c / 4), k = c % 4, l = (32 + 2 * e + 2 * i - h - k) % 7, m = Math.floor((a + 11 * h + 22 * l) / 451);
+  const mois = Math.floor((h + l - 7 * m + 114) / 31), jour = ((h + l - 7 * m + 114) % 31) + 1;
+  return new Date(annee, mois - 1, jour);
+}
+(function scrSaisonPaques() {
+  if (typeof SAISONS === 'undefined' || SAISONS.some(s => s.cle === 'paques')) return;
+  const p = scrPaques(new Date().getFullYear());
+  const debut = new Date(p); debut.setDate(p.getDate() - 14);
+  const fin = new Date(p); fin.setDate(p.getDate() + 1);
+  SAISONS.unshift({ cle: 'paques', nom: 'Pâques',
+    debut: { mois: debut.getMonth() + 1, jour: debut.getDate() }, fin: { mois: fin.getMonth() + 1, jour: fin.getDate() },
+    dossierRex: 'assets/logos/rex/saison-paques/', poseConnexion: 'debout', decors: ['🥚', '🐰', '🌷', '🐣'] });
+})();
+
+// Les éléments de Pâques : des fanions pastel en guise de guirlande, un panier d'œufs, un lapin
+// qui dépasse à peine, des tulipes.
+const SCR_OEUF = (c1, c2) => `<svg viewBox="0 0 24 30" aria-hidden="true"><path d="M12 1C5 1 1 12 1 19a11 11 0 0 0 22 0C23 12 19 1 12 1z" fill="${c1}"/>
+  <path d="M2 16q5-4 10 0t10 0v3q-5-4-10 0T2 19z" fill="${c2}"/><circle cx="7" cy="24" r="1.6" fill="#fff" opacity=".8"/><circle cx="16" cy="9" r="1.4" fill="#fff" opacity=".8"/></svg>`;
+const SCR_PANIER = `<svg viewBox="0 0 70 46" aria-hidden="true">
+  <path d="M10 18Q35 -12 60 18" stroke="#B9824A" stroke-width="3" fill="none"/>
+  <ellipse cx="22" cy="20" rx="7" ry="9" fill="#F7B6C8"/><ellipse cx="35" cy="17" rx="7" ry="9.5" fill="#A8E6CF"/><ellipse cx="48" cy="20" rx="7" ry="9" fill="#FFE08A"/>
+  <path d="M6 22h58l-6 22H12z" fill="#C8925A"/><path d="M8 28h54M10 34h50M12 40h46" stroke="#A8743F" stroke-width="1.5"/>
+  <path d="M6 22q6-4 10 0q5-4 10 0q5-4 10 0q5-4 10 0q5-4 10 0q4-4 8 0" fill="#9DD49B"/></svg>`;
+const SCR_LAPIN = `<svg viewBox="0 0 50 50" aria-hidden="true">
+  <ellipse cx="17" cy="14" rx="5" ry="14" fill="#fff"/><ellipse cx="33" cy="14" rx="5" ry="14" fill="#fff"/>
+  <ellipse cx="17" cy="14" rx="2.3" ry="10" fill="#F7B6C8"/><ellipse cx="33" cy="14" rx="2.3" ry="10" fill="#F7B6C8"/>
+  <ellipse cx="25" cy="38" rx="17" ry="14" fill="#fff"/><circle cx="19" cy="35" r="2" fill="#113679"/><circle cx="31" cy="35" r="2" fill="#113679"/>
+  <ellipse cx="25" cy="40" rx="2.4" ry="1.8" fill="#F28CA8"/></svg>`;
+const SCR_TULIPE = (c) => `<svg viewBox="0 0 20 44" aria-hidden="true"><path d="M10 16V44" stroke="#4E9A5A" stroke-width="2"/>
+  <path d="M10 34q-7-4-8-12 6 2 8 8z" fill="#5FAF6B"/><path d="M3 4l4 5 3-7 3 7 4-5v8a7 7 0 0 1-14 0z" fill="${c}"/></svg>`;
+function scrFanions(w) {
+  const couleurs = ['#F7B6C8', '#A8E6CF', '#FFE08A', '#B8C7FF', '#FFC8A2'], n = Math.max(6, Math.round(w / 34)), l = w / n;
+  let fil = '', f = '';
+  for (let i = 0; i < n; i++) {
+    const a = i * l, milieu = a + l / 2, sag = 5 * Math.sin(Math.PI * (i + 0.5) / n) + 3;
+    fil += `${i ? 'L' : 'M'}${a} ${3 + 5 * Math.sin(Math.PI * i / n)}`;
+    f += `<path d="M${a + 3} ${3 + 5 * Math.sin(Math.PI * i / n)}L${a + l - 3} ${3 + 5 * Math.sin(Math.PI * (i + 1) / n)}L${milieu} ${sag + 16}Z" fill="${couleurs[i % couleurs.length]}" opacity=".92"/>`;
+  }
+  fil += `L${w} 3`;
+  return `<svg class="scr-fanions" viewBox="0 0 ${w} 30" width="${w}" height="30" aria-hidden="true"><path d="${fil}" stroke="#fff" stroke-width="1.2" fill="none" opacity=".8"/>${f}</svg>`;
+}
+
 const SCR_TOILE = `<svg class="scr-toile" viewBox="0 0 100 100" aria-hidden="true"><g fill="none" stroke="#fff" stroke-width=".9" stroke-linecap="round">
   <path d="M0 0L100 4M0 0L92 34M0 0L76 66M0 0L48 90M0 0L16 100"/>
   <path d="M22 1Q20 8 20 7.5Q17 13 16.5 16Q13 19 10.5 21.5Q7 22 3.5 22"/>
@@ -133,8 +183,20 @@ function scrPoser() {
   const cle = s ? s.cle : '';
   // On retire ce qui n'est plus de saison (changement forcé dans Apparence, interrupteur coupé).
   document.querySelectorAll('.scr-deco').forEach(d => { if (d.dataset.saison !== cle) d.remove(); });
-  if (cle !== 'noel' && cle !== 'halloween') return;
+  if (cle !== 'noel' && cle !== 'halloween' && cle !== 'paques') return;
   if (document.body.classList.contains('mode-espace-client')) return;   // l'espace client a le sien (js/62)
+  if (cle === 'paques') {
+    document.querySelectorAll(SCR_BANDEAUX).forEach(h => scrPoserSur(h, w => scrFanions(w)
+      + `<span class="scr-panier">${SCR_PANIER}</span><span class="scr-lapin">${SCR_LAPIN}</span>`
+      + `<span class="scr-oeuf scr-o1">${SCR_OEUF('#B8C7FF', '#fff')}</span><span class="scr-oeuf scr-o2">${SCR_OEUF('#FFC8A2', '#F7B6C8')}</span>`
+      + `<span class="scr-tulipe scr-t1">${SCR_TULIPE('#F28CA8')}</span><span class="scr-tulipe scr-t2">${SCR_TULIPE('#FFD166')}</span>`));
+    const sb = document.querySelector('.sidebar');
+    if (sb) scrPoserSur(sb, w => scrFanions(w)
+      + `<span class="scr-oeuf scr-o3">${SCR_OEUF('#A8E6CF', '#FFE08A')}</span><span class="scr-oeuf scr-o4">${SCR_OEUF('#F7B6C8', '#fff')}</span>`
+      + `<span class="scr-tulipe scr-t3">${SCR_TULIPE('#B8C7FF')}</span>`);
+    document.querySelectorAll('.scr-deco').forEach(d => { d.dataset.saison = cle; });
+    return;
+  }
   const bandeau = cle === 'noel'
     ? w => scrGuirlande(w, 10) + scrLisereIrregulier(w, true) + scrNeige(14)
       + `<span class="scr-sapin">${SCR_SAPIN}</span><span class="scr-cadeaux">${SCR_CADEAUX}</span><span class="scr-boule">${SCR_BOULE}</span>`
@@ -218,7 +280,20 @@ function scrPoser() {
     @keyframes scrDescend { 0%, 100% { transform: translateY(-18px); } 50% { transform: translateY(14px); } }
     @media (max-width: 768px) { .scr-sapin, .scr-cadeaux, .scr-lune, .scr-ch2 { display: none; } }
 
-    @media (prefers-reduced-motion: reduce) { .scr-neige, .scr-f1, .scr-f2, .scr-chauve { display: none; } .scr-ampoule, .scr-boule, .scr-araignee, .scr-ailes { animation: none; } }
+    /* Pâques */
+    .scr-fanions { position: absolute; left: 0; top: 0; }
+    .scr-panier, .scr-lapin, .scr-oeuf, .scr-tulipe { position: absolute; }
+    .scr-panier { left: 16px; bottom: 2px; width: 70px; filter: drop-shadow(0 3px 5px rgba(0,0,0,.2)); }
+    .scr-lapin { left: 92px; bottom: -6px; width: 40px; opacity: .95; animation: scrLapin 6s ease-in-out infinite; }
+    @keyframes scrLapin { 0%, 70%, 100% { transform: translateY(0); } 78% { transform: translateY(-7px); } 86% { transform: translateY(0); } 92% { transform: translateY(-3px); } }
+    .scr-oeuf { width: 16px; opacity: .9; }
+    .scr-o1 { left: 140px; bottom: 4px; transform: rotate(-12deg); } .scr-o2 { left: 160px; bottom: 2px; width: 13px; transform: rotate(14deg); }
+    .sidebar .scr-o3 { left: 16px; bottom: 96px; } .sidebar .scr-o4 { left: 36px; bottom: 94px; width: 12px; transform: rotate(16deg); }
+    .scr-tulipe { width: 12px; opacity: .9; bottom: 0; }
+    .scr-t1 { left: 4px; } .scr-t2 { left: 178px; width: 10px; } .sidebar .scr-t3 { right: 14px; bottom: 90px; }
+    @media (max-width: 768px) { .scr-lapin, .scr-o2, .scr-t2 { display: none; } }
+
+    @media (prefers-reduced-motion: reduce) { .scr-neige, .scr-f1, .scr-f2, .scr-chauve { display: none; } .scr-ampoule, .scr-boule, .scr-araignee, .scr-ailes, .scr-lapin { animation: none; } }
     @media (max-width: 768px) { .scr-f1, .scr-c1 { display: none; } .scr-coin { width: 60px; height: 60px; } }
     @media print { .scr-deco { display: none !important; } }`;
   document.head.appendChild(st);

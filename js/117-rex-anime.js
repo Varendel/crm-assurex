@@ -55,19 +55,32 @@ const RXA_REPOS = 'assets/logos/rex/anim-confiant/1.png';   // pose de repos com
 // de sa largeur pour rester juste sur téléphone ; le miroir pivote autour de ses pieds.
 RXA_SEQUENCES.flamme = (() => {
   const tenir = { 9: 40, 19: 200, 25: 80, 37: 120, 49: 120, 59: 1100 };
-  const etapes = Array.from({ length: 60 }, (_, i) => ({ f: i, ms: 80 + (tenir[i] || 0), x: 0, miroir: false }));
+  // Images 55 et 56 écartées (21.09.2026) : la 56 a une paupière à moitié baissée qui fait un trait
+  // en travers de l'œil, et la 55 fait le clin d'œil avec l'autre œil que les images 57 à 59.
+  const ECARTEES = new Set([54, 55]);
+  const etapes = Array.from({ length: 60 }, (_, i) => i).filter(i => !ECARTEES.has(i))
+    .map(i => ({ f: i, ms: 80 + (tenir[i] || 0), x: 0, miroir: false }));
   // La marche : la planche « marche rex intermédiaire » (8 images, un vrai cycle de pas avec les
   // positions de passage), détourée et mise à la même échelle et au même point d'appui que la
   // planche flamme — Rex ne change pas de taille d'une planche à l'autre. Ses images sont rangées
   // après les 60 de la flamme (indices 60 à 67). Deux cycles par trajet.
-  const PAS = 16, D = 55;
-  for (let r = 0; r < 2; r++) {
-    for (let k = 0; k < PAS; k++) etapes.push({ f: 60 + (k % 8), ms: 90, x: -D * (k + 1) / PAS, miroir: true });
-    for (let k = 0; k < PAS; k++) etapes.push({ f: 60 + (k % 8), ms: 90, x: -D + D * (k + 1) / PAS, miroir: false });
-  }
+  // Les demi-tours : la planche « rex tourne rond » (8 vues : face, trois-quarts, profil, dos…),
+  // indices 68 à 75. Rex se retourne vraiment au bout de chaque trajet au lieu de basculer en
+  // miroir d'un coup ; au second départ, il fait le tour complet par le dos.
+  const PAS = 16, D = 55, T = 68, tourner = (vues, x) => vues.forEach(v => etapes.push({ f: T + v, ms: 110, x, miroir: false }));
+  const marcher = (deX, aX, miroir) => { for (let k = 0; k < PAS; k++) etapes.push({ f: 60 + (k % 8), ms: 90, x: deX + (aX - deX) * (k + 1) / PAS, miroir }); };
+  tourner([0, 7, 6], 0);           // de face → trois-quarts gauche
+  marcher(0, -D, true);             // vers la gauche
+  tourner([6, 7, 0, 1, 2], -D);     // se retourne vers la droite
+  marcher(-D, 0, false);            // revient
+  tourner([2, 3, 4, 5, 6], 0);      // tour par le dos, repart à gauche
+  marcher(0, -D, true);
+  tourner([6, 7, 0, 1, 2], -D);
+  marcher(-D, 0, false);            // de retour, de profil vers la droite : la flamme reprend à l'image 1
   const fichiers = [...Array.from({ length: 60 }, (_, i) => `assets/logos/rex/anim-flamme/${i + 1}.webp`),
-                    ...Array.from({ length: 8 }, (_, i) => `assets/logos/rex/anim-marche8/${i + 1}.webp`)];
-  return { n: 68, fichiers, etapes, ordre: etapes.map(e => e.f), ms: etapes.map(e => e.ms), repos: 'assets/logos/rex/anim-flamme/1.webp' };
+                    ...Array.from({ length: 8 }, (_, i) => `assets/logos/rex/anim-marche8/${i + 1}.webp`),
+                    ...Array.from({ length: 8 }, (_, i) => `assets/logos/rex/anim-tour8/${i + 1}.webp`)];
+  return { n: 76, fichiers, etapes, ordre: etapes.map(e => e.f), ms: etapes.map(e => e.ms), repos: 'assets/logos/rex/anim-flamme/1.webp' };
 })();
 RXA_MOUVEMENTS.splice(0, RXA_MOUVEMENTS.length, 'flamme');
 RXA_REPOS_BANDEAU.splice(0, 2, 0, 0);   // en continu

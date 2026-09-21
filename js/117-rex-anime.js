@@ -243,7 +243,17 @@ const RXA_DECOR = `
 <svg class="rxa-decor" viewBox="0 0 420 170" aria-hidden="true" focusable="false">
   <defs>
     <radialGradient id="rxaLueur" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#00CFFF" stop-opacity=".75"/><stop offset="1" stop-color="#00CFFF" stop-opacity="0"/></radialGradient>
+    <!-- 22.09.2026 : relief et nuances. Brume chaude à l'horizon, volcan éclairé à gauche et dans
+         l'ombre à droite, une montagne plus lointaine derrière, végétation vert-bleu, rochers
+         plus chauds. Tout reste translucide : le décor se devine derrière Rex. -->
+    <linearGradient id="rxaBrume" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFB88A" stop-opacity="0"/><stop offset=".7" stop-color="#FFB88A" stop-opacity=".07"/><stop offset="1" stop-color="#7FE0C8" stop-opacity=".10"/></linearGradient>
+    <linearGradient id="rxaFlancClair" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C9D8FF" stop-opacity=".30"/><stop offset="1" stop-color="#8FA8E0" stop-opacity=".12"/></linearGradient>
+    <linearGradient id="rxaFlancOmbre" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0A1F4D" stop-opacity=".30"/><stop offset="1" stop-color="#0A1F4D" stop-opacity=".12"/></linearGradient>
+    <linearGradient id="rxaSol" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6FD3B0" stop-opacity=".16"/><stop offset="1" stop-color="#6FD3B0" stop-opacity="0"/></linearGradient>
   </defs>
+  <rect x="0" y="96" width="420" height="56" fill="url(#rxaBrume)"/>
+  <!-- La montagne lointaine, derrière le volcan. -->
+  <path d="M150 150 L196 98 Q204 90 212 96 L236 116 L252 104 Q258 100 264 106 L318 150 Z" fill="#B8C8F0" opacity=".09"/>
   <!-- Le volcan fume : des bouffées rondes naissent du cratère, montent en grossissant et
        s'effacent, l'une après l'autre. -->
   <g fill="#fff">
@@ -253,10 +263,42 @@ const RXA_DECOR = `
     <circle class="rxa-bouffee" cx="120" cy="54" r="6.5" style="animation-delay:-4.8s"/>
     <circle class="rxa-bouffee" cx="117" cy="54" r="7" style="animation-delay:-6.4s"/>
   </g>
-  <path d="M40 150 L96 70 Q104 60 112 62 L124 62 Q132 60 140 70 L206 150 Z" fill="#fff" opacity=".10"/>
+  <!-- Le volcan en relief : flanc gauche éclairé, flanc droit dans l'ombre, ravines, coulées
+       turquoise qui luisent à peine. -->
+  <path d="M40 150 L96 70 Q104 60 112 62 L118 62 L112 96 L104 122 L110 150 Z" fill="url(#rxaFlancClair)"/>
+  <path d="M110 150 L104 122 L112 96 L118 62 L124 62 Q132 60 140 70 L206 150 Z" fill="url(#rxaFlancOmbre)"/>
+  <path d="M40 150 L96 70 Q104 60 112 62 L124 62 Q132 60 140 70 L206 150 Z" fill="none" stroke="#fff" stroke-opacity=".10" stroke-width="1"/>
+  <g fill="none" stroke-linecap="round">
+    <path d="M100 72 Q92 96 78 118 Q70 132 62 146" stroke="#fff" stroke-opacity=".10" stroke-width="1.2"/>
+    <path d="M108 66 Q104 90 94 112" stroke="#fff" stroke-opacity=".08" stroke-width="1"/>
+    <path d="M132 70 Q142 94 158 116 Q168 130 178 146" stroke="#0A1F4D" stroke-opacity=".18" stroke-width="1.4"/>
+    <path d="M126 66 Q130 88 138 104" stroke="#0A1F4D" stroke-opacity=".14" stroke-width="1.1"/>
+    <path class="rxa-lave" d="M116 64 Q114 80 110 92 Q106 104 108 116" stroke="#00CFFF" stroke-opacity=".30" stroke-width="1.6"/>
+    <path class="rxa-lave" d="M122 64 Q126 78 130 88" stroke="#00CFFF" stroke-opacity=".22" stroke-width="1.2" style="animation-delay:-2s"/>
+  </g>
+  <path d="M96 70 Q104 60 112 62 L124 62 Q132 60 140 70 Q130 66 118 67 Q106 66 96 70 Z" fill="#fff" opacity=".12"/>
   <ellipse cx="118" cy="64" rx="18" ry="7" fill="url(#rxaLueur)"/>
-  <!-- Au loin, un grand herbivore au long cou, à peine plus marqué que le volcan. -->
-  <path d="M296 150 C310 144 320 132 338 125 C354 119 368 120 376 114 C381 98 384 80 389 66 C391 59 398 56 403 60 C406 63 403 67 398 67 C394 82 392 102 388 122 C386 134 381 141 378 151 L369 151 L367 140 C358 142 348 142 341 140 L339 151 L330 151 L328 138 C317 143 306 148 296 150 Z" fill="#fff" opacity=".08"/>
+  <!-- Au loin, un grand herbivore au long cou, teinté vert-bleu. -->
+  <path d="M296 150 C310 144 320 132 338 125 C354 119 368 120 376 114 C381 98 384 80 389 66 C391 59 398 56 403 60 C406 63 403 67 398 67 C394 82 392 102 388 122 C386 134 381 141 378 151 L369 151 L367 140 C358 142 348 142 341 140 L339 151 L330 151 L328 138 C317 143 306 148 296 150 Z" fill="#9FE3D2" opacity=".10"/>
+  <!-- Des ptérodactyles qui passent, de droite à gauche, chacun à son rythme. -->
+  <g transform="translate(450 18)" fill="#0A1F4D" opacity=".42">
+    <g class="rxa-passe" style="animation-duration:23s;animation-delay:-6s">
+      <g class="rxa-ailes"><path d="M-1 0 C-6 -6 -13 -7 -20 -3 C-13 -3 -7 -1 -2 2 Z"/><path d="M1 0 C6 -6 13 -7 20 -3 C13 -3 7 -1 2 2 Z"/></g>
+      <path d="M3 1 C1 -1 -2 -1 -4 1 L-11 -1 L-6 2 C-4 4 1 4 3 1 Z"/>
+    </g>
+  </g>
+  <g transform="translate(460 40) scale(.7)" fill="#0A1F4D" opacity=".32">
+    <g class="rxa-passe" style="animation-duration:31s;animation-delay:-19s">
+      <g class="rxa-ailes" style="animation-duration:1.3s"><path d="M-1 0 C-6 -6 -13 -7 -20 -3 C-13 -3 -7 -1 -2 2 Z"/><path d="M1 0 C6 -6 13 -7 20 -3 C13 -3 7 -1 2 2 Z"/></g>
+      <path d="M3 1 C1 -1 -2 -1 -4 1 L-11 -1 L-6 2 C-4 4 1 4 3 1 Z"/>
+    </g>
+  </g>
+  <g transform="translate(470 8) scale(.55)" fill="#0A1F4D" opacity=".26">
+    <g class="rxa-passe" style="animation-duration:27s;animation-delay:-2s">
+      <g class="rxa-ailes" style="animation-duration:1.1s"><path d="M-1 0 C-6 -6 -13 -7 -20 -3 C-13 -3 -7 -1 -2 2 Z"/><path d="M1 0 C6 -6 13 -7 20 -3 C13 -3 7 -1 2 2 Z"/></g>
+      <path d="M3 1 C1 -1 -2 -1 -4 1 L-11 -1 L-6 2 C-4 4 1 4 3 1 Z"/>
+    </g>
+  </g>
   <!-- Un ptérodactyle qui plane lentement près de la fumée. -->
   <g transform="translate(62 26)" fill="#0A1F4D" opacity=".5">
     <g class="rxa-ptero">
@@ -269,8 +311,8 @@ const RXA_DECOR = `
     </g>
   </g>
   <!-- Le palmier préhistorique (cycadée) : tronc écaillé, couronne de palmes arquées. -->
-  <g fill="#0A1F4D" opacity=".45">
-    <path d="M36 152 C39 130 43 106 48 82 L54 82 C50 106 47 130 45 152 Z"/>
+  <g fill="#0C3A4C" opacity=".5">
+    <path d="M36 152 C39 130 43 106 48 82 L54 82 C50 106 47 130 45 152 Z" fill="#3A2F4F"/>
     <path d="M38 140 l7 -3 M39 128 l7 -3 M41 116 l7 -3 M43 104 l7 -3 M45 92 l7 -3" stroke="#fff" stroke-opacity=".10" stroke-width="1.2" fill="none"/>
     <path d="M51 79 C66 70 86 72 99 88 C86 81 68 81 52 84 Z"/>
     <path d="M51 79 C36 70 16 72 3 88 C16 81 34 81 50 84 Z"/>
@@ -280,10 +322,17 @@ const RXA_DECOR = `
     <path d="M52 81 C67 85 80 96 84 112 C75 101 64 92 52 86 Z"/>
     <path d="M50 81 C35 85 22 96 18 112 C27 101 38 92 50 86 Z"/>
     <path d="M62 152 C60 142 56 136 50 132 C58 134 63 140 66 150 Z M68 152 C70 140 76 134 84 132 C78 138 74 144 72 152 Z M74 152 C78 144 86 140 94 140 C86 144 80 148 78 152 Z"/>
+  </g>
+  <!-- Rochers aux tons chauds, avec un reflet sur le dessus. -->
+  <g fill="#3E3350" opacity=".5">
     <path d="M268 152 Q274 138 290 138 Q304 138 308 152 Z"/>
     <path d="M300 152 Q304 144 314 144 Q322 145 324 152 Z" opacity=".8"/>
     <path d="M168 152 Q172 144 182 144 Q190 145 192 152 Z" opacity=".7"/>
   </g>
+  <g fill="none" stroke="#FFD2B0" stroke-opacity=".16" stroke-width="1.2" stroke-linecap="round">
+    <path d="M276 142 Q288 137 300 141"/><path d="M306 147 Q313 144 319 146"/><path d="M173 148 Q181 144 188 147"/>
+  </g>
+  <rect x="0" y="146" width="420" height="6" fill="url(#rxaSol)"/>
   <rect x="0" y="151" width="420" height="2" rx="1" fill="#fff" opacity=".14"/>
 </svg>`;
 
@@ -351,7 +400,13 @@ function rxaPoser() {
     .rxa-ailes { transform-box: fill-box; transform-origin: 50% 90%; animation: rxaAiles 1.6s ease-in-out infinite; }
     @keyframes rxaPtero { 0%, 100% { transform: translate(0, 0); } 30% { transform: translate(18px, -5px); } 60% { transform: translate(34px, 2px); } 80% { transform: translate(14px, 4px); } }
     @keyframes rxaAiles { 0%, 100% { transform: scaleY(1); } 45% { transform: scaleY(.35); } }
-    @media (prefers-reduced-motion: reduce) { .rxa-ptero, .rxa-ailes { animation: none; } .rxa-bouffee { animation: none; opacity: .12; } }
+    /* Ptérodactyles de passage : traversent tout le décor de droite à gauche, puis reviennent. */
+    .rxa-passe { animation: rxaPasse 25s linear infinite; }
+    @keyframes rxaPasse { 0% { transform: translate(0, 0); } 25% { transform: translate(-130px, 6px); } 50% { transform: translate(-260px, -2px); } 75% { transform: translate(-390px, 5px); } 100% { transform: translate(-540px, 0); } }
+    /* Les coulées turquoise du volcan luisent doucement. */
+    .rxa-lave { animation: rxaLave 5s ease-in-out infinite; }
+    @keyframes rxaLave { 0%, 100% { stroke-opacity: .12; } 50% { stroke-opacity: .38; } }
+    @media (prefers-reduced-motion: reduce) { .rxa-ptero, .rxa-ailes, .rxa-passe, .rxa-lave { animation: none; } .rxa-passe { display: none; } .rxa-bouffee { animation: none; opacity: .12; } }
     @media (max-width: 768px) { .rxa-scene .rxa-decor { height: 96px; right: -16px; } }
     @media (max-width: 768px) { img.dbx-hero-mascotte.rxa-flamme { height: 96px !important; margin-left: calc(-180 / 234 * 96px); } }`;
   st.textContent += `

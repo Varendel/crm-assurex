@@ -272,6 +272,15 @@
     color: var(--text-muted); font-size: var(--t-m); cursor: pointer; flex-shrink: 0;
   }
   .postit-add:hover { border-color: var(--accent); color: var(--accent); }
+  /* Post-its en colonne à droite de la fiche (21.09.2026) : le contenu s'écoule à côté. */
+  .fiche-postits { float: right; width: 168px; margin: 0 0 14px 18px; display: flex; flex-direction: column; align-items: center; gap: 16px; position: relative; z-index: 2; }
+  .fiche-postits .postit-note { width: 158px; }
+  /* Les onglets s'écoulent à côté de la colonne au lieu de passer dessous. */
+  .fiche-postits ~ [id^="tab-"]:not(.hidden) { display: flow-root; }
+  .postit-add.postit-add-onglets { width: auto; height: 30px; margin: 0 0 4px auto; padding: 0 12px; border-radius: 999px; border-width: 1px; font-size: var(--t-xs); align-self: center; white-space: nowrap; }
+  @media (max-width: 768px) {
+    .fiche-postits { float: none; width: auto; margin: 0 0 14px; flex-direction: row; flex-wrap: wrap; justify-content: flex-start; }
+  }
   .tab-btn { background: none; border: none; cursor: pointer; padding: 9px 14px; font-size: var(--t-s); color: var(--text-muted); border-bottom: 2px solid transparent; margin-bottom: -1px; transition: all 0.15s; }
   .tab-btn.active { color: var(--accent); font-weight: 600; border-bottom-color: var(--accent); }
 

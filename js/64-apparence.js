@@ -63,7 +63,7 @@ function apxSectionHtml() {
 
   const carteSaison = saisons.map(s => `
     <button type="button" class="apx-carte ${forcee === s.cle ? 'actif' : ''}" onclick="saisonImposer('${s.cle}')">
-      <span class="apx-saison-icone">${s.cle === 'halloween' ? '🎃' : s.cle === 'noel' ? '🎄' : s.cle === 'aucune' ? '—' : '🗓️'}</span>
+      <span class="apx-saison-icone">${s.cle === 'aucune' ? '—' : ((typeof SAISONS !== 'undefined' && (SAISONS.find(x => x.cle === s.cle) || {}).decors || ['🗓️'])[0])}</span>
       <b>${s.nom}${forcee === s.cle ? ' ✓' : ''}</b><small>${apxEsc(s.desc)}</small>
     </button>`).join('');
 

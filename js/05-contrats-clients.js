@@ -414,16 +414,6 @@ async function showClient(id) {
     </div>
     ${htmlEnteteFicheClient(c, { contrats, rappels, mandatsSignes, rendezVousClient, agent, isEntreprise, displayName, displaySub, headerIcon })}
 
-    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start;padding:6px 2px 14px">
-      ${postits.map(p => `
-        <div class="postit-note" style="background:${p.couleur || '#fde047'};transform:rotate(${p.rotation || 0}deg)">
-          <button onclick="deletePostit('${p.id}','${c.id}')" class="postit-close">×</button>
-          <textarea class="postit-text" onblur="savePostitContenu('${p.id}', this.value)" placeholder="Écris ici...">${p.contenu || ''}</textarea>
-          <button onclick="convertirPostitEnRappel('${p.id}','${c.id}', this)" style="position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,0.12);border:none;border-radius:6px;padding:3px 7px;font-size:10px;font-weight: 500;color:#1a1a1a;cursor:pointer">→ Tâche</button>
-        </div>`).join('')}
-      <button onclick="addPostit('${c.id}')" class="postit-add" title="Ajouter un post-it">📌 +</button>
-    </div>
-
     <div class="tabs">
       <button class="tab-btn active" onclick="switchTab(this,'tab-identite')">Identité</button>
       <button class="tab-btn" onclick="switchTab(this,'tab-documents')">📄 Documents (${typeof dcxCompteDocuments === 'function' ? dcxCompteDocuments(id, contrats, mandatsSignes, rappels) : mandatsSignes.length})</button>
@@ -434,7 +424,20 @@ async function showClient(id) {
       ${estRoleRH() ? '' : `<button class="tab-btn" onclick="switchTab(this,'tab-factures')">Factures (${factures.length})</button>`}
       <button class="tab-btn" onclick="switchTab(this,'tab-rappels')">Rappels (${rappels.length})</button>
       <button class="tab-btn" onclick="switchTab(this,'tab-rdv')">📅 RDV (${rendezVousClient.length})</button>
+      <button onclick="addPostit('${c.id}')" class="postit-add postit-add-onglets" title="Ajouter un post-it">📌 + Post-it</button>
     </div>
+
+    <!-- Post-its à droite (21.09.2026) : ils occupaient une rangée entière entre l'en-tête et les
+         onglets, même vides. En colonne flottante, le contenu de la fiche remonte d'un cran et
+         s'écoule à côté. -->
+    ${postits.length ? `<aside class="fiche-postits" aria-label="Post-its">
+      ${postits.map(p => `
+        <div class="postit-note" style="background:${p.couleur || '#fde047'};transform:rotate(${p.rotation || 0}deg)">
+          <button onclick="deletePostit('${p.id}','${c.id}')" class="postit-close" aria-label="Supprimer le post-it">×</button>
+          <textarea class="postit-text" onblur="savePostitContenu('${p.id}', this.value)" placeholder="Écris ici...">${p.contenu || ''}</textarea>
+          <button onclick="convertirPostitEnRappel('${p.id}','${c.id}', this)" style="position:absolute;bottom:6px;right:6px;background:rgba(0,0,0,0.12);border:none;border-radius:6px;padding:3px 7px;font-size:10px;font-weight: 500;color:#1a1a1a;cursor:pointer">→ Tâche</button>
+        </div>`).join('')}
+    </aside>` : ''}
 
     <div id="tab-identite">
       ${editingClient ? `

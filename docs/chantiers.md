@@ -1,5 +1,34 @@
 # REX CRM — chantiers, état des fonctions, vestiges
 
+## Point du 21.09.2026, fin d'après-midi
+
+**Contrôle automatique** : les 57 écrans du menu ont été ouverts un à un. Aucun ne plante ; trois
+alertes vues pendant un enchaînement trop rapide ne se reproduisent pas isolément.
+
+**Fait dans la journée** : nouvelle adresse (archive + annonces aux compagnies + mail en CCI) ·
+barre du haut avec loupe permanente et fil d'Ariane · menu qui défile seul, pictogrammes au
+trait, pied en bouton scindé · Vue d'ensemble unique · REX CLOUD refait (couvertures d'abord) ·
+factures de test supprimables, en-tête Assurex | EX.GROUP · ménage + RC reconnus ensemble ·
+citations par thème, en parchemin · recherche dans le dossier de dépôt (nom, date, lecture) ·
+opportunités converties · pipeline compact · post-its à droite · saisons de Rex aux équinoxes et
+solstices · Rex vivant dans le bandeau (postures enchaînées, tour et saut HD) · GIF de Rex et du
+logo EX.GROUP.
+
+**Reste ouvert** (par ordre d'importance) :
+1. **Décomptes OZ 2024-2025** : lus (CSS, GM, Helsana, Allianz, AXA, Bâloise, Mobilière,
+   Vaudoise) mais pas encore écrits en base — tableau de correspondance à valider. Lot 2026 à
+   terminer (lecture interrompue).
+2. **Rattacher chaque commission à son bordereau** par numéro de police.
+3. **Opportunités gagnées sans contrat lié** : 5 sur 8 — le calculateur les déduit, mieux vaut les lier.
+4. **Écrans vestiges** (styles en dur, émojis) : 3 162 styles en ligne et 1 749 émojis, dont les
+   deux tiers dans `03` à `10`. Priorité : Importer un décompte, Tâches & rappels, Agents.
+5. **Enveloppes** : 61 fonctions enveloppées ; `renderSidebar`, `navigate`, `ecVueEspaceClient`
+   quatre fois. Depuis js/112, les enveloppes de l'espace client en js/97, 102, 103, 104 sont
+   inactives : à retirer.
+6. **Planches Rex HD** (1024 px, fond transparent) : à fournir ; ou animation Rive.
+7. Dates : clés Brevo à changer, campagne du 6 octobre, franchise LAMal avant fin octobre,
+   déclaration des salaires avant fin décembre.
+
 *21.09.2026. Mesures prises sur le code, pas à l'œil. Aucun nom de client ni montant de portefeuille :
 le dépôt est public.*
 

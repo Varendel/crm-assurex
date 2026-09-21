@@ -35,6 +35,13 @@ const RXA_SEQUENCES = {
 };
 RXA_MOUVEMENTS.push('tour', 'saut');
 Object.assign(RXA_POIDS, { tour: 1, saut: 2 });
+
+// 21.09.2026, soir : « Enlève tous les Rex animés sauf celui qui saute du bandeau supérieur. Je
+// n'aime pas le rendu sur les autres. » Seul le saut reste, et seulement dans le bandeau ; le Rex
+// du menu, les flottements et les gestes par écran sont retirés. Les séries de postures restent
+// sur le disque : les remettre, c'est retirer ce filtre.
+RXA_MOUVEMENTS.splice(0, RXA_MOUVEMENTS.length, 'saut');
+const RXA_REPOS_BANDEAU = [4000, 9000];   // un saut toutes les 4 à 9 secondes, pas en continu
 const RXA_REPOS = 'assets/logos/rex/anim-confiant/1.png';   // pose de repos commune à toutes les séries
 
 const RXA_PAR_ECRAN = {
@@ -82,7 +89,7 @@ async function rxaJouer(mouvement, img) {
 }
 
 function rxaTirage(dernier) {
-  const liste = RXA_MOUVEMENTS.filter(m => m !== dernier);
+  const liste = RXA_MOUVEMENTS.length > 1 ? RXA_MOUVEMENTS.filter(m => m !== dernier) : RXA_MOUVEMENTS;
   const total = liste.reduce((s, m) => s + (RXA_POIDS[m] || 1), 0);
   let x = Math.random() * total;
   for (const m of liste) { x -= RXA_POIDS[m] || 1; if (x <= 0) return m; }
@@ -113,20 +120,10 @@ function rxaPoser() {
   // Le bandeau du tableau de bord : le Rex principal (pas le compagnon de saison).
   document.querySelectorAll('img.dbx-hero-mascotte:not(.rexb-compagnon), .dbx-hero-mascotte img.rexb:not(.rexb-compagnon)').forEach(img => {
     if (img._rxaVit) return;
-    img.addEventListener('mouseenter', () => { img._rxaDemande = 'joie'; });
-    rxaVivre(img, [350, 1100]);
+    img.addEventListener('mouseenter', () => { img._rxaDemande = 'saut'; });
+    rxaVivre(img, RXA_REPOS_BANDEAU);
   });
-  // Le compagnon de saison et tout Rex costumé encore affiché : il flotte.
-  document.querySelectorAll('#main-content img.rexb-compagnon, #main-content img.srx-costume').forEach(img => {
-    if (img._rxaVit) return;
-    img.classList.remove('respire'); img.classList.add('rxa-vivant');
-  });
-  // Le menu.
-  const menu = document.querySelector('.sidebar .rex-mascotte-menu');
-  if (menu && !menu._rxaVit) {
-    menu.addEventListener('mouseenter', () => { menu._rxaDemande = 'joie'; });
-    rxaVivre(menu, [3000, 7000]);
-  }
+  // Plus de flottement ailleurs, ni de Rex animé dans le menu (retirés le 21.09.2026).
 }
 
 (function rxaBrancher() {
@@ -141,20 +138,11 @@ function rxaPoser() {
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', demarrer); else demarrer();
 
-  // L'écran qu'on ouvre : le Rex du menu fait le geste qui va avec, au prochain mouvement.
-  if (typeof navigate === 'function') {
-    const origine = navigate;
-    window.navigate = function (vue) {
-      const r = origine.apply(this, arguments);
-      const m = typeof vue === 'string' ? RXA_PAR_ECRAN[vue] : null;
-      const menu = document.querySelector('.sidebar .rex-mascotte-menu');
-      if (m && menu) menu._rxaDemande = m;
-      return r;
-    };
-  }
-
   const st = document.createElement('style');
   st.textContent = `
+    /* Les Rex fixes restent fixes : plus de flottement (bandeaux, compagnon, REX CLOUD). */
+    img.rexb.respire, .rexb-duo .rexb-compagnon.respire, .cloud-rex, img.rxa-vivant { animation: none !important; }`;
+  st.textContent += `
     .sidebar .rex-mascotte-menu, img.dbx-hero-mascotte { object-fit: contain; object-position: center bottom; }
     .sidebar .rex-mascotte-menu:hover, img.dbx-hero-mascotte:hover { cursor: pointer; }
     img.rxa-vivant { animation: rxaVivant 3.4s ease-in-out infinite; transform-origin: 50% 100%; }

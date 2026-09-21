@@ -56,17 +56,18 @@ const RXA_REPOS = 'assets/logos/rex/anim-confiant/1.png';   // pose de repos com
 RXA_SEQUENCES.flamme = (() => {
   const tenir = { 9: 40, 19: 200, 25: 80, 37: 120, 49: 120, 59: 1100 };
   const etapes = Array.from({ length: 60 }, (_, i) => ({ f: i, ms: 80 + (tenir[i] || 0), x: 0, miroir: false }));
-  // La planche n'a pas de vrai cycle de pas (l'écart des pieds ne varie que de 62 à 73 px) : en
-  // marchant, Rex glissait avec des jambes qui tremblaient. Il garde donc sa pose debout de profil
-  // (image 1) et se dandine à chaque pas — il monte et descend, se balance de ±3° — comme dans un
-  // dessin animé quand on n'a pas de cycle de pas.
-  const PAS = 20, D = 55, PAR_PAS = 5;                   // 20 images par trajet, un pas toutes les 5 images
-  const dandine = k => { const p = Math.sin((k + 1) / PAR_PAS * Math.PI); return { y: -Math.abs(p) * 3, r: p * 3 }; };
+  // La marche : la planche « marche rex intermédiaire » (8 images, un vrai cycle de pas avec les
+  // positions de passage), détourée et mise à la même échelle et au même point d'appui que la
+  // planche flamme — Rex ne change pas de taille d'une planche à l'autre. Ses images sont rangées
+  // après les 60 de la flamme (indices 60 à 67). Deux cycles par trajet.
+  const PAS = 16, D = 55;
   for (let r = 0; r < 2; r++) {
-    for (let k = 0; k < PAS; k++) etapes.push({ f: 0, ms: 70, x: -D * (k + 1) / PAS, miroir: true, ...dandine(k) });
-    for (let k = 0; k < PAS; k++) etapes.push({ f: 0, ms: 70, x: -D + D * (k + 1) / PAS, miroir: false, ...dandine(k) });
+    for (let k = 0; k < PAS; k++) etapes.push({ f: 60 + (k % 8), ms: 90, x: -D * (k + 1) / PAS, miroir: true });
+    for (let k = 0; k < PAS; k++) etapes.push({ f: 60 + (k % 8), ms: 90, x: -D + D * (k + 1) / PAS, miroir: false });
   }
-  return { n: 60, ext: 'webp', etapes, ordre: etapes.map(e => e.f), ms: etapes.map(e => e.ms), repos: 'assets/logos/rex/anim-flamme/1.webp' };
+  const fichiers = [...Array.from({ length: 60 }, (_, i) => `assets/logos/rex/anim-flamme/${i + 1}.webp`),
+                    ...Array.from({ length: 8 }, (_, i) => `assets/logos/rex/anim-marche8/${i + 1}.webp`)];
+  return { n: 68, fichiers, etapes, ordre: etapes.map(e => e.f), ms: etapes.map(e => e.ms), repos: 'assets/logos/rex/anim-flamme/1.webp' };
 })();
 RXA_MOUVEMENTS.splice(0, RXA_MOUVEMENTS.length, 'flamme');
 RXA_REPOS_BANDEAU.splice(0, 2, 0, 0);   // en continu
@@ -84,7 +85,8 @@ function rxaPrecharger() {
   const promesses = [];
   for (const m of RXA_MOUVEMENTS) {
     const n = RXA_SEQUENCES[m] ? RXA_SEQUENCES[m].n : 7, ext = (RXA_SEQUENCES[m] && RXA_SEQUENCES[m].ext) || 'png';
-    if (!window._rxa.images[m]) window._rxa.images[m] = Array.from({ length: n }, (_, i) => { const im = new Image(); im.src = `${RXA_DOSSIER}${m}/${i + 1}.${ext}`; return im; });
+    const liste = RXA_SEQUENCES[m] && RXA_SEQUENCES[m].fichiers;
+    if (!window._rxa.images[m]) window._rxa.images[m] = Array.from({ length: n }, (_, i) => { const im = new Image(); im.src = liste ? liste[i] : `${RXA_DOSSIER}${m}/${i + 1}.${ext}`; return im; });
     for (const im of window._rxa.images[m]) promesses.push(im.decode ? im.decode().catch(() => {}) : Promise.resolve());
   }
   // decode() peut ne jamais répondre dans un onglet en arrière-plan : on n'attend pas plus de

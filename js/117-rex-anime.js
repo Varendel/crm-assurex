@@ -63,38 +63,43 @@ RXA_SEQUENCES.flamme = (() => {
   //   · marche en crachant vers la gauche (8)   → indices 16 à 23
   //   · saut (8 images)                         → indices 24 à 31 ; la hauteur de chaque image
   //     au-dessus du sol est rendue par un déplacement vertical (y, en % de la hauteur).
-  // 21.09.2026, soir : la marche passe à la planche « marche détaillée » (16 images, deux pas
-  // complets, avec un clignement), et Rex va s'adosser pour de vrai : à gauche contre le bout de
-  // la barre de recherche du bandeau, à droite contre le bord du bandeau. Ces deux points dépendent
-  // de la largeur de l'écran : la séquence est recalculée à chaque passage (construire).
-  const M = 0, DT = 16, FG = 24, SA = 32, AP = 40, PCT_PAR_IMAGE = 2.25, D = 36;
+  // 21.09.2026, soir : Rex va s'adosser pour de vrai : à gauche contre le bout de la barre de
+  // recherche du bandeau (ou contre le bord gauche du bandeau quand elle n'est pas à sa hauteur,
+  // sur téléphone), à droite contre le bord du bandeau. Ces points dépendent de la largeur de
+  // l'écran : la séquence est recalculée à chaque passage (construire). La planche « marche
+  // détaillée » a été essayée puis écartée (on ne voyait pas un pied passer devant l'autre).
+  const M = 0, DT = 8, FG = 16, SA = 24, AP = 32, PCT_PAR_IMAGE = 2.25, D = 36;
   const SAUT_Y = [0, 1.6, -0.5, -27.7, -37, -17.3, 0.8, -0.3], SAUT_MS = [160, 170, 90, 100, 190, 100, 150, 200];
   // Dans les images de 516 px : bords du corps dans les deux poses adossées (dos à droite, dos à
   // gauche), et pivot du miroir (53,7 %, voir le CSS).
   const APPUI_DROIT = 350, APPUI_GAUCHE = 227, LARGEUR = 516;
   function construire(img) {
-    let G = -D, R = 0;
+    let G = -D, R = 0, FLAMME_MIN = -D / 2;
     const hero = img && img.closest('.dbx-hero'), rech = hero && hero.querySelector('.dbx-recherche');
-    if (hero && rech && img.style.transform === '') {
-      const ri = img.getBoundingClientRect(), rr = rech.getBoundingClientRect(), rh = hero.getBoundingClientRect();
+    if (hero && img.style.transform === '') {
+      const ri = img.getBoundingClientRect(), rh = hero.getBoundingClientRect(), rr = rech && rech.getBoundingClientRect();
       if (ri.width > 0) {
         const pct = px => px / ri.width * 100, bord = p => ri.left + p / LARGEUR * ri.width;
-        const g = pct(rr.right + 2 - bord(APPUI_GAUCHE)), r = pct(rh.right - 12 - bord(APPUI_DROIT));
-        // Barre de recherche à gauche et à portée (pas sur téléphone, où elle passe au-dessus).
-        if (g < -8 && g > -160 && rr.bottom > ri.top + ri.height * 0.3) G = g;
+        // Barre de recherche à sa hauteur et à sa gauche : il s'y adosse. Sinon (téléphone, où
+        // elle passe au-dessus), il s'adosse au bord gauche du bandeau.
+        const aCote = rr && rr.width > 0 && rr.right < ri.left + ri.width * 0.5 && rr.bottom > ri.top + ri.height * 0.3;
+        const g = pct((aCote ? rr.right + 2 : rh.left + 10) - bord(APPUI_GAUCHE)), r = pct(rh.right - 12 - bord(APPUI_DROIT));
+        if (g < -8 && g > -160) G = g;
         R = Math.max(0, Math.min(40, r));
+        // La longue flamme part du bord gauche de l'image : elle ne doit pas sortir du bandeau.
+        FLAMME_MIN = Math.min(0, pct(rh.left + 6 - ri.left));
       }
     }
     const etapes = [];
     const tourner = (vues, x) => vues.forEach(v => etapes.push({ f: DT + v, ms: v === 4 ? 220 : 110, x, miroir: false }));
     const marcher = (deX, aX, miroir) => {
       const pas = Math.max(8, Math.round(Math.abs(aX - deX) / PCT_PAR_IMAGE));
-      for (let k = 0; k < pas; k++) etapes.push({ f: M + (k % 16), ms: 90, x: deX + (aX - deX) * (k + 1) / pas, miroir });
+      for (let k = 0; k < pas; k++) etapes.push({ f: M + (k % 8), ms: 90, x: deX + (aX - deX) * (k + 1) / pas, miroir });
     };
     const cracher = (deX, aX) => { const t = [130, 130, 130, 150, 240, 260, 160, 140]; for (let k = 0; k < 8; k++) etapes.push({ f: FG + k, ms: t[k], x: deX + (aX - deX) * (k + 1) / 8, miroir: false }); };
     const sauter = () => SAUT_Y.forEach((y, k) => etapes.push({ f: SA + k, ms: SAUT_MS[k], x: 0, y, miroir: false }));
     const adosser = (pose, x) => etapes.push({ f: AP + pose, ms: 2400, x, miroir: false });
-    const C = Math.max(G / 2, -D / 2);
+    const C = Math.max(G / 2, -D / 2, FLAMME_MIN);
     tourner([0, 1, 2, 3], 0);                 // de profil → de face
     sauter();                                 // un saut de joie, sur place
     tourner([3, 4, 5, 6, 7], 0);              // sourire en clignant, puis profil gauche
@@ -114,8 +119,8 @@ RXA_SEQUENCES.flamme = (() => {
     return etapes;
   }
   const lot = (dossier, n = 8) => Array.from({ length: n }, (_, i) => `assets/logos/rex/${dossier}/${i + 1}.webp`);
-  const fichiers = [...lot('anim-marche16', 16), ...lot('anim-demitour8'), ...lot('anim-flammegauche8'), ...lot('anim-saut8'), ...lot('anim-appui2', 2)];
-  const seq = { n: 42, fichiers, repos: 'assets/logos/rex/anim-demitour8/1.webp' };
+  const fichiers = [...lot('anim-marche8'), ...lot('anim-demitour8'), ...lot('anim-flammegauche8'), ...lot('anim-saut8'), ...lot('anim-appui2', 2)];
+  const seq = { n: 34, fichiers, repos: 'assets/logos/rex/anim-demitour8/1.webp' };
   seq.construire = img => { seq.etapes = construire(img); seq.ordre = seq.etapes.map(e => e.f); seq.ms = seq.etapes.map(e => e.ms); };
   seq.construire(null);
   return seq;
@@ -212,8 +217,14 @@ const RXA_DECOR = `
   <defs>
     <radialGradient id="rxaLueur" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#00CFFF" stop-opacity=".75"/><stop offset="1" stop-color="#00CFFF" stop-opacity="0"/></radialGradient>
   </defs>
-  <g class="rxa-fumee" fill="#fff" opacity=".12">
-    <circle cx="118" cy="44" r="9"/><circle cx="128" cy="32" r="11"/><circle cx="116" cy="20" r="8"/>
+  <!-- Le volcan fume : des bouffées rondes naissent du cratère, montent en grossissant et
+       s'effacent, l'une après l'autre. -->
+  <g fill="#fff">
+    <circle class="rxa-bouffee" cx="118" cy="54" r="7"/>
+    <circle class="rxa-bouffee" cx="121" cy="54" r="6" style="animation-delay:-1.6s"/>
+    <circle class="rxa-bouffee" cx="116" cy="54" r="7.5" style="animation-delay:-3.2s"/>
+    <circle class="rxa-bouffee" cx="120" cy="54" r="6.5" style="animation-delay:-4.8s"/>
+    <circle class="rxa-bouffee" cx="117" cy="54" r="7" style="animation-delay:-6.4s"/>
   </g>
   <path d="M40 150 L96 70 Q104 60 112 62 L124 62 Q132 60 140 70 L206 150 Z" fill="#fff" opacity=".10"/>
   <ellipse cx="118" cy="64" rx="18" ry="7" fill="url(#rxaLueur)"/>
@@ -295,15 +306,23 @@ function rxaPoser() {
     .dbx-hero-droite .rexb-compagnon { display: none !important; }
     /* Le décor : derrière Rex, calé sur ses pieds, étendu vers la gauche pour son trajet de marche. */
     .rxa-scene { position: relative; display: inline-block; line-height: 0; }
-    .rxa-scene .rxa-decor { position: absolute; right: -30px; bottom: 0; height: 170px; width: auto; aspect-ratio: 420 / 170; z-index: 1; pointer-events: none; }
+    .rxa-scene .rxa-decor { position: absolute; right: -30px; bottom: 0; height: 170px; width: auto; aspect-ratio: 420 / 170; z-index: 1; pointer-events: none; overflow: visible; }
     .rxa-scene img { position: relative; z-index: 2; }
-    .rxa-fumee { transform-box: fill-box; transform-origin: 50% 100%; animation: rxaFumee 9s ease-in-out infinite; }
-    @keyframes rxaFumee { 0%, 100% { transform: translateY(0) scale(1); opacity: .12; } 50% { transform: translateY(-6px) scale(1.12); opacity: .07; } }
+    /* Rex marche et s'adosse jusqu'aux bords du bandeau : la partie transparente de son image ne
+       doit pas élargir la page (défilement de côté sur iPhone). Le vertical reste libre (résultats
+       de la recherche). */
+    .dbx-hero { overflow-x: clip; }
+    .rxa-bouffee { transform-box: fill-box; transform-origin: 50% 50%; opacity: 0; animation: rxaBouffee 8s linear infinite; }
+    @keyframes rxaBouffee {
+      0% { transform: translate(0, 0) scale(.35); opacity: 0; }
+      12% { opacity: .2; }
+      50% { transform: translate(5px, -26px) scale(1.05); opacity: .15; }
+      100% { transform: translate(-3px, -54px) scale(1.7); opacity: 0; } }
     .rxa-ptero { animation: rxaPtero 16s ease-in-out infinite; }
     .rxa-ailes { transform-box: fill-box; transform-origin: 50% 90%; animation: rxaAiles 1.6s ease-in-out infinite; }
     @keyframes rxaPtero { 0%, 100% { transform: translate(0, 0); } 30% { transform: translate(18px, -5px); } 60% { transform: translate(34px, 2px); } 80% { transform: translate(14px, 4px); } }
     @keyframes rxaAiles { 0%, 100% { transform: scaleY(1); } 45% { transform: scaleY(.35); } }
-    @media (prefers-reduced-motion: reduce) { .rxa-fumee, .rxa-ptero, .rxa-ailes { animation: none; } }
+    @media (prefers-reduced-motion: reduce) { .rxa-ptero, .rxa-ailes { animation: none; } .rxa-bouffee { animation: none; opacity: .12; } }
     @media (max-width: 768px) { .rxa-scene .rxa-decor { height: 96px; right: -16px; } }
     @media (max-width: 768px) { img.dbx-hero-mascotte.rxa-flamme { height: 96px !important; margin-left: calc(-180 / 234 * 96px); } }`;
   st.textContent += `

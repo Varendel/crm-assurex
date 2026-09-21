@@ -191,7 +191,7 @@ function viewDashboardV2() {
       </div>
       <div class="dbx-hero-droite">
         <div class="dbx-hero-boutons">
-          <button type="button" id="btn-sync-outlook" class="dbx-btn-verre" onclick="synchroniserOutlook()" title="Vérifie dans Outlook si des compagnies ont répondu aux demandes d'offre">↻ Synchroniser Outlook</button>
+          <button type="button" id="btn-sync-outlook" class="dbx-btn-verre" onclick="synchroniserOutlook()" title="Vérifie dans Outlook si des compagnies ont répondu aux demandes d'offre">↻ <span class="dbx-lib-long">Synchroniser </span>Outlook</button>
           <button type="button" class="dbx-btn-blanc" onclick="navigate('nouveau-client')">+ Client</button>
           <button type="button" class="dbx-btn-blanc" onclick="opportuniteEnEditionId=null;navigate('nouvelle-opportunite')">+ Opportunité</button>
         </div>

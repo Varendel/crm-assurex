@@ -142,11 +142,11 @@ function viewEcohubSync() {
   const pret = totContrats ? Math.round((totContrats - totSansPolice) * 100 / totContrats) : 100;
 
   return `<div class="ehs">
-    <header class="dx-tete"><div><div class="dx-surtitre">EcoHub · IG B2B</div><h2>Préparation de la synchronisation</h2>
+    <header class="dx-tete"><div><div class="dx-surtitre">${typeof ehmLogo === 'function' ? ehmLogo({ h: 14 }) : 'EcoHub'} · IG B2B</div><h2>Préparation de la synchronisation</h2>
       <p class="dx-sous">Quand une compagnie ouvrira le flux, chaque ligne reçue devra retrouver son client et son contrat. Ici, ce qui manque pour que le rapprochement fonctionne dès le premier jour.</p></div>
       <div class="dx-tete-actions">
         <button type="button" class="btn-secondary" onclick="ehsCharger(true).then(() => navigate('ecohub-sync', { silent: true }))">↻ Actualiser</button>
-        <button type="button" class="btn-secondary" onclick="ehsSynchroniserMaintenant()" title="Lance tout de suite la même synchronisation que celle de 6 h 15 et 18 h 15">⚡ Synchroniser maintenant</button>
+        <button type="button" class="btn-secondary" onclick="ehsSynchroniserMaintenant()" title="Lance tout de suite la même synchronisation que celle de 6 h 15 et 18 h 15">${typeof ehmLogo === 'function' ? ehmLogo({ icone: true, alt: '' }) : '⚡'} Synchroniser maintenant</button>
         <button type="button" class="btn-save" onclick="ehsPreparerCorrespondances()">🔗 Préparer les correspondances</button>
       </div></header>
 

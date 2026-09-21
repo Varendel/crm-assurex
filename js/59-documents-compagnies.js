@@ -239,7 +239,7 @@ ${d.numero_police ? `<span class="dcx-police">${dcxEsc(d.numero_police)}</span>`
 ${d.date_document ? `<span>${fmtDate(d.date_document)}</span>` : ''}
 ${periode ? `<span>${periode}</span>` : ''}
 ${montant ? `<span class="dcx-montant">${montant}</span>` : ''}
-<span class="dcx-source">${d.source === 'ecohub' ? 'EcoHub' : 'dépôt manuel'}</span>
+${dcxPastillesSource(d)}
       </div>
     </div>
     <div class="dcx-client">
@@ -493,7 +493,7 @@ function dcxToutDocument(clientId, contrats, mandats, rappels) {
     out.push({ origine: 'compagnie', icone: t.icone, titre: d.titre || d.nom_fichier || t.label,
       sous: [t.label, d.compagnie, d.numero_police, d.date_document ? fmtDate(d.date_document) : '',
      d.montant != null && d.montant !== '' ? 'CHF ' + fmtCHF(Number(d.montant)) : ''].filter(Boolean).join(' · '),
-      etat: d.source === 'ecohub' ? 'EcoHub' : 'déposé à la main',
+      etat: d.source === 'ecohub' ? '' : 'déposé à la main', ecohub: d.source === 'ecohub',
       publiable: { id: d.id, visible: !!d.visible_client },
       ouvrir: `dcxOuvrir('${dcxEsc(d.chemin)}')`,
       apercu: `dcxApercu('${dcxEsc(d.chemin)}', '${dcxEsc(d.titre || d.nom_fichier || '')}')` });
@@ -505,6 +505,17 @@ function dcxToutDocument(clientId, contrats, mandats, rappels) {
       apercu: r.piece_jointe_path ? `dcxApercu('${dcxEsc(r.piece_jointe_path)}', '${dcxEsc(r.piece_jointe_nom || r.titre || '')}')` : null });
   }
   return out;
+}
+
+// Pastilles d'origine (22.09.2026) : un document arrivé par EcoHub porte le logo EcoHub ; un
+// document visible par le client porte « En ligne » (il est dans son espace REX CLOUD).
+function dcxPastilleEcohub() {
+  const logo = typeof ehmLogo === 'function' ? ehmLogo({ icone: true, alt: '', h: 13 }) : '';
+  return `<span class="dcx-pastille dcx-pastille-ecohub" title="Document reçu par EcoHub">${logo}EcoHub</span>`;
+}
+function dcxPastillesSource(d) {
+  return (d.source === 'ecohub' ? dcxPastilleEcohub() : '<span class="dcx-source">dépôt manuel</span>')
+    + (d.visible_client ? '<span class="dcx-pastille dcx-pastille-enligne" title="Visible dans l’espace REX CLOUD du client">● En ligne</span>' : '');
 }
 
 function dcxCompteDocuments(clientId, contrats, mandats, rappels) {
@@ -532,7 +543,7 @@ function dcxOngletDocuments(c, contrats, mandats, rappels) {
       <span class="dcx-doc-sous">${dcxEsc(d.sous || '')}</span>
     </button>
     ${d.apercu ? `<button type="button" class="dcx-loupe" onclick="${d.apercu}" title="Aperçu rapide">🔍</button>` : '<span></span>'}
-    ${d.etat ? `<span class="dcx-doc-etat ${d.ok ? 'ok' : ''}">${dcxEsc(d.etat)}</span>` : '<span></span>'}
+    ${d.ecohub ? dcxPastilleEcohub() : d.etat ? `<span class="dcx-doc-etat ${d.ok ? 'ok' : ''}">${dcxEsc(d.etat)}</span>` : '<span></span>'}
     ${d.publiable
       ? `<button type="button" class="dcx-publier ${d.publiable.visible ? 'on' : ''}"
    title="${d.publiable.visible ? 'Ce document est visible dans l’espace du client — cliquer pour le retirer' : 'Rendre ce document visible dans l’espace du client'}"

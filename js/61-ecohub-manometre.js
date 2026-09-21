@@ -53,6 +53,18 @@ async function ehmCharger() {
   window._ehm.etat = E;
 }
 
+// ── Le logo EcoHub (22.09.2026) ─────────────────────────────────────────────────────────────────
+// « Utilise ce logo pour les notifs EcoHub, les documents, le bouton d'envoi et les messages sur le
+// tableau de bord. » Logo complet pour les titres, symbole seul (l'hexagone) pour les pastilles et
+// les boutons, où le mot entier serait illisible. Version marine et version blanche : le CSS
+// (css/90) bascule sur la blanche en thème sombre et sur les fonds bleus.
+function ehmLogo(opts) {
+  const o = opts || {};
+  const f = o.icone ? 'ecohub-icone' : 'ecohub';
+  const h = o.h || (o.icone ? 16 : 18);
+  return `<img class="ehx-logo ${o.icone ? 'ehx-logo-icone' : ''} ${o.blanc ? 'ehx-blanc' : ''} ${o.classe || ''}" src="assets/logos/${f}${o.blanc ? '-blanc' : ''}.svg" alt="${o.alt == null ? 'EcoHub' : o.alt}" height="${h}" style="height:${h}px;width:auto"/>`;
+}
+
 // ── Le manomètre ────────────────────────────────────────────────────────────────────────────────
 // Demi-cadran de 180°, aiguille à gauche quand rien n'est prêt, à droite quand tout l'est.
 function htmlManometreEcohub(valeur, taille) {
@@ -112,7 +124,7 @@ function ehmCarteDashboard() {
 
   return `<section class="dbx-carte ehm-carte">
     <header class="dbx-carte-tete">
-      <div><h2>EcoHub</h2><span class="dbx-carte-sous">échange normalisé avec les compagnies</span></div>
+      <div><h2 class="ehx-titre">${ehmLogo({ h: 20 })}</h2><span class="dbx-carte-sous">échange normalisé avec les compagnies</span></div>
       <button type="button" class="dbx-lien" onclick="navigate('ecohub-sync')">Ouvrir →</button>
     </header>
     <div class="ehm-corps">
@@ -123,7 +135,7 @@ function ehmCarteDashboard() {
           ? `<div class="ehm-ligne alerte"><b>${E.sansPolice}</b> sans numéro de police — ils ne pourront pas être rapprochés</div>`
           : '<div class="ehm-ligne">tous portent un numéro de police</div>'}
         <div class="ehm-etats">${etatFlux}${etatSync}</div>
-        <button type="button" class="btn-secondary ehm-btn" onclick="ehsSynchroniserMaintenant()">⚡ Synchroniser maintenant</button>
+        <button type="button" class="btn-secondary ehm-btn ehx-btn" onclick="ehsSynchroniserMaintenant()">${ehmLogo({ icone: true, alt: '' })} Synchroniser maintenant</button>
       </div>
     </div>
   </section>`;
@@ -160,12 +172,12 @@ function ehmPastillesBandeau() {
   return `
     <button type="button" class="bmq-pastille ${ton}" onclick="navigate('ecohub-sync')"
       title="EcoHub · ${E.contrats} contrat(s) chez les compagnies suivies, ${E.sansPolice} sans numéro de police&#10;Cliquer pour ouvrir le manomètre">
-      <span class="bmq-pastille-icone" aria-hidden="true">🎛️</span>
+      <span class="bmq-pastille-icone" aria-hidden="true">${ehmLogo({ icone: true, blanc: true, alt: '', h: 15 })}</span>
       <span class="bmq-pastille-valeur">${p == null ? '—' : p + ' %'}</span>
     </button>
     ${E.nouveaux.length ? `<button type="button" class="bmq-pastille nouveau" onclick="navigate('documents-compagnies')"
       title="${E.nouveaux.length} document(s) reçu(s) depuis ta dernière visite :&#10;${noms.map(n => '· ' + n).join('&#10;')}${E.nouveaux.length > 6 ? '&#10;…' : ''}&#10;Cliquer pour les ouvrir">
-      <span class="bmq-pastille-icone" aria-hidden="true">📥</span>
+      <span class="bmq-pastille-icone" aria-hidden="true">${ehmLogo({ icone: true, blanc: true, alt: '', h: 15 })}📥</span>
       <span class="bmq-pastille-valeur">${E.nouveaux.length}</span>
     </button>` : ''}`;
 }
@@ -183,9 +195,9 @@ function ehmBandeauNouveaux() {
   }).filter(Boolean))];
   const orphelins = E.nouveaux.filter(d => !d.client_id).length;
   return `<div class="ehm-bandeau">
-    <span class="ehm-bandeau-icone" aria-hidden="true">📥</span>
+    <span class="ehm-bandeau-icone" aria-hidden="true">${ehmLogo({ icone: true, alt: '', h: 26 })}</span>
     <div class="ehm-bandeau-texte">
-      <strong>${n} nouveau${n > 1 ? 'x' : ''} document${n > 1 ? 's' : ''} reçu${n > 1 ? 's' : ''} d’EcoHub</strong>
+      <strong>${n} nouveau${n > 1 ? 'x' : ''} document${n > 1 ? 's' : ''} reçu${n > 1 ? 's' : ''} d’${ehmLogo({ h: 13, classe: 'ehx-logo-texte' })}</strong>
       <span>${clients.length ? clients.slice(0, 4).map(ehmEsc).join(' · ') + (clients.length > 4 ? ` et ${clients.length - 4} autre(s)` : '') : ''}${orphelins ? `${clients.length ? ' · ' : ''}${orphelins} à rattacher` : ''}</span>
     </div>
     <button type="button" class="btn-save" onclick="navigate('documents-compagnies')">Voir</button>

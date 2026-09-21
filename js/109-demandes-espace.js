@@ -32,6 +32,47 @@ function dspBandeauHtml() {
   </div>`;
 }
 
+// ── « Document demandé » sur la fiche client (22.09.2026) ───────────────────────────────────────
+// « Il faudrait une notif sur la fiche client qui clignote : document demandé. » Quand le client a
+// demandé un document depuis son espace (demandes_documents, pas encore envoyé), la fiche l'annonce
+// en tête, en orange REX CLOUD, avec un voyant qui clignote tant que la demande est ouverte. Le
+// bouton mène à l'onglet « Documents » des messages clients, où on l'envoie et la marque envoyée.
+const DSP_DOC_OUVERTES = ['nouvelle', 'en_cours'];
+
+async function dspSignalerDocumentsDemandes(clientId) {
+  if (!clientId || typeof dbGet !== 'function') return;
+  const rows = await dbGet('demandes_documents',
+    `client_id=eq.${clientId}&statut=in.(${DSP_DOC_OUVERTES.join(',')})&select=id,type_document,statut,created_at&order=created_at.asc`).catch(() => []);
+  // La fiche a pu changer pendant la requête : on ne pose l'alerte que sur la bonne.
+  if (!Array.isArray(rows) || !rows.length || currentView !== 'fiche-client' || currentClientId !== clientId) return;
+  const main = document.getElementById('main-content');
+  if (!main || main.querySelector('.dsp-doc-alerte')) return;
+  const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const jours = iso => Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86400000));
+  const plus = rows[0];
+  const j = jours(plus.created_at);
+  const types = [...new Set(rows.map(r => r.type_document || 'Document'))];
+  main.insertAdjacentHTML('afterbegin', `<div class="dsp-doc-alerte" role="status">
+    <span class="dsp-doc-feu" aria-hidden="true"></span>
+    <img src="${DSP_LOGO}" alt="" class="dsp-logo" width="22" height="22" onerror="this.style.display='none'"/>
+    <div class="dsp-doc-texte">
+      <b>${rows.length > 1 ? rows.length + ' documents demandés' : 'Document demandé'} par le client</b>
+      <span>${types.slice(0, 3).map(esc).join(' · ')}${types.length > 3 ? '…' : ''} — ${j === 0 ? 'aujourd’hui' : `depuis ${j} jour${j > 1 ? 's' : ''}`}</span>
+    </div>
+    <button type="button" class="dsp-doc-btn" onclick="if(typeof _mc!=='undefined'){_mc.onglet='documents';} navigate('messages-clients')">Traiter →</button>
+  </div>`);
+}
+
+(function dspBrancherFiche() {
+  if (typeof showClient !== 'function') return;
+  const origine = window.showClient;
+  window.showClient = async function (id) {
+    const r = await origine.apply(this, arguments);
+    dspSignalerDocumentsDemandes(id);
+    return r;
+  };
+})();
+
 (function dspBrancher() {
   if (typeof viewMessagesClients !== 'function') return;
   const origine = viewMessagesClients;

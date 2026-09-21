@@ -41,6 +41,42 @@
   .dsp-quoi { flex-basis: 100%; }
 }
 
+/* ── « Document demandé » en tête de fiche client (js/109, 22.09.2026) ───────────────────────────
+   Le voyant clignote tant que la demande est ouverte ; le reste du bandeau reste fixe, pour qu'on
+   puisse le lire. Rien ne clignote pour qui a demandé moins d'animations. */
+.dsp-doc-alerte {
+  display: flex; align-items: center; gap: 12px; margin: 0 0 14px; padding: 10px 14px;
+  border-radius: var(--r-m, 12px); color: #fff;
+  background: linear-gradient(100deg, var(--dsp-orange) 0%, #FB923C 100%);
+  box-shadow: 0 4px 14px color-mix(in srgb, var(--dsp-orange) 35%, transparent);
+  animation: dspDocBord 1.6s ease-in-out infinite;
+}
+.dsp-doc-feu { width: 12px; height: 12px; border-radius: 50%; background: #fff; flex-shrink: 0;
+  box-shadow: 0 0 0 0 rgba(255,255,255,.8); animation: dspDocFeu 1.1s ease-in-out infinite; }
+.dsp-doc-texte { display: flex; flex-direction: column; min-width: 0; flex: 1; line-height: 1.3; }
+.dsp-doc-texte b { font-size: var(--t-m); font-weight: 600; }
+.dsp-doc-texte span { font-size: var(--t-s); opacity: .92; }
+.dsp-doc-btn { flex-shrink: 0; border: none; background: #fff; color: #C2410C; font-weight: 600; font-size: var(--t-s);
+  padding: 7px 14px; border-radius: 9px; cursor: pointer; font-family: inherit; }
+.dsp-doc-btn:hover { background: #FFF7ED; }
+@keyframes dspDocFeu { 0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(255,255,255,.75); } 50% { opacity: .25; box-shadow: 0 0 0 7px rgba(255,255,255,0); } }
+@keyframes dspDocBord { 0%, 100% { box-shadow: 0 4px 14px color-mix(in srgb, var(--dsp-orange) 30%, transparent); } 50% { box-shadow: 0 4px 22px color-mix(in srgb, var(--dsp-orange) 70%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .dsp-doc-alerte, .dsp-doc-feu { animation: none; } }
+@media (max-width: 620px) { .dsp-doc-alerte { flex-wrap: wrap; } .dsp-doc-btn { width: 100%; } }
+
+/* ── Les pastilles EcoHub (js/59, js/61 — 22.09.2026) ─────────────────────────────────────────── */
+.dcx-pastille { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px;
+  font-size: var(--t-xs); font-weight: 600; white-space: nowrap; }
+.dcx-pastille-ecohub { background: #EEF0FB; color: #151958; border: 1px solid #D5D9F2; }
+.dcx-pastille-enligne { background: color-mix(in srgb, #22C55E 14%, transparent); color: #15803D; border: 1px solid color-mix(in srgb, #22C55E 35%, transparent); }
+.ehx-logo { display: inline-block; vertical-align: middle; }
+.ehx-titre { display: flex; align-items: center; margin: 0; }
+.ehx-btn { display: inline-flex; align-items: center; gap: 7px; }
+.ehx-logo-texte { vertical-align: -1px; margin-left: 2px; }
+/* En thème sombre, le logo marine passe en blanc (la pastille EcoHub garde son fond clair). */
+html:not([data-theme="clair"]) .ehx-logo:not(.ehx-blanc) { filter: brightness(0) invert(1); }
+html:not([data-theme="clair"]) .dcx-pastille-ecohub .ehx-logo { filter: none; }
+
 /* ── Les demandes non traitées ────────────────────────────────────────────────────────────────
    `.neuf` est posé par js/51 sur les quatre familles — message, sinistre, document, transfert —
    dès que la ligne n'a pas été traitée. Une seule règle les couvre donc toutes, y compris celles

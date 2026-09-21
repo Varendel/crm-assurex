@@ -110,6 +110,12 @@
   transition: background var(--v-court, .15s);
 }
 .cou-liste li:hover { background: var(--surface-hover); }
+/* Logo de la compagnie à gauche de chaque contrat (22.09.2026) : on reconnaît l'assureur d'un
+   coup d'œil, sans lire la petite ligne. */
+.cou-liste li { display: flex; align-items: center; gap: 8px; }
+.cou-logo { flex-shrink: 0; display: inline-flex; line-height: 0; }
+.cou-texte { min-width: 0; flex: 1; }
+.cou-texte b, .cou-texte small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cou-liste li:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .cou-liste b { display: block; font-size: var(--t-xs, 11px); font-weight: 500; color: var(--text); }
 .cou-liste small { display: block; font-size: 10px; color: var(--text-muted); }

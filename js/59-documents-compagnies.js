@@ -251,7 +251,7 @@ ${dcxPastillesSource(d)}
       <button type="button" class="dcx-loupe" onclick="dcxApercu('${dcxEsc(d.chemin)}', '${dcxEsc(d.titre || d.nom_fichier || '')}')" title="Aperçu rapide">🔍</button>
       <button type="button" class="dcx-publier ${d.visible_client ? 'on' : ''}" ${rattache ? '' : 'disabled'}
 title="${d.visible_client ? 'Ce document est visible dans l’espace du client — cliquer pour le retirer' : rattache ? 'Rendre ce document visible dans l’espace du client' : 'Rattache d’abord le document à un client'}"
-onclick="dcxBasculerVisible('${d.id}', ${d.visible_client ? 'false' : 'true'})">${d.visible_client ? '👁 Visible' : 'Publier'}</button>
+onclick="dcxBasculerVisible('${d.id}', ${d.visible_client ? 'false' : 'true'})">${d.source === 'ecohub' && typeof ehmLogo === 'function' ? ehmLogo({ icone: true, alt: '', h: 12 }) + ' ' : ''}${d.visible_client ? '👁 En ligne' : (d.source === 'ecohub' ? 'Pousser dans l’espace client' : 'Publier')}</button>
       <button type="button" class="btn-secondary" onclick="dcxOuvrir('${dcxEsc(d.chemin)}')">Ouvrir</button>
     </div>
   </div>`;
@@ -546,8 +546,8 @@ function dcxOngletDocuments(c, contrats, mandats, rappels) {
     ${d.ecohub ? dcxPastilleEcohub() : d.etat ? `<span class="dcx-doc-etat ${d.ok ? 'ok' : ''}">${dcxEsc(d.etat)}</span>` : '<span></span>'}
     ${d.publiable
       ? `<button type="button" class="dcx-publier ${d.publiable.visible ? 'on' : ''}"
-   title="${d.publiable.visible ? 'Ce document est visible dans l’espace du client — cliquer pour le retirer' : 'Rendre ce document visible dans l’espace du client'}"
-   onclick="dcxBasculerVisible('${d.publiable.id}', ${d.publiable.visible ? 'false' : 'true'}).then(()=>showClient('${c.id}'))">${d.publiable.visible ? '👁 Visible' : 'Publier'}</button>`
+   title="${d.publiable.visible ? 'Ce document est visible dans l’espace du client — cliquer pour le retirer' : (d.ecohub ? 'Pousser ce document reçu par EcoHub dans l’espace du client' : 'Rendre ce document visible dans l’espace du client')}"
+   onclick="dcxBasculerVisible('${d.publiable.id}', ${d.publiable.visible ? 'false' : 'true'}).then(()=>showClient('${c.id}'))">${d.ecohub && typeof ehmLogo === 'function' ? ehmLogo({ icone: true, alt: '', h: 12 }) + ' ' : ''}${d.publiable.visible ? '👁 En ligne' : (d.ecohub ? 'Pousser dans l’espace client' : 'Publier')}</button>`
       : '<span></span>'}
   </div>`;
 

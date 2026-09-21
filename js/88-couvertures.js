@@ -111,8 +111,11 @@ function couCarteHtml(c) {
     <ul class="cou-liste">${c.contrats.map(ct => `
       <li ${typeof showDetailContrat === 'function' ? `onclick="showDetailContrat('${ct.id}')" role="button" tabindex="0"
         onkeydown="if(event.key==='Enter'){showDetailContrat('${ct.id}')}"` : ''}>
-        <b>${couEsc(ct.produit || 'Contrat')}</b>
-        <small>${couEsc(ct.compagnie || '')}${ct.numero_police ? ' · ' + couEsc(ct.numero_police) : ''}</small>
+        ${ct.compagnie && typeof pictoCompagnie === 'function' ? `<span class="cou-logo" title="${couEsc(ct.compagnie)}">${pictoCompagnie(ct.compagnie, 22)}</span>` : ''}
+        <span class="cou-texte">
+          <b>${couEsc(ct.produit || 'Contrat')}</b>
+          <small>${couEsc(ct.compagnie || '')}${ct.numero_police ? ' · ' + couEsc(ct.numero_police) : ''}</small>
+        </span>
       </li>`).join('')}</ul>
   </div>`;
 }

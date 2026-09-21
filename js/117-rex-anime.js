@@ -70,20 +70,29 @@ RXA_SEQUENCES.flamme = (() => {
   // 21.09.2026, soir : la planche « REX demi tour » (profil droite → trois-quarts → face avec un
   // clignement souriant → trois-quarts → profil gauche), indices 68 à 75, remplace ces demi-tours :
   // même style que la marche, et Rex se retourne en passant par la face, en regardant l'utilisateur.
-  const PAS = 16, D = 55, DT = 68, tourner = (vues, x, ms = 110) => vues.forEach(v => etapes.push({ f: DT + v, ms: v === 4 ? 220 : ms, x, miroir: false }));
-  const marcher = (deX, aX, miroir) => { for (let k = 0; k < PAS; k++) etapes.push({ f: 60 + (k % 8), ms: 90, x: deX + (aX - deX) * (k + 1) / PAS, miroir }); };
+  // 21.09.2026, nuit : « il marche à gauche et crache une longue flamme turquoise » — la planche
+  // « REX flamme gauche » (8 images, Rex tourné vers la gauche, flamme jusqu'à deux fois sa
+  // longueur), indices 76 à 83. Toutes les images ont été élargies de 180 px transparents à gauche
+  // (516 × 234) pour que la flamme tienne : Rex garde exactement sa taille et sa place (voir CSS).
+  // Le trajet D est donc exprimé en % de la nouvelle largeur (36 % ≈ l'ancien 55 %).
+  const PAS = 16, D = 36, DT = 68, FG = 76, tourner = (vues, x, ms = 110) => vues.forEach(v => etapes.push({ f: DT + v, ms: v === 4 ? 220 : ms, x, miroir: false }));
+  const marcher = (deX, aX, miroir, pas = PAS) => { for (let k = 0; k < pas; k++) etapes.push({ f: 60 + (k % 8), ms: 90, x: deX + (aX - deX) * (k + 1) / pas, miroir }); };
+  // Marche en crachant : la première moitié du trajet, la grande flamme tenue un peu plus longtemps.
+  const cracher = (deX, aX) => { const t = [130, 130, 130, 150, 240, 260, 160, 140]; for (let k = 0; k < 8; k++) etapes.push({ f: FG + k, ms: t[k], x: deX + (aX - deX) * (k + 1) / 8, miroir: false }); };
   tourner([3, 5, 6, 7], 0);                  // de face (fin de la flamme) → profil gauche
   marcher(0, -D, true);                       // vers la gauche
   tourner([7, 6, 5, 4, 3, 2, 1, 0], -D);      // demi-tour vers la droite, en passant par la face
   marcher(-D, 0, false);                      // revient
   tourner([0, 1, 2, 3, 4, 5, 6, 7], 0);       // demi-tour vers la gauche
-  marcher(0, -D, true);
+  cracher(0, -D / 2);                         // repart en crachant une longue flamme turquoise
+  marcher(-D / 2, -D, true, 8);               // finit le trajet en marchant
   tourner([7, 6, 5, 4, 3, 2, 1, 0], -D);
   marcher(-D, 0, false);                      // de retour, de profil vers la droite : la flamme reprend à l'image 1
   const fichiers = [...Array.from({ length: 60 }, (_, i) => `assets/logos/rex/anim-flamme/${i + 1}.webp`),
                     ...Array.from({ length: 8 }, (_, i) => `assets/logos/rex/anim-marche8/${i + 1}.webp`),
-                    ...Array.from({ length: 8 }, (_, i) => `assets/logos/rex/anim-demitour8/${i + 1}.webp`)];
-  return { n: 76, fichiers, etapes, ordre: etapes.map(e => e.f), ms: etapes.map(e => e.ms), repos: 'assets/logos/rex/anim-flamme/1.webp' };
+                    ...Array.from({ length: 8 }, (_, i) => `assets/logos/rex/anim-demitour8/${i + 1}.webp`),
+                    ...Array.from({ length: 8 }, (_, i) => `assets/logos/rex/anim-flammegauche8/${i + 1}.webp`)];
+  return { n: 84, fichiers, etapes, ordre: etapes.map(e => e.f), ms: etapes.map(e => e.ms), repos: 'assets/logos/rex/anim-flamme/1.webp' };
 })();
 RXA_MOUVEMENTS.splice(0, RXA_MOUVEMENTS.length, 'flamme');
 RXA_REPOS_BANDEAU.splice(0, 2, 0, 0);   // en continu
@@ -235,7 +244,9 @@ function rxaPoser() {
     /* Rex flamme dans le bandeau : image plus large (la flamme part vers la droite), sans flottement,
        sans le compagnon de saison à côté. Rex y garde à peu près la taille de l'ancienne pose. */
     img.dbx-hero-mascotte.rxa-flamme { height: 170px !important; width: auto !important; max-width: none; animation: none !important; filter: drop-shadow(0 10px 18px rgba(0,0,0,.28));
-      transform-origin: 29% 100%; position: relative; z-index: 2; }
+      /* Images élargies de 180 px à gauche (sur 234 de haut) : on reprend cette place par une marge
+         négative, pour que Rex reste exactement où il était ; le pivot du miroir suit ses pieds. */
+      margin-left: calc(-180 / 234 * 170px); transform-origin: 53.7% 100%; position: relative; z-index: 2; pointer-events: none; }
     .dbx-hero-droite .rexb-compagnon { display: none !important; }
     /* Le décor : derrière Rex, calé sur ses pieds, étendu vers la gauche pour son trajet de marche. */
     .rxa-scene { position: relative; display: inline-block; line-height: 0; }
@@ -245,7 +256,7 @@ function rxaPoser() {
     @keyframes rxaFumee { 0%, 100% { transform: translateY(0) scale(1); opacity: .12; } 50% { transform: translateY(-6px) scale(1.12); opacity: .07; } }
     @media (prefers-reduced-motion: reduce) { .rxa-fumee { animation: none; } }
     @media (max-width: 768px) { .rxa-scene .rxa-decor { height: 96px; right: -16px; } }
-    @media (max-width: 768px) { img.dbx-hero-mascotte.rxa-flamme { height: 96px !important; } }`;
+    @media (max-width: 768px) { img.dbx-hero-mascotte.rxa-flamme { height: 96px !important; margin-left: calc(-180 / 234 * 96px); } }`;
   st.textContent += `
     .sidebar .rex-mascotte-menu, img.dbx-hero-mascotte { object-fit: contain; object-position: center bottom; }
     .sidebar .rex-mascotte-menu:hover, img.dbx-hero-mascotte:hover { cursor: pointer; }

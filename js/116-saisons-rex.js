@@ -34,12 +34,13 @@ const SRX_GALERIES = {
     dossier: 'assets/logos/rex/saison-ete/',
     dessins: [
       ['profiter-moment', 'Profiter du moment'], ['plongeon-reussite', 'Plongeon dans la réussite'], ['surf-projets', 'Surf de projets'],
-      ['equipe-vacances', 'Équipe en mode vacances'], ['nouveaux-horizons', 'Explorer de nouveaux horizons'], ['construire-ensemble', 'Construire ensemble'],
+      // « Construire ensemble » (Rex et son château de sable) retiré le 21.09.2026 : trop enfantin.
+      ['equipe-vacances', 'Équipe en mode vacances'], ['nouveaux-horizons', 'Explorer de nouveaux horizons'],
       ['pause-meritee', 'Pause bien méritée'], ['relax-performance', 'Relax & performance'], ['garder-cap', 'Garder le cap'],
       ['petits-plaisirs', 'Petits plaisirs, grands résultats'], ['plus-loin-ensemble', 'Ensemble, on va plus loin'], ['vibrer-annee', 'Vibrer toute l’année'],
     ],
     poses: { debout: 'profiter-moment', pouce: 'garder-cap', montre: 'surf-projets', ordinateur: 'pause-meritee',
-      joie: 'plongeon-reussite', planification: 'construire-ensemble', reflexion: 'nouveaux-horizons', marche: 'plus-loin-ensemble',
+      joie: 'plongeon-reussite', planification: 'vibrer-annee', reflexion: 'nouveaux-horizons', marche: 'plus-loin-ensemble',
       concentre: 'relax-performance', confiant: 'equipe-vacances', enthousiaste: 'petits-plaisirs' },
   },
   printemps: {

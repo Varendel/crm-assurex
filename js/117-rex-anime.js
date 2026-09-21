@@ -56,10 +56,15 @@ const RXA_REPOS = 'assets/logos/rex/anim-confiant/1.png';   // pose de repos com
 RXA_SEQUENCES.flamme = (() => {
   const tenir = { 9: 40, 19: 200, 25: 80, 37: 120, 49: 120, 59: 1100 };
   const etapes = Array.from({ length: 60 }, (_, i) => ({ f: i, ms: 80 + (tenir[i] || 0), x: 0, miroir: false }));
-  const CYCLE = 10, PAS = 2 * CYCLE, D = 55;            // 2 cycles de marche par trajet, 55 % de la largeur
+  // La planche n'a pas de vrai cycle de pas (l'écart des pieds ne varie que de 62 à 73 px) : en
+  // marchant, Rex glissait avec des jambes qui tremblaient. Il garde donc sa pose debout de profil
+  // (image 1) et se dandine à chaque pas — il monte et descend, se balance de ±3° — comme dans un
+  // dessin animé quand on n'a pas de cycle de pas.
+  const PAS = 20, D = 55, PAR_PAS = 5;                   // 20 images par trajet, un pas toutes les 5 images
+  const dandine = k => { const p = Math.sin((k + 1) / PAR_PAS * Math.PI); return { y: -Math.abs(p) * 3, r: p * 3 }; };
   for (let r = 0; r < 2; r++) {
-    for (let k = 0; k < PAS; k++) etapes.push({ f: k % CYCLE, ms: 80, x: -D * (k + 1) / PAS, miroir: true });
-    for (let k = 0; k < PAS; k++) etapes.push({ f: k % CYCLE, ms: 80, x: -D + D * (k + 1) / PAS, miroir: false });
+    for (let k = 0; k < PAS; k++) etapes.push({ f: 0, ms: 70, x: -D * (k + 1) / PAS, miroir: true, ...dandine(k) });
+    for (let k = 0; k < PAS; k++) etapes.push({ f: 0, ms: 70, x: -D + D * (k + 1) / PAS, miroir: false, ...dandine(k) });
   }
   return { n: 60, ext: 'webp', etapes, ordre: etapes.map(e => e.f), ms: etapes.map(e => e.ms), repos: 'assets/logos/rex/anim-flamme/1.webp' };
 })();
@@ -105,7 +110,7 @@ async function rxaJouer(mouvement, img) {
     if (!document.body.contains(img)) break;
     img.src = cadres[ordre[p]].src;
     const e = seq && seq.etapes && seq.etapes[p];
-    if (e) img.style.transform = (e.x || e.miroir) ? `translateX(${e.x}%) scaleX(${e.miroir ? -1 : 1})` : '';
+    if (e) img.style.transform = (e.x || e.miroir || e.y) ? `translate(${e.x}%, ${e.y || 0}%) scaleX(${e.miroir ? -1 : 1}) rotate(${e.r || 0}deg)` : '';
     await rxaAttendre(seq ? seq.ms[p] : RXA_PAS_MS);
   }
   if (seq && seq.etapes) img.style.transform = '';
@@ -142,12 +147,52 @@ async function rxaVivre(img, repos) {
   img._rxaVit = false;
 }
 
+// ── Le petit décor préhistorique (21.09.2026) ──────────────────────────────────────────────────
+// « Intègre autour de lui deux ou trois éléments de paysage de dinosaure, dans le thème Rex, sans
+// être extravagant. » Un volcan lointain (silhouette pâle, lueur turquoise, fumée lente), une
+// fougère en ombre chinoise, quelques rochers et l'ombre de ses pieds. Tout est translucide, aux
+// couleurs du bandeau : le décor se devine, Rex reste le sujet. Il couvre aussi son trajet de marche.
+const RXA_DECOR = `
+<svg class="rxa-decor" viewBox="0 0 420 170" aria-hidden="true" focusable="false">
+  <defs>
+    <radialGradient id="rxaLueur" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#00CFFF" stop-opacity=".75"/><stop offset="1" stop-color="#00CFFF" stop-opacity="0"/></radialGradient>
+  </defs>
+  <g class="rxa-fumee" fill="#fff" opacity=".12">
+    <circle cx="118" cy="44" r="9"/><circle cx="128" cy="32" r="11"/><circle cx="116" cy="20" r="8"/>
+  </g>
+  <path d="M40 150 L96 70 Q104 60 112 62 L124 62 Q132 60 140 70 L206 150 Z" fill="#fff" opacity=".10"/>
+  <ellipse cx="118" cy="64" rx="18" ry="7" fill="url(#rxaLueur)"/>
+  <g fill="#0A1F4D" opacity=".42">
+    <path d="M22 152 C24 120 30 96 44 78" stroke="#0A1F4D" stroke-width="3" fill="none"/>
+    <path d="M44 78 C32 80 20 86 12 96 C26 92 36 90 44 88 Z"/>
+    <path d="M42 90 C30 94 18 102 12 114 C26 108 36 104 42 100 Z"/>
+    <path d="M38 104 C28 110 20 118 16 130 C28 122 34 118 38 114 Z"/>
+    <path d="M46 84 C58 84 70 88 78 96 C66 94 56 94 46 94 Z"/>
+    <path d="M44 98 C56 100 66 106 72 114 C60 110 52 108 44 108 Z"/>
+    <path d="M40 112 C50 116 58 122 62 130 C52 126 46 124 40 122 Z"/>
+    <path d="M268 152 Q274 138 290 138 Q304 138 308 152 Z"/>
+    <path d="M300 152 Q304 144 314 144 Q322 145 324 152 Z" opacity=".8"/>
+    <path d="M168 152 Q172 144 182 144 Q190 145 192 152 Z" opacity=".7"/>
+  </g>
+  <rect x="0" y="151" width="420" height="2" rx="1" fill="#fff" opacity=".14"/>
+</svg>`;
+
+function rxaDecor(img) {
+  if (!img || (img.parentElement && img.parentElement.classList.contains('rxa-scene'))) return;
+  const scene = document.createElement('span');
+  scene.className = 'rxa-scene';
+  img.parentNode.insertBefore(scene, img);
+  scene.insertAdjacentHTML('afterbegin', RXA_DECOR);
+  scene.appendChild(img);
+}
+
 // ── Où Rex vit ─────────────────────────────────────────────────────────────────────────────────
 function rxaPoser() {
   // Le bandeau du tableau de bord : le Rex principal (pas le compagnon de saison).
   document.querySelectorAll('img.dbx-hero-mascotte:not(.rexb-compagnon), .dbx-hero-mascotte img.rexb:not(.rexb-compagnon)').forEach(img => {
     if (img._rxaVit) return;
     img.addEventListener('mouseenter', () => { img._rxaDemande = RXA_MOUVEMENTS[0]; });
+    if (RXA_MOUVEMENTS[0] === 'flamme') rxaDecor(img);
     rxaVivre(img, RXA_REPOS_BANDEAU);
   });
   // Plus de flottement ailleurs, ni de Rex animé dans le menu (retirés le 21.09.2026).
@@ -174,6 +219,14 @@ function rxaPoser() {
     img.dbx-hero-mascotte.rxa-flamme { height: 170px !important; width: auto !important; max-width: none; animation: none !important; filter: drop-shadow(0 10px 18px rgba(0,0,0,.28));
       transform-origin: 29% 100%; position: relative; z-index: 2; }
     .dbx-hero-droite .rexb-compagnon { display: none !important; }
+    /* Le décor : derrière Rex, calé sur ses pieds, étendu vers la gauche pour son trajet de marche. */
+    .rxa-scene { position: relative; display: inline-block; line-height: 0; }
+    .rxa-scene .rxa-decor { position: absolute; right: -30px; bottom: 0; height: 170px; width: auto; aspect-ratio: 420 / 170; z-index: 1; pointer-events: none; }
+    .rxa-scene img { position: relative; z-index: 2; }
+    .rxa-fumee { transform-box: fill-box; transform-origin: 50% 100%; animation: rxaFumee 9s ease-in-out infinite; }
+    @keyframes rxaFumee { 0%, 100% { transform: translateY(0) scale(1); opacity: .12; } 50% { transform: translateY(-6px) scale(1.12); opacity: .07; } }
+    @media (prefers-reduced-motion: reduce) { .rxa-fumee { animation: none; } }
+    @media (max-width: 768px) { .rxa-scene .rxa-decor { height: 96px; right: -16px; } }
     @media (max-width: 768px) { img.dbx-hero-mascotte.rxa-flamme { height: 96px !important; } }`;
   st.textContent += `
     .sidebar .rex-mascotte-menu, img.dbx-hero-mascotte { object-fit: contain; object-position: center bottom; }

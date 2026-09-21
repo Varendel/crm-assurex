@@ -55,6 +55,21 @@ const TYPO_POLICES = [
     google: 'Lexend:wght@400;500;600', desc: 'Espacée pour la lecture rapide, confortable toute la journée' },
 ];
 
+// Police des TITRES (21.09.2026) : une police à empattements pour les grands titres seulement —
+// bandeaux d'écran, titres de cartes, citations. Le texte courant garde la police choisie
+// au-dessus : un chiffre dans un tableau se lit mieux sans empattement.
+const TYPO_TITRES = [
+  { cle: 'meme', nom: 'Comme le texte', pile: '', google: '', desc: 'réglage d’origine' },
+  { cle: 'fraunces', nom: 'Fraunces', pile: "'Fraunces', Georgia, serif",
+    google: 'Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600', desc: 'Chaleureuse et haut de gamme, allure de banque privée' },
+  { cle: 'newsreader', nom: 'Newsreader', pile: "'Newsreader', Georgia, serif",
+    google: 'Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600', desc: 'Éditoriale et sobre, comme un grand quotidien' },
+  { cle: 'instrument-serif', nom: 'Instrument Serif', pile: "'Instrument Serif', Georgia, serif",
+    google: 'Instrument+Serif', desc: 'Fine et élancée, très élégante en grand' },
+  { cle: 'cormorant', nom: 'Cormorant Garamond', pile: "'Cormorant Garamond', Georgia, serif",
+    google: 'Cormorant+Garamond:wght@500;600', desc: 'Classique, gravée — va avec les citations en parchemin' },
+];
+
 const TYPO_TAILLES = [
   { cle: 'petit', nom: 'Petit', desc: 'plus de lignes à l’écran' },
   { cle: 'normal', nom: 'Normal', desc: 'réglage d’origine' },
@@ -96,6 +111,10 @@ function typoAppliquer() {
   const b = document.body;
   if (!b) return;
   b.style.setProperty('--police-choisie', police.pile);
+  const titres = TYPO_TITRES.find(p => p.cle === typoLire('titres', 'meme')) || TYPO_TITRES[0];
+  typoChargerPolice(titres);
+  if (titres.pile) b.style.setProperty('--police-titres', titres.pile); else b.style.removeProperty('--police-titres');
+  b.setAttribute('data-titres', titres.cle);
   b.setAttribute('data-texte', typoLire('texte', 'normal'));
   b.setAttribute('data-coins', typoLire('coins', 'normal'));
   b.setAttribute('data-animations', typoLire('animations', 'oui'));
@@ -114,6 +133,7 @@ function typoSectionHtml() {
   const taille = typoLire('texte', 'normal');
   const coins = typoLire('coins', 'normal');
   const anim = typoLire('animations', 'oui');
+  const titres = typoLire('titres', 'meme');
 
   const cartesPolice = TYPO_POLICES.map(p => `
     <button type="button" class="apx-carte typo-carte ${police === p.cle ? 'actif' : ''}"
@@ -136,6 +156,17 @@ function typoSectionHtml() {
     <div class="apx-cartes">${cartesPolice}</div>
     <p class="typo-note">Les graisses sont volontairement limitées : charger les très grasses
       ferait revenir le « tout en gras » corrigé récemment.</p>
+  </section>
+
+  <section class="dbx-carte apx-section">
+    <header class="dbx-carte-tete"><div><h2>Police des titres</h2>
+      <span class="dbx-carte-sous">Une touche à empattements pour les grands titres seulement — le texte et les chiffres ne changent pas</span></div></header>
+    <div class="apx-cartes">${TYPO_TITRES.map(p => `
+      <button type="button" class="apx-carte typo-carte ${titres === p.cle ? 'actif' : ''}"
+        onclick="typoChoisir('titres','${p.cle}')" onmouseenter="typoPrecharger('${p.cle}')">
+        <span class="typo-apercu typo-apercu-titre" style="font-family:${p.pile || 'var(--police-choisie, inherit)'}">Assurex</span>
+        <b>${typoEsc(p.nom)}${titres === p.cle ? ' ✓' : ''}</b><small>${typoEsc(p.desc)}</small>
+      </button>`).join('')}</div>
   </section>
 
   <section class="dbx-carte apx-section">
@@ -167,7 +198,7 @@ function typoSectionHtml() {
 // Précharger au survol : la police arrive pendant que l'œil lit la description, donc l'aperçu
 // est déjà dans la bonne fonte quand on clique.
 function typoPrecharger(cle) {
-  const p = TYPO_POLICES.find(x => x.cle === cle);
+  const p = TYPO_POLICES.find(x => x.cle === cle) || TYPO_TITRES.find(x => x.cle === cle);
   if (p) typoChargerPolice(p);
 }
 

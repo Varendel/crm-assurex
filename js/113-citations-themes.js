@@ -204,7 +204,7 @@ function rctAppliquer() { if (typeof rexAfficherCitation === 'function') rexAffi
         radial-gradient(ellipse at 80% 85%, rgba(160, 110, 40, .18), transparent 60%),
         linear-gradient(180deg, #F5E6BF 0%, #EDD9A8 55%, #E3C88E 100%);
       color: #3B2A14;
-      font-family: "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+      font-family: var(--police-titres, "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif);
       box-shadow: inset 0 0 26px rgba(120, 80, 20, .33), inset 0 0 2px rgba(90, 60, 20, .45), 0 16px 32px rgba(40, 25, 5, .32);
       animation: rctDerouler .75s cubic-bezier(.2, .8, .2, 1) both;
     }

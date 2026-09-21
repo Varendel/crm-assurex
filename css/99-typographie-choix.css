@@ -89,3 +89,13 @@ body[data-animations="non"] *::after {
   margin: 12px 0 0; font-size: var(--t-xs, 11px); color: var(--text-muted);
   line-height: 1.5; text-wrap: pretty;
 }
+
+/* ── La police des titres (js/107, 21.09.2026) ─────────────────────────────────────────────────
+   Seulement les grands titres : bandeaux d'écran, en-tête de l'espace client, titres de cartes.
+   Rien dans les tableaux, les boutons ni les chiffres. Sans choix, rien ne change. */
+body:not([data-titres="meme"]) :is(.rex-bandeau h1, .dbx-hero h1, .fcx-hero h1, .cf-hero h1, .rc-tete h1,
+  .dbx-carte-tete h2, .rbq-bloc h2, .main > h1, .main > h2, .page-title) {
+  font-family: var(--police-titres, inherit);
+  font-weight: 500; letter-spacing: -.01em;
+}
+.typo-apercu-titre { font-size: 22px; letter-spacing: -.01em; }

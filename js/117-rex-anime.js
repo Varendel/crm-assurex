@@ -1,30 +1,34 @@
-// ═══ REX S'ANIME DANS LE BANDEAU (21.09.2026) ══════════════════════════════════════════════════
-// « Crée des GIF avec ces planches et anime REX du bandeau. » La planche « planches gif REX.png »
-// (dossier Logos/REX) donne dix mouvements de sept images : salut, joie, montre, ordinateur,
-// concentré, planification, réflexion, pouce, marche, confiant. Détourées et calées sur les pieds
-// le 21.09.2026 dans assets/logos/rex/anim-<mouvement>/1..7.png, et en GIF dans
-// assets/logos/rex/gifs/rex-<mouvement>.gif.
+// ═══ REX, PERSONNAGE 2D VIVANT (21.09.2026) ════════════════════════════════════════════════════
+// « Par animation j'entendais que les ensembles de postures mis bout à bout donnent l'impression
+// d'un Rex 2D vivant. »
 //
-// Dans le CRM, on n'utilise pas les GIF : leur transparence est tout ou rien et laisse un liseré
-// blanc sur le bandeau bleu. On fait défiler les PNG détourés, qui gardent un bord net.
+// La planche « planches gif REX.png » (Logos/planches REX) donne dix mouvements de sept images :
+// salut, joie, montre, ordinateur, concentré, planification, réflexion, pouce, marche, confiant.
+// Détourés et calés sur les pieds dans assets/logos/rex/anim-<mouvement>/1..7.png.
 //
-// Quand REX bouge, et quand il se tait :
-//   · il salue à l'ouverture du CRM ;
-//   · il saute de joie au survol de sa tête ;
-//   · il fait le geste de l'écran qu'on ouvre (l'ordinateur pour les commissions, le bloc-notes
-//     pour les tâches, la réflexion pour le conseil…), une fois, puis reprend la pose ;
-//   · de temps en temps, sans rien demander, un petit geste discret ;
-//   · jamais si l'onglet est caché, si le système demande moins d'animations, ou s'il porte son
-//     costume de saison (le costume n'existe qu'en image fixe) — il sautille alors simplement.
+// Chaque série commence et finit sur Rex debout, au repos : on peut donc les enchaîner sans saut.
+// Rex joue un mouvement (aller-retour, 1→7→1), reste une respiration sur sa pose de repos, puis en
+// choisit un autre — jamais deux fois le même d'affilée, et plus souvent les gestes « de présence »
+// (confiant, salut, pouce) que les gestes « de travail » (ordinateur, bloc-notes). Il ne s'arrête
+// que si l'image quitte la page, si l'onglet est caché, ou si le système demande moins d'animation.
 //
-// RETOUR EN ARRIÈRE : retirer la ligne de index.html. REX redevient fixe.
+//   · Bandeau du tableau de bord : Rex vit en continu, respirations courtes.
+//   · Menu : même Rex, plus calme (respirations de 3 à 7 secondes).
+//   · Au survol : il saute de joie ; en ouvrant un écran, il fait le geste de cet écran.
+//
+// Le costume de saison n'existe qu'en image fixe : là où Rex vit, il garde sa tenue ordinaire ; le
+// costume habille le reste (connexion, citations, REX CLOUD, poses fixes des écrans). Un costumé
+// qui reste affiché ailleurs flotte doucement (.rxa-vivant) pour ne pas paraître figé.
+//
+// RETOUR EN ARRIÈRE : retirer la ligne de index.html. Rex redevient fixe.
 
 const RXA_DOSSIER = 'assets/logos/rex/anim-';
 const RXA_MOUVEMENTS = ['salut', 'joie', 'montre', 'ordinateur', 'concentre', 'planification', 'reflexion', 'pouce', 'marche', 'confiant'];
-const RXA_PAS_MS = 85;
-const RXA_REPOS = ['confiant', 'pouce', 'reflexion', 'marche'];
+// Poids : combien de fois un mouvement revient, relativement aux autres.
+const RXA_POIDS = { confiant: 5, salut: 3, pouce: 3, joie: 2, montre: 2, marche: 2, reflexion: 2, ordinateur: 1, concentre: 1, planification: 1 };
+const RXA_PAS_MS = 90;
+const RXA_REPOS = 'assets/logos/rex/anim-confiant/1.png';   // pose de repos commune à toutes les séries
 
-// L'écran ouvert → le geste qui va avec.
 const RXA_PAR_ECRAN = {
   dashboard: 'salut', 'commissions-attente': 'ordinateur', 'import-decompte': 'ordinateur', 'entrees-argent': 'ordinateur',
   tresorerie: 'concentre', 'suivi-financier': 'concentre', rappels: 'planification', agenda: 'planification',
@@ -32,126 +36,116 @@ const RXA_PAR_ECRAN = {
   opportunites: 'montre', 'opp-converties': 'joie', 'nouveau-contrat-direct': 'pouce', factures: 'ordinateur',
 };
 
-window._rxa = window._rxa || { images: {}, enCours: false, dernier: 0 };
+window._rxa = window._rxa || { images: {}, pret: false };
 
 function rxaPrecharger() {
+  const promesses = [];
   for (const m of RXA_MOUVEMENTS) {
-    if (window._rxa.images[m]) continue;
-    window._rxa.images[m] = Array.from({ length: 7 }, (_, i) => { const im = new Image(); im.src = `${RXA_DOSSIER}${m}/${i + 1}.png`; return im; });
+    if (!window._rxa.images[m]) window._rxa.images[m] = Array.from({ length: 7 }, (_, i) => { const im = new Image(); im.src = `${RXA_DOSSIER}${m}/${i + 1}.png`; return im; });
+    for (const im of window._rxa.images[m]) promesses.push(im.decode ? im.decode().catch(() => {}) : Promise.resolve());
   }
+  // decode() peut ne jamais répondre dans un onglet en arrière-plan : on n'attend pas plus de
+  // 3 secondes. rxaJouer vérifie de toute façon que chaque image est chargée avant de la montrer.
+  return Promise.race([Promise.all(promesses), rxaAttendre(3000)]).then(() => { window._rxa.pret = true; });
 }
 
 function rxaCalme() {
   return document.hidden || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches);
 }
+const rxaAttendre = ms => new Promise(r => setTimeout(r, ms));
 
-function rxaCible() { return document.querySelector('.sidebar .rex-mascotte-menu'); }
-
-// Joue un mouvement : aller puis retour (1→7→1), pour revenir exactement à la pose de départ.
-function rxaJouer(mouvement, img) {
-  img = img || rxaCible();
-  if (!img || window._rxa.enCours || rxaCalme()) return;
-  if (img.classList.contains('srx-costume')) { rxaSautiller(img); return; }
+// Un mouvement, sur une image donnée. Chaque image a son propre verrou : le Rex du menu et celui du
+// bandeau vivent chacun leur vie.
+async function rxaJouer(mouvement, img) {
+  if (!img || img._rxaJoue || rxaCalme()) return;
   const cadres = window._rxa.images[mouvement];
   if (!cadres || !cadres.every(c => c.complete && c.naturalWidth)) return;
-  window._rxa.enCours = true;
-  window._rxa.dernier = Date.now();
-  const repos = img.getAttribute('src');
-  const ordre = [0, 1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1, 0];
-  img.classList.add('rxa-joue');
-  let k = 0;
-  const pas = () => {
-    if (k >= ordre.length) {
-      img.src = repos; img.classList.remove('rxa-joue'); window._rxa.enCours = false; return;
-    }
-    img.src = cadres[ordre[k++]].src;
-    setTimeout(pas, RXA_PAS_MS);
-  };
-  pas();
+  img._rxaJoue = true;
+  for (const k of [0, 1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1, 0]) {
+    if (!document.body.contains(img)) break;
+    img.src = cadres[k].src;
+    await rxaAttendre(RXA_PAS_MS);
+  }
+  img._rxaJoue = false;
 }
 
-function rxaSautiller(img) {
-  img.classList.remove('rxa-saut'); void img.offsetWidth; img.classList.add('rxa-saut');
-  window._rxa.dernier = Date.now();
+function rxaTirage(dernier) {
+  const liste = RXA_MOUVEMENTS.filter(m => m !== dernier);
+  const total = liste.reduce((s, m) => s + (RXA_POIDS[m] || 1), 0);
+  let x = Math.random() * total;
+  for (const m of liste) { x -= RXA_POIDS[m] || 1; if (x <= 0) return m; }
+  return liste[0];
 }
 
-// ── Le grand Rex du bandeau du tableau de bord (21.09.2026) ────────────────────────────────────
-// « Ce n'est pas animé » — c'était celui-là, le bandeau : le Rex en costume de saison sur le bleu.
-// Costumé, il n'existe qu'en image fixe : il vit alors par le mouvement (il flotte, se balance,
-// rebondit). En tenue ordinaire, il joue ses vraies animations, un geste toutes les huit secondes.
-const RXA_HERO_GESTES = ['salut', 'joie', 'pouce', 'montre', 'confiant'];
+// La vie de Rex : mouvement, respiration, mouvement… tant qu'il est à l'écran.
+async function rxaVivre(img, repos) {
+  if (!img || img._rxaVit) return;
+  img._rxaVit = true;
+  img.classList.remove('respire', 'rxa-vivant', 'srx-costume');
+  img.src = RXA_REPOS;
+  let dernier = null;
+  await rxaAttendre(400);
+  while (document.body.contains(img)) {
+    if (rxaCalme() || !window._rxa.pret) { await rxaAttendre(1000); continue; }
+    const m = img._rxaDemande || rxaTirage(dernier);
+    img._rxaDemande = null;
+    await rxaJouer(m, img);
+    dernier = m;
+    await rxaAttendre(repos[0] + Math.random() * (repos[1] - repos[0]));
+  }
+  img._rxaVit = false;
+}
 
-function rxaHero() {
-  document.querySelectorAll('img.dbx-hero-mascotte, .dbx-hero-mascotte img, .rexb-duo img.rexb').forEach(img => {
-    if (img.dataset.rxa) return;
-    img.dataset.rxa = '1';
-    const costume = /\/saison-|poses-(halloween|noel)\//.test(img.getAttribute('src') || '');
-    // La « respiration » de js/58 ferait deux animations sur la même image : le mouvement la remplace.
-    if (costume || img.classList.contains('rexb-compagnon')) { img.classList.remove('respire'); img.classList.add('rxa-vivant'); return; }
-    let n = 0;
-    setTimeout(() => rxaJouer('salut', img), 600);
-    const minuterie = setInterval(() => {
-      if (!document.body.contains(img)) { clearInterval(minuterie); return; }
-      if (!window._rxa.enCours) rxaJouer(RXA_HERO_GESTES[++n % RXA_HERO_GESTES.length], img);
-    }, 8000);
-    img.addEventListener('mouseenter', () => { if (!window._rxa.enCours) rxaJouer('joie', img); });
+// ── Où Rex vit ─────────────────────────────────────────────────────────────────────────────────
+function rxaPoser() {
+  // Le bandeau du tableau de bord : le Rex principal (pas le compagnon de saison).
+  document.querySelectorAll('img.dbx-hero-mascotte:not(.rexb-compagnon), .dbx-hero-mascotte img.rexb:not(.rexb-compagnon)').forEach(img => {
+    if (img._rxaVit) return;
+    img.addEventListener('mouseenter', () => { img._rxaDemande = 'joie'; });
+    rxaVivre(img, [350, 1100]);
   });
-  document.querySelectorAll('img.rxa-vivant:not([data-rxa-saut])').forEach(img => {
-    img.dataset.rxaSaut = '1';
-    img.addEventListener('mouseenter', () => { img.classList.remove('rxa-hop'); void img.offsetWidth; img.classList.add('rxa-hop'); });
+  // Le compagnon de saison et tout Rex costumé encore affiché : il flotte.
+  document.querySelectorAll('#main-content img.rexb-compagnon, #main-content img.srx-costume').forEach(img => {
+    if (img._rxaVit) return;
+    img.classList.remove('respire'); img.classList.add('rxa-vivant');
   });
+  // Le menu.
+  const menu = document.querySelector('.sidebar .rex-mascotte-menu');
+  if (menu && !menu._rxaVit) {
+    menu.addEventListener('mouseenter', () => { menu._rxaDemande = 'joie'; });
+    rxaVivre(menu, [3000, 7000]);
+  }
 }
-
-(function rxaBrancher() {
-  const main = () => document.getElementById('main-content');
-  const surveiller = () => {
-    const m = main();
-    if (!m) { setTimeout(surveiller, 400); return; }
-    let t = null;
-    new MutationObserver(() => { clearTimeout(t); t = setTimeout(rxaHero, 80); }).observe(m, { childList: true, subtree: true });
-    rxaHero();
-  };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', surveiller); else surveiller();
-})();
 
 (function rxaBrancher() {
   const demarrer = () => {
     rxaPrecharger();
-    // Le salut d'ouverture, une fois les images arrivées.
-    setTimeout(() => rxaJouer('salut'), 1200);
-    // Joie au survol.
-    document.addEventListener('mouseover', ev => {
-      const img = rxaCible();
-      if (img && ev.target === img && Date.now() - window._rxa.dernier > 2500) rxaJouer('joie', img);
-    });
-    // Un geste de temps en temps : rarement, pour rester un clin d'œil.
-    setInterval(() => {
-      if (Date.now() - window._rxa.dernier < 70000) return;
-      rxaJouer(RXA_REPOS[Math.floor(Math.random() * RXA_REPOS.length)]);
-    }, 15000);
+    rxaPoser();
+    const main = document.getElementById('main-content');
+    if (main) {
+      let t = null;
+      new MutationObserver(() => { clearTimeout(t); t = setTimeout(rxaPoser, 80); }).observe(main, { childList: true, subtree: true });
+    }
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', demarrer); else demarrer();
 
-  // Le geste de l'écran ouvert.
+  // L'écran qu'on ouvre : le Rex du menu fait le geste qui va avec, au prochain mouvement.
   if (typeof navigate === 'function') {
     const origine = navigate;
     window.navigate = function (vue) {
       const r = origine.apply(this, arguments);
       const m = typeof vue === 'string' ? RXA_PAR_ECRAN[vue] : null;
-      if (m && Date.now() - window._rxa.dernier > 4000) setTimeout(() => rxaJouer(m), 250);
+      const menu = document.querySelector('.sidebar .rex-mascotte-menu');
+      if (m && menu) menu._rxaDemande = m;
       return r;
     };
   }
 
   const st = document.createElement('style');
   st.textContent = `
-    .sidebar .rex-mascotte-menu { object-fit: contain; object-position: center bottom; }
-    .sidebar .rex-mascotte-menu:hover { cursor: pointer; }
-    .rxa-saut { animation: rxaSaut .6s cubic-bezier(.3, 1.6, .5, 1); transform-origin: 50% 100%; }
-    @keyframes rxaSaut { 0% { transform: none; } 30% { transform: translateY(-6px) scale(1.04, .97); } 60% { transform: translateY(0) scale(.97, 1.03); } 100% { transform: none; } }
-    /* Le costume vit : il flotte, se balance, s'écrase un peu en retombant. Lent, régulier. */
+    .sidebar .rex-mascotte-menu, img.dbx-hero-mascotte { object-fit: contain; object-position: center bottom; }
+    .sidebar .rex-mascotte-menu:hover, img.dbx-hero-mascotte:hover { cursor: pointer; }
     img.rxa-vivant { animation: rxaVivant 3.4s ease-in-out infinite; transform-origin: 50% 100%; }
-    img.rxa-vivant.rexb-compagnon { animation-delay: -1.2s; animation-duration: 3.9s; }
     @keyframes rxaVivant {
       0%, 100% { transform: translateY(0) rotate(0deg) scale(1, 1); }
       22% { transform: translateY(-9px) rotate(-3deg) scale(.99, 1.01); }
@@ -159,8 +153,6 @@ function rxaHero() {
       68% { transform: translateY(-6px) rotate(3deg) scale(.99, 1.01); }
       88% { transform: translateY(0) rotate(0deg) scale(1.02, .98); }
     }
-    img.rxa-vivant.rxa-hop { animation: rxaHop .7s cubic-bezier(.3, 1.5, .5, 1), rxaVivant 3.4s ease-in-out .7s infinite; }
-    @keyframes rxaHop { 0% { transform: none; } 35% { transform: translateY(-22px) rotate(-6deg) scale(.96, 1.05); } 70% { transform: translateY(0) scale(1.06, .94); } 100% { transform: none; } }
-    @media (prefers-reduced-motion: reduce) { .rxa-saut, img.rxa-vivant, img.rxa-vivant.rxa-hop { animation: none; } }`;
+    @media (prefers-reduced-motion: reduce) { img.rxa-vivant { animation: none; } }`;
   document.head.appendChild(st);
 })();

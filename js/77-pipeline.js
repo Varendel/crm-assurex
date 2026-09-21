@@ -119,21 +119,29 @@ function viewOpportunites() {
     ${rhMode ? `<button class="btn-secondary" onclick="navigate('nouveau-rappel')">${PICTO_CREE_EQUIPE} Créer une tâche pour Jonathan</button>` : ''}
   </div>
 
-  ${rhMode ? '' : `<div class="dbx-kpis">
-    ${kpi({ i: 1, label: 'Pondéré', valeur: D.pondere, prefixe: 'CHF ', sous: `sur ${D.OPPS.length} affaires en cours` })}
-    ${kpi({ i: 2, label: 'Commission potentielle', valeur: D.commission, prefixe: 'CHF ', sous: couverture(D.OPPS.filter(o => Number(o.commission_estimee || 0) > 0).length, D.OPPS.length) })}
-    ${kpi({ i: 3, label: 'À relancer', valeur: D.echues.length, sous: D.echues.length ? 'échéance dépassée' : 'aucune échéance dépassée', ton: D.echues.length ? 'cf-alerte' : '' })}
-    ${kpi({ i: 4, label: 'À compléter', valeur: D.OPPS.length - D.avecMontant.length, sous: 'affaires sans montant estimé', ton: (D.OPPS.length - D.avecMontant.length) ? 'cf-alerte' : '' })}
-  </div>`}
-
-  ${D.anomalies.length ? `<div class="pln-anomalies">
-    <b>⚠️ ${D.anomalies.length} chiffre(s) à vérifier</b>
-    <ul>${D.anomalies.map(a => `<li><button type="button" onclick="opportuniteEnEditionId='${a.o.id}';navigate('nouvelle-opportunite')">${plnEsc(a.o.titre || nomClient(a.o))}</button> — ${plnEsc(a.quoi)}</li>`).join('')}</ul>
-    <small>Une commission ne peut pas dépasser la prime qui la produit. Corrige l’un ou l’autre sur la fiche.</small>
-  </div>` : ''}
-
-  ${typeof renderOppsEchuesBanner === 'function' ? renderOppsEchuesBanner(D.OPPS, nomClient) : ''}
-  ${!rhMode && typeof bandeauSansProchaineAction === 'function' ? bandeauSansProchaineAction(D.OPPS, nomClient) : ''}
+  ${(() => {
+    // Le haut du pipeline, en une ligne (21.09.2026) : « les encadrés au-dessus des opportunités
+    // prennent trop de place ». Quatre cartes de chiffres et trois bandeaux d'alerte faisaient
+    // descendre les affaires sous la ligne de flottaison. Les chiffres deviennent des pastilles ;
+    // les alertes, des boutons qui se déplient à la demande. Rien n'est retiré.
+    const sansMontant = D.OPPS.length - D.avecMontant.length;
+    const sansAction = typeof paOuverte === 'function' && typeof prochaineAction === 'function'
+      ? D.OPPS.filter(o => paOuverte(o) && !prochaineAction(o.id)).length : 0;
+    const echuesHtml = typeof renderOppsEchuesBanner === 'function' ? renderOppsEchuesBanner(D.OPPS, nomClient) : '';
+    const sansActionHtml = !rhMode && typeof bandeauSansProchaineAction === 'function' ? bandeauSansProchaineAction(D.OPPS, nomClient) : '';
+    const anomaliesHtml = D.anomalies.length ? `<div class="pln-anomalies">
+      <ul>${D.anomalies.map(a => `<li><button type="button" onclick="opportuniteEnEditionId='${a.o.id}';navigate('nouvelle-opportunite')">${plnEsc(a.o.titre || nomClient(a.o))}</button> — ${plnEsc(a.quoi)}</li>`).join('')}</ul>
+      <small>Une commission ne peut pas dépasser la prime qui la produit. Corrige l’un ou l’autre sur la fiche.</small></div>` : '';
+    const repli = (cle, ton, libelle, html) => html ? `<details class="pln-repli ${ton}" data-cle="${cle}"><summary>${libelle}</summary><div class="pln-repli-corps">${html}</div></details>` : '';
+    return `<div class="pln-resume">
+      ${rhMode ? '' : `<span class="pln-pastille"><small>Pondéré</small><b>CHF ${plnCHF(D.pondere)}</b></span>
+      <span class="pln-pastille"><small>Commission potentielle</small><b>CHF ${plnCHF(D.commission)}</b><i>${plnEsc(couverture(D.OPPS.filter(o => Number(o.commission_estimee || 0) > 0).length, D.OPPS.length))}</i></span>
+      ${sansMontant ? `<span class="pln-pastille alerte"><small>À compléter</small><b>${sansMontant}</b><i>sans montant</i></span>` : ''}`}
+      ${repli('echues', 'danger', `⏰ ${D.echues.length} à relancer`, echuesHtml)}
+      ${repli('action', 'alerte', `➜ ${sansAction} sans prochaine action`, sansActionHtml)}
+      ${rhMode ? '' : repli('anomalies', 'alerte', `⚠️ ${D.anomalies.length} chiffre${D.anomalies.length > 1 ? 's' : ''} à vérifier`, anomaliesHtml)}
+    </div>`;
+  })()}
 
   <div class="tabs pln-tabs">${vues}</div>
   ${corps}

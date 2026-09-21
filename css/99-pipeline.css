@@ -53,3 +53,25 @@ html:not([data-theme="clair"]) .pln-analyse { border-top-color: rgba(255, 255, 2
   font-size: var(--t-s, 12.5px); line-height: 1.55; text-wrap: pretty;
 }
 .pln-couverture b { font-weight: var(--t-moyen, 600); }
+
+/* ═══ Le haut du pipeline en une ligne (21.09.2026) ═══════════════════════════════════════════
+   Pastilles de chiffres et alertes repliées : les affaires remontent sous le titre. */
+.pln-resume { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px; margin: 4px 0 14px; }
+.pln-pastille { display: inline-flex; align-items: baseline; gap: 6px; padding: 6px 12px; border-radius: 999px;
+  background: var(--surface); border: 1px solid var(--border); font-size: var(--t-s); }
+.pln-pastille small { color: var(--text-muted); font-size: var(--t-xs); }
+.pln-pastille b { font-weight: 600; font-variant-numeric: tabular-nums; }
+.pln-pastille i { font-style: normal; font-size: var(--t-xs); color: var(--text-dim); }
+.pln-pastille.alerte { border-color: color-mix(in srgb, var(--c-alerte) 45%, transparent); }
+.pln-repli { border-radius: 14px; }
+.pln-repli > summary { list-style: none; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 12px; border-radius: 999px; font-size: var(--t-s); font-weight: 500; }
+.pln-repli > summary::-webkit-details-marker { display: none; }
+.pln-repli > summary::after { content: '▾'; font-size: 10px; opacity: .7; }
+.pln-repli[open] > summary::after { content: '▴'; }
+.pln-repli.danger > summary { background: var(--c-danger-fond, color-mix(in srgb, var(--c-danger) 12%, transparent)); color: var(--c-danger-texte); }
+.pln-repli.alerte > summary { background: var(--c-alerte-fond, color-mix(in srgb, var(--c-alerte) 12%, transparent)); color: var(--c-alerte-texte); }
+.pln-repli[open] { flex-basis: 100%; }
+.pln-repli-corps { margin-top: 8px; }
+.pln-repli-corps > div { margin-bottom: 0 !important; }
+.pln-repli-corps .pln-anomalies { margin: 0; }

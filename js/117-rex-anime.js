@@ -27,6 +27,14 @@ const RXA_MOUVEMENTS = ['salut', 'joie', 'montre', 'ordinateur', 'concentre', 'p
 // Poids : combien de fois un mouvement revient, relativement aux autres.
 const RXA_POIDS = { confiant: 5, salut: 3, pouce: 3, joie: 2, montre: 2, marche: 2, reflexion: 2, ordinateur: 1, concentre: 1, planification: 1 };
 const RXA_PAS_MS = 90;
+// Les planches HD du 21.09.2026 (« rex tourne rond flamme bleu », « rex sautant ») : 8 images,
+// jouées dans l'ordre avec leur propre rythme, au lieu de l'aller-retour des séries de 7.
+const RXA_SEQUENCES = {
+  tour: { n: 8, ordre: [0, 1, 2, 3, 4, 5, 6, 7, 0], ms: [260, 110, 110, 110, 110, 110, 110, 110, 300] },
+  saut: { n: 8, ordre: [0, 1, 2, 3, 4, 5, 6, 7], ms: [220, 160, 90, 90, 220, 90, 160, 300] },
+};
+RXA_MOUVEMENTS.push('tour', 'saut');
+Object.assign(RXA_POIDS, { tour: 1, saut: 2 });
 const RXA_REPOS = 'assets/logos/rex/anim-confiant/1.png';   // pose de repos commune à toutes les séries
 
 const RXA_PAR_ECRAN = {
@@ -41,7 +49,8 @@ window._rxa = window._rxa || { images: {}, pret: false };
 function rxaPrecharger() {
   const promesses = [];
   for (const m of RXA_MOUVEMENTS) {
-    if (!window._rxa.images[m]) window._rxa.images[m] = Array.from({ length: 7 }, (_, i) => { const im = new Image(); im.src = `${RXA_DOSSIER}${m}/${i + 1}.png`; return im; });
+    const n = RXA_SEQUENCES[m] ? RXA_SEQUENCES[m].n : 7;
+    if (!window._rxa.images[m]) window._rxa.images[m] = Array.from({ length: n }, (_, i) => { const im = new Image(); im.src = `${RXA_DOSSIER}${m}/${i + 1}.png`; return im; });
     for (const im of window._rxa.images[m]) promesses.push(im.decode ? im.decode().catch(() => {}) : Promise.resolve());
   }
   // decode() peut ne jamais répondre dans un onglet en arrière-plan : on n'attend pas plus de
@@ -61,11 +70,14 @@ async function rxaJouer(mouvement, img) {
   const cadres = window._rxa.images[mouvement];
   if (!cadres || !cadres.every(c => c.complete && c.naturalWidth)) return;
   img._rxaJoue = true;
-  for (const k of [0, 1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1, 0]) {
+  const seq = RXA_SEQUENCES[mouvement];
+  const ordre = seq ? seq.ordre : [0, 1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1, 0];
+  for (let p = 0; p < ordre.length; p++) {
     if (!document.body.contains(img)) break;
-    img.src = cadres[k].src;
-    await rxaAttendre(RXA_PAS_MS);
+    img.src = cadres[ordre[p]].src;
+    await rxaAttendre(seq ? seq.ms[p] : RXA_PAS_MS);
   }
+  if (seq) img.src = RXA_REPOS;
   img._rxaJoue = false;
 }
 

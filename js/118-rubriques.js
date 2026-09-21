@@ -10,8 +10,9 @@
 //   · « Accès rapide » : TOUS les écrans de la rubrique en boutons, rangés par groupe — y compris
 //     ceux que le menu replie. C'est là que « Affaires » (un groupe de Vente, pas une rubrique)
 //     devient visible d'un coup d'œil.
-// On y arrive par l'entrée « Vue d'ensemble » en tête de chaque rubrique, ou en cliquant le nom de
-// la rubrique dans le fil d'Ariane de la barre du haut.
+// Mise à jour du même jour : plus d'entrée par rubrique. Une seule « Vue d'ensemble », en tête du
+// menu sous le Tableau de bord, regroupe toutes les rubriques sur une page (viewVueEnsemble plus
+// bas). Le nom d'une rubrique dans le fil d'Ariane y mène, au bon bloc.
 //
 // Lecture seule : tout est calculé sur les données déjà chargées. RETOUR EN ARRIÈRE : retirer la
 // ligne de index.html.
@@ -180,38 +181,79 @@ function viewRubrique(secId) {
   </div>`;
 }
 
+// ── La vue d'ensemble unique (21.09.2026) ──────────────────────────────────────────────────────
+// « Laisse Vue d'ensemble et Dashboard tout en haut. Il faut une vue d'ensemble qui regroupe tous
+// les menus ; supprime la vue d'ensemble propre à chacun. » Une seule page, en tête du menu sous le
+// Tableau de bord : chaque rubrique y a son bloc (chiffres, à traiter, accès rapide), et une barre
+// de raccourcis en haut descend directement au bloc voulu.
+function viewVueEnsemble() {
+  const rh = typeof estRoleRH === 'function' && estRoleRH();
+  const secs = (typeof SECTIONS !== 'undefined' ? SECTIONS : []).filter(s => !s.solo && Array.isArray(s.sub)
+    && s.sub.some(x => !rh || x.rhAllowed));
+  const bloc = sec => {
+    const r = (RBQ_RESUMES[sec.id] || (() => ({ cartes: [], taches: [] })))();
+    const taches = r.taches.filter(Boolean);
+    const ecrans = sec.sub.filter(s => !rh || s.rhAllowed);
+    const groupes = [];
+    for (const s of ecrans) {
+      const g = s.groupe || sec.label;
+      let b = groupes.find(x => x.nom === g);
+      if (!b) { b = { nom: g, ecrans: [] }; groupes.push(b); }
+      b.ecrans.push(s);
+    }
+    return `<section class="rbq-rubrique" id="rbq-${sec.id}">
+      <h2>${sec.icon || ''} ${rbqEsc(sec.label)}</h2>
+      ${r.cartes.length && !rh ? `<div class="rbq-cartes">${r.cartes.join('')}</div>` : ''}
+      ${taches.length && !rh ? `<ul class="rbq-taches">${taches.join('')}</ul>` : ''}
+      <div class="rbq-groupes">${groupes.map(g => `<div class="rbq-groupe">
+        <h3>${rbqEsc(g.nom)}</h3>
+        <div class="rbq-boutons">${g.ecrans.map(s => `<button type="button" class="rbq-bouton" onclick="navigate('${s.id}')"><span aria-hidden="true">${s.icon || '•'}</span>${rbqEsc(s.label)}</button>`).join('')}</div>
+      </div>`).join('')}</div>
+    </section>`;
+  };
+  return `<div class="dbx rbq">
+    <h1>🧭 Vue d’ensemble</h1>
+    <nav class="rbq-sauts" aria-label="Aller à une rubrique">${secs.map(s => `<button type="button" onclick="rbqAller('${s.id}')">${s.icon || ''} ${rbqEsc(s.label)}</button>`).join('')}</nav>
+    ${secs.map(bloc).join('')}
+  </div>`;
+}
+
+function rbqAller(secId) {
+  const el = document.getElementById('rbq-' + secId);
+  if (el) { el.scrollIntoView({ behavior: 'smooth', block: 'start' }); el.classList.remove('rbq-eclaire'); void el.offsetWidth; el.classList.add('rbq-eclaire'); }
+}
+
 // ── Branchements ───────────────────────────────────────────────────────────────────────────────
 (function rbqBrancher() {
-  if (typeof SECTIONS !== 'undefined') {
-    for (const sec of SECTIONS) {
-      if (sec.solo || !Array.isArray(sec.sub) || sec.sub.some(s => s.id === 'rubrique-' + sec.id)) continue;
-      // En tête de rubrique, avant le premier groupe. Visible en session RH seulement si la
-      // rubrique a des écrans autorisés (le menu la masque sinon de toute façon).
-      sec.sub.unshift({ id: 'rubrique-' + sec.id, icon: '🧭', label: 'Vue d’ensemble', rhAllowed: sec.sub.some(s => s.rhAllowed) });
-      if (typeof NAV_SYNONYMES !== 'undefined') NAV_SYNONYMES['rubrique-' + sec.id] = `accueil resume rubrique ${sec.label.toLowerCase()} ensemble tableau`;
-    }
+  if (typeof SECTIONS !== 'undefined' && !SECTIONS.some(s => s.id === 'vue-ensemble-solo')) {
+    const i = SECTIONS.findIndex(s => s.id === 'dashboard-solo');
+    SECTIONS.splice(i >= 0 ? i + 1 : 0, 0, { id: 'vue-ensemble-solo', label: 'Vue d’ensemble', icon: '🧭', solo: true, target: 'vue-ensemble', rhAllowed: true });
   }
   if (typeof NAV_SYNONYMES !== 'undefined') {
-    NAV_SYNONYMES['rubrique-vente'] += ' affaires affaire';
+    NAV_SYNONYMES['vue-ensemble'] = 'accueil resume rubriques ensemble tout menus acces rapide affaires vente compta marketing admin rh agenda';
     NAV_SYNONYMES['suivi'] = (NAV_SYNONYMES['suivi'] || '') + ' affaires affaire dossiers en cours';
   }
   if (typeof renderView === 'function') {
     const origine = renderView;
     window.renderView = async function () {
       const v = typeof currentView !== 'undefined' ? currentView : '';
+      const main = document.getElementById('main-content');
+      if (v === 'vue-ensemble') { if (main) main.innerHTML = viewVueEnsemble(); return; }
+      // Anciennes adresses « rubrique-xxx » : la vue d'ensemble, au bon bloc.
       if (v.startsWith('rubrique-')) {
-        const main = document.getElementById('main-content');
-        if (main) main.innerHTML = viewRubrique(v.slice(9));
+        currentView = 'vue-ensemble';
+        if (main) main.innerHTML = viewVueEnsemble();
+        setTimeout(() => rbqAller(v.slice(9)), 60);
         return;
       }
       return origine.apply(this, arguments);
     };
   }
-  // Le fil d'Ariane : cliquer « Vente » ouvre la vue d'ensemble de Vente.
+  // Le fil d'Ariane : cliquer « Vente » ouvre la vue d'ensemble, au bloc Vente.
   if (typeof mnuOuvrirRubrique === 'function') {
     window.mnuOuvrirRubrique = function (secId) {
-      if (typeof openSections !== 'undefined') openSections[secId] = true;
-      navigate('rubrique-' + secId);
+      navigate('vue-ensemble');
+      setTimeout(() => rbqAller(secId), 80);
     };
   }
 
@@ -246,6 +288,19 @@ function viewRubrique(secId) {
     .rbq-bouton span { width: 22px; text-align: center; }
     .rbq-autres { display: flex; flex-wrap: wrap; gap: 8px; }
     .rbq-autres button { border: 1px solid var(--border); background: var(--surface); color: var(--text-muted); border-radius: 999px; padding: 6px 14px; cursor: pointer; font: inherit; font-size: var(--t-s); }
-    .rbq-autres button:hover { color: var(--text); border-color: var(--accent); }`;
+    .rbq-autres button:hover { color: var(--text); border-color: var(--accent); }
+    .rbq-sauts { position: sticky; top: calc(var(--rex-barre-h, 56px) + 6px); z-index: 5; display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px;
+      padding: 8px; border-radius: 14px; background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(8px); }
+    .rbq-sauts button { border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 999px; padding: 6px 14px; cursor: pointer; font: inherit; font-size: var(--t-s); }
+    .rbq-sauts button:hover { border-color: var(--accent); color: var(--accent); }
+    .rbq-rubrique { margin-bottom: 18px; padding: 18px; border-radius: 18px; background: var(--surface); border: 1px solid var(--border);
+      scroll-margin-top: calc(var(--rex-barre-h, 56px) + 70px); }
+    .rbq-rubrique > h2 { margin: 0 0 12px; font-size: 18px; font-weight: 600; }
+    .rbq-rubrique .rbq-carte { background: var(--surface-alt); }
+    .rbq-rubrique .rbq-taches { margin-bottom: 14px; }
+    .rbq-rubrique .rbq-boutons { flex-direction: row; flex-wrap: wrap; }
+    .rbq-rubrique .rbq-bouton { padding: 7px 11px; font-size: var(--t-s); }
+    .rbq-eclaire { animation: rbqEclaire 1.2s ease; }
+    @keyframes rbqEclaire { 0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent); } 100% { box-shadow: 0 0 0 14px transparent; } }`;
   document.head.appendChild(st);
 })();

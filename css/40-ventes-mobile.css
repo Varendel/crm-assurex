@@ -122,6 +122,9 @@
   .opx-offre-boutons { display: flex; gap: 6px; flex-shrink: 0; }
   .opx-offre-boutons button { border: 1px solid var(--border); background: var(--surface); color: var(--text); border-radius: 9px; padding: 6px 10px; font-size: var(--t-s); font-weight: 500; cursor: pointer; white-space: nowrap; font-family: inherit; }
   .opx-offre-boutons button:hover { border-color: var(--accent-border); color: var(--accent); }
+  .opx-offre-boutons .opx-joindre { display: inline-flex; align-items: center; border: 1px solid var(--accent-border); background: var(--accent-dim); color: var(--accent); border-radius: 9px; padding: 6px 10px; font-size: var(--t-s); font-weight: 500; cursor: pointer; white-space: nowrap; }
+  .opx-offre-boutons .opx-joindre:hover { filter: brightness(1.1); }
+  .opx-offre-boutons .opx-joindre:focus-within { outline: 2px solid var(--accent); outline-offset: 2px; }
   .opx-comparer { width: 100%; margin-top: 12px; border: none; border-radius: 12px; padding: 11px 14px; font-size: var(--t-m); font-weight: 600; cursor: pointer; color: #fff; background: linear-gradient(135deg, #113679, #1A4A9C); box-shadow: 0 8px 20px rgba(17,54,121,0.25); font-family: inherit; }
   .opx-comparer:hover { transform: translateY(-1px); }
   .opx-offres-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }

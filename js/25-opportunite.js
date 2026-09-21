@@ -579,6 +579,7 @@ function htmlOffresOpportunite(oppId) {
   const actions = `<div class="opx-offres-actions">
     <button type="button" class="btn-secondary" onclick="opNouvelleDemandeOffre('${oppId}')">📝 ${demandes.length ? 'Nouvelle demande' : "Demander des offres"}</button>
     ${derniere ? `<button type="button" class="btn-secondary" onclick="demandeOffreEnEditionId='${derniere.id}';navigate('nouvelle-demande-offre')">↺ Reprendre la demande du ${fmtDate(derniere.created_at)}</button>` : ''}
+    <button type="button" class="btn-secondary" onclick="opSaisirOffre('${oppId}',null,null)" title="Offre reçue d'une compagnie (y compris non sollicitée) : compagnie, prime et PDF">📎 Uploader une offre</button>
   </div>`;
   if (!entrees.length) {
     return `<div class="dbx-vide-petit">${demandes.length ? 'Demande enregistrée, pas encore envoyée aux compagnies.' : "Aucune offre demandée pour l'instant."}</div>${actions}`;
@@ -598,6 +599,9 @@ function htmlOffresOpportunite(oppId) {
       </div>
       <div class="opx-offre-boutons">
         ${st.cls === 'relancer' || st.cls === 'attente' ? `<button type="button" onclick="opRelancerCompagnie('${d.id}',${idx})">🔔 Relancer</button>` : ''}
+        ${e.offre_path
+          ? `<button type="button" onclick="ouvrirPieceJointe('${e.offre_path}')" title="${opEsc(e.offre_nom || 'Offre PDF')}">📄 Voir l'offre</button>`
+          : `<label class="opx-joindre" title="Joindre le PDF de l'offre (10 Mo max.)">📎 Joindre l'offre<input type="file" accept="application/pdf" hidden onchange="opJoindreOffre('${oppId}','${d.id}',${idx},this)"/></label>`}
         <button type="button" onclick="opSaisirOffre('${oppId}','${d.id}',${idx})">${e.prime || e.recue_le ? '✎' : '📥 Offre reçue'}</button>
         ${(e.prime || e.recue_le) && e.statut !== 'déclinée' && typeof opSigneeVersContrat === 'function' ? `<button type="button" class="opx-offre-signee" onclick="opSigneeVersContrat('${oppId}','${d.id}',${idx})" title="Déposer la ou les polices, passer l’opportunité en Gagné et créer le contrat">✍️ Signée → contrat</button>` : ''}
       </div>
@@ -629,6 +633,8 @@ function opSaisirOffre(oppId, demandeId, idx) {
         <div class="form-field"><label class="form-label" for="of-franchise">Franchise / délai d'attente</label><input class="form-input" id="of-franchise" value="${opEsc(e.franchise || '')}" placeholder="Ex. CHF 500 · 30 j"/></div>
         <div class="form-field" style="grid-column:span 2"><label class="form-label" for="of-couverture">Couverture — points clés</label><input class="form-input" id="of-couverture" value="${opEsc(e.couverture || '')}" placeholder="Ex. 90 % du salaire, 730 j, sans réserve"/></div>
         <div class="form-field" style="grid-column:span 2"><label class="form-label" for="of-remarque">Remarque</label><textarea class="form-input" id="of-remarque" rows="2">${opEsc(e.remarque || '')}</textarea></div>
+        <div class="form-field" style="grid-column:span 2"><label class="form-label" for="of-fichier">Offre PDF${e.offre_path ? ' — déjà jointe : ' + opEsc(e.offre_nom || 'offre.pdf') + ' (en choisir une autre la remplace)' : ' (facultatif)'}</label>
+          <input class="form-input" id="of-fichier" type="file" accept="application/pdf"/></div>
         <div class="form-field" style="grid-column:span 2"><label class="form-label">Statut</label>
           <div class="opx-radios">${[['reçue', 'Offre reçue'], ['déclinée', 'La compagnie décline'], ['envoyée', 'Toujours en attente']].map(([v, l]) => `<label><input type="radio" name="of-statut" value="${v}" ${(e.statut === 'déclinée' ? 'déclinée' : 'reçue') === v ? 'checked' : ''}/> ${l}</label>`).join('')}</div></div>
       </div>
@@ -646,6 +652,9 @@ async function opEnregistrerOffre(oppId, demandeId, idx) {
   const primeTxt = val('of-prime');
   const prime = primeTxt ? (typeof nombreCH === 'function' ? nombreCH(primeTxt) : parseFloat(primeTxt.replace(/[' ]/g, '').replace(',', '.'))) : null;
   const statut = document.querySelector('input[name="of-statut"]:checked')?.value || 'reçue';
+  const fichier = document.getElementById('of-fichier')?.files?.[0] || null;
+  if (fichier && fichier.type !== 'application/pdf') { showError('Seuls les fichiers PDF sont acceptés pour une offre.'); return; }
+  if (fichier && fichier.size > 10 * 1024 * 1024) { showError('Fichier trop lourd — maximum 10 Mo.'); return; }
   const btn = document.getElementById('of-btn');
   if (btn) { if (btn.disabled) return; btn.disabled = true; }
   let d = demandeId ? (window._opDemandes[oppId] || []).find(x => x.id === demandeId) : null;
@@ -683,8 +692,48 @@ async function opEnregistrerOffre(oppId, demandeId, idx) {
   // Première offre reçue : l'affaire passe naturellement en « Proposition »
   if (statut === 'reçue' && o && ['Contact', 'Analyse'].includes(o.stade)) await opChangerStade(oppId, 'Proposition');
   await opChargerDemandes(oppId);
+  // PDF de l'offre (22.09.2026) : archivé sur l'entrée de la compagnie, même stockage que
+  // « Joindre l'offre » de la fiche client (js/08). Pour une compagnie ajoutée ici, on retrouve
+  // son entrée par son nom dans les demandes rechargées.
+  if (fichier && typeof uploadOffreCompagnie === 'function') {
+    let cible = d && idx !== null ? { id: d.id, i: idx } : null;
+    if (!cible) (window._opDemandes[oppId] || []).forEach(x => (x.compagnies_envoi || []).forEach((ce, i) => { if (ce.compagnie === entree.compagnie) cible = { id: x.id, i }; }));
+    if (cible) {
+      await uploadOffreCompagnie(cible.id, cible.i, { files: [fichier] }, '', '');
+      await ajouterLigneHistoriqueOpportunite(oppId, `📎 Offre PDF de ${entree.compagnie} jointe`);
+      await opChargerDemandes(oppId);
+    }
+  }
   opRafraichir();
   if (currentView === 'suivi' && typeof suxRecharger === 'function') suxRecharger();
+}
+
+// « 📎 Joindre l'offre » sur une ligne de la fiche opportunité (22.09.2026). Joindre le PDF vaut
+// réception : si l'offre n'était pas encore marquée reçue, elle le devient (et l'affaire passe
+// en « Proposition » comme lors d'une saisie).
+async function opJoindreOffre(oppId, demandeId, idx, input) {
+  if (!input.files || !input.files[0] || typeof uploadOffreCompagnie !== 'function') return;
+  const nom = input.files[0].name;
+  await uploadOffreCompagnie(demandeId, idx, input, '', '');
+  const rows = await dbGet('demandes_offre', `id=eq.${demandeId}&select=id,compagnies_envoi`);
+  const d = Array.isArray(rows) && rows[0];
+  const entrees = d ? [...(d.compagnies_envoi || [])] : [];
+  const e = entrees[idx] ? { ...entrees[idx] } : null;
+  if (e && e.offre_path && e.offre_nom === nom) {
+    if (!e.recue_le && e.statut !== 'déclinée') {
+      e.recue_le = new Date().toISOString();
+      e.statut = e.retenue ? 'retenue' : 'reçue';
+      entrees[idx] = e;
+      const r = await dbPatch('demandes_offre', demandeId, { compagnies_envoi: entrees });
+      if (!(r && r.error)) {
+        await ajouterLigneHistoriqueOpportunite(oppId, `📥 Offre reçue de ${e.compagnie} (PDF joint)`);
+        const o = allOpportunites.find(x => x.id === oppId);
+        if (o && ['Contact', 'Analyse'].includes(o.stade)) await opChangerStade(oppId, 'Proposition');
+      }
+    } else await ajouterLigneHistoriqueOpportunite(oppId, `📎 Offre PDF de ${e.compagnie} jointe`);
+  }
+  await opChargerDemandes(oppId);
+  opRafraichir();
 }
 
 // ── Relance d'une compagnie (aperçu modifiable, jamais d'envoi automatique) ─────────────────

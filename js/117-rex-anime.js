@@ -63,34 +63,62 @@ RXA_SEQUENCES.flamme = (() => {
   //   · marche en crachant vers la gauche (8)   → indices 16 à 23
   //   · saut (8 images)                         → indices 24 à 31 ; la hauteur de chaque image
   //     au-dessus du sol est rendue par un déplacement vertical (y, en % de la hauteur).
-  const M = 0, DT = 8, FG = 16, SA = 24, PAS = 16, D = 36;
+  // 21.09.2026, soir : la marche passe à la planche « marche détaillée » (16 images, deux pas
+  // complets, avec un clignement), et Rex va s'adosser pour de vrai : à gauche contre le bout de
+  // la barre de recherche du bandeau, à droite contre le bord du bandeau. Ces deux points dépendent
+  // de la largeur de l'écran : la séquence est recalculée à chaque passage (construire).
+  const M = 0, DT = 16, FG = 24, SA = 32, AP = 40, PCT_PAR_IMAGE = 2.25, D = 36;
   const SAUT_Y = [0, 1.6, -0.5, -27.7, -37, -17.3, 0.8, -0.3], SAUT_MS = [160, 170, 90, 100, 190, 100, 150, 200];
-  const etapes = [];
-  const tourner = (vues, x) => vues.forEach(v => etapes.push({ f: DT + v, ms: v === 4 ? 220 : 110, x, miroir: false }));
-  const marcher = (deX, aX, miroir, pas = PAS) => { for (let k = 0; k < pas; k++) etapes.push({ f: M + (k % 8), ms: 90, x: deX + (aX - deX) * (k + 1) / pas, miroir }); };
-  const cracher = (deX, aX) => { const t = [130, 130, 130, 150, 240, 260, 160, 140]; for (let k = 0; k < 8; k++) etapes.push({ f: FG + k, ms: t[k], x: deX + (aX - deX) * (k + 1) / 8, miroir: false }); };
-  const sauter = () => SAUT_Y.forEach((y, k) => etapes.push({ f: SA + k, ms: SAUT_MS[k], x: 0, y, miroir: false }));
-  tourner([0, 1, 2, 3], 0);                   // de profil → de face
-  sauter();                                   // un saut de joie, sur place
-  tourner([3, 4, 5, 6, 7], 0);                // sourire en clignant, puis profil gauche
-  marcher(0, -D, true);                       // vers la gauche
-  tourner([7, 6, 5, 4, 3, 2, 1, 0], -D);      // demi-tour vers la droite, en passant par la face
-  marcher(-D, 0, false);                      // revient
-  tourner([0, 1, 2, 3, 4, 5, 6, 7], 0);       // demi-tour vers la gauche
-  cracher(0, -D / 2);                         // repart en crachant une longue flamme turquoise
-  marcher(-D / 2, -D, true, 8);               // finit le trajet en marchant
-  // Fin de séquence (planche « REX appuyé », indices 32 et 33) : il s'adosse à gauche, bras et
-  // jambes croisés, revient, et s'adosse à droite avant que tout recommence.
-  const AP = 32, adosser = (pose, x) => etapes.push({ f: AP + pose, ms: 2200, x, miroir: false });
-  tourner([7, 6, 5, 4, 3, 2, 1, 0], -D);      // se retourne vers la droite…
-  adosser(1, -D);                             // … et s'adosse à gauche
-  marcher(-D, 0, false);                      // revient à sa place
-  tourner([0, 1, 2, 3, 4, 5, 6, 7], 0);       // se retourne vers la gauche…
-  adosser(0, 0);                              // … et s'adosse à droite
-  tourner([7, 6, 5, 4, 3, 2, 1, 0], 0);       // de nouveau de profil vers la droite : tout recommence
+  // Dans les images de 516 px : bords du corps dans les deux poses adossées (dos à droite, dos à
+  // gauche), et pivot du miroir (53,7 %, voir le CSS).
+  const APPUI_DROIT = 350, APPUI_GAUCHE = 227, LARGEUR = 516;
+  function construire(img) {
+    let G = -D, R = 0;
+    const hero = img && img.closest('.dbx-hero'), rech = hero && hero.querySelector('.dbx-recherche');
+    if (hero && rech && img.style.transform === '') {
+      const ri = img.getBoundingClientRect(), rr = rech.getBoundingClientRect(), rh = hero.getBoundingClientRect();
+      if (ri.width > 0) {
+        const pct = px => px / ri.width * 100, bord = p => ri.left + p / LARGEUR * ri.width;
+        const g = pct(rr.right + 2 - bord(APPUI_GAUCHE)), r = pct(rh.right - 12 - bord(APPUI_DROIT));
+        // Barre de recherche à gauche et à portée (pas sur téléphone, où elle passe au-dessus).
+        if (g < -8 && g > -160 && rr.bottom > ri.top + ri.height * 0.3) G = g;
+        R = Math.max(0, Math.min(40, r));
+      }
+    }
+    const etapes = [];
+    const tourner = (vues, x) => vues.forEach(v => etapes.push({ f: DT + v, ms: v === 4 ? 220 : 110, x, miroir: false }));
+    const marcher = (deX, aX, miroir) => {
+      const pas = Math.max(8, Math.round(Math.abs(aX - deX) / PCT_PAR_IMAGE));
+      for (let k = 0; k < pas; k++) etapes.push({ f: M + (k % 16), ms: 90, x: deX + (aX - deX) * (k + 1) / pas, miroir });
+    };
+    const cracher = (deX, aX) => { const t = [130, 130, 130, 150, 240, 260, 160, 140]; for (let k = 0; k < 8; k++) etapes.push({ f: FG + k, ms: t[k], x: deX + (aX - deX) * (k + 1) / 8, miroir: false }); };
+    const sauter = () => SAUT_Y.forEach((y, k) => etapes.push({ f: SA + k, ms: SAUT_MS[k], x: 0, y, miroir: false }));
+    const adosser = (pose, x) => etapes.push({ f: AP + pose, ms: 2400, x, miroir: false });
+    const C = Math.max(G / 2, -D / 2);
+    tourner([0, 1, 2, 3], 0);                 // de profil → de face
+    sauter();                                 // un saut de joie, sur place
+    tourner([3, 4, 5, 6, 7], 0);              // sourire en clignant, puis profil gauche
+    marcher(0, C, true);                      // vers la gauche
+    tourner([7, 6, 5, 4, 3, 2, 1, 0], C);     // demi-tour vers la droite, en passant par la face
+    marcher(C, 0, false);                     // revient
+    tourner([0, 1, 2, 3, 4, 5, 6, 7], 0);     // demi-tour vers la gauche
+    cracher(0, C);                            // repart en crachant une longue flamme turquoise
+    marcher(C, G, true);                      // jusqu'au bout de la barre de recherche
+    tourner([7, 6, 5, 4, 3, 2, 1, 0], G);     // se retourne vers la droite…
+    adosser(1, G);                            // … et s'adosse contre la barre de recherche
+    marcher(G, R, false);                     // traverse jusqu'au bord droit du bandeau
+    tourner([0, 1, 2, 3, 4, 5, 6, 7], R);     // se retourne vers la gauche…
+    adosser(0, R);                            // … et s'adosse contre le bord du bandeau
+    marcher(R, 0, true);                      // revient à sa place
+    tourner([7, 6, 5, 4, 3, 2, 1, 0], 0);     // de nouveau de profil vers la droite : tout recommence
+    return etapes;
+  }
   const lot = (dossier, n = 8) => Array.from({ length: n }, (_, i) => `assets/logos/rex/${dossier}/${i + 1}.webp`);
-  const fichiers = [...lot('anim-marche8'), ...lot('anim-demitour8'), ...lot('anim-flammegauche8'), ...lot('anim-saut8'), ...lot('anim-appui2', 2)];
-  return { n: 34, fichiers, etapes, ordre: etapes.map(e => e.f), ms: etapes.map(e => e.ms), repos: 'assets/logos/rex/anim-demitour8/1.webp' };
+  const fichiers = [...lot('anim-marche16', 16), ...lot('anim-demitour8'), ...lot('anim-flammegauche8'), ...lot('anim-saut8'), ...lot('anim-appui2', 2)];
+  const seq = { n: 42, fichiers, repos: 'assets/logos/rex/anim-demitour8/1.webp' };
+  seq.construire = img => { seq.etapes = construire(img); seq.ordre = seq.etapes.map(e => e.f); seq.ms = seq.etapes.map(e => e.ms); };
+  seq.construire(null);
+  return seq;
 })();
 
 RXA_MOUVEMENTS.splice(0, RXA_MOUVEMENTS.length, 'flamme');
@@ -131,6 +159,7 @@ async function rxaJouer(mouvement, img) {
   if (!cadres || !cadres.every(c => c.complete && c.naturalWidth)) return;
   img._rxaJoue = true;
   const seq = RXA_SEQUENCES[mouvement];
+  if (seq && seq.construire) seq.construire(img);
   const ordre = seq ? seq.ordre : [0, 1, 2, 3, 4, 5, 6, 5, 4, 3, 2, 1, 0];
   for (let p = 0; p < ordre.length; p++) {
     if (!document.body.contains(img)) break;
@@ -188,14 +217,31 @@ const RXA_DECOR = `
   </g>
   <path d="M40 150 L96 70 Q104 60 112 62 L124 62 Q132 60 140 70 L206 150 Z" fill="#fff" opacity=".10"/>
   <ellipse cx="118" cy="64" rx="18" ry="7" fill="url(#rxaLueur)"/>
-  <g fill="#0A1F4D" opacity=".42">
-    <path d="M22 152 C24 120 30 96 44 78" stroke="#0A1F4D" stroke-width="3" fill="none"/>
-    <path d="M44 78 C32 80 20 86 12 96 C26 92 36 90 44 88 Z"/>
-    <path d="M42 90 C30 94 18 102 12 114 C26 108 36 104 42 100 Z"/>
-    <path d="M38 104 C28 110 20 118 16 130 C28 122 34 118 38 114 Z"/>
-    <path d="M46 84 C58 84 70 88 78 96 C66 94 56 94 46 94 Z"/>
-    <path d="M44 98 C56 100 66 106 72 114 C60 110 52 108 44 108 Z"/>
-    <path d="M40 112 C50 116 58 122 62 130 C52 126 46 124 40 122 Z"/>
+  <!-- Au loin, un grand herbivore au long cou, à peine plus marqué que le volcan. -->
+  <path d="M296 150 C310 144 320 132 338 125 C354 119 368 120 376 114 C381 98 384 80 389 66 C391 59 398 56 403 60 C406 63 403 67 398 67 C394 82 392 102 388 122 C386 134 381 141 378 151 L369 151 L367 140 C358 142 348 142 341 140 L339 151 L330 151 L328 138 C317 143 306 148 296 150 Z" fill="#fff" opacity=".08"/>
+  <!-- Un ptérodactyle qui plane lentement près de la fumée. -->
+  <g transform="translate(62 26)" fill="#0A1F4D" opacity=".5">
+    <g class="rxa-ptero">
+      <g class="rxa-ailes">
+        <path d="M-1 0 C-7 -7 -16 -8 -25 -3 C-17 -3 -9 -1 -3 3 Z"/>
+        <path d="M1 0 C7 -7 16 -8 25 -3 C17 -3 9 -1 3 3 Z"/>
+      </g>
+      <path d="M-3 1 C-1 -1 2 -1 4 1 L12 -1 L6 2 C4 4 -1 4 -3 1 Z"/>
+      <path d="M-3 2 L-8 4 L-3 3 Z"/>
+    </g>
+  </g>
+  <!-- Le palmier préhistorique (cycadée) : tronc écaillé, couronne de palmes arquées. -->
+  <g fill="#0A1F4D" opacity=".45">
+    <path d="M36 152 C39 130 43 106 48 82 L54 82 C50 106 47 130 45 152 Z"/>
+    <path d="M38 140 l7 -3 M39 128 l7 -3 M41 116 l7 -3 M43 104 l7 -3 M45 92 l7 -3" stroke="#fff" stroke-opacity=".10" stroke-width="1.2" fill="none"/>
+    <path d="M51 79 C66 70 86 72 99 88 C86 81 68 81 52 84 Z"/>
+    <path d="M51 79 C36 70 16 72 3 88 C16 81 34 81 50 84 Z"/>
+    <path d="M51 78 C60 62 78 55 93 60 C79 62 64 69 53 81 Z"/>
+    <path d="M51 78 C42 62 24 55 9 60 C23 62 38 69 49 81 Z"/>
+    <path d="M51 78 C50 64 54 53 63 46 C59 57 56 68 53 80 Z"/>
+    <path d="M52 81 C67 85 80 96 84 112 C75 101 64 92 52 86 Z"/>
+    <path d="M50 81 C35 85 22 96 18 112 C27 101 38 92 50 86 Z"/>
+    <path d="M62 152 C60 142 56 136 50 132 C58 134 63 140 66 150 Z M68 152 C70 140 76 134 84 132 C78 138 74 144 72 152 Z M74 152 C78 144 86 140 94 140 C86 144 80 148 78 152 Z"/>
     <path d="M268 152 Q274 138 290 138 Q304 138 308 152 Z"/>
     <path d="M300 152 Q304 144 314 144 Q322 145 324 152 Z" opacity=".8"/>
     <path d="M168 152 Q172 144 182 144 Q190 145 192 152 Z" opacity=".7"/>
@@ -253,7 +299,11 @@ function rxaPoser() {
     .rxa-scene img { position: relative; z-index: 2; }
     .rxa-fumee { transform-box: fill-box; transform-origin: 50% 100%; animation: rxaFumee 9s ease-in-out infinite; }
     @keyframes rxaFumee { 0%, 100% { transform: translateY(0) scale(1); opacity: .12; } 50% { transform: translateY(-6px) scale(1.12); opacity: .07; } }
-    @media (prefers-reduced-motion: reduce) { .rxa-fumee { animation: none; } }
+    .rxa-ptero { animation: rxaPtero 16s ease-in-out infinite; }
+    .rxa-ailes { transform-box: fill-box; transform-origin: 50% 90%; animation: rxaAiles 1.6s ease-in-out infinite; }
+    @keyframes rxaPtero { 0%, 100% { transform: translate(0, 0); } 30% { transform: translate(18px, -5px); } 60% { transform: translate(34px, 2px); } 80% { transform: translate(14px, 4px); } }
+    @keyframes rxaAiles { 0%, 100% { transform: scaleY(1); } 45% { transform: scaleY(.35); } }
+    @media (prefers-reduced-motion: reduce) { .rxa-fumee, .rxa-ptero, .rxa-ailes { animation: none; } }
     @media (max-width: 768px) { .rxa-scene .rxa-decor { height: 96px; right: -16px; } }
     @media (max-width: 768px) { img.dbx-hero-mascotte.rxa-flamme { height: 96px !important; margin-left: calc(-180 / 234 * 96px); } }`;
   st.textContent += `

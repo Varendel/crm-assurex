@@ -346,6 +346,35 @@ function rxaDecor(img) {
   img.parentNode.insertBefore(scene, img);
   scene.insertAdjacentHTML('afterbegin', RXA_DECOR);
   scene.appendChild(img);
+  rxaSol(img);
+}
+
+// ── Le sol, jusqu'au bas du bandeau (22.09.2026) ─────────────────────────────────────────────────
+// « Ajoute un effet de sol jusqu'au bas du bandeau au paysage. » Le décor s'arrêtait à la ligne
+// où marche Rex ; sous elle, le dégradé du bandeau reprenait, et le paysage semblait posé en l'air.
+// Une couche posée sur le bandeau lui-même part EXACTEMENT de cette ligne (mesurée, car la marge
+// basse du bandeau change entre ordinateur et téléphone) et descend jusqu'au bord : terre sombre,
+// liseré vert d'eau, quelques touffes d'herbe et cailloux. Elle s'efface vers la gauche pour ne
+// pas passer sous la barre de recherche.
+function rxaSol(img) {
+  const hero = img && img.closest('.dbx-hero');
+  if (!hero) return;
+  if (!hero.querySelector(':scope > .rxa-sol')) hero.insertAdjacentHTML('beforeend', '<span class="rxa-sol" aria-hidden="true"></span>');
+  const caler = () => {
+    const d = hero.querySelector('.rxa-decor');
+    if (!d || !hero.isConnected) return;
+    const rh = hero.getBoundingClientRect(), rd = d.getBoundingClientRect();
+    if (!rd.height) return;
+    const ligne = rd.top + rd.height * 151 / 170;          // la ligne de sol du dessin (viewBox 420 × 170)
+    hero.style.setProperty('--rxa-sol', Math.max(8, Math.round(rh.bottom - ligne)) + 'px');
+  };
+  requestAnimationFrame(caler);
+  setTimeout(caler, 400);
+  if (!window._rxaSolResize) {
+    window._rxaSolResize = true;
+    let t = null;
+    window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => document.querySelectorAll('.dbx-hero').forEach(h => { const i = h.querySelector('img.dbx-hero-mascotte'); if (i) rxaSol(i); }), 150); });
+  }
 }
 
 // ── Où Rex vit ─────────────────────────────────────────────────────────────────────────────────
@@ -387,6 +416,13 @@ function rxaPoser() {
     .dbx-hero img.dbx-hero-mascotte:not(.rxa-flamme) { visibility: hidden; }
     /* Le décor : derrière Rex, calé sur ses pieds, étendu vers la gauche pour son trajet de marche. */
     .rxa-scene { position: relative; display: inline-block; line-height: 0; }
+    /* Le sol jusqu'au bas du bandeau (rxaSol) : hauteur mesurée dans --rxa-sol. */
+    .dbx-hero > .rxa-sol { position: absolute !important; left: 0; right: 0; bottom: 0; height: var(--rxa-sol, 40px); z-index: 0 !important;
+      pointer-events: none; border-radius: 0 0 inherit inherit; border-bottom-left-radius: inherit; border-bottom-right-radius: inherit;
+      background:
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='40' viewBox='0 0 140 40'%3E%3Cg fill='%236FD3B0' fill-opacity='.22'%3E%3Cpath d='M12 6 l2 -6 l1 6 l2 -4 l0 4 z'/%3E%3Cpath d='M78 7 l1.5 -5 l1 5 l2 -3.5 l0 3.5 z'/%3E%3Cpath d='M118 5 l1.5 -4 l1 4 z'/%3E%3C/g%3E%3Cg fill='%23ffffff' fill-opacity='.10'%3E%3Cellipse cx='44' cy='14' rx='3' ry='1.4'/%3E%3Cellipse cx='101' cy='22' rx='2.2' ry='1'/%3E%3Cellipse cx='23' cy='27' rx='1.6' ry='.8'/%3E%3C/g%3E%3C/svg%3E") repeat-x 0 0 / 140px 40px,
+        linear-gradient(to bottom, rgba(111, 211, 176, .20) 0, rgba(111, 211, 176, .20) 1px, rgba(111, 211, 176, .09) 2px, rgba(10, 31, 77, .30) 100%);
+      -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 42%, #000 100%); mask-image: linear-gradient(to right, transparent 0%, #000 42%, #000 100%); }
     .rxa-scene .rxa-decor { position: absolute; right: -30px; bottom: 0; height: 170px; width: auto; aspect-ratio: 420 / 170; z-index: 1; pointer-events: none; overflow: visible; }
     .rxa-scene img { position: relative; z-index: 2; }
     /* Rex marche et s'adosse jusqu'aux bords du bandeau : la partie transparente de son image ne

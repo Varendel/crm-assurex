@@ -79,11 +79,18 @@ RXA_SEQUENCES.flamme = (() => {
   tourner([0, 1, 2, 3, 4, 5, 6, 7], 0);       // demi-tour vers la gauche
   cracher(0, -D / 2);                         // repart en crachant une longue flamme turquoise
   marcher(-D / 2, -D, true, 8);               // finit le trajet en marchant
-  tourner([7, 6, 5, 4, 3, 2, 1, 0], -D);
-  marcher(-D, 0, false);                      // de retour, de profil vers la droite : tout recommence
-  const lot = (dossier) => Array.from({ length: 8 }, (_, i) => `assets/logos/rex/${dossier}/${i + 1}.webp`);
-  const fichiers = [...lot('anim-marche8'), ...lot('anim-demitour8'), ...lot('anim-flammegauche8'), ...lot('anim-saut8')];
-  return { n: 32, fichiers, etapes, ordre: etapes.map(e => e.f), ms: etapes.map(e => e.ms), repos: 'assets/logos/rex/anim-demitour8/1.webp' };
+  // Fin de séquence (planche « REX appuyé », indices 32 et 33) : il s'adosse à gauche, bras et
+  // jambes croisés, revient, et s'adosse à droite avant que tout recommence.
+  const AP = 32, adosser = (pose, x) => etapes.push({ f: AP + pose, ms: 2200, x, miroir: false });
+  tourner([7, 6, 5, 4, 3, 2, 1, 0], -D);      // se retourne vers la droite…
+  adosser(1, -D);                             // … et s'adosse à gauche
+  marcher(-D, 0, false);                      // revient à sa place
+  tourner([0, 1, 2, 3, 4, 5, 6, 7], 0);       // se retourne vers la gauche…
+  adosser(0, 0);                              // … et s'adosse à droite
+  tourner([7, 6, 5, 4, 3, 2, 1, 0], 0);       // de nouveau de profil vers la droite : tout recommence
+  const lot = (dossier, n = 8) => Array.from({ length: n }, (_, i) => `assets/logos/rex/${dossier}/${i + 1}.webp`);
+  const fichiers = [...lot('anim-marche8'), ...lot('anim-demitour8'), ...lot('anim-flammegauche8'), ...lot('anim-saut8'), ...lot('anim-appui2', 2)];
+  return { n: 34, fichiers, etapes, ordre: etapes.map(e => e.f), ms: etapes.map(e => e.ms), repos: 'assets/logos/rex/anim-demitour8/1.webp' };
 })();
 
 RXA_MOUVEMENTS.splice(0, RXA_MOUVEMENTS.length, 'flamme');

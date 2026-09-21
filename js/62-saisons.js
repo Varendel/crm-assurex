@@ -94,11 +94,28 @@ function saisonAppliquer() {
 // On tente la planche de la saison ; si le fichier n'existe pas encore, le navigateur bascule
 // tout seul sur la pose normale. C'est ce repli qui permet de livrer les planches au fur et à
 // mesure sans jamais casser l'affichage.
+// Inventaire des poses de saison réellement livrées (22.09.2026) : le repli par onerror marche,
+// mais chaque fichier absent coûtait une requête en erreur et une ligne au journal des erreurs
+// (poses-halloween/debout.png, poses-noel/joie.png…). Un dossier listé ici n'est tenté que pour
+// les fichiers listés ; un dossier absent de la liste garde l'ancien comportement (on tente).
+// À COMPLÉTER quand une nouvelle planche est déposée.
+const SAISON_POSES_LIVREES = {
+  'assets/logos/rex/poses-halloween/': ['enthousiaste.png', 'joie.png', 'planification.png', 'reflexion.png', 'rodolphe.png'],
+  'assets/logos/rex/poses-noel/': ['concentre.png', 'debout.png', 'montre.png', 'pouce.png', 'rodolphe.png'],
+  'assets/logos/rex/saison-paques/': [],
+  'assets/logos/rex/saison-ete/': [],        // dessins thématiques seulement (js/116), pas de poses
+  'assets/logos/rex/saison-printemps/': [],
+};
+function saisonPoseLivree(dossier, f) {
+  const liste = SAISON_POSES_LIVREES[dossier];
+  return !liste || liste.includes(f);
+}
+
 function saisonSourceRex(nom) {
   const s = saisonCourante();
   const p = (typeof REX_POSES !== 'undefined' && REX_POSES[nom]) ? REX_POSES[nom] : null;
   if (!p) return null;
-  return s ? { src: s.dossierRex + p.f, repli: REX_DOSSIER + p.f } : { src: REX_DOSSIER + p.f, repli: null };
+  return s && saisonPoseLivree(s.dossierRex, p.f) ? { src: s.dossierRex + p.f, repli: REX_DOSSIER + p.f } : { src: REX_DOSSIER + p.f, repli: null };
 }
 
 // ── Décor de l'espace client ────────────────────────────────────────────────────────────────────
@@ -160,7 +177,7 @@ function saisonPoserCompagnonConnexion() {
     const normal = 'assets/logos/rex/poses/debout.png';
     const fichier = (s && typeof REX_POSES !== 'undefined' && REX_POSES[s.poseConnexion])
       ? REX_POSES[s.poseConnexion].f : 'debout.png';
-    const voulu = s ? s.dossierRex + fichier : normal;
+    const voulu = s && saisonPoseLivree(s.dossierRex, fichier) ? s.dossierRex + fichier : normal;
     if (!rex.getAttribute('src') || rex.getAttribute('src').split('?')[0] !== voulu) {
       rex.onerror = function () { this.onerror = null; this.src = normal; };
       rex.src = voulu;

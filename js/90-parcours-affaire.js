@@ -368,7 +368,8 @@ function pafGenererLettreResiliation(oppId) {
   if (!o) return;
   if (!o.client_id) { showError('Cette affaire concerne un prospect : crée d’abord la fiche client pour générer la lettre (coordonnées et signature).'); return; }
   if (typeof ouvrirModaleResiliation !== 'function') return;
-  const quoi = `${o.produit || ''} ${o.titre || ''}`.toLowerCase();
+  // opportunites.produits (liste ou texte selon l'ancienneté de la fiche) + le titre
+  const quoi = `${typeof o.produits === 'string' ? o.produits : JSON.stringify(o.produits || '')} ${o.titre || ''}`.toLowerCase();
   const type = /lamal|assurance de base|\bbase\b/.test(quoi) ? 'lamal' : /3a|pilier 3a|vie li[ée]e/.test(quoi) ? 'vie3a' : /3b|vie/.test(quoi) ? 'vie3b' : 'lca';
   document.getElementById('modal-paf-resiliation')?.remove();
   ouvrirModaleResiliation(o.client_id, {

@@ -49,16 +49,19 @@ const RXA_REPOS = 'assets/logos/rex/anim-confiant/1.png';   // pose de repos com
 // pieds et à taille constante : Rex marche, salue, souffle sa flamme turquoise, allume sa queue,
 // lève le pouce et fait un clin d'œil. WebP à fond transparent (753 Ko les 60). Le repos est la
 // dernière image de la série (pouce levé, queue allumée) : pas de saut de taille entre deux passages.
-// Déroulé demandé : les 60 images dans l'ordre, puis Rex marche en faisant 2 allers-retours entre
-// les images 1 et 13, puis tout recommence — en continu, sans pause entre deux boucles.
+// Déroulé demandé : les 60 images dans l'ordre, puis Rex MARCHE VRAIMENT — il part vers la gauche
+// (image en miroir, cycle de marche des images 1 à 10) puis revient à sa place, deux allers-retours
+// — puis tout recommence, en continu. Le trajet est un déplacement de l'image (translateX), en %
+// de sa largeur pour rester juste sur téléphone ; le miroir pivote autour de ses pieds.
 RXA_SEQUENCES.flamme = (() => {
   const tenir = { 9: 40, 19: 200, 25: 80, 37: 120, 49: 120, 59: 1100 };
-  const complet = Array.from({ length: 60 }, (_, i) => i);
-  const aller = Array.from({ length: 13 }, (_, i) => i), retour = aller.slice(1, -1).reverse();
-  const marche = [...aller, ...retour, ...aller, ...retour];
-  const ordre = [...complet, ...marche];
-  const ms = [...complet.map(i => 80 + (tenir[i] || 0)), ...marche.map(() => 80)];
-  return { n: 60, ext: 'webp', ordre, ms, repos: 'assets/logos/rex/anim-flamme/1.webp' };
+  const etapes = Array.from({ length: 60 }, (_, i) => ({ f: i, ms: 80 + (tenir[i] || 0), x: 0, miroir: false }));
+  const CYCLE = 10, PAS = 2 * CYCLE, D = 55;            // 2 cycles de marche par trajet, 55 % de la largeur
+  for (let r = 0; r < 2; r++) {
+    for (let k = 0; k < PAS; k++) etapes.push({ f: k % CYCLE, ms: 80, x: -D * (k + 1) / PAS, miroir: true });
+    for (let k = 0; k < PAS; k++) etapes.push({ f: k % CYCLE, ms: 80, x: -D + D * (k + 1) / PAS, miroir: false });
+  }
+  return { n: 60, ext: 'webp', etapes, ordre: etapes.map(e => e.f), ms: etapes.map(e => e.ms), repos: 'assets/logos/rex/anim-flamme/1.webp' };
 })();
 RXA_MOUVEMENTS.splice(0, RXA_MOUVEMENTS.length, 'flamme');
 RXA_REPOS_BANDEAU.splice(0, 2, 0, 0);   // en continu
@@ -101,8 +104,11 @@ async function rxaJouer(mouvement, img) {
   for (let p = 0; p < ordre.length; p++) {
     if (!document.body.contains(img)) break;
     img.src = cadres[ordre[p]].src;
+    const e = seq && seq.etapes && seq.etapes[p];
+    if (e) img.style.transform = (e.x || e.miroir) ? `translateX(${e.x}%) scaleX(${e.miroir ? -1 : 1})` : '';
     await rxaAttendre(seq ? seq.ms[p] : RXA_PAS_MS);
   }
+  if (seq && seq.etapes) img.style.transform = '';
   if (seq) img.src = seq.repos || RXA_REPOS;
   img._rxaJoue = false;
 }
@@ -165,7 +171,8 @@ function rxaPoser() {
     img.rexb.respire, .rexb-duo .rexb-compagnon.respire, .cloud-rex, img.rxa-vivant { animation: none !important; }
     /* Rex flamme dans le bandeau : image plus large (la flamme part vers la droite), sans flottement,
        sans le compagnon de saison à côté. Rex y garde à peu près la taille de l'ancienne pose. */
-    img.dbx-hero-mascotte.rxa-flamme { height: 170px !important; width: auto !important; max-width: none; animation: none !important; filter: drop-shadow(0 10px 18px rgba(0,0,0,.28)); }
+    img.dbx-hero-mascotte.rxa-flamme { height: 170px !important; width: auto !important; max-width: none; animation: none !important; filter: drop-shadow(0 10px 18px rgba(0,0,0,.28));
+      transform-origin: 29% 100%; position: relative; z-index: 2; }
     .dbx-hero-droite .rexb-compagnon { display: none !important; }
     @media (max-width: 768px) { img.dbx-hero-mascotte.rxa-flamme { height: 96px !important; } }`;
   st.textContent += `

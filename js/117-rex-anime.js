@@ -49,13 +49,19 @@ const RXA_REPOS = 'assets/logos/rex/anim-confiant/1.png';   // pose de repos com
 // pieds et à taille constante : Rex marche, salue, souffle sa flamme turquoise, allume sa queue,
 // lève le pouce et fait un clin d'œil. WebP à fond transparent (753 Ko les 60). Le repos est la
 // dernière image de la série (pouce levé, queue allumée) : pas de saut de taille entre deux passages.
+// Déroulé demandé : les 60 images dans l'ordre, puis Rex marche en faisant 2 allers-retours entre
+// les images 1 et 13, puis tout recommence — en continu, sans pause entre deux boucles.
 RXA_SEQUENCES.flamme = (() => {
   const tenir = { 9: 40, 19: 200, 25: 80, 37: 120, 49: 120, 59: 1100 };
-  const ordre = Array.from({ length: 60 }, (_, i) => i);
-  return { n: 60, ext: 'webp', ordre, ms: ordre.map(i => 80 + (tenir[i] || 0)), repos: 'assets/logos/rex/anim-flamme/60.webp' };
+  const complet = Array.from({ length: 60 }, (_, i) => i);
+  const aller = Array.from({ length: 13 }, (_, i) => i), retour = aller.slice(1, -1).reverse();
+  const marche = [...aller, ...retour, ...aller, ...retour];
+  const ordre = [...complet, ...marche];
+  const ms = [...complet.map(i => 80 + (tenir[i] || 0)), ...marche.map(() => 80)];
+  return { n: 60, ext: 'webp', ordre, ms, repos: 'assets/logos/rex/anim-flamme/1.webp' };
 })();
 RXA_MOUVEMENTS.splice(0, RXA_MOUVEMENTS.length, 'flamme');
-RXA_REPOS_BANDEAU.splice(0, 2, 5000, 10000);   // la flamme toutes les 5 à 10 secondes
+RXA_REPOS_BANDEAU.splice(0, 2, 0, 0);   // en continu
 
 const RXA_PAR_ECRAN = {
   dashboard: 'salut', 'commissions-attente': 'ordinateur', 'import-decompte': 'ordinateur', 'entrees-argent': 'ordinateur',

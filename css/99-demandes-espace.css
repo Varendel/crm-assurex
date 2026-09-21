@@ -69,6 +69,12 @@
 .ja-icone:has(> .ja-logo) { background: #fff !important; border: 1px solid rgba(21, 25, 88, .14); }
 .ja-logo { width: 22px; height: 22px; object-fit: contain; display: block; }
 .ja-logo-ecohub { width: 15px; height: 16px; }
+/* Pastille EcoHub en coin, sur les notes et tâches créées par la synchronisation. */
+.ja-icone { position: relative; }
+.ja-pastille-ecohub { position: absolute; right: -5px; bottom: -5px; width: 17px; height: 17px; border-radius: 50%;
+  background: #fff; border: 1px solid rgba(21, 25, 88, .18); display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 1px 3px rgba(0,0,0,.15); }
+.ja-pastille-ecohub img { width: 10px; height: 11px; display: block; }
 
 /* ── Les pastilles EcoHub (js/59, js/61 — 22.09.2026) ─────────────────────────────────────────── */
 .dcx-pastille { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px;

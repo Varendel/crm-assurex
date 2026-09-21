@@ -167,11 +167,13 @@ function renderFilActivite() {
   const liste = _ja.items.filter(i => _ja.filtre === 'tout' || i.type === _ja.filtre);
   if (!liste.length) { zoneFil.innerHTML = '<div class="table-empty">Rien pour l’instant.</div>'; return; }
   zoneFil.innerHTML = liste.slice(0, 120).map(i => {
-    // Notes et tâches posées par la synchronisation EcoHub : elles gardent leur filtre (Notes, Tâches)
-    // mais prennent le logo EcoHub, pour qu'on voie d'un coup d'œil qu'elles ne viennent pas d'un humain.
-    const t = /ecohub/i.test(i.qui || '') ? JA_TYPES.ecohub : (JA_TYPES[i.type] || JA_TYPES.modification);
+    const t = JA_TYPES[i.type] || JA_TYPES.modification;
+    // Notes et tâches posées par la synchronisation EcoHub : elles gardent leur pictogramme (la case
+    // cochée dit « tâche ») et portent en plus une petite pastille EcoHub qui dit d'où elles viennent.
+    const pastille = i.type !== 'ecohub' && /ecohub/i.test(i.qui || '')
+      ? '<span class="ja-pastille-ecohub"><img src="assets/logos/ecohub-icone.svg" alt=""/></span>' : '';
     return `<div class="ja-item">
-      <span class="ja-icone" style="background:${t.fond}" aria-hidden="true">${t.icone}</span>
+      <span class="ja-icone" style="background:${t.fond}" aria-hidden="true">${t.icone}${pastille}</span>
       <div class="ja-corps">
         <div class="ja-item-titre">${jaEsc(i.titre)}</div>
         ${i.detail ? `<div class="ja-item-detail">${jaEsc(i.detail)}</div>` : ''}

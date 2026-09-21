@@ -75,6 +75,45 @@ function rxaSautiller(img) {
   window._rxa.dernier = Date.now();
 }
 
+// ── Le grand Rex du bandeau du tableau de bord (21.09.2026) ────────────────────────────────────
+// « Ce n'est pas animé » — c'était celui-là, le bandeau : le Rex en costume de saison sur le bleu.
+// Costumé, il n'existe qu'en image fixe : il vit alors par le mouvement (il flotte, se balance,
+// rebondit). En tenue ordinaire, il joue ses vraies animations, un geste toutes les huit secondes.
+const RXA_HERO_GESTES = ['salut', 'joie', 'pouce', 'montre', 'confiant'];
+
+function rxaHero() {
+  document.querySelectorAll('img.dbx-hero-mascotte, .dbx-hero-mascotte img, .rexb-duo img.rexb').forEach(img => {
+    if (img.dataset.rxa) return;
+    img.dataset.rxa = '1';
+    const costume = /\/saison-|poses-(halloween|noel)\//.test(img.getAttribute('src') || '');
+    // La « respiration » de js/58 ferait deux animations sur la même image : le mouvement la remplace.
+    if (costume || img.classList.contains('rexb-compagnon')) { img.classList.remove('respire'); img.classList.add('rxa-vivant'); return; }
+    let n = 0;
+    setTimeout(() => rxaJouer('salut', img), 600);
+    const minuterie = setInterval(() => {
+      if (!document.body.contains(img)) { clearInterval(minuterie); return; }
+      if (!window._rxa.enCours) rxaJouer(RXA_HERO_GESTES[++n % RXA_HERO_GESTES.length], img);
+    }, 8000);
+    img.addEventListener('mouseenter', () => { if (!window._rxa.enCours) rxaJouer('joie', img); });
+  });
+  document.querySelectorAll('img.rxa-vivant:not([data-rxa-saut])').forEach(img => {
+    img.dataset.rxaSaut = '1';
+    img.addEventListener('mouseenter', () => { img.classList.remove('rxa-hop'); void img.offsetWidth; img.classList.add('rxa-hop'); });
+  });
+}
+
+(function rxaBrancher() {
+  const main = () => document.getElementById('main-content');
+  const surveiller = () => {
+    const m = main();
+    if (!m) { setTimeout(surveiller, 400); return; }
+    let t = null;
+    new MutationObserver(() => { clearTimeout(t); t = setTimeout(rxaHero, 80); }).observe(m, { childList: true, subtree: true });
+    rxaHero();
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', surveiller); else surveiller();
+})();
+
 (function rxaBrancher() {
   const demarrer = () => {
     rxaPrecharger();
@@ -110,6 +149,18 @@ function rxaSautiller(img) {
     .sidebar .rex-mascotte-menu:hover { cursor: pointer; }
     .rxa-saut { animation: rxaSaut .6s cubic-bezier(.3, 1.6, .5, 1); transform-origin: 50% 100%; }
     @keyframes rxaSaut { 0% { transform: none; } 30% { transform: translateY(-6px) scale(1.04, .97); } 60% { transform: translateY(0) scale(.97, 1.03); } 100% { transform: none; } }
-    @media (prefers-reduced-motion: reduce) { .rxa-saut { animation: none; } }`;
+    /* Le costume vit : il flotte, se balance, s'écrase un peu en retombant. Lent, régulier. */
+    img.rxa-vivant { animation: rxaVivant 3.4s ease-in-out infinite; transform-origin: 50% 100%; }
+    img.rxa-vivant.rexb-compagnon { animation-delay: -1.2s; animation-duration: 3.9s; }
+    @keyframes rxaVivant {
+      0%, 100% { transform: translateY(0) rotate(0deg) scale(1, 1); }
+      22% { transform: translateY(-9px) rotate(-3deg) scale(.99, 1.01); }
+      45% { transform: translateY(0) rotate(0deg) scale(1.03, .97); }
+      68% { transform: translateY(-6px) rotate(3deg) scale(.99, 1.01); }
+      88% { transform: translateY(0) rotate(0deg) scale(1.02, .98); }
+    }
+    img.rxa-vivant.rxa-hop { animation: rxaHop .7s cubic-bezier(.3, 1.5, .5, 1), rxaVivant 3.4s ease-in-out .7s infinite; }
+    @keyframes rxaHop { 0% { transform: none; } 35% { transform: translateY(-22px) rotate(-6deg) scale(.96, 1.05); } 70% { transform: translateY(0) scale(1.06, .94); } 100% { transform: none; } }
+    @media (prefers-reduced-motion: reduce) { .rxa-saut, img.rxa-vivant, img.rxa-vivant.rxa-hop { animation: none; } }`;
   document.head.appendChild(st);
 })();

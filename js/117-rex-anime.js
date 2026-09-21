@@ -67,19 +67,22 @@ RXA_SEQUENCES.flamme = (() => {
   // Les demi-tours : la planche « rex tourne rond » (8 vues : face, trois-quarts, profil, dos…),
   // indices 68 à 75. Rex se retourne vraiment au bout de chaque trajet au lieu de basculer en
   // miroir d'un coup ; au second départ, il fait le tour complet par le dos.
-  const PAS = 16, D = 55, T = 68, tourner = (vues, x) => vues.forEach(v => etapes.push({ f: T + v, ms: 110, x, miroir: false }));
+  // 21.09.2026, soir : la planche « REX demi tour » (profil droite → trois-quarts → face avec un
+  // clignement souriant → trois-quarts → profil gauche), indices 68 à 75, remplace ces demi-tours :
+  // même style que la marche, et Rex se retourne en passant par la face, en regardant l'utilisateur.
+  const PAS = 16, D = 55, DT = 68, tourner = (vues, x, ms = 110) => vues.forEach(v => etapes.push({ f: DT + v, ms: v === 4 ? 220 : ms, x, miroir: false }));
   const marcher = (deX, aX, miroir) => { for (let k = 0; k < PAS; k++) etapes.push({ f: 60 + (k % 8), ms: 90, x: deX + (aX - deX) * (k + 1) / PAS, miroir }); };
-  tourner([0, 7, 6], 0);           // de face → trois-quarts gauche
-  marcher(0, -D, true);             // vers la gauche
-  tourner([6, 7, 0, 1, 2], -D);     // se retourne vers la droite
-  marcher(-D, 0, false);            // revient
-  tourner([2, 3, 4, 5, 6], 0);      // tour par le dos, repart à gauche
+  tourner([3, 5, 6, 7], 0);                  // de face (fin de la flamme) → profil gauche
+  marcher(0, -D, true);                       // vers la gauche
+  tourner([7, 6, 5, 4, 3, 2, 1, 0], -D);      // demi-tour vers la droite, en passant par la face
+  marcher(-D, 0, false);                      // revient
+  tourner([0, 1, 2, 3, 4, 5, 6, 7], 0);       // demi-tour vers la gauche
   marcher(0, -D, true);
-  tourner([6, 7, 0, 1, 2], -D);
-  marcher(-D, 0, false);            // de retour, de profil vers la droite : la flamme reprend à l'image 1
+  tourner([7, 6, 5, 4, 3, 2, 1, 0], -D);
+  marcher(-D, 0, false);                      // de retour, de profil vers la droite : la flamme reprend à l'image 1
   const fichiers = [...Array.from({ length: 60 }, (_, i) => `assets/logos/rex/anim-flamme/${i + 1}.webp`),
                     ...Array.from({ length: 8 }, (_, i) => `assets/logos/rex/anim-marche8/${i + 1}.webp`),
-                    ...Array.from({ length: 8 }, (_, i) => `assets/logos/rex/anim-tour8/${i + 1}.webp`)];
+                    ...Array.from({ length: 8 }, (_, i) => `assets/logos/rex/anim-demitour8/${i + 1}.webp`)];
   return { n: 76, fichiers, etapes, ordre: etapes.map(e => e.f), ms: etapes.map(e => e.ms), repos: 'assets/logos/rex/anim-flamme/1.webp' };
 })();
 RXA_MOUVEMENTS.splice(0, RXA_MOUVEMENTS.length, 'flamme');

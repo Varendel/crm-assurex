@@ -25,6 +25,10 @@ const FQR_STATUTS = {
 };
 const FQR_FILTRES = [['toutes', 'Toutes'], ['brouillon', 'Brouillons'], ['emise', 'À encaisser'], ['retard', 'En retard'], ['payee', 'Payées'], ['annulee', 'Annulées']];
 
+// Logo EX.GROUP (fichier fourni par David Pereira, « Asset 1.svg »), en ligne pour que la facture
+// s'imprime sans dépendre d'un fichier externe.
+const FQR_LOGO_EXGROUP = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1570.84 252.1"><g fill="#113679"><rect y="120.9" width="139.28" height="28.95"/><rect y="179.03" width="152.5" height="28.95"/><rect y="65.05" width="152.5" height="28.72"/><polygon points="411.01 0 406.43 28.83 405.67 33.79 398.86 76.61 380.67 61.06 331.92 114.35 291.62 114.35 311.87 136.24 377.89 207.56 335.07 207.56 290.53 159.31 206.6 252.1 164.54 252.1 269.22 136.2 203.45 65.05 245.98 65.05 291.24 113.88 356.88 40.81 338.89 25.47 411.01 0"/><path d="M1337.22,65.08v94.29c0,26.870-21.78,48.65-48.65,48.65h-64.6c-26.87,0-48.65-21.78-48.65-48.65v-94.29h32.41v93.44c0,9.43,7.65,17.08,17.08,17.08h62.91c9.43,0,17.080-7.65,17.080-17.08v-93.44h32.41Z"/><path d="M889.29,118.39v-18.47c0-20.97-15.5-34.88-37.84-34.88h-124.23v28.72h117.62c7.29,0,12.77,4.56,12.77,11.85v8.89c0,7.3-4.56,12.08-12.77,12.08h-117.62v81.39h32.14v-52.66h62.69l33.28,52.66h36.24l-32.6-53.12c19.15-2.73,30.32-16.64,30.32-36.47"/><path d="M1080.74,67.8c-5.04-1.81-10.51-2.77-16.22-2.77h-64.63c-5.72,0-11.18.97-16.22,2.77-18.87,6.68-32.4,24.67-32.4,45.85v45.64c0,21.18,13.53,39.21,32.4,45.89,5.04,1.81,10.51,2.77,16.22,2.77h64.63c5.72,0,11.18-.97,16.22-2.77,18.87-6.68,32.4-24.71,32.4-45.89v-45.64c0-21.18-13.53-39.17-32.4-45.85ZM1080.74,158.45c0,9.46-7.65,17.1-17.1,17.1h-62.87c-9.460,0-17.1-7.65-17.1-17.1v-43.96c0-9.41,7.65-17.06,17.1-17.06h62.87c9.46,0,17.1,7.65,17.1,17.06v43.96Z"/><path d="M556.76,97.48h112.37v-32.4h-113.25c-5.72,0-11.18.97-16.22,2.77-18.87,6.68-32.4,24.67-32.4,45.85v45.64c0,21.18,13.53,39.21,32.4,45.89,5.04,1.81,10.51,2.77,16.22,2.77h64.63c5.72,0,11.18-.97,16.22-2.77,18.87-6.68,32.4-24.71,32.4-45.89v-37.61h-64.74v32.4h32.34v4.37c0,9.46-7.65,17.1-17.1,17.1h-62.87c-9.46,0-17.1-7.65-17.1-17.1v-43.96c0-9.41,7.65-17.06,17.1-17.06Z"/><path d="M1533.02,65.08h-124.26v142.92h32.15v-52.66h62.7l32.67-.41c3.49-.04,7-.38,10.34-1.37,15.39-4.580,24.22-17.53,24.22-35.16v-18.45c0-20.97-15.51-34.88-37.82-34.88ZM1539.15,114.54c0,7.31-4.54,12.1-12.78,12.1h-85.47v-32.82h86.4c6.54,0,11.85,5.31,11.85,11.85v8.87Z"/></g><rect fill="#00cfff" x="411.01" y="158.58" width="52.06" height="52.06"/></svg>');
+
 function fqrEsc(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
 function fqrIso(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
 function fqrAjouterJours(iso, n) { const d = new Date((iso || fqrIso(new Date())) + 'T00:00:00'); d.setDate(d.getDate() + n); return fqrIso(d); }
@@ -432,6 +436,7 @@ function fqrListeHtml(liste, auj) {
         ${f.statut === 'emise' ? act('✓', 'Marquer payée', `fqrOuvrirPaiement('${f.id}')`, 'fqr-icone-ok') : ''}
         ${f.statut === 'payee' ? act('↺', 'Annuler le paiement (remettre à encaisser)', `fqrAnnulerPaiement('${f.id}')`) : ''}
         ${['brouillon', 'emise'].includes(f.statut) ? act('⊘', 'Annuler la facture', `fqrAnnuler('${f.id}')`, 'fqr-icone-danger') : ''}
+        ${f.statut !== 'payee' ? act('🗑', 'Supprimer (facture de test)', `fqrSupprimer('${f.id}')`, 'fqr-icone-danger') : ''}
       </span>
     </div>`;
   }).join('')}</div>`;
@@ -447,6 +452,25 @@ async function fqrAnnuler(id) {
   if (r && r.error) { showError('Facture non annulée : ' + errMsg(r)); return; }
   if (typeof logAction === 'function') logAction('annuler_facture', 'factures', id, f.numero);
   showError(`✓ Facture ${f.numero} annulée`);
+  await fqrCharger();
+}
+
+// Supprimer, et non annuler (21.09.2026) : « il doit y avoir un bouton supprimer pour les données
+// test que je fais ». Une vraie facture émise s'ANNULE (elle reste, avec son numéro, pour la
+// comptabilité) ; une facture de test n'a jamais existé et doit disparaître. D'où la double
+// barrière : on retape le numéro, et une facture payée ne se supprime pas — elle a laissé une
+// trace à la banque.
+async function fqrSupprimer(id) {
+  const f = fqrTrouver(id);
+  if (!f) return;
+  if (f.statut === 'payee') { showError('Une facture payée ne se supprime pas : annulez d’abord le paiement.'); return; }
+  const saisie = prompt(`Supprimer définitivement la facture ${f.numero} (${f.debiteur?.nom || 'sans débiteur'}, ${f.devise} ${fqrFmtMontant(f.montant)}) ?\n\nÀ réserver aux factures de test. Une vraie facture s’annule, elle ne se supprime pas.\n\nTapez le numéro ${f.numero} pour confirmer :`);
+  if (saisie === null) return;
+  if (saisie.trim().toUpperCase() !== String(f.numero || '').toUpperCase()) { showError('Numéro différent — rien n’a été supprimé.'); return; }
+  const r = await dbDelete('factures', id);
+  if (r && r.error) { showError('Suppression impossible : ' + errMsg(r)); return; }
+  if (typeof logAction === 'function') logAction('supprimer_facture', 'factures', id, f.numero);
+  showError(`✓ Facture ${f.numero} supprimée`);
   await fqrCharger();
 }
 
@@ -957,7 +981,10 @@ function fqrDocumentHtml(f, P, opt = {}) {
   P = P || {};
   const lignes = (f.lignes || []).filter(l => String(l.libelle || '').trim() || fqrNombre(l.prix));
   const bulletinSepare = lignes.length > 12; // au-delà, la section paiement passe en page 2
-  const logo = P.logo !== false && typeof ASSUREX_LOGO_B64 !== 'undefined' && ASSUREX_LOGO_B64 ? `<img src="${ASSUREX_LOGO_B64}" alt="">` : '';
+  // Assurex | EX.GROUP (21.09.2026) : le logo du groupe, plus petit, séparé par un filet vertical
+  // et centré sur la hauteur du logo Assurex.
+  const logo = P.logo !== false && typeof ASSUREX_LOGO_B64 !== 'undefined' && ASSUREX_LOGO_B64
+    ? `<img src="${ASSUREX_LOGO_B64}" alt="Assurex"><span class="logo-filet"></span><img class="logo-groupe" src="${FQR_LOGO_EXGROUP}" alt="EX.GROUP">` : '';
   const cr = fqrLignesAdresse(P);
   const db = fqrLignesAdresse(f.debiteur);
   const contact = [P.email, P.tel].filter(Boolean).map(fqrEsc).join(' · ');
@@ -1002,7 +1029,10 @@ function fqrDocumentHtml(f, P, opt = {}) {
     .page { position: relative; width: 210mm; height: 297mm; overflow: hidden; background: #fff; margin: ${opt.apercu ? '0' : '8mm auto'}; page-break-after: always; break-after: page; }
     .page:last-child { page-break-after: auto; break-after: auto; }
     .tete { position: absolute; top: 14mm; left: 20mm; right: 15mm; display: flex; justify-content: space-between; align-items: flex-start; }
+    .logo { display: flex; align-items: center; gap: 5mm; }
     .logo img { height: 15mm; max-width: 70mm; object-fit: contain; }
+    .logo .logo-filet { width: 0.4mm; height: 13mm; background: #113679; }
+    .logo img.logo-groupe { height: 6mm; max-width: 40mm; }
     .nom-crea { font-size: 14pt; color: #113679; }
     .crea { font-size: 8.5pt; line-height: 1.4; text-align: right; color: #333; }
     .dest { position: absolute; top: 50mm; left: 118mm; width: 80mm; font-size: 10.5pt; line-height: 1.4; }

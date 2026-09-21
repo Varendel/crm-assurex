@@ -36,10 +36,12 @@ function couRendre(client, contrats, isEntreprise) {
     ? getCategoriesPourSegment(segment) : []).filter(c => c !== 'Autre');
   const actifs = (contrats || []).filter(ct => !['résilié', 'annulé', 'mandat_resilie'].includes(ct.statut));
   const cat = ct => typeof categoriePourProduitLibre === 'function' ? categoriePourProduitLibre(ct.produit) : null;
+  // Un contrat combiné (« RC + inventaire du ménage ») coche chacune des branches qu'il couvre.
+  const cats = ct => typeof categoriesPourProduitLibre === 'function' ? categoriesPourProduitLibre(ct.produit) : [cat(ct)];
 
   const couvertes = [], manquantes = [];
   for (const c of categories) {
-    const l = actifs.filter(ct => cat(ct) === c);
+    const l = actifs.filter(ct => cats(ct).includes(c));
     (l.length ? couvertes : manquantes).push({ label: c, contrats: l });
   }
   const prime = actifs.reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
@@ -48,7 +50,7 @@ function couRendre(client, contrats, isEntreprise) {
 
   // Les contrats qu'aucune branche du segment ne réclame : ils existent, ils se voient ailleurs
   // sur la fiche, mais les compter dans le ratio fausserait le dénominateur. On les signale.
-  const horsGrille = actifs.filter(ct => !categories.includes(cat(ct))).length;
+  const horsGrille = actifs.filter(ct => !cats(ct).some(c => categories.includes(c))).length;
 
   const cctBadge = isEntreprise ? `
     <span class="cou-cct ${client && client.cct ? 'oui' : 'non'}">

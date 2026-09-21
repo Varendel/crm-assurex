@@ -1,0 +1,170 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   LE MENU, REPRIS EN ENTIER (js/111, 21.09.2026)
+   Une barre du haut qui ne part jamais, un menu qui défile seul, des rubriques qui se lisent
+   comme des rubriques, et un focus clavier visible partout. La matière du bandeau (relief,
+   lignes gravées) reste dans css/99-menu.css : ce fichier ne touche qu'à la structure.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+:root { --rex-barre-h: 56px; }
+
+/* ── La colonne de droite : barre + écran ──────────────────────────────────────────────────────── */
+.rex-colonne { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.rex-colonne > .main { flex: 1; min-width: 0; }
+
+.rex-barre {
+  position: sticky; top: 0; z-index: 55;
+  height: var(--rex-barre-h); box-sizing: border-box;
+  display: flex; align-items: center; gap: var(--e-3, 12px);
+  padding: 0 34px;
+  background: color-mix(in srgb, var(--bg) 86%, transparent);
+  -webkit-backdrop-filter: saturate(1.4) blur(10px); backdrop-filter: saturate(1.4) blur(10px);
+  border-bottom: 1px solid var(--border);
+}
+
+.rex-barre-retour {
+  flex-shrink: 0; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--r-s, 10px); border: 1px solid var(--border); background: transparent;
+  color: var(--text-muted); cursor: pointer;
+}
+.rex-barre-retour:hover:not(:disabled) { color: var(--text); background: var(--surface-alt); }
+.rex-barre-retour:disabled { opacity: .35; cursor: default; }
+
+/* Le fil d'Ariane : on lit où l'on est sans chercher la ligne surlignée dans le menu. */
+.rex-fil {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px;
+  font-size: var(--t-s, 12.5px); color: var(--text-muted); white-space: nowrap; overflow: hidden;
+}
+.rex-fil-etape { overflow: hidden; text-overflow: ellipsis; }
+button.rex-fil-etape {
+  border: 0; background: none; padding: 3px 6px; margin: 0 -6px; border-radius: 6px;
+  font: inherit; color: inherit; cursor: pointer;
+}
+button.rex-fil-etape:hover { color: var(--text); background: var(--surface-alt); }
+.rex-fil-sep { color: var(--text-dim); flex-shrink: 0; }
+.rex-fil-ici { color: var(--text); font-weight: 600; font-size: var(--t-m, 13.5px); }
+
+/* LA LOUPE. Grande, à droite, toujours au même endroit : c'est l'entrée principale du logiciel. */
+.rex-loupe {
+  flex: 0 1 420px; min-width: 200px; height: 38px;
+  display: flex; align-items: center; gap: 10px; padding: 0 10px 0 12px;
+  border-radius: var(--r-m, 12px); border: 1px solid var(--border);
+  background: var(--surface); color: var(--text-muted);
+  font: inherit; font-size: var(--t-s, 12.5px); text-align: left; cursor: text;
+  box-shadow: 0 1px 2px rgba(0,0,0,.06);
+  transition: border-color .15s, box-shadow .15s, color .15s;
+}
+.rex-loupe:hover { border-color: var(--accent-border, var(--accent)); color: var(--text); }
+.rex-loupe:focus-visible { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-dim); }
+.rex-loupe svg { flex-shrink: 0; color: var(--accent); }
+.rex-loupe-txt { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rex-loupe kbd {
+  flex-shrink: 0; font-family: var(--t-mono, monospace); font-size: 10px; padding: 2px 6px; border-radius: 5px;
+  background: var(--surface-alt); color: var(--text-muted); border: 1px solid var(--border);
+}
+
+/* Sur téléphone : la barre de l'app existe déjà, avec sa loupe. */
+@media (max-width: 768px) {
+  .rex-barre { display: none; }
+}
+@media (max-width: 1100px) and (min-width: 769px) {
+  .rex-barre { padding: 0 20px; }
+  .rex-loupe kbd { display: none; }
+}
+
+/* Les éléments qui collaient au haut de la fenêtre passent sous la barre au lieu de derrière. */
+@media (min-width: 769px) {
+  .fqr-apercu { top: calc(var(--rex-barre-h) + 8px); }
+}
+
+/* ── Le menu : un logo qui reste, une liste qui défile, une équipe qui reste ───────────────────── */
+html .sidebar { overflow: hidden; }
+.sidebar-logo { flex-shrink: 0; padding-bottom: 14px; }
+#nav {
+  flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain;
+  margin: 0 -12px; padding: 2px 12px 18px;
+  scrollbar-width: thin; scrollbar-color: rgba(255,255,255,.18) transparent;
+  /* Un fondu en bas : on voit que la liste continue, sans barre de défilement envahissante. */
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent);
+          mask-image: linear-gradient(to bottom, #000 calc(100% - 22px), transparent);
+}
+#nav::-webkit-scrollbar { width: 6px; }
+#nav::-webkit-scrollbar-thumb { background: rgba(255,255,255,.16); border-radius: 3px; }
+#nav:hover::-webkit-scrollbar-thumb { background: rgba(255,255,255,.28); }
+
+/* La recherche du menu fait double emploi avec la loupe du haut, sauf sur téléphone où le menu
+   est un tiroir : là, elle reste. */
+@media (min-width: 769px) { #nav .nav-chercher { display: none; } }
+
+/* L'équipe, compacte : elle mangeait un quart de la hauteur du menu. */
+.sidebar-team { flex-shrink: 0; padding-top: 10px; }
+.sidebar-team .team-title { display: none; }
+#team-list { display: flex; flex-wrap: wrap; gap: 4px; }
+#team-list .team-member { padding: 3px 8px 3px 4px; border-radius: 999px; }
+.sidebar-team .btn-logout { margin-top: 8px; padding: 6px 10px; }
+.sidebar .assurex-menu { width: 110px; margin: 10px auto 0; opacity: .85; }
+
+/* ── Les rubriques ─────────────────────────────────────────────────────────────────────────────── */
+.nav-outils {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 16px 10px 6px; font-size: 10px; letter-spacing: .09em; text-transform: uppercase;
+  color: var(--text-dim);
+}
+.nav-outils button {
+  border: 0; background: none; padding: 2px 4px; cursor: pointer; border-radius: 5px;
+  font: inherit; font-size: 10.5px; letter-spacing: 0; text-transform: none; color: var(--text-muted);
+}
+.nav-outils button:hover { color: var(--text); text-decoration: underline; }
+
+/* La rubrique se lit comme un titre : plus grande et plus claire que ce qu'elle contient. */
+html .sidebar .nav-section-btn {
+  margin-top: 8px; min-height: 38px; padding: 6px 8px; gap: 10px;
+  font-size: var(--t-m, 13.5px); font-weight: 600; letter-spacing: 0; text-transform: none;
+  color: #fff; border-radius: 10px;
+}
+html .sidebar .nav-section-btn .nav-lib::before { display: none; }
+html .sidebar .nav-section-btn:hover { background: rgba(255,255,255,.07); }
+html .sidebar .nav-section-btn.active { color: #7FE3FF; }
+.nav-sec-ico {
+  width: 26px; height: 26px; flex-shrink: 0; border-radius: 8px;
+  display: inline-flex; align-items: center; justify-content: center; font-size: 14px;
+  background: rgba(255,255,255,.09); box-shadow: inset 0 1px 0 rgba(255,255,255,.14);
+}
+.nav-sec-compte {
+  margin-left: auto; min-width: 18px; padding: 1px 6px; border-radius: 999px; text-align: center;
+  font-size: 10.5px; font-weight: 500; font-variant-numeric: tabular-nums;
+  background: rgba(255,255,255,.08); color: var(--text-muted);
+}
+html .sidebar .nav-section-btn .arrow { margin-left: 4px; color: var(--text-dim); }
+
+/* Le contenu d'une rubrique ouverte, relié à elle par un filet : on voit ce qui lui appartient. */
+html .sidebar .nav-groupe,
+html .sidebar .nav-item[data-sec],
+html .sidebar .nav-plus {
+  margin-left: 20px !important; width: calc(100% - 20px) !important;
+  border-left: 1px solid rgba(255,255,255,.12);
+  border-radius: 0 10px 10px 0;
+}
+html .sidebar .nav-groupe {
+  border-top: 0 !important; margin-top: 0 !important;
+  padding: 10px 8px 3px 12px !important; justify-content: flex-start;
+}
+html .sidebar .nav-groupe > span:first-child { text-align: left; }
+html .sidebar .nav-item { min-height: 32px; }
+/* Un libellé long passe à la ligne au lieu d'être coupé : « Importer un décom… » ne dit plus
+   ce qu'il ouvre. */
+html .sidebar .nav-item .nav-lib,
+html .sidebar .nav-solo-btn .nav-lib {
+  white-space: normal; overflow: visible; text-overflow: clip; line-height: 1.25; text-wrap: balance;
+}
+html .sidebar .nav-item[data-sec] { padding-left: 10px; }
+.nav-plus {
+  display: block; text-align: left; padding: 6px 12px; border-top: 0; border-right: 0; border-bottom: 0;
+  background: none; cursor: pointer; font: inherit; font-size: var(--t-xs, 11px); color: var(--text-muted);
+}
+.nav-plus:hover { color: var(--text); }
+
+/* ── Le focus clavier, visible partout dans le menu et la barre ─────────────────────────────────── */
+.sidebar button:focus-visible,
+.rex-barre button:focus-visible:not(.rex-loupe) {
+  outline: 2px solid #00CFFF; outline-offset: -2px;
+}

@@ -1,0 +1,85 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   NOUVELLE ADRESSE (js/110, 21.09.2026)
+   Reprend les briques de 99-adresse.css (adr-avant, adr-grille, adr-item-chg) : la demande du
+   client et le geste du courtier doivent se ressembler.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* L'adresse de l'en-tête devient cliquable, sans changer d'allure : juste un « changer » discret. */
+.nad-chip { cursor: pointer; font: inherit; }
+.nad-chip-plus {
+  margin-left: 8px; padding-left: 8px;
+  border-left: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  font-size: var(--t-xs); opacity: .75;
+}
+.nad-chip:hover .nad-chip-plus { opacity: 1; text-decoration: underline; }
+
+.nad-origine {
+  display: flex; align-items: center; gap: 6px;
+  margin: 0 0 var(--e-3, 12px); font-size: var(--t-s); color: var(--c-alerte-texte, #B45309);
+}
+
+/* ── Sur la fiche ──────────────────────────────────────────────────────────────────────────────── */
+.nad-fiche:empty { display: none; }
+.nad-fiche { display: flex; flex-direction: column; gap: var(--e-2, 8px); margin: var(--e-3, 12px) 0; }
+
+.nad-bandeau {
+  display: flex; align-items: center; gap: var(--e-3, 12px);
+  padding: 12px 16px; border-radius: var(--r-m, 12px);
+  background: var(--c-alerte-fond, color-mix(in srgb, var(--c-alerte) 12%, transparent));
+  border: 1px solid color-mix(in srgb, var(--c-alerte) 35%, transparent);
+}
+.nad-bandeau-ico { display: inline-flex; color: var(--c-alerte-texte, #B45309); }
+.nad-bandeau > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.nad-bandeau strong { font-size: var(--t-m); font-weight: 600; color: var(--text); }
+.nad-bandeau span { font-size: var(--t-s); color: var(--text-muted); }
+.nad-bandeau button {
+  padding: 7px 14px; border-radius: var(--r-s, 10px); border: 0; cursor: pointer;
+  background: var(--c-alerte); color: #fff; font: inherit; font-size: var(--t-s); font-weight: 600;
+}
+
+.nad-hist { font-size: var(--t-s); color: var(--text-muted); }
+.nad-hist summary { cursor: pointer; width: fit-content; }
+.nad-hist ol { margin: 8px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; }
+.nad-hist-adr { display: block; color: var(--text); }
+.nad-hist-meta { display: block; font-size: var(--t-xs); }
+
+/* ── La fenêtre de suivi ───────────────────────────────────────────────────────────────────────── */
+.nad-chg { margin-bottom: var(--e-3, 12px); }
+.nad-date { color: var(--text-muted); font-size: var(--t-s); }
+
+.nad-points {
+  padding: 10px 14px; margin-bottom: var(--e-3, 12px);
+  border-radius: var(--r-s, 10px); background: var(--surface-alt);
+  border-left: 3px solid var(--c-alerte, #F59E0B);
+  font-size: var(--t-s);
+}
+.nad-points b { font-weight: 600; color: var(--text); }
+.nad-points ul { margin: 6px 0 0; padding-left: 18px; color: var(--text-muted); line-height: 1.5; }
+
+.nad-cies { display: flex; flex-direction: column; gap: 6px; margin-bottom: var(--e-3, 12px); }
+.nad-cie {
+  display: grid; grid-template-columns: auto minmax(0, 1fr) auto; column-gap: 10px; row-gap: 2px;
+  align-items: center; padding: 9px 12px; border-radius: var(--r-s, 10px); cursor: pointer;
+  border: 1px solid color-mix(in srgb, var(--border) 60%, transparent); background: var(--surface-alt);
+}
+.nad-cie input { grid-row: span 2; }
+.nad-cie-nom { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; color: var(--text); font-size: var(--t-m); }
+.nad-cie-contrats { grid-column: 2; font-size: var(--t-xs); color: var(--text-muted); }
+.nad-cie-mail { grid-column: 3; grid-row: 1; font-size: var(--t-xs); color: var(--text-muted); text-align: right; }
+.nad-cie-mail.manque { color: var(--c-danger-texte, #B91C1C); }
+.nad-lien {
+  grid-column: 3; grid-row: 2; justify-self: end;
+  border: 0; background: none; padding: 0; cursor: pointer;
+  font: inherit; font-size: var(--t-xs); color: var(--accent); text-decoration: underline;
+}
+.nad-lien:disabled { color: var(--text-dim); cursor: default; text-decoration: none; }
+
+.nad-alerte { margin: 0 0 8px; font-size: var(--t-s); color: var(--c-danger-texte, #B91C1C); }
+.nad-actions { flex-wrap: wrap; }
+.nad-envoye { flex-basis: 100%; font-size: var(--t-s); color: var(--c-succes-texte, #15803D); }
+
+@media (max-width: 520px) {
+  .nad-cie { grid-template-columns: auto minmax(0, 1fr); }
+  .nad-cie-mail, .nad-lien { grid-column: 2; grid-row: auto; justify-self: start; text-align: left; }
+  .nad-bandeau { flex-wrap: wrap; }
+}

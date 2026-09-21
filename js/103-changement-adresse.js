@@ -46,7 +46,7 @@ function adrOuvrir() {
   }
   creerModale('modal-adr', `
     <div class="opx-modale mdx-modale mdx-modale-flex adr-modale" role="dialog" aria-modal="true" aria-labelledby="adr-titre">
-      <h3 id="adr-titre">Changer mon adresse</h3>
+      <h3 id="adr-titre">Annoncer un déménagement</h3>
       <p class="adr-sous">Votre conseiller met votre dossier à jour et annonce le changement à
         chacune de vos compagnies. Vous n’avez rien d’autre à faire.</p>
 
@@ -124,7 +124,7 @@ function adrTuileHtml() {
   }
   return `<button type="button" class="ec-tuile" onclick="adrOuvrir()">
     <span>${adrIco('habitation', 22)}</span>
-    <b>Changer mon adresse</b>
+    <b>Annoncer un déménagement</b>
     <small>Vos contrats suivent : nous prévenons chaque compagnie</small>
   </button>`;
 }

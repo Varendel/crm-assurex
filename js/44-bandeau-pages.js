@@ -54,6 +54,8 @@ function rbAbsorberBarre(barre, cible) {
 function rbAppliquer() {
   const main = document.getElementById('main-content');
   if (!main || typeof currentUser === 'undefined' || !currentUser) return;
+  // L'espace client a son propre en-tête (js/112) : le bandeau du CRM y déplaçait le nom du client.
+  if (currentUser.role === 'client' || document.body.classList.contains('mode-espace-client')) return;
   const barre = main.querySelector(':scope > #nav-back-bar');
   const existant = main.querySelector('.rex-bandeau, .rex-bandeau-hote');
   if (existant) { rbAbsorberBarre(barre, existant); return; }

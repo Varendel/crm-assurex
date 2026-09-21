@@ -28,11 +28,9 @@ function ecSousDomaineClient() {
     ecModeCloud(true);
     document.title = `${EC_MARQUE} — Espace client`;
     // Logo EX.GROUP : on reprend celui du code (js/15) plutôt qu'une copie du tracé
-    // Sortie de secours (20.09.2026) : une fois qu'un client s'est connecté sur un appareil,
-    // l'adresse garde ?espace=client — le conseiller qui reprend le même téléphone voyait la
-    // page REX CLOUD alors qu'il vient travailler. Ce lien discret le ramène au CRM.
-    const bascule = document.getElementById('login-bascule');
-    if (bascule) bascule.style.display = '';
+    // Le lien « Vous êtes conseiller ? Ouvrir REX CRM » est retiré (21.09.2026, demande de
+    // Jonathan) : un client n'a pas à voir l'entrée du CRM. Le conseiller passe par l'adresse
+    // sans ?espace=client ; le sous-domaine dédié séparera bientôt les deux entièrement.
     const ex = document.querySelector('.cloud-signature .cloud-ex');
     if (ex && typeof LOGO_EXGROUPE_SVG !== 'undefined') {
       const span = document.createElement('span');

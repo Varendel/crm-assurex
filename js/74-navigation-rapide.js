@@ -214,7 +214,7 @@ function navPeindre(garderFocus) {
   let section = null, html = '';
   r.forEach((x, i) => {
     if (x.section !== section) { section = x.section; html += `<div class="nav-palette-section">${section}</div>`; }
-    const estEcran = !x.id.startsWith('client:');
+    const estEcran = !/^(client|contrat|opp):/.test(x.id);
     const epingle = estEcran && navEpingles().includes(x.id);
     html += `<button type="button" class="nav-palette-ligne ${i === window._nav.index ? 'actif' : ''}"
         role="option" aria-selected="${i === window._nav.index}" data-i="${i}" onclick="navAller(${i})">

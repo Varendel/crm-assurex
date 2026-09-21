@@ -1,0 +1,205 @@
+/* ═══════════════════════════════════════════════════════════════════════════════════════════════
+   REX CLOUD — LA REFONTE (js/112, 21.09.2026)
+   Une colonne centrée, lisible au pouce sur un iPhone comme sur un écran de bureau. Les couvertures
+   d'abord, les gestes ensuite. Texte centré pour les titres et les tuiles ; les listes de contrats
+   restent alignées à gauche, parce qu'on y lit des noms et des numéros ligne à ligne.
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+/* Rien du CRM dans l'espace client : ni la barre du haut, ni la barre mobile, ni les widgets. */
+body.mode-espace-client .rex-barre,
+body.mode-espace-client .mobile-topbar,
+body.mode-espace-client .rex-horloge,
+body.mode-espace-client [class*="montre"],
+body.mode-espace-client .bmq-bloc { display: none !important; }
+body.mode-espace-client #main-content { padding: 0 !important; }
+
+.rc {
+  --rc-marine: #113679; --rc-cyan: #00CFFF; --rc-vert: #059669; --rc-vert-fonce: #047857;
+  max-width: 760px; margin: 0 auto; padding: 0 16px 32px;
+  color: var(--text); text-align: center;
+}
+
+/* ── La barre : la marque à gauche, la sortie à droite ─────────────────────────────────────────── */
+.rc-barre {
+  position: sticky; top: 0; z-index: 30;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  margin: 0 -16px; padding: calc(10px + env(safe-area-inset-top)) 16px 10px;
+  background: linear-gradient(168deg, #0B2458 0%, #113679 60%, #1A4A9C 100%);
+  box-shadow: 0 1px 0 rgba(255,255,255,.08), 0 6px 18px -10px rgba(3,14,38,.6);
+}
+.rc-marque { display: inline-flex; align-items: center; }
+.rc-marque img { height: 22px; width: auto; }
+
+/* « Se déconnecter » : en couleur, avec un mot et une icône. Petit, mais on le trouve. */
+.rc-sortie {
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 36px; padding: 0 14px; border-radius: 999px; cursor: pointer;
+  border: 1px solid rgba(255, 138, 138, .55); background: rgba(220, 38, 38, .16);
+  color: #FFD6D6; font: inherit; font-size: 13px; font-weight: 600;
+}
+.rc-sortie:hover { background: rgba(220, 38, 38, .3); color: #fff; }
+
+/* ── L'en-tête : le nom, centré ─────────────────────────────────────────────────────────────────── */
+.rc-tete { padding: 26px 0 8px; }
+.rc-surtitre { display: block; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); }
+.rc-tete h1 { margin: 6px 0 4px; font-size: clamp(24px, 6vw, 32px); font-weight: 600; letter-spacing: -.02em; line-height: 1.15; text-wrap: balance; }
+.rc-tete .ec-ident { justify-content: center; margin: 0; }
+
+/* ── Les onglets : une barre défilante, centrée quand elle tient ───────────────────────────────── */
+.rc-onglets {
+  display: flex; gap: 6px; justify-content: safe center; overflow-x: auto; scrollbar-width: none;
+  margin: 12px -16px 4px; padding: 4px 16px 10px;
+}
+.rc-onglets::-webkit-scrollbar { display: none; }
+.rc-onglets button {
+  flex-shrink: 0; min-height: 38px; padding: 0 16px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--border); background: var(--surface); color: var(--text-muted);
+  font: inherit; font-size: 13.5px; font-weight: 500;
+}
+.rc-onglets button.actif { background: var(--rc-marine); border-color: var(--rc-marine); color: #fff; }
+.rc-onglets em { margin-left: 6px; font-style: normal; font-size: 11px; padding: 1px 6px; border-radius: 999px; background: #F59E0B; color: #1b1300; }
+
+.rc-corps { display: flex; flex-direction: column; gap: 14px; text-align: left; }
+.rc-corps > .dbx-carte, .rc-corps > section:not([class*="rc-"]) { margin-top: 0 !important; }
+
+/* ── Cartes ───────────────────────────────────────────────────────────────────────────────────── */
+.rc-carte {
+  padding: 18px 16px; border-radius: 18px;
+  background: var(--surface); border: 1px solid var(--border);
+  box-shadow: 0 1px 2px rgba(0,0,0,.05);
+}
+.rc-carte > h2 { margin: 0 0 4px; text-align: center; font-size: 18px; font-weight: 600; letter-spacing: -.01em; }
+.rc-sous, .rc-vide { margin: 0 0 14px; text-align: center; font-size: 13px; color: var(--text-muted); }
+.rc-visuel-cache { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+/* ── Le bandeau court ─────────────────────────────────────────────────────────────────────────── */
+.rc-bandeau {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center;
+  padding: 10px 14px; border-radius: 14px; text-align: center;
+  background: color-mix(in srgb, var(--rc-cyan) 10%, var(--surface));
+  border: 1px solid color-mix(in srgb, var(--rc-cyan) 35%, transparent);
+  font-size: 13px;
+}
+.rc-bandeau.urgent { background: color-mix(in srgb, #F59E0B 14%, var(--surface)); border-color: color-mix(in srgb, #F59E0B 45%, transparent); }
+.rc-bandeau p { margin: 0; line-height: 1.45; }
+.rc-bandeau-ico { display: inline-flex; color: var(--accent); }
+.rc-bandeau-jours { color: var(--text-muted); white-space: nowrap; }
+.rc-bandeau-actions { display: inline-flex; gap: 10px; align-items: center; }
+.rc-bandeau-actions button {
+  border: 0; border-radius: 999px; padding: 5px 12px; cursor: pointer;
+  background: var(--rc-marine); color: #fff; font: inherit; font-size: 12.5px; font-weight: 600;
+}
+.rc-bandeau-actions a { font-size: 12.5px; color: var(--accent); }
+
+/* ── Mes couvertures ──────────────────────────────────────────────────────────────────────────── */
+.rc-domaines { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
+.rc-domaine { border-radius: 14px; background: var(--surface-alt); border: 1px solid color-mix(in srgb, var(--border) 70%, transparent); overflow: hidden; }
+.rc-domaine-tete {
+  display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 14px; cursor: pointer;
+  border: 0; background: none; color: var(--text); font: inherit; text-align: left;
+}
+.rc-domaine-tete:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
+.rc-domaine-ico {
+  width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--rc-vert) 14%, transparent); color: var(--rc-vert);
+}
+.rc-domaine-tete b { flex: 1; font-size: 15px; font-weight: 600; }
+.rc-domaine-prime { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.rc-domaine-prime small { font-weight: 400; color: var(--text-muted); }
+.rc-contrats { list-style: none; margin: 0; padding: 0 14px 10px; display: flex; flex-direction: column; }
+.rc-contrats li { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent); }
+.rc-logo { flex-shrink: 0; display: inline-flex; }
+.rc-contrat-txt { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.rc-contrat-txt b { font-size: 13.5px; font-weight: 500; }
+.rc-contrat-txt small { font-size: 12px; color: var(--text-muted); overflow-wrap: anywhere; }
+.rc-police {
+  flex-shrink: 0; display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 0 10px;
+  border-radius: 999px; border: 1px solid var(--border); background: var(--surface); color: var(--accent);
+  cursor: pointer; font: inherit; font-size: 12px; font-weight: 600;
+}
+.rc-lien {
+  display: flex; align-items: center; justify-content: center; gap: 6px; margin: 14px auto 0; padding: 6px 10px;
+  border: 0; background: none; cursor: pointer; color: var(--accent); font: inherit; font-size: 13.5px; font-weight: 600;
+}
+
+/* ── Tuiles d'action : centrées, une idée chacune ─────────────────────────────────────────────── */
+.rc-tuiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin-top: 12px; }
+.rc-tuile {
+  display: flex; flex-direction: column; align-items: center; justify-content: flex-start; gap: 6px;
+  min-height: 118px; padding: 16px 12px; border-radius: 14px; cursor: pointer; text-align: center;
+  border: 1px solid var(--border); background: var(--surface-alt); color: var(--text); font: inherit;
+  transition: border-color .15s, transform .15s;
+}
+.rc-tuile:hover { border-color: var(--accent); transform: translateY(-1px); }
+.rc-tuile-ico { width: 44px; height: 44px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--accent) 12%, transparent); color: var(--accent); }
+.rc-tuile b { font-size: 14px; font-weight: 600; line-height: 1.25; text-wrap: balance; }
+.rc-tuile small { font-size: 12px; color: var(--text-muted); line-height: 1.35; text-wrap: balance; }
+/* Sur deux colonnes, une tuile seule en dernière ligne prend toute la largeur au lieu de laisser
+   un trou. */
+@media (max-width: 520px) { .rc-tuile:last-child:nth-child(odd) { grid-column: 1 / -1; min-height: 0; } }
+.rc-tuile-attente { cursor: default; opacity: .85; }
+.rc-tuile-attente:hover { transform: none; border-color: var(--border); }
+
+/* ── Le transfert : le bouton vert ────────────────────────────────────────────────────────────── */
+.rc-transfert { display: flex; }
+.rc-btn-vert {
+  width: 100%; display: flex; flex-direction: column; align-items: center; gap: 4px;
+  padding: 16px 18px; border-radius: 16px; border: 0; cursor: pointer; text-align: center;
+  background: linear-gradient(180deg, #10B981 0%, var(--rc-vert) 100%); color: #fff; font: inherit;
+  box-shadow: 0 8px 20px -10px rgba(5, 150, 105, .8), inset 0 1px 0 rgba(255,255,255,.25);
+}
+.rc-btn-vert:hover { background: linear-gradient(180deg, #0EA371 0%, var(--rc-vert-fonce) 100%); }
+.rc-btn-vert b { font-size: 16px; font-weight: 600; }
+.rc-btn-vert small { font-size: 12.5px; opacity: .92; text-wrap: balance; }
+
+/* ── Rendez-vous et véhicules ─────────────────────────────────────────────────────────────────── */
+.rc-duo { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+.rc-liste { list-style: none; margin: 10px 0 0; padding: 0; }
+.rc-liste li { display: flex; justify-content: space-between; gap: 10px; padding: 8px 0; border-top: 1px solid color-mix(in srgb, var(--border) 60%, transparent); font-size: 13.5px; }
+.rc-liste li span { color: var(--text-muted); }
+.rc-plaque { font-family: var(--t-mono, monospace); font-size: 12px; padding: 1px 8px; border-radius: 6px; border: 1px solid var(--border); }
+
+/* ── Le conseiller ────────────────────────────────────────────────────────────────────────────── */
+.rc-conseiller { display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; }
+.rc-co-photo { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; margin-bottom: 4px; border: 2px solid var(--surface-alt); }
+.rc-conseiller > b { font-size: 15px; font-weight: 600; }
+.rc-conseiller > small { font-size: 12.5px; color: var(--text-muted); }
+.rc-co-liens { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 10px; }
+.rc-co-liens a {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 38px; padding: 0 14px; border-radius: 999px;
+  border: 1px solid var(--border); color: var(--text); text-decoration: none; font-size: 13px;
+}
+
+/* ── Pied ─────────────────────────────────────────────────────────────────────────────────────── */
+.rc-pied { margin-top: 24px; font-size: 12px; color: var(--text-muted); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.rc-pied p { margin: 0; }
+.rc-pied button { border: 0; background: none; color: var(--text-muted); text-decoration: underline; cursor: pointer; font: inherit; }
+.rc-signature { display: inline-flex; align-items: center; gap: 8px; opacity: .8; }
+.rc-signature img { height: 14px; }
+html:not([data-theme="clair"]) .rc-signature img { filter: brightness(0) invert(.85); }
+.rc-ex, .rc-ex svg { display: inline-flex; height: 12px; width: auto; }
+
+/* ── Les onglets de détail gardent leurs styles, dans la colonne ──────────────────────────────── */
+.rc-corps .dbx-carte { border-radius: 18px; }
+
+/* ── Focus clavier ────────────────────────────────────────────────────────────────────────────── */
+.rc button:focus-visible, .rc a:focus-visible { outline: 3px solid color-mix(in srgb, var(--rc-cyan) 70%, transparent); outline-offset: 2px; }
+
+@media (min-width: 720px) {
+  .rc { padding: 0 24px 40px; }
+  .rc-barre { margin: 0 -24px; padding-left: 24px; padding-right: 24px; }
+  .rc-carte { padding: 22px 22px; }
+}
+
+@media (prefers-reduced-motion: reduce) { .rc-tuile { transition: none; } .rc-tuile:hover { transform: none; } }
+
+/* ═══ Connexion sur téléphone (21.09.2026) ══════════════════════════════════════════════════════
+   La carte était centrée dans la hauteur : un grand vide au-dessus, un autre en dessous, et le
+   bouton loin du pouce. Elle se pose sous le bandeau, avec un titre centré. */
+@media (max-width: 860px) {
+  #login-screen .login-zone { align-items: flex-start; padding: 28px 20px 32px; }
+  #login-screen .login-card h2 { text-align: center; }
+  #login-screen .login-footer { text-align: center; }
+  body.mode-cloud .login-panneau { padding-top: calc(48px + env(safe-area-inset-top)); }
+}

@@ -1590,8 +1590,13 @@ function carteCouverture(label, ok, detail, police) {
 const REGLES_CATEGORIE_PRODUIT_LIBRE = [
   ['Véhicule', p => /véhicule|casco|flotte/i.test(p)],
   ['Assurances de personnes (entreprise)', p => /perte de gain|\blaa\b|laac|laaf|indemnité journalière|maladie collective/i.test(p)],
+  // « RC + inventaire du ménage » (21.09.2026) : commençant par « RC », il tombait dans
+  // Responsabilité civile et la carte Ménage restait « non couverte » — signalé par Jonathan sur
+  // un contrat Groupe Mutuel, mais les 11 contrats combinés (6 compagnies) étaient touchés. Le
+  // ménage passe donc AVANT la RC ; la RC privée qu'il contient est rendue par
+  // CATEGORIES_SECONDAIRES ci-dessous, pour que les deux cartes soient cochées.
+  ['Ménage / habitation', p => /m[ée]nage|inventaire du m/i.test(p)],
   ['Responsabilité civile', p => /^rc\b|responsabilité civile/i.test(p)],
-  ['Ménage / habitation', p => /ménage/i.test(p)],
   ['Caution de loyer', p => /caution/i.test(p)],
   ['Bâtiment', p => /bâtiment/i.test(p)],
   ['Protection juridique', p => /protection juridique/i.test(p)],
@@ -1609,6 +1614,19 @@ function categoriePourProduitLibre(produitTexte) {
   if (!p) return null;
   const regle = REGLES_CATEGORIE_PRODUIT_LIBRE.find(([, test]) => test(p));
   return regle ? regle[0] : null;
+}
+
+// Un contrat combiné couvre plusieurs catégories. La catégorie principale (couleur, tri) reste
+// unique ; la vue d'ensemble des couvertures, elle, doit cocher chacune de celles qu'il couvre.
+const CATEGORIES_SECONDAIRES = [
+  ['Responsabilité civile', p => /^rc\b|\brc priv|responsabilité civile/i.test(p) && /m[ée]nage|inventaire du m/i.test(p)],
+];
+function categoriesPourProduitLibre(produitTexte) {
+  const p = (produitTexte || '').trim();
+  const principale = categoriePourProduitLibre(p);
+  if (!principale) return [];
+  const autres = CATEGORIES_SECONDAIRES.filter(([cat, test]) => cat !== principale && test(p)).map(([cat]) => cat);
+  return [principale, ...autres];
 }
 
 // Couleur par catégorie de branche — sert à distinguer visuellement les lignes de contrats sur la
@@ -1647,7 +1665,7 @@ function renderVueEnsembleCouvertures(client, contrats, isEntreprise) {
   // masquait silencieusement les autres contrats de la même catégorie sur cette vue — repéré par
   // Jonathan le 09.09.2026 (ex. Kisann SA : LAA + Perte de gain maladie, un seul des deux visible).
   // On liste maintenant TOUS les contrats actifs de chaque catégorie, une carte par contrat.
-  const contratsPourCategorie = (cat) => contratsActifs.filter(ct => categoriePourProduitLibre(ct.produit) === cat);
+  const contratsPourCategorie = (cat) => contratsActifs.filter(ct => categoriesPourProduitLibre(ct.produit).includes(cat));
 
   const items = categories.flatMap(cat => {
     const trouves = contratsPourCategorie(cat);

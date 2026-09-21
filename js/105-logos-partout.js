@@ -73,6 +73,8 @@ function lgpAppliquer(racine) {
         const p = n.parentElement;
         if (!p || LGP_INTERDITS.has(p.tagName)) return NodeFilter.FILTER_REJECT;
         if (p.dataset && p.dataset.lgp) return NodeFilter.FILTER_REJECT;
+        // Une zone qui pose déjà ses logos elle-même (l'espace client, js/112) s'exclut ainsi.
+        if (p.closest('[data-lgp-non]')) return NodeFilter.FILTER_REJECT;
         // Le texte doit être TOUT le contenu de son élément : « Helvetia » oui, « offre reçue de
         // Helvetia le 3 mars » non. Le second est une phrase, pas une étiquette.
         if ((p.textContent || '').trim() !== (n.nodeValue || '').trim()) return NodeFilter.FILTER_REJECT;

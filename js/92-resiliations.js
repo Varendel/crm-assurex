@@ -109,7 +109,7 @@ function rslLigneHtml(oppId, r) {
     <span class="rsl-logo">${typeof pictoCompagnie === 'function' ? pictoCompagnie(r.compagnie, 26) : ''}</span>
     <div class="rsl-corps">
       <b>${rslEsc(r.compagnie || 'Assureur à préciser')}</b>
-      <small>${rslEsc(r.produit || '')}${r.numero_police ? ` · police ${rslEsc(r.numero_police)}` : ''}${r.prime_annuelle ? ` · CHF ${rslCHF(r.prime_annuelle)}/an` : ''}</small>
+      <small>${rslEsc(r.produit || '')}${r.numero_police ? ` · police ${rslEsc(r.numero_police)}` : ''}</small>
       <small class="rsl-dates">
         ${r.echeance ? `Échéance ${fmtDate(r.echeance)}` : 'Échéance inconnue'}
         ${r.limite ? ` · résilier avant le ${fmtDate(r.limite)}` : ''}
@@ -174,8 +174,6 @@ function rslOuvrirAjout(oppId, resilId) {
           <input class="form-input" id="rsl-produit" value="${rslEsc(v(r && r.produit))}" placeholder="Ex. RC + inventaire du ménage"/></div>
         <div><label for="rsl-police">N° de police</label>
           <input class="form-input" id="rsl-police" value="${rslEsc(v(r && r.numero_police))}"/></div>
-        <div><label for="rsl-prime">Prime actuelle (CHF/an)</label>
-          <input class="form-input" id="rsl-prime" inputmode="decimal" value="${v(r && r.prime_annuelle)}"/></div>
         <div><label for="rsl-echeance">Échéance du contrat</label>
           <input class="form-input" id="rsl-echeance" type="date" value="${v(r && r.echeance)}" onchange="rslProposerLimite()"/></div>
         <div><label for="rsl-limite">Résiliation reçue avant le</label>
@@ -206,7 +204,6 @@ function rslDepuisContrat(contratId) {
   set('rsl-cie', ct.compagnie || '');
   set('rsl-produit', ct.produit || '');
   set('rsl-police', ct.numero_police || '');
-  set('rsl-prime', ct.prime_annuelle || '');
   set('rsl-echeance', ct.date_echeance || '');
   rslProposerLimite();
 }
@@ -231,7 +228,8 @@ async function rslEnregistrer(oppId, resilId) {
     compagnie: txt('rsl-cie'),
     produit: txt('rsl-produit'),
     numero_police: txt('rsl-police'),
-    prime_annuelle: nb('rsl-prime'),
+    // Plus de prime dans la résiliation (22.09.2026, Jonathan : « on s'en fout ») — la colonne
+    // reste en base, elle n'est simplement plus demandée ni affichée.
     echeance: txt('rsl-echeance'),
     limite: txt('rsl-limite'),
   };

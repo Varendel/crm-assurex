@@ -697,13 +697,15 @@ async function opEnregistrerOffre(oppId, demandeId, idx) {
   // « Joindre l'offre » de la fiche client (js/08). Pour une compagnie ajoutée ici, on retrouve
   // son entrée par son nom dans les demandes rechargées.
   if (fichier && typeof uploadOffreCompagnie === 'function') {
-    let cible = d && idx !== null ? { id: d.id, i: idx } : null;
-    if (!cible) (window._opDemandes[oppId] || []).forEach(x => (x.compagnies_envoi || []).forEach((ce, i) => { if (ce.compagnie === entree.compagnie) cible = { id: x.id, i }; }));
-    if (cible) {
-      await uploadOffreCompagnie(cible.id, cible.i, { files: [fichier] }, '', '');
+    // L'entrée qu'on vient d'écrire : la même position si elle existait, sinon la dernière de la
+    // demande complétée (d) ou de la demande créée (r) — jamais une recherche par nom, qui pouvait
+    // tomber sur la même compagnie dans une ancienne demande.
+    const nouvelleId = !d && Array.isArray(r) && r[0] ? r[0].id : (!d && r && r.id) || null;
+    const cible = d ? { id: d.id, i: idx !== null ? idx : entrees.length - 1 } : nouvelleId ? { id: nouvelleId, i: entrees.length - 1 } : null;
+    if (cible && await uploadOffreCompagnie(cible.id, cible.i, { files: [fichier] }, '', '')) {
       await ajouterLigneHistoriqueOpportunite(oppId, `📎 Offre PDF de ${entree.compagnie} jointe`);
       await opChargerDemandes(oppId);
-    }
+    } else if (!cible) showError('Offre enregistrée, mais le PDF n’a pas pu être rattaché : joins-le avec « 📎 Joindre l’offre ».');
   }
   opRafraichir();
   if (currentView === 'suivi' && typeof suxRecharger === 'function') suxRecharger();

@@ -313,8 +313,10 @@ async function uploadOffreCompagnie(demandeOffreId, idx, input, refreshType, ref
     showError('✓ Offre archivée avec succès.');
     if (refreshType === 'client' && refreshId) showClient(refreshId);
     else if (refreshType === 'opp' && refreshId) renderDemandeOffreLieeOpportunite(refreshId);
+    return true;
   } catch (e) {
     showError('Erreur upload : ' + e.message);
+    return false;
   }
 }
 

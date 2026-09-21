@@ -177,7 +177,7 @@ function rsxPeindre() {
       <div class="rsx-table-enveloppe"><table class="rsx-table">
         <thead><tr>
           <th><span>Échéance</span></th><th><span>Client</span></th><th><span>Compagnie</span></th>
-          <th><span>Contrat</span></th><th class="d"><span>Prime</span></th>
+          <th><span>Contrat</span></th>
           <th><span>État</span></th><th><span></span></th>
         </tr></thead>
         <tbody>${L.map(rsxLigneHtml).join('')}</tbody>
@@ -189,18 +189,24 @@ function rsxPeindre() {
       </div></section>`}`;
 }
 
+// « Poster avant » = limite moins RSX_POSTE jours, en date LOCALE : toISOString() passait en UTC
+// et reculait d'un jour de plus en heure suisse (limite 30.09 → 25.09 au lieu du 26.09).
+function rsxPosterAvant(limite) {
+  const d = new Date(limite + 'T00:00:00');
+  d.setDate(d.getDate() - RSX_POSTE);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function rsxLigneHtml(r) {
   const e = r.etat;
-  const poster = r.limite ? new Date(new Date(r.limite + 'T00:00:00').getTime() - RSX_POSTE * 86400000) : null;
   return `<tr class="ton-${e.ton}">
     <td class="rsx-date">
-      ${r.limite ? `<b>${fmtDate(r.limite)}</b><small>poster avant le ${fmtDate(poster.toISOString().slice(0, 10))}</small>`
+      ${r.limite ? `<b>${fmtDate(r.limite)}</b><small>poster avant le ${fmtDate(rsxPosterAvant(r.limite))}</small>`
         : '<b class="rsx-inconnu">à déterminer</b><small>échéance du contrat inconnue</small>'}
     </td>
     <td><b>${rsxEsc(r.client_nom)}</b><small>${rsxEsc(r.affaire)}</small></td>
     <td>${rsxEsc(r.compagnie || '—')}</td>
     <td>${rsxEsc(r.produit || '—')}<small>${r.numero_police ? 'police ' + rsxEsc(r.numero_police) : ''}</small></td>
-    <td class="d">${r.prime_annuelle ? 'CHF ' + rsxCHF(r.prime_annuelle) : '—'}</td>
     <td><span class="rsx-etat ton-${e.ton}">${rsxEsc(e.nom)}</span></td>
     <td class="rsx-actions">
       ${r.opp ? `<button type="button" class="rsx-act" onclick="rsxOuvrirAffaire('${r.opportunite_id}')" title="Ouvrir l’affaire">Affaire</button>` : ''}
@@ -237,12 +243,11 @@ function rsxExcel() {
   const d = iso => (iso ? new Date(iso + 'T00:00:00') : null);
   const feuille = XLSX.utils.json_to_sheet(L.map(r => ({
     'Réception avant le': d(r.limite),
-    'À poster avant le': r.limite ? new Date(new Date(r.limite + 'T00:00:00').getTime() - RSX_POSTE * 86400000) : null,
+    'À poster avant le': r.limite ? d(rsxPosterAvant(r.limite)) : null,
     Client: r.client_nom,
     Compagnie: r.compagnie || '',
     Contrat: r.produit || '',
     'N° de police': r.numero_police || '',
-    'Prime annuelle': r.prime_annuelle != null ? Number(r.prime_annuelle) : null,
     'Échéance du contrat': d(r.echeance),
     État: r.etat.nom,
     'Envoyée le': d(r.envoyee_le),
@@ -250,7 +255,7 @@ function rsxExcel() {
     Affaire: r.affaire,
   })));
   feuille['!cols'] = [{ wch: 17 }, { wch: 16 }, { wch: 26 }, { wch: 16 }, { wch: 30 },
-    { wch: 16 }, { wch: 13 }, { wch: 18 }, { wch: 18 }, { wch: 12 }, { wch: 13 }, { wch: 28 }];
+    { wch: 16 }, { wch: 18 }, { wch: 18 }, { wch: 12 }, { wch: 13 }, { wch: 28 }];
   const classeur = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(classeur, feuille, 'Résiliations');
   XLSX.writeFile(classeur, `resiliations_${new Date().toISOString().slice(0, 10)}.xlsx`);
@@ -271,16 +276,15 @@ function rsxImprimer() {
     </header>
     <table class="rsx-imp-table">
       <thead><tr><th>✓</th><th>Réception avant</th><th>Poster avant</th><th>Client</th>
-        <th>Compagnie</th><th>Police</th><th>Contrat</th><th class="d">Prime</th></tr></thead>
+        <th>Compagnie</th><th>Police</th><th>Contrat</th></tr></thead>
       <tbody>${L.map(r => `<tr>
         <td class="rsx-case"></td>
         <td>${r.limite ? fmtDate(r.limite) : '—'}</td>
-        <td>${r.limite ? fmtDate(new Date(new Date(r.limite + 'T00:00:00').getTime() - RSX_POSTE * 86400000).toISOString().slice(0, 10)) : '—'}</td>
+        <td>${r.limite ? fmtDate(rsxPosterAvant(r.limite)) : '—'}</td>
         <td>${rsxEsc(r.client_nom)}</td>
         <td>${rsxEsc(r.compagnie || '')}</td>
         <td>${rsxEsc(r.numero_police || '')}</td>
         <td>${rsxEsc(r.produit || '')}</td>
-        <td class="d">${r.prime_annuelle ? rsxCHF(r.prime_annuelle) : ''}</td>
       </tr>`).join('')}</tbody>
     </table>
     <p class="rsx-imp-pied">Le délai porte sur la <b>réception</b> par l’assureur : la colonne

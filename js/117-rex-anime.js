@@ -75,8 +75,13 @@ RXA_SEQUENCES.flamme = (() => {
   // 22.09.2026 : nouvelle planche « un pas » (8 images, dont 6 utiles : la 7 et la 8 répètent la
   // 1 et la 2). Chaque image a son avance propre, mesurée sur le pied posé (en px de la planche),
   // et une durée qui en dépend : le pied au sol reste immobile, le corps avance.
-  const M = 0, NM = 6, DT = 6, FG = 14, SA = 22, AP = 30, D = 36;
-  const PAS_AVANCE = [13, 12, 25, 74, 57, 5], PAS_TOTAL = 186, FOULEE = 21.8;   // foulée en % de la largeur de l'image
+  // 22.09.2026 (validé par Jonathan) : « planche reconstituée » de 13 images. Les 6 images du pas
+  // sont complétées par 7 intermédiaires reprises des autres planches (croisée 2 et 13,
+  // intermédiaire 7, correction 4 et 5, détaillée 7 et 16), choisies par comparaison des
+  // silhouettes des jambes pour combler les sauts. Les écarts étant désormais réguliers, l'avance
+  // et la durée sont les mêmes pour chaque image.
+  const M = 0, NM = 13, DT = 13, FG = 21, SA = 29, AP = 37, D = 36;
+  const PAS_AVANCE = Array(NM).fill(1), PAS_TOTAL = NM, PAS_MS = 50, FOULEE = 21.8;   // foulée en % de la largeur de l'image
   const SAUT_Y = [0, 1.6, -0.5, -27.7, -37, -17.3, 0.8, -0.3], SAUT_MS = [160, 170, 90, 100, 190, 100, 150, 200];
   // Dans les images de 516 px : bords du corps dans les deux poses adossées (dos à droite, dos à
   // gauche), et pivot du miroir (53,7 %, voir le CSS).
@@ -109,7 +114,7 @@ RXA_SEQUENCES.flamme = (() => {
       for (let p = 0; p < pas; p++) for (let k = 0; k < NM; k++) {
         const part = PAS_AVANCE[k] / PAS_TOTAL;
         fait += part * FOULEE * echelle;
-        etapes.push({ f: M + k, ms: Math.round(55 + 1.5 * PAS_AVANCE[k]), x: deX + sens * Math.min(fait, dist), miroir });
+        etapes.push({ f: M + k, ms: PAS_MS, x: deX + sens * Math.min(fait, dist), miroir });
       }
     };
     const cracher = (deX, aX) => { const t = [130, 130, 130, 150, 240, 260, 160, 140]; for (let k = 0; k < 8; k++) etapes.push({ f: FG + k, ms: t[k], x: deX + (aX - deX) * (k + 1) / 8, miroir: false }); };
@@ -135,8 +140,8 @@ RXA_SEQUENCES.flamme = (() => {
     return etapes;
   }
   const lot = (dossier, n = 8) => Array.from({ length: n }, (_, i) => `assets/logos/rex/${dossier}/${i + 1}.webp`);
-  const fichiers = [...lot('anim-marchepas', NM), ...lot('anim-demitour8'), ...lot('anim-flammegauche8'), ...lot('anim-saut8'), ...lot('anim-appui2', 2)];
-  const seq = { n: 32, fichiers, repos: 'assets/logos/rex/anim-demitour8/1.webp' };
+  const fichiers = [...lot('anim-marche13', NM), ...lot('anim-demitour8'), ...lot('anim-flammegauche8'), ...lot('anim-saut8'), ...lot('anim-appui2', 2)];
+  const seq = { n: 39, fichiers, repos: 'assets/logos/rex/anim-demitour8/1.webp' };
   seq.construire = img => { seq.etapes = construire(img); seq.ordre = seq.etapes.map(e => e.f); seq.ms = seq.etapes.map(e => e.ms); };
   seq.construire(null);
   return seq;
@@ -208,8 +213,14 @@ async function rxaVivre(img, repos) {
   img._rxaVit = true;
   img.classList.remove('respire', 'rxa-vivant', 'srx-costume');
   const premier = RXA_SEQUENCES[RXA_MOUVEMENTS[0]];
-  img.src = (premier && premier.repos) || RXA_REPOS;
-  if (RXA_MOUVEMENTS[0] === 'flamme') { img.classList.add('rxa-flamme'); img.removeAttribute('loading'); img.style.height = ''; }
+  if (RXA_MOUVEMENTS[0] === 'flamme') {
+    // 22.09.2026 : plus d'image d'apparition. L'ancienne pose fixe du bandeau reste invisible (CSS
+    // plus bas) ; Rex n'apparaît qu'une fois sa première image animée chargée.
+    img.removeAttribute('loading'); img.style.height = '';
+    img.addEventListener('load', () => img.classList.add('rxa-flamme'), { once: true });
+    img.src = premier.repos;
+    if (img.complete && img.naturalWidth && img.src.endsWith(premier.repos)) img.classList.add('rxa-flamme');
+  } else img.src = (premier && premier.repos) || RXA_REPOS;
   let dernier = null;
   await rxaAttendre(400);
   while (document.body.contains(img)) {
@@ -320,6 +331,8 @@ function rxaPoser() {
          négative, pour que Rex reste exactement où il était ; le pivot du miroir suit ses pieds. */
       margin-left: calc(-180 / 234 * 170px); transform-origin: 53.7% 100%; position: relative; z-index: 2; pointer-events: none; }
     .dbx-hero-droite .rexb-compagnon { display: none !important; }
+    /* L'ancienne pose fixe ne s'affiche jamais : Rex n'apparaît qu'animé (22.09.2026). */
+    .dbx-hero img.dbx-hero-mascotte:not(.rxa-flamme) { visibility: hidden; }
     /* Le décor : derrière Rex, calé sur ses pieds, étendu vers la gauche pour son trajet de marche. */
     .rxa-scene { position: relative; display: inline-block; line-height: 0; }
     .rxa-scene .rxa-decor { position: absolute; right: -30px; bottom: 0; height: 170px; width: auto; aspect-ratio: 420 / 170; z-index: 1; pointer-events: none; overflow: visible; }

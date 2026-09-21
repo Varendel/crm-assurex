@@ -672,7 +672,7 @@ function ouvrirEcranChargementCrm() {
       <span class="ecc-point" aria-hidden="true"></span>
     </span>
     <div class="ecc-piste" aria-hidden="true">
-      <img src="assets/logos/rex/poses/marche.png" alt="" class="ecc-rex"/>
+      <!-- 22.09.2026 : plus d'image de Rex ici ; il n'apparaît qu'animé, dans le bandeau. -->
       <span class="ecc-barre"><span></span></span>
     </div>
     <div class="ecc-texte">Préparation de votre espace de travail…</div>

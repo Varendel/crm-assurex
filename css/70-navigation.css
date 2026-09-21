@@ -145,6 +145,7 @@
 .tcx-partiel { height: 4px; border-radius: 999px; background: var(--surface-alt); margin-top: 5px; overflow: hidden; }
 .tcx-partiel span { display: block; height: 100%; background: #16A34A; }
 .tcx-dates { display: flex; flex-direction: column; gap: 2px; font-size: var(--t-xs); color: var(--text-muted); }
+.tcx-dates .tcx-saisie { font-size: 10px; color: var(--text-dim); }
 .tcx-bord { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--t-xs); color: var(--text-dim); }
 .tcx-droite { display: flex; flex-direction: column; align-items: flex-end; gap: 5px; }
 .tcx-montant { font-size: var(--t-l); font-weight: 600; color: var(--text); font-variant-numeric: tabular-nums; white-space: nowrap; }

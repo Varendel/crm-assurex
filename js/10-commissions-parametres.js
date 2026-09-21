@@ -1,3 +1,26 @@
+// ═══ LA DATE D'UNE COMMISSION DANS « TOUTES LES COMMISSIONS » (21.09.2026) ═══════════════════════
+// « C'est écrit que j'ai encaissé Victor Grandval le 19.09, c'est faux. » La liste affichait la date
+// de CRÉATION de la ligne — pour une ligne importée d'un décompte, le jour de l'import — comme si
+// c'était celle de l'encaissement. Désormais : une commission encaissée montre sa vraie date de
+// réception (la sienne, ou celle de son bordereau), la date de saisie en petit ; une commission
+// encore attendue montre sa date de saisie, dite comme telle. Tri et filtres suivent la même date.
+function tcEncaissee(c) { return c.statut === 'reçue' || c.statut === 'versé_oz'; }
+function tcDateReception(c) {
+  if (c.date_reception) return String(c.date_reception).slice(0, 10);
+  const b = c.bordereau_id && typeof allBordereaux !== 'undefined' ? allBordereaux.find(x => x.id === c.bordereau_id) : null;
+  return b && b.date_reception ? String(b.date_reception).slice(0, 10) : '';
+}
+function tcDateRef(c) { return tcDateReception(c) || String(c.date_creation || '').slice(0, 10); }
+function tcDatesHtml(c) {
+  const saisie = c.date_creation ? fmtDate(c.date_creation) : '';
+  if (tcEncaissee(c)) {
+    const r = tcDateReception(c);
+    return r ? `<span title="Date à laquelle l'argent est arrivé">Reçue le ${fmtDate(r)}</span>${saisie ? `<small class="tcx-saisie">saisie le ${saisie}</small>` : ''}`
+             : `<span class="tcx-manque" title="Aucune date de réception enregistrée : à compléter">Date de réception inconnue</span>${saisie ? `<small class="tcx-saisie">saisie le ${saisie}</small>` : ''}`;
+  }
+  return saisie ? `<span title="Date à laquelle la commission a été enregistrée">Saisie le ${saisie}</span>` : '<span>—</span>';
+}
+
 // ═══ VERSEMENTS PARTIELS (commissions payées en plusieurs fois — ex. AGV TONI SA) ═══
 // Certaines conventions (paiement direct du client hors décompte assureur) versent une
 // commission de gestion en 3-4 fois au fil des échéances. commission_tranches garde un
@@ -342,8 +365,8 @@ function renderToutesCommissions() {
       if (entiteFilter === 'assurex' && !(clEnt && clEnt.source_cofidex)) return false;
       if (entiteFilter === 'aucun' && (clEnt && (clEnt.source_oz || clEnt.source_cofidex))) return false;
     }
-    if (dateDebutFilter && (!c.date_creation || c.date_creation < dateDebutFilter)) return false;
-    if (dateFinFilter && (!c.date_creation || c.date_creation > dateFinFilter)) return false;
+    if (dateDebutFilter && (!tcDateRef(c) || tcDateRef(c) < dateDebutFilter)) return false;
+    if (dateFinFilter && (!tcDateRef(c) || tcDateRef(c) > dateFinFilter)) return false;
     if (search) {
       const haystack = `${c.client_nom||''} ${c.compagnie||''} ${c.produit||''} ${c.numero_police||''} ${numeroBordereauDe(c)}`.toLowerCase();
       if (!haystack.includes(search)) return false;
@@ -380,8 +403,8 @@ function renderToutesCommissions() {
       if (entiteFilter === 'assurex' && !(clEnt && clEnt.source_cofidex)) return false;
       if (entiteFilter === 'aucun' && (clEnt && (clEnt.source_oz || clEnt.source_cofidex))) return false;
     }
-    if (dateDebutFilter && (!c.date_creation || c.date_creation < dateDebutFilter)) return false;
-    if (dateFinFilter && (!c.date_creation || c.date_creation > dateFinFilter)) return false;
+    if (dateDebutFilter && (!tcDateRef(c) || tcDateRef(c) < dateDebutFilter)) return false;
+    if (dateFinFilter && (!tcDateRef(c) || tcDateRef(c) > dateFinFilter)) return false;
     if (search) {
       const haystack = `${c.client_nom||''} ${c.compagnie||''} ${c.produit||''} ${c.numero_police||''} ${numeroBordereauDe(c)}`.toLowerCase();
       if (!haystack.includes(search)) return false;
@@ -390,7 +413,7 @@ function renderToutesCommissions() {
   }).sort((a,b) => {
     if (tri === 'montant_desc') return montantC(b) - montantC(a);
     if (tri === 'prevue') return (commissionDatePrevue(a) || '9999').localeCompare(commissionDatePrevue(b) || '9999');
-    return new Date(b.date_creation||0) - new Date(a.date_creation||0);
+    return String(tcDateRef(b) || '').localeCompare(String(tcDateRef(a) || ''));
   });
 
   _tcCommissionsFiltrees = filtered;
@@ -488,7 +511,7 @@ function renderToutesCommissions() {
         ${c.detail_calcul ? `<div class="tcx-detail">${esc(c.detail_calcul.split('[')[0].trim())}</div>` : `<div class="tcx-detail tcx-manque">Détail du calcul manquant — clique pour préciser</div>`}
         ${verse > 0 && c.statut === 'en_attente' ? `<div class="tcx-partiel"><span style="width:${Math.min(100, verse / (m || 1) * 100)}%"></span></div><div class="tcx-detail" style="color:var(--c-succes-texte)">Reçu CHF ${fmtCHF(verse)} sur ${fmtCHF(m)} (versements partiels)</div>` : ''}
       </div>
-      <div class="tcx-dates"><span>${c.date_creation ? fmtDate(c.date_creation) : '—'}</span>${typeof htmlCommissionPrevue === 'function' ? htmlCommissionPrevue(c) : ''}${numBord ? `<span class="tcx-bord">${esc(numBord)}</span>` : ''}</div>
+      <div class="tcx-dates">${tcDatesHtml(c)}${typeof htmlCommissionPrevue === 'function' ? htmlCommissionPrevue(c) : ''}${numBord ? `<span class="tcx-bord">${esc(numBord)}</span>` : ''}</div>
       <div class="tcx-droite">
         <b class="tcx-montant ${m < 0 ? 'negatif' : ''}">CHF ${fmtCHF(m)}</b>
         <span class="tcx-badges">${badge(statutCommissionLabel(c.statut), statutCommissionColor(c.statut))}${badgeNatureCommission(c.nature)}</span>

@@ -80,8 +80,11 @@ RXA_SEQUENCES.flamme = (() => {
   // intermédiaire 7, correction 4 et 5, détaillée 7 et 16), choisies par comparaison des
   // silhouettes des jambes pour combler les sauts. Les écarts étant désormais réguliers, l'avance
   // et la durée sont les mêmes pour chaque image.
-  const M = 0, NM = 13, DT = 13, FG = 21, SA = 29, AP = 37, D = 36;
-  const PAS_AVANCE = Array(NM).fill(1), PAS_TOTAL = NM, PAS_MS = 50, FOULEE = 21.8;   // foulée en % de la largeur de l'image
+  // 22.09.2026, correction validée : 10 images (les 6e, 8e et 11e de la version à 13 retirées :
+  // petit bond et allers-retours du pied). Rex avance à chaque image exactement du recul mesuré
+  // de son pied posé (px de l'image de 516), pour que ce pied ne glisse plus au sol.
+  const M = 0, NM = 10, DT = 10, FG = 18, SA = 26, AP = 34, D = 36;
+  const PAS_AVANCE = [3, 2, 6, 5, 9, 3, 15, 6, 10, 6], PAS_TOTAL = 65, PAS_MS = 65, FOULEE = 65 / 516 * 100;   // foulée en % de la largeur de l'image
   const SAUT_Y = [0, 1.6, -0.5, -27.7, -37, -17.3, 0.8, -0.3], SAUT_MS = [160, 170, 90, 100, 190, 100, 150, 200];
   // Dans les images de 516 px : bords du corps dans les deux poses adossées (dos à droite, dos à
   // gauche), et pivot du miroir (53,7 %, voir le CSS).
@@ -140,8 +143,8 @@ RXA_SEQUENCES.flamme = (() => {
     return etapes;
   }
   const lot = (dossier, n = 8) => Array.from({ length: n }, (_, i) => `assets/logos/rex/${dossier}/${i + 1}.webp`);
-  const fichiers = [...lot('anim-marche13', NM), ...lot('anim-demitour8'), ...lot('anim-flammegauche8'), ...lot('anim-saut8'), ...lot('anim-appui2', 2)];
-  const seq = { n: 39, fichiers, repos: 'assets/logos/rex/anim-demitour8/1.webp' };
+  const fichiers = [...lot('anim-marche10', NM), ...lot('anim-demitour8'), ...lot('anim-flammegauche8'), ...lot('anim-saut8'), ...lot('anim-appui2', 2)];
+  const seq = { n: 36, fichiers, repos: 'assets/logos/rex/anim-demitour8/1.webp' };
   seq.construire = img => { seq.etapes = construire(img); seq.ordre = seq.etapes.map(e => e.f); seq.ms = seq.etapes.map(e => e.ms); };
   seq.construire(null);
   return seq;

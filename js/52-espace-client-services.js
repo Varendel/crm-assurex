@@ -210,8 +210,9 @@ function ecOngletAccueil() {
     ${ecCarteTransfert()}
 
     ${prochains.length ? `<section class="dbx-carte" style="margin-top:18px"><header class="dbx-carte-tete"><h2>Mes rendez-vous</h2></header>
-      <div class="sfx-liste">${prochains.map(r => `<div class="sfx-ligne"><span class="sfx-corps"><b>${ecEsc(r.type || 'Rendez-vous')}</b><small>${ecEsc(r.lieu || r.mode || '')}</small></span><span class="ck-date">${fmtDate(r.date_heure.slice(0, 10))} ${r.date_heure.slice(11, 16)}</span></div>`).join('')}</div>
+      <div class="sfx-liste">${prochains.map(r => `<div class="sfx-ligne"><span class="sfx-corps"><b>${ecEsc(r.type || 'Rendez-vous')}</b><small>${ecEsc(r.lieu || r.mode || '')}</small></span><span class="ck-date">${fmtDate(typeof ecRdvJour === 'function' ? ecRdvJour(r.date_heure) : r.date_heure.slice(0, 10))} ${typeof ecRdvHeure === 'function' ? ecRdvHeure(r.date_heure) : r.date_heure.slice(11, 16)}</span></div>`).join('')}</div>
     </section>` : ''}
+    ${/* 22.09.2026 : heure et date du rendez-vous en heure de Zurich, plus en UTC (ecRdvHeure, js/48). */ ''}
 
     ${(E.vehicules || []).length ? `<section class="dbx-carte" style="margin-top:18px"><header class="dbx-carte-tete"><h2>Mes véhicules</h2></header>
       <div class="ec-vehicules">${E.vehicules.map(v => `<span class="ec-vehicule"><b>${ecEsc([v.marque, v.modele].filter(Boolean).join(' ') || v.type_vehicule || 'Véhicule')}</b>${v.numero_plaque ? `<em>${ecEsc(v.numero_plaque)}</em>` : ''}</span>`).join('')}</div>
@@ -512,7 +513,11 @@ async function ecEnvoyerMessage() {
   }
   document.getElementById('modal-ec-message')?.remove();
   showError('✓ Message transmis à votre conseiller.');
-  window._ec.messages = [{ ...ligne, created_at: new Date().toISOString() }, ...(window._ec.messages || [])];
+  // 22.09.2026 : la ligne ajoutée localement n'avait pas d'id — ouvrir la conversation
+  // (filOuvrirClient) ou y répondre échouait jusqu'au rechargement de la page. On reprend la
+  // ligne créée renvoyée par dbPost ; à défaut, l'ancienne construction locale.
+  const creee = Array.isArray(r) && r[0] && r[0].id ? r[0] : null;
+  window._ec.messages = [creee || { ...ligne, created_at: new Date().toISOString() }, ...(window._ec.messages || [])];
   ecRendre();
 }
 

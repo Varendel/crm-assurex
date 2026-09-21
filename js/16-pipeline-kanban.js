@@ -14,12 +14,22 @@ const OFFRE_STATUTS = {
   'reçue':       { label: 'offre reçue',          symbole: '✓', couleur: '#1F9D6B', suivant: 'retenue' },
   'retenue':     { label: 'offre retenue',        symbole: '★', couleur: '#113679', suivant: 'non_retenue' },
   'non_retenue': { label: 'non retenue',          symbole: '✕', couleur: '#B42318', suivant: 'envoyée' },
+  // 22.09.2026 : « déclinée » est posé par la fiche opportunité (js/25) ; faute d'entrée ici, une
+  // compagnie qui avait décliné s'affichait « en attente » sur le kanban.
+  'déclinée':    { label: 'la compagnie décline', symbole: '⊘', couleur: '#6B7280', suivant: 'envoyée' },
 };
 
 let _pipelineDemandes = null;     // demandes d'offre liées à une opportunité (chargées à la demande)
 let _pipelineRhMode = false;
 
 function _offreStatut(s) { return OFFRE_STATUTS[s] ? s : (s === 'recue' ? 'reçue' : 'envoyée'); }
+// 22.09.2026 : le statut affiché suit le même modèle que la fiche (js/25 opStatutOffre) —
+// le drapeau « retenue » prime, et une date de réception sans statut vaut « reçue ».
+function _offreStatutEntree(e) {
+  if (e.retenue) return 'retenue';
+  if (!OFFRE_STATUTS[e.statut] && e.statut !== 'recue' && (e.recue_le || e.recu_le)) return 'reçue';
+  return _offreStatut(e.statut);
+}
 
 async function activerKanbanPipeline(rhMode) {
   _pipelineRhMode = !!rhMode;
@@ -35,7 +45,7 @@ function _offresDeLOpportunite(oppId) {
   const lignes = [];
   (_pipelineDemandes || []).filter(d => d.opportunite_id === oppId).forEach(d => {
     (Array.isArray(d.compagnies_envoi) ? d.compagnies_envoi : []).forEach((e, index) => {
-      if (e && e.compagnie) lignes.push({ demandeId: d.id, index, compagnie: e.compagnie, statut: _offreStatut(e.statut) });
+      if (e && e.compagnie) lignes.push({ demandeId: d.id, index, compagnie: e.compagnie, statut: _offreStatutEntree(e) });
     });
   });
   return lignes;
@@ -73,13 +83,43 @@ async function changerStatutOffrePipeline(demandeId, index) {
   const d = (_pipelineDemandes || []).find(x => x.id === demandeId);
   if (!d || !Array.isArray(d.compagnies_envoi) || !d.compagnies_envoi[index]) return;
   const envoi = [...d.compagnies_envoi];
-  const actuel = _offreStatut(envoi[index].statut);
+  const actuel = _offreStatutEntree(envoi[index]);
   const nouveau = OFFRE_STATUTS[actuel].suivant;
-  envoi[index] = { ...envoi[index], statut: nouveau };
-  if (nouveau === 'reçue' && !envoi[index].recu_le) envoi[index].recu_le = new Date().toISOString();
+  const e = { ...envoi[index], statut: nouveau };
+  // 22.09.2026 : même modèle que la fiche opportunité (js/25) — date sous « recue_le » (l'ancien
+  // « recu_le » n'était lu nulle part ailleurs), drapeau « retenue » tenu à jour, et le retour à
+  // « envoyée » efface la réception, sinon la fiche continuait d'afficher l'offre comme reçue.
+  if (!e.recue_le && e.recu_le) e.recue_le = e.recu_le;
+  delete e.recu_le;
+  if (nouveau === 'reçue' && !e.recue_le) e.recue_le = new Date().toISOString();
+  e.retenue = nouveau === 'retenue';
+  if (nouveau === 'envoyée') e.recue_le = null;
+  envoi[index] = e;
+  // Une seule offre retenue par affaire, comme opRetenir (js/25) : les autres demandes de la même
+  // opportunité perdent leur drapeau (et « retenue » redevient « reçue »).
+  const autres = [];
+  if (nouveau === 'retenue') {
+    (_pipelineDemandes || []).filter(x => x.id !== demandeId && x.opportunite_id === d.opportunite_id).forEach(x => {
+      const liste = Array.isArray(x.compagnies_envoi) ? x.compagnies_envoi : [];
+      if (!liste.some(y => y && (y.retenue || y.statut === 'retenue'))) return;
+      autres.push({ x, liste: liste.map(y => y && (y.retenue || y.statut === 'retenue') ? { ...y, retenue: false, statut: 'reçue' } : y) });
+    });
+    envoi.forEach((y, i) => { if (i !== index && y && (y.retenue || y.statut === 'retenue')) envoi[i] = { ...y, retenue: false, statut: 'reçue' }; });
+  }
   const r = await dbPatch('demandes_offre', demandeId, { compagnies_envoi: envoi });
   if (r && r.error) { showError('Statut de l’offre non enregistré : ' + errMsg(r)); return; }
   d.compagnies_envoi = envoi;
+  for (const a of autres) {
+    const ra = await dbPatch('demandes_offre', a.x.id, { compagnies_envoi: a.liste });
+    if (!(ra && ra.error)) a.x.compagnies_envoi = a.liste;
+  }
+  if (nouveau === 'retenue' && d.opportunite_id) {
+    const o = (typeof allOpportunites !== 'undefined' ? allOpportunites : []).find(x => x.id === d.opportunite_id);
+    const nom = normaliserCompagnie(e.compagnie || '');
+    if (o && nom) { const ro = await dbPatch('opportunites', o.id, { compagnie: nom }); if (!(ro && ro.error)) o.compagnie = nom; }
+  }
+  // La fiche garde ses demandes en cache : on l'oublie pour qu'elle relise l'état à jour.
+  if (d.opportunite_id && window._opDemandes) delete window._opDemandes[d.opportunite_id];
   logAction('statut_offre', 'demandes_offre', demandeId, `${normaliserCompagnie(envoi[index].compagnie)} : ${OFFRE_STATUTS[nouveau].label}`);
   remplirOffresPipeline();
 }

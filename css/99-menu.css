@@ -21,9 +21,15 @@
    Rien ne doit se voir au premier regard. Si on remarque l'effet, c'est qu'il est trop fort.
    ═══════════════════════════════════════════════════════════════════════════════════════════════ */
 
+/* 22.09.2026 : le « position: sticky » répété ici l'emportait (html .sidebar est plus spécifique)
+   sur le tiroir mobile de css/00 (.sidebar { position: fixed } sous 768 px) : sur téléphone, le
+   menu restait dans le flux au lieu de glisser par-dessus la page. On ne le répète donc plus
+   qu'au-dessus de 768 px. */
+@media (min-width: 769px) {
+  html .sidebar { position: sticky; }  /* déjà posé par css/00 ; répété car les couches en dépendent */
+}
 html .sidebar {
-  position: sticky;            /* déjà posé par css/00 ; répété car les couches en dépendent */
-  isolation: isolate;          /* les pseudo-éléments restent sous le contenu, jamais au-dessus */
+  isolation: isolate;         /* les pseudo-éléments restent sous le contenu, jamais au-dessus */
   background:
     /* Le halo turquoise du bandeau, en haut à gauche, à la même intensité. */
     radial-gradient(120% 34% at 0% 0%, rgba(0, 207, 255, .22) 0%, transparent 60%),

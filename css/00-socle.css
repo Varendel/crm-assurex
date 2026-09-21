@@ -479,6 +479,10 @@
        pour le contenu, comme une vraie app. */
     .sidebar {
       position: fixed; top: 0; left: 0; height: 100vh; width: 260px; max-width: 82vw;
+      /* 22.09.2026 : 100vh sur Safari iOS = hauteur SANS la barre d'adresse — le bas du tiroir
+         (équipe, déconnexion) passait dessous. 100dvh suit la zone réellement visible ; la
+         ligne 100vh au-dessus reste pour les navigateurs qui ne connaissent pas dvh. */
+      height: 100dvh;
       z-index: 100; transform: translateX(-100%); transition: transform .2s ease;
       box-shadow: 8px 0 24px rgba(0,0,0,0.45);
     }

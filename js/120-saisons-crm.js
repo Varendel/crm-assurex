@@ -234,7 +234,11 @@ function scrPoser() {
   st.textContent = `
     .scr-deco, .sidebar > .scr-deco { position: absolute !important; inset: 0 !important; width: auto !important; height: auto !important;
       margin: 0 !important; padding: 0 !important; pointer-events: none; overflow: hidden; border-radius: inherit; z-index: 0 !important; }
-    .dbx-hero > :not(.scr-deco), .rex-bandeau > :not(.scr-deco), .fcx-hero > :not(.scr-deco), .cf-hero > :not(.scr-deco) { position: relative; z-index: 1; }
+    /* 22.09.2026 : les calques décoratifs propres aux bandeaux (.dbx-hero-deco, .rex-bandeau-deco,
+       en absolute inset:0) étaient repassés en relative par cette règle, plus spécifique : ils
+       sortaient du fond et poussaient le contenu. On les exclut, comme .scr-deco. */
+    .dbx-hero > :not(.scr-deco):not(.dbx-hero-deco):not(.rex-bandeau-deco), .rex-bandeau > :not(.scr-deco):not(.dbx-hero-deco):not(.rex-bandeau-deco),
+    .fcx-hero > :not(.scr-deco):not(.dbx-hero-deco):not(.rex-bandeau-deco), .cf-hero > :not(.scr-deco):not(.dbx-hero-deco):not(.rex-bandeau-deco) { position: relative; z-index: 1; }
 
     /* Noël : neige légère, liseré en haut du bandeau, petite congère au pied du menu */
     .scr-neige { position: absolute; inset: 0; }

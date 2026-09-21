@@ -468,7 +468,10 @@ function htmlFilOpportunite(o) {
   });
   (window._opDemandes[o.id] || []).forEach(d => {
     (Array.isArray(d.compagnies_envoi) ? d.compagnies_envoi : []).forEach(e => {
-      if (e.recue_le) items.push({ date: e.recue_le, icone: '📥', texte: `Offre reçue de ${e.compagnie}${e.prime ? ' — CHF ' + fmtCHF(e.prime) + '/an' : ''}` });
+      // 22.09.2026 : la synchro Outlook (js/04) et le kanban (js/16) écrivaient « recu_le » —
+      // on lit les deux noms pour que les offres déjà enregistrées ainsi restent visibles.
+      const recueLe = e.recue_le || e.recu_le;
+      if (recueLe) items.push({ date: recueLe, icone: '📥', texte: `Offre reçue de ${e.compagnie}${e.prime ? ' — CHF ' + fmtCHF(e.prime) + '/an' : ''}` });
       if (e.relance_le) items.push({ date: e.relance_le, icone: '🔔', texte: `Relance envoyée à ${e.compagnie}` });
     });
   });
@@ -556,6 +559,9 @@ async function opChargerDemandes(oppId) {
   if (zone) zone.innerHTML = htmlOffresOpportunite(oppId);
   const fil = document.getElementById('opx-fil');
   if (fil && o) fil.innerHTML = htmlFilOpportunite(o);
+  // 22.09.2026 : le bandeau « ce qu'il reste à faire » (js/90) est calculé avant ce chargement ;
+  // on le repeint maintenant que les offres sont connues, sinon il reste sur « vérification ».
+  if (typeof pafRepeindreBandeau === 'function') pafRepeindreBandeau(oppId);
 }
 
 function opToutesEntrees(oppId) {
@@ -567,7 +573,7 @@ function opToutesEntrees(oppId) {
 function opStatutOffre(e) {
   if (e.retenue) return { cls: 'retenue', txt: '★ Retenue' };
   if (e.statut === 'déclinée') return { cls: 'declinee', txt: 'Déclinée' };
-  if (e.recue_le || e.statut === 'reçue') return { cls: 'recue', txt: 'Reçue' };
+  if (e.recue_le || e.recu_le || e.statut === 'reçue') return { cls: 'recue', txt: 'Reçue' }; // 22.09.2026 : ancien nom recu_le toléré
   const j = opJoursDepuis(e.relance_le || e.envoye_le);
   if (opEntreeSansReponse(e)) return { cls: 'relancer', txt: `Sans réponse · ${opJoursDepuis(e.envoye_le)} j` };
   return { cls: 'attente', txt: e.envoye_le ? `Envoyée ${j === 0 ? "aujourd'hui" : 'il y a ' + j + ' j'}` : 'À envoyer' };
@@ -603,8 +609,8 @@ function htmlOffresOpportunite(oppId) {
         ${e.offre_path
           ? `<button type="button" onclick="ouvrirPieceJointe('${e.offre_path}')" title="${opEsc(e.offre_nom || 'Offre PDF')}">📄 Voir l'offre</button>`
           : `<label class="opx-joindre" title="Joindre le PDF de l'offre (10 Mo max.)">📎 Joindre l'offre<input type="file" accept="application/pdf" hidden onchange="opJoindreOffre('${oppId}','${d.id}',${idx},this)"/></label>`}
-        <button type="button" onclick="opSaisirOffre('${oppId}','${d.id}',${idx})">${e.prime || e.recue_le ? '✎' : '📥 Offre reçue'}</button>
-        ${(e.prime || e.recue_le) && e.statut !== 'déclinée' && typeof opSigneeVersContrat === 'function' ? `<button type="button" class="opx-offre-signee" onclick="opSigneeVersContrat('${oppId}','${d.id}',${idx})" title="Déposer la ou les polices, passer l’opportunité en Gagné et créer le contrat">✍️ Signée → contrat</button>` : ''}
+        <button type="button" onclick="opSaisirOffre('${oppId}','${d.id}',${idx})">${e.prime || e.recue_le || e.recu_le ? '✎' : '📥 Offre reçue'}</button>
+        ${(e.prime || e.recue_le || e.recu_le) && e.statut !== 'déclinée' && typeof opSigneeVersContrat === 'function' ? `<button type="button" class="opx-offre-signee" onclick="opSigneeVersContrat('${oppId}','${d.id}',${idx})" title="Déposer la ou les polices, passer l’opportunité en Gagné et créer le contrat">✍️ Signée → contrat</button>` : ''}
       </div>
     </div>`;
   }).join('')}</div>
@@ -671,6 +677,10 @@ async function opEnregistrerOffre(oppId, demandeId, idx) {
     entrees = d ? [...(d.compagnies_envoi || [])] : [];
     idx = null;
   }
+  // 22.09.2026 : une date sous l'ancien nom (recu_le, js/04 et js/16) est reprise sous le bon
+  // nom, pour qu'une offre déjà reçue ne soit pas re-datée ni re-signalée dans le fil.
+  if (!entree.recue_le && entree.recu_le) entree.recue_le = entree.recu_le;
+  delete entree.recu_le;
   const etaitRecue = !!entree.recue_le;
   Object.assign(entree, {
     prime: Number.isFinite(prime) && prime > 0 ? Math.round(prime * 100) / 100 : null,
@@ -723,7 +733,7 @@ async function opJoindreOffre(oppId, demandeId, idx, input) {
   const entrees = d ? [...(d.compagnies_envoi || [])] : [];
   const e = entrees[idx] ? { ...entrees[idx] } : null;
   if (e && e.offre_path && e.offre_nom === nom) {
-    if (!e.recue_le && e.statut !== 'déclinée') {
+    if (!e.recue_le && !e.recu_le && e.statut !== 'déclinée') { // 22.09.2026 : ancien nom recu_le toléré
       e.recue_le = new Date().toISOString();
       e.statut = e.retenue ? 'retenue' : 'reçue';
       entrees[idx] = e;
@@ -781,7 +791,7 @@ async function opApresEnvoiDemande(ctx) {
 // ═══ COMPARATEUR + RECOMMANDATION ═══════════════════════════════════════════════════════════
 function opComparer(oppId) {
   const o = allOpportunites.find(x => x.id === oppId);
-  const entrees = opToutesEntrees(oppId).filter(x => x.e.prime || x.e.recue_le);
+  const entrees = opToutesEntrees(oppId).filter(x => x.e.prime || x.e.recue_le || x.e.recu_le);
   if (!entrees.length) { showError('Aucune offre reçue à comparer — saisis d’abord les offres (« + Offre reçue »).'); return; }
   const min = Math.min(...entrees.filter(x => x.e.prime).map(x => Number(x.e.prime)));
   const d0 = (window._opDemandes[oppId] || [])[0];
@@ -863,7 +873,7 @@ async function opSauverReco(oppId, silencieux) {
 async function opImprimerRecommandation(oppId) {
   await opSauverReco(oppId, true);
   const o = allOpportunites.find(x => x.id === oppId);
-  const entrees = opToutesEntrees(oppId).filter(x => x.e.prime || x.e.recue_le).sort((a, b) => (Number(a.e.prime) || 9e9) - (Number(b.e.prime) || 9e9));
+  const entrees = opToutesEntrees(oppId).filter(x => x.e.prime || x.e.recue_le || x.e.recu_le).sort((a, b) => (Number(a.e.prime) || 9e9) - (Number(b.e.prime) || 9e9));
   const reco = document.getElementById('opx-reco')?.value || '';
   const nom = o ? opNomClient(o) : '';
   const html = `<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>Comparaison des offres</title><style>

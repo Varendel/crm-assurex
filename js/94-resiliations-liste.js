@@ -313,8 +313,10 @@ function rsxLettres() {
 
   const texte = L.map(r => {
     const c = r.client;
+    // 22.09.2026 : texte brut pour le presse-papiers — l'échappement HTML (rsxEsc) y laissait
+    // des « &amp; » et « &#39; » dans le nom (« Dupont & Fils », « D'Amico »).
     return [
-      rsxEsc(r.client_nom),
+      r.client_nom || '',
       c && c.adresse ? c.adresse : '',
       c && (c.npa || c.ville) ? `${c.npa || ''} ${c.ville || ''}`.trim() : '',
       '',
@@ -333,7 +335,7 @@ function rsxLettres() {
       'Veuillez agréer, Madame, Monsieur, mes salutations distinguées.',
       '',
       '',
-      rsxEsc(r.client_nom),
+      r.client_nom || '',
     ].filter((x, i, a) => !(x === '' && a[i - 1] === '')).join('\n');
   }).join('\n\n' + '─'.repeat(64) + '\n\n');
 

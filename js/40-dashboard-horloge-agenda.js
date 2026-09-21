@@ -96,9 +96,14 @@ function hlMettreAJour() {
   h.setAttribute('transform', `rotate(${hr * 30} 100 100)`);
   document.getElementById('hl-m').setAttribute('transform', `rotate(${m * 6} 100 100)`);
   document.getElementById('hl-s').setAttribute('transform', `rotate(${s * 6} 100 100)`);
-  const dt = document.getElementById('hl-date'); if (dt) dt.textContent = d.getDate();
-  const hh = document.getElementById('hl-heure'); if (hh) hh.textContent = d.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
-  const jj = document.getElementById('hl-jour'); if (jj) jj.textContent = d.toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long' });
+  // 22.09.2026 : ces trois textes étaient réécrits 8 fois par seconde même inchangés. Chaque
+  // écriture de textContent remplace le nœud texte et réveille les MutationObserver posés sur
+  // #main-content (trois modules) : du travail pour rien, en continu, tant que l'accueil est ouvert.
+  // On n'écrit plus que si la valeur a changé (une fois par minute, une fois par jour).
+  const ecrire = (id, v) => { const el = document.getElementById(id); v = String(v); if (el && el.textContent !== v) el.textContent = v; };
+  ecrire('hl-date', d.getDate());
+  ecrire('hl-heure', d.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' }));
+  ecrire('hl-jour', d.toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long' }));
 }
 function hlDemarrerHorloge() {
   hlMettreAJour();

@@ -245,6 +245,61 @@ function mcQuand(iso) {
 }
 function mcNonLus() { return (_mc.messages || []).filter(m => m.statut === 'nouveau').length + (_mc.transferts || []).filter(t => t.statut === 'nouveau').length; }
 
+// ── Ce qui attend une action : UNE seule définition (22.09.2026) ────────────────────────────────
+// Trois écrans comptaient « les demandes clients en attente » chacun à sa façon : la pastille du
+// menu (js/108 : statut « nouveau » seulement), la carte du tableau de bord (js/18 : tout ce qui
+// n'est pas traité) et les indicateurs de cette page. Le menu disait 3, le tableau de bord 7.
+// Désormais la règle est écrite ici, une fois : js/108 en tire ses requêtes, js/18 et
+// mcTableauDeBord lisent mcDemandesEnAttente(). Changer un critère = changer cette liste.
+//   statuts : valeurs qui comptent comme « en attente » ; null = tout sauf « traite ».
+const MC_EN_ATTENTE = [
+  { cle: 'messages', table: 'messages_clients', memoire: 'messages', statuts: null,
+    un: 'message', ico: 'message', onglet: 'messages', emoji: '💬', quoi: 'Message',
+    det: m => m.sujet || String(m.message || '').slice(0, 70) },
+  { cle: 'transferts', table: 'demandes_transfert', memoire: 'transferts', statuts: ['nouveau', 'mandat_genere', 'envoye'],
+    un: 'demande de transfert', ico: 'document', onglet: 'transferts', emoji: '🤝', quoi: 'Transfert de gestion',
+    det: t => `${(t.compagnies || []).length} compagnie(s)` },
+  { cle: 'sinistres', table: 'sinistres', memoire: 'sinistres', statuts: ['declare', 'transmis', 'en_cours'],
+    un: 'sinistre ouvert', ico: 'sinistre', onglet: 'sinistres', emoji: '🛟', quoi: 'Sinistre',
+    det: s => s.type_sinistre || '' },
+  { cle: 'documents', table: 'demandes_documents', memoire: 'documents', statuts: ['nouvelle', 'en_cours'],
+    un: 'demande de document', ico: 'document', onglet: 'documents', emoji: '📄', quoi: 'Document',
+    det: d => d.type_document || '' },
+  // Adresses et personnel : leurs cartes sont posées au-dessus des onglets (js/103, js/104),
+  // d'où l'onglet « messages » par défaut au clic.
+  { cle: 'adresses', table: 'demandes_adresse', memoire: 'adresses', statuts: ['nouvelle'],
+    un: 'changement d’adresse', ico: 'habitation', onglet: 'messages', emoji: '🏠', quoi: 'Changement d’adresse',
+    det: a => [a.npa, a.ville].filter(Boolean).join(' ') },
+  { cle: 'salaries', table: 'annonces_salaries', memoire: 'salaries', statuts: ['nouvelle'],
+    un: 'annonce de personnel', ico: 'personnel', onglet: 'messages', emoji: '👥', quoi: 'Annonce de personnel',
+    det: () => '' },
+];
+
+function mcEstEnAttente(source, ligne) {
+  if (!ligne) return false;
+  return source.statuts ? source.statuts.includes(ligne.statut) : ligne.statut !== 'traite';
+}
+
+// Le même critère traduit en filtre PostgREST, pour la pastille qui interroge la base sans
+// charger les listes (js/108).
+function mcFiltreEnAttente(source) {
+  return source.statuts ? `statut=in.(${source.statuts.join(',')})` : 'or=(statut.is.null,statut.neq.traite)';
+}
+
+// Les éléments en attente, tirés des listes chargées par mcCharger (et ses extensions js/103,
+// js/104), les plus anciens d'abord : c'est le client qui attend.
+function mcDemandesEnAttente() {
+  const out = [];
+  for (const s of MC_EN_ATTENTE) {
+    const liste = (typeof _mc !== 'undefined' && _mc[s.memoire]) || [];
+    for (const x of liste) {
+      if (!mcEstEnAttente(s, x)) continue;
+      out.push({ cle: s.cle, o: s.onglet, ico: s.emoji, quoi: s.quoi, det: s.det(x), c: x.client_id, d: x.created_at, ligne: x });
+    }
+  }
+  return out.sort((a, b) => String(a.d || '').localeCompare(String(b.d || '')));
+}
+
 function viewMessagesClients() {
   if (_mc.messages === null) { mcCharger().then(() => navigate('messages-clients', { silent: true })); return '<div class="loader">Chargement des messages…</div>'; }
   const nouveauxT = (_mc.transferts || []).filter(t => t.statut === 'nouveau').length;
@@ -276,25 +331,33 @@ function viewMessagesClients() {
 // Tableau de bord : ce qui attend une action, et la réactivité réelle (délai moyen de réponse)
 function mcTableauDeBord() {
   const msgs = _mc.messages || [], trs = _mc.transferts || [];
-  const nouveaux = msgs.filter(m => m.statut === 'nouveau').length;
+  // 22.09.2026 : les compteurs viennent de la définition commune (MC_EN_ATTENTE) — mêmes chiffres
+  // que la pastille du menu et la carte du tableau de bord. « Messages à traiter » ne comptait
+  // que les « nouveau » : un message lu mais sans réponse disparaissait du compteur.
+  const attente = mcDemandesEnAttente();
+  const nb = cle => attente.filter(x => x.cle === cle).length;
+  const nouveaux = nb('messages');
   const limite = Date.now() - 48 * 3600 * 1000;
-  const enRetard = msgs.filter(m => m.statut !== 'traite' && new Date(m.created_at || 0).getTime() < limite).length;
-  const trAFaire = trs.filter(t => ['nouveau', 'mandat_genere', 'envoye'].includes(t.statut)).length;
+  const enRetard = attente.filter(x => x.cle === 'messages' && new Date(x.d || 0).getTime() < limite).length;
+  const trAFaire = nb('transferts');
   const lignes = trs.flatMap(t => Array.isArray(t.compagnies) ? t.compagnies : []);
   const attendues = lignes.filter(x => (x.statut || 'attendu') !== 'recu').length;
   const recues = lignes.filter(x => x.statut === 'recu').length;
-  const repondus = msgs.filter(m => m.repondu_le && m.created_at);
+  // 22.09.2026 : seuls les messages VENUS du client mesurent notre délai de réponse. Ceux que le
+  // conseiller écrit lui-même (canal « conseiller ») sont enregistrés déjà traités, avec
+  // repondu_le = created_at : ils tiraient la moyenne vers zéro.
+  const repondus = msgs.filter(m => m.canal === 'espace_client' && m.repondu_le && m.created_at);
   const delai = repondus.length
     ? Math.round(repondus.reduce((s, m) => s + (new Date(m.repondu_le) - new Date(m.created_at)), 0) / repondus.length / 3600000)
     : null;
   const k = (i, label, valeur, sous) => typeof dbxKpi === 'function'
     ? dbxKpi({ i, label, valeur, sous })
     : `<div class="dbx-kpi"><b>${valeur}</b><span>${label}</span><small>${sous}</small></div>`;
-  const sinAFaire = (_mc.sinistres || []).filter(s => ['declare', 'transmis', 'en_cours'].includes(s.statut)).length;
+  const sinAFaire = nb('sinistres');
   const sinNeufs = (_mc.sinistres || []).filter(s => s.statut === 'declare').length;
-  const docAFaire = (_mc.documents || []).filter(d => ['nouvelle', 'en_cours'].includes(d.statut)).length;
+  const docAFaire = nb('documents');
   return `<div class="dbx-kpis mcx-bord">
-    ${k(0, 'Messages à traiter', nouveaux, enRetard ? `${enRetard} en attente depuis plus de 48 h` : 'tout est suivi')}
+    ${k(0, 'Messages à traiter', nouveaux, `${enRetard ? `${enRetard} en attente depuis plus de 48 h` : 'tout est suivi'} · ${attente.length} demande(s) client en attente au total`)}
     ${k(1, 'Sinistres ouverts', sinAFaire, sinNeufs ? `${sinNeufs} à annoncer à l’assureur` : 'tous annoncés')}
     ${k(2, 'Documents à envoyer', docAFaire, `${(_mc.documents || []).length} demande(s) au total`)}
     ${k(3, 'Transferts · polices', trAFaire, `${attendues} police(s) attendue(s) · ${recues} reçue(s)`)}
@@ -422,6 +485,9 @@ async function mcEnvoyerAuClient() {
   document.getElementById('modal-mc-ecrire')?.remove();
   showError(`✓ Message envoyé à ${to} et classé sur la fiche.`);
   if (_mc.messages) await mcCharger(true);
+  // 22.09.2026 : la liste était rechargée en mémoire mais pas redessinée — le message envoyé
+  // n'apparaissait qu'au prochain passage sur la page.
+  if (typeof currentView !== 'undefined' && currentView === 'messages-clients') navigate('messages-clients', { silent: true });
 }
 
 function mcLigneMessage(m) {
@@ -599,6 +665,10 @@ function mcLigneTransfert(t) {
     <div class="mcx-actions">
       <button type="button" class="btn-save" onclick="mcGenererMandat('${t.id}')" ${t.signature_data ? '' : 'disabled'}>📄 Générer le mandat signé</button>
       <button type="button" class="btn-secondary" onclick="mcEnvoyerAuxCompagnies('${t.id}')">✉️ Envoyer aux compagnies…</button>
+      ${/* 22.09.2026 : le module « Demandes de polices » (js/63) n'était relié à rien —
+           dpGenererDepuisTransfert n'était jamais appelé. Il prépare une demande par compagnie,
+           sans rien envoyer : l'envoi reste sur la page Demandes de polices, après relecture. */ ''}
+      ${typeof dpGenererDepuisTransfert === 'function' && ['nouveau', 'mandat_genere', 'envoye'].includes(t.statut) ? `<button type="button" class="btn-secondary" onclick="dpGenererDepuisTransfert('${t.id}')">📨 Générer les demandes de polices</button>` : ''}
       ${t.statut !== 'termine' ? `<button type="button" class="btn-secondary" onclick="mcStatutTransfert('${t.id}', 'termine')">✓ Dossier terminé</button>` : ''}
     </div>
   </article>`;
@@ -713,5 +783,29 @@ function mcEnvoyerAuxCompagnies(id) {
     if (typeof mdxMajCompteur === 'function') mdxMajCompteur();
     if (n) showError(`${n} compagnie(s) demandée(s) par le client pré-cochée(s).`);
   }, 120);
-  if (t.statut === 'nouveau' || t.statut === 'mandat_genere') mcStatutTransfert(id, 'envoye');
+  // 22.09.2026 : le statut passait à « Envoyé aux compagnies » dès l'OUVERTURE du choix des
+  // compagnies — un simple clic suivi d'« Annuler » suffisait à faire croire au client (js/98) et
+  // au cabinet que le mandat était parti. On mémorise le dossier ; le statut n'est posé qu'une
+  // fois l'envoi Outlook réussi (voir mcBrancherEnvoiMandat ci-dessous).
+  window._mcTransfertEnvoi = { transfertId: id, clientId: t.client_id };
 }
+
+// Le module d'envoi du mandat (js/05) n'annonce pas sa réussite. On l'enveloppe : l'envoi est
+// réussi quand, l'appel terminé, l'aperçu a été refermé par la fonction elle-même (elle ne le
+// ferme qu'après un sendMail accepté ; annulation, erreur ou refus Outlook le laissent ouvert).
+(function mcBrancherEnvoiMandat() {
+  if (typeof envoyerApercuEmailMandatViaOutlook !== 'function') return;
+  const origine = envoyerApercuEmailMandatViaOutlook;
+  window.envoyerApercuEmailMandatViaOutlook = async function () {
+    const suivi = window._mcTransfertEnvoi;
+    const ctx = window._apercuEmailMandat;
+    const r = await origine.apply(this, arguments);
+    const envoye = !document.getElementById('modal-apercu-email-mandat');
+    if (envoye && suivi && ctx && ctx.clientId === suivi.clientId) {
+      window._mcTransfertEnvoi = null;
+      const t = (_mc.transferts || []).find(x => x.id === suivi.transfertId);
+      if (t && (t.statut === 'nouveau' || t.statut === 'mandat_genere')) await mcStatutTransfert(t.id, 'envoye');
+    }
+    return r;
+  };
+})();

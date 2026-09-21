@@ -98,12 +98,33 @@ async function ecEntrerEspaceClient(acces, email) {
 // ── L'espace lui-même ───────────────────────────────────────────────────────────────────────────
 function ecNomClient(c) { return c ? (typeof estEntreprise === 'function' && estEntreprise(c) ? c.nom : `${c.prenom || ''} ${c.nom || ''}`.trim()) : ''; }
 
+// 22.09.2026 : le client voyait une autre date limite que le CRM. Deux défauts : setMonth
+// débordait (31.12 − 3 mois donnait 1er octobre au lieu du 30 septembre) et `Number(preavis) || 3`
+// transformait un préavis de 0 mois en 3 mois. On reprend le calcul du CRM (rnDateLimite, js/11),
+// qui gère la fin de mois, le préavis 0 et l'échéance LAMal reconduite d'année en année.
 function ecDateLimiteResiliation(ct) {
   if (!ct.date_echeance) return null;
-  const mois = Number(ct.preavis_mois) || (/lamal/i.test(ct.produit || '') ? 1 : 3);
-  const d = new Date(ct.date_echeance + 'T12:00:00');
-  d.setMonth(d.getMonth() - mois);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  if (typeof rnDateLimite === 'function') return rnDateLimite(ct);
+  const p = ct.preavis_mois;
+  const mois = (p !== null && p !== undefined && p !== '' && !isNaN(Number(p))) ? Number(p) : (/lamal/i.test(ct.produit || '') ? 1 : 3);
+  // Repli (js/11 absent) : même règle de fin de mois que rnDateLimite, sans débordement.
+  const [y, m, j] = String(ct.date_echeance).slice(0, 10).split('-').map(Number);
+  const cible = new Date(Date.UTC(y, m - 1 - mois, 1));
+  const dernier = new Date(Date.UTC(cible.getUTCFullYear(), cible.getUTCMonth() + 1, 0)).getUTCDate();
+  cible.setUTCDate(Math.min(j, dernier));
+  return cible.toISOString().slice(0, 10);
+}
+
+// 22.09.2026 : les rendez-vous s'affichaient avec l'heure UTC (date_heure.slice(11, 16)) — un
+// rendez-vous à 10 h apparaissait à 08:00 en été. On convertit en heure de Zurich, et la date
+// aussi (un rendez-vous tôt le matin pouvait tomber la veille). Partagé par js/52 et js/112.
+function ecRdvJour(iso) {
+  if (!iso) return '';
+  try { return new Date(iso).toLocaleDateString('sv-SE', { timeZone: 'Europe/Zurich' }); } catch (e) { return String(iso).slice(0, 10); }
+}
+function ecRdvHeure(iso) {
+  if (!iso) return '';
+  try { return new Date(iso).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' }); } catch (e) { return String(iso).slice(11, 16); }
 }
 
 function ecVueEspaceClient() {
@@ -134,7 +155,7 @@ function ecVueEspaceClient() {
     <div class="dbx-kpis" style="margin-top:16px">
       ${typeof dbxKpi === 'function' ? dbxKpi({ i: 0, label: 'Contrats en vigueur', valeur: actifs.length, sous: `${(E.vehicules || []).length} véhicule(s) assuré(s)` }) : ''}
       ${typeof dbxKpi === 'function' ? dbxKpi({ i: 1, label: 'Primes annuelles', valeur: prime, prefixe: 'CHF ', sous: 'total de vos contrats en vigueur' }) : ''}
-      ${typeof dbxKpi === 'function' ? dbxKpi({ i: 2, label: 'Prochain rendez-vous', valeur: prochains.length, sous: prochains[0] ? fmtDate(prochains[0].date_heure.slice(0, 10)) : 'aucun rendez-vous planifié' }) : ''}
+      ${typeof dbxKpi === 'function' ? dbxKpi({ i: 2, label: 'Prochain rendez-vous', valeur: prochains.length, sous: prochains[0] ? fmtDate(ecRdvJour(prochains[0].date_heure)) : 'aucun rendez-vous planifié' }) : ''}
     </div>
 
     <section class="dbx-carte" style="margin-top:18px"><header class="dbx-carte-tete"><h2>Mes contrats</h2><span class="dbx-carte-sous">${actifs.length} en vigueur</span></header>
@@ -164,7 +185,7 @@ function ecVueEspaceClient() {
     </section>` : ''}
 
     ${prochains.length ? `<section class="dbx-carte" style="margin-top:18px"><header class="dbx-carte-tete"><h2>Mes rendez-vous</h2></header>
-      <div class="sfx-liste">${prochains.map(r => `<div class="sfx-ligne"><span class="sfx-corps"><b>${ecEsc(r.type || 'Rendez-vous')}</b><small>${ecEsc(r.lieu || r.mode || '')}</small></span><span class="ck-date">${fmtDate(r.date_heure.slice(0, 10))} ${r.date_heure.slice(11, 16)}</span></div>`).join('')}</div>
+      <div class="sfx-liste">${prochains.map(r => `<div class="sfx-ligne"><span class="sfx-corps"><b>${ecEsc(r.type || 'Rendez-vous')}</b><small>${ecEsc(r.lieu || r.mode || '')}</small></span><span class="ck-date">${fmtDate(ecRdvJour(r.date_heure))} ${ecRdvHeure(r.date_heure)}</span></div>`).join('')}</div>
     </section>` : ''}
 
     ${ecCarteTransfert()}

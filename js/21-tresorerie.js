@@ -160,10 +160,14 @@ function trCalculer() {
   res.plusBas = res.parMois.reduce((min, x) => (!min || x.fin < min.fin ? x : min), null);
   // Réalisé : moyenne des commissions reçues sur les 3 derniers mois complets
   const trois = [1, 2, 3].map(i => trIso(new Date(auj.getFullYear(), auj.getMonth() - i, 1)).slice(0, 7));
-  const recu = allCommissionsAttente.filter(ca => ca.statut === 'reçue' || ca.statut === 'extourné').reduce((s, ca) => {
+  // 22.09.2026 — extournes : encaissé puis repris = 0 net, jamais −X. Une extournée encaissée compte
+  // +|X| à sa date de réception, la reprise négative (reçue) porte seule la déduction ; avant, les
+  // deux retranchaient (−2X). Une date conventionnelle (estimée) ne situe pas l'argent dans un mois :
+  // exclue de cette moyenne mensuelle, comme des courbes.
+  const recu = allCommissionsAttente.filter(ca => commissionEncaisseeOuExtournee(ca) && !ca.date_reception_estimee).reduce((s, ca) => {
     const d = typeof commissionDateReception === 'function' ? commissionDateReception(ca) : ca.date_reception;
     if (!d || !trois.includes(d.slice(0, 7))) return s;
-    return s + (ca.statut === 'extourné' ? -1 : 1) * Number(ca.montant_final != null ? ca.montant_final : (ca.montant_estime || 0));
+    return s + commissionMontantEncaisse(ca);
   }, 0);
   res.moyenneRecue3 = recu / 3;
   return res;

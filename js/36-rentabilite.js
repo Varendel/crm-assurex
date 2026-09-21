@@ -31,12 +31,27 @@ function rtParContrat() {
   allCommissionsAttente.forEach(ca => {
     if (!ca.contrat_id || ['annulée', 'annulé'].includes(ca.statut)) return;
     const r = res[ca.contrat_id] = res[ca.contrat_id] || { acq: 0, gest: 0, enc: 0, att: 0 };
+    // 22.09.2026 — extournes : encaissé puis repris = 0 net, jamais −X. Une extournée encaissée compte
+    // +|X| dans l'encaissé (commissionExtourneeEncaissee, js/29), jamais encaissée → 0 ; la reprise
+    // négative (autre ligne du même contrat) porte seule la déduction. Jamais « attendue » — avant,
+    // une extourne tombait dans l'attendu.
+    if (ca.statut === 'extourné') {
+      const x = typeof commissionExtourneeEncaissee === 'function' ? commissionExtourneeEncaissee(ca) : 0;
+      r.enc += x;
+      if (ca.nature !== 'gestion') r.acq += x;
+      return;
+    }
     const m = Number(ca.montant_final ?? ca.montant_estime ?? 0);
     const recuTr = typeof commissionDejaRecu === 'function' ? commissionDejaRecu(ca) : 0;
     if (ca.nature === 'gestion') r.gest = Math.max(r.gest, Number(ca.montant_estime || m)); // une année de gestion
     else r.acq += m;
     if (['reçue', 'versé_oz'].includes(ca.statut)) r.enc += m;
-    else { r.enc += recuTr; r.att += Math.max(0, Number(ca.montant_estime || 0) - recuTr); }
+    else {
+      r.enc += recuTr;
+      // Attendu : même définition partout (commissionAEncaisser, js/29 — 22.09.2026)
+      const attendue = typeof commissionAEncaisser === 'function' ? commissionAEncaisser(ca) : ca.statut === 'en_attente';
+      if (attendue) r.att += Math.max(0, Number(ca.montant_estime || 0) - recuTr);
+    }
   });
   return res;
 }

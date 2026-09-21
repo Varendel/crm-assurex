@@ -23,20 +23,13 @@
 // RETOUR EN ARRIÈRE : retirer les deux lignes de index.html.
 
 // Ce qui compte comme « en attente ». Chaque source dit sa table, son filtre et où aller.
-const NTF_SOURCES = [
-  { cle: 'messages', table: 'messages_clients', filtre: 'statut=eq.nouveau',
-    un: 'message', vue: 'messages-clients', ico: 'message' },
-  { cle: 'transferts', table: 'demandes_transfert', filtre: 'statut=eq.nouveau',
-    un: 'demande de transfert', vue: 'messages-clients', ico: 'document' },
-  { cle: 'sinistres', table: 'sinistres', filtre: 'statut=eq.declare',
-    un: 'sinistre déclaré', vue: 'messages-clients', ico: 'sinistre' },
-  { cle: 'documents', table: 'demandes_documents', filtre: 'statut=eq.nouvelle',
-    un: 'demande de document', vue: 'messages-clients', ico: 'document' },
-  { cle: 'adresses', table: 'demandes_adresse', filtre: 'statut=eq.nouvelle',
-    un: 'changement d’adresse', vue: 'messages-clients', ico: 'habitation' },
-  { cle: 'salaries', table: 'annonces_salaries', filtre: 'statut=eq.nouvelle',
-    un: 'annonce de personnel', vue: 'messages-clients', ico: 'personnel' },
-];
+// 22.09.2026 : les critères ne sont plus écrits ici mais tirés de MC_EN_ATTENTE (js/51), la
+// définition commune au menu, au tableau de bord et à la page Messages clients. La pastille ne
+// comptait que les « nouveau » (3) quand le tableau de bord affichait tout le non-traité (7).
+const NTF_SOURCES = (typeof MC_EN_ATTENTE !== 'undefined' && typeof mcFiltreEnAttente === 'function')
+  ? MC_EN_ATTENTE.map(s => ({ cle: s.cle, table: s.table, filtre: mcFiltreEnAttente(s),
+      un: s.un, vue: 'messages-clients', ico: s.ico }))
+  : [];
 
 let NTF_ETAT = { comptes: {}, total: 0, plusAncien: null, charge: false };
 
@@ -66,8 +59,18 @@ function ntfPluriel(libelle, n) {
 // On demande l'identifiant et la date, rien d'autre : le compte et l'ancienneté suffisent, et
 // rapatrier le contenu des messages pour les compter serait payer cher une information qu'on
 // n'affiche pas.
+// 22.09.2026 : le relevé tournait aussi dans l'espace client (REX CLOUD) : toutes les 90 s, six
+// requêtes sur des tables du cabinet (où la RLS ne lui rend au mieux que ses propres lignes), et
+// le titre de l'onglet du client prenait un compteur « (2) » de ses PROPRES demandes, comme s'il
+// avait des messages à traiter. Côté client, on ne relève rien.
+function ntfEstEspaceClient() {
+  return (typeof currentUser !== 'undefined' && currentUser && currentUser.role === 'client')
+    || document.body.classList.contains('mode-espace-client');
+}
+
 async function ntfCharger() {
   if (typeof dbGet !== 'function') return NTF_ETAT;
+  if (ntfEstEspaceClient()) return NTF_ETAT;
   const resultats = await Promise.all(NTF_SOURCES.map(s =>
     dbGet(s.table, `select=id,created_at&${s.filtre}&order=created_at.asc&limit=200`).catch(() => null)));
 
@@ -208,7 +211,7 @@ function ntfVoyantHtml() {
 
   // Premier chargement puis relevé régulier. On ne relève pas quand l'onglet est caché : personne
   // ne lit, et une requête toutes les 90 secondes pendant une nuit ne sert qu'à faire du bruit.
-  const relever = () => { if (!document.hidden) ntfCharger().catch(() => {}); };
+  const relever = () => { if (!document.hidden && !ntfEstEspaceClient()) ntfCharger().catch(() => {}); };
   setTimeout(relever, 2500);
   setInterval(relever, 90000);
   document.addEventListener('visibilitychange', () => { if (!document.hidden) relever(); });

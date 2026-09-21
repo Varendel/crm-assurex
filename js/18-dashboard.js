@@ -55,9 +55,13 @@ function dbxDonnees() {
   const moisCourant = mois[11], moisPrec = mois[10];
 
   // Commissions reçues (post-fusion) et extournes, par mois de réception
-  const recues = allCommissionsAttente.filter(ca => ca.statut === 'reçue' || ca.statut === 'extourné').map(ca => {
+  // 22.09.2026 — extournes : encaissé puis repris = 0 net, jamais −X. Une extournée qui avait été
+  // encaissée compte +|X| à sa date de réception (commissionMontantEncaisse, js/29) ; la reprise
+  // négative, une fois reçue, porte seule la déduction. Avant : l'extourne était retranchée ici EN
+  // PLUS de la reprise (−2X au total), et saisie en négatif elle redevenait +X.
+  const recues = allCommissionsAttente.filter(ca => commissionEncaisseeOuExtournee(ca)).map(ca => {
     const d = commissionDateReception(ca);
-    return { ca, d, signe: ca.statut === 'extourné' ? -1 : 1 };
+    return { ca, d, signe: 1 };
   }).filter(x => !x.d || x.d >= DATE_BASCULE_ASSUREX);
   // Une date conventionnelle n'entre PAS dans la courbe mensuelle (20.09.2026). 104 commissions
   // ont été marquées reçues sans qu'aucun relevé ne permette de les dater : elles portaient toutes
@@ -67,11 +71,11 @@ function dbxDonnees() {
   const commMois = Object.fromEntries(mois.map(m => [m, 0]));
   let recuSansDate = 0, nbSansDate = 0;
   recues.forEach(x => {
-    const montant = x.signe * dbxMontant(x.ca);
+    const montant = x.signe * commissionMontantEncaisse(x.ca);
     if (x.ca.date_reception_estimee) { recuSansDate += montant; nbSansDate++; return; }
     if (x.d && commMois[x.d.slice(0, 7)] != null) commMois[x.d.slice(0, 7)] += montant;
   });
-  let totalRecu = recues.reduce((s, x) => s + x.signe * dbxMontant(x.ca), 0);
+  let totalRecu = recues.reduce((s, x) => s + x.signe * commissionMontantEncaisse(x.ca), 0);
   // Versements partiels déjà encaissés sur des commissions encore en attente (paiement échelonné)
   (typeof allCommissionTranches !== 'undefined' ? allCommissionTranches : []).forEach(t => {
     const ca = allCommissionsAttente.find(c => c.id === t.commission_id);
@@ -81,11 +85,10 @@ function dbxDonnees() {
     if (commMois[t.date_reception.slice(0, 7)] != null) commMois[t.date_reception.slice(0, 7)] += m;
   });
 
-  const commAttente = allCommissionsAttente.filter(ca => {
-    if (ca.statut !== 'en_attente') return false;
-    const ct = allContrats.find(c => c.id === ca.contrat_id);
-    return ct && ct.statut !== 'annulé' && ct.date_debut && ct.date_debut >= DATE_BASCULE_ASSUREX;
-  });
+  // 22.09.2026 : même définition de « à encaisser » que « Toutes les commissions » et le Cockpit
+  // (commissionAEncaisser, js/29). Avant, la carte ne gardait que les contrats débutés après la
+  // bascule : elle affichait un autre montant que la liste qu'elle ouvre.
+  const commAttente = allCommissionsAttente.filter(ca => typeof commissionAEncaisser === 'function' ? commissionAEncaisser(ca) : ca.statut === 'en_attente');
   const totalAttente = commAttente.reduce((s, ca) => s + (typeof commissionResteAttendu === 'function' ? commissionResteAttendu(ca) : Number(ca.montant_estime || 0)), 0);
 
   // Hors polices externes (« assuré ailleurs », saisies depuis Équipement) : pas notre portefeuille
@@ -337,12 +340,10 @@ function dbxDemandesListe() {
     mcCharger().then(() => { const el = document.getElementById('dbx-demandes'); if (el) el.innerHTML = dbxDemandesListe(); }).catch(() => {});
     return '<div class="dbx-chargement"><span></span><span></span><span></span></div>';
   }
-  const items = [
-    ...(_mc.messages || []).filter(m => m.statut !== 'traite').map(m => ({ o: 'messages', ico: '💬', quoi: 'Message', det: m.sujet || String(m.message || '').slice(0, 70), c: m.client_id, d: m.created_at })),
-    ...(_mc.sinistres || []).filter(s => ['declare', 'transmis', 'en_cours'].includes(s.statut)).map(s => ({ o: 'sinistres', ico: '🛟', quoi: 'Sinistre', det: s.type_sinistre || '', c: s.client_id, d: s.created_at })),
-    ...(_mc.documents || []).filter(x => ['nouvelle', 'en_cours'].includes(x.statut)).map(x => ({ o: 'documents', ico: '📄', quoi: 'Document', det: x.type_document || '', c: x.client_id, d: x.created_at })),
-    ...(_mc.transferts || []).filter(t => ['nouveau', 'mandat_genere', 'envoye'].includes(t.statut)).map(t => ({ o: 'transferts', ico: '🤝', quoi: 'Transfert de gestion', det: `${(t.compagnies || []).length} compagnie(s)`, c: t.client_id, d: t.created_at })),
-  ].sort((a, b) => String(a.d || '').localeCompare(String(b.d || '')));
+  // 22.09.2026 : la liste vient de la définition commune (mcDemandesEnAttente, js/51) — la même
+  // que la pastille du menu (js/108) et les indicateurs de la page Messages clients. Avant, chaque
+  // écran avait ses propres filtres et les trois chiffres ne concordaient pas.
+  const items = typeof mcDemandesEnAttente === 'function' ? mcDemandesEnAttente() : [];
   if (!items.length) return '<div class="dbx-vide-petit">Aucune demande en attente. Vos clients sont servis.</div>';
   const depuis = iso => {
     const h = Math.max(0, Math.round((Date.now() - new Date(iso || Date.now()).getTime()) / 3600000));
@@ -498,7 +499,9 @@ async function dbxChargerNouveautes() {
   allRendezVous.filter(r => r.cree_par === 'client' && r.created_at && r.created_at >= depuis).forEach(r => items.push({ date: r.created_at, icone: '📅', ton: 'bleu',
     texte: `RDV réservé en ligne par <strong>${dbxEsc(dbxNomClient(r.client_id) || r.prospect_nom || 'un prospect')}</strong> — ${fmtDate(r.date_heure)}`, action: r.client_id ? `showClient('${r.client_id}')` : "navigate('rendez-vous')" }));
   (demandes || []).forEach(d => (Array.isArray(d.compagnies_envoi) ? d.compagnies_envoi : []).forEach(e => {
-    if (e && e.recu_le && e.recu_le >= depuis) items.push({ date: e.recu_le, icone: '📨', ton: 'violet',
+    // 22.09.2026 : recue_le est le nom unifié ; recu_le (ancien, js/04 et js/16) reste lu.
+    const recueLe = e && (e.recue_le || e.recu_le);
+    if (recueLe && recueLe >= depuis) items.push({ date: recueLe, icone: '📨', ton: 'violet',
       texte: `Offre reçue de <strong>${dbxEsc(normaliserCompagnie(e.compagnie || ''))}</strong>${d.client_id ? ' pour ' + dbxEsc(dbxNomClient(d.client_id)) : ''}`, action: d.opportunite_id ? `editerOpportunite('${d.opportunite_id}')` : "navigate('suivi')" });
   }));
   // Commissions reçues : une ligne par jour de réception, toutes compagnies confondues
@@ -528,7 +531,14 @@ async function dbxChargerNouveautes() {
 function dbxVuePilotage(D) {
   const clientsActifs = allClients.filter(c => c.statut === 'actif').length;
   const nouveauxMois = allClients.filter(c => (c.created_at || '').slice(0, 7) === D.moisCourant).length;
-  const gestion = allCommissionsAttente.filter(ca => ca.statut === 'reçue' && ca.nature === 'gestion').reduce((s, ca) => s + dbxMontant(ca), 0);
+  // 22.09.2026 : mêmes règles que le total encaissé qu'elle cite (D.totalRecu) — reçues après la
+  // bascule seulement, extournée encaissée à +|X| (la reprise la compense : 0 net, jamais −X). Avant,
+  // elle comptait aussi le reçu d'avant la fusion.
+  const gestion = allCommissionsAttente.filter(ca => {
+    if (!commissionEncaisseeOuExtournee(ca) || ca.nature !== 'gestion') return false;
+    const d = commissionDateReception(ca);
+    return !d || d >= DATE_BASCULE_ASSUREX;
+  }).reduce((s, ca) => s + commissionMontantEncaisse(ca), 0);
   let tauxEq = null;
   if (typeof eqAnalyse === 'function') {
     const eq = allClients.filter(c => (c.statut || 'actif') !== 'inactif').map(eqAnalyse).filter(a => a.contrats.length);

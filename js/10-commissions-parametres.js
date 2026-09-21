@@ -10,11 +10,21 @@ function tcDateReception(c) {
   const b = c.bordereau_id && typeof allBordereaux !== 'undefined' ? allBordereaux.find(x => x.id === c.bordereau_id) : null;
   return b && b.date_reception ? String(b.date_reception).slice(0, 10) : '';
 }
+// « À refacturer à OZ » (22.09.2026) : une seule règle — ozARefacturer (js/34) — pour la carte,
+// l'onglet, la page Commissions et le Cockpit. Repli si js/34 n'est pas chargé.
+function tcARefacturer(c) {
+  if (typeof ozARefacturer === 'function') return ozARefacturer(c);
+  return c.statut === 'versé_oz' && typeof ozPartAssurex === 'function' && ozPartAssurex(c) && !c.refacture_le;
+}
 function tcDateRef(c) { return tcDateReception(c) || String(c.date_creation || '').slice(0, 10); }
 function tcDatesHtml(c) {
   const saisie = c.date_creation ? fmtDate(c.date_creation) : '';
   if (tcEncaissee(c)) {
     const r = tcDateReception(c);
+    // 22.09.2026 : une date conventionnelle (date_reception_estimee) ou une date encore à venir n'est
+    // pas un fait — on ne l'écrit plus « Reçue le », mais comme l'estimation qu'elle est.
+    const auj = (() => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })();
+    if (r && (c.date_reception_estimee || r > auj)) return `<span title="Date conventionnelle : aucun relevé ne date encore cet encaissement">≈ reçue vers le ${fmtDate(r)} (date estimée)</span>${saisie ? `<small class="tcx-saisie">saisie le ${saisie}</small>` : ''}`;
     return r ? `<span title="Date à laquelle l'argent est arrivé">Reçue le ${fmtDate(r)}</span>${saisie ? `<small class="tcx-saisie">saisie le ${saisie}</small>` : ''}`
              : `<span class="tcx-manque" title="Aucune date de réception enregistrée : à compléter">Date de réception inconnue</span>${saisie ? `<small class="tcx-saisie">saisie le ${saisie}</small>` : ''}`;
   }
@@ -129,10 +139,16 @@ function showModalEditCommission(commId) {
         </select></div>
         <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="ec-statut" onchange="document.getElementById('ec-refacturee-field').style.display = this.value === 'versé_oz' ? 'block' : 'none'">
           <option value="en_attente" ${c.statut==='en_attente'?'selected':''}>En attente</option>
+          <option value="en_attente_naissance" ${c.statut==='en_attente_naissance'?'selected':''}>🍼 En attente de la naissance</option>
           <option value="reçue" ${c.statut==='reçue'?'selected':''}>Reçue (Assurex)</option>
           <option value="versé_oz" ${c.statut==='versé_oz'?'selected':''}>Versée sur OZ (convention pas encore fusionnée — à refacturer)</option>
           <option value="extourné" ${c.statut==='extourné'?'selected':''}>↩ Extournée (contrat policé puis annulé après versement)</option>
+          <option value="annulée" ${c.statut==='annulée'?'selected':''}>❌ Annulée (ne sera jamais versée)</option>
           ${c.statut === 'annulé' ? `<option value="annulé" selected>❌ Annulé (ancien statut — passe en Extournée si le contrat a été policé, sinon remets En attente)</option>` : ''}
+          ${/* 22.09.2026 : sans option pour son statut, le select retombait sur « En attente » et un simple
+               « Enregistrer » (pour corriger un nom) changeait le statut. Tout statut inconnu de la liste
+               (ex. versé_cofidex) est donc repris tel quel. */ ''}
+          ${c.statut && !['en_attente', 'en_attente_naissance', 'reçue', 'versé_oz', 'extourné', 'annulée', 'annulé'].includes(c.statut) ? `<option value="${c.statut}" selected>${statutCommissionLabel(c.statut)}</option>` : ''}
         </select></div>
         <div class="form-field" id="ec-refacturee-field" style="display:${c.statut === 'versé_oz' ? 'block' : 'none'}"><label class="form-label">Refacturée à Assurex ?</label><select class="form-select" id="ec-refacturee">
           <option value="non" ${!c.refacture_le?'selected':''}>Non — encore à transférer en interne</option>
@@ -211,7 +227,16 @@ async function saveEditCommission(commId) {
   // ── Passage vers "Extourné" : générer automatiquement la commission NÉGATIVE ──
   // correspondante, en attente de rapprochement (débit) sur un futur bordereau de
   // la même compagnie — exactement comme une commission normale, mais en négatif.
-  if (body.statut === 'extourné' && !etaitDejaExtourne) {
+  // 22.09.2026 — extournes : encaissé puis repris = 0 net, jamais −X. La commission « extourné » qui
+  // avait été encaissée continue de compter +|X| (commissionExtourneeEncaissee, js/29) ; c'est CETTE
+  // reprise négative, une fois reçue, qui porte seule la déduction. Elle n'a donc de sens que si de
+  // l'argent était réellement arrivé (reçue, versée à OZ, ou versements partiels) : extourner une
+  // commission jamais encaissée ne doit rien retrancher (elle compte déjà 0).
+  const originalEncaissee = original && (['reçue', 'versé_oz', 'versé_cofidex'].includes(original.statut) || totalVersementsCommission(commId) !== 0);
+  if (body.statut === 'extourné' && !etaitDejaExtourne && !originalEncaissee) {
+    showError('Commission extournée. Elle n’avait jamais été encaissée : aucune reprise négative n’est créée.');
+  }
+  if (body.statut === 'extourné' && !etaitDejaExtourne && originalEncaissee) {
     const montantOriginal = Math.abs(body.montant_final != null ? body.montant_final : (body.montant_estime || 0));
     if (montantOriginal > 0) {
       const rExtourne = await dbPost('commissions_attente', {
@@ -287,8 +312,8 @@ function viewCommissionsAttente(prefiltreStatut) {
         <option value="assurex">${COFIDEX_MINI_LOGO} Clients Assurex / EX Groupe</option>
         <option value="aucun">— Non marqués</option>
       </select>
-      <label class="tcx-date"><span>Du</span><input type="date" class="form-input" id="tc-date-debut" title="Date de création — du" onchange="renderToutesCommissions()"/></label>
-      <label class="tcx-date"><span>au</span><input type="date" class="form-input" id="tc-date-fin" title="Date de création — au" onchange="renderToutesCommissions()"/></label>
+      <label class="tcx-date"><span>Du</span><input type="date" class="form-input" id="tc-date-debut" title="Date de réception (à défaut, date de saisie) — du" onchange="renderToutesCommissions()"/></label>
+      <label class="tcx-date"><span>au</span><input type="date" class="form-input" id="tc-date-fin" title="Date de réception (à défaut, date de saisie) — au" onchange="renderToutesCommissions()"/></label>
       <select class="form-select" id="tc-tri" onchange="renderToutesCommissions()">
         <option value="date">Plus récent d'abord</option>
         <option value="montant_desc" selected>Montant décroissant</option>
@@ -314,12 +339,14 @@ function exporterCommissionsCsv() {
     const b = allBordereaux.find(bd => bd.id === c.bordereau_id);
     return b ? (b.numero || '') : '';
   }
-  const entetes = ['Client', 'Produit', 'Compagnie', 'Statut', 'Nature', 'Montant (CHF)', 'N° bordereau', 'Date création', 'Entité'];
+  // 22.09.2026 : la date de réception (la sienne ou celle du bordereau) rejoint l'export — la liste
+  // la montre et la filtre, l'Excel ne donnait que la date de saisie.
+  const entetes = ['Client', 'Produit', 'Compagnie', 'Statut', 'Nature', 'Montant (CHF)', 'N° bordereau', 'Date réception', 'Date réception estimée', 'Date création', 'Entité'];
   const lignes = _tcCommissionsFiltrees.map(c => {
     const cl = c.client_id ? allClients.find(x => x.id === c.client_id) : null;
     const entite = cl && cl.source_oz ? 'OZ Assure' : cl && cl.source_cofidex ? 'Assurex/EX' : '—';
     const montant = c.montant_final != null ? c.montant_final : (c.montant_estime || 0);
-    return [c.client_nom || '', c.produit || '', c.compagnie || '', c.statut || '', c.nature || 'acquisition', Number(montant), numeroBordereauDe2(c), c.date_creation || '', entite];
+    return [c.client_nom || '', c.produit || '', c.compagnie || '', c.statut || '', c.nature || 'acquisition', Number(montant), numeroBordereauDe2(c), tcDateReception(c), c.date_reception_estimee ? 'oui' : '', c.date_creation || '', entite];
   });
   exporterCsv('toutes_les_commissions_' + new Date().toISOString().slice(0,10), entetes, lignes);
 }
@@ -374,7 +401,10 @@ function renderToutesCommissions() {
     return true;
   };
   const baseTous = allCommissionsAttente.filter(passeAutresFiltres);
-  const baseStats = baseTous.filter(c => c.statut !== 'versé_oz');
+  // 22.09.2026 : une commission annulée ne sera jamais versée — hors des totaux et de « Toutes »,
+  // visible seulement dans son propre onglet.
+  const estAnnulee = c => c.statut === 'annulée' || c.statut === 'annulé';
+  const baseStats = baseTous.filter(c => c.statut !== 'versé_oz' && !estAnnulee(c));
   const tranchesAssurex = id => (typeof allCommissionTranches !== 'undefined' ? allCommissionTranches : [])
     .filter(t => t.commission_id === id && !t.annule && t.encaisse_par !== 'oz').reduce((s, t) => s + Number(t.montant || 0), 0);
 
@@ -392,9 +422,13 @@ function renderToutesCommissions() {
       if (ct && (ct.commissionne === false || ct.statut === 'annulé')) return false;
     }
     if (compagnieFilter && normaliserCompagnie(c.compagnie) !== compagnieFilter) return false;
+    // « OZ à refacturer » : même règle que la carte, la page OZ et le Cockpit (ozARefacturer, js/34 —
+    // 22.09.2026). Avant, l'onglet prenait TOUT le versé OZ non refacturé, santé et acquisitions
+    // sans apporteur comprises, qui restent pourtant chez OZ.
     if (statutFilter === 'versé_oz_a_refacturer') {
-      if (!(c.statut === 'versé_oz' && !c.refacture_le)) return false;
+      if (!tcARefacturer(c)) return false;
     } else if (statutFilter && c.statut !== statutFilter) return false;
+    if (!statutFilter && estAnnulee(c)) return false; // « Toutes » : sans les annulées (22.09.2026)
     if (natureFilter && (c.nature || 'acquisition') !== natureFilter) return false;
     if (typeClientFilter && typeClientDe(c) !== typeClientFilter) return false;
     if (entiteFilter) {
@@ -419,24 +453,32 @@ function renderToutesCommissions() {
   _tcCommissionsFiltrees = filtered;
 
   // En attente : reste après versements partiels (paiements échelonnés)
-  const totalAttente = baseStats.filter(c => c.statut === 'en_attente').reduce((s,c) => s + (typeof commissionResteAttendu === 'function' ? commissionResteAttendu(c) : montantC(c)), 0);
-  const recuDe = c => c.statut === 'reçue' ? montantC(c) : (c.statut === 'en_attente' ? tranchesAssurex(c.id) : 0);
+  // 22.09.2026 : « à encaisser » = commissionAEncaisser (js/29), la même définition que la carte du
+  // tableau de bord et le Cockpit — naissances comprises, gestion encaissée par OZ exclue.
+  const aEncaisser = c => typeof commissionAEncaisser === 'function' ? commissionAEncaisser(c) : c.statut === 'en_attente';
+  const totalAttente = baseStats.filter(aEncaisser).reduce((s,c) => s + (typeof commissionResteAttendu === 'function' ? commissionResteAttendu(c) : montantC(c)), 0);
+  // 22.09.2026 — extournes : encaissé puis repris = 0 net, jamais −X. Une extournée qui avait été
+  // encaissée compte +|X| (commissionExtourneeEncaissee, js/29), jamais encaissée → 0 ; la reprise
+  // négative, reçue au débit d'un bordereau, est dans recuDe et porte seule la déduction. Avant,
+  // l'extourne était retranchée EN PLUS de la reprise : −X au lieu de 0.
+  const montantExt = c => typeof commissionExtourneeEncaissee === 'function' ? commissionExtourneeEncaissee(c) : 0;
+  const montantProduit = c => c.statut === 'extourné' ? montantExt(c) : montantC(c);
+  const recuDe = c => c.statut === 'reçue' ? montantC(c) : c.statut === 'extourné' ? montantExt(c) : (aEncaisser(c) ? tranchesAssurex(c.id) : 0);
   const totalRecuBrut = baseStats.reduce((s,c) => s + recuDe(c), 0);
   const nbRecues = baseStats.filter(c => recuDe(c) !== 0).length;
-  // Les extournes peuvent être saisies en positif ou en négatif selon la source : on compte toujours
-  // leur valeur absolue, pour qu'elles retranchent bien du net encaissé (19.09.2026).
-  const totalExtourne = baseStats.filter(c => c.statut === 'extourné').reduce((s,c) => s + Math.abs(montantC(c)), 0);
-  const totalRecuNet = totalRecuBrut - totalExtourne;
-  const totalAcquisition = baseStats.filter(c => (c.nature||'acquisition') === 'acquisition' && c.statut !== 'extourné').reduce((s,c) => s + montantC(c), 0);
-  const totalGestion = baseStats.filter(c => c.nature === 'gestion' && c.statut !== 'extourné').reduce((s,c) => s + montantC(c), 0);
+  const totalExtourne = baseStats.filter(c => c.statut === 'extourné').reduce((s, c) => s + montantExt(c), 0);
+  const totalRecuNet = totalRecuBrut;
+  const totalAcquisition = baseStats.filter(c => (c.nature||'acquisition') === 'acquisition').reduce((s,c) => s + montantProduit(c), 0);
+  const totalGestion = baseStats.filter(c => c.nature === 'gestion').reduce((s,c) => s + montantProduit(c), 0);
 
   // Répartition "qui rapporte quoi" par entité — même principe que dans "Tous les contrats" :
   // calculée sur les lignes filtrées par tous les autres critères (compagnie/statut/nature/...)
   // mais SANS le filtre entité lui-même, pour pouvoir comparer OZ / Assurex / non-marqués côte
-  // à côte même quand "Toutes entités" est sélectionné. Extournées exclues (comme totalGestion).
+  // à côte même quand "Toutes entités" est sélectionné. Extournées à leur montant encaissé (+|X| ou 0,
+  // règle du 22.09.2026 — la reprise négative les compense).
   function totauxEntiteComm(testFn) {
-    const lignes = filtered.filter(c => c.statut !== 'extourné' && testFn(c.client_id ? allClients.find(x => x.id === c.client_id) : null));
-    return { count: lignes.length, montant: lignes.reduce((s,c) => s + montantC(c), 0) };
+    const lignes = filtered.filter(c => (statutFilter === 'annulée' || !estAnnulee(c)) && testFn(c.client_id ? allClients.find(x => x.id === c.client_id) : null));
+    return { count: lignes.length, montant: lignes.reduce((s,c) => s + montantProduit(c), 0) };
   }
   const totOzC = totauxEntiteComm(cl => cl && cl.source_oz);
   const totAssurexC = totauxEntiteComm(cl => cl && cl.source_cofidex);
@@ -447,13 +489,15 @@ function renderToutesCommissions() {
   const ozRefacturable = baseTous.filter(c => c.statut === 'versé_oz' && typeof ozPartAssurex === 'function' && ozPartAssurex(c));
   const totalOzRefacturable = ozRefacturable.reduce((s, c) => s + montantC(c), 0);
   const dejaRefacture = ozRefacturable.filter(c => c.refacture_le).reduce((s, c) => s + montantC(c), 0);
+  // Reste à refacturer : la règle partagée (tcARefacturer → ozARefacturer), comme l'onglet qu'ouvre la carte
+  const totalARefacturer = baseTous.filter(tcARefacturer).reduce((s, c) => s + montantC(c), 0);
 
   const kpi = (o) => typeof dbxKpi === 'function' ? dbxKpi(o) : statCard(o.label, (o.prefixe || '') + fmtCHF(Math.round(o.valeur)), '#00CFFF', o.sous);
   const zoneStats = document.getElementById('tc-stats');
   if (zoneStats) zoneStats.innerHTML = [
-    kpi({ i: 0, label: 'En attente', valeur: totalAttente, prefixe: 'CHF ', sous: `${baseStats.filter(c => c.statut === 'en_attente').length} commission(s) · reste attendu`, onclick: "tcChoisirStatut('en_attente')" }),
-    kpi({ i: 1, label: 'Encaissé par Assurex', valeur: totalRecuNet, prefixe: 'CHF ', sous: `${nbRecues} commission(s) · versements partiels inclus${totalExtourne ? ` · après ${fmtCHF(Math.round(totalExtourne))} d’extournes` : ''}`, onclick: "tcChoisirStatut('reçue')" }),
-    kpi({ i: 2, label: 'Versé à OZ, revient à Assurex', valeur: totalOzRefacturable, prefixe: 'CHF ', sous: dejaRefacture ? `dont ${fmtCHF(Math.round(dejaRefacture))} déjà refacturés` : 'encaissé par OZ pour le compte d’Assurex', onclick: "tcChoisirStatut('versé_oz_a_refacturer')" }),
+    kpi({ i: 0, label: 'En attente', valeur: totalAttente, prefixe: 'CHF ', sous: `${baseStats.filter(aEncaisser).length} commission(s) · reste attendu`, onclick: "tcChoisirStatut('en_attente')" }),
+    kpi({ i: 1, label: 'Encaissé par Assurex', valeur: totalRecuNet, prefixe: 'CHF ', sous: `${nbRecues} commission(s) · versements partiels inclus${totalExtourne ? ` · dont ${fmtCHF(Math.round(totalExtourne))} extournés, compensés par leur reprise` : ''}`, onclick: "tcChoisirStatut('reçue')" }),
+    kpi({ i: 2, label: 'Versé à OZ, revient à Assurex', valeur: totalOzRefacturable, prefixe: 'CHF ', sous: `reste à refacturer CHF ${fmtCHF(Math.round(totalARefacturer))}${dejaRefacture ? ` · ${fmtCHF(Math.round(dejaRefacture))} déjà refacturés` : ''}`, onclick: "tcChoisirStatut('versé_oz_a_refacturer')" }),
     // « Produit total » (21.09.2026) : cette carte ne totalisait PAS toutes les commissions, seulement
     // la part qui revient à Assurex. Avec le mot « total », on la lisait comme le grand total — et
     // 13 294 francs face à plus de 100 000 encaissés faisait croire à une erreur. Elle dit
@@ -479,7 +523,8 @@ function renderToutesCommissions() {
     ['reçue', 'Reçues', nb(c => c.statut === 'reçue')],
     ['extourné', 'Extournées', nb(c => c.statut === 'extourné')],
     ['versé_oz', 'Versé OZ', nb(c => c.statut === 'versé_oz')],
-    ['versé_oz_a_refacturer', 'OZ à refacturer', nb(c => c.statut === 'versé_oz' && !c.refacture_le)],
+    ['versé_oz_a_refacturer', 'OZ à refacturer', nb(tcARefacturer)],
+    ['annulée', 'Annulées', nb(estAnnulee)],
     ['', 'Toutes', baseStats.length],
   ].filter(([v, , n]) => n > 0 || v === '' || v === statutFilter);
   const zoneOnglets = document.getElementById('tc-onglets');
@@ -1475,7 +1520,9 @@ function viewOzCommissionsAssurex() {
   }
   const lignes = allCommissionsAttente.filter(c => c.statut === 'versé_oz');
   const total = lignes.reduce((s,c) => s + Number(c.montant_final != null ? c.montant_final : (c.montant_estime||0)), 0);
-  const aRefacturer = lignes.filter(c => !c.refacture_le);
+  // 22.09.2026 : même règle que le Cockpit et « Toutes les commissions » (tcARefacturer) — la santé
+  // et les acquisitions sans apporteur restent chez OZ, elles ne sont pas « à refacturer ».
+  const aRefacturer = lignes.filter(tcARefacturer);
   const totalARefacturer = aRefacturer.reduce((s,c) => s + Number(c.montant_final != null ? c.montant_final : (c.montant_estime||0)), 0);
 
   return `
@@ -1493,7 +1540,7 @@ function viewOzCommissionsAssurex() {
         <div><div style="font-size:13px;font-weight: 600;color:var(--text)">${c.client_nom||'—'}</div><div style="font-size:11px;color:var(--text-muted)">${c.produit||''}</div></div>
         <div style="font-size:12px;color:var(--text-muted)">${c.compagnie||''}</div>
         <div style="font-weight: 600;color:#1a56db">CHF ${fmtCHF(Number(c.montant_final != null ? c.montant_final : (c.montant_estime||0)))}</div>
-        <div>${c.refacture_le ? `<span style="color:var(--c-succes-texte);font-size:11.5px;font-weight: 500">✓ Faite le ${fmtDate(c.refacture_le)}</span>` : `<span style="color:var(--c-alerte-texte);font-size:11.5px;font-weight: 500">⏳ À refacturer</span>`}</div>
+        <div>${c.refacture_le ? `<span style="color:var(--c-succes-texte);font-size:11.5px;font-weight: 500">✓ Faite le ${fmtDate(c.refacture_le)}</span>` : tcARefacturer(c) ? `<span style="color:var(--c-alerte-texte);font-size:11.5px;font-weight: 500">⏳ À refacturer</span>` : `<span style="color:var(--text-muted);font-size:11.5px">Reste chez OZ</span>`}</div>
         <div><button onclick="showModalEditCommission('${c.id}')" style="background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:7px;padding:4px 10px;font-size:11px;cursor:pointer">✏️</button></div>
       </div>`).join('') || '<div class="table-empty">Aucune commission versée à OZ Assure enregistrée.</div>'}
     </div>`;

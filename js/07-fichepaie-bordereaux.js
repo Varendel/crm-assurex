@@ -193,7 +193,10 @@ function renderBordereauxList() {
 async function toggleBordereauVerse(bordereauId) {
   const b = allBordereaux.find(x => x.id === bordereauId);
   if (!b) return;
-  const commissionsLiees = allCommissionsAttente.filter(c => c.bordereau_id === bordereauId && c.statut !== 'annulé' && c.statut !== 'annulée');
+  // 22.09.2026 : une commission extournée liée au bordereau n'est pas touchée non plus — « Marquer
+  // comme versé » la repassait « reçue » (+X) alors que l'extourne compte pour 0 et que la reprise
+  // négative porte déjà la déduction ; le retour en arrière la remettait « en attente ».
+  const commissionsLiees = allCommissionsAttente.filter(c => c.bordereau_id === bordereauId && !['annulé', 'annulée', 'extourné'].includes(c.statut));
   const surOZ = b.encaisse_par === 'oz';
 
   if (b.statut !== 'reçu') {
@@ -384,7 +387,10 @@ function showModalValidationCommission(bordereauId) {
             <label class="form-label">Commission en attente *</label>
             <select class="form-select" id="val-commission" onchange="prefillMontantEstime()">
               <option value="">— Sélectionner —</option>
-              ${enAttente.map(c => { const deja = typeof commissionDejaRecu === 'function' ? commissionDejaRecu(c) : 0; const reste = Math.max(0, Number(c.montant_estime || 0) - deja); return `<option value="${c.id}" data-montant="${reste.toFixed(2)}" data-total="${Number(c.montant_estime || 0)}" data-deja="${deja}" data-client="${c.client_nom}">${c.nature === 'gestion' ? '🔄' : '🆕'} ${c.client_nom} — ${c.produit} (CHF ${fmtCHF((c.montant_estime||0))}${deja > 0 ? ` · déjà reçu ${fmtCHF(deja)} · reste ${fmtCHF(reste)}` : ''})</option>`; }).join('')}
+              ${enAttente.map(c => { const deja = typeof commissionDejaRecu === 'function' ? commissionDejaRecu(c) : 0;
+                // 22.09.2026 : une reprise négative (extourne) garde son signe — Math.max(0, …) la
+                // ramenait à 0 et le montant pré-rempli était nul, impossible à rapprocher du débit.
+                const est = Number(c.montant_estime || 0); const reste = est < 0 ? est - deja : Math.max(0, est - deja); return `<option value="${c.id}" data-montant="${reste.toFixed(2)}" data-total="${Number(c.montant_estime || 0)}" data-deja="${deja}" data-client="${c.client_nom}">${c.nature === 'gestion' ? '🔄' : '🆕'} ${c.client_nom} — ${c.produit} (CHF ${fmtCHF((c.montant_estime||0))}${deja > 0 ? ` · déjà reçu ${fmtCHF(deja)} · reste ${fmtCHF(reste)}` : ''})</option>`; }).join('')}
             </select>
             ${enAttente.length === 0 ? `<div style="font-size:11px;color:var(--c-alerte-texte);margin-top:6px">Aucune commission en attente pour ${b.compagnie}.</div>` : ''}
           </div>
@@ -511,12 +517,26 @@ async function saveValidationCommission(bordereauId) {
     return;
   }
 
+  // « Paiement complet » après des versements partiels (22.09.2026) : le montant saisi n'est que le
+  // SOLDE. Avant, il écrasait montant_final (la commission ne valait plus que le dernier versement)
+  // et montant_estime (l'estimation d'origine était perdue). Ce solde devient donc un dernier
+  // versement, et montant_final = tout ce qu'Assurex a reçu (versements + ce paiement). Les tranches
+  // encaissées par OZ restent à OZ (règle commissionSoldeParEntite, js/06). Estimation intacte.
+  const commAvant = allCommissionsAttente.find(c => c.id === commId);
+  const tranchesAvant = commAvant && typeof commissionTranches === 'function' ? commissionTranches(commAvant) : [];
+  let patchComplet = { montant_estime: montantEstime, montant_final: montantFinal };
+  if (tranchesAvant.length) {
+    const rT = await dbPost('commission_tranches', { commission_id: commId, montant: montantFinal, date_reception: dateReceptionFinale, bordereau_id: bordereauId, note: `Solde — bordereau ${bordereauConcerne?.numero || ''} ${bordereauConcerne?.mois || ''}`.trim() });
+    if (rT && rT.error) { showError('Paiement non enregistré : ' + errMsg(rT)); if (btn) { btn.textContent = '✓ Valider'; btn.disabled = false; } return; }
+    allCommissionTranches = await dbGet('commission_tranches', 'annule=eq.false&select=*');
+    const recuAssurex = commissionTranches(commAvant).filter(t => t.encaisse_par !== 'oz').reduce((s, t) => s + Number(t.montant || 0), 0);
+    patchComplet = { montant_final: Math.round(recuAssurex * 100) / 100 };
+  }
   const res = await dbPatch('commissions_attente', commId, {
     statut: 'reçue',
     bordereau_id: bordereauId,
     numero_police: numeroPolice,
-    montant_estime: montantEstime,
-    montant_final: montantFinal,
+    ...patchComplet,
     sens, deduction_pct: deduction, mouvement,
     date_reception: dateReceptionFinale,
   });
@@ -2183,7 +2203,15 @@ async function envoyerApercuEmailDemandeOffreViaOutlook() {
       ctx.cies.forEach(cie => {
         const i = compagniesEnvoi.findIndex(e => e.compagnie_id === cie.id);
         const entree = { compagnie_id: cie.id, compagnie: cie.compagnie, email: cie.email || null, envoye_le: maintenant, statut: 'envoyée' };
-        if (i >= 0) compagniesEnvoi[i] = entree; else compagniesEnvoi.push(entree);
+        // 22.09.2026 : un renvoi à une compagnie déjà sollicitée remplaçait son entrée entière —
+        // prime, franchise, date de réception, offre retenue, PDF joint et relances étaient perdus.
+        // On ne met à jour que l'envoi ; le statut n'est remis à « envoyée » que si aucune offre
+        // n'était encore arrivée (une offre reçue ou retenue le reste).
+        if (i >= 0) {
+          const ancienne = compagniesEnvoi[i] || {};
+          const dejaRecue = !!(ancienne.recue_le || ancienne.recu_le || ancienne.retenue || ['reçue', 'retenue', 'non_retenue'].includes(ancienne.statut));
+          compagniesEnvoi[i] = { ...ancienne, compagnie: cie.compagnie, email: cie.email || ancienne.email || null, envoye_le: maintenant, statut: dejaRecue ? ancienne.statut : 'envoyée' };
+        } else compagniesEnvoi.push(entree);
       });
     }
     await dbPatch('demandes_offre', ctx.demandeOffreId, { compagnies_envoi: compagniesEnvoi });
@@ -2243,8 +2271,18 @@ function construireBodyDemandeOffre() {
 // Enregistre (création ou mise à jour) sans naviguer — retourne l'id du dossier. Utilisé par le
 // bouton "Enregistrer" ET par la sauvegarde silencieuse au moment de générer l'email.
 async function enregistrerDemandeOffreSansNaviguer(demandeOffreId) {
+  // 22.09.2026 : une demande déjà créée par une sauvegarde silencieuse (génération de l'email)
+  // porte son id dans le champ caché — sans le relire, « Enregistrer » en créait une seconde.
+  if (!demandeOffreId) demandeOffreId = document.getElementById('do-demande-offre-id')?.value || null;
   const body = construireBodyDemandeOffre();
   const enModification = !!demandeOffreId;
+  // 22.09.2026 : le formulaire détaillé ne connaît qu'une partie de « donnees » ; l'écraser
+  // effaçait la recommandation (js/25), les branches et précisions (js/26). On fusionne.
+  if (enModification) {
+    const ex = await dbGet('demandes_offre', `id=eq.${demandeOffreId}&select=donnees`);
+    const anciennes = Array.isArray(ex) && ex[0] && ex[0].donnees && typeof ex[0].donnees === 'object' ? ex[0].donnees : {};
+    body.donnees = { ...anciennes, ...body.donnees };
+  }
   const res = enModification ? await dbPatch('demandes_offre', demandeOffreId, body) : await dbPost('demandes_offre', body);
   if (res && res.error) { showError('Erreur: ' + errMsg(res)); return null; }
   const id = enModification ? demandeOffreId : (res && res[0] ? res[0].id : null);
@@ -2253,7 +2291,17 @@ async function enregistrerDemandeOffreSansNaviguer(demandeOffreId) {
     const val = key => document.getElementById(key)?.value || null;
     await ajouterLigneHistoriqueOpportunite(body.opportunite_id, `📝 Demande d'offre enregistrée${val('do-prospect-nom') || document.getElementById('do-client')?.selectedOptions[0]?.text ? ' pour ' + (document.getElementById('do-client')?.selectedOptions[0]?.text || val('do-prospect-nom')) : ''}`);
   }
-  if (id) { const hidden = document.getElementById('do-demande-offre-id'); if (hidden) hidden.value = id; }
+  // 22.09.2026 : pour une demande pas encore enregistrée, le champ caché n'existe pas (il n'est
+  // posé que pour une demande reprise) : on le crée, comme js/26, pour que les clics suivants
+  // (email, enregistrer) mettent à jour cette demande au lieu d'en créer une nouvelle.
+  if (id) {
+    let hidden = document.getElementById('do-demande-offre-id');
+    if (!hidden) {
+      hidden = document.createElement('input'); hidden.type = 'hidden'; hidden.id = 'do-demande-offre-id';
+      (document.getElementById('main-content') || document.body).appendChild(hidden);
+    }
+    hidden.value = id;
+  }
   return id;
 }
 

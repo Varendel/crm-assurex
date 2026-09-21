@@ -82,9 +82,14 @@ function dpRediger(clientId, compagnie, polices) {
 
   const objet = `Mandat de courtage — ${nom}${ide ? ` (${c.ide})` : ''} — demande de polices et transfert de portefeuille`;
 
+  // 22.09.2026 : le courrier disait « Vous le trouverez en annexe », alors que l'envoi (Graph
+  // sendMail, dpEnvoyerLot) ne joint AUCUNE pièce. Annoncer une annexe absente fait perdre un
+  // aller-retour avec la compagnie — et engage le cabinet sur un document qui n'est pas parti.
+  // Tant que le PDF n'est pas joint automatiquement, le texte ne promet plus d'annexe.
+
   const corps = `Madame, Monsieur,
 
-Notre client ${nom}${naissance}${adresse ? `, ${adresse}` : ''} nous a confié la gestion de ses assurances et a signé un mandat de courtage en faveur d’Assurex Sàrl. Vous le trouverez en annexe.
+Notre client ${nom}${naissance}${adresse ? `, ${adresse}` : ''} nous a confié la gestion de ses assurances et a signé un mandat de courtage en faveur d’Assurex Sàrl. Nous vous en transmettons une copie sur simple demande.
 
 Nous vous prions de bien vouloir :
 
@@ -143,19 +148,56 @@ async function dpGenererDepuisTransfert(transfertId, silencieux) {
   if (!silencieux) {
     showError(`✓ ${crees} demande(s) préparée(s)${doublons ? ` · ${doublons} déjà en cours` : ''}.`);
   }
-  if (crees) await dbPatch('demandes_transfert', t.id, { statut: 'en_cours', traite_le: new Date().toISOString() });
+  // 22.09.2026 : on écrivait statut « en_cours », valeur que demandes_transfert n'accepte pas
+  // (nouveau, mandat_genere, envoye, termine, annule) : le PATCH échouait en silence. La valeur
+  // juste est « envoye » — mais seulement quand un courrier est réellement PARTI : à ce stade les
+  // demandes sont seulement préparées, et « Envoyé aux compagnies » s'afficherait côté client
+  // (js/98) alors que rien n'est encore sorti. Le statut est donc posé par dpEnvoyerLot, après un
+  // envoi réussi (dpMarquerTransfertEnvoye).
   await dpCharger();
+  if (crees && !silencieux && typeof navigate === 'function' && confirm(`${crees} demande(s) de polices préparée(s).\n\nOuvrir la page « Demandes de polices » pour relire les courriers avant envoi ?`)) {
+    navigate('demandes-polices');
+  }
   return crees;
+}
+
+// Le transfert passe à « Envoyé aux compagnies » quand au moins une de ses demandes est partie.
+async function dpMarquerTransfertEnvoye(transfertId) {
+  if (!transfertId) return;
+  const rows = await dbGet('demandes_transfert', `id=eq.${transfertId}&select=id,statut`).catch(() => []);
+  const t = (rows || [])[0];
+  if (!t || !['nouveau', 'mandat_genere'].includes(t.statut)) return;
+  const r = await dbPatch('demandes_transfert', transfertId, { statut: 'envoye', traite_le: new Date().toISOString() });
+  if (r && r.error) return;
+  const local = (typeof _mc !== 'undefined' && _mc.transferts || []).find(x => x.id === transfertId);
+  if (local) local.statut = 'envoye';
 }
 
 // ── Envoi ───────────────────────────────────────────────────────────────────────────────────────
 // Une confirmation pour le lot, pas une par message : trente confirmations d'affilée ne sont plus
 // lues, ce qui revient à ne plus rien contrôler du tout.
+// 22.09.2026 : « Rien ne part sans que Jonathan ait vu ce qui part » — mais le bouton Envoyer
+// partait sur une simple boîte de confirmation qui ne montre que la compagnie et l'adresse, jamais
+// le courrier. Avant tout envoi (ou relance), chaque courrier du lot passe désormais par l'aperçu
+// dpVoirCourrier ; le lot ne reprend qu'une fois tous les courriers ouverts, puis la confirmation
+// explicite reste la dernière étape.
+function dpExigerLecture(liste, suite) {
+  window._dp.vus = window._dp.vus || new Set();
+  const nonVu = liste.find(d => !window._dp.vus.has(d.id));
+  if (!nonVu) return true;
+  const reste = liste.filter(d => !window._dp.vus.has(d.id)).length;
+  window._dp.suite = suite;
+  dpVoirCourrier(nonVu.id, { reste });
+  return false;
+}
+
 async function dpEnvoyerLot(ids) {
   const liste = (ids || []).map(id => window._dp.demandes.find(d => d.id === id)).filter(Boolean);
   const prets = liste.filter(d => d.destinataire);
   const sansAdresse = liste.filter(d => !d.destinataire);
   if (!prets.length) { showError('Aucune de ces demandes n’a d’adresse de destinataire. Complète le carnet des compagnies.'); return; }
+  if (!dpExigerLecture(prets, { type: 'envoi', ids })) return;
+  window._dp.suite = null;
 
   const apercu = prets.slice(0, 8).map(d => `  • ${d.compagnie} → ${d.destinataire} (${dpNomClient(d.client_id)})`).join('\n');
   const message = `Envoyer ${prets.length} demande(s) de polices depuis ton compte Outlook ?\n\n${apercu}${prets.length > 8 ? `\n  … et ${prets.length - 8} autre(s)` : ''}`
@@ -185,6 +227,9 @@ async function dpEnvoyerLot(ids) {
       if (!r.ok) { echecs.push(`${d.compagnie} (${r.status})`); continue; }
       await dbPatch('demandes_polices', d.id, { statut: 'envoyee', envoyee_le: new Date().toISOString() });
       if (typeof logAction === 'function') logAction('envoi_demande_police', 'demandes_polices', d.id, d.compagnie);
+      // 22.09.2026 : le transfert d'origine passe à « Envoyé aux compagnies » maintenant, et
+      // seulement maintenant — un courrier est effectivement parti.
+      if (d.transfert_id) await dpMarquerTransfertEnvoye(d.transfert_id).catch(() => {});
       ok++;
     } catch (e) { echecs.push(`${d.compagnie} (${e.message})`); }
   }
@@ -196,6 +241,9 @@ async function dpEnvoyerLot(ids) {
 async function dpRelancerLot(ids) {
   const liste = (ids || []).map(id => window._dp.demandes.find(d => d.id === id)).filter(d => d && d.destinataire);
   if (!liste.length) { showError('Rien à relancer.'); return; }
+  // La relance reprend le courrier d'origine : on l'a relu avant de le renvoyer (22.09.2026).
+  if (!dpExigerLecture(liste, { type: 'relance', ids })) return;
+  window._dp.suite = null;
   if (!confirm(`Relancer ${liste.length} compagnie(s) restée(s) sans réponse ?`)) return;
   if (typeof assurerTokenOutlook === 'function' && !(await assurerTokenOutlook())) {
     showError('Connecte-toi à Outlook pour envoyer les relances.'); return;
@@ -308,9 +356,20 @@ function dpLigne(d) {
   </div>`;
 }
 
-function dpVoirCourrier(id) {
+function dpVoirCourrier(id, opts) {
   const d = window._dp.demandes.find(x => x.id === id);
   if (!d) return;
+  // 22.09.2026 : ouvrir le courrier vaut lecture (dpExigerLecture). Quand l'aperçu est ouvert
+  // par un envoi ou une relance en attente, son bouton principal enregistre puis reprend le lot.
+  window._dp.vus = window._dp.vus || new Set();
+  window._dp.vus.add(d.id);
+  const suite = window._dp.suite && opts ? window._dp.suite : null;
+  const reste = opts && opts.reste ? opts.reste : 0;
+  const annexe = /en annexe|ci-joint/i.test(d.corps || '');
+  const actionSuite = suite
+    ? `<button type="button" class="btn-save" onclick="dpEnregistrerCourrier('${d.id}', true)">${reste > 1 ? `✓ Relu — courrier suivant (${reste - 1} restant${reste - 1 > 1 ? 's' : ''})` : suite.type === 'relance' ? '✓ Relu — préparer la relance…' : '✓ Relu — passer à l’envoi…'}</button>`
+    : `<button type="button" class="btn-save" onclick="dpEnregistrerCourrier('${d.id}')">✓ Enregistrer</button>
+       ${d.statut === 'a_envoyer' && d.destinataire ? `<button type="button" class="btn-save" onclick="window._dp.suite={type:'envoi',ids:['${d.id}']};dpEnregistrerCourrier('${d.id}', true)">📨 Enregistrer et envoyer…</button>` : ''}`;
   creerModale('modal-dp-courrier', `
     <div class="opx-modale dp-modale" role="dialog" aria-modal="true" aria-label="Courrier à la compagnie">
       <h3>${dpEsc(d.compagnie)}</h3>
@@ -319,15 +378,16 @@ function dpVoirCourrier(id) {
         <input class="form-input" id="dp-objet" value="${dpEsc(d.objet || '')}"/></div>
       <div class="form-field"><label class="form-label" for="dp-corps">Message</label>
         <textarea class="form-input dp-corps" id="dp-corps" rows="18">${dpEsc(d.corps || '')}</textarea></div>
-      <div class="ec-note">Le mandat signé doit être joint à l’envoi. Relis avant d’envoyer : ce courrier engage le cabinet auprès de la compagnie.</div>
+      ${annexe ? '<div class="ec-note">⚠️ Ce courrier annonce une pièce jointe (« en annexe » / « ci-joint »), mais l’envoi depuis le CRM ne joint aucun fichier. Corrige le texte ou envoie le mandat séparément.</div>' : ''}
+      <div class="ec-note">Le mandat signé n’est pas joint automatiquement à cet envoi. Relis avant d’envoyer : ce courrier engage le cabinet auprès de la compagnie.</div>
       <div class="opx-modale-actions">
-        <button type="button" class="btn-secondary" onclick="document.getElementById('modal-dp-courrier').remove()">Fermer</button>
-        <button type="button" class="btn-save" onclick="dpEnregistrerCourrier('${d.id}')">✓ Enregistrer</button>
+        <button type="button" class="btn-secondary" onclick="window._dp.suite=null;document.getElementById('modal-dp-courrier').remove()">Fermer</button>
+        ${actionSuite}
       </div>
     </div>`, { padding: '16px' });
 }
 
-async function dpEnregistrerCourrier(id) {
+async function dpEnregistrerCourrier(id, continuer) {
   const objet = document.getElementById('dp-objet')?.value || '';
   const corps = document.getElementById('dp-corps')?.value || '';
   const r = await dbPatch('demandes_polices', id, { objet, corps });
@@ -335,5 +395,13 @@ async function dpEnregistrerCourrier(id) {
   document.getElementById('modal-dp-courrier')?.remove();
   await dpCharger();
   dpRendre();
+  // 22.09.2026 : reprise de l'envoi ou de la relance en attente — qui ouvre le courrier suivant
+  // non relu, ou arrive à la confirmation explicite une fois tout relu.
+  const suite = continuer ? window._dp.suite : null;
+  if (suite) {
+    if (suite.type === 'relance') await dpRelancerLot(suite.ids);
+    else await dpEnvoyerLot(suite.ids);
+    return;
+  }
   showError('✓ Courrier enregistré.');
 }

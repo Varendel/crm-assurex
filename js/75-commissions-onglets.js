@@ -63,6 +63,11 @@ function cmxHtml(vueCourante) {
     const r = origine.apply(this, arguments);
     const poser = () => {
       if (!CMX_ONGLETS.some(o => o.vue === vue)) return;
+      // 22.09.2026 : si l'utilisateur est déjà parti ailleurs (ou si navigate() l'a redirigé, ex.
+      // garde-fou RH), la promesse ou le minuteur de 350 ms posaient les onglets sur l'écran
+      // suivant. On ne pose que si la vue affichée est encore celle demandée.
+      if (typeof currentView !== 'undefined' && currentView !== vue) return;
+      if (typeof vueDetailActive !== 'undefined' && vueDetailActive) return;
       const main = document.getElementById('main-content');
       if (!main || main.querySelector('.cmx-onglets')) return;
       window._cmx.onglet = cmxOngletDepuisVue(vue);

@@ -547,7 +547,12 @@ const USER_ROLES = {
 // comptabilité, paramètres) reste réservé aux rôles apporteur/signataire. Liste blanche volontaire
 // (plutôt qu'une liste noire) : toute nouvelle vue ajoutée au CRM à l'avenir sera invisible pour ce
 // rôle par défaut, sauf ajout explicite ici.
-const RH_VUES_AUTORISEES = new Set(['portefeuille', 'clients-prives', 'clients-entreprises', 'rappels', 'agenda', 'rendez-vous', 'opportunites', 'volume-primes', 'tous-contrats', 'recherche-vehicules', 'nouvelle-opportunite', 'nouveau-rappel']);
+// 22.09.2026 : ajout de 'apparence', 'calendly' (cochés rhAllowed dans le menu, donc affichés à la
+// session RH) et 'vue-ensemble' (entrée « Vue d'ensemble » rhAllowed de js/118, et cible du bouton
+// « ↑ menu » de js/93). Absents d'ici, un clic dessus retombait en silence sur « Tous les clients ».
+// 'suivi' reste volontairement HORS liste : l'écran affiche la commission pondérée ; l'onglet
+// mobile « Affaires » (js/28) ouvre le Pipeline à la place pour cette session.
+const RH_VUES_AUTORISEES = new Set(['portefeuille', 'clients-prives', 'clients-entreprises', 'rappels', 'agenda', 'rendez-vous', 'opportunites', 'volume-primes', 'tous-contrats', 'recherche-vehicules', 'nouvelle-opportunite', 'nouveau-rappel', 'apparence', 'calendly', 'vue-ensemble']);
 
 // Pictogramme marquant une opportunité/tâche créée par la session RH ("les filles") pour Jonathan
 // — affiché sur les cartes pipeline, la liste des tâches, et les notifications du dashboard.

@@ -937,9 +937,18 @@ function viewRappels() {
     const c = allClients.find(cl => cl.id === r.client_id);
     return c ? (estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`) : '';
   }
+  // 22.09.2026 : new Date('AAAA-MM-JJ') est minuit UTC (2 h du matin à Zurich en été). Comparé à
+  // « maintenant », un rappel dû AUJOURD'HUI passait « en retard » dès le matin, et figurait en
+  // même temps dans « 30 prochains jours » (arrondi à 0) : compté en retard, et deux fois. On
+  // compte désormais en jours de calendrier locaux, entre la date du rappel et la date du jour.
+  function joursJusqua(dateStr) {
+    const [y, m, d] = String(dateStr).slice(0, 10).split('-').map(Number);
+    const t = new Date();
+    return Math.round((new Date(y, m - 1, d) - new Date(t.getFullYear(), t.getMonth(), t.getDate())) / 86400000);
+  }
   function dateRelative(dateStr) {
     if (!dateStr) return '';
-    const j = Math.round((new Date(dateStr) - new Date()) / 86400000);
+    const j = joursJusqua(dateStr);
     if (j < 0) return ` · ⚠️ en retard de ${Math.abs(j)}j`;
     if (j === 0) return ` · aujourd'hui`;
     if (j <= 7) return ` · dans ${j}j`;
@@ -958,8 +967,9 @@ function viewRappels() {
 
   const today = new Date();
   const finDuMois = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-  const enRetard = ouverts.filter(r => r.date_echeance && new Date(r.date_echeance) < today);
-  const ceMois = ouverts.filter(r => r.date_echeance && new Date(r.date_echeance) >= today && new Date(r.date_echeance) <= finDuMois);
+  const enRetard = ouverts.filter(r => r.date_echeance && joursJusqua(r.date_echeance) < 0);
+  const finDuMoisIso = `${finDuMois.getFullYear()}-${String(finDuMois.getMonth() + 1).padStart(2, '0')}-${String(finDuMois.getDate()).padStart(2, '0')}`;
+  const ceMois = ouverts.filter(r => r.date_echeance && joursJusqua(r.date_echeance) >= 0 && String(r.date_echeance).slice(0, 10) <= finDuMoisIso);
   const fermes = allRappels
     .filter(r => r.statut !== 'ouvert')
     .sort((a,b) => new Date(b.date_echeance||b.created_at||0) - new Date(a.date_echeance||a.created_at||0));
@@ -967,17 +977,17 @@ function viewRappels() {
   // Grouper par horizon temporel (utilisé pour la vue "Ouverts")
   const groups = [
     { label: '🔴 En retard', color: '#f87171', items: enRetard },
-    { label: '🟠 Dans les 30 prochains jours', color: '#fb923c', items: ouverts.filter(r => { if (!r.date_echeance) return false; const j = Math.round((new Date(r.date_echeance)-today)/86400000); return j>=0 && j<=30; }) },
-    { label: '🟡 1 à 3 mois', color: '#f59e0b', items: ouverts.filter(r => { if (!r.date_echeance) return false; const j = Math.round((new Date(r.date_echeance)-today)/86400000); return j>30 && j<=90; }) },
-    { label: '🔵 3 à 12 mois', color: '#38bdf8', items: ouverts.filter(r => { if (!r.date_echeance) return false; const j = Math.round((new Date(r.date_echeance)-today)/86400000); return j>90 && j<=365; }) },
-    { label: '⚪ Plus d\'un an / sans échéance', color: '#64748b', items: ouverts.filter(r => !r.date_echeance || Math.round((new Date(r.date_echeance)-today)/86400000) > 365) },
+    { label: '🟠 Dans les 30 prochains jours', color: '#fb923c', items: ouverts.filter(r => { if (!r.date_echeance) return false; const j = joursJusqua(r.date_echeance); return j>=0 && j<=30; }) },
+    { label: '🟡 1 à 3 mois', color: '#f59e0b', items: ouverts.filter(r => { if (!r.date_echeance) return false; const j = joursJusqua(r.date_echeance); return j>30 && j<=90; }) },
+    { label: '🔵 3 à 12 mois', color: '#38bdf8', items: ouverts.filter(r => { if (!r.date_echeance) return false; const j = joursJusqua(r.date_echeance); return j>90 && j<=365; }) },
+    { label: '⚪ Plus d\'un an / sans échéance', color: '#64748b', items: ouverts.filter(r => !r.date_echeance || joursJusqua(r.date_echeance) > 365) },
   ];
 
   // Date d'échéance mise en avant en premier (colonne dédiée, étiquetée) — demande de Jonathan
   // le 10.08.2026 : il ne savait pas quelle date était affichée. La date planifiée (quand on
   // compte s'en occuper, distincte de l'échéance) reste visible mais clairement étiquetée à part.
   const renderItem = r => {
-    const enRetardItem = r.date_echeance && new Date(r.date_echeance) < today;
+    const enRetardItem = r.date_echeance && joursJusqua(r.date_echeance) < 0;
     const details = [];
     if (nomClientRappel(r)) details.push(`👤 <span onclick="event.stopPropagation(); showClient('${r.client_id}')" style="cursor:pointer;color:var(--accent);text-decoration:underline dotted">${nomClientRappel(r)}</span>`);
     const relatif = dateRelative(r.date_echeance).replace(/^ · /, '');
@@ -1377,12 +1387,21 @@ function commissionDateReception(ca) {
   return null;
 }
 
+// 22.09.2026 : une commission encaissée par OZ mais qui revient à Assurex (ozPartAssurex, js/34 —
+// gestion des clients Assurex, acquisition avec apporteur) suit « le partage des apporteurs comme
+// une commission reçue normalement ». Elle n'entrait pourtant jamais dans la fiche de paie : la part
+// de l'apporteur n'était jamais versée. Mêmes exclusions qu'avant (fiche déjà faite, sans date).
+function commissionEligibleFichePaie(ca) {
+  if (ca.statut === 'reçue') return true;
+  return ca.statut === 'versé_oz' && typeof ozPartAssurex === 'function' && ozPartAssurex(ca);
+}
+
 function renderFichePaieApercu() {
   const debut = document.getElementById('fp-debut')?.value;
   const fin = document.getElementById('fp-fin')?.value;
 
   const eligibles = allCommissionsAttente.filter(ca => {
-    if (ca.statut !== 'reçue') return false;
+    if (!commissionEligibleFichePaie(ca)) return false;
     if (ca.fiche_paie_id) return false; // déjà payée dans une fiche précédente
     const d = commissionDateReception(ca);
     if (!d) return false;
@@ -1474,7 +1493,7 @@ async function genererFichePaie() {
   if (!debut || !fin) { showError('Sélectionne une période valide.'); return; }
 
   const eligibles = allCommissionsAttente.filter(ca => {
-    if (ca.statut !== 'reçue' || ca.fiche_paie_id) return false;
+    if (!commissionEligibleFichePaie(ca) || ca.fiche_paie_id) return false;
     const d = commissionDateReception(ca);
     return d && d >= debut && d <= fin;
   });
@@ -2677,13 +2696,15 @@ async function importerCommissionsEtBordereau(nomAssureur) {
   for (const attente of attentesTouchees) {
     const estime = Number(attente.montant_estime || 0);
     const deja = typeof commissionDejaRecu === 'function' ? commissionDejaRecu(attente) : 0;
-    if (deja > 0 && estime - deja <= Math.max(1, estime * 0.02)) {
-      // Soldée : « versée à OZ » si l'essentiel a été encaissé par OZ, sinon « reçue » (Assurex)
-      const trs = typeof commissionTranches === 'function' ? commissionTranches(attente) : [];
-      const partOZ = trs.filter(t => t.encaisse_par === 'oz').reduce((s, t) => s + Number(t.montant || 0), 0);
-      const statutSolde = partOZ > deja / 2 ? 'versé_oz' : 'reçue';
-      const rS = await dbPatch('commissions_attente', attente.id, { statut: statutSolde, montant_final: Math.round(deja * 100) / 100, bordereau_id: nouveauBordereau.id, date_reception: dateReceptionCommission });
-      if (!(rS && rS.error)) { attente.statut = statutSolde; attente.montant_final = Math.round(deja * 100) / 100; nbSoldes++; ecartsAJournaliser.push({ attente, source: statutSolde === 'versé_oz' ? 'import OZ' : 'import' }); }
+    // 22.09.2026 : une reprise négative (extourne à rapprocher du débit) se solde aussi — le test
+    // « deja > 0 » l'en empêchait, elle restait « en attente » à vie. Comparaison dans le sens du signe.
+    const sens = estime < 0 ? -1 : 1;
+    if (deja * sens > 0 && (estime - deja) * sens <= Math.max(1, Math.abs(estime) * 0.02)) {
+      // Soldée : chacun garde sa part réellement encaissée (commissionSoldeParEntite, ci-dessous)
+      const solde = commissionSoldeParEntite(attente);
+      const statutSolde = solde.statut;
+      const rS = await dbPatch('commissions_attente', attente.id, { statut: statutSolde, montant_final: solde.montant_final, bordereau_id: nouveauBordereau.id, date_reception: dateReceptionCommission });
+      if (!(rS && rS.error)) { attente.statut = statutSolde; attente.montant_final = solde.montant_final; nbSoldes++; ecartsAJournaliser.push({ attente: { ...attente, montant_final: Math.round(deja * 100) / 100 } /* écart estimé ↔ total versé, les deux entités */, source: statutSolde === 'versé_oz' ? 'import OZ' : 'import' }); }
     }
   }
   await journaliserEcartsCommission(ecartsAJournaliser, nouveauBordereau.id);
@@ -2698,5 +2719,23 @@ async function importerCommissionsEtBordereau(nomAssureur) {
   if (btn) { btn.disabled = false; btn.textContent = '✓ Créer les commissions et le bordereau'; }
   _decompteLignes = []; _decompteNomAssureur = ''; _decompteCommissionTotaleAnnoncee = null; _decompteFichier = null;
   navigate('bordereaux');
+}
+
+// ═══ SOLDE D'UNE COMMISSION PAYÉE PAR OZ ET PAR ASSUREX (22.09.2026) ═══════════════════════════
+// Règle : chaque entité garde ce qu'elle a réellement encaissé.
+//   - Assurex a encaissé une part (tranches non OZ) → commission « reçue », montant_final = PART
+//     D'ASSUREX = total reçu − tranches encaissées par OZ. La part OZ reste tracée dans ses tranches
+//     (encaisse_par = 'oz'), hors chiffres Assurex.
+//   - Tout a été encaissé par OZ → « versée à OZ », montant_final = total reçu.
+// Avant, la commission entière allait à l'entité majoritaire : avec 60 % reçus par OZ, les 40 %
+// encaissés par Assurex sortaient de ses chiffres (et inversement, OZ était compté chez Assurex).
+// Utilisée par l'import de décompte (ci-dessus) et par le rapprochement du compte courant OZ (js/34).
+function commissionSoldeParEntite(ca) {
+  const trs = typeof commissionTranches === 'function' ? commissionTranches(ca) : [];
+  const total = trs.reduce((s, t) => s + Number(t.montant || 0), 0);
+  const partOZ = trs.filter(t => t.encaisse_par === 'oz').reduce((s, t) => s + Number(t.montant || 0), 0);
+  const partAssurex = Math.round((total - partOZ) * 100) / 100;
+  if (Math.abs(partAssurex) >= 0.01) return { statut: 'reçue', montant_final: partAssurex };
+  return { statut: 'versé_oz', montant_final: Math.round(total * 100) / 100 };
 }
 

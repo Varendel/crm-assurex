@@ -33,9 +33,17 @@ function rexInstallerMobile() {
   nav.setAttribute('aria-label', 'Navigation principale');
   nav.innerHTML = REX_ONGLETS_MOBILE.map(o => o.id === '+'
     ? `<button type="button" class="rex-tab-plus" onclick="rexSaisieRapide()" aria-label="Saisie rapide"><span>+</span></button>`
-    : `<button type="button" class="rex-tab" data-vue="${o.id}" onclick="navigate('${o.id}')"><span class="rex-tab-icone">${o.icone}</span><span>${o.label}</span></button>`).join('');
+    : `<button type="button" class="rex-tab" data-vue="${o.id}" onclick="rexAllerOnglet('${o.id}')"><span class="rex-tab-icone">${o.icone}</span><span>${o.label}</span></button>`).join('');
   app.appendChild(nav);
   rexMajTabbar();
+}
+
+// 22.09.2026 : l'onglet « Affaires » ouvre 'suivi', hors périmètre RH (commission pondérée à
+// l'écran) : le garde-fou de navigate() renvoyait alors en silence sur « Tous les clients ». Pour
+// la session RH, l'onglet ouvre le Pipeline, qui lui est autorisé (sans montants).
+function rexAllerOnglet(id) {
+  const rh = typeof estRoleRH === 'function' && estRoleRH();
+  navigate(rh && id === 'suivi' ? 'opportunites' : id);
 }
 
 function rexMajTabbar() {

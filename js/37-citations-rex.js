@@ -122,12 +122,25 @@ function rexCitationStyles() {
   .rex-citation.reduite img:hover{opacity:1;transform:scale(1.06)}  @keyframes rexCitIn{from{opacity:0;transform:translateY(14px) scale(.96)}to{opacity:1;transform:none}}
   @keyframes rexCitChange{0%{opacity:.2;transform:scale(.97)}100%{opacity:1;transform:none}}
   @media (max-width:768px){.rex-citation{right:12px;bottom:calc(84px + env(safe-area-inset-bottom,0px));max-width:calc(100vw - 24px)}.rex-citation img{width:38px;height:38px}.rex-citation.grande img{width:68px;height:68px}}
+  /* 22.09.2026 : sur téléphone, z-index 900 passait Rex AU-DESSUS du tiroir de menu (100), de son
+     voile (90) et de la barre d'actions des ventes (.opx-barre-mobile, 70, posée au même endroit) :
+     la bulle masquait des boutons. On le passe sous tout cela, et on le retire quand le tiroir est
+     ouvert ou que la barre d'actions est à l'écran (:has — les navigateurs qui ne le connaissent
+     pas gardent au moins le z-index abaissé). */
+  @media (max-width:768px){.rex-citation{z-index:60}body:has(.sidebar.open) .rex-citation,body:has(.opx-barre-mobile) .rex-citation{display:none}}
   @media print{.rex-citation{display:none!important}}
   @media (prefers-reduced-motion: reduce){.rex-citation,.rex-citation.change .rex-citation-bulle,.rex-citation.sortie{animation:none}}`;
   document.head.appendChild(s);
 }
 
-function rexEsc(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+/* 22.09.2026 : rexEsc était déclarée ici ET dans js/28. Ce fichier étant chargé après, sa
+   version (sans échappement de l'apostrophe) remplaçait partout celle de js/28, plus complète —
+   y compris dans les onclick de la saisie rapide mobile. On ne la définit plus ici que si js/28
+   est absent, et alors dans sa version complète. (Affectation plutôt que déclaration : une
+   déclaration « function » serait hissée et écraserait js/28 quoi qu'il arrive.) */
+if (typeof window.rexEsc !== 'function') {
+  window.rexEsc = function (v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); };
+}
 
 function rexCitationSuivante() {
   const n = REX_CITATIONS.length;
@@ -145,6 +158,9 @@ function rexCitationInterdite() {
 }
 
 function rexAfficherCitation(changer) {
+  // 22.09.2026 : un retrait programmé par rexEffacerCitation (650 ms après la sortie) supprimait
+  // la bulle qu'on venait de rappeler d'un clic pendant l'animation. On l'annule d'abord.
+  clearTimeout(window._rexCit.retrait); window._rexCit.retrait = null;
   if (typeof currentUser === 'undefined' || !currentUser) return;
   if (rexCitationInterdite()) { document.getElementById('rex-citation')?.remove(); return; }
   rexCitationStyles();
@@ -180,7 +196,8 @@ function rexEffacerCitation() {
   const el = document.getElementById('rex-citation');
   if (!el) return;
   el.classList.add('sortie');
-  setTimeout(() => el.remove(), 650);
+  clearTimeout(window._rexCit.retrait);
+  window._rexCit.retrait = setTimeout(() => { window._rexCit.retrait = null; el.remove(); }, 650);
 }
 
 function rexReduireCitation() {

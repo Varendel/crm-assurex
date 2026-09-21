@@ -269,18 +269,26 @@ function ozPartAssurex(ca) {
   return !!date && date >= (typeof DATE_GESTION_ASSUREX !== 'undefined' ? DATE_GESTION_ASSUREX : '2027-01-01');
 }
 
+// « À refacturer à OZ » — LA règle partagée (22.09.2026) : versée à OZ, part d'Assurex, pas encore
+// refacturée, TOUTES ANNÉES. La carte et l'onglet de « Toutes les commissions », la page OZ et ce
+// Cockpit avaient chacun la leur (avec ou sans ozPartAssurex, année en cours seulement ou non) :
+// quatre montants « à refacturer » différents pour la même chose.
+function ozARefacturer(ca) { return !!ca && ca.statut === 'versé_oz' && ozPartAssurex(ca) && !ca.refacture_le; }
+
+function ozLigneRefacturation(ca) {
+  const m = Number(ca.montant_final != null ? ca.montant_final : (ca.montant_estime || 0));
+  const s = typeof splitMontantAgent === 'function' ? splitMontantAgent(m, ca.contrat_id) : { pJ: m, pA: 0, agent: null };
+  return { ca, m, pJ: s.pJ, pA: s.pA, agent: s.agent };
+}
 function ozLignesRefacturation(annee) {
-  return allCommissionsAttente.filter(ca => ca.statut === 'versé_oz' && ozPartAssurex(ca) && String(ca.date_reception || ca.date_creation || '').startsWith(annee)).map(ca => {
-    const m = Number(ca.montant_final != null ? ca.montant_final : (ca.montant_estime || 0));
-    const s = typeof splitMontantAgent === 'function' ? splitMontantAgent(m, ca.contrat_id) : { pJ: m, pA: 0, agent: null };
-    return { ca, m, pJ: s.pJ, pA: s.pA, agent: s.agent };
-  });
+  return allCommissionsAttente.filter(ca => ca.statut === 'versé_oz' && ozPartAssurex(ca) && String(ca.date_reception || ca.date_creation || '').startsWith(annee)).map(ozLigneRefacturation);
 }
 
 function htmlCockpitOZ() {
   const annee = String(new Date().getFullYear());
   const lignes = ozLignesRefacturation(annee);
-  const ouvertes = lignes.filter(l => !l.ca.refacture_le);
+  // Ouvertes : toutes années (une commission 2025 non refacturée ne disparaît pas au 1er janvier)
+  const ouvertes = allCommissionsAttente.filter(ozARefacturer).map(ozLigneRefacturation);
   const somme = (arr, k) => arr.reduce((s, x) => s + x[k], 0);
   const restentOZ = allCommissionsAttente.filter(ca => ca.statut === 'versé_oz' && !ozPartAssurex(ca) && String(ca.date_reception || ca.date_creation || '').startsWith(annee));
   window._ozSelection = new Set(ouvertes.map(l => l.ca.id));
@@ -349,10 +357,14 @@ function ozPropositionsCompteCourant() {
     const liees = (parPolice[ozNormPolice(r.police)] || []).filter(x => proche(r.compagnie, x.ct.compagnie || x.ca.compagnie));
     if (!liees.length) return;
     const montant = Number(r.credit);
-    // Déjà enregistrée comme commission reçue / versée à OZ du même montant → rien à déduire
-    if (liees.some(x => ['reçue', 'versé_oz'].includes(x.ca.statut) && Math.abs(Number(x.ca.montant_final ?? x.ca.montant_estime ?? 0) - montant) <= 0.05)) return;
     const type = classerTypeMouvementOz(r.type_mouvement);
     const periode = ozPeriodeLigne(r);
+    // Déjà enregistrée comme commission reçue / versée à OZ du même montant → rien à déduire.
+    // 22.09.2026 : seulement si c'est la MÊME commission — même nature et même année que la ligne.
+    // Avant, la gestion 2025 déjà versée (même montant chaque année) faisait ignorer la ligne 2026.
+    const natureLigne = type === 'Gestion' ? 'gestion' : 'acquisition';
+    if (liees.some(x => ['reçue', 'versé_oz'].includes(x.ca.statut) && (x.ca.nature || 'acquisition') === natureLigne
+      && ozAnneeCommission(x.ca) === periode && Math.abs(Number(x.ca.montant_final ?? x.ca.montant_estime ?? 0) - montant) <= 0.05)) return;
     const enAttente = liees.filter(x => x.ca.statut === 'en_attente');
     let cible = null;
     if (type !== 'Gestion') {
@@ -423,8 +435,11 @@ async function ozAppliquerRapprochement() {
     const deja = commissionDejaRecu(p.ca);
     if (deja > 0 && p.attendu - deja <= Math.max(1, p.attendu * 0.02)) {
       const derniere = p.lignes.map(r => r.date_mouvement).sort().pop();
-      const r = await dbPatch('commissions_attente', p.ca.id, { statut: 'versé_oz', montant_final: Math.round(deja * 100) / 100, date_reception: derniere });
-      if (!(r && r.error)) { p.ca.statut = 'versé_oz'; p.ca.montant_final = Math.round(deja * 100) / 100; p.ca.date_reception = derniere; nbSoldees++; ecarts.push({ attente: p.ca, source: 'compte courant OZ' }); }
+      // 22.09.2026 : si Assurex a déjà encaissé une partie (tranches non OZ), la commission n'est pas
+      // passée en bloc « versée à OZ » — Assurex garde sa part (règle : commissionSoldeParEntite, js/06).
+      const solde = typeof commissionSoldeParEntite === 'function' ? commissionSoldeParEntite(p.ca) : { statut: 'versé_oz', montant_final: Math.round(deja * 100) / 100 };
+      const r = await dbPatch('commissions_attente', p.ca.id, { statut: solde.statut, montant_final: solde.montant_final, date_reception: derniere });
+      if (!(r && r.error)) { p.ca.statut = solde.statut; p.ca.montant_final = solde.montant_final; p.ca.date_reception = derniere; nbSoldees++; ecarts.push({ attente: { ...p.ca, montant_final: Math.round(deja * 100) / 100 } /* écart sur le total versé */, source: 'compte courant OZ' }); }
     }
   }
   if (ecarts.length && typeof journaliserEcartsCommission === 'function') await journaliserEcartsCommission(ecarts, null);

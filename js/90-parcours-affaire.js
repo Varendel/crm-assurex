@@ -75,6 +75,11 @@ function pafJours(iso) {
 
 function pafOpp(id) { return (typeof allOpportunites !== 'undefined' ? allOpportunites : []).find(o => o.id === id); }
 
+// 22.09.2026 : « pas encore chargé » n'est ni un manque ni un acquis. Avant, null valait « rien ne
+// manque » : la fiche affichait « ✓ rien ne manque » le temps que les offres arrivent, puis restait
+// ainsi (le bandeau n'était jamais repeint). Ce repère vaut « on ne sait pas encore ».
+const PAF_INCONNU = '__paf_inconnu__';
+
 // ── Ce qu'il manque, étape par étape ────────────────────────────────────────────────────────────
 // Le cœur du module. Pour chaque exigence, on regarde la donnée réelle : pas de case à cocher
 // décorative, pas d'état déclaratif. Une étape est franchie quand ce qu'elle exige EXISTE.
@@ -86,10 +91,12 @@ function pafManques(o) {
   m.volume = !Number(o.montant_potentiel || 0) ? 'Volume de prime non estimé' : null;
 
   const demandes = (window._opDemandes && window._opDemandes[o.id]) || null;
-  // null = pas encore chargé ; on ne réclame rien tant qu'on ne sait pas.
-  m.offres = demandes === null ? null
+  // null = pas encore chargé ; on ne réclame rien tant qu'on ne sait pas — sans pour autant
+  // déclarer l'étape franchie (PAF_INCONNU, repeint par opChargerDemandes).
+  // recu_le : ancien nom de la date de réception (js/04, js/16), toléré (22.09.2026).
+  m.offres = demandes === null ? PAF_INCONNU
     : !demandes.length ? 'Aucune demande d’offre envoyée'
-    : !demandes.some(d => (d.compagnies_envoi || []).some(e => e.prime || e.recue_le)) ? 'Aucune offre reçue'
+    : !demandes.some(d => (d.compagnies_envoi || []).some(e => e.prime || e.recue_le || e.recu_le)) ? 'Aucune offre reçue'
     : null;
 
   m.decision = !o.signee_le ? 'Date de signature non renseignée' : null;
@@ -108,15 +115,36 @@ function pafEtapeCourante(o) {
 // est encore à ce stade et ce qui débloque le suivant. Une barre d'étapes sans cela est une
 // étiquette : elle nomme la situation sans aider à en sortir.
 function pafBandeau(o) {
+  // 22.09.2026 : enveloppe repérable, pour repeindre le bandeau quand les offres (js/25) ou les
+  // résiliations (js/92) finissent de charger — il est calculé avant elles.
+  return `<div class="paf-bandeau" id="paf-bandeau-${o.id}">${pafBandeauCorps(o)}</div>`;
+}
+
+function pafBandeauCorps(o) {
   if (o.stade === 'Perdu') return pafPerdue(o);
   const courante = pafEtapeCourante(o);
   return pafActionSuivante(o, courante, pafManques(o));
 }
 
+function pafRepeindreBandeau(oppId) {
+  const z = document.getElementById('paf-bandeau-' + oppId);
+  const o = pafOpp(oppId);
+  if (z && o) z.innerHTML = pafBandeauCorps(o);
+}
+
 // L'action suivante. C'est ce qui manquait le plus : on savait où on en était, jamais quoi faire.
 function pafActionSuivante(o, courante, manques) {
   const e = PAF_ETAPES[courante];
-  const reste = e.requis.map(r => ({ cle: r, texte: manques[r] })).filter(x => x.texte);
+  const inconnus = e.requis.filter(r => manques[r] === PAF_INCONNU);
+  const reste = e.requis.map(r => ({ cle: r, texte: manques[r] })).filter(x => x.texte && x.texte !== PAF_INCONNU);
+
+  // Rien de connu ne manque, mais une donnée n'est pas encore lue : pas de ✓ prématuré.
+  if (!reste.length && inconnus.length) {
+    return `<div class="paf-suite">
+      <b>${pafEsc(e.nom)} : vérification en cours…</b>
+      <small>${pafEsc(e.but)}</small>
+    </div>`;
+  }
 
   if (!reste.length) {
     const suivante = PAF_ETAPES[courante + 1];
@@ -147,12 +175,17 @@ function pafActionSuivante(o, courante, manques) {
 function pafBoutonPour(o, cle) {
   const b = (txt, action) => `<button type="button" class="paf-act" onclick="${action}">${txt}</button>`;
   switch (cle) {
-    case 'client': return b('Rattacher un client', `pafFocus('o-client-recherche')`);
-    case 'titre': return b('Donner un intitulé', `pafFocus('o-titre')`);
+    // 22.09.2026 : les champs client et intitulé n'existent que dans le formulaire complet (js/07) ;
+    // sur la fiche, pafFocus ne trouvait rien. On ouvre ce formulaire, puis on y place le curseur.
+    case 'client': return typeof opModeFormulaire === 'function'
+      ? b('Rattacher un client', `opModeFormulaire('${o.id}');setTimeout(()=>pafFocus('o-client-recherche'),80)`) : '';
+    case 'titre': return typeof opModeFormulaire === 'function'
+      ? b('Donner un intitulé', `opModeFormulaire('${o.id}');setTimeout(()=>pafFocus('o-titre'),80)`) : '';
     case 'type': return b('Préciser', `pafOuvrirSituation('${o.id}')`);
     case 'volume': return b('Estimer', `pafOuvrirSituation('${o.id}')`);
-    case 'offres': return typeof ouvrirDemandeOffre === 'function'
-      ? b('Demander des offres', `ouvrirDemandeOffre('${o.id}')`) : '';
+    // 22.09.2026 : ouvrirDemandeOffre n'existe pas — le bouton n'apparaissait jamais.
+    case 'offres': return typeof opNouvelleDemandeOffre === 'function'
+      ? b('Demander des offres', `opNouvelleDemandeOffre('${o.id}')`) : '';
     case 'decision': return b('Marquer la signature', `pafOuvrirSignature('${o.id}')`);
     case 'resiliation': return b('Préparer la résiliation', `pafOuvrirResiliation('${o.id}')`);
     case 'contrat': return b('Créer le contrat', `pafVersContrat('${o.id}')`);
@@ -175,8 +208,12 @@ function pafFocus(id) {
   setTimeout(() => el.focus(), 320);
 }
 
+// 22.09.2026 : opChangerStade (js/25) plutôt que changerStadeOpportuniteRapide directement — ce
+// dernier ne met à jour que l'ancien formulaire ; la fiche restait sur l'ancien stade, sans
+// probabilité ajustée ni ligne d'historique.
 async function pafAllerEtape(oppId, stade) {
-  if (typeof changerStadeOpportuniteRapide === 'function') await changerStadeOpportuniteRapide(oppId, stade);
+  if (typeof opChangerStade === 'function') await opChangerStade(oppId, stade);
+  else if (typeof changerStadeOpportuniteRapide === 'function') { await changerStadeOpportuniteRapide(oppId, stade); pafRafraichir(); }
 }
 
 // ── La situation actuelle du client ─────────────────────────────────────────────────────────────
@@ -186,6 +223,8 @@ function pafOuvrirSituation(oppId) {
   const o = pafOpp(oppId);
   if (!o || typeof creerModale !== 'function') return;
   const v = x => (x == null ? '' : x);
+  // 22.09.2026 : « Ouvrir les mandats » menait à une vue « mandats » inexistante ; les mandats et
+  // transferts de portefeuille aux compagnies se préparent dans « Demandes de polices » (js/63).
   creerModale('modal-paf-situation', `
     <div class="paf-modale">
       <h3>La situation du client</h3>
@@ -202,7 +241,7 @@ function pafOuvrirSituation(oppId) {
 
       <div id="paf-mandat" style="display:${o.type_affaire === 'portefeuille' ? '' : 'none'}">
         ${typeof navigate === 'function' ? `<button type="button" class="paf-lien-mandats"
-          onclick="document.getElementById('modal-paf-situation').remove();navigate('mandats')">
+          onclick="document.getElementById('modal-paf-situation').remove();navigate('demandes-polices')">
           Ouvrir les mandats →</button>` : ''}
       </div>
 
@@ -277,9 +316,21 @@ async function pafEnregistrerSituation(oppId) {
     maj.resiliation_limite = pafLimiteResiliation(maj.actuel_echeance);
   }
 
+  const avant = { compagnie: o.actuel_compagnie, police: o.actuel_police };
   const r = await dbPatch('opportunites', oppId, maj);
   if (r && r.error) { showError('Enregistrement impossible : ' + errMsg(r)); return; }
   Object.assign(o, maj);
+  // 22.09.2026 : la liste des résiliations (js/92, js/94 et le manque du parcours) ne lit que la
+  // table opportunites_resiliations — sans ligne là, un changement d'assureur n'apparaissait
+  // jamais dans « Résiliations à faire ».
+  if (maj.resiliation_requise && (maj.actuel_compagnie || maj.actuel_police)) {
+    await pafSynchroResiliation(o, {
+      compagnie: maj.actuel_compagnie, numero_police: maj.actuel_police,
+      // limite non transmise : une date corrigée d'après les CG dans le bloc Résiliations reste ;
+      // elle n'est recalculée que si l'échéance change (ou à la création de la ligne).
+      echeance: maj.actuel_echeance,
+    }, avant);
+  }
   document.getElementById('modal-paf-situation')?.remove();
   showError('✓ Situation enregistrée');
   pafRafraichir();
@@ -288,10 +339,70 @@ async function pafEnregistrerSituation(oppId) {
 // Trois mois avant l'échéance : c'est le délai ordinaire des contrats choses et RC en Suisse.
 // C'est une aide à la saisie, pas une règle : les conditions générales de chaque contrat font foi,
 // et certaines branches (LAMal, maladie) ont leur propre calendrier. La date reste modifiable.
+// 22.09.2026 : même calcul que rnDateLimite (js/11) — setMonth(-3) débordait en fin de mois
+// (31.05 − 3 mois donnait le 03.03 au lieu du 28.02) ; on reste sur le dernier jour du mois
+// visé (31.12 − 3 mois = 30.09). Date construite en local, sans toISOString (décalage UTC).
 function pafLimiteResiliation(echeance) {
-  const d = new Date(echeance + 'T00:00:00');
-  d.setMonth(d.getMonth() - 3);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const [y, m, d] = String(echeance || '').slice(0, 10).split('-').map(Number);
+  if (!y || !m || !d) return null;
+  const cible = new Date(y, m - 1 - 3, 1);
+  const dernierJour = new Date(cible.getFullYear(), cible.getMonth() + 1, 0).getDate();
+  return `${cible.getFullYear()}-${String(cible.getMonth() + 1).padStart(2, '0')}-${String(Math.min(d, dernierJour)).padStart(2, '0')}`;
+}
+
+// 22.09.2026 : reporte la résiliation saisie sur l'affaire (colonnes opportunites.resiliation_*)
+// dans opportunites_resiliations, la table que lisent le bloc « Résiliations » (js/92) et la liste
+// « Résiliations à faire » (js/94). La ligne est retrouvée par n° de police, sinon par compagnie
+// (valeurs actuelles puis précédentes, pour ne pas dupliquer après une correction de saisie).
+// Une date déjà posée dans la ligne n'est remplacée que par une valeur saisie ici.
+async function pafSynchroResiliation(o, champs, avant) {
+  try {
+    let lignes = (window._rsl && window._rsl.parOpp && window._rsl.parOpp[o.id]) || null;
+    if (!lignes) {
+      const r = await dbGet('opportunites_resiliations', `opportunite_id=eq.${o.id}&select=*`);
+      lignes = Array.isArray(r) ? r : [];
+    }
+    const norm = s => String(s || '').trim().toLowerCase();
+    const polices = [champs.numero_police, o.actuel_police, avant && avant.police].map(norm).filter(Boolean);
+    const cies = [champs.compagnie, o.actuel_compagnie, avant && avant.compagnie].map(norm).filter(Boolean);
+    const ligne = lignes.find(l => polices.includes(norm(l.numero_police)))
+      || lignes.find(l => (!l.numero_police || !polices.length) && cies.includes(norm(l.compagnie)))
+      || null;
+
+    const maj = {};
+    Object.entries(champs).forEach(([k, v]) => { if (v !== undefined && (v !== null || !ligne)) maj[k] = v; });
+    if (ligne) {
+      // L'échéance a changé : la limite proposée suit, sauf si une limite est saisie ici.
+      if (champs.limite == null && champs.echeance && champs.echeance !== ligne.echeance) maj.limite = pafLimiteResiliation(champs.echeance);
+      if (!Object.keys(maj).length) return;
+      const r = await dbPatch('opportunites_resiliations', ligne.id, maj);
+      if (r && r.error) { showError('Affaire enregistrée, mais la liste des résiliations n’a pas suivi : ' + errMsg(r)); return; }
+    } else {
+      if (!maj.compagnie && !maj.numero_police) return;   // même exigence que rslEnregistrer (js/92)
+      const police = norm(maj.numero_police);
+      const ct = police ? (typeof allContrats !== 'undefined' ? allContrats : [])
+        .find(c => c.client_id === o.client_id && norm(c.numero_police) === police) : null;
+      const r = await dbPost('opportunites_resiliations', {
+        opportunite_id: o.id,
+        contrat_id: ct ? ct.id : null,
+        compagnie: maj.compagnie || null,
+        produit: ct ? (ct.produit || null) : null,
+        numero_police: maj.numero_police || null,
+        echeance: maj.echeance || null,
+        limite: maj.limite || (maj.echeance ? pafLimiteResiliation(maj.echeance) : null),
+        envoyee_le: maj.envoyee_le || null,
+        confirmee_le: maj.confirmee_le || null,
+      });
+      if (r && r.error) { showError('Affaire enregistrée, mais la liste des résiliations n’a pas suivi : ' + errMsg(r)); return; }
+    }
+  } catch (e) {
+    showError('Affaire enregistrée, mais la liste des résiliations n’a pas suivi : ' + (e && e.message || e));
+  }
+  // Le bloc de js/92 garde sa liste en mémoire : on l'oublie pour qu'il la relise.
+  if (window._rsl) {
+    window._rsl.parOpp[o.id] = null;
+    if (window._rsl.chargement) window._rsl.chargement[o.id] = false;
+  }
 }
 
 // ── La résiliation ──────────────────────────────────────────────────────────────────────────────
@@ -349,6 +460,16 @@ async function pafEnregistrerResiliation(oppId) {
   const r = await dbPatch('opportunites', oppId, maj);
   if (r && r.error) { showError('Enregistrement impossible : ' + errMsg(r)); return; }
   Object.assign(o, maj);
+  // 22.09.2026 : même report dans opportunites_resiliations que pour la situation (voir
+  // pafSynchroResiliation) — sinon « Envoyée / Confirmée » saisis ici restaient invisibles de
+  // js/92 et js/94, et le parcours continuait de réclamer la résiliation.
+  if (o.actuel_compagnie || o.actuel_police) {
+    await pafSynchroResiliation(o, {
+      compagnie: o.actuel_compagnie || null, numero_police: o.actuel_police || null,
+      echeance: o.actuel_echeance || null, limite: maj.resiliation_limite,
+      envoyee_le: maj.resiliation_envoyee_le, confirmee_le: maj.resiliation_confirmee_le,
+    });
+  }
   if (maj.resiliation_envoyee_le && typeof ajouterLigneHistoriqueOpportunite === 'function') {
     await ajouterLigneHistoriqueOpportunite(oppId,
       `✉️ Résiliation envoyée à ${o.actuel_compagnie || 'l’assureur actuel'} le ${fmtDate(maj.resiliation_envoyee_le)}`);
@@ -472,24 +593,25 @@ function pafVersContrat(oppId) {
   const o = pafOpp(oppId);
   if (!o) return;
 
+  // 22.09.2026 : l'offre RETENUE d'abord (c'est elle que le client a signée), et seulement à
+  // défaut la première offre reçue non déclinée — avant, la première reçue était prise même
+  // quand une autre avait été retenue.
   const demandes = (window._opDemandes && window._opDemandes[oppId]) || [];
-  for (const d of demandes) {
-    const i = (d.compagnies_envoi || []).findIndex(e => (e.prime || e.recue_le) && e.statut !== 'déclinée');
-    if (i >= 0 && typeof opSigneeVersContrat === 'function') {
-      opSigneeVersContrat(oppId, d.id, i);
-      return;
-    }
+  const offres = demandes.flatMap(d => (d.compagnies_envoi || []).map((e, i) => ({ d, e, i })))
+    .filter(x => x.e && (x.e.prime || x.e.recue_le || x.e.recu_le) && x.e.statut !== 'déclinée');
+  const choisie = offres.find(x => x.e.retenue) || offres[0] || null;
+  if (choisie && typeof opSigneeVersContrat === 'function') {
+    opSigneeVersContrat(oppId, choisie.d.id, choisie.i);
+    return;
   }
 
   // Pas d'offre formelle : on part de l'affaire elle-même.
-  if (typeof prefillOpportunite !== 'undefined') {
-    try { prefillOpportunite = o; } catch (e) { /* variable absente : le formulaire s'ouvrira vide */ }
-  }
-  if (typeof showFormContrat === 'function') { showFormContrat(o.client_id, null, o); return; }
-  if (typeof navigate === 'function') {
-    showError('Créez le contrat depuis la fiche client — l’affaire y est rattachée.');
-    if (o.client_id && typeof showClient === 'function') showClient(o.client_id);
-  }
+  // 22.09.2026 : showFormContrat n'existe pas, et prefillOpportunite restait posé — le prochain
+  // contrat créé, n'importe où, se serait rattaché à cette affaire. demarrerCreationContratDepuisOpp
+  // (js/06) est le chemin du kanban « Gagné » : il pose le préremplissage ET ouvre le formulaire.
+  if (typeof demarrerCreationContratDepuisOpp === 'function') { demarrerCreationContratDepuisOpp(o.id); return; }
+  showError('Créez le contrat depuis la fiche client — l’affaire y est rattachée.');
+  if (o.client_id && typeof showClient === 'function') showClient(o.client_id);
 }
 
 // ── Le résumé remplaçant « produits envisagés » ─────────────────────────────────────────────────

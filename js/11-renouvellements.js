@@ -490,21 +490,50 @@ async function rlMarquer(clientId, statut) {
   rnRafraichir();
 }
 
-async function rlEnvoyerEmail(clientId, btn) {
+// 22.09.2026 : le bouton « ✉️ E-mail » envoyait la relance LAMal au premier clic, sans que le
+// message soit vu. Règle du cabinet : aucun e-mail ne part tout seul. Le clic ouvre désormais un
+// aperçu modifiable (destinataire, objet, texte) ; l'envoi n'a lieu qu'après un clic explicite
+// sur « Envoyer » ET une confirmation (rlConfirmerEnvoiEmail).
+function rlEnvoyerEmail(clientId) {
   const x = rlClientsLamal().find(y => y.client.id === clientId);
   const destinataire = x && rlEmailClient(x.client);
   if (!destinataire) return;
-  if (!(await assurerTokenOutlook())) { showError('Connecte-toi à Outlook (Microsoft) dans le CRM pour envoyer cet e-mail.'); return; }
-  if (btn) { btn.disabled = true; btn.textContent = 'Envoi…'; }
   const annee = new Date().getMonth() >= 6 ? new Date().getFullYear() + 1 : new Date().getFullYear();
+  creerModale('modal-rl-email', `
+    <div class="opx-modale mdx-modale mdx-modale-flex mdx-modale-large" role="dialog" aria-modal="true" aria-labelledby="rl-email-titre">
+      <h3 id="rl-email-titre">Relance LAMal — aperçu de l’e-mail</h3>
+      <div class="opx-modale-sous">Rien n’est envoyé tant que vous n’avez pas cliqué sur « Envoyer » et confirmé.</div>
+      <div class="form-field"><label class="form-label" for="rl-email-a">À</label>
+        <input class="form-input" id="rl-email-a" value="${rnEsc(destinataire)}"/></div>
+      <div class="form-field"><label class="form-label" for="rl-email-sujet">Objet</label>
+        <input class="form-input" id="rl-email-sujet" value="${rnEsc(`Votre assurance maladie ${annee} — faisons le point`)}"/></div>
+      <div class="form-field mdx-champ-corps"><label class="form-label" for="rl-email-corps">Message</label>
+        <textarea class="form-input" id="rl-email-corps" rows="14">${rnEsc(rlMessage(x))}</textarea></div>
+      <div class="opx-modale-actions mdx-actions mdx-actions-envoi">
+        <button type="button" class="btn-secondary mdx-a-gauche" onclick="document.getElementById('modal-rl-email').remove()">Annuler</button>
+        <button type="button" class="btn-save" id="rl-email-envoi" onclick="rlConfirmerEnvoiEmail('${clientId}')">📨 Envoyer via Outlook…</button>
+      </div>
+    </div>`, { padding: '16px' });
+}
+
+async function rlConfirmerEnvoiEmail(clientId) {
+  const destinataire = (document.getElementById('rl-email-a')?.value || '').trim();
+  const sujet = document.getElementById('rl-email-sujet')?.value || '';
+  const corps = document.getElementById('rl-email-corps')?.value || '';
+  if (!/@/.test(destinataire)) { showError('Indique une adresse e-mail valable.'); return; }
+  if (!corps.trim()) { showError('Le message est vide.'); return; }
+  if (!confirm(`Envoyer cette relance LAMal à ${destinataire} depuis ton compte Outlook ?`)) return;
+  if (!(await assurerTokenOutlook())) { showError('Connecte-toi à Outlook (Microsoft) dans le CRM pour envoyer cet e-mail.'); return; }
+  const btn = document.getElementById('rl-email-envoi');
+  if (btn) { btn.disabled = true; btn.textContent = 'Envoi…'; }
   try {
     const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
       method: 'POST',
       headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         message: {
-          subject: `Votre assurance maladie ${annee} — faisons le point`,
-          body: { contentType: 'text', content: rlMessage(x) },
+          subject: sujet,
+          body: { contentType: 'text', content: corps },
           toRecipients: [{ emailAddress: { address: destinataire } }],
         },
         saveToSentItems: true,
@@ -512,11 +541,12 @@ async function rlEnvoyerEmail(clientId, btn) {
     });
     if (!r.ok) throw new Error('HTTP ' + r.status);
   } catch (e) {
-    console.error('rlEnvoyerEmail', e);
+    console.error('rlConfirmerEnvoiEmail', e);
     showError('L\u2019e-mail n\u2019est pas parti — réessaie ou utilise 📋 pour copier le message.');
-    if (btn) { btn.disabled = false; btn.textContent = '✉️ E-mail'; }
+    if (btn) { btn.disabled = false; btn.textContent = '📨 Envoyer via Outlook…'; }
     return;
   }
+  document.getElementById('modal-rl-email')?.remove();
   showError(`✓ E-mail envoyé à ${destinataire}.`);
   await rlMarquer(clientId, 'relance');
 }

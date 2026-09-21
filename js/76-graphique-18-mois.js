@@ -22,6 +22,8 @@
 const DBX18_PASSES = 12;   // mois courant inclus
 const DBX18_AVENIR = 6;
 
+function dbx18Iso(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+
 function dbx18Mois() {
   const res = [];
   const d = new Date(); d.setDate(1);
@@ -36,7 +38,9 @@ function dbx18Mois() {
 // versement réel de la compagnie pour la gestion, création + délai observé pour l'acquisition.
 function dbx18Attendu(mois) {
   const out = Object.fromEntries(mois.map(m => [m, 0]));
-  const aujIso = new Date().toISOString().slice(0, 10);
+  // 22.09.2026 : date LOCALE. toISOString() passe en UTC — un minuit suisse devient la veille à
+  // 22 h/23 h, et un versement du 1er du mois glissait sur le mois précédent.
+  const aujIso = dbx18Iso(new Date());
   const CA = typeof allCommissionsAttente !== 'undefined' ? allCommissionsAttente : [];
   const CT = typeof allContrats !== 'undefined' ? allContrats : [];
 
@@ -53,7 +57,7 @@ function dbx18Attendu(mois) {
       const delai = typeof trDelaiMoyenAcquisition === 'function' ? trDelaiMoyenAcquisition() : 60;
       const b = new Date(((ca.date_creation || aujIso).slice(0, 10)) + 'T00:00:00');
       b.setDate(b.getDate() + delai);
-      date = b.toISOString().slice(0, 10);
+      date = dbx18Iso(b);
     }
     const parts = (ca.nature === 'gestion' && typeof commissionEcheancier === 'function')
       ? commissionEcheancier(ca, reste) : [{ date, montant: reste }];
@@ -76,12 +80,16 @@ function dbx18Encaisse(mois) {
   const bascule = typeof DATE_BASCULE_ASSUREX !== 'undefined' ? DATE_BASCULE_ASSUREX : '2026-06-01';
   const CA = typeof allCommissionsAttente !== 'undefined' ? allCommissionsAttente : [];
   for (const ca of CA) {
-    if (!['reçue', 'extourné'].includes(ca.statut)) continue;
+    // 22.09.2026 — extournes : encaissé puis repris = 0 net, jamais −X. Une extournée encaissée reste
+    // à +|X| dans son mois de réception (l'argent est entré) ; la reprise négative, reçue au débit
+    // d'un bordereau, la compense dans le mois où la compagnie reprend. Avant, l'extourne était
+    // retranchée ici en plus de la reprise : −2X.
+    if (!commissionEncaisseeOuExtournee(ca)) continue;
     if (ca.date_reception_estimee) continue;
     const d = typeof commissionDateReception === 'function' ? commissionDateReception(ca) : ca.date_reception;
     if (!d || d < bascule) continue;
     const cle = String(d).slice(0, 7);
-    if (out[cle] != null) out[cle] += (ca.statut === 'extourné' ? -1 : 1) * Number(ca.montant_final ?? ca.montant_estime ?? 0);
+    if (out[cle] != null) out[cle] += commissionMontantEncaisse(ca);
   }
   const tranches = typeof allCommissionTranches !== 'undefined' ? allCommissionTranches : [];
   for (const t of tranches) {

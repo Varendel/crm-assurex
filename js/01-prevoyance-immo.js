@@ -282,6 +282,10 @@ function statutCommissionLabel(statut) {
   if (statut === 'versé_cofidex') return 'Versé EX Groupe';
   if (statut === 'extourné') return '↩ Extournée';
   if (statut === 'annulé') return '❌ Annulé (legacy)';
+  // 22.09.2026 : ces deux statuts existent en base mais tombaient dans « En attente » — une commission
+  // annulée (jamais versée) se lisait comme attendue.
+  if (statut === 'annulée') return '❌ Annulée';
+  if (statut === 'en_attente_naissance') return '🍼 Attente naissance';
   return 'En attente';
 }
 function statutCommissionColor(statut) {

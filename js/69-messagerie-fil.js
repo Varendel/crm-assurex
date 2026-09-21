@@ -58,7 +58,10 @@ function filHtml(messageId, moiCote) {
 // Remplace l'ancienne fenêtre de réponse. On garde le nom mcRepondre : il est appelé depuis les
 // boutons déjà en place (js/51), et changer le nom obligerait à les retoucher un par un.
 function mcRepondre(id) {
-  const m = (window._mc && _mc.messages || []).find(x => x.id === id);
+  // 22.09.2026 : `_mc` est déclaré par `let` (js/51) : il n'existe PAS sur window. Le test
+  // `window._mc && …` valait donc toujours faux, la liste était vide et « Répondre… » ne s'ouvrait
+  // jamais. On lit la variable elle-même.
+  const m = (typeof _mc !== 'undefined' && _mc.messages || []).find(x => x.id === id);
   if (!m) return;
   const c = (typeof allClients !== 'undefined' ? allClients : []).find(x => x.id === m.client_id);
   const nom = typeof mcNomClient === 'function' ? mcNomClient(m.client_id) : '';
@@ -108,26 +111,46 @@ async function filEnvoyerConseiller(id) {
   await filCharger(id);
   const z = document.getElementById('fil-zone');
   if (z) { z.innerHTML = filHtml(id, 'conseiller'); z.scrollTop = z.scrollHeight; }
-  const m = (window._mc && _mc.messages || []).find(x => x.id === id);
+  const m = (typeof _mc !== 'undefined' && _mc.messages || []).find(x => x.id === id);
   if (m && clore) m.statut = 'traite';
   showError(clore ? '✓ Réponse envoyée, demande close. Le client est prévenu.' : '✓ Réponse envoyée. Le client est prévenu.');
+  // 22.09.2026 : la liste derrière la fenêtre gardait la demande « Nouveau » et la pastille du
+  // menu son ancien compte jusqu'au prochain relevé (90 s). On redessine la page et on relève.
+  if (typeof currentView !== 'undefined' && currentView === 'messages-clients' && typeof navigate === 'function') navigate('messages-clients', { silent: true });
+  if (typeof ntfCharger === 'function') ntfCharger().catch(() => {});
 }
 
 // L'e-mail devient une option : certains clients ne se connectent jamais à leur espace, et pour
 // ceux-là la notification dans l'application ne sert à rien.
 function filAussiParMail(id) {
-  const m = (window._mc && _mc.messages || []).find(x => x.id === id);
+  const m = (typeof _mc !== 'undefined' && _mc.messages || []).find(x => x.id === id);
   const texte = (document.getElementById('fil-texte')?.value || '').trim();
   if (!m) return;
   if (!texte) { showError('Écris d’abord ta réponse.'); return; }
   const c = (typeof allClients !== 'undefined' ? allClients : []).find(x => x.id === m.client_id);
   if (!c || !c.email) { showError('Ce client n’a pas d’adresse e-mail dans sa fiche.'); return; }
-  if (typeof mcEcrireAuClient === 'function') {
-    mcEcrireAuClient(m.client_id);
-    setTimeout(() => {
-      const corps = document.getElementById('mce-corps');
-      if (corps) corps.value = texte + '\n\n' + (corps.value || '');
-    }, 60);
+  if (typeof mcEcrireAuClient !== 'function') return;
+  // 22.09.2026 : on visait #mce-corps, qui n'existe pas (le champ de mcEcrireAuClient est
+  // #mc-ecr-corps), et mcEcrireMajMotif réécrit le corps à chaque changement de motif : la réponse
+  // tapée n'arrivait jamais dans l'e-mail. On règle d'abord motif (« Autre information », sans
+  // texte imposé) et contrat du message, PUIS on pose la réponse dans le corps. mcEcrireAuClient
+  // est synchrone : plus besoin d'attendre.
+  mcEcrireAuClient(m.client_id);
+  const motif = document.getElementById('mc-ecr-motif');
+  if (motif) { motif.value = 'autre'; if (typeof mcEcrireMajMotif === 'function') mcEcrireMajMotif(); }
+  const sel = document.getElementById('mc-ecr-contrat');
+  if (sel && m.contrat_id && [...sel.options].some(o => o.value === m.contrat_id)) {
+    sel.value = m.contrat_id;
+    if (typeof mcEcrireMajTexte === 'function') mcEcrireMajTexte();
+  }
+  const sujet = document.getElementById('mc-ecr-sujet');
+  if (sujet && m.sujet) sujet.value = 'Re : ' + m.sujet;
+  const corps = document.getElementById('mc-ecr-corps');
+  if (corps) {
+    // Le modèle « autre » laisse une ligne d'introduction vide entre la salutation et la
+    // formule de politesse : la réponse s'y place. À défaut, elle passe en tête.
+    const v = corps.value || '';
+    corps.value = v.includes('\n\n\n\n') ? v.replace('\n\n\n\n', `\n\n${texte}\n\n`) : texte + '\n\n' + v;
   }
 }
 
@@ -212,7 +235,15 @@ async function filEnvoyerClient(messageId) {
   const r = await dbPost('messages_echanges', { message_id: messageId, auteur: 'client', corps: texte.slice(0, 5000) });
   if (r && r.error) { showError('Votre message n’a pas pu être envoyé.'); return; }
   // Une relance du client rouvre la demande : elle n'est plus close puisqu'il y a du nouveau.
-  try { await dbPatch('messages_clients', messageId, { statut: 'nouveau' }); } catch (e) {}
+  // 22.09.2026 : ce PATCH ne faisait rien — la RLS ne donne au client que SELECT/INSERT sur
+  // messages_clients, le refus était silencieux et la demande restait « Traité » côté CRM. La
+  // réouverture est désormais faite par la base (déclencheur sur messages_echanges, migration
+  // 20260922_rouvrir_demande_sur_relance_client.sql). On ne l'appelle plus ; on met seulement à
+  // jour l'affichage local, pour que le client voie sa demande repartir « en cours ».
+  const m = ((window._ec || {}).messages || []).find(x => x.id === messageId);
+  if (m) m.statut = 'nouveau';
+  const sous = document.querySelector('#modal-fil-client .fil-sous');
+  if (sous) sous.textContent = 'En cours de traitement';
   const el = document.getElementById('filc-texte');
   if (el) el.value = '';
   await filCharger(messageId);

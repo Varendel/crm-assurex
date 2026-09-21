@@ -88,9 +88,20 @@ function crxVariables() {
   const moi = crxMoi();
   let limite = '';
   if (ct.date_echeance) {
-    const mois = Number(ct.preavis_mois) || (/lamal/i.test(ct.produit || '') ? 1 : 3);
-    const d = new Date(ct.date_echeance + 'T12:00:00'); d.setMonth(d.getMonth() - mois);
-    limite = crxDateLongue(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`);
+    // 22.09.2026 : même date limite que le CRM et REX CLOUD. L'ancien calcul (setMonth) débordait
+    // en fin de mois (31.12 − 3 mois → 1er octobre) et `Number(preavis) || 3` changeait un préavis
+    // de 0 mois en 3 mois : le courrier annonçait une date fausse. rnDateLimite (js/11) fait foi.
+    let iso = typeof rnDateLimite === 'function' ? rnDateLimite(ct) : null;
+    if (!iso) {
+      const p = ct.preavis_mois;
+      const mois = (p !== null && p !== undefined && p !== '' && !isNaN(Number(p))) ? Number(p) : (/lamal/i.test(ct.produit || '') ? 1 : 3);
+      const [y, m, j] = String(ct.date_echeance).slice(0, 10).split('-').map(Number);
+      const cible = new Date(Date.UTC(y, m - 1 - mois, 1));
+      const dernier = new Date(Date.UTC(cible.getUTCFullYear(), cible.getUTCMonth() + 1, 0)).getUTCDate();
+      cible.setUTCDate(Math.min(j, dernier));
+      iso = cible.toISOString().slice(0, 10);
+    }
+    limite = crxDateLongue(iso);
   }
   return {
     prenom: c ? (c.prenom || '') : '', nom: c ? (c.nom || '') : '',

@@ -24,21 +24,66 @@ function sfxCompte(ca) {
   return true;
 }
 
+// 22.09.2026 : « à encaisser / attendu » — UNE seule définition, partagée par la carte du tableau de
+// bord, « Toutes les commissions » et le Cockpit. Chacun avait la sienne (statut en_attente seul,
+// naissances oubliées, contrats d'avant la bascule écartés…) : la carte et la liste qu'elle ouvre
+// ne tombaient jamais sur le même montant. Une extourne, une annulée ne sont jamais attendues.
+function commissionAEncaisser(ca) {
+  return !!ca && (typeof commissionAttendue === 'function' ? commissionAttendue(ca) : ca.statut === 'en_attente') && sfxCompte(ca);
+}
+
+// ═══ EXTOURNES — RÈGLE DÉFINITIVE (22.09.2026) ═══════════════════════════════════════════════
+// Encaissé puis repris = 0 net, JAMAIS −X. Une commission « extourné » qui avait été encaissée
+// (montant_final, versements partiels non OZ, ou date de réception) continue de compter pour son
+// montant encaissé en valeur ABSOLUE (+X), à sa date de réception : l'argent est bien entré. La
+// reprise négative (−X), une fois reçue sur un bordereau, porte seule la déduction → net 0 au moment
+// où la compagnie reprend l'argent ; d'ici là le net reste +X, ce qui est la réalité de trésorerie.
+// Jamais encaissée → 0. Une extournée n'est jamais « attendue ». Valeur absolue : une extourne saisie
+// en négatif ne peut ni retrancher deux fois, ni changer de signe.
+function commissionExtourneeEncaissee(ca) {
+  if (!ca || ca.statut !== 'extourné') return 0;
+  if (ca.montant_final != null) return Math.abs(Number(ca.montant_final) || 0);
+  const trs = (typeof allCommissionTranches !== 'undefined' ? allCommissionTranches : [])
+    .filter(t => t.commission_id === ca.id && !t.annule && t.encaisse_par !== 'oz');
+  if (trs.length) return Math.abs(trs.reduce((s, t) => s + Number(t.montant || 0), 0));
+  if (ca.date_reception) return Math.abs(Number(ca.montant_estime || 0));
+  return 0;
+}
+// Montant encaissé par Assurex d'une commission soldée : reçue → son montant ; extournée → ci-dessus
+function commissionMontantEncaisse(ca) {
+  if (!ca) return 0;
+  if (ca.statut === 'reçue') return Number(ca.montant_final ?? ca.montant_estime ?? 0);
+  return commissionExtourneeEncaissee(ca);
+}
+// Comptée dans l'encaissé : reçue, ou extournée après encaissement
+function commissionEncaisseeOuExtournee(ca) { return !!ca && (ca.statut === 'reçue' || commissionExtourneeEncaissee(ca) !== 0); }
+
 // Encaissements Assurex datés : tranches (versements partiels) + commissions reçues sans tranche
 function sfxEncaissements() {
   const bascule = sfxBascule();
   const tranches = typeof allCommissionTranches !== 'undefined' ? allCommissionTranches : [];
-  const parId = new Set(tranches.map(t => t.commission_id));
+  // 22.09.2026 : seules les tranches encaissées par Assurex remplacent le montant de la commission.
+  // Une commission reçue qui n'a que des tranches OZ était sinon comptée pour 0 (tranches OZ exclues
+  // plus bas, et montant_final ignoré parce que la commission « avait des tranches »).
+  const parId = new Set(tranches.filter(t => t.encaisse_par !== 'oz').map(t => t.commission_id));
   const res = [];
   tranches.forEach(t => {
     const ca = allCommissionsAttente.find(c => c.id === t.commission_id);
     if (!ca || ca.statut === 'versé_oz' || t.encaisse_par === 'oz') return; // encaissé par OZ : hors chiffres Assurex
+    if (ca.statut === 'annulée') return;
     const d = (t.date_reception || t.created_at || '').slice(0, 10);
-    if (d && d >= bascule) res.push({ date: d, montant: Number(t.montant || 0), ca });
+    // Extournée : ses versements restent de l'argent entré, en valeur absolue (règle 22.09.2026 ci-dessus)
+    const m = ca.statut === 'extourné' ? Math.abs(Number(t.montant || 0)) : Number(t.montant || 0);
+    if (d && d >= bascule) res.push({ date: d, montant: m, ca });
   });
-  allCommissionsAttente.filter(ca => ca.statut === 'reçue' && !parId.has(ca.id)).forEach(ca => {
-    const d = (ca.date_reception || ca.date_creation || '').slice(0, 10);
-    if (d && d >= bascule) res.push({ date: d, montant: Number(ca.montant_final ?? ca.montant_estime ?? 0), ca });
+  // 22.09.2026 : vraie date de réception (la sienne ou celle du bordereau, jamais la date de saisie),
+  // et une date conventionnelle (date_reception_estimee) n'entre pas dans les mois — même règle que
+  // le tableau de bord. Avant, 104 commissions datées du 30.09 par convention faisaient un faux pic.
+  // Elles restent dans le total de l'année (elles ont bien été encaissées), marquées « estimee ».
+  // Extournées encaissées incluses à +|X| (règle 22.09.2026) : la reprise −X les compense une fois reçue.
+  allCommissionsAttente.filter(ca => commissionEncaisseeOuExtournee(ca) && !parId.has(ca.id)).forEach(ca => {
+    const d = String((typeof commissionDateReception === 'function' ? commissionDateReception(ca) : ca.date_reception) || '').slice(0, 10);
+    if (d && d >= bascule) res.push({ date: d, montant: commissionMontantEncaisse(ca), ca, estimee: !!ca.date_reception_estimee });
   });
   return res;
 }
@@ -49,7 +94,7 @@ function sfxDonnees() {
   const annee = auj.slice(0, 4);
   const recuAnnee = enc.filter(e => e.date.startsWith(annee)).reduce((s, e) => s + e.montant, 0);
   // Naissances incluses (19.09.2026) : elles font partie de l'attendu, datées depuis la naissance prévue
-  const attente = allCommissionsAttente.filter(ca => (typeof commissionAttendue === 'function' ? commissionAttendue(ca) : ca.statut === 'en_attente') && sfxCompte(ca));
+  const attente = allCommissionsAttente.filter(commissionAEncaisser);
   const reste = ca => typeof commissionResteAttendu === 'function' ? commissionResteAttendu(ca) : Number(ca.montant_estime || 0);
   const totalReste = attente.reduce((s, ca) => s + reste(ca), 0);
   const il60 = sfxIso(new Date(Date.now() - 60 * 86400000));
@@ -69,7 +114,8 @@ function sfxDonnees() {
   // 12 derniers mois
   const mois = [];
   for (let i = 11; i >= 0; i--) { const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - i); mois.push(sfxIso(d).slice(0, 7)); }
-  const parMois = mois.map(m => enc.filter(e => e.date.startsWith(m)).reduce((s, e) => s + e.montant, 0));
+  // Dates conventionnelles hors des barres mensuelles (22.09.2026)
+  const parMois = mois.map(m => enc.filter(e => !e.estimee && e.date.startsWith(m)).reduce((s, e) => s + e.montant, 0));
   // Production encaissée par OZ Assure (compte courant OZ, net crédit − débit) : affichée à côté
   // d'Assurex, dans une autre couleur, pour voir toute la production du groupe jusqu'à la fusion.
   const ledger = window._ck && window._ck.ozLedger;
@@ -112,7 +158,7 @@ function sfxDonnees() {
   // nombre moyen de versements par mois × montant moyen d'un versement = entrée mensuelle type.
   const debut12 = mois[0] + '-01';
   const occ = [
-    ...enc.filter(e => e.date >= debut12 && e.montant > 0).map(e => e.montant),
+    ...enc.filter(e => !e.estimee && e.date >= debut12 && e.montant > 0).map(e => e.montant),
     ...(ledger || []).filter(r => String(r.date_mouvement || '') >= debut12 && Number(r.credit) > 0).map(r => Number(r.credit)),
   ];
   // Mois « actifs » seulement (au moins un versement) : les mois sans décompte saisi ne tirent pas la moyenne vers le bas
@@ -155,7 +201,8 @@ function sfxParCompagnie() {
   });
   const reste = ca => typeof commissionResteAttendu === 'function' ? commissionResteAttendu(ca) : Number(ca.montant_estime || 0);
   allCommissionsAttente.forEach(ca => {
-    if (ca.statut === 'en_attente') { const r = reste(ca); if (r > 0) { const x = get(ca.compagnie); x.attendu += r; x.nbAtt++; } }
+    // Attendu : même définition partout (commissionAEncaisser, 22.09.2026) — naissances incluses, OZ exclu
+    if (commissionAEncaisser(ca)) { const r = reste(ca); if (r > 0) { const x = get(ca.compagnie); x.attendu += r; x.nbAtt++; } }
     else if (['reçue', 'versé_oz'].includes(ca.statut) && ca.montant_final != null && Number(ca.montant_estime) > 0 && Number(ca.montant_final) > 0) {
       get(ca.compagnie).ratios.push(Number(ca.montant_final) / Number(ca.montant_estime));
     }

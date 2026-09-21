@@ -268,6 +268,9 @@ function mnuBoutons(nav) {
   return [...nav.querySelectorAll('button')].filter(b => b.offsetParent !== null && !b.disabled && !b.closest('.nav-outils'));
 }
 function mnuClavier(ev) {
+  // 22.09.2026 : Alt + flèches appartient à la navigation (js/93 : Alt+← précédent, Alt+↑ menu
+  // rattaché). Sans ce filtre, Alt+↑ dans le menu déplaçait AUSSI le focus d'un cran.
+  if (ev.altKey) return;
   const nav = document.getElementById('nav');
   if (!nav || !nav.contains(document.activeElement)) return;
   const liste = mnuBoutons(nav);

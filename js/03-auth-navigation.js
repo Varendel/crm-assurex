@@ -760,6 +760,13 @@ async function logout() {
   logAction('logout', null, null, currentUser ? `${currentUser.prenom} ${currentUser.nom}` : null);
   await supabaseAuthLogout();
   currentUser = null;
+  /* 22.09.2026 : la déconnexion laissait tourner le rattrapage des signatures (toutes les 2 min,
+     sans session) et gardait l'historique de navigation : l'utilisateur suivant, sur le même
+     poste, pouvait « revenir » sur les fiches ouvertes par le précédent. */
+  clearInterval(window._pollingSignaturesEnAttente);
+  window._pollingSignaturesEnAttente = null;
+  window._hist = { pile: [], index: -1, enCours: false };  // même forme que js/93
+  navHistory = [];
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('app').classList.remove('active');
   document.getElementById('login-email').value = '';
@@ -1068,9 +1075,13 @@ async function restaurerEtat(etat) {
     await renderView();
     return;
   }
-  currentView = etat.view;
-  renderSidebar();
-  await renderView();
+  /* 22.09.2026 : on passait directement currentView + renderView(), ce qui court-circuitait tout
+     ce qui enveloppe navigate() : onglets des commissions (js/75), barre d'onglets iPhone
+     (js/28), fermeture du tiroir mobile, garde-fou RH. Le retour arrière sur ces écrans les
+     rendait donc incomplets. navigate() en mode silencieux fait tout cela SANS empiler : ni
+     navHistory ici, ni la pile de js/93 (qui ignore aussi silent, et est en « enCours » pendant
+     un rejeu) — pas de boucle d'historique. */
+  await navigate(etat.view, { silent: true });
 }
 
 // Recharge les tables financières critiques depuis Supabase — garantit que le
@@ -1482,19 +1493,10 @@ function renderResultatsRechercheGlobale() {
   zone.style.display = 'block';
 }
 
-// Raccourci clavier général Ctrl/Cmd+K : ramène sur le dashboard si besoin puis place le focus
-// dans le champ de recherche globale, depuis n'importe quel écran du CRM.
-document.addEventListener('keydown', (e) => {
-  if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
-    e.preventDefault();
-    const focusChamp = () => {
-      const el = document.getElementById('recherche-globale-input');
-      if (el) { el.focus(); el.select(); }
-    };
-    if (typeof currentView !== 'undefined' && currentView === 'dashboard') focusChamp();
-    else if (typeof navigate === 'function') navigate('dashboard').then(focusChamp);
-  }
-});
+/* 22.09.2026 : l'ancien raccourci Ctrl/Cmd+K d'ici (retour au tableau de bord + focus dans la
+   recherche globale) est retiré. js/74 pose le même raccourci pour ouvrir la palette de
+   navigation : les deux se déclenchaient à chaque frappe — la palette s'ouvrait pendant que
+   l'écran partait sur le tableau de bord derrière elle. On garde la palette seule. */
 
 // Cadre "État des dossiers" — réutilisé sur la fiche client ET la fiche opportunité (même liste
 // de demandes d'offre, filtrée différemment en amont selon client_id ou opportunite_id).
@@ -1594,10 +1596,22 @@ async function renderView() {
   const main = document.getElementById('main-content');
   if (currentView !== 'nouvelle-opportunite') { window._oppFormulairePour = null; window._oppFormulaireNouveau = false; }
   if (currentView !== 'nouvelle-demande-offre') window._doClassique = false;
+  /* 22.09.2026 : jeton de rendu. Plusieurs vues attendent refreshCoreData() (ou un autre appel
+     réseau) avant de peindre. Si l'utilisateur change d'écran pendant l'attente, le rendu lent
+     arrivait APRÈS le nouveau et écrasait #main-content : on cliquait « Rappels » et on se
+     retrouvait sur le tableau de bord. Chaque rendu prend un numéro ; après chaque attente, s'il
+     n'est plus le dernier (ou si la vue a changé), il abandonne sans rien écrire. */
+  const jeton = window._renduJeton = (window._renduJeton || 0) + 1;
+  const vueDemandee = currentView;
+  // Une fiche détail (showClient…) ouverte pendant l'attente ne passe pas par renderView : on la
+  // détecte par vueDetailActive, qui a changé entre-temps.
+  const detailDemande = vueDetailActive;
+  const perime = () => jeton !== window._renduJeton || currentView !== vueDemandee || vueDetailActive !== detailDemande;
   switch (currentView) {
     case 'dashboard':
       main.innerHTML = '<div class="loader">Actualisation des données...</div>';
       await refreshCoreData();
+      if (perime()) return;
       // Nouveau tableau de bord (js/18) sauf si « Vue classique » a été choisie
       main.innerHTML = (typeof viewDashboardV2 === 'function' && !dbxClassiqueActive()) ? viewDashboardV2() : viewDashboard();
       mountCalendarWidget();
@@ -1609,29 +1623,30 @@ async function renderView() {
     case 'clients-oz': main.innerHTML = viewPortefeuille('oz'); break;
     case 'tous-contrats': main.innerHTML = viewTousContrats(); break;
     case 'recherche-vehicules': main.innerHTML = viewRechercheVehicules(); break;
-    case 'volume-primes': main.innerHTML = '<div class="loader">Calcul en cours...</div>'; main.innerHTML = await viewVolumePrimes(); break;
+    case 'volume-primes': { main.innerHTML = '<div class="loader">Calcul en cours...</div>'; const h = await viewVolumePrimes(); if (perime()) return; main.innerHTML = h; break; }
     case 'nouveau-client': main.innerHTML = viewNouveauClient(); break;
     // Fiche opportunité aérée + création rapide (js/25) ; l'ancien formulaire reste le mode « tous les champs »
     case 'nouvelle-opportunite': main.innerHTML = typeof viewOpportuniteRoute === 'function' ? viewOpportuniteRoute() : viewNouvelleOpportunite(); break;
     case 'nouveau-rappel': main.innerHTML = viewNouveauRappel(); break;
-    case 'nouveau-bordereau': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewNouveauBordereau(); break;
-    case 'importer-bordereau': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewImporterBordereauIGB2B(); break;
+    case 'nouveau-bordereau': { main.innerHTML = '<div class="loader">Chargement...</div>'; const h = await viewNouveauBordereau(); if (perime()) return; main.innerHTML = h; break; }
+    case 'importer-bordereau': { main.innerHTML = '<div class="loader">Chargement...</div>'; const h = await viewImporterBordereauIGB2B(); if (perime()) return; main.innerHTML = h; break; }
     case 'nouveau-contrat': main.innerHTML = viewNouveauContrat(); initSegmentContrat(); break;
     case 'nouveau-contrat-direct': contratClientId = null; main.innerHTML = viewNouveauContrat(); initSegmentContrat(); break;
     // Demande d'offre simplifiée (js/26) ; l'ancien formulaire reste accessible (« Formulaire détaillé »)
-    case 'nouvelle-demande-offre': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = (typeof viewDemandeOffreSimple === 'function' && !window._doClassique) ? await viewDemandeOffreSimple() : await viewNouvelleDemandeOffre(); bindAdresseAutocomplete({ adresseId: 'do-adresse', champUnique: true }); break;
+    case 'nouvelle-demande-offre': { main.innerHTML = '<div class="loader">Chargement...</div>'; const h = (typeof viewDemandeOffreSimple === 'function' && !window._doClassique) ? await viewDemandeOffreSimple() : await viewNouvelleDemandeOffre(); if (perime()) return; main.innerHTML = h; bindAdresseAutocomplete({ adresseId: 'do-adresse', champUnique: true }); break; }
     case 'commissions-attente':
       main.innerHTML = '<div class="loader">Actualisation des données...</div>';
       await refreshCoreData();
+      if (perime()) return;
       main.innerHTML = viewCommissionsAttente();
       break;
     case 'rapport-finma': main.innerHTML = viewRapportFinma(); break;
     case 'suivi-financier':
-      if (typeof viewSuiviFinancierV2 === 'function') { main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); main.innerHTML = viewSuiviFinancierV2(); }
+      if (typeof viewSuiviFinancierV2 === 'function') { main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); if (perime()) return; main.innerHTML = viewSuiviFinancierV2(); }
       else main.innerHTML = viewSuiviFinancier();
       break;
     case 'conseil': main.innerHTML = viewConseil(); break;
-    case 'caution': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); main.innerHTML = typeof viewComptesCaution === 'function' ? viewComptesCaution() : ''; break;
+    case 'caution': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); if (perime()) return; main.innerHTML = typeof viewComptesCaution === 'function' ? viewComptesCaution() : ''; break;
     // Marquage OZ / Assurex-EX des clients sans entité (js/39)
     // Courriers clients avec en-tête Assurex / EX.GROUP (js/45)
     case 'courriers': main.innerHTML = typeof viewCourriers === 'function' ? viewCourriers() : ''; break;
@@ -1665,10 +1680,10 @@ async function renderView() {
     case 'campagnes-performance': main.innerHTML = typeof viewCampagnesPerformance === 'function' ? viewCampagnesPerformance() : ''; break;
     // Préparation de l'échange de données EcoHub : qualité des clés de rapprochement (js/54)
     case 'ecohub-sync': main.innerHTML = typeof viewEcohubSync === 'function' ? viewEcohubSync() : ''; break;
-    case 'marquage-entites': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); main.innerHTML = typeof viewMarquageEntites === 'function' ? viewMarquageEntites() : ''; break;
+    case 'marquage-entites': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); if (perime()) return; main.innerHTML = typeof viewMarquageEntites === 'function' ? viewMarquageEntites() : ''; break;
     // Factures QR suisses (js/33)
-    case 'factures': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = typeof viewFacturesQR === 'function' ? await viewFacturesQR() : '<div class="table-empty">Module factures non chargé.</div>'; break;
-    case 'tresorerie': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); main.innerHTML = viewTresorerie(); break;
+    case 'factures': { main.innerHTML = '<div class="loader">Chargement...</div>'; const h = typeof viewFacturesQR === 'function' ? await viewFacturesQR() : '<div class="table-empty">Module factures non chargé.</div>'; if (perime()) return; main.innerHTML = h; break; }
+    case 'tresorerie': main.innerHTML = '<div class="loader">Actualisation des données...</div>'; await refreshCoreData(); if (perime()) return; main.innerHTML = viewTresorerie(); break;
     case 'production': main.innerHTML = viewProduction(); break;
     case 'opportunites': main.innerHTML = viewOpportunites(); break;
     case 'suivi': main.innerHTML = typeof viewSuiviAffaires === 'function' ? viewSuiviAffaires() : viewSuivi(); break;
@@ -1682,12 +1697,13 @@ async function renderView() {
     case 'calc-lpp': currentView = 'analyse-prevoyance'; renderSidebar(); main.innerHTML = viewAnalysePrevoyance(); break;
     case 'calc-immo': main.innerHTML = viewFinancementImmo(); break;
     case 'agenda': main.innerHTML = viewAgenda(); break;
-    case 'rendez-vous': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewRendezVous(); break;
+    case 'rendez-vous': { main.innerHTML = '<div class="loader">Chargement...</div>'; const h = await viewRendezVous(); if (perime()) return; main.innerHTML = h; break; }
     case 'campagnes': main.innerHTML = viewCampagnes(); break;
     case 'nouveau-agent': main.innerHTML = viewNouvelAgent(); break;
     case 'bordereaux':
       main.innerHTML = '<div class="loader">Actualisation des données...</div>';
       await refreshCoreData();
+      if (perime()) return;
       main.innerHTML = viewBordereaux();
       break;
     case 'fiche-paie': main.innerHTML = viewFichePaie(); break;
@@ -1695,14 +1711,20 @@ async function renderView() {
     case 'commissions': main.innerHTML = viewCommissions(); break;
     case 'fiche-commission': main.innerHTML = viewFicheCommission(); break;
     case 'agents': main.innerHTML = viewAgents(); break;
-    case 'audit-log': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewAuditLog(); break;
-    case 'contacts-compagnies': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewContactsCompagnies(); break;
+    case 'audit-log': { main.innerHTML = '<div class="loader">Chargement...</div>'; const h = await viewAuditLog(); if (perime()) return; main.innerHTML = h; break; }
+    case 'contacts-compagnies': { main.innerHTML = '<div class="loader">Chargement...</div>'; const h = await viewContactsCompagnies(); if (perime()) return; main.innerHTML = h; break; }
     case 'apparence': main.innerHTML = viewApparence(); break;
-    case 'oz-assure': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewOzAssure(); break;
+    case 'oz-assure': { main.innerHTML = '<div class="loader">Chargement...</div>'; const h = await viewOzAssure(); if (perime()) return; main.innerHTML = h; break; }
     case 'oz-commissions-assurex': main.innerHTML = viewOzCommissionsAssurex(); break;
     case 'contrats-orphelins-commission': main.innerHTML = viewContratsOrphelinsCommission(); break;
-    case 'rapport-finma-oz': main.innerHTML = '<div class="loader">Chargement...</div>'; main.innerHTML = await viewRapportFinmaOz(); break;
-    default: main.innerHTML = viewDashboard(); mountCalendarWidget();
+    case 'rapport-finma-oz': { main.innerHTML = '<div class="loader">Chargement...</div>'; const h = await viewRapportFinmaOz(); if (perime()) return; main.innerHTML = h; break; }
+    /* 22.09.2026 : une vue inconnue peignait l'ANCIEN tableau de bord (viewDashboard) sans avoir
+       rechargé les données — un écran à moitié vide qui ressemblait à un bug de chiffres. On
+       redirige vers le vrai tableau de bord. Garde-fou : 'dashboard' a son propre case, donc la
+       redirection ne peut pas reboucler ; si currentView vaut déjà 'dashboard' on s'arrête. */
+    default:
+      if (currentView !== 'dashboard') await navigate('dashboard', { silent: true });
+      return;
   }
 
   // ── Barre de navigation : flèche retour + lien vers la liste principale de la section ──

@@ -71,9 +71,13 @@ function eaBornes() {
 // garde donc de côté, à afficher à part.
 let eaSansDate = [];
 
+// 22.09.2026 : date LOCALE (AAAA-MM-JJ). toISOString() passe en UTC : un minuit suisse devenait la
+// veille, et une échéance du 1er du mois glissait sur le mois précédent.
+function eaIso(d) { return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; }
+
 function eaCollecter() {
   const { du, au } = eaBornes();
-  const aujIso = new Date().toISOString().slice(0, 10);
+  const aujIso = eaIso(new Date());
   const lignes = [];
   eaSansDate = [];
   const CA = typeof allCommissionsAttente !== 'undefined' ? allCommissionsAttente : [];
@@ -95,7 +99,13 @@ function eaCollecter() {
       ca_id: ca.id,
     };
 
-    const encaisse = ['reçue', 'versé_oz'].includes(ca.statut);
+    // 22.09.2026 — extournes : encaissé puis repris = 0 net, jamais −X. Une extournée qui avait été
+    // encaissée reste une entrée de +|X| à sa date de réception (la reprise négative, reçue, la
+    // compense) ; jamais encaissée → aucune ligne. Jamais « attendue ».
+    const montantExt = ca.statut === 'extourné' && typeof commissionExtourneeEncaissee === 'function' ? commissionExtourneeEncaissee(ca) : 0;
+    if (ca.statut === 'extourné' && !montantExt) continue;
+    const montantEnc = ca.statut === 'extourné' ? montantExt : Number(ca.montant_final ?? ca.montant_estime ?? 0);
+    const encaisse = ['reçue', 'versé_oz', 'extourné'].includes(ca.statut);
     if (encaisse) {
       // LA DATE D'ENCAISSEMENT, ET RIEN D'AUTRE (20.09.2026).
       // Cette ligne reprenait `date_creation` quand `date_reception` manquait. Or date_creation
@@ -106,17 +116,24 @@ function eaCollecter() {
       // Une date inventée est pire qu'une date absente : elle se lit comme un fait. On sort donc
       // ces lignes de la série datée, et on les compte à part (eaSansDate) pour qu'elles se
       // voient au lieu de se fondre.
-      const date = (ca.date_reception || '').slice(0, 10);
-      if (!date) { eaSansDate.push({ ...commun, montant: Number(ca.montant_final ?? ca.montant_estime ?? 0),
+      // 22.09.2026 : la date du bordereau vaut date de réception (commissionDateReception, comme
+      // partout ailleurs) ; une date conventionnelle (date_reception_estimee) ne situe pas l'argent
+      // dans un mois — la ligne rejoint les encaissements non datés.
+      const date = ca.date_reception_estimee ? ''
+        : String((typeof commissionDateReception === 'function' ? commissionDateReception(ca) : ca.date_reception) || '').slice(0, 10);
+      if (!date) { eaSansDate.push({ ...commun, montant: montantEnc,
         entite: ca.statut === 'versé_oz' ? 'OZ' : 'Assurex' }); continue; }
       if (date < du || date > au) continue;
-      lignes.push({ ...commun, date, montant: Number(ca.montant_final ?? ca.montant_estime ?? 0),
+      lignes.push({ ...commun, date, montant: montantEnc,
         etat: ca.statut === 'versé_oz' ? 'Encaissé (OZ)' : 'Encaissé', entite: ca.statut === 'versé_oz' ? 'OZ' : 'Assurex',
         reel: ca.montant_final != null, retard: false });
       continue;
     }
 
-    // Attendu : on reprend l'échéancier du moteur de trésorerie plutôt que d'en réinventer un.
+    // Attendu : SEULEMENT ce qui est réellement attendu (en attente, naissance) — 22.09.2026. Une
+    // extourne ou tout autre statut tombait ici et s'affichait « Attendu » / « En retard ».
+    if (!(typeof commissionAttendue === 'function' ? commissionAttendue(ca) : ca.statut === 'en_attente')) continue;
+    // On reprend l'échéancier du moteur de trésorerie plutôt que d'en réinventer un.
     const reste = typeof commissionResteAttendu === 'function' ? commissionResteAttendu(ca)
       : Number(ca.montant_estime || 0);
     if (!reste) continue;
@@ -126,7 +143,7 @@ function eaCollecter() {
       const delai = typeof trDelaiMoyenAcquisition === 'function' ? trDelaiMoyenAcquisition() : 60;
       const b = new Date(((ca.date_creation || aujIso).slice(0, 10)) + 'T00:00:00');
       b.setDate(b.getDate() + delai);
-      datePrevue = b.toISOString().slice(0, 10);
+      datePrevue = eaIso(b);
     }
     const parts = (gestion && typeof commissionEcheancier === 'function')
       ? commissionEcheancier(ca, reste) : [{ date: datePrevue, montant: reste }];

@@ -151,9 +151,14 @@ function rcAgenda() {
   const prochains = (E.rdv || []).filter(r => r.date_heure && r.date_heure >= new Date().toISOString() && r.statut !== 'annule');
   const vehicules = E.vehicules || [];
   if (!prochains.length && !vehicules.length) return '';
+  // 22.09.2026 : date_heure est en UTC ; slice(11, 16) affichait 08:00 pour un rendez-vous à
+  // 10 h (été). On passe par l'heure de Zurich (ecRdvJour / ecRdvHeure, js/48).
+  const jour = iso => typeof ecRdvJour === 'function' ? ecRdvJour(iso) : String(iso).slice(0, 10);
+  const heure = iso => typeof ecRdvHeure === 'function' ? ecRdvHeure(iso)
+    : new Date(iso).toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/Zurich' });
   return `<div class="rc-duo">
     ${prochains.length ? `<section class="rc-carte" aria-labelledby="rc-rdv-titre"><h2 id="rc-rdv-titre">Mes rendez-vous</h2>
-      <ul class="rc-liste">${prochains.map(r => `<li><b>${rcEsc(r.type || 'Rendez-vous')}</b><span>${fmtDate(r.date_heure.slice(0, 10))} · ${r.date_heure.slice(11, 16)}</span></li>`).join('')}</ul></section>` : ''}
+      <ul class="rc-liste">${prochains.map(r => `<li><b>${rcEsc(r.type || 'Rendez-vous')}</b><span>${fmtDate(jour(r.date_heure))} · ${heure(r.date_heure)}</span></li>`).join('')}</ul></section>` : ''}
     ${vehicules.length ? `<section class="rc-carte" aria-labelledby="rc-veh-titre"><h2 id="rc-veh-titre">Mes véhicules</h2>
       <ul class="rc-liste">${vehicules.map(v => `<li><b>${rcEsc([v.marque, v.modele].filter(Boolean).join(' ') || v.type_vehicule || 'Véhicule')}</b>${v.numero_plaque ? `<span class="rc-plaque">${rcEsc(v.numero_plaque)}</span>` : ''}</li>`).join('')}</ul></section>` : ''}
   </div>`;

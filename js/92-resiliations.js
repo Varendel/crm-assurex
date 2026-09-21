@@ -30,11 +30,15 @@ function rslJours(iso) {
 // aide à la saisie, PAS une règle — les conditions générales de chaque contrat font foi, et
 // certaines branches ont leur propre calendrier (LAMal au 30 novembre, par exemple). La date
 // reste modifiable, et c'est volontairement elle qui est enregistrée, pas la formule.
+// 22.09.2026 : même calcul que rnDateLimite (js/11) — setMonth(-3) débordait en fin de mois
+// (31.05 → 03.03 au lieu du 28.02). On reste sur le dernier jour du mois visé (31.12 → 30.09),
+// en date locale (pas de toISOString, qui décale d'un jour selon le fuseau).
 function rslLimiteProposee(echeance) {
-  if (!echeance) return '';
-  const d = new Date(echeance + 'T00:00:00');
-  d.setMonth(d.getMonth() - 3);
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const [y, m, d] = String(echeance || '').slice(0, 10).split('-').map(Number);
+  if (!y || !m || !d) return '';
+  const cible = new Date(y, m - 1 - 3, 1);
+  const dernierJour = new Date(cible.getFullYear(), cible.getMonth() + 1, 0).getDate();
+  return `${cible.getFullYear()}-${String(cible.getMonth() + 1).padStart(2, '0')}-${String(Math.min(d, dernierJour)).padStart(2, '0')}`;
 }
 
 function rslEtat(r) {
@@ -134,6 +138,9 @@ function rslPeindre(oppId) {
   const o = (typeof allOpportunites !== 'undefined' ? allOpportunites : []).find(x => x.id === oppId);
   if (!o) return;
   z.innerHTML = rslCorpsHtml(o, rslListe(oppId));
+  // 22.09.2026 : le bandeau du parcours (js/90) lit cette liste ; calculé avant son chargement,
+  // il est repeint ici pour ne pas rester sur « vérification en cours ».
+  if (typeof pafRepeindreBandeau === 'function') pafRepeindreBandeau(oppId);
 }
 
 // ── Ajouter ou modifier ─────────────────────────────────────────────────────────────────────────
@@ -354,7 +361,9 @@ function rslCopierLettre(oppId, resilId) {
     window.pafManques = function (o) {
       const m = origine.apply(this, arguments);
       const l = rslListe(o.id);
-      if (l === null) { m.resiliation = null; return m; }   // pas encore chargé : on ne réclame rien
+      // Pas encore chargé : on ne réclame rien, sans pour autant déclarer l'étape franchie
+      // (22.09.2026 — PAF_INCONNU, js/90 ; repeint par rslPeindre une fois la liste lue).
+      if (l === null) { m.resiliation = typeof PAF_INCONNU !== 'undefined' ? PAF_INCONNU : null; return m; }
       const ouvertes = l.filter(r => !r.envoyee_le);
       m.resiliation = ouvertes.length
         ? `${ouvertes.length} résiliation${ouvertes.length > 1 ? 's' : ''} à envoyer`

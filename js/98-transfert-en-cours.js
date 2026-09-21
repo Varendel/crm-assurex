@@ -34,21 +34,22 @@ async function etrCharger() {
 function etrEnCours() {
   const E = window._ec || {};
   if (!Array.isArray(E.transferts)) return null;
-  return E.transferts.find(t => !t.traite_le) || null;
+  // 22.09.2026 : on regardait l'absence de traite_le. Or le CRM pose traite_le dès « Mandat
+  // généré » (mcStatutTransfert, js/51) : le bloc disparaissait alors que les polices n'étaient
+  // pas encore demandées — et à l'inverse un dossier annulé sans date restait « en cours ». Le
+  // statut fait foi, avec les mêmes valeurs « en cours » que le CRM.
+  return E.transferts.find(t => ['nouveau', 'mandat_genere', 'envoye'].includes(t.statut)) || null;
 }
 
 function etrEsc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 
-// Une police est considérée comme arrivée quand un contrat actif du client porte la même
-// compagnie. On ne compare pas les numéros de police : celui du décompte diffère souvent de celui
-// que le client nous avait donné, et un faux négatif inquiéterait pour rien.
+// 22.09.2026 : une police était dite « arrivée » dès qu'un contrat actif du client portait la
+// même compagnie. Un client déjà chez nous pour son auto AXA voyait donc sa police ménage AXA
+// « reçue » le jour même de sa demande, et le client ne voyait pas la même chose que le CRM. La
+// ligne porte son propre statut, posé par le cabinet (js/51 : attendu / relance / recu) : c'est
+// lui qui fait foi, exactement comme dans le CRM (mcLigneTransfert).
 function etrPoliceArrivee(ligne) {
-  const E = window._ec || {};
-  const cie = String(ligne.compagnie || '').trim().toLowerCase();
-  if (!cie) return false;
-  return (E.contrats || []).some(ct =>
-    String(ct.compagnie || '').trim().toLowerCase() === cie
-    && !['annulé', 'résilié', 'mandat_resilie'].includes(ct.statut));
+  return !!ligne && ligne.statut === 'recu';
 }
 
 function etrBlocHtml() {

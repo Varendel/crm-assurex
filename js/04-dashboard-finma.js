@@ -68,7 +68,10 @@ async function synchroniserOutlookInterne(oppIdFiltre) {
         });
         if (match) {
           e.statut = 'reçue';
-          e.recu_le = match.receivedDateTime;
+          // 22.09.2026 : « recue_le » est le nom lu par la fiche opportunité, le suivi et le
+          // parcours (js/25, 27, 90) — « recu_le » faisait passer ces offres pour non reçues.
+          e.recue_le = match.receivedDateTime;
+          delete e.recu_le;
           modifie = true;
           nbMaj++;
           compagniesRecuesCetteFois.push({ compagnie: e.compagnie, recu_le: match.receivedDateTime });
@@ -123,23 +126,19 @@ function viewDashboard() {
   // (date connue et < 01.06.2026). Si aucune date n'est renseignée nulle part,
   // on l'inclut plutôt que de la faire disparaître silencieusement — une commission
   // marquée "reçue" dans ce CRM (créé après la fusion) ne peut pas être antérieure.
+  // 22.09.2026 — extournes : encaissé puis repris = 0 net, jamais −X. Une extournée qui avait été
+  // encaissée reste comptée +|X| (commissionMontantEncaisse, js/29) ; la reprise négative, une fois
+  // reçue, est dans cette même liste et porte seule la déduction. Avant, l'extourne était en plus
+  // retranchée à part (−2X au total), et saisie en négatif elle s'AJOUTAIT au net.
   const commissionsRecues = allCommissionsAttente.filter(ca => {
-    if (ca.statut !== 'reçue') return false;
+    if (!commissionEncaisseeOuExtournee(ca)) return false;
     const d = commissionDateReception(ca);
     if (!d) return true; // pas de date connue → on ne l'exclut plus par défaut
     return d >= DATE_BASCULE_ASSUREX;
   });
-  const totalCommRecuesBrut = commissionsRecues.reduce((s, ca) => s + Number(ca.montant_final != null ? ca.montant_final : (ca.montant_estime||0)), 0);
-  // Extourné = commission déjà reçue puis reprise par la compagnie (contrat policé annulé après coup) — réduit le net réellement conservé
-  const commissionsExtournees = allCommissionsAttente.filter(ca => {
-    if (ca.statut !== 'extourné') return false;
-    const d = commissionDateReception(ca);
-    if (!d) return true;
-    return d >= DATE_BASCULE_ASSUREX;
-  });
-  const totalExtourne = commissionsExtournees.reduce((s, ca) => s + Number(ca.montant_final != null ? ca.montant_final : (ca.montant_estime||0)), 0);
-  const totalCommRecues = totalCommRecuesBrut - totalExtourne;
-  const totalGestionRecue = commissionsRecues.filter(ca => ca.nature === 'gestion').reduce((s, ca) => s + Number(ca.montant_final != null ? ca.montant_final : (ca.montant_estime||0)), 0);
+  const totalCommRecuesBrut = commissionsRecues.reduce((s, ca) => s + commissionMontantEncaisse(ca), 0);
+  const totalCommRecues = totalCommRecuesBrut;
+  const totalGestionRecue = commissionsRecues.filter(ca => ca.nature === 'gestion').reduce((s, ca) => s + commissionMontantEncaisse(ca), 0);
   const totalAcquisitionRecue = totalCommRecuesBrut - totalGestionRecue;
   const nbContratsActifs = allContrats.filter(ct => !['résilié','annulé','mandat_resilie'].includes(ct.statut) && ct.commissionne !== false).length;
   const urgents = allRappels.filter(r => r.urgence === 'haute' && r.statut === 'ouvert');

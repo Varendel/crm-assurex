@@ -81,8 +81,8 @@ function mnuPeindreFil() {
   if (o.groupe) morceaux.push(`<span class="rex-fil-etape rex-fil-groupe">${mnuEsc(o.groupe)}</span>`);
   if (o.ecran) morceaux.push(`<span class="rex-fil-etape rex-fil-ici" aria-current="page">${mnuEsc(o.ecran)}</span>`);
   fil.innerHTML = morceaux.join('<span class="rex-fil-sep" aria-hidden="true">›</span>');
-  const retour = document.getElementById('rex-retour');
-  if (retour) retour.disabled = !(typeof navHistory !== 'undefined' && navHistory.length);
+  // Les flèches « précédent » et « menu rattaché » : js/93 les nomme et les active.
+  if (typeof navPoserFleche === 'function') navPoserFleche();
 }
 
 // ── La barre du haut ───────────────────────────────────────────────────────────────────────────
@@ -98,7 +98,10 @@ function mnuPoserBarre() {
   col.innerHTML = `
     <header class="rex-barre" id="rex-barre">
       <div class="rex-barre-gauche">
-        <button type="button" class="rex-barre-retour" id="rex-retour" onclick="goBack()" aria-label="Revenir à l’écran précédent" title="Retour">${MNU_RETOUR}</button>
+        <div class="rex-nav-fleches" role="group" aria-label="Se déplacer">
+          <button type="button" class="rex-nav-btn" id="rex-retour" onclick="goBack()" disabled>${MNU_RETOUR}<span class="rex-nav-txt">Précédent</span></button>
+          <button type="button" class="rex-nav-btn rex-nav-monter" id="rex-monter" onclick="navMonter()" hidden></button>
+        </div>
         <nav class="rex-fil" id="rex-fil" aria-label="Vous êtes ici"></nav>
       </div>
       <button type="button" class="rex-loupe" id="rex-loupe" onclick="navOuvrir()" aria-keyshortcuts="Control+K /"

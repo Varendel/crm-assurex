@@ -24,13 +24,31 @@
   border-bottom: 1px solid var(--border);
 }
 
-.rex-barre-retour {
-  flex-shrink: 0; width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;
-  border-radius: var(--r-s, 10px); border: 1px solid var(--border); background: transparent;
-  color: var(--text-muted); cursor: pointer;
+/* Les deux flèches (js/93) : « ← écran précédent » et « ↑ menu rattaché », nommées, toujours ici.
+   Un seul groupe bordé, comme le bouton scindé du pied de menu. */
+.rex-nav-fleches {
+  flex-shrink: 0; display: inline-flex; align-items: stretch; height: 34px;
+  border: 1px solid var(--border); border-radius: var(--r-s, 10px); background: var(--surface); overflow: hidden;
 }
-.rex-barre-retour:hover:not(:disabled) { color: var(--text); background: var(--surface-alt); }
-.rex-barre-retour:disabled { opacity: .35; cursor: default; }
+.rex-nav-btn {
+  min-width: 34px; display: inline-flex; align-items: center; gap: 6px; padding: 0 10px;
+  border: 0; background: transparent; color: var(--text-muted);
+  font: inherit; font-size: var(--t-s, 12.5px); font-weight: 500; cursor: pointer; white-space: nowrap;
+}
+.rex-nav-btn + .rex-nav-btn { border-left: 1px solid var(--border); }
+.rex-nav-btn svg { flex-shrink: 0; color: var(--accent); }
+.rex-nav-btn:hover:not(:disabled) { color: var(--text); background: var(--surface-alt); }
+.rex-nav-btn:disabled { cursor: default; color: var(--text-dim); }
+.rex-nav-btn:disabled svg { color: var(--text-dim); }
+.rex-nav-btn[hidden] { display: none; }
+.rex-nav-txt { max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
+/* Écran moyen : la flèche ↑ nomme déjà la rubrique et le bandeau le titre de l'écran — le fil
+   d'Ariane cède sa place aux deux flèches plutôt que de tout tronquer. */
+@media (max-width: 1500px) and (min-width: 769px) {
+  .rex-barre .rex-fil { display: none; }
+  .rex-nav-txt { max-width: 120px; }
+}
+@media (max-width: 1100px) and (min-width: 769px) { .rex-nav-txt { max-width: 72px; } }
 
 /* Le fil d'Ariane : on lit où l'on est sans chercher la ligne surlignée dans le menu. */
 .rex-fil {
@@ -66,9 +84,15 @@ button.rex-fil-etape:hover { color: var(--text); background: var(--surface-alt);
   background: var(--surface-alt); color: var(--text-muted); border: 1px solid var(--border);
 }
 
-/* Sur téléphone : la barre de l'app existe déjà, avec sa loupe. */
+/* Sur téléphone : la barre de l'app porte déjà le titre et la loupe. On ne garde que les deux
+   flèches, en une ligne fine sous elle, pour qu'elles soient là aussi. */
 @media (max-width: 768px) {
-  .rex-barre { display: none; }
+  .rex-barre { position: static; height: auto; display: flex; padding: 8px 14px; background: transparent;
+    -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .rex-barre .rex-fil, .rex-barre .rex-loupe, .rex-barre-droite { display: none; }
+  .rex-nav-fleches { max-width: 100%; }
+  .rex-nav-txt { max-width: 38vw; }
+  body.mode-espace-client .rex-barre { display: none; }
 }
 @media (max-width: 1100px) and (min-width: 769px) {
   .rex-barre { padding: 0 20px; }

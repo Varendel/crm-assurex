@@ -116,46 +116,9 @@ function rbAppliquer() {
   rbAbsorberBarre(barre, bandeau);
 }
 
-// ═══ HISTORIQUE SYNCHRONISÉ AVEC LE NAVIGATEUR ═══════════════════════════════════════════════
-// Avant : le CRM avait son propre historique (navHistory) mais le bouton « précédent » du
-// navigateur, de la souris ou Alt+← n'en savait rien (il quittait la page ou ne faisait rien),
-// et la flèche du CRM ne reculait pas l'historique du navigateur. Désormais chaque étape du CRM
-// crée une entrée d'historique du navigateur, et les deux reculent ensemble :
-//   - flèche du CRM → history.back() → même chemin que le bouton du navigateur ;
-//   - bouton du navigateur / souris / Alt+← → retour interne du CRM (popstate) ;
-//   - on ne sort jamais du CRM par erreur : arrivé au début, on revient au tableau de bord.
-(function rbHistorique() {
-  if (typeof navHistory === 'undefined' || typeof goBack !== 'function' || !window.history || !history.pushState) return;
-  let restauration = false;
-  const pousser = navHistory.push;
-  navHistory.push = function () {
-    const r = pousser.apply(this, arguments);
-    if (!restauration) { try { history.pushState({ rex: true, n: navHistory.length }, ''); } catch (e) { /* bac à sable */ } }
-    return r;
-  };
-  const retourInterne = goBack;
-  // Entrée « base » + une entrée de garde : le premier « précédent » reste dans le CRM
-  try { history.replaceState({ rex: true, n: 0, base: true }, ''); history.pushState({ rex: true, n: 0 }, ''); } catch (e) {}
-  window.addEventListener('popstate', async () => {
-    if (restauration) return;
-    // Une fenêtre (modale) ouverte : « précédent » la ferme, sans changer de page
-    const modales = document.querySelectorAll('.rex-modale');
-    if (modales.length) {
-      modales[modales.length - 1].remove();
-      try { history.pushState({ rex: true, n: navHistory.length }, ''); } catch (e) {}
-      return;
-    }
-    restauration = true;
-    try { await retourInterne(); }
-    finally { restauration = false; }
-    // Revenu tout au début : on recrée la garde pour ne jamais quitter le CRM par erreur
-    if (history.state && history.state.base) { try { history.pushState({ rex: true, n: 0 }, ''); } catch (e) {} }
-  });
-  goBack = function () {
-    if (navHistory.length && history.state && history.state.rex && !history.state.base) history.back();
-    else retourInterne();
-  };
-})();
+// ═══ HISTORIQUE DU NAVIGATEUR : retiré le 21.09.2026 ═══════════════════════════════════════════
+// Il doublait celui de js/93 : deux écouteurs « popstate » reculaient chacun d'un pas, et un seul
+// « précédent » du navigateur sautait deux écrans. js/93 tient désormais seul l'historique.
 
 // Réapplique après chaque rendu (navigation, onglets internes qui réécrivent la page)
 (function rbObserver() {

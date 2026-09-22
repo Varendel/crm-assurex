@@ -46,14 +46,18 @@ async function aemRendre() {
   const z = document.getElementById('aem-apercu');
   if (!z) return;
   const d = await aemDonnees();
-  const moi = (d.ag && [d.ag.prenom, d.ag.nom].filter(Boolean).join(' ')) || (typeof currentUser !== 'undefined' && currentUser ? `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() : '');
-  const email = (d.ag && d.ag.email) || (typeof currentUser !== 'undefined' && currentUser && currentUser.email) || '';
+  // L'adresse expéditeur reste toujours visible : celle du compte Outlook qui enverra réellement.
+  const cpt = typeof sigCompteOutlook === 'function' ? await sigCompteOutlook().catch(() => null) : null;
+  const moi = (cpt && cpt.nom) || (d.ag && [d.ag.prenom, d.ag.nom].filter(Boolean).join(' ')) || (typeof currentUser !== 'undefined' && currentUser ? `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() : '');
+  const emailCrm = (d.ag && d.ag.email) || (typeof currentUser !== 'undefined' && currentUser && currentUser.email) || '';
+  const email = (cpt && cpt.adresse) || emailCrm;
+  const autre = cpt && cpt.adresse && emailCrm && cpt.adresse.toLowerCase() !== emailCrm.toLowerCase();
   const init = moi.split(/\s+/).map(x => x[0] || '').join('').slice(0, 2).toUpperCase() || '✉';
   const puces = arr => arr.map(e => `<span class="aem-puce">${aemEsc(e)}</span>`).join('');
   z.querySelector('.aem-tete').innerHTML = `
     <div class="aem-objet">${aemEsc(d.sujet) || '<i>(sans objet)</i>'}</div>
     <div class="aem-exp"><span class="aem-avatar">${aemEsc(init)}</span>
-      <div><div><b>${aemEsc(moi)}</b> <small>&lt;${aemEsc(email)}&gt;</small></div>
+      <div><div><b>${aemEsc(moi)}</b> <span class="aem-de${autre ? ' aem-de-autre' : ''}" title="Compte Outlook qui envoie l’e-mail">${aemEsc(email) || 'compte Outlook non connecté'}</span>${autre ? ' <b class="aem-de-autre">⚠️ pas l’adresse de ta session CRM</b>' : ''}</div>
         <div class="aem-lignes"><span>À</span> ${d.to.length ? puces(d.to) : '<i>aucun destinataire</i>'}</div>
         ${d.cc.length ? `<div class="aem-lignes"><span>Cc</span> ${puces(d.cc)}</div>` : ''}</div></div>
     ${d.pj.length ? `<div class="aem-pj">${d.pj.map(p => `<span class="aem-fichier">📄 ${aemEsc(p.nom)}${p.taille ? ` <small>${typeof pjeTaille === 'function' ? pjeTaille(p.taille) : ''}</small>` : ''}</span>`).join('')}</div>` : ''}`;
@@ -124,6 +128,8 @@ function aemMode(m) {
     .aem-lignes { margin-top: 3px; color: #374151; display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
     .aem-lignes > span:first-child { color: #6b7280; min-width: 20px; }
     .aem-puce { background: #eef2f7; border-radius: 999px; padding: 1px 8px; }
+    .aem-de { background: #eef2f7; border-radius: 999px; padding: 1px 8px; color: #374151; }
+    .aem-de-autre { background: #FEF3C7; color: #92400E; }
     .aem-pj { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
     .aem-fichier { border: 1px solid #d1d5db; border-radius: 8px; padding: 4px 9px; font-size: 12px; background: #f9fafb; }
     .aem-fichier small { color: #6b7280; }

@@ -28,6 +28,20 @@ async function sigAgent(forcer) {
   return _sig.agent;
 }
 
+// « Par sécurité, laisse toujours l'adresse expéditeur visible. » L'e-mail part du compte Outlook
+// connecté, pas forcément de l'adresse de la session CRM : on lit le compte réel et on l'affiche.
+async function sigCompteOutlook(forcer) {
+  if (!forcer && _sig.compte !== undefined) return _sig.compte;
+  _sig.compte = null;
+  try {
+    if (typeof msalAccessToken !== 'undefined' && msalAccessToken) {
+      const r = await fetch('https://graph.microsoft.com/v1.0/me?$select=mail,userPrincipalName,displayName', { headers: { Authorization: `Bearer ${msalAccessToken}` } });
+      if (r.ok) { const j = await r.json(); _sig.compte = { adresse: j.mail || j.userPrincipalName || '', nom: j.displayName || '' }; }
+    }
+  } catch (e) { /* hors ligne : on n'affiche rien plutôt qu'une fausse adresse */ }
+  return _sig.compte;
+}
+
 async function sigCopiesDemandes() {
   const r = await dbGet('agents', 'copie_demandes_offre=is.true&select=email');
   return (Array.isArray(r) ? r : []).map(x => x.email).filter(Boolean);
@@ -163,7 +177,11 @@ function sigTexteVersHtml(texte, ag) {
     window.envoyerApercuEmailDemandeOffreViaOutlook = async function () {
       window._sigSans = !!document.getElementById('sig-sans')?.checked;
       _sig.envoiDemande = true;
-      try { return await env.apply(this, arguments); } finally { _sig.envoiDemande = false; window._sigSans = false; }
+      // La confirmation de js/07 annonçait une adresse écrite en dur : on y met le compte réel.
+      const cpt = await sigCompteOutlook().catch(() => null);
+      const conf = window.confirm;
+      window.confirm = (msg) => conf(String(msg).replace(/depuis\s+\S+@\S+/i, `depuis ${cpt && cpt.adresse ? cpt.adresse : 'le compte Outlook connecté'}`));
+      try { return await env.apply(this, arguments); } finally { window.confirm = conf; _sig.envoiDemande = false; window._sigSans = false; }
     };
   }
   // Dans l'aperçu : la ligne signature + copie, au-dessus des boutons
@@ -185,7 +203,9 @@ function sigTexteVersHtml(texte, ag) {
     .sig-ligne { display: flex; flex-wrap: wrap; gap: 6px 14px; align-items: center; font-size: 12px; color: var(--text-muted); margin: 0 0 12px; }
     .sig-ligne b { color: var(--text); }
     .sig-ligne button { background: none; border: 0; padding: 0; color: var(--accent); font: inherit; font-weight: 600; cursor: pointer; }
-    .sig-ligne .sig-ko { color: var(--c-alerte-texte, #B45309); }`;
+    .sig-ligne .sig-ko { color: var(--c-alerte-texte, #B45309); }
+    .sig-ligne .sig-exp { padding: 2px 9px; border-radius: 999px; background: var(--surface-alt); border: 1px solid var(--border); }
+    .sig-ligne .sig-exp.sig-autre { color: var(--c-alerte-texte, #B45309); border-color: currentColor; font-weight: 600; }`;
   document.head.appendChild(st);
 })();
 
@@ -194,7 +214,11 @@ async function sigLigneMaj(el, avecCopie) {
   const ag = await sigAgent().catch(() => null);
   const ok = ag && ag.signature_email_html;
   const copies = avecCopie ? await sigCopiesDemandes().catch(() => []) : [];
-  el.innerHTML = `${ok ? `<span>✍️ <b>Ta signature Outlook</b> sera ajoutée${ag.signature_email_maj_le ? ` (reprise le ${fmtDate(String(ag.signature_email_maj_le).slice(0, 10))})` : ''}</span>
+  const cpt = await sigCompteOutlook().catch(() => null);
+  const moi = ((typeof currentUser !== 'undefined' && currentUser && currentUser.email) || '').toLowerCase();
+  const autre = cpt && cpt.adresse && moi && cpt.adresse.toLowerCase() !== moi;
+  el.innerHTML = `<span class="sig-exp${autre ? ' sig-autre' : ''}">📤 Envoi depuis : <b>${cpt && cpt.adresse ? sigEsc(cpt.adresse) : 'compte Outlook non connecté'}</b>${autre ? ' ⚠️ ce n’est pas l’adresse de ta session CRM' : ''}</span>
+    ${ok ? `<span>✍️ <b>Ta signature Outlook</b> sera ajoutée${ag.signature_email_maj_le ? ` (reprise le ${fmtDate(String(ag.signature_email_maj_le).slice(0, 10))})` : ''}</span>
       <label><input type="checkbox" id="sig-sans"/> sans signature</label>`
     : '<span class="sig-ko">✍️ Pas encore de signature enregistrée</span>'}
     <button type="button" onclick="sigReprendreOutlook()">↻ ${ok ? 'Mettre à jour' : 'Reprendre ma signature Outlook'}</button>

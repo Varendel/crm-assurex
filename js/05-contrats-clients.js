@@ -1685,10 +1685,25 @@ function ouvrirOptionsMandatCourtage(clientId) {
       </div>
       <div class="opx-modale-actions mdx-actions">
         <button type="button" class="btn-secondary" onclick="document.getElementById('modal-options-mandat').remove()">Annuler</button>
+        <!-- 22.09.2026 : « Pas de mandat » proposait seulement d'en faire signer un. Beaucoup de
+             mandats existent déjà, signés sur papier ou par la compagnie : on peut les déposer ici. -->
+        <label class="btn-secondary mdx-televerser" title="Mandat déjà signé : PDF ou photo">📤 J’ai déjà le mandat signé
+          <input type="file" accept="application/pdf,image/*" hidden onchange="mdxDeposerMandatSigne('${clientId}', this)"/></label>
         <button type="button" class="btn-save" onclick="validerOptionsMandatCourtage('${clientId}')">Continuer vers la signature →</button>
       </div>
     </div>`, { opacite: 0.8, padding: '16px' });
   m.classList.add('rex-modale-feuille');
+}
+
+// Dépôt d'un mandat déjà signé depuis la fenêtre « Mandat de courtage » : même enregistrement que
+// depuis la fiche client (uploadMandatSigne, js/08), puis la pastille et les couvertures se
+// rafraîchissent — le mandat devient aussitôt joignable aux demandes d'offre (js/136).
+async function mdxDeposerMandatSigne(clientId, input) {
+  if (!input || !input.files || !input.files[0]) return;
+  document.getElementById('modal-options-mandat')?.remove();
+  await uploadMandatSigne(clientId, input);
+  if (typeof _couMandats !== 'undefined' && _couMandats.delete) _couMandats.delete(clientId);
+  if (typeof _mop !== 'undefined') _mop.clients = null;
 }
 
 function validerOptionsMandatCourtage(clientId) {

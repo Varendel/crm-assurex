@@ -627,3 +627,5 @@
   font-variant-numeric: tabular-nums lining-nums;
 }
 @media (max-width: 620px) { .bd-numero { font-size: var(--t-s); padding: 2px 8px; } }
+/* « J'ai déjà le mandat signé » (22.09.2026) : un label qui se comporte comme un bouton. */
+.mdx-televerser { display: inline-flex; align-items: center; gap: 6px; cursor: pointer; }

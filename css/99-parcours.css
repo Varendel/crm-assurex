@@ -201,3 +201,9 @@ html:not([data-theme="clair"]) body:not(.mode-cloud):not(.mode-espace-client) .o
   .paf-cartes { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); }
   .paf-actions > * { flex: 1 1 auto; }
 }
+
+/* Passer l'étape (22.09.2026) : discret, à droite des manques — c'est une sortie de secours,
+   pas le chemin normal. */
+.paf-sauter { margin-top: 8px; align-self: flex-start; background: none; border: 1px dashed var(--border);
+  color: var(--text-muted); border-radius: 999px; padding: 4px 12px; font: inherit; font-size: var(--t-xs, 12px); cursor: pointer; }
+.paf-sauter:hover { color: var(--text); border-color: var(--accent-border); border-style: solid; }

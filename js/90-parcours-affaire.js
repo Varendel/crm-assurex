@@ -102,6 +102,9 @@ function pafManques(o) {
   m.decision = !o.signee_le ? 'Date de signature non renseignée' : null;
   m.resiliation = (o.resiliation_requise && !o.resiliation_envoyee_le) ? 'Résiliation de l’ancien contrat à envoyer' : null;
   m.contrat = !o.contrat_id ? 'Contrat non créé dans le portefeuille' : null;
+  // 22.09.2026 : « Certaines affaires sont déjà saisies avant la fonction. » Une affaire d'avant le
+  // parcours réclamait indéfiniment des étapes déjà faites ailleurs : on peut les déclarer passées.
+  if (o.paf_ignore) Object.keys(m).forEach(k => { if (m[k] !== PAF_INCONNU) m[k] = null; });
   return m;
 }
 
@@ -135,8 +138,10 @@ function pafRepeindreBandeau(oppId) {
 // L'action suivante. C'est ce qui manquait le plus : on savait où on en était, jamais quoi faire.
 function pafActionSuivante(o, courante, manques) {
   const e = PAF_ETAPES[courante];
-  const inconnus = e.requis.filter(r => manques[r] === PAF_INCONNU);
-  const reste = e.requis.map(r => ({ cle: r, texte: manques[r] })).filter(x => x.texte && x.texte !== PAF_INCONNU);
+  // Étapes déclarées déjà faites (affaire antérieure au parcours) : plus rien n'est réclamé, y
+  // compris ce qu'un autre module ajoute aux manques après pafManques.
+  const inconnus = o.paf_ignore ? [] : e.requis.filter(r => manques[r] === PAF_INCONNU);
+  const reste = o.paf_ignore ? [] : e.requis.map(r => ({ cle: r, texte: manques[r] })).filter(x => x.texte && x.texte !== PAF_INCONNU);
 
   // Rien de connu ne manque, mais une donnée n'est pas encore lue : pas de ✓ prématuré.
   if (!reste.length && inconnus.length) {
@@ -162,13 +167,38 @@ function pafActionSuivante(o, courante, manques) {
     </div>`;
   }
 
+  const suivante = PAF_ETAPES[courante + 1];
   return `<div class="paf-suite">
     <b>Pour passer à l’étape suivante</b>
     <ul class="paf-manques">${reste.map(x => `<li>
       <span>${pafEsc(x.texte)}</span>
       ${pafBoutonPour(o, x.cle)}
     </li>`).join('')}</ul>
+    <button type="button" class="paf-sauter" title="Affaire traitée avant le parcours : on ne réclame plus ces points"
+      onclick="pafSauterEtape('${o.id}')">⏭️ ${suivante ? `Passer l’étape — aller à « ${pafEsc(suivante.nom)} »` : 'Marquer ces points comme déjà faits'}</button>
   </div>`;
+}
+
+// Passer l'étape sans la remplir : l'affaire avance (ou, à la dernière étape, ne réclame plus rien).
+// Le fil garde la trace du saut : le parcours reste honnête sur ce qui a été fait ou non.
+async function pafSauterEtape(oppId) {
+  const o = pafOpp(oppId);
+  if (!o) return;
+  const courante = pafEtapeCourante(o), e = PAF_ETAPES[courante], suivante = PAF_ETAPES[courante + 1];
+  const question = suivante
+    ? `Passer l’étape « ${e.nom} » sans la remplir et aller à « ${suivante.nom} » ?`
+    : `Ne plus réclamer les points manquants de « ${e.nom} » sur cette affaire ?`;
+  if (!confirm(question)) return;
+  const corps = suivante ? { stade: suivante.stade } : { paf_ignore: true };
+  const r = await dbPatch('opportunites', oppId, corps);
+  if (r && r.error) { showError('Étape non passée : ' + errMsg(r)); return; }
+  Object.assign(o, corps);
+  if (typeof ajouterLigneHistoriqueOpportunite === 'function')
+    await ajouterLigneHistoriqueOpportunite(oppId, suivante
+      ? `⏭️ Étape « ${e.nom} » passée manuellement (affaire antérieure au parcours) → ${suivante.nom}`
+      : `⏭️ Points restants de « ${e.nom} » déclarés déjà faits (affaire antérieure au parcours)`);
+  pafRepeindreBandeau(oppId);
+  if (typeof opRafraichir === 'function') opRafraichir();
 }
 
 // À chaque manque, le geste qui le comble — et pas un lien vers un écran où le chercher.

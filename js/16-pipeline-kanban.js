@@ -45,7 +45,9 @@ function _offresDeLOpportunite(oppId) {
   const lignes = [];
   (_pipelineDemandes || []).filter(d => d.opportunite_id === oppId).forEach(d => {
     (Array.isArray(d.compagnies_envoi) ? d.compagnies_envoi : []).forEach((e, index) => {
-      if (e && e.compagnie) lignes.push({ demandeId: d.id, index, compagnie: e.compagnie, statut: _offreStatutEntree(e) });
+      // 22.09.2026 : la prime annuelle suit l'offre jusqu'au pipeline — « mets le tarif annuel sur
+      // les offres du pipeline en ligne si connu ».
+      if (e && e.compagnie) lignes.push({ demandeId: d.id, index, compagnie: e.compagnie, statut: _offreStatutEntree(e), prime: Number(e.prime) > 0 ? Number(e.prime) : null });
     });
   });
   return lignes;
@@ -61,18 +63,29 @@ function remplirOffresPipeline() {
     const couleurResume = retenue ? 'var(--accent)' : offres.every(o => o.statut !== 'envoyée') ? '#1F9D6B' : '#F59E0B';
     zone.innerHTML = `<div style="display:flex;flex-direction:column;gap:6px;padding:7px 8px;margin-bottom:8px;border-radius:8px;background:var(--surface-alt);border:1px solid var(--border)">
       <div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--text-muted)"><span>Offres demandées</span><strong style="color:${couleurResume};font-weight:600">${resume}</strong></div>
-      <div style="display:flex;flex-wrap:wrap;gap:7px">
-        ${offres.map(o => {
-          const st = OFFRE_STATUTS[o.statut];
-          const nom = normaliserCompagnie(o.compagnie);
-          const titre = `${nom} — ${st.label}${_pipelineRhMode ? '' : ' (clic : statut suivant)'}`;
-          return `<button type="button" title="${titre.replace(/"/g, '&quot;')}" aria-label="${titre.replace(/"/g, '&quot;')}" ${_pipelineRhMode ? 'disabled' : ''}
-            onclick="event.stopPropagation();changerStatutOffrePipeline('${o.demandeId}', ${o.index})"
-            draggable="false" style="position:relative;padding:0;border:2px solid ${o.statut === 'retenue' ? st.couleur : 'transparent'};border-radius:8px;background:none;cursor:${_pipelineRhMode ? 'default' : 'pointer'};opacity:${o.statut === 'non_retenue' ? 0.45 : 1};line-height:0">
-            ${pictoCompagnie(o.compagnie, 22)}
-            <span style="position:absolute;right:-6px;bottom:-6px;min-width:14px;height:14px;padding:0 2px;box-sizing:border-box;border-radius:7px;background:${st.couleur};color:#fff;font-size:9px;line-height:14px;font-weight:600;text-align:center">${st.symbole}</span>
-          </button>`;
-        }).join('')}
+      <div style="display:flex;flex-wrap:wrap;gap:${offres.length > 3 ? 4 : 7}px">
+        ${(() => {
+          // Le tarif annuel s'affiche à côté du logo quand il est connu. Plus il y a d'offres, plus
+          // la pastille est compacte, pour que la ligne tienne dans la carte sans la déformer.
+          const n = offres.length;
+          const taille = n > 4 ? 15 : n > 3 ? 17 : n > 2 ? 19 : 22;
+          const police = n > 4 ? 8.5 : n > 2 ? 9.5 : 10.5;
+          const court = v => n > 3 && v >= 1000 ? Math.round(v / 100) / 10 + 'k' : fmtCHF(Math.round(v));
+          return offres.map(o => {
+            const st = OFFRE_STATUTS[o.statut];
+            const nom = normaliserCompagnie(o.compagnie);
+            const titre = `${nom} — ${st.label}${o.prime ? ` · CHF ${fmtCHF(o.prime)}/an` : ''}${_pipelineRhMode ? '' : ' (clic : statut suivant)'}`;
+            const prix = o.prime && !_pipelineRhMode
+              ? `<span style="font-size:${police}px;font-weight:600;color:var(--text);white-space:nowrap">${court(o.prime)}</span>` : '';
+            return `<button type="button" title="${titre.replace(/"/g, '&quot;')}" aria-label="${titre.replace(/"/g, '&quot;')}" ${_pipelineRhMode ? 'disabled' : ''}
+              onclick="event.stopPropagation();changerStatutOffrePipeline('${o.demandeId}', ${o.index})"
+              draggable="false" style="position:relative;display:inline-flex;align-items:center;gap:${prix ? 5 : 0}px;padding:${prix ? '2px 7px 2px 2px' : '0'};border:2px solid ${o.statut === 'retenue' ? st.couleur : 'transparent'};border-radius:${prix ? 999 : 8}px;background:${prix ? 'var(--surface)' : 'none'};cursor:${_pipelineRhMode ? 'default' : 'pointer'};opacity:${o.statut === 'non_retenue' ? 0.45 : 1};line-height:1">
+              <span style="position:relative;line-height:0">${pictoCompagnie(o.compagnie, taille)}
+                <span style="position:absolute;right:-5px;bottom:-5px;min-width:13px;height:13px;padding:0 2px;box-sizing:border-box;border-radius:7px;background:${st.couleur};color:#fff;font-size:8.5px;line-height:13px;font-weight:600;text-align:center">${st.symbole}</span></span>
+              ${prix}
+            </button>`;
+          }).join('');
+        })()}
       </div>
     </div>`;
   });

@@ -33,10 +33,20 @@ async function pjeDocuments(oppId) {
   }));
   if (o.client_id) {
     try {
-      const m = await dbGet('mandats_signes', `client_id=eq.${o.client_id}&signe=is.true&archive=is.false&select=fichier_url,fichier_nom,created_at&order=created_at.desc&limit=1`);
       // « Si les mandats sont signés, ils doivent aussi sortir dans les documents liés de la demande
       // d'offre et toujours joints » : coché d'office (décochable au cas par cas).
-      if (Array.isArray(m) && m[0] && m[0].fichier_url) items.push({ path: m[0].fichier_url, nom: m[0].fichier_nom || 'Mandat de courtage signé.pdf', source: 'Mandat signé · joint d’office', defaut: true });
+      // Un mandat signé DANS le CRM n'a pas de PDF (fichier_url vide) : seule la capture HTML de la
+      // signature existe (html_snapshot, cas Tandoori Plage). On le liste quand même et le PDF est
+      // fabriqué au moment de l'envoi, puis archivé sur le mandat pour les fois suivantes.
+      const m = await dbGet('mandats_signes', `client_id=eq.${o.client_id}&signe=is.true&archive=is.false&select=id,fichier_url,fichier_nom,html_snapshot,created_at&order=created_at.desc`);
+      const sig = (Array.isArray(m) ? m : []).filter(x => x.fichier_url || x.html_snapshot);
+      if (sig.length) {
+        const x = sig[0];
+        const nom = (x.fichier_nom || 'Mandat de courtage signé').replace(/\.(pdf|html?)$/i, '').replace(/[\\/:*?"<>|]/g, '-') + '.pdf';
+        items.push(x.fichier_url
+          ? { path: x.fichier_url, nom, source: 'Mandat signé · joint d’office', defaut: true }
+          : { path: `mandat:${x.id}`, mandatId: x.id, html: x.html_snapshot, nom, source: 'Mandat signé dans le CRM · joint d’office', defaut: true });
+      }
     } catch (e) { /* sans mandat : rien */ }
   }
   return items.sort((a, b) => (b.defaut ? 1 : 0) - (a.defaut ? 1 : 0));   // le mandat en tête
@@ -48,7 +58,7 @@ function pjeRendre() {
   const lignes = [
     ..._pje.items.map((it, i) => `<label class="pje-ligne"><input type="checkbox" data-pje="d${i}" ${it.coche ? 'checked' : ''} onchange="pjeCocher('d',${i},this.checked)"/>
       <span class="pje-nom">📄 ${pjeEsc(it.nom)}</span><span class="pje-src">${pjeEsc(it.source)}</span>
-      <button type="button" class="pje-voir" onclick="event.preventDefault();ouvrirPieceJointe('${pjeEsc(it.path)}')" title="Voir le document">👁</button></label>`),
+      <button type="button" class="pje-voir" onclick="event.preventDefault();pjeVoir(${i})" title="Voir le document">👁</button></label>`),
     ..._pje.locaux.map((f, i) => `<label class="pje-ligne"><input type="checkbox" ${f.coche ? 'checked' : ''} onchange="pjeCocher('l',${i},this.checked)"/>
       <span class="pje-nom">💻 ${pjeEsc(f.file.name)}</span><span class="pje-src">${pjeTaille(f.file.size)} · ordinateur</span></label>`),
   ];
@@ -79,6 +89,11 @@ async function pjfPoser() {
   pjeRendre();
 }
 function pjeCocher(t, i, v) { (t === 'd' ? _pje.items : _pje.locaux)[i].coche = v; pjeRendre(); }
+function pjeVoir(i) {
+  const it = _pje.items[i]; if (!it) return;
+  if (it.html) { const w = window.open(URL.createObjectURL(new Blob([it.html], { type: 'text/html;charset=utf-8' })), '_blank'); if (!w) showError('Autorise les fenêtres pop-up pour voir le mandat.'); return; }
+  ouvrirPieceJointe(it.path);
+}
 function pjeAjouterLocaux(input) {
   [...(input.files || [])].forEach(file => _pje.locaux.push({ file, coche: true }));
   input.value = ''; pjeRendre();
@@ -93,10 +108,39 @@ async function pjeTelecharger(path) {
 function pjeB64(blob) {
   return new Promise((ok, ko) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1] || ''); fr.onerror = () => ko(fr.error); fr.readAsDataURL(blob); });
 }
+// Mandat signé dans le CRM : PDF fabriqué depuis la capture HTML (jsPDF + html2canvas chargés à la
+// demande), puis archivé sur le mandat — la fois suivante, c'est un vrai fichier comme les autres.
+function pjeScript(src) { return new Promise((ok, ko) => { const s = document.createElement('script'); s.src = src; s.onload = ok; s.onerror = () => ko(new Error('chargement ' + src)); document.head.appendChild(s); }); }
+async function pjeMandatPdf(it) {
+  if (!window.html2canvas) await pjeScript('https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js');
+  if (!window.jspdf) await pjeScript('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  const hote = document.createElement('div');
+  hote.style.cssText = 'position:fixed;left:-10000px;top:0;width:794px;background:#fff;padding:36px;font-family:Arial,Helvetica,sans-serif;color:#111';
+  hote.innerHTML = it.html;
+  document.body.appendChild(hote);
+  try {
+    const toile = await html2canvas(hote, { scale: 2, backgroundColor: '#fff', useCORS: true });
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4' });
+    const L = 210, H = 297, hImg = toile.height * L / toile.width;
+    const img = toile.toDataURL('image/jpeg', 0.92);
+    for (let y = 0, p = 0; y < hImg; y += H, p++) { if (p) pdf.addPage(); pdf.addImage(img, 'JPEG', 0, -y, L, hImg); }
+    const blob = pdf.output('blob');
+    // archivage (facultatif) : le mandat aura enfin son PDF
+    try {
+      const path = `mandats/${it.mandatId}/${Date.now().toString(36)}-mandat-signe.pdf`;
+      const token = await getValidAccessToken() || SUPABASE_KEY;
+      const up = await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${path}`, { method: 'POST', headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/pdf' }, body: blob });
+      if (up.ok) await dbPatch('mandats_signes', it.mandatId, { fichier_url: path, fichier_nom: it.nom });
+    } catch (e) { /* l'envoi n'attend pas l'archivage */ }
+    return blob;
+  } finally { hote.remove(); }
+}
+
 async function pjePreparer() {
   const out = [];
   for (const it of _pje.items.filter(x => x.coche)) {
-    const b = await pjeTelecharger(it.path);
+    const b = it.html ? await pjeMandatPdf(it) : await pjeTelecharger(it.path);
     out.push({ name: it.nom, type: b.type || 'application/octet-stream', blob: b });
   }
   _pje.locaux.filter(x => x.coche).forEach(f => out.push({ name: f.file.name, type: f.file.type || 'application/octet-stream', blob: f.file }));

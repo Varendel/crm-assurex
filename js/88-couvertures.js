@@ -100,6 +100,30 @@ function couRendre(client, contrats, isEntreprise) {
 // Une branche couverte. Quand elle porte plusieurs contrats — c'est courant côté entreprise, où
 // LAA et perte de gain tombent dans la même famille — ils sont tous listés : une version
 // antérieure n'en gardait qu'un et masquait les autres en silence.
+// ── Le délai de résiliation, en petit sous chaque contrat (22.09.2026) ──────────────────────────
+// « Mets les délais de résiliation apparents en petits sur la fiche client, les couvertures. »
+// Délai ordinaire : 3 mois avant l'échéance (même calcul que le parcours et les renouvellements).
+// LAMal : l'assurance de base se résilie pour le 31.12, la lettre devant être reçue avant fin
+// novembre. Ce sont des repères : les conditions générales du contrat font foi.
+function couLimiteResiliation(ct) {
+  const ech = String(ct.date_echeance || '').slice(0, 10);
+  if (!ech) return null;
+  if (/lamal|assurance de base/i.test(ct.produit || '')) return `${ech.slice(0, 4)}-11-30`;
+  return typeof pafLimiteResiliation === 'function' ? pafLimiteResiliation(ech) : null;
+}
+
+function couResiliationHtml(ct) {
+  if (['résilié', 'annulé', 'mandat_resilie'].includes(ct.statut || '')) return '';
+  const limite = couLimiteResiliation(ct);
+  if (!limite) return '';
+  const jours = Math.round((new Date(limite) - new Date(new Date().toDateString())) / 86400000);
+  const passe = jours < 0;
+  const classe = passe ? 'cou-resil passe' : jours <= 45 ? 'cou-resil proche' : 'cou-resil';
+  const titre = `Résiliation ordinaire : ${/lamal|assurance de base/i.test(ct.produit || '') ? 'LAMal, lettre reçue avant fin novembre pour le 31.12' : '3 mois avant l’échéance du ' + fmtDate(String(ct.date_echeance).slice(0, 10))} — les conditions générales font foi`;
+  const texte = passe ? `délai passé (${fmtDate(limite)})` : `résiliable jusqu’au ${fmtDate(limite)}${jours <= 45 ? ` · ${jours} j` : ''}`;
+  return ` · <span class="${classe}" title="${couEsc(titre)}">⏳ ${texte}</span>`;
+}
+
 function couCarteHtml(c) {
   const prime = c.contrats.reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
   return `<div class="cou-carte pleine">
@@ -115,7 +139,7 @@ function couCarteHtml(c) {
         ${ct.compagnie && typeof pictoCompagnie === 'function' ? `<span class="cou-logo" title="${couEsc(ct.compagnie)}">${pictoCompagnie(ct.compagnie, 22)}</span>` : ''}
         <span class="cou-texte">
           <b>${couEsc(ct.produit || 'Contrat')}</b>
-          <small>${couEsc(ct.compagnie || '')}${ct.numero_police ? ' · ' + couEsc(ct.numero_police) : ''}</small>
+          <small>${couEsc(ct.compagnie || '')}${ct.numero_police ? ' · ' + couEsc(ct.numero_police) : ''}${couResiliationHtml(ct)}</small>
         </span>
       </li>`).join('')}</ul>
   </div>`;

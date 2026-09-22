@@ -143,8 +143,8 @@ const CATALOGUE_PRODUITS = {
   // compagnieEstAssureurViePur ci-dessous) — Swiss Life ne vend rien d'autre.
   'Prévoyance': [
     // ── LPP 2e pilier entreprise ─────────────────────────────────────────
-    { id: 'lpp_entreprise', label: 'LPP collective (2e pilier entreprise)', segment: 'tous', modules: ['Business Invest', 'Business Premium', 'Business Select', 'Prime Solution', 'Business Protect', 'Company Protect'] },
-    { id: 'lpp_individuelle', label: 'LPP rachat / versement volontaire', segment: 'tous', modules: [] },
+    { id: 'lpp_entreprise', label: 'LPP collective', segment: 'tous', modules: ['Business Invest', 'Business Premium', 'Business Select', 'Prime Solution', 'Business Protect', 'Company Protect'] },
+    { id: 'lpp_individuelle', label: 'LPP rachat', segment: 'tous', modules: [] },
   ],
   'Prévoyance privée': [
     // ── Pilier 3a ────────────────────────────────────────────────────────
@@ -155,7 +155,7 @@ const CATALOGUE_PRODUITS = {
     { id: 'vie_3b_risque', label: 'Assurance vie risque pur 3b', segment: 'prive', modules: ['Décès seul', 'Décès + invalidité'] },
     { id: 'vie_3b_placement', label: 'Assurance vie placement 3b (Swiss Life Select / BVG)', segment: 'prive', modules: [] },
     // ── Libre passage / autres ───────────────────────────────────────────
-    { id: 'libre_passage', label: 'Police de libre passage (LPP sortie)', segment: 'prive', modules: [] },
+    { id: 'libre_passage', label: 'Libre passage', segment: 'prive', modules: [] },
     { id: 'prevoyance_enfant', label: 'Prévoyance enfant', segment: 'prive', modules: [] },
   ],
   'Santé': [
@@ -169,8 +169,8 @@ const CATALOGUE_PRODUITS = {
   'Assurances de personnes (entreprise)': [
     { id: 'perte_gain_maladie_accident_lca', label: 'Perte de gain maladie/accident LCA', segment: 'entreprise', modules: ['Délai d\'attente réduit', 'Couverture 720 jours étendue'] },
     { id: 'perte_gain_maladie_lca', label: 'Perte de gain maladie LCA', segment: 'entreprise', modules: ['Délai d\'attente réduit', 'Couverture 720 jours étendue'] },
-    { id: 'laa', label: 'LAA (assurance-accidents obligatoire)', segment: 'entreprise', modules: ['Accidents professionnels (AP)', 'Accidents non professionnels (ANP)', 'Sursalaire LAA complémentaire'] },
-    { id: 'laac', label: 'LAAC — LAA complémentaire (sursalaire au-delà du plafond LAA)', segment: 'entreprise', modules: ['Indemnité de salaire 0-20%', 'Division privée / semi-privée', 'Prise en charge accident antérieur'] },
+    { id: 'laa', label: 'LAA', segment: 'entreprise', modules: ['Accidents professionnels (AP)', 'Accidents non professionnels (ANP)', 'Sursalaire LAA complémentaire'] },
+    { id: 'laac', label: 'LAAC (complémentaire)', segment: 'entreprise', modules: ['Indemnité de salaire 0-20%', 'Division privée / semi-privée', 'Prise en charge accident antérieur'] },
   ],
   'Entreprise — risques spécifiques': [
     { id: 'pertes_exploitation', label: 'Perte d\'exploitation', segment: 'entreprise', modules: [] },
@@ -304,7 +304,7 @@ const PRODUITS_OPPORTUNITE_GROUPES = {
   'Prévoyance': [
     { id: 'vie_3a', label: '3a (assurance ou compte)' },
     { id: 'vie_3b_mixte', label: '3b (libre passage, mixte, risque ou placement)' },
-    { id: 'lpp_entreprise', label: 'LPP (collective ou rachat individuel)' },
+    { id: 'lpp_entreprise', label: 'LPP' },
     { id: 'prevoyance_enfant', label: 'Prévoyance enfant' },
   ],
   'Santé': [
@@ -313,8 +313,8 @@ const PRODUITS_OPPORTUNITE_GROUPES = {
   ],
   'Assurances de personnes (entreprise)': [
     { id: 'perte_gain_maladie_accident_lca', label: 'Perte de gain maladie/accident LCA' },
-    { id: 'laa', label: 'LAA (assurance-accidents obligatoire)' },
-    { id: 'laac', label: 'LAAC — LAA complémentaire' },
+    { id: 'laa', label: 'LAA' },
+    { id: 'laac', label: 'LAAC (complémentaire)' },
   ],
   'Entreprise — risques spécifiques': [
     { id: 'pertes_exploitation', label: 'Perte d\'exploitation' },

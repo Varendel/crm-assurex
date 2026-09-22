@@ -168,3 +168,8 @@ html:not([data-theme="clair"]) .cou-mandat.oui { color: #4ADE80; }
   .cou-grille { grid-template-columns: 1fr; }
   .cou-manque { grid-template-columns: repeat(auto-fill, minmax(128px, 1fr)); }
 }
+
+/* Délai de résiliation sous chaque contrat des couvertures (22.09.2026) — repère discret. */
+.cou-resil { white-space: nowrap; }
+.cou-resil.proche { color: var(--c-alerte-texte, #B45309); font-weight: 600; }
+.cou-resil.passe { color: var(--text-muted); text-decoration: line-through; }

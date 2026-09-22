@@ -72,7 +72,9 @@ const PICTOS_COMPAGNIES = {
   // 3.pilier@retraitespopulaires.ch). Le fichier est attendu dans assets/logos/compagnies ;
   // tant qu'il n'y est pas, l'attribut onerror du rendu bascule sur le monogramme vert.
   'Retraites Populaires': { img: 'assets/logos/compagnies/retraites-populaires.jpg', forme: 'carre', ajuste: 'contain', fondImg: '#FFFFFF', bordure: true, abr: 'RP', fond: '#00A758' },
-  'Animalia': { abr: 'AN' },
+  // Animalia (animaux de compagnie) est une marque de la Vaudoise : c'est son logo qui est affiché
+  // (22.09.2026), plutôt qu'un monogramme « AN » que personne ne reconnaît.
+  'Animalia': { img: 'assets/logos/compagnies/vaudoise.png', forme: 'rond', abr: 'AN' },
 };
 
 function _pictoEsc(v) {

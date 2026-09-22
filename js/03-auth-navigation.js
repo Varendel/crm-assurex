@@ -834,6 +834,9 @@ const SECTIONS = [
   { id: 'dashboard-solo', label: 'Tableau de bord', icon: '📊', solo: true, target: 'dashboard' },
   { id: 'pipeline-solo', label: 'Pipeline', icon: '🎯', solo: true, target: 'opportunites', rhAllowed: true },
   { id: 'oz-assure-solo', label: 'OZ Assure', solo: true, logo: true, target: 'oz-assure', signataireOnly: true },
+  // 22.09.2026 : « Mets le logo comme bouton… mets-le sous OZ. » Écrire à la fiduciaire Cofidex au
+  // sujet d'un client (js/142) : bouton logo, juste sous OZ Assure, pas une ligne de menu de plus.
+  { id: 'cofidex-solo', label: 'Écrire à Cofidex', solo: true, logoImg: 'assets/logos/cofidex.png', target: 'cofidex', staff: true },
 
   { id: 'vente', label: 'Vente', icon: '🚀', sub: [
     { id: 'clients-prives', icon: '🙂', label: 'Clients privés', rhAllowed: true, groupe: 'Clients' },
@@ -893,7 +896,6 @@ const SECTIONS = [
     { id: 'messages-clients', icon: '💬', label: 'Messages clients', staff: true, groupe: 'Relation client' },
     { id: 'demandes-polices', icon: '📤', label: 'Demandes de polices', staff: true, groupe: 'Relation client' },
     { id: 'courriers', icon: '📨', label: 'Courriers clients', staff: true, avance: true, groupe: 'Relation client' },
-    { id: 'cofidex', icon: '🏢', label: 'Écrire à Cofidex', staff: true, groupe: 'Relation client' },
     { id: 'documents-compagnies', icon: '📥', label: 'Documents compagnies', staff: true, avance: true, groupe: 'Relation client' },
     { id: 'dossier-financement', icon: '🏦', label: 'Dossiers financement', staff: true, avance: true, groupe: 'Relation client' },
 
@@ -932,6 +934,12 @@ function renderSidebar() {
       if (sec.logo) {
         nav += `<button class="nav-solo-btn nav-solo-logo ${active ? 'active' : ''}" onclick="navigate('${sec.target}')" title="OZ Assure">
           ${OZASSURE_LOGO_SVG}
+        </button>`;
+        return;
+      }
+      if (sec.logoImg) {
+        nav += `<button class="nav-solo-btn nav-solo-logo nav-cofidex ${active ? 'active' : ''}" onclick="navigate('${sec.target}')" title="${sec.label}">
+          <img src="${sec.logoImg}" alt="${sec.label}" class="nav-cofidex-logo"/><span class="nav-lib">Écrire à l’équipe</span>
         </button>`;
         return;
       }

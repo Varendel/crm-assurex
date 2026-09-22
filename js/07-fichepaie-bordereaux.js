@@ -2173,23 +2173,22 @@ async function envoyerApercuEmailDemandeOffreViaOutlook() {
   const sujet = document.getElementById('apercu-email-sujet')?.value || '';
   const corps = document.getElementById('apercu-email-corps')?.value || '';
   if (!ctx.emails.length) { showError("Aucune compagnie sélectionnée n'a d'email enregistré — ajoute-en dans Paramètres → Contacts compagnies."); return; }
-  if (!confirm(`Envoyer ce courriel à ${ctx.emails.join(', ')} depuis jo@cofidex.ch ?`)) return;
-  if (!(await assurerTokenOutlook())) { showError('Connecte-toi à Outlook (bouton Microsoft dans le menu) pour envoyer.'); return; }
 
-  let envoiOk = false;
-  try {
-    const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: { subject: sujet, body: { contentType: 'text', content: corps }, toRecipients: ctx.emails.map(e => ({ emailAddress: { address: e } })) },
-        saveToSentItems: true,
-      }),
-    });
-    envoiOk = r.ok;
-    if (!r.ok && r.status === 401) { showError('Session Outlook expirée — reconnecte-toi (bouton Microsoft dans le menu) puis réessaie.'); return; }
-    if (!r.ok) { showError("Échec de l'envoi via Outlook — réessaie."); return; }
-  } catch (e) { showError("Erreur réseau lors de l'envoi via Outlook : " + e.message); return; }
+  // 22.09.2026 (audit, point 2) : l'envoi passe par envoyerCourriel (js/143) — compte Outlook réel,
+  // signature, pièces jointes, confirmation et erreurs y sont traités une fois pour toutes.
+  // Pièces jointes cochées (js/136) et copie systématique des demandes d'offre (js/138).
+  let pieces = [];
+  if (typeof pjePreparer === 'function') {
+    try { pieces = (await pjePreparer()).map(p => ({ nom: p.name, type: p.type, contentBytes: p.contentBytes })); }
+    catch (e) { showError('Envoi arrêté : ' + (e.message || e)); return; }
+  }
+  const copie = typeof sigCopiesDemandes === 'function' ? (await sigCopiesDemandes().catch(() => [])) : [];
+  const res = await envoyerCourriel({ a: ctx.emails, copie, objet: sujet, texte: corps, pieces, contexte: 'demande d’offre' });
+  const envoiOk = res.ok;
+  if (!envoiOk) return;
+  if (pieces.length && ctx.oppId && typeof ajouterLigneHistoriqueOpportunite === 'function') {
+    await ajouterLigneHistoriqueOpportunite(ctx.oppId, `📎 Joint à la demande d’offre : ${pieces.map(p => p.nom).join(', ')}`);
+  }
 
   if (envoiOk && ctx.demandeOffreId) {
     const existantes = (await dbGet('demandes_offre', `id=eq.${ctx.demandeOffreId}&select=compagnies_envoi`))?.[0]?.compagnies_envoi || [];

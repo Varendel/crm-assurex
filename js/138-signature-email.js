@@ -145,50 +145,12 @@ function sigTexteVersHtml(texte, ag) {
   return `<div style="font-family:Aptos,Calibri,Arial,sans-serif;font-size:11pt;color:#000">${corps}</div>`;
 }
 
-// ── Le branchement unique sur les envois ─────────────────────────────────────────────────────────
+// ── Branchement ─────────────────────────────────────────────────────────────────────────────────
+// 22.09.2026 (audit, point 2) : la signature et la copie ne sont plus injectées en réécrivant
+// window.fetch — envoyerCourriel (js/143) s'en charge au moment de l'envoi. Ne restent ici que les
+// briques qu'elle utilise (sigAgent, sigImages, sigTexteVersHtml, sigCopiesDemandes) et la ligne
+// d'information de l'aperçu.
 (function sigBrancher() {
-  const f0 = window.fetch;
-  window.fetch = async function (url, opts) {
-    if (!/graph\.microsoft\.com\/v1\.0\/me\/sendMail$/.test(String(url)) || !opts || typeof opts.body !== 'string') return f0.apply(window, arguments);
-    try {
-      const b = JSON.parse(opts.body); const m = b && b.message;
-      if (m) {
-        // 1. Copie systématique des demandes d'offre
-        if (_sig.envoiDemande) {
-          const deja = new Set([...(m.toRecipients || []), ...(m.ccRecipients || [])].map(x => (x.emailAddress && x.emailAddress.address || '').toLowerCase()));
-          const cc = (await sigCopiesDemandes()).filter(e => !deja.has(e.toLowerCase()));
-          if (cc.length) m.ccRecipients = [...(m.ccRecipients || []), ...cc.map(address => ({ emailAddress: { address } }))];
-        }
-        // 2. Signature
-        const ag = window._sigSans ? null : await sigAgent();
-        if (ag && ag.signature_email_actif && ag.signature_email_html && m.body) {
-          const deja = /_MailAutoSig|Agrément FINMA/i.test(m.body.content || '');
-          if (!deja) {
-            const corps = m.body.contentType === 'html' ? m.body.content : sigTexteVersHtml(m.body.content, ag);
-            m.body = { contentType: 'html', content: `<html><head><meta charset="utf-8"></head><body>${corps}<br>${ag.signature_email_html}</body></html>` };
-            const imgs = await sigImages(ag);
-            if (imgs.length) m.attachments = [...(m.attachments || []), ...imgs];
-          }
-        }
-        opts = { ...opts, body: JSON.stringify(b) };
-      }
-    } catch (e) { console.warn('Signature / copie non appliquées', e); }
-    return f0.call(window, url, opts);
-  };
-
-  // Demande d'offre : on sait que l'envoi en cours en est une (pour la copie).
-  if (typeof envoyerApercuEmailDemandeOffreViaOutlook === 'function') {
-    const env = envoyerApercuEmailDemandeOffreViaOutlook;
-    window.envoyerApercuEmailDemandeOffreViaOutlook = async function () {
-      window._sigSans = !!document.getElementById('sig-sans')?.checked;
-      _sig.envoiDemande = true;
-      // La confirmation de js/07 annonçait une adresse écrite en dur : on y met le compte réel.
-      const cpt = await sigCompteOutlook().catch(() => null);
-      const conf = window.confirm;
-      window.confirm = (msg) => conf(String(msg).replace(/depuis\s+\S+@\S+/i, `depuis ${cpt && cpt.adresse ? cpt.adresse : 'le compte Outlook connecté'}`));
-      try { return await env.apply(this, arguments); } finally { window.confirm = conf; _sig.envoiDemande = false; window._sigSans = false; }
-    };
-  }
   // Dans l'aperçu : la ligne signature + copie, au-dessus des boutons
   if (typeof ouvrirApercuEmailDemandeOffre === 'function') {
     const ouvrir = ouvrirApercuEmailDemandeOffre;

@@ -231,7 +231,7 @@ async function saveBordereau() {
   const mois = `${document.getElementById('b-mois-select').value} ${document.getElementById('b-annee-select').value}`;
   const montant = Math.round((nombreCH(document.getElementById('b-montant').value) || 0) * 100) / 100; // centimes conservés (19.09.2026)
   const tauxCaution = parseFloat(document.getElementById('b-caution').value) || 0;
-  if (!compagnie) { alert('Compagnie obligatoire.'); return; }
+  if (!compagnie) { showError('Compagnie obligatoire.'); return; }
   const body = {
     // Même format que les imports : « BRD 008 - Mois Année - Compagnie » (compteur continu, 19.09.2026)
     numero: typeof genererNumeroBordereau === 'function'

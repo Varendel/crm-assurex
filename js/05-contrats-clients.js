@@ -2210,7 +2210,7 @@ async function envoyerSignatureAutonome(token) {
   const ctx = canvas.getContext('2d');
   const pixels = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
   const aDessine = pixels.some((v, i) => i % 4 === 3 && v > 0);
-  if (!aDessine) { alert('Merci de signer avant d\u2019envoyer.'); return; }
+  if (!aDessine) { showError('Merci de signer avant d\u2019envoyer.'); return; }
   const signatureDataUrl = canvas.toDataURL('image/png');
   const zone = document.getElementById('contenu-signature-autonome');
   const boutonEnvoi = document.querySelector('#contenu-signature-autonome button[onclick*="envoyerSignatureAutonome"]');
@@ -2423,7 +2423,7 @@ async function confirmerReservationRdv() {
   const nom = cp ? `${cp.prenom} ${cp.nom}` : (document.getElementById('rdv-nom')?.value || '').trim();
   const email = cp ? cp.email : (document.getElementById('rdv-email')?.value || '').trim();
   const tel = cp ? cp.tel : (document.getElementById('rdv-tel')?.value || '').trim();
-  if (!nom) { alert('Merci d\'indiquer votre nom.'); return; }
+  if (!nom) { showError('Merci d\'indiquer votre nom.'); return; }
   const notes = (document.getElementById('rdv-notes')?.value || '').trim();
   const dateHeureIso = isoZurich(_rdvEtat.date, _rdvEtat.heure);
 
@@ -3354,7 +3354,7 @@ function genererPageGardeTransmission(clientId) {
 // boutons de génération de documents (prochain : rappel de paiement, confirmation de résiliation...).
 async function telechargerDocxDepuisModele(cheminModele, donnees, nomFichier) {
   if (typeof window.PizZip === 'undefined' || typeof window.docxtemplater === 'undefined') {
-    alert('La génération de documents Word n’a pas pu se charger (pas de connexion internet ?).');
+    showError('La génération de documents Word n’a pas pu se charger (pas de connexion internet ?).');
     return;
   }
   try {
@@ -3373,7 +3373,7 @@ async function telechargerDocxDepuisModele(cheminModele, donnees, nomFichier) {
     a.click();
     a.remove();
   } catch (err) {
-    alert('Erreur lors de la génération du document Word : ' + (err && err.message ? err.message : err));
+    showError('Erreur lors de la génération du document Word : ' + (err && err.message ? err.message : err));
   }
 }
 

@@ -120,7 +120,7 @@ function renderEtapesLocales() {
 async function saveRappel() {
   const rh = estRoleRH();
   const titre = document.getElementById('r-titre').value.trim();
-  if (!titre) { alert('Titre obligatoire.'); return; }
+  if (!titre) { showError('Titre obligatoire.'); return; }
   const body = {
     titre,
     nature: document.getElementById('r-nature').value,

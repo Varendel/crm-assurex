@@ -1257,7 +1257,7 @@ async function saveClient() {
     if (!adresse) missing.push('Adresse');
     if (!npa) missing.push('NPA');
   }
-  if (missing.length > 0) { alert('Champs obligatoires manquants : ' + missing.join(', ')); return; }
+  if (missing.length > 0) { showError('Champs obligatoires manquants : ' + missing.join(', ')); return; }
   const body = {
     prenom, nom,
     civilite: document.getElementById('f-civilite') ? (document.getElementById('f-civilite').value || null) : null,
@@ -1302,7 +1302,7 @@ async function saveClient() {
     btn.textContent = 'Erreur — réessayer';
     btn.disabled = false;
     const detail = result && result.detail ? JSON.stringify(result.detail) : 'connexion';
-    alert('Erreur lors de l\'enregistrement (' + detail + '). Vérifiez les champs et réessayez.');
+    showError('Erreur lors de l\'enregistrement (' + detail + '). Vérifiez les champs et réessayez.');
   }
 }
 
@@ -1538,7 +1538,7 @@ async function saveEntreprise() {
   if (!adresse) missing.push('Adresse');
   if (!npa) missing.push('NPA');
   if (!ville) missing.push('Ville');
-  if (missing.length > 0) { alert('Champs obligatoires manquants : ' + missing.join(', ')); return; }
+  if (missing.length > 0) { showError('Champs obligatoires manquants : ' + missing.join(', ')); return; }
   const contact = (document.getElementById('e-contact-prenom').value + ' ' + document.getElementById('e-contact-nom').value).trim();
   const body = {
     prenom: contact || document.getElementById('e-contact-prenom').value || '',
@@ -1576,7 +1576,7 @@ async function saveEntreprise() {
     btn.textContent = 'Erreur — réessayer';
     btn.disabled = false;
     const detail = result && result.detail ? JSON.stringify(result.detail) : 'connexion';
-    alert('Erreur lors de l\'enregistrement (' + detail + '). Vérifiez les champs et réessayez.');
+    showError('Erreur lors de l\'enregistrement (' + detail + '). Vérifiez les champs et réessayez.');
   }
 }
 
@@ -2923,7 +2923,7 @@ function filtrerProduitsOpportunite(texte) {
 async function saveOpportunite(id) {
   const rh = estRoleRH();
   const titre = document.getElementById('o-titre').value.trim();
-  if (!titre) { alert('Titre obligatoire.'); return; }
+  if (!titre) { showError('Titre obligatoire.'); return; }
   // Prime et commission ne sont plus saisies dans un champ global unique : chaque produit coché
   // porte sa propre case "prime CHF/an" (cf. ligneesProduitsOpportunite) — le montant potentiel et
   // la commission estimée de l'opportunité sont dérivés automatiquement de la somme de ces lignes.

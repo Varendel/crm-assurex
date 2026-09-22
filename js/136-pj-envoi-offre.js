@@ -188,33 +188,9 @@ async function pjePreparer() {
     return r;
   };
 
-  // Envoi : on prépare les fichiers, puis on laisse js/07 envoyer ; son appel à sendMail reçoit les
-  // pièces jointes au passage (une seule fois, pour cet envoi-là).
-  const envoyer = envoyerApercuEmailDemandeOffreViaOutlook;
-  window.envoyerApercuEmailDemandeOffreViaOutlook = async function () {
-    const coches = _pje.items.some(x => x.coche) || _pje.locaux.some(x => x.coche);
-    if (!coches) return envoyer.apply(this, arguments);
-    let pj;
-    try { showError('⏳ Préparation des pièces jointes…'); pj = await pjePreparer(); }
-    catch (e) { showError('Envoi arrêté : ' + (e.message || e)); return; }
-    const f0 = window.fetch;
-    let jointes = false;
-    window.fetch = function (url, opts) {
-      if (!jointes && /graph\.microsoft\.com\/v1\.0\/me\/sendMail$/.test(String(url)) && opts && typeof opts.body === 'string') {
-        try {
-          const b = JSON.parse(opts.body);
-          b.message.attachments = pj.map(x => ({ '@odata.type': '#microsoft.graph.fileAttachment', name: x.name, contentType: x.type, contentBytes: x.contentBytes }));
-          opts = { ...opts, body: JSON.stringify(b) }; jointes = true;
-        } catch (e) { /* corps illisible : envoi tel quel */ }
-      }
-      return f0.apply(this, [url, opts]);
-    };
-    const ctx = window._apercuEmailDemandeOffre || {};
-    try { await envoyer.apply(this, arguments); }
-    finally { window.fetch = f0; }
-    if (jointes && !document.getElementById('modal-apercu-email-do') && ctx.oppId && typeof ajouterLigneHistoriqueOpportunite === 'function')
-      await ajouterLigneHistoriqueOpportunite(ctx.oppId, `📎 Joint à la demande d’offre : ${pj.map(x => x.name).join(', ')}`);
-  };
+  // 22.09.2026 (audit, point 2) : l'envoi n'est plus détourné ici. js/07 appelle pjePreparer()
+  // lui-même et passe les pièces à envoyerCourriel (js/143) — plus besoin de réécrire window.fetch
+  // pour glisser les fichiers dans la requête Graph au vol.
 
   let tPjf = null;
   const guetter = () => { const m = document.getElementById('main-content'); if (m) new MutationObserver(() => { clearTimeout(tPjf); tPjf = setTimeout(() => pjfPoser().catch(() => {}), 150); }).observe(m, { childList: true, subtree: true }); };

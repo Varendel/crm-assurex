@@ -321,27 +321,14 @@ async function nadEnvoyerOutlook(clientId) {
   if (!bcc.length) { showError('Aucune compagnie cochée n’a d’adresse e-mail.'); return; }
   const c = nadClient(clientId);
   const objet = nadObjet(c, s.a);
+  // La confirmation ci-dessous liste les copies cachées une par une : on la garde telle quelle
+  // (confirmer: false) et l'envoi lui-même passe par envoyerCourriel (js/143, audit point 2).
   if (!confirm(`Envoyer maintenant depuis ${NAD_CABINET} ?\n\nObjet : ${objet}\n\nEn copie cachée (${bcc.length}) :\n${bcc.join('\n')}`)) return;
-  if (typeof assurerTokenOutlook !== 'function' || !(await assurerTokenOutlook())) {
-    showError('Connectez-vous à Outlook (bouton Microsoft dans le menu) pour envoyer.'); return;
-  }
-  try {
-    const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: {
-          subject: objet,
-          body: { contentType: 'text', content: nadCorps(c, s.a, null) },
-          toRecipients: [{ emailAddress: { address: NAD_CABINET } }],
-          bccRecipients: bcc.map(e => ({ emailAddress: { address: e } })),
-        },
-        saveToSentItems: true,
-      }),
-    });
-    if (r.status === 401) { showError('Session Outlook expirée — reconnectez-vous puis réessayez.'); return; }
-    if (!r.ok) { showError('Échec de l’envoi via Outlook — rien n’est parti, réessayez.'); return; }
-  } catch (e) { showError('Erreur réseau, rien n’est parti : ' + e.message); return; }
+  const res = await envoyerCourriel({
+    a: NAD_CABINET, cci: bcc, objet, texte: nadCorps(c, s.a, null),
+    confirmer: false, contexte: 'changement d’adresse',
+  });
+  if (!res.ok) return;
   await nadMarquer(clientId);
 }
 

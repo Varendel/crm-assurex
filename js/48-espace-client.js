@@ -222,27 +222,15 @@ async function ecEnvoyerAcces() {
   const ctx = window._ecEnvoi;
   if (!ctx) { showError('Rien à envoyer — recrée l’accès pour obtenir un mot de passe.'); return; }
   if (!confirm(`Envoyer les accès REX CLOUD à ${ctx.email} depuis ton compte Outlook ?\n\nLe mot de passe figure en clair dans le message : c'est le seul envoi, il ne sera plus affiché ensuite.`)) return;
-  if (typeof assurerTokenOutlook === 'function' && !(await assurerTokenOutlook())) {
-    showError('Connecte-toi à Outlook (bouton Microsoft dans le menu) pour envoyer, ou utilise « Copier le message ».');
-    return;
-  }
-  try {
-    const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: {
-          subject: `Votre espace ${EC_MARQUE}${ctx.nom ? ' — ' + ctx.nom : ''}`,
-          body: { contentType: 'text', content: ctx.message },
-          toRecipients: [{ emailAddress: { address: ctx.email } }],
-        },
-        saveToSentItems: true,
-      }),
-    });
-    if (r.status === 401) { showError('Session Outlook expirée — reconnecte-toi puis réessaie.'); return; }
-    if (!r.ok) { showError('Échec de l’envoi via Outlook — utilise « Copier le message ».'); return; }
-  } catch (e) { showError('Erreur réseau : ' + e.message); return; }
-  showError(`✓ Accès envoyés à ${ctx.email}.`);
+  // 22.09.2026 (audit, point 2) : envoi via envoyerCourriel (js/143). La confirmation reste celle
+  // du dessus — elle prévient que le mot de passe part en clair — d'où confirmer: false.
+  const res = await envoyerCourriel({
+    a: ctx.email,
+    objet: `Votre espace ${EC_MARQUE}${ctx.nom ? ' — ' + ctx.nom : ''}`,
+    texte: ctx.message,
+    confirmer: false, contexte: 'accès client',
+  });
+  if (!res.ok) return;
   if (typeof logAction === 'function') logAction('envoi_acces_client', 'acces_clients', null, ctx.email);
   window._ecEnvoi = null;
   document.getElementById('modal-acces-client')?.remove();

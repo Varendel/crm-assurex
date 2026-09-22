@@ -397,21 +397,9 @@ async function dfEnvoyerOutlook() {
   const sujet = document.getElementById('df-mail-sujet')?.value || '';
   const corps = document.getElementById('df-mail-corps')?.value || '';
   if (!to.length) { showError('Indique au moins une adresse e-mail.'); return; }
-  if (!confirm(`Envoyer la demande de documents à ${to.join(', ')} depuis ton compte Outlook ?`)) return;
-  if (typeof assurerTokenOutlook === 'function' && !(await assurerTokenOutlook())) {
-    showError('Connecte-toi à Outlook (bouton Microsoft dans le menu) pour envoyer, ou utilise « Ouvrir dans mon client mail ».');
-    return;
-  }
-  try {
-    const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: { subject: sujet, body: { contentType: 'text', content: corps }, toRecipients: to.map(a => ({ emailAddress: { address: a } })) }, saveToSentItems: true }),
-    });
-    if (r.status === 401) { showError('Session Outlook expirée — reconnecte-toi puis réessaie.'); return; }
-    if (!r.ok) { showError('Échec de l’envoi via Outlook.'); return; }
-  } catch (e) { showError('Erreur réseau : ' + e.message); return; }
-  showError(`✓ Demande envoyée à ${to.join(', ')}.`);
+  // 22.09.2026 (audit, point 2) : envoi via envoyerCourriel (js/143).
+  const res = await envoyerCourriel({ a: to, objet: sujet, texte: corps, contexte: 'demande de documents' });
+  if (!res.ok) return;
   if (_df && _df.client_id) {
     await dbPost('activites_client', { client_id: _df.client_id, type: 'courrier', sujet: sujet.slice(0, 300), contenu: corps.slice(0, 10000), auteur: ((typeof crxMoi === 'function' ? crxMoi().nom : '') || '').slice(0, 200) });
   }

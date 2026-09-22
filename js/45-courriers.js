@@ -333,20 +333,15 @@ async function crxEnvoyerOutlook() {
   const corps = document.getElementById('crx-mail-corps')?.value || '';
   const joindre = document.getElementById('crx-mail-joindre')?.checked;
   if (!to.length) { showError('Indique l’adresse e-mail du destinataire.'); return; }
-  if (!confirm(`Envoyer ce courriel à ${to.join(', ')} depuis ton compte Outlook${joindre ? ', avec le courrier Word en pièce jointe' : ''} ?`)) return;
-  if (!(await assurerTokenOutlook())) { showError('Connecte-toi à Outlook (bouton Microsoft dans le menu) pour envoyer.'); return; }
-  const message = { subject: sujet, body: { contentType: 'text', content: corps }, toRecipients: to.map(e => ({ emailAddress: { address: e } })) };
-  try {
-    if (joindre) {
-      const blob = await crxDocxBlob();
-      const b64 = await new Promise((ok, ko) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1]); fr.onerror = ko; fr.readAsDataURL(blob); });
-      message.attachments = [{ '@odata.type': '#microsoft.graph.fileAttachment', name: crxNomFichier() + '.docx', contentType: blob.type, contentBytes: b64 }];
-    }
-    const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', { method: 'POST', headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ message, saveToSentItems: true }) });
-    if (r.status === 401) { showError('Session Outlook expirée — reconnecte-toi puis réessaie.'); return; }
-    if (!r.ok) { showError("Échec de l'envoi via Outlook — réessaie."); return; }
-  } catch (e) { showError('Erreur lors de l’envoi : ' + e.message); return; }
+  // 22.09.2026 (audit, point 2) : l'envoi passe par envoyerCourriel (js/143) — compte Outlook réel
+  // annoncé dans la confirmation, signature de l'expéditeur, messages d'erreur communs.
+  let pieces = [];
+  if (joindre) {
+    try { pieces = [{ nom: crxNomFichier() + '.docx', blob: await crxDocxBlob() }]; }
+    catch (e) { showError('Le courrier Word n’a pas pu être préparé : ' + (e.message || e)); return; }
+  }
+  const res = await envoyerCourriel({ a: to, objet: sujet, texte: corps, pieces, contexte: 'courrier' });
+  if (!res.ok) return;
   document.getElementById('modal-crx-email')?.remove();
   await crxArchiver('e-mail à ' + to.join(', '));
-  showError(`✓ Courriel envoyé à ${to.join(', ')}.`);
 }

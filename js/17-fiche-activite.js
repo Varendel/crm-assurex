@@ -284,15 +284,12 @@ async function publierActivite() {
       const dest = typeof rlEmailClient === 'function' ? rlEmailClient(c) : c.email;
       const sujet = (document.getElementById('ja-sujet')?.value || '').trim() || 'Assurex';
       if (!dest) throw new Error('pas d’e-mail utilisable sur cette fiche');
-      if (!(await assurerTokenOutlook())) throw new Error('connecte-toi à Outlook (Microsoft) dans le CRM');
-      const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
-        method: 'POST', headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: { subject: sujet, body: { contentType: 'text', content: texte }, toRecipients: [{ emailAddress: { address: dest } }] }, saveToSentItems: true }),
-      });
-      if (!r.ok) throw new Error('envoi Outlook refusé (HTTP ' + r.status + ')');
+      // 22.09.2026 (audit, point 2) : envoi via envoyerCourriel (js/143), qui affiche déjà le compte
+      // Outlook réel dans la confirmation et pose la signature de l'expéditeur.
+      const res = await envoyerCourriel({ a: dest, objet: sujet, texte, contexte: 'fiche client' });
+      if (!res.ok) { if (btn) btn.disabled = false; return; }
       const rr = await dbPost('activites_client', { client_id: c.id, type: 'email', sujet, contenu: texte, auteur });
       if (rr && rr.error) console.error('Journal : e-mail envoyé mais non journalisé', rr);
-      showError(`✓ E-mail envoyé à ${dest}.`);
     } else {
       const r = await dbPost('activites_client', { client_id: c.id, type: _ja.mode, contenu: texte, auteur });
       if (r && r.error) throw new Error(errMsg(r));

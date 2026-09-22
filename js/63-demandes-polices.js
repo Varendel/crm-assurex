@@ -204,27 +204,14 @@ async function dpEnvoyerLot(ids) {
     + (sansAdresse.length ? `\n\n${sansAdresse.length} demande(s) sans adresse seront ignorées.` : '');
   if (!confirm(message)) return;
 
-  if (typeof assurerTokenOutlook === 'function' && !(await assurerTokenOutlook())) {
-    showError('Connecte-toi à Outlook (bouton Microsoft dans le menu) pour envoyer.');
-    return;
-  }
-
+  // 22.09.2026 (audit, point 2) : chaque courrier part par envoyerCourriel (js/143). Le lot a déjà
+  // été confirmé en bloc ci-dessus et rend son propre bilan : envois muets, sans confirmation.
   let ok = 0; const echecs = [];
   for (const d of prets) {
     try {
-      const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          message: {
-            subject: d.objet,
-            body: { contentType: 'text', content: d.corps },
-            toRecipients: [{ emailAddress: { address: d.destinataire } }],
-          },
-          saveToSentItems: true,
-        }),
-      });
-      if (!r.ok) { echecs.push(`${d.compagnie} (${r.status})`); continue; }
+      const res = await envoyerCourriel({ a: d.destinataire, objet: d.objet, texte: d.corps,
+        confirmer: false, silencieux: true, contexte: 'demande de police' });
+      if (!res.ok) { echecs.push(`${d.compagnie} (${res.statut})`); continue; }
       await dbPatch('demandes_polices', d.id, { statut: 'envoyee', envoyee_le: new Date().toISOString() });
       if (typeof logAction === 'function') logAction('envoi_demande_police', 'demandes_polices', d.id, d.compagnie);
       // 22.09.2026 : le transfert d'origine passe à « Envoyé aux compagnies » maintenant, et
@@ -245,21 +232,15 @@ async function dpRelancerLot(ids) {
   if (!dpExigerLecture(liste, { type: 'relance', ids })) return;
   window._dp.suite = null;
   if (!confirm(`Relancer ${liste.length} compagnie(s) restée(s) sans réponse ?`)) return;
-  if (typeof assurerTokenOutlook === 'function' && !(await assurerTokenOutlook())) {
-    showError('Connecte-toi à Outlook pour envoyer les relances.'); return;
-  }
+  // Même principe que l'envoi du lot : confirmé en bloc, chaque relance part muette (js/143).
   let ok = 0;
   for (const d of liste) {
     const j = dpJours(d.envoyee_le);
     const corps = `Madame, Monsieur,\n\nNous nous permettons de revenir vers vous concernant notre demande du ${fmtDate(String(d.envoyee_le).slice(0, 10))}${j ? ` (il y a ${j} jours)` : ''}, restée sans réponse à ce jour.\n\n${d.corps}`;
     try {
-      const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: { subject: `Rappel — ${d.objet}`, body: { contentType: 'text', content: corps },
-          toRecipients: [{ emailAddress: { address: d.destinataire } }] }, saveToSentItems: true }),
-      });
-      if (!r.ok) continue;
+      const res = await envoyerCourriel({ a: d.destinataire, objet: `Rappel — ${d.objet}`, texte: corps,
+        confirmer: false, silencieux: true, contexte: 'relance' });
+      if (!res.ok) continue;
       await dbPatch('demandes_polices', d.id, { statut: 'relancee', relancee_le: new Date().toISOString(), nb_relances: (d.nb_relances || 0) + 1 });
       ok++;
     } catch (e) { /* on continue le lot */ }

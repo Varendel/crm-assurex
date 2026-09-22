@@ -522,24 +522,12 @@ async function rlConfirmerEnvoiEmail(clientId) {
   const corps = document.getElementById('rl-email-corps')?.value || '';
   if (!/@/.test(destinataire)) { showError('Indique une adresse e-mail valable.'); return; }
   if (!corps.trim()) { showError('Le message est vide.'); return; }
-  if (!confirm(`Envoyer cette relance LAMal à ${destinataire} depuis ton compte Outlook ?`)) return;
-  if (!(await assurerTokenOutlook())) { showError('Connecte-toi à Outlook (Microsoft) dans le CRM pour envoyer cet e-mail.'); return; }
   const btn = document.getElementById('rl-email-envoi');
   if (btn) { btn.disabled = true; btn.textContent = 'Envoi…'; }
+  // 22.09.2026 (audit, point 2) : envoi via envoyerCourriel (js/143) — compte réel, signature, erreurs.
   try {
-    const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: {
-          subject: sujet,
-          body: { contentType: 'text', content: corps },
-          toRecipients: [{ emailAddress: { address: destinataire } }],
-        },
-        saveToSentItems: true,
-      }),
-    });
-    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const res = await envoyerCourriel({ a: destinataire, objet: sujet, texte: corps, contexte: 'relance LAMal' });
+    if (!res.ok) { if (btn) { btn.disabled = false; btn.textContent = '📨 Envoyer via Outlook…'; } return; }
   } catch (e) {
     console.error('rlConfirmerEnvoiEmail', e);
     showError('L\u2019e-mail n\u2019est pas parti — réessaie ou utilise 📋 pour copier le message.');
@@ -547,7 +535,6 @@ async function rlConfirmerEnvoiEmail(clientId) {
     return;
   }
   document.getElementById('modal-rl-email')?.remove();
-  showError(`✓ E-mail envoyé à ${destinataire}.`);
   await rlMarquer(clientId, 'relance');
 }
 

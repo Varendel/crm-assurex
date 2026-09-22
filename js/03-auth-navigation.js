@@ -329,20 +329,15 @@ async function sendTaskAssignmentEmail(rappel, agent) {
     const natureLabel = rappel.nature === 'tache' ? 'Nouvelle tâche assignée' : 'Nouveau rappel assigné';
     const echeanceLine = rappel.date_echeance ? `Échéance : ${fmtDate(rappel.date_echeance)}\n` : '';
     const contenu = `${natureLabel} dans REX CRM\n\n${rappel.titre}\n\n${clientLine}${collabLine}${echeanceLine}Urgence : ${rappel.urgence || ''}\n\n${rappel.notes || ''}\n\n— Ouvrir dans REX CRM : https://varendel.github.io/crm-assurex`;
-    const body = {
-      message: {
-        subject: `${rappel.nature === 'tache' ? '📋' : '🔔'} ${rappel.titre}`,
-        body: { contentType: 'text', content: contenu },
-        toRecipients: [{ emailAddress: { address: agent.email } }],
-      },
-      saveToSentItems: true,
-    };
-    const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
+    // 22.09.2026 (audit, point 2) : envoi via envoyerCourriel (js/143). Notification interne, déjà
+    // voulue par l'assignation : pas de confirmation, et toujours silencieuse en cas d'échec.
+    const res = await envoyerCourriel({
+      a: agent.email,
+      objet: `${rappel.nature === 'tache' ? '📋' : '🔔'} ${rappel.titre}`,
+      texte: contenu,
+      confirmer: false, silencieux: true, contexte: 'tâche assignée',
     });
-    return r.ok;
+    return !!res.ok;
   } catch(e) { console.error('Graph sendMail exception', e); return false; }
 }
 

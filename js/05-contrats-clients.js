@@ -1646,34 +1646,20 @@ async function envoyerApercuEmailMandatViaOutlook() {
   const sujet = document.getElementById('apercu-mandat-sujet')?.value || '';
   const corps = document.getElementById('apercu-mandat-corps')?.value || '';
   if (!ctx.emails.length) { showError("Aucune compagnie sélectionnée n'a d'email enregistré — ajoute-en dans Paramètres → Contacts compagnies."); return; }
-  if (!confirm(`Envoyer ce courriel à ${ctx.emails.join(', ')} depuis le compte Outlook connecté ?\n\nLe mandat signé est joint automatiquement.`)) return;
-  if (!(await assurerTokenOutlook())) { showError('Connecte-toi à Outlook (bouton Microsoft dans le menu) pour envoyer.'); return; }
   // Le mandat signé part avec le courriel : c'est tout l'objet de l'envoi (22.09.2026).
   let pieces = [];
   if (typeof pjeMandatDuClient === 'function' && ctx.clientId) {
     try {
       showError('⏳ Préparation du mandat…');
       const m = await pjeMandatDuClient(ctx.clientId);
-      if (m) {
-        const b64 = await new Promise((ok, ko) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1] || ''); fr.onerror = ko; fr.readAsDataURL(m.blob); });
-        pieces = [{ '@odata.type': '#microsoft.graph.fileAttachment', name: m.name, contentType: m.type, contentBytes: b64 }];
-      } else if (!confirm('Aucun mandat signé trouvé pour ce client : envoyer le courriel sans pièce jointe ?')) return;
+      if (m) pieces = [{ nom: m.name, type: m.type, blob: m.blob }];
+      else if (!confirm('Aucun mandat signé trouvé pour ce client : envoyer le courriel sans pièce jointe ?')) return;
     } catch (e) { if (!confirm('Le mandat n’a pas pu être préparé (' + (e.message || e) + ').\n\nEnvoyer sans pièce jointe ?')) return; }
   }
-  try {
-    const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: { subject: sujet, body: { contentType: 'text', content: corps }, toRecipients: ctx.emails.map(e => ({ emailAddress: { address: e } })), ...(pieces.length ? { attachments: pieces } : {}) },
-        saveToSentItems: true,
-      }),
-    });
-    if (!r.ok && r.status === 401) { showError('Session Outlook expirée — reconnecte-toi (bouton Microsoft dans le menu) puis réessaie.'); return; }
-    if (!r.ok) { showError("Échec de l'envoi via Outlook — réessaie."); return; }
-  } catch (e) { showError("Erreur réseau lors de l'envoi via Outlook : " + e.message); return; }
+  // 22.09.2026 (audit, point 2) : compte Outlook réel, signature, erreurs — via envoyerCourriel (js/143).
+  const res = await envoyerCourriel({ a: ctx.emails, objet: sujet, texte: corps, pieces, contexte: 'mandat signé' });
+  if (!res.ok) return;
   document.getElementById('modal-apercu-email-mandat')?.remove();
-  showError(`✓ Courriel envoyé à ${ctx.emails.join(', ')}. Pense à transmettre le mandat signé séparément si ce n'est pas déjà fait.`);
 }
 
 // Étape ajoutée le 18.09.2026 (demande de Jonathan) avant la signature du mandat de courtage :
@@ -2113,10 +2099,6 @@ async function recupererSignaturesEnAttente() {
 // notifications de rappels/tâches assignées) — nécessite d'être connecté à Outlook dans le CRM.
 async function envoyerLienSignatureParEmail(clientId, lienSignature, emailDestinataire) {
   const btn = document.getElementById('btn-envoi-email-signature');
-  if (!(await assurerTokenOutlook())) {
-    showError('Connecte-toi à Outlook (Microsoft) dans le CRM pour pouvoir envoyer cet e-mail.');
-    return;
-  }
   if (btn) { btn.textContent = 'Envoi en cours...'; btn.disabled = true; }
   const c = allClients.find(x => x.id === clientId);
   const nomClient = c ? (estEntreprise(c) ? c.nom : c.prenom) : '';
@@ -2135,26 +2117,12 @@ async function envoyerLienSignatureParEmail(clientId, lienSignature, emailDestin
     : estResiliation
     ? `Bonjour ${nomClient || ''},\n\nAfin de valider la résiliation de votre police, veuillez signer dans l'encadré prévu à cet effet en suivant ce lien depuis votre téléphone ou votre ordinateur :\n\n${lienSignature}\n\nLa signature ne prend qu'une minute.\n\nMeilleures salutations,\nAssurex Sàrl`
     : `Bonjour ${nomClient || ''},\n\nAfin de valider votre mandat de courtage, veuillez signer dans l'encadré prévu à cet effet en suivant ce lien depuis votre téléphone ou votre ordinateur :\n\n${lienSignature}\n\nLa signature ne prend qu'une minute.\n\nMeilleures salutations,\nAssurex Sàrl`;
-  const body = {
-    message: {
-      subject: sujet,
-      body: { contentType: 'text', content: contenu },
-      toRecipients: [{ emailAddress: { address: emailDestinataire } }],
-    },
-    saveToSentItems: true,
-  };
-  try {
-    const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    });
-    if (btn) {
-      btn.textContent = r.ok ? '✓ E-mail envoyé' : 'Échec de l\u2019envoi — réessayer';
-      btn.disabled = false;
-    }
-  } catch (e) {
-    if (btn) { btn.textContent = 'Échec de l\u2019envoi — réessayer'; btn.disabled = false; }
+  // 22.09.2026 (audit, point 2) : envoi via envoyerCourriel (js/143). L'état du bouton reste le
+  // retour visible ici ; la fonction se charge du compte Outlook, de la signature et des erreurs.
+  const res = await envoyerCourriel({ a: emailDestinataire, objet: sujet, texte: contenu, contexte: 'lien de signature' });
+  if (btn) {
+    btn.textContent = res.ok ? '✓ E-mail envoyé' : res.annule ? '📨 Envoyer le lien par e-mail' : 'Échec de l\u2019envoi — réessayer';
+    btn.disabled = false;
   }
 }
 

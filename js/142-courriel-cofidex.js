@@ -203,26 +203,21 @@ async function ccxEnvoyer() {
   const dest = ccxDestinataires();
   const c = ccxClient();
   if (!dest.length || !c) { showError('Choisis au moins un destinataire et un client.'); return; }
-  if (!confirm(`Envoyer ce courriel à ${dest.join(', ')} ?`)) return;
-  if (typeof assurerTokenOutlook === 'function' && !(await assurerTokenOutlook())) { showError('Connecte-toi à Outlook (bouton Microsoft) pour envoyer.'); return; }
   const b = document.getElementById('ccx-envoyer');
   if (b) b.disabled = true;
   try {
-    const b64 = blob => new Promise((ok, ko) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1] || ''); fr.onerror = ko; fr.readAsDataURL(blob); });
+    // 22.09.2026 (audit, point 2) : l'envoi passe par envoyerCourriel (js/143), qui s'occupe du
+    // compte Outlook, de la signature, de l'encodage des pièces jointes et des erreurs.
     const pieces = [];
     for (const i of _ccx.docsCoches) {
       const it = _ccx.docs[i]; if (!it) continue;
       const blob = it.mandat && typeof pjeMandatDuClient === 'function' ? (await pjeMandatDuClient(c.id))?.blob
         : (typeof pjeTelecharger === 'function' ? await pjeTelecharger(it.path) : null);
-      if (blob) pieces.push({ '@odata.type': '#microsoft.graph.fileAttachment', name: it.nom.replace(/[\\/:*?"<>|]/g, '-'), contentType: blob.type || 'application/pdf', contentBytes: await b64(blob) });
+      if (blob) pieces.push({ nom: it.nom, type: blob.type || 'application/pdf', blob });
     }
-    for (const f of _ccx.locaux) pieces.push({ '@odata.type': '#microsoft.graph.fileAttachment', name: f.name, contentType: f.type || 'application/octet-stream', contentBytes: await b64(f) });
-    const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
-      method: 'POST', headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: { subject: _ccx.objet, body: { contentType: 'text', content: _ccx.corps }, toRecipients: dest.map(address => ({ emailAddress: { address } })), ...(pieces.length ? { attachments: pieces } : {}) }, saveToSentItems: true }),
-    });
-    if (!r.ok) { showError(r.status === 401 ? 'Session Outlook expirée — reconnecte-toi puis réessaie.' : 'Échec de l’envoi via Outlook.'); if (b) b.disabled = false; return; }
-    showError(`✓ Courriel envoyé à ${dest.join(', ')}.`);
+    for (const f of _ccx.locaux) pieces.push({ nom: f.name, type: f.type || 'application/octet-stream', blob: f });
+    const res = await envoyerCourriel({ a: dest, objet: _ccx.objet, texte: _ccx.corps, pieces, contexte: 'Cofidex' });
+    if (!res.ok) { if (b) b.disabled = false; return; }
     if (typeof ajouterActiviteClient === 'function') await ajouterActiviteClient(c.id, 'email', `Courriel à Cofidex (${dest.join(', ')}) : ${_ccx.objet}`);
     _ccx.locaux = []; _ccx.docsCoches = new Set();
     ccxChargerDocuments(); ccxMajApercu();

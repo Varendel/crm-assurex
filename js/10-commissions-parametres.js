@@ -1159,20 +1159,11 @@ async function envoyerApercuEmailCampagneViaOutlook() {
   const sujet = document.getElementById('apercu-campagne-sujet')?.value || '';
   const corps = document.getElementById('apercu-campagne-corps')?.value || '';
   if (!client || !client.email) { showError("Ce client n'a pas d'email enregistré."); return; }
-  if (!confirm(`Envoyer ce courriel à ${client.email} depuis jo@cofidex.ch ?`)) return;
-  if (!(await assurerTokenOutlook())) { showError('Connecte-toi à Outlook (bouton Microsoft dans le menu) pour envoyer.'); return; }
-  try {
-    const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: { subject: sujet, body: { contentType: 'text', content: corps }, toRecipients: [{ emailAddress: { address: client.email } }] },
-        saveToSentItems: true,
-      }),
-    });
-    if (r.ok) { showError('✓ Email envoyé à ' + client.email); document.getElementById('modal-apercu-email-campagne')?.remove(); }
-    else { showError("Échec de l'envoi — réessaie ou utilise « Ouvrir dans mon client mail »."); }
-  } catch (e) { showError("Échec de l'envoi — réessaie ou utilise « Ouvrir dans mon client mail »."); }
+  // 22.09.2026 (audit, point 2) : envoi via envoyerCourriel (js/143). L'adresse d'expéditeur n'est
+  // plus écrite en dur ici — c'est le compte Outlook réellement connecté qui est annoncé.
+  const res = await envoyerCourriel({ a: client.email, objet: sujet, texte: corps, contexte: 'campagne' });
+  if (!res.ok) return;
+  document.getElementById('modal-apercu-email-campagne')?.remove();
 }
 
 // AGENTS

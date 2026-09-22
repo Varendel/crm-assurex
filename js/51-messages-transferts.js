@@ -437,15 +437,9 @@ async function mcEnvoyerAuClient() {
   if (!/@/.test(to)) { showError('Pas d’adresse e-mail sur cette fiche client.'); return; }
   const sujet = document.getElementById('mc-ecr-sujet')?.value || '';
   const corps = document.getElementById('mc-ecr-corps')?.value || '';
-  if (!confirm(`Envoyer ce message à ${to} depuis ton compte Outlook ?`)) return;
-  if (typeof assurerTokenOutlook === 'function' && !(await assurerTokenOutlook())) { showError('Connecte-toi à Outlook pour envoyer.'); return; }
-  try {
-    const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
-      method: 'POST', headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: { subject: sujet, body: { contentType: 'text', content: corps }, toRecipients: [{ emailAddress: { address: to } }] }, saveToSentItems: true }),
-    });
-    if (!r.ok) { showError('Échec de l’envoi via Outlook.'); return; }
-  } catch (e) { showError('Erreur réseau : ' + e.message); return; }
+  // 22.09.2026 (audit, point 2) : envoi via envoyerCourriel (js/143).
+  const res = await envoyerCourriel({ a: to, objet: sujet, texte: corps, contexte: 'message au client' });
+  if (!res.ok) return;
   const moi = typeof crxMoi === 'function' ? crxMoi() : { nom: '' };
   await dbPost('messages_clients', {
     client_id: c.id, contrat_id: contratId || null, sujet: `${motif.l} — ${sujet}`.slice(0, 200),
@@ -500,15 +494,9 @@ async function mcEnregistrerReponse(id, envoyer) {
   const moi = typeof crxMoi === 'function' ? crxMoi() : { nom: '', email: '' };
   if (envoyer) {
     if (!to.length) { showError('Indique une adresse e-mail.'); return; }
-    if (!confirm(`Envoyer cette réponse à ${to.join(', ')} depuis ton compte Outlook ?`)) return;
-    if (typeof assurerTokenOutlook === 'function' && !(await assurerTokenOutlook())) { showError('Connecte-toi à Outlook pour envoyer.'); return; }
-    try {
-      const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
-        method: 'POST', headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: { subject: sujet, body: { contentType: 'text', content: corps }, toRecipients: to.map(a => ({ emailAddress: { address: a } })) }, saveToSentItems: true }),
-      });
-      if (!r.ok) { showError('Échec de l’envoi via Outlook.'); return; }
-    } catch (e) { showError('Erreur réseau : ' + e.message); return; }
+    // 22.09.2026 (audit, point 2) : envoi via envoyerCourriel (js/143).
+    const res = await envoyerCourriel({ a: to, objet: sujet, texte: corps, contexte: 'réponse au client' });
+    if (!res.ok) return;
   }
   const maj = { reponse: corps, repondu_par: moi.nom || moi.email || '', repondu_le: new Date().toISOString(), statut: 'traite' };
   const r = await dbPatch('messages_clients', id, maj);

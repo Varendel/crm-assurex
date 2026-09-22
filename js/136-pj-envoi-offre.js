@@ -34,7 +34,9 @@ async function pjeDocuments(oppId) {
   if (o.client_id) {
     try {
       const m = await dbGet('mandats_signes', `client_id=eq.${o.client_id}&signe=is.true&archive=is.false&select=fichier_url,fichier_nom,created_at&order=created_at.desc&limit=1`);
-      if (Array.isArray(m) && m[0] && m[0].fichier_url) items.push({ path: m[0].fichier_url, nom: m[0].fichier_nom || 'Mandat de courtage signé.pdf', source: 'Mandat signé du client' });
+      // « Si les mandats sont signés, ils doivent aussi sortir dans les documents liés de la demande
+      // d'offre et toujours joints » : coché d'office (décochable au cas par cas).
+      if (Array.isArray(m) && m[0] && m[0].fichier_url) items.push({ path: m[0].fichier_url, nom: m[0].fichier_nom || 'Mandat de courtage signé.pdf', source: 'Mandat signé · joint d’office', defaut: true });
     } catch (e) { /* sans mandat : rien */ }
   }
   return items;
@@ -73,7 +75,7 @@ async function pjfPoser() {
   if (_pje.form !== oid) { _pje.items = []; _pje.locaux = []; }
   _pje.form = oid; _pje.sansOpp = !oid;
   const avant = new Map(_pje.items.map(x => [x.path, x.coche]));
-  try { _pje.items = oid ? (await pjeDocuments(oid)).map(x => ({ ...x, coche: !!avant.get(x.path) })) : []; } catch (e) { _pje.items = []; }
+  try { _pje.items = oid ? (await pjeDocuments(oid)).map(x => ({ ...x, coche: avant.has(x.path) ? avant.get(x.path) : !!x.defaut })) : []; } catch (e) { _pje.items = []; }
   pjeRendre();
 }
 function pjeCocher(t, i, v) { (t === 'd' ? _pje.items : _pje.locaux)[i].coche = v; pjeRendre(); }
@@ -125,7 +127,7 @@ async function pjePreparer() {
     }
     pjeRendre();
     pjeOppDe(ctx).then(async oid => { ctx.oppId = ctx.oppId || oid; _pje.sansOpp = !oid;
-      _pje.items = oid ? (await pjeDocuments(oid)).map(x => ({ ...x, coche: !!avant.get(x.path) })) : []; pjeRendre(); }).catch(() => pjeRendre());
+      _pje.items = oid ? (await pjeDocuments(oid)).map(x => ({ ...x, coche: avant.has(x.path) ? avant.get(x.path) : !!x.defaut })) : []; pjeRendre(); }).catch(() => pjeRendre());
     return r;
   };
 

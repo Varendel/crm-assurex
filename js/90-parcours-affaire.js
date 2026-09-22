@@ -93,10 +93,10 @@ function pafManques(o) {
   const demandes = (window._opDemandes && window._opDemandes[o.id]) || null;
   // null = pas encore chargé ; on ne réclame rien tant qu'on ne sait pas — sans pour autant
   // déclarer l'étape franchie (PAF_INCONNU, repeint par opChargerDemandes).
-  // recu_le : ancien nom de la date de réception (js/04, js/16), toléré (22.09.2026).
+  // recue_le: ancien nom de la date de réception (js/04, js/16), toléré (22.09.2026).
   m.offres = demandes === null ? PAF_INCONNU
     : !demandes.length ? 'Aucune demande d’offre envoyée'
-    : !demandes.some(d => (d.compagnies_envoi || []).some(e => e.prime || e.recue_le || e.recu_le)) ? 'Aucune offre reçue'
+    : !demandes.some(d => (d.compagnies_envoi || []).some(e => e.prime || e.recue_le)) ? 'Aucune offre reçue'
     : null;
 
   m.decision = !o.signee_le ? 'Date de signature non renseignée' : null;
@@ -628,7 +628,7 @@ function pafVersContrat(oppId) {
   // quand une autre avait été retenue.
   const demandes = (window._opDemandes && window._opDemandes[oppId]) || [];
   const offres = demandes.flatMap(d => (d.compagnies_envoi || []).map((e, i) => ({ d, e, i })))
-    .filter(x => x.e && (x.e.prime || x.e.recue_le || x.e.recu_le) && x.e.statut !== 'déclinée');
+    .filter(x => x.e && (x.e.prime || x.e.recue_le || x.e.recue_le) && x.e.statut !== 'déclinée');
   const choisie = offres.find(x => x.e.retenue) || offres[0] || null;
   if (choisie && typeof opSigneeVersContrat === 'function') {
     opSigneeVersContrat(oppId, choisie.d.id, choisie.i);

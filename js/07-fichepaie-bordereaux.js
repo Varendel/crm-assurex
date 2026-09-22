@@ -2209,7 +2209,7 @@ async function envoyerApercuEmailDemandeOffreViaOutlook() {
         // n'était encore arrivée (une offre reçue ou retenue le reste).
         if (i >= 0) {
           const ancienne = compagniesEnvoi[i] || {};
-          const dejaRecue = !!(ancienne.recue_le || ancienne.recu_le || ancienne.retenue || ['reçue', 'retenue', 'non_retenue'].includes(ancienne.statut));
+          const dejaRecue = !!(ancienne.recue_le || ancienne.retenue || ['reçue', 'retenue', 'non_retenue'].includes(ancienne.statut));
           compagniesEnvoi[i] = { ...ancienne, compagnie: cie.compagnie, email: cie.email || ancienne.email || null, envoye_le: maintenant, statut: dejaRecue ? ancienne.statut : 'envoyée' };
         } else compagniesEnvoi.push(entree);
       });

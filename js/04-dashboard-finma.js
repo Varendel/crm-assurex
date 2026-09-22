@@ -71,17 +71,16 @@ async function synchroniserOutlookInterne(oppIdFiltre) {
           // 22.09.2026 : « recue_le » est le nom lu par la fiche opportunité, le suivi et le
           // parcours (js/25, 27, 90) — « recu_le » faisait passer ces offres pour non reçues.
           e.recue_le = match.receivedDateTime;
-          delete e.recu_le;
           modifie = true;
           nbMaj++;
-          compagniesRecuesCetteFois.push({ compagnie: e.compagnie, recu_le: match.receivedDateTime });
+          compagniesRecuesCetteFois.push({ compagnie: e.compagnie, recue_le: match.receivedDateTime });
         }
       });
       if (modifie) {
         await dbPatch('demandes_offre', d.id, { compagnies_envoi: compagniesEnvoi });
         if (d.opportunite_id) {
           for (const c of compagniesRecuesCetteFois) {
-            await ajouterLigneHistoriqueOpportunite(d.opportunite_id, `📨 Offre reçue — ${c.compagnie} — ${fmtDate(c.recu_le)}`);
+            await ajouterLigneHistoriqueOpportunite(d.opportunite_id, `📨 Offre reçue — ${c.compagnie} — ${fmtDate(c.recue_le)}`);
           }
         }
       }

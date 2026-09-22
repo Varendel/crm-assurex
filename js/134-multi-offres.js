@@ -16,7 +16,7 @@
 let _mvc = null;   // { oppId, file: [{compagnie, prime, produit, fichier}], rang }
 
 function mvcEsc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-function mvcRecue(e) { return !!(e.recue_le || e.recu_le || e.statut === 'reçue' || e.retenue) && e.statut !== 'déclinée'; }
+function mvcRecue(e) { return !!(e.recue_le || e.statut === 'reçue' || e.retenue) && e.statut !== 'déclinée'; }
 
 function mvcOuvrir(oppId) {
   const o = allOpportunites.find(x => x.id === oppId);

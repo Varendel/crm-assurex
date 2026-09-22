@@ -23,7 +23,7 @@ function cofPrimeSante(produitId, primeAnnuelle) {
 function cofOffresRetenues(oppId, o) {
   const entrees = (typeof opToutesEntrees === 'function' ? opToutesEntrees(oppId) : [])
     .map(x => x.e)
-    .filter(e => e && Number(e.prime) > 0 && e.statut !== 'déclinée' && (e.recue_le || e.recu_le || e.retenue || e.statut === 'reçue' || e.statut === 'retenue'));
+    .filter(e => e && Number(e.prime) > 0 && e.statut !== 'déclinée' && (e.recue_le || e.retenue || e.statut === 'reçue' || e.statut === 'retenue'));
   const parProduit = new Map();
   entrees.forEach(e => {
     const type = (typeof otyTypeEntree === 'function' ? otyTypeEntree(e, o) : null) || (Array.isArray(o.produits) ? o.produits[0] : null);

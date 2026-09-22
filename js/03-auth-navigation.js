@@ -1521,7 +1521,7 @@ function renderEtatDossiers(demandesOffre, refreshType, refreshId) {
         compagnie: e.compagnie,
         email: e.email || null,
         envoyeLe: e.envoye_le || null,
-        recuLe: e.recu_le || null,
+        recuLe: e.recue_le || null,
         soumisClient: !!e.soumis_client,
         soumisClientLe: e.soumis_client_le || null,
         offrePath: e.offre_path || null,

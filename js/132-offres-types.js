@@ -112,7 +112,7 @@ function otyArbreHtml(oppId) {
   const groupes = new Map();
   (o && Array.isArray(o.produits) ? o.produits : []).forEach(id => groupes.set(id, []));   // les couvertures visées d'abord, même sans offre
   entrees.forEach(x => { const t = otyTypeEntree(x.e, o) || ''; if (!groupes.has(t)) groupes.set(t, []); groupes.get(t).push(x); });
-  const recue = e => !!(e.recue_le || e.recu_le || e.statut === 'reçue' || e.retenue);
+  const recue = e => !!(e.recue_le || e.statut === 'reçue' || e.retenue);
   const choix = [...new Set([...(o && o.produits || []), ...OTY_REGLES.map(r => r[0])])];
   const selecteur = (x, t) => `<select class="oty-classer" title="Changer le type de cette offre" onchange="otyClasser('${oppId}','${x.d.id}',${x.idx},this.value)">
       <option value="">— Non classée —</option>${choix.map(id => `<option value="${id}" ${id === t ? 'selected' : ''}>${otyEsc(otyLabel(id))}</option>`).join('')}</select>`;

@@ -73,7 +73,7 @@ async function suxRecharger() {
   const z2 = document.getElementById('sux-demandes'); if (z2) z2.innerHTML = htmlSuxDemandes();
   const z3 = document.getElementById('sux-priorites'); if (z3) z3.innerHTML = htmlSuxPriorites();
   // 22.09.2026 : « recu_le » est l'ancien nom écrit par js/04 et js/16 — lu aussi.
-  const attente = suxEntrees().filter(x => x.e.statut === 'envoyée' && !(x.e.recue_le || x.e.recu_le));
+  const attente = suxEntrees().filter(x => x.e.statut === 'envoyée' && !(x.e.recue_le || x.e.recue_le));
   const aRelancer = attente.filter(x => opEntreeSansReponse(x.e));
   const k = document.getElementById('sux-kpi-attente');
   if (k) { k.classList.toggle('alerte', !!aRelancer.length); k.innerHTML = `<span>Offres attendues</span><b>${attente.length}</b><small>${aRelancer.length ? `${aRelancer.length} à relancer` : 'rien à relancer ✓'}</small>`; }
@@ -97,7 +97,7 @@ function suxScorer(o) {
   const demandes = (window._suiviDemandes || []).filter(d => d.opportunite_id === o.id);
   const sansReponse = demandes.flatMap(d => (d.compagnies_envoi || []).filter(opEntreeSansReponse));
   if (sansReponse.length) { score += 40; reasons.push(`🔔 ${sansReponse.length} offre${sansReponse.length > 1 ? 's' : ''} à relancer`); }
-  const recues = demandes.flatMap(d => (d.compagnies_envoi || []).filter(e => (e.recue_le || e.recu_le) && !e.retenue)); // 22.09.2026 : ancien nom recu_le toléré
+  const recues = demandes.flatMap(d => (d.compagnies_envoi || []).filter(e => (e.recue_le) && !e.retenue)); // 22.09.2026 : ancien nom recu_le toléré
   if (recues.length && !demandes.some(d => (d.compagnies_envoi || []).some(e => e.retenue))) { score += 30; reasons.push(`📥 ${recues.length} offre${recues.length > 1 ? 's' : ''} reçue${recues.length > 1 ? 's' : ''} à présenter`); }
   if (opEstDormante(o)) { score += 30; reasons.push(`💤 ${opJoursDepuis(opDerniereActivite(o))} j sans activité`); }
   if (typeof prochaineAction === 'function' && !prochaineAction(o.id)) { score += 25; reasons.push('➜ Aucune prochaine action'); }
@@ -155,7 +155,7 @@ function htmlSuxDemandes() {
   if (!ds.length) return `<div class="dbx-vide-petit">Aucune demande d’offre pour l’instant. <button type="button" class="dbx-lien" onclick="navigate('nouvelle-demande-offre')">En créer une →</button></div>`;
   return `<div class="sux-mini">${ds.map(d => {
     const envs = Array.isArray(d.compagnies_envoi) ? d.compagnies_envoi : [];
-    const recues = envs.filter(e => e.recue_le || e.recu_le).length; // 22.09.2026 : ancien nom recu_le toléré
+    const recues = envs.filter(e => e.recue_le).length; // 22.09.2026 : ancien nom recu_le toléré
     const etat = !envs.length ? 'Pas encore envoyée' : `${envs.length} compagnie${envs.length > 1 ? 's' : ''} · ${recues} réponse${recues > 1 ? 's' : ''}`;
     return `<button type="button" onclick="demandeOffreEnEditionId='${d.id}';navigate('nouvelle-demande-offre')"><span><b>${suxEsc(suxNomDemande(d))}</b><small>${fmtDate(d.created_at)} · ${etat}</small></span>
       <span class="sux-logos">${envs.slice(0, 4).map(e => typeof pictoCompagnie === 'function' ? pictoCompagnie(e.compagnie, 22) : '').join('')}</span></button>`;

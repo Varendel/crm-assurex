@@ -334,7 +334,7 @@ async function marquerCompagnieRecue(demandeOffreId, idx, refreshType, refreshId
     if (!compagniesEnvoi[idx]) throw new Error('Compagnie introuvable sur ce dossier');
     const recuLe = new Date().toISOString();
     compagniesEnvoi[idx].statut = 'reçue';
-    compagniesEnvoi[idx].recu_le = recuLe;
+    compagniesEnvoi[idx].recue_le = recuLe;
     const r = await dbPatch('demandes_offre', demandeOffreId, { compagnies_envoi: compagniesEnvoi });
     if (r && r.error) throw new Error(errMsg(r));
 

@@ -505,7 +505,7 @@ async function dbxChargerNouveautes() {
     texte: `RDV réservé en ligne par <strong>${dbxEsc(dbxNomClient(r.client_id) || r.prospect_nom || 'un prospect')}</strong> — ${fmtDate(r.date_heure)}`, action: r.client_id ? `showClient('${r.client_id}')` : "navigate('rendez-vous')" }));
   (demandes || []).forEach(d => (Array.isArray(d.compagnies_envoi) ? d.compagnies_envoi : []).forEach(e => {
     // 22.09.2026 : recue_le est le nom unifié ; recu_le (ancien, js/04 et js/16) reste lu.
-    const recueLe = e && (e.recue_le || e.recu_le);
+    const recueLe = e && (e.recue_le);
     if (recueLe && recueLe >= depuis) items.push({ date: recueLe, icone: '📨', ton: 'violet',
       texte: `Offre reçue de <strong>${dbxEsc(normaliserCompagnie(e.compagnie || ''))}</strong>${d.client_id ? ' pour ' + dbxEsc(dbxNomClient(d.client_id)) : ''}`, action: d.opportunite_id ? `editerOpportunite('${d.opportunite_id}')` : "navigate('suivi')" });
   }));

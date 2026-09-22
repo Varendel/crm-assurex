@@ -27,7 +27,7 @@ function _offreStatut(s) { return OFFRE_STATUTS[s] ? s : (s === 'recue' ? 'reçu
 // le drapeau « retenue » prime, et une date de réception sans statut vaut « reçue ».
 function _offreStatutEntree(e) {
   if (e.retenue) return 'retenue';
-  if (!OFFRE_STATUTS[e.statut] && e.statut !== 'recue' && (e.recue_le || e.recu_le)) return 'reçue';
+  if (!OFFRE_STATUTS[e.statut] && e.statut !== 'recue' && (e.recue_le)) return 'reçue';
   return _offreStatut(e.statut);
 }
 
@@ -99,11 +99,9 @@ async function changerStatutOffrePipeline(demandeId, index) {
   const actuel = _offreStatutEntree(envoi[index]);
   const nouveau = OFFRE_STATUTS[actuel].suivant;
   const e = { ...envoi[index], statut: nouveau };
-  // 22.09.2026 : même modèle que la fiche opportunité (js/25) — date sous « recue_le » (l'ancien
-  // « recu_le » n'était lu nulle part ailleurs), drapeau « retenue » tenu à jour, et le retour à
-  // « envoyée » efface la réception, sinon la fiche continuait d'afficher l'offre comme reçue.
-  if (!e.recue_le && e.recu_le) e.recue_le = e.recu_le;
-  delete e.recu_le;
+  // 22.09.2026 : même modèle que la fiche opportunité (js/25) — date sous « recue_le », drapeau
+  // « retenue » tenu à jour, et le retour à « envoyée » efface la réception, sinon la fiche
+  // continuait d'afficher l'offre comme reçue.
   if (nouveau === 'reçue' && !e.recue_le) e.recue_le = new Date().toISOString();
   e.retenue = nouveau === 'retenue';
   if (nouveau === 'envoyée') e.recue_le = null;

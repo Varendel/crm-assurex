@@ -1,0 +1,30 @@
+/* ═══ IMPORT D'UN DOSSIER DE MANDATS (js/123, 22.09.2026) ═══════════════════════════════════════ */
+.imp-voile { position: fixed; inset: 0; z-index: 1200; background: rgba(4, 10, 25, .62); display: flex; align-items: center; justify-content: center; padding: 16px; }
+.imp-boite { width: min(1100px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; background: var(--surface); color: var(--text);
+  border: 1px solid var(--border); border-radius: 16px; box-shadow: 0 24px 60px rgba(0,0,0,.35); overflow: hidden; }
+.imp-tete { display: flex; align-items: center; justify-content: space-between; padding: 14px 18px; border-bottom: 1px solid var(--border); }
+.imp-tete h2 { margin: 0; font-size: var(--t-l, 16px); font-weight: 600; }
+.imp-x { border: 0; background: none; color: var(--text-muted); font-size: 22px; cursor: pointer; line-height: 1; }
+.imp-corps { padding: 16px 18px; overflow: auto; display: flex; flex-direction: column; gap: 12px; }
+.imp-corps p { margin: 0; font-size: var(--t-s); color: var(--text-muted); }
+.imp-choix { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.imp-choix label { font-size: var(--t-s); display: inline-flex; gap: 8px; align-items: center; }
+.imp-choix select, .imp-table select { background: var(--surface-alt); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 5px 8px; font: inherit; font-size: var(--t-s); max-width: 100%; }
+.imp-dossier { cursor: pointer; }
+.imp-resume b { color: var(--text); }
+.imp-table-boite { overflow: auto; border: 1px solid var(--border); border-radius: 10px; }
+.imp-table { width: 100%; border-collapse: collapse; font-size: var(--t-s); }
+.imp-table th { position: sticky; top: 0; background: var(--surface-alt); text-align: left; font-weight: 600; font-size: var(--t-xs); text-transform: uppercase; letter-spacing: .05em; color: var(--text-muted); padding: 8px 10px; }
+.imp-table td { padding: 7px 10px; border-top: 1px solid var(--border); vertical-align: middle; }
+.imp-table td small { color: var(--text-muted); }
+.imp-table td:nth-child(3) select, .imp-table td:nth-child(4) select { width: 100%; min-width: 180px; }
+.imp-table tr.off td { opacity: .55; }
+.imp-etat { display: inline-block; padding: 2px 9px; border-radius: 999px; font-size: var(--t-xs); font-weight: 600; white-space: nowrap; }
+.imp-etat.vert { background: color-mix(in srgb, #16A34A 15%, transparent); color: #16A34A; }
+.imp-etat.orange { background: color-mix(in srgb, #F59E0B 18%, transparent); color: #B45309; }
+.imp-etat.rouge { background: color-mix(in srgb, #EF4444 15%, transparent); color: #DC2626; }
+.imp-etat.gris { background: var(--surface-alt); color: var(--text-muted); }
+html:not([data-theme="clair"]) .imp-etat.vert { color: #4ADE80; }
+html:not([data-theme="clair"]) .imp-etat.orange { color: #FBBF24; }
+html:not([data-theme="clair"]) .imp-etat.rouge { color: #F87171; }
+.imp-pied { display: flex; justify-content: space-between; gap: 10px; padding-top: 4px; }

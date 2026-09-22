@@ -38,63 +38,7 @@ function selectStadeOpportunite(o, stadeActuel, tousLesStades) {
 // sessions), pour ne pas perdre le choix en changeant de stade/filtre dans la même visite.
 let vueModePipeline = 'kanban'; // 'kanban' | 'liste' | 'echeances'
 
-function viewOpportunites() {
-  // Session RH (Cofidex) : Pipeline visible mais en lecture seule et sans aucun chiffre (primes,
-  // commissions, valeur pondérée) — cf. RH_VUES_AUTORISEES et le garde-fou sidebar (js/03). Le
-  // drapeau est calculé une fois ici et passé à chaque sous-vue plutôt que ré-appelé partout.
-  const rhMode = estRoleRH();
-  const stadeColor = { Contact:'#64748b', Analyse:'#38bdf8', Proposition:'#f59e0b', Négociation:'#a78bfa' };
-  const stades = ['Contact','Analyse','Proposition','Négociation'];
-  const tousLesStades = [...stades, 'Gagné', 'Perdu'];
-  const OPPS = allOpportunites.filter(o => o.stade !== 'Gagné' && o.stade !== 'Perdu');
-  const gagnees = allOpportunites.filter(o => o.stade === 'Gagné');
-  const perdues = allOpportunites.filter(o => o.stade === 'Perdu');
-  const total = OPPS.reduce((s,o) => s+(o.montant_potentiel||0), 0);
-  const pondere = OPPS.reduce((s,o) => s+Math.round((o.montant_potentiel||0)*(o.probabilite||0)/100), 0);
-  const caPotentiel = OPPS.reduce((s,o) => s+(o.commission_estimee||0), 0);
-
-  function nomClient(o) {
-    const c = allClients.find(cl => cl.id === o.client_id);
-    if (c) return estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`;
-    return o.prospect_nom ? `${o.prospect_nom} 🆕` : '—';
-  }
-
-  const toggleVues = [
-    { id: 'kanban', label: '📋 Kanban' },
-    { id: 'liste', label: '📃 Liste' },
-    { id: 'echeances', label: '📅 Échéances' },
-    { id: 'priorites', label: '🎯 Priorités' },
-  ].map(v => `<button class="tab-btn ${vueModePipeline === v.id ? 'active' : ''}" onclick="vueModePipeline='${v.id}';navigate('opportunites')">${v.label}</button>`).join('');
-
-  let corps;
-  if (vueModePipeline === 'liste') corps = renderListeOpportunites(OPPS, nomClient, tousLesStades, stadeColor, rhMode);
-  else if (vueModePipeline === 'echeances') corps = renderEcheancesOpportunites(OPPS, nomClient, stadeColor, rhMode);
-  else if (vueModePipeline === 'priorites') corps = renderPrioritesOpportunites(OPPS, nomClient, stadeColor, rhMode);
-  else corps = renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, tousLesStades, nomClient, rhMode);
-
-  return `
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
-      <h2 style="margin:0;font-size:18px;font-weight: 600;color:var(--text)">Pipeline — Opportunités</h2>
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn-add" onclick="opportuniteEnEditionId=null;navigate('nouvelle-opportunite')">${rhMode ? PICTO_CREE_EQUIPE + ' Créer une opportunité pour Jonathan' : '+ Nouvelle opportunité'}</button>
-        ${rhMode ? `<button class="btn-secondary" onclick="navigate('nouveau-rappel')">${PICTO_CREE_EQUIPE} Créer une tâche pour Jonathan</button>` : ''}
-      </div>
-    </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">${rhMode ? "Vue d'ensemble des affaires en cours (stades, clients, tâches liées) — lecture seule, sans montants. Utilise les boutons ci-dessus pour créer une opportunité ou une tâche pour Jonathan." : 'Suivi des affaires en négociation, avant signature. Une fois "Gagnée" depuis le menu de stade, l\'opportunité ouvre directement le formulaire de contrat pré-rempli.'}</div>
-    ${renderOppsEchuesBanner(OPPS, nomClient)}
-    ${!rhMode && typeof bandeauSansProchaineAction === 'function' ? bandeauSansProchaineAction(OPPS, nomClient) : ''}
-    <div class="stat-grid" style="margin-bottom:20px">
-      ${rhMode ? '' : statCard('Pipeline total (prime)', 'CHF ' + total.toLocaleString(), '#f59e0b')}
-      ${rhMode ? '' : statCard('Pondéré (prime)', 'CHF ' + pondere.toLocaleString(), '#38bdf8')}
-      ${rhMode ? '' : statCard('CA potentiel (commissions)', 'CHF ' + caPotentiel.toLocaleString(), '#4ade80')}
-      ${statCard('En cours', OPPS.length, '#e2e8f0')}
-      ${statCard('Gagnées', gagnees.length, '#4ade80')}
-    </div>
-    ${rhMode ? '' : renderStatsBranchesPipeline(OPPS)}
-    ${rhMode ? '' : renderCamembertsPipeline(OPPS)}
-    <div class="tabs" style="margin-bottom:18px">${toggleVues}</div>
-    ${corps}`;
-}
+// (retiré le 22.09.2026) viewOpportunites : doublon mort — la version active est dans js/77, chargée après celle-ci, donc seule exécutée.
 
 // ── Stats du pipeline par branche — nécessite que les opportunités aient un champ `produits`
 // (tableau d'ids catalogue) rempli. Basé sur PRODUIT_BRANCHES (js/02-catalogue-session.js).
@@ -230,75 +174,7 @@ function renderOppsEchuesBanner(OPPS, nomClient) {
 // ── Vue Kanban (par défaut) — colonnes par stade + tableaux Gagnées/Perdues en dessous ──
 // rhMode : carte non cliquable (pas d'accès à la fiche d'édition), sans montant ni menu de
 // changement de stade (action réservée aux rôles apporteur/signataire).
-function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, tousLesStades, nomClient, rhMode) {
-  let kanban = stades.map(stade => {
-    const opps = OPPS.filter(o => o.stade === stade);
-    const color = stadeColor[stade];
-    return `<div class="kanban-col" data-stade="${stade}">
-      <div class="kanban-col-title">
-        <div class="kanban-dot" style="background:${color}"></div>
-        <div style="font-size:11px;font-weight: 500;color:${color};text-transform:uppercase;letter-spacing:0.8px">${stade}</div>
-        <div style="font-size:10px;color:var(--text-muted);margin-left:auto">${opps.length}${rhMode ? '' : ` · CHF ${fmtCHF(Math.round(opps.reduce((s, o) => s + Number(o.montant_potentiel || 0), 0)))}`}</div>
-      </div>
-      ${opps.map(o => {
-        const tachesOuvertes = allRappels.filter(r => r.opportunite_id === o.id && r.statut === 'ouvert').length;
-        const echue = o.date_echeance && new Date(o.date_echeance) < new Date(new Date().setHours(0,0,0,0));
-        return `<div class="kanban-card" data-opp-id="${o.id}" ${rhMode ? '' : 'draggable="true" title="Glisser vers un autre stade"'} onclick="editerOpportunite('${o.id}')" style="cursor:${rhMode ? 'pointer' : 'grab'};position:relative;${echue ? 'border-left:3px solid #f87171' : ''}">
-        ${o.cree_par ? `<div title="Créée par ${o.cree_par}" style="position:absolute;top:8px;right:8px;font-size:13px">${PICTO_CREE_EQUIPE}${o.notif_vue ? '' : ' 🔴'}</div>` : ''}
-        <div style="font-size:12.5px;font-weight: 500;color:var(--text);margin-bottom:4px">${o.titre}</div>
-        <div style="font-size:13px;font-weight: 600;color:var(--text);margin-bottom:1px">${nomClient(o)}</div>
-        <div style="font-size:10.5px;color:var(--text-muted);margin-bottom:6px">${tachesOuvertes > 0 ? `☑ ${tachesOuvertes} tâche${tachesOuvertes > 1 ? 's' : ''}` : '&nbsp;'}</div>
-        <div class="opp-offres" data-opp="${o.id}" data-compagnie="${(o.compagnie || '').replace(/"/g, '&quot;')}">${o.compagnie && typeof compagnieAvecPicto === 'function' ? `<div style="font-size:11px;color:var(--text-muted);margin-bottom:6px">${compagnieAvecPicto(o.compagnie, 20)}</div>` : ''}</div>
-        ${typeof htmlProchaineAction === 'function' ? htmlProchaineAction(o) : ''}
-        ${o.date_echeance ? `<div style="font-size:10px;font-weight: 500;color:${echue ? '#f87171' : 'var(--text-muted)'};margin-bottom:6px">${echue ? '🔴 Échue le ' : 'Échéance '}${fmtDate(o.date_echeance)}</div>` : ''}
-        <div style="display:flex;justify-content:space-between;align-items:center">
-          ${rhMode ? '<span></span>' : `<span style="font-size:13px;font-weight: 600;color:var(--c-alerte-texte)">CHF ${fmtCHF((o.montant_potentiel||0))}</span>`}
-          ${o.apporteur_id ? avatar(agentById(o.apporteur_id), 22) : ''}
-        </div>
-        <div class="progress-bar" style="margin-top:8px"><div class="progress-fill" style="width:${o.probabilite||0}%;background:${color}"></div></div>
-        <div style="font-size:10px;color:var(--text-muted);margin-top:6px;display:flex;justify-content:space-between;align-items:center;gap:6px">
-          <span>${o.probabilite||0}%</span>
-          <div style="display:flex;gap:4px;align-items:center">
-            ${rhMode ? '' : `<button onclick="event.stopPropagation();ouvrirModaleMotifPerte('${o.id}','kanban')" title="Marquer perdue" style="background:none;border:1px solid color-mix(in srgb, var(--c-danger) 35%, transparent);color:var(--c-danger-texte);border-radius:5px;padding:2px 6px;font-size:10px;font-weight: 500;cursor:pointer">✕ Perdu</button>`}
-            ${rhMode ? '' : selectStadeOpportunite(o, stade, tousLesStades)}
-          </div>
-        </div>
-      </div>`;
-      }).join('')}
-      ${opps.length === 0 ? '<div class="kanban-empty">Aucune</div>' : ''}
-    </div>`;
-  }).join('');
-
-  // Glisser-déposer + offres multi-compagnies : branchés après l'affichage (js/16-pipeline-kanban.js)
-  setTimeout(() => { if (typeof activerKanbanPipeline === 'function') activerKanbanPipeline(rhMode); }, 0);
-  return `${rhMode ? '' : `<div class="kanban-zones-fin" aria-hidden="true">
-      <div class="kanban-zone-fin" data-stade="Gagné">✓ Déposer ici : <strong>Gagné</strong></div>
-      <div class="kanban-zone-fin perdu" data-stade="Perdu">✕ Déposer ici : <strong>Perdu</strong></div>
-    </div>`}
-    <div class="kanban">${kanban}</div>
-    ${gagnees.length > 0 ? `<div style="margin-top:24px">
-      <div style="font-size:11px;font-weight: 500;color:var(--c-succes-texte);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">✓ Gagnées (${gagnees.length})</div>
-      <div class="table-wrap">${gagnees.map(o => `<div class="table-row" style="grid-template-columns:${rhMode ? '1fr 160px 150px' : '1fr 160px 100px 150px 110px'};${rhMode ? '' : 'cursor:pointer'}" ${rhMode ? '' : `onclick="editerOpportunite('${o.id}')"`}>
-        <div style="font-weight: 600;font-size:13px;color:var(--text)">${o.titre}</div>
-        <div style="font-size:13px;font-weight: 600;color:var(--text)">${nomClient(o)}</div>
-        ${rhMode ? '' : `<div style="font-size:12px;font-weight: 500;color:var(--c-alerte-texte)">CHF ${fmtCHF((o.montant_potentiel||0))}</div>`}
-        ${rhMode ? '' : `<div>${selectStadeOpportunite(o, 'Gagné', tousLesStades)}</div>`}
-        <div>${o.contrat_id ? badge('Contrat créé', '#4ade80') : badge('À finaliser', '#f59e0b')}</div>
-      </div>`).join('')}</div>
-    </div>` : ''}
-    ${perdues.length > 0 ? `<div style="margin-top:24px">
-      <div style="font-size:11px;font-weight: 500;color:var(--c-danger-texte);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">✕ Perdues (${perdues.length})</div>
-      <div class="table-wrap">${perdues.map(o => `<div class="table-row" style="grid-template-columns:${rhMode ? '1fr 160px' : '1fr 160px 100px 150px'};${rhMode ? '' : 'cursor:pointer'}" ${rhMode ? '' : `onclick="editerOpportunite('${o.id}')"`}>
-        <div>
-          <div style="font-weight: 600;font-size:13px;color:var(--text)">${o.titre}</div>
-          ${o.motif_perte ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:2px;font-style:italic">Motif : ${o.motif_perte}</div>` : ''}
-        </div>
-        <div style="font-size:13px;font-weight: 600;color:var(--text)">${nomClient(o)}</div>
-        ${rhMode ? '' : `<div style="font-size:12px;font-weight: 500;color:var(--text-muted)">CHF ${fmtCHF((o.montant_potentiel||0))}</div>`}
-        ${rhMode ? '' : `<div>${selectStadeOpportunite(o, 'Perdu', tousLesStades)}</div>`}
-      </div>`).join('')}</div>
-    </div>` : ''}`;
-}
+// (retiré le 22.09.2026) renderKanbanOpportunites : doublon mort — la version active est dans js/78, chargée après celle-ci, donc seule exécutée.
 
 // ── Vue Liste — toutes les opportunités (tous stades confondus) en une seule table triable ──
 // Utile pour scanner/trier vite par montant, probabilité ou échéance sans le découpage par

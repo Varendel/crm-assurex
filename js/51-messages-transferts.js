@@ -23,54 +23,9 @@ function mtClientCourant() { return (window._ec && window._ec.client) || null; }
 // ════════════════════════════════════════════════════════════════════════════════════════════════
 
 // ── Écrire au conseiller : au sujet d'un contrat, ou message libre ──────────────────────────────
-function ecOuvrirMessage(contratId) {
-  const E = window._ec || {};
-  const ct = (E.contrats || []).find(x => x.id === contratId) || null;
-  const contrats = (E.contrats || []).filter(x => ['actif', 'renouveler', 'en_cours'].includes(x.statut));
-  const titre = ct ? 'Contacter mon conseiller' : 'Laisser un message';
-  const sous = ct ? `${ct.produit || 'Contrat'}${ct.compagnie ? ' · ' + ct.compagnie : ''}${ct.numero_police ? ' · police ' + ct.numero_police : ''}`
-    : 'Votre question ne concerne pas un contrat en particulier — écrivez-nous librement.';
-  creerModale('modal-ec-message', `
-    <div class="opx-modale mdx-modale mdx-modale-flex" role="dialog" aria-modal="true" aria-labelledby="ec-msg-titre">
-      ${typeof mdxTeteModale === 'function' ? mdxTeteModale(ct ? '💬' : '✉️', titre, sous, 'modal-ec-message', 'ec-msg-titre') : `<h3 id="ec-msg-titre">${mtEsc(titre)}</h3>`}
-      ${!ct && contrats.length ? `<div class="form-field"><label class="form-label" for="ec-msg-contrat">Contrat concerné <span class="mdx-optionnel">facultatif</span></label>
-        <select class="form-select" id="ec-msg-contrat"><option value="">Aucun contrat en particulier</option>
-          ${contrats.map(x => `<option value="${x.id}">${mtEsc(x.produit || 'Contrat')} — ${mtEsc(x.compagnie || '')}${x.numero_police ? ' (' + mtEsc(x.numero_police) + ')' : ''}</option>`).join('')}
-        </select></div>` : `<input type="hidden" id="ec-msg-contrat" value="${ct ? ct.id : ''}"/>`}
-      <div class="form-field"><label class="form-label" for="ec-msg-sujet">Objet</label>
-        <input class="form-input" id="ec-msg-sujet" maxlength="200" value="${ct ? mtEsc('Question sur ' + (ct.produit || 'mon contrat')) : ''}" placeholder="Ex. : changement d’adresse"/></div>
-      <div class="form-field mdx-champ-corps"><label class="form-label" for="ec-msg-texte">Votre message</label>
-        <textarea class="form-input" id="ec-msg-texte" rows="7" maxlength="5000" placeholder="Décrivez votre demande…"></textarea></div>
-      <div class="opx-modale-actions mdx-actions">
-        <button type="button" class="btn-secondary" onclick="document.getElementById('modal-ec-message').remove()">Annuler</button>
-        <button type="button" class="btn-save" id="ec-msg-envoi" onclick="ecEnvoyerMessage()">Envoyer à mon conseiller</button>
-      </div>
-    </div>`, { padding: '16px' }).classList.add('rex-modale-feuille');
-  setTimeout(() => document.getElementById('ec-msg-texte')?.focus(), 60);
-}
+// (retiré le 22.09.2026) ecOuvrirMessage : doublon mort — la version active est dans js/52, chargée après celle-ci, donc seule exécutée.
 
-async function ecEnvoyerMessage() {
-  const c = mtClientCourant();
-  if (!c) return;
-  const texte = (document.getElementById('ec-msg-texte')?.value || '').trim();
-  if (texte.length < 5) { showError('Votre message est un peu court — précisez votre demande.'); return; }
-  const btn = document.getElementById('ec-msg-envoi');
-  if (btn) { btn.disabled = true; btn.textContent = 'Envoi…'; }
-  const contratId = document.getElementById('ec-msg-contrat')?.value || null;
-  const r = await dbPost('messages_clients', {
-    client_id: c.id, contrat_id: contratId || null,
-    sujet: (document.getElementById('ec-msg-sujet')?.value || '').slice(0, 200) || null,
-    message: texte.slice(0, 5000), canal: 'espace_client', statut: 'nouveau',
-  });
-  if (r && r.error) {
-    if (btn) { btn.disabled = false; btn.textContent = 'Envoyer à mon conseiller'; }
-    showError('Votre message n’a pas pu être envoyé — réessayez ou écrivez à jo@cofidex.ch.');
-    return;
-  }
-  document.getElementById('modal-ec-message')?.remove();
-  showError('✓ Message transmis à votre conseiller. Il vous répondra par e-mail.');
-  if (window._ec) window._ec.messages = [{ created_at: new Date().toISOString(), sujet: null, statut: 'nouveau' }, ...(window._ec.messages || [])];
-}
+// (retiré le 22.09.2026) ecEnvoyerMessage : doublon mort — la version active est dans js/52, chargée après celle-ci, donc seule exécutée.
 
 // ── Transférer la gestion de ses contrats ───────────────────────────────────────────────────────
 // Le bouton ouvre d'abord une page d'explication (Rex et sa bulle) : le client comprend ce que le
@@ -534,27 +489,7 @@ async function mcStatut(id, statut) {
   navigate('messages-clients', { silent: true });
 }
 
-function mcRepondre(id) {
-  const m = (_mc.messages || []).find(x => x.id === id);
-  if (!m) return;
-  const c = (typeof allClients !== 'undefined' ? allClients : []).find(x => x.id === m.client_id);
-  const moi = typeof crxMoi === 'function' ? crxMoi() : { nom: '', email: '', tel: '' };
-  const civ = c && c.civilite === 'Madame' ? 'Madame,' : c && c.civilite === 'Monsieur' ? 'Monsieur,' : 'Madame, Monsieur,';
-  const corps = [civ, '', 'Merci pour votre message.', '', '', 'Meilleures salutations', '', moi.nom, moi.email, moi.tel].filter(x => x !== undefined).join('\n');
-  creerModale('modal-mc-reponse', `
-    <div class="opx-modale mdx-modale mdx-modale-flex mdx-modale-large" role="dialog" aria-modal="true" aria-labelledby="mc-rep-titre">
-      ${typeof mdxTeteModale === 'function' ? mdxTeteModale('✉️', 'Répondre au client', mtEsc(mcNomClient(m.client_id)) + ' — rien n’est envoyé automatiquement', 'modal-mc-reponse', 'mc-rep-titre') : '<h3 id="mc-rep-titre">Répondre</h3>'}
-      <div class="mcx-rappel"><b>Son message :</b><p>${mtEsc(m.message).replace(/\n/g, '<br/>')}</p></div>
-      <div class="form-field"><label class="form-label" for="mc-rep-a">À</label><input class="form-input" id="mc-rep-a" value="${mtEsc((c && c.email) || '')}"/></div>
-      <div class="form-field"><label class="form-label" for="mc-rep-sujet">Objet</label><input class="form-input" id="mc-rep-sujet" value="${mtEsc('Re : ' + (m.sujet || 'votre message'))}"/></div>
-      <div class="form-field mdx-champ-corps"><label class="form-label" for="mc-rep-corps">Réponse</label><textarea class="form-input" id="mc-rep-corps" rows="10">${mtEsc(corps)}</textarea></div>
-      <div class="opx-modale-actions mdx-actions mdx-actions-envoi">
-        <button type="button" class="btn-secondary mdx-a-gauche" onclick="document.getElementById('modal-mc-reponse').remove()">Fermer</button>
-        <button type="button" class="btn-secondary" onclick="mcEnregistrerReponse('${id}', false)">💾 Noter la réponse (sans e-mail)</button>
-        <button type="button" class="btn-save" onclick="mcEnregistrerReponse('${id}', true)">📨 Envoyer via Outlook…</button>
-      </div>
-    </div>`, { padding: '16px' }).classList.add('rex-modale-feuille');
-}
+// (retiré le 22.09.2026) mcRepondre : doublon mort — la version active est dans js/69, chargée après celle-ci, donc seule exécutée.
 
 async function mcEnregistrerReponse(id, envoyer) {
   const m = (_mc.messages || []).find(x => x.id === id);

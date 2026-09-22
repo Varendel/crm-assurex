@@ -8,9 +8,11 @@
 // Pour la modifier : ce fichier (texte) et assets/signature/ (image). Les coordonnées viennent de la
 // signature Outlook de Jonathan, elles figurent déjà sur chaque e-mail envoyé et sur cofidex.ch.
 
-// Image FIXE : Outlook sous Windows n'affiche que la première image d'un GIF animé, et celle de
-// l'animation EX.GROUP est presque vide. Le bloc des quatre marques en PNG s'affiche partout.
-const SIG_LOGO = { cid: 'exgroup-signature@assurex', nom: 'EX-GROUP.png', type: 'image/png', url: 'assets/signature/exgroup-4-marques-600.png', largeur: 260 };
+// Le logo COFIDEX de la signature (22.09.2026). Deux précautions apprises à l'usage :
+//   · image FIXE — Outlook sous Windows n'affiche que la première image d'un GIF animé ;
+//   · version BLEU MARINE sur fond transparent — le fichier Logos\cofidexgif.gif est un logo blanc
+//     (lettres blanches sur fond blanc) : invisible dans un e-mail, dont le fond est blanc.
+const SIG_LOGO = { cid: 'cofidex-signature@assurex', nom: 'COFIDEX.png', type: 'image/png', url: 'assets/logos/cofidex.png', largeur: 200 };
 
 const SIG_ASSUREX = {
   'jo@cofidex.ch': { nom: 'Jonathan Ozkan', titre: 'Directeur associé Assurex Sàrl', tel: '+41 79 101 99 26' },
@@ -32,7 +34,7 @@ function sigAssurexHtml(agent) {
     <p style="margin:11pt 0 0;font-size:11pt;${F}"><b>${nom}</b></p>
     ${ligne(`<b>${p.titre}</b>`)}
     ${ligne('Spécialiste en assurances &amp; prévoyance AFA | Agréé FINMA', 'margin-top:8pt')}
-    <p style="margin:10pt 0 0"><img src="cid:${SIG_LOGO.cid}" alt="EX.GROUP — Cofidex · Revidex · Assurex" width="${SIG_LOGO.largeur}" style="width:${SIG_LOGO.largeur}px;max-width:100%;height:auto;border:0"></p>
+    <p style="margin:10pt 0 0"><img src="cid:${SIG_LOGO.cid}" alt="COFIDEX" width="${SIG_LOGO.largeur}" style="width:${SIG_LOGO.largeur}px;max-width:100%;height:auto;border:0"></p>
     ${ligne('Rue du Centre 142 – 1025 St-Sulpice', 'margin-top:10pt')}
     ${ligne('Succursale : Chemin de Pallud 3 – 1822 Chernex (Montreux)')}
     ${ligne(`<b>${tel} | <a href="https://www.cofidex.ch" style="color:#113679">www.cofidex.ch</a></b>`, 'margin-top:6pt')}

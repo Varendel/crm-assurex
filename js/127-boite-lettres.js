@@ -38,9 +38,9 @@ async function balScanner() {
         const joints = new Set((typeof oxoEntrees === 'function' ? oxoEntrees(o.id) : []).map(x => x.e && x.e.offre_nom).filter(Boolean));
         const offres = [];
         for (const m of msgs.filter(m => m.hasAttachments && age(m) <= 30).slice(0, 8)) {
-          const ja = await oxoGraph(`https://graph.microsoft.com/v1.0/me/messages/${m.id}/attachments?$select=name,contentType`).catch(() => null);
+          const ja = await oxoGraph(`https://graph.microsoft.com/v1.0/me/messages/${m.id}/attachments?$select=id,name,contentType`).catch(() => null);
           ((ja && ja.value) || []).filter(a => /\.pdf$/i.test(a.name || '') && !joints.has(a.name) && BAL_MOTS_OFFRE.test(`${a.name} ${m.subject || ''}`))
-            .forEach(a => offres.push({ nom: a.name, date: m.receivedDateTime, de: (m.from && m.from.emailAddress && (m.from.emailAddress.name || m.from.emailAddress.address)) || '' }));
+            .forEach(a => offres.push({ nom: a.name, mid: m.id, aid: a.id, date: m.receivedDateTime, de: (m.from && m.from.emailAddress && (m.from.emailAddress.name || m.from.emailAddress.address)) || '' }));
         }
         if (courrier.length || offres.length) {
           const derniere = [...courrier.map(m => m.receivedDateTime), ...offres.map(x => x.date)].sort().pop();
@@ -73,6 +73,20 @@ function balMajBouton() {
   b.title = _bal.res ? (n ? `${n} client(s) avec du courrier ou des offres (${nOffres} avec offre)` : 'Rien de nouveau dans Outlook pour les affaires en cours') : 'Courrier et offres arrivés pour les clients des affaires en cours';
 }
 
+// Les jumelles : regarder le PDF de l'offre avant de la valider (« Reçue ✓ » reste un geste à part).
+const BAL_JUMELLES = `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="6.5" cy="15.5" r="3.5"/><circle cx="17.5" cy="15.5" r="3.5"/><path d="M10 15.5h4M4.2 12.8 6 5.5a1.6 1.6 0 0 1 3 0l1 4.5M19.8 12.8 18 5.5a1.6 1.6 0 0 0-3 0l-1 4.5"/></svg>`;
+
+async function balVoirOffre(oppId, j) {
+  const r = (_bal.res || []).find(x => x.oppId === oppId);
+  const x = r && r.offres.filter(y => y.mid && y.aid)[j];
+  if (!x) return;
+  try {
+    const a = await oxoGraph(`https://graph.microsoft.com/v1.0/me/messages/${x.mid}/attachments/${x.aid}`);
+    const bin = atob(a.contentBytes || ''); const oct = new Uint8Array(bin.length); for (let k = 0; k < bin.length; k++) oct[k] = bin.charCodeAt(k);
+    window.open(URL.createObjectURL(new Blob([oct], { type: 'application/pdf' })), '_blank');
+  } catch (e) { showError('Offre inaccessible : ' + e.message); }
+}
+
 async function balOuvrir(forcer) {
   creerModale('modal-bal', `<div class="opx-modale bal" role="dialog" aria-labelledby="bal-titre">
     <h3 id="bal-titre">📬 Boîte aux lettres — affaires en cours</h3>
@@ -94,6 +108,7 @@ async function balOuvrir(forcer) {
         ${r.offres.length ? `<span class="bal-pastille offre" title="${balEsc(r.offres.map(x => x.nom + ' — ' + x.de).join('\n'))}">📄 ${r.offres.length} offre${r.offres.length > 1 ? 's' : ''}</span>` : ''}
         ${r.courrier ? `<span class="bal-pastille courrier" title="${balEsc(r.dernierSujet)}">✉️ ${r.courrier} e-mail${r.courrier > 1 ? 's' : ''}</span>` : ''}
         <small>dernier : ${fmtDate(r.derniere)}</small>
+        ${r.offres.filter(x => x.mid && x.aid).map((x, j) => `<button type="button" class="bal-jumelles" onclick="balVoirOffre('${r.oppId}',${j})" title="Regarder l’offre avant de la valider : ${balEsc(x.nom)} — ${balEsc(x.de)}">${BAL_JUMELLES}<span>${balEsc(x.nom.replace(/\.pdf$/i, '').slice(0, 26))}</span></button>`).join('')}
       </div>
       <div class="bal-actions">
         ${r.offres.length ? `<button type="button" class="btn-save" onclick="document.getElementById('modal-bal').remove();oxoOuvrir('${r.oppId}',true)">Voir les offres</button>` : ''}
@@ -110,7 +125,11 @@ async function balOuvrir(forcer) {
     // Première ouverture de la session : relevé discret en arrière-plan (sans fenêtre de connexion).
     if (!_bal.res && !_bal.enCours && !_bal.lance) { _bal.lance = true; setTimeout(() => balScanner().catch(() => {}), 1200); }
     setTimeout(balMajBouton, 0);
-    return h.replace('<div class="pln-actions">', `<div class="pln-actions"><button type="button" id="bal-bouton" class="btn-secondary bal-bouton" onclick="balOuvrir()">📬 Boîte aux lettres <span class="bal-compte"></span></button>`);
+    // 22.09.2026 : « descends le bouton boîte aux lettres à côté de Priorités » — au bout des onglets
+    // de vue (Kanban · Liste · Échéances · Priorités), là où l'œil cherche ce qui trie les affaires.
+    const bouton = `<button type="button" id="bal-bouton" class="btn-secondary bal-bouton" onclick="balOuvrir()">📬 Boîte aux lettres <span class="bal-compte"></span></button>`;
+    const apres = /(<button class="tab-btn[^"]*"\s*onclick="vueModePipeline='priorites';navigate\('opportunites'\)">[^<]*<\/button>)/;
+    return apres.test(h) ? h.replace(apres, `$1${bouton}`) : h.replace('<div class="pln-actions">', `<div class="pln-actions">${bouton}`);
   };
   const st = document.createElement('style');
   st.textContent = `
@@ -139,6 +158,11 @@ async function balOuvrir(forcer) {
     .bal-pastille.courrier { background: color-mix(in srgb, #F97316 16%, transparent); color: #C2410C; }
     html:not([data-theme="clair"]) .bal-pastille.courrier { color: #FDBA74; }
     html:not([data-theme="clair"]) .bal-pastille.offre { color: #4ADE80; }
+    .bal-jumelles { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 3px 9px; border-radius: 999px; cursor: pointer;
+      border: 1px solid color-mix(in srgb, #16A34A 45%, var(--border)); background: var(--surface); color: var(--text); font: inherit; font-size: var(--t-xs); }
+    .bal-jumelles:hover { background: color-mix(in srgb, #16A34A 12%, var(--surface)); }
+    .bal-jumelles svg { color: #16A34A; flex-shrink: 0; }
+    .bal-jumelles span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 170px; }
     .bal-actions { display: flex; gap: 6px; }
     .bal-actions button { padding: 6px 11px; font-size: var(--t-s); white-space: nowrap; }
     @media (max-width: 680px) { .bal-ligne { grid-template-columns: 1fr; } .bal-quoi { justify-content: flex-start; } }

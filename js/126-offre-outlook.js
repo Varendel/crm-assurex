@@ -136,7 +136,7 @@ function oxoRendre() {
   zone.innerHTML = `<datalist id="oxo-cies">${connues.map(c => `<option value="${oxoEsc(c)}">`).join('')}</datalist>
     <div class="oxo-liste">${pieces.map((p, i) => `
     <div class="oxo-piece ${p.offre ? 'probable' : ''} ${p.fait ? 'fait' : ''}">
-      <button type="button" class="oxo-voir" onclick="oxoVoir(${i})" title="Ouvrir le PDF">📄</button>
+      <button type="button" class="oxo-voir" onclick="oxoVoir(${i})" title="Regarder l’offre avant de la valider">${typeof BAL_JUMELLES !== 'undefined' ? BAL_JUMELLES : '📄'}</button>
       <div class="oxo-corps"><b>${oxoEsc(p.nom)}</b>
         <small>${fmtDate(p.date)} · ${oxoEsc(p.de)}${p.sujet ? ' · ' + oxoEsc(p.sujet) : ''}</small></div>
       ${p.fait ? `<span class="oxo-ok">✓ Reçue — ${oxoEsc(p.compagnie)}</span>` : `<div class="oxo-actions">

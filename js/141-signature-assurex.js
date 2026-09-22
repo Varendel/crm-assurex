@@ -8,10 +8,11 @@
 // Pour la modifier : ce fichier (texte) et assets/signature/ (image). Les coordonnées viennent de la
 // signature Outlook de Jonathan, elles figurent déjà sur chaque e-mail envoyé et sur cofidex.ch.
 
-// Le logo COFIDEX de la signature : le fichier cofidexgif.gif du dossier Logos, tel quel, à la
-// demande de Jonathan (22.09.2026). Copié dans assets/signature/ pour être servi avec le CRM et
-// joint en image intégrée (cid) à chaque e-mail sortant.
-const SIG_LOGO = { cid: 'cofidex-signature@assurex', nom: 'cofidexgif.gif', type: 'image/gif', url: 'assets/signature/cofidexgif.gif', largeur: 228 };
+// Le logo COFIDEX de la signature : le fichier officiel du dossier des logos
+// (Logos\Cofidex\Logo Cofidex\Logo files\PNGs - SVGs\4x\Asset 1@4x-8.png), bleu nuit sur fond
+// transparent. Copié tel quel dans assets/signature/ pour être servi avec le CRM, et joint en
+// image intégrée (cid) à chaque e-mail sortant. 4521 px de large pour 200 px d'affichage.
+const SIG_LOGO = { cid: 'cofidex-signature@assurex', nom: 'COFIDEX.png', type: 'image/png', url: 'assets/signature/cofidex-logo.png', largeur: 200 };
 
 const SIG_ASSUREX = {
   'jo@cofidex.ch': { nom: 'Jonathan Ozkan', titre: 'Directeur associé Assurex Sàrl', tel: '+41 79 101 99 26' },

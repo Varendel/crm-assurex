@@ -229,9 +229,39 @@ async function ccxEnvoyer() {
   } catch (e) { showError('Envoi impossible : ' + (e.message || e)); if (b) b.disabled = false; }
 }
 
+// ── Le bouton dans le menu : le logo Cofidex plutôt qu'une ligne de plus (22.09.2026) ───────────
+// « Mets le logo comme bouton, c'est plus facile à voir ; mets-le en bouton exclusif un peu. »
+// L'entrée « Écrire à Cofidex » du menu est remplacée par un bouton à part : logo Cofidex sur fond
+// clair, encadré, détaché des autres lignes — on le repère sans lire.
+(function ccxBoutonMenu() {
+  let t = null;
+  const poser = () => {
+    document.querySelectorAll('.nav-item[onclick*="navigate(\'cofidex\')"]:not([data-ccx])').forEach(b => {
+      b.setAttribute('data-ccx', '');
+      b.classList.add('nav-cofidex');
+      b.innerHTML = `<img src="assets/logos/cofidex.png" alt="Cofidex" class="nav-cofidex-logo"/><span class="nav-lib">Écrire à l’équipe</span>`;
+      b.title = 'Écrire à l’équipe Cofidex au sujet d’un client';
+    });
+  };
+  const go = () => { const app = document.getElementById('app') || document.body; new MutationObserver(() => { clearTimeout(t); t = setTimeout(poser, 80); }).observe(app, { childList: true, subtree: true }); poser(); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
+})();
+
 (function ccxStyles() {
   const st = document.createElement('style');
   st.textContent = `
+    .nav-item.nav-cofidex { flex-direction: column; align-items: flex-start; gap: 4px; margin: 8px 0; padding: 10px 12px;
+      border: 1px solid color-mix(in srgb, #113679 35%, var(--border)); border-radius: 12px;
+      background: color-mix(in srgb, #113679 8%, var(--surface)); }
+    .nav-item.nav-cofidex:hover { background: color-mix(in srgb, #113679 16%, var(--surface)); border-color: #113679; }
+    .nav-cofidex-logo { width: 116px; max-width: 100%; height: auto; display: block; }
+    :root:not([data-theme="light"]) .nav-cofidex-logo, [data-theme="dark"] .nav-cofidex-logo { filter: brightness(0) invert(1); opacity: .92; }
+    .nav-item.nav-cofidex .nav-lib { font-size: var(--t-xs, 11.5px); color: var(--text-muted); }
+    .sidebar-repliee .nav-item.nav-cofidex { align-items: center; padding: 8px 4px; }
+    .sidebar-repliee .nav-cofidex-logo { width: 34px; object-fit: cover; object-position: left; }`;
+  document.head.appendChild(st);
+  const st2 = document.createElement('style');
+  st2.textContent = `
     .ccx-doux { color: var(--text-muted); font-size: var(--t-xs, 11.5px); }
     .ccx-equipe-bloc { padding: 14px 16px; margin-bottom: 16px; }
     .ccx-bloc-tete { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
@@ -264,5 +294,5 @@ async function ccxEnvoyer() {
     .ccx-doc small { color: var(--text-muted); margin-left: 4px; font-size: 10.5px; }
     .ccx-ajout { display: inline-block; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--accent); }
     @media (max-width: 1100px) { .ccx-grille { grid-template-columns: 1fr; } .ccx-apercu-zone { position: static; } }`;
-  document.head.appendChild(st);
+  document.head.appendChild(st2);
 })();

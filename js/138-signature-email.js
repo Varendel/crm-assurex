@@ -25,6 +25,9 @@ async function sigAgent(forcer) {
   if (!email) return null;
   const r = await dbGet('agents', `email=eq.${encodeURIComponent(email)}&select=id,prenom,nom,email,signature_email_html,signature_email_images,signature_email_actif,signature_email_maj_le`);
   _sig.agent = Array.isArray(r) && r[0] ? r[0] : null; _sig.t = Date.now(); _sig.images = null;
+  // Sans signature reprise d'Outlook : celle intégrée au CRM (js/141) — « intègre ma signature
+  // directement ». Une signature reprise d'Outlook reste prioritaire.
+  if (_sig.agent && !_sig.agent.signature_email_html && typeof sigAssurexPourAgent === 'function') Object.assign(_sig.agent, sigAssurexPourAgent(_sig.agent));
   return _sig.agent;
 }
 
@@ -119,7 +122,9 @@ async function sigImages(ag) {
   const out = [];
   for (const im of (ag.signature_email_images || [])) {
     try {
-      const r = await fetch(`${SUPABASE_URL}/storage/v1/object/authenticated/documents/${im.path}`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` } });
+      // im.url : image du dépôt (signature intégrée) ; im.path : image rangée dans le stockage.
+      const r = im.url ? await fetch(im.url)
+        : await fetch(`${SUPABASE_URL}/storage/v1/object/authenticated/documents/${im.path}`, { headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}` } });
       if (!r.ok) continue;
       const b = await r.blob();
       const b64 = await new Promise((ok, ko) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1] || ''); fr.onerror = ko; fr.readAsDataURL(b); });
@@ -218,7 +223,7 @@ async function sigLigneMaj(el, avecCopie) {
   const moi = ((typeof currentUser !== 'undefined' && currentUser && currentUser.email) || '').toLowerCase();
   const autre = cpt && cpt.adresse && moi && cpt.adresse.toLowerCase() !== moi;
   el.innerHTML = `<span class="sig-exp${autre ? ' sig-autre' : ''}">📤 Envoi depuis : <b>${cpt && cpt.adresse ? sigEsc(cpt.adresse) : 'compte Outlook non connecté'}</b>${autre ? ' ⚠️ ce n’est pas l’adresse de ta session CRM' : ''}</span>
-    ${ok ? `<span>✍️ <b>Ta signature Outlook</b> sera ajoutée${ag.signature_email_maj_le ? ` (reprise le ${fmtDate(String(ag.signature_email_maj_le).slice(0, 10))})` : ''}</span>
+    ${ok ? `<span>✍️ <b>${ag.integree ? 'Signature Assurex intégrée' : 'Ta signature Outlook'}</b> sera ajoutée${!ag.integree && ag.signature_email_maj_le ? ` (reprise le ${fmtDate(String(ag.signature_email_maj_le).slice(0, 10))})` : ''}</span>
       <label><input type="checkbox" id="sig-sans"/> sans signature</label>`
     : '<span class="sig-ko">✍️ Pas encore de signature enregistrée</span>'}
     <button type="button" onclick="sigReprendreOutlook()">↻ ${ok ? 'Mettre à jour' : 'Reprendre ma signature Outlook'}</button>

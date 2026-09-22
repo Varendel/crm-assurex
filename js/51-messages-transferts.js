@@ -302,7 +302,18 @@ function mcDemandesEnAttente() {
 
 function viewMessagesClients() {
   if (_mc.messages === null) { mcCharger().then(() => navigate('messages-clients', { silent: true })); return '<div class="loader">Chargement des messages…</div>'; }
-  const nouveauxT = (_mc.transferts || []).filter(t => t.statut === 'nouveau').length;
+  // 22.09.2026 : « il semblerait que j'ai un message et je ne le vois pas dans la vue ». La pastille
+  // du menu compte tout ce qui attend (MC_EN_ATTENTE : un transfert « mandat généré » attend encore
+  // son envoi aux compagnies), mais les onglets ne comptaient que les « nouveau » et la vue s'ouvrait
+  // sur Messages, vide. Les onglets comptent désormais la même chose que la pastille, et à l'arrivée
+  // on ouvre l'onglet qui contient une demande en attente (tant qu'on n'en a pas choisi un).
+  const attente = mcDemandesEnAttente();
+  const nbO = o => attente.filter(x => x.o === o).length;
+  if (!_mc.ongletChoisi && !nbO(_mc.onglet)) {
+    const o = ['messages', 'sinistres', 'documents', 'transferts'].find(k => nbO(k));
+    if (o) _mc.onglet = o;
+  }
+  const nouveauxT = nbO('transferts');
   const msgs = (_mc.messages || []).filter(m => _mc.filtre === 'tout' || m.statut === _mc.filtre);
   return `<div class="mcx">
     <header class="dx-tete"><div><div class="dx-surtitre">REX CLOUD · demandes venues de l’espace client</div><h2>Messages clients</h2>
@@ -314,10 +325,10 @@ function viewMessagesClients() {
     </header>
     ${mcTableauDeBord()}
     <div class="mcx-onglets" role="tablist">
-      <button type="button" role="tab" class="${_mc.onglet === 'messages' ? 'actif' : ''}" onclick="_mc.onglet='messages';navigate('messages-clients',{silent:true})">💬 Messages <span>${(_mc.messages || []).filter(m => m.statut === 'nouveau').length}</span></button>
-      <button type="button" role="tab" class="${_mc.onglet === 'sinistres' ? 'actif' : ''}" onclick="_mc.onglet='sinistres';navigate('messages-clients',{silent:true})">🛟 Sinistres <span>${(_mc.sinistres || []).filter(s => s.statut === 'declare').length}</span></button>
-      <button type="button" role="tab" class="${_mc.onglet === 'documents' ? 'actif' : ''}" onclick="_mc.onglet='documents';navigate('messages-clients',{silent:true})">📄 Documents <span>${(_mc.documents || []).filter(d => d.statut === 'nouvelle').length}</span></button>
-      <button type="button" role="tab" class="${_mc.onglet === 'transferts' ? 'actif' : ''}" onclick="_mc.onglet='transferts';navigate('messages-clients',{silent:true})">🤝 Transferts de gestion <span>${nouveauxT}</span></button>
+      <button type="button" role="tab" class="${_mc.onglet === 'messages' ? 'actif' : ''}" onclick="_mc.ongletChoisi=true;_mc.onglet='messages';navigate('messages-clients',{silent:true})">💬 Messages <span>${nbO('messages')}</span></button>
+      <button type="button" role="tab" class="${_mc.onglet === 'sinistres' ? 'actif' : ''}" onclick="_mc.ongletChoisi=true;_mc.onglet='sinistres';navigate('messages-clients',{silent:true})">🛟 Sinistres <span>${nbO('sinistres')}</span></button>
+      <button type="button" role="tab" class="${_mc.onglet === 'documents' ? 'actif' : ''}" onclick="_mc.ongletChoisi=true;_mc.onglet='documents';navigate('messages-clients',{silent:true})">📄 Documents <span>${nbO('documents')}</span></button>
+      <button type="button" role="tab" class="${_mc.onglet === 'transferts' ? 'actif' : ''}" onclick="_mc.ongletChoisi=true;_mc.onglet='transferts';navigate('messages-clients',{silent:true})">🤝 Transferts de gestion <span>${nouveauxT}</span></button>
     </div>
     ${_mc.onglet === 'messages' ? `
       <div class="mcx-filtres">${['nouveau', 'lu', 'traite', 'tout'].map(f => `<button type="button" class="${_mc.filtre === f ? 'actif' : ''}" onclick="_mc.filtre='${f}';navigate('messages-clients',{silent:true})">${f === 'tout' ? 'Tous' : MT_STATUTS_MSG[f]}</button>`).join('')}</div>

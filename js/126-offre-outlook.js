@@ -79,7 +79,7 @@ async function oxoDetecter(oppId, forcer) {
       const de = (m.from && m.from.emailAddress) || {};
       const texte = `${a.name} ${m.subject || ''}`;
       pieces.push({ mid: m.id, aid: a.id, nom: a.name, taille: a.size, sujet: m.subject || '', de: de.name || de.address || '', date: m.receivedDateTime,
-        offre: OXO_MOTS_OFFRE.test(texte), compagnie: oxoDevinerCompagnie(texte, de, compagnies) });
+        offre: OXO_MOTS_OFFRE.test(texte), compagnie: oxoDevinerCompagnie(texte, de, compagnies), type: typeof otyDetecter === 'function' ? otyDetecter(texte) : null });
     });
   }
   pieces.sort((a, b) => (b.offre - a.offre) || (!!b.compagnie - !!a.compagnie) || String(b.date).localeCompare(String(a.date)));
@@ -138,7 +138,7 @@ function oxoRendre() {
     <div class="oxo-piece ${p.offre ? 'probable' : ''} ${p.fait ? 'fait' : ''}">
       <button type="button" class="oxo-voir" onclick="oxoVoir(${i})" title="Regarder l’offre avant de la valider">${typeof BAL_JUMELLES !== 'undefined' ? BAL_JUMELLES : '📄'}</button>
       <div class="oxo-corps"><b>${oxoEsc(p.nom)}</b>
-        <small>${fmtDate(p.date)} · ${oxoEsc(p.de)}${p.sujet ? ' · ' + oxoEsc(p.sujet) : ''}</small></div>
+        <small>${p.type && typeof otyLabel === 'function' ? '<span class="oxo-type">' + oxoEsc(otyLabel(p.type)) + '</span> ' : ''}${fmtDate(p.date)} · ${oxoEsc(p.de)}${p.sujet ? ' · ' + oxoEsc(p.sujet) : ''}</small></div>
       ${p.fait ? `<span class="oxo-ok">✓ Reçue — ${oxoEsc(p.compagnie)}</span>` : `<div class="oxo-actions">
         <input id="oxo-cie-${i}" list="oxo-cies" value="${oxoEsc(p.compagnie)}" placeholder="Compagnie" aria-label="Compagnie de l’offre"/>
         <button type="button" class="btn-save" onclick="oxoRecue(${i})">Reçue ✓</button></div>`}
@@ -171,6 +171,7 @@ async function oxoRecue(i) {
   try { fichier = await oxoFichier(p); } catch (e) { showError('PDF inaccessible : ' + e.message); return; }
   if (fichier.size > 10 * 1024 * 1024) { showError('PDF trop lourd (plus de 10 Mo) : joins-le à la main.'); return; }
   showError('⏳ Enregistrement de l’offre…');
+  window._oxoSujetImport = `${p.nom} ${p.sujet || ''}`;   // le type de l'offre se lit aussi dans l'objet de l'e-mail (js/132)
 
   const existante = oxoEntrees(oppId).find(x => oxoCle(x.e && x.e.compagnie) === oxoCle(compagnie) && !x.e.offre_path);
   let demandeId, idx;
@@ -251,6 +252,7 @@ async function oxoNoteEtDocument(o, compagnie, chemin, p) {
     .oxo-actions { display: flex; gap: 6px; align-items: center; flex-shrink: 0; }
     .oxo-actions input { width: 140px; background: var(--surface-alt); color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 6px 8px; font: inherit; font-size: var(--t-s); }
     .oxo-actions .btn-save { padding: 6px 12px; font-size: var(--t-s); }
+    .oxo-type { display: inline-block; padding: 0 6px; border-radius: 999px; background: var(--accent-dim); color: var(--accent); font-weight: 600; margin-right: 4px; }
     .oxo-ok { font-size: var(--t-s); font-weight: 600; color: #16A34A; white-space: nowrap; }
     @media (max-width: 620px) { .oxo-piece { flex-wrap: wrap; } .oxo-actions { width: 100%; } .oxo-actions input { flex: 1; } }
     @media (prefers-reduced-motion: reduce) { .oxo-bandeau { animation: none; } }`;

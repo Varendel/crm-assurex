@@ -169,3 +169,20 @@ html:not([data-theme="clair"]) .dbx-hero .bmq { border-color: var(--bnd-verre-bo
 .fcx-hero h1, .fcx-hero h2,
 .cf-hero h1, .cf-hero h2,
 .ozx-hero h1, .ozx-hero h2 { color: inherit; }
+/* ── Les boutons posés sur un bandeau clair (22.09.2026) ─────────────────────────────────────────
+   « Vérifie tous les titres des bandeaux dans chaque menu : il y en a qui sont restés noirs. »
+   Ce n'étaient pas les titres mais les BOUTONS : .btn-secondary (et ses cousins) gardaient leur
+   fond de surface sombre (rgb 19,29,50) alors que le bandeau passait au bleu ciel, et l'encre
+   marine héritée (plus haut) rendait leur texte invisible : des pavés noirs. Ils passent en verre
+   blanc bordé de marine ; les boutons principaux gardent leur couleur et reprennent un texte blanc. */
+html:not([data-theme="clair"]) :is(.dbx-hero, .fcx-hero, .cf-hero, .ozx-hero, .rex-bandeau, .rex-bandeau-hote) :is(.btn-secondary, .btn-cancel, .btn-outline, .btn-light, .dbx-btn-verre, .tab-btn, select, input:not([type="checkbox"]):not([type="radio"])) {
+  background: rgba(255, 255, 255, .72) !important;
+  border: 1px solid var(--bnd-verre-bord) !important;
+  color: var(--bnd-encre) !important;
+  box-shadow: 0 1px 2px rgba(11, 36, 88, .08) !important;
+}
+html:not([data-theme="clair"]) :is(.dbx-hero, .fcx-hero, .cf-hero, .ozx-hero, .rex-bandeau, .rex-bandeau-hote) :is(.btn-secondary, .btn-cancel, .btn-outline, .btn-light, .dbx-btn-verre, .tab-btn):hover {
+  background: #fff !important; border-color: rgba(11, 36, 88, .3) !important;
+}
+html:not([data-theme="clair"]) :is(.dbx-hero, .fcx-hero, .cf-hero, .ozx-hero, .rex-bandeau, .rex-bandeau-hote) :is(.btn-save, .btn-add, .btn-primary, .dbx-btn-blanc.primaire),
+html:not([data-theme="clair"]) :is(.dbx-hero, .fcx-hero, .cf-hero, .ozx-hero, .rex-bandeau, .rex-bandeau-hote) :is(.btn-save, .btn-add, .btn-primary) * { color: #fff !important; }

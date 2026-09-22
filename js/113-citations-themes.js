@@ -235,6 +235,24 @@ function rctAppliquer() { if (typeof rexAfficherCitation === 'function') rexAffi
       from { clip-path: inset(-14px -14px calc(100% - 8px) -14px); }
       to { clip-path: inset(-14px -14px -14px -14px); }
     }
-    @media (prefers-reduced-motion: reduce) { #rex-citation .rex-citation-bulle { animation: none; } }`;
+    @media (prefers-reduced-motion: reduce) { #rex-citation .rex-citation-bulle { animation: none; } }
+    /* ── Téléphone (22.09.2026 — « trop invasif et grand ») ──────────────────────────────────────
+       Le parchemin gardait sa taille d'ordinateur : texte à 16,5 px, marges de 32 px, Rex de
+       68 px — il couvrait le tiers bas de l'écran. Ici : un rouleau serré, Rex en vignette, et la
+       citation se lit sans masquer les boutons du bas. */
+    @media (max-width: 620px) {
+      #rex-citation { right: 8px; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); gap: 4px; max-width: calc(100vw - 16px); }
+      #rex-citation .rex-citation-bulle { max-width: min(280px, calc(100vw - 70px)); margin: 6px 2px; padding: 11px 22px 10px 13px; }
+      #rex-citation .rex-citation-bulle::before, #rex-citation .rex-citation-bulle::after { left: -5px; right: -5px; height: 9px; border-radius: 5px; }
+      #rex-citation .rex-citation-bulle::before { top: -4px; }
+      #rex-citation .rex-citation-bulle::after { bottom: -4px; }
+      #rex-citation .rex-citation-texte, #rex-citation.grande .rex-citation-texte { font-size: 13px; line-height: 1.42; }
+      #rex-citation .rex-citation-trad { font-size: 11.5px; }
+      #rex-citation .rex-citation-auteur { font-size: 11px; margin-top: 5px; }
+      #rex-citation .rex-citation-fermer { top: 3px; right: 4px; font-size: 16px; }
+      #rex-citation img, #rex-citation.grande img { width: 40px; height: 40px; }
+      #rex-citation .rct-bouton { font-size: 10.5px !important; padding: 2px 9px !important; margin-top: 5px; min-height: 0 !important; min-width: 0 !important; line-height: 1.4; }
+      #rex-citation .rex-citation-bulle { max-width: min(262px, calc(100vw - 70px)); }
+    }`;
   document.head.appendChild(s);
 })();

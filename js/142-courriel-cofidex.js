@@ -1,20 +1,33 @@
-// ═══ ÉCRIRE À COFIDEX AU SUJET D'UN CLIENT (22.09.2026) ═════════════════════════════════════════
-// « Ajoute l'équipe Cofidex SA avec les collaborateurs… le rôle est destinataires. Il faut un bouton
-// Cofidex sur les clients pour leur envoyer un mail. Je pensais à lier une fonction pour envoyer des
-// courriels liés au client. »
+// ═══ ÉCRIRE À COFIDEX — VUE DÉDIÉE (22.09.2026) ═════════════════════════════════════════════════
+// « Laisse l'équipe et enlève le bouton Cofidex ; ajoute cette fonction de leur écrire dans une vue
+// dédiée inspirée des courriers sortants : une belle mise en page avec les membres d'équipe et un
+// sélecteur de client. »
 //
-// Un bouton « 🏢 Cofidex » sur la fiche client ouvre un courriel DÉJÀ RENSEIGNÉ avec ce que l'autre
-// côté a besoin de savoir : qui est le client, son IDE, ses contrats, ses échéances — plus les
-// documents du client qu'on veut joindre. On choisit les destinataires dans l'équipe (table
-// equipe_cofidex), on relit, on envoie. Jamais d'envoi sans relecture ni sans clic.
-//
-// L'expéditeur, la signature et la mise en forme viennent du branchement unique (js/138) : ce
-// courriel-ci part donc comme les autres, signé, depuis le compte Outlook connecté.
+// Même principe que « Courriers clients » (js/45) : à gauche ce qu'on écrit, à droite l'aperçu de
+// ce qui part. En haut, l'équipe Cofidex (table equipe_cofidex) en cartes cliquables — on choisit
+// les destinataires d'un clic. Le client se choisit dans un champ de recherche : sa situation
+// (IDE, contrats, primes, échéances) remplit le message toute seule, et ses documents deviennent
+// des pièces jointes à cocher.
+// L'envoi passe par le compte Outlook connecté avec la signature (js/138), après confirmation.
 
-const _ccx = { equipe: null, t: 0, client: null, pj: [] };
+const _ccx = { equipe: null, t: 0, clientId: null, dest: new Set(), modele: 'presentation', objet: '', corps: '', docs: [], docsCoches: new Set(), locaux: [], charge: false };
 
 function ccxEsc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
-function ccxNom(c) { return !c ? '' : (typeof estEntreprise === 'function' && estEntreprise(c)) ? (c.nom || '') : [c.prenom, c.nom].filter(Boolean).join(' '); }
+function ccxNomClient(c) { return !c ? '' : (typeof estEntreprise === 'function' && estEntreprise(c)) ? (c.nom || '') : [c.prenom, c.nom].filter(Boolean).join(' '); }
+function ccxClient() { return (typeof allClients !== 'undefined' ? allClients : []).find(x => x.id === _ccx.clientId) || null; }
+function ccxInitiales(p) { return [(p.prenom || '')[0], (p.nom || '')[0]].filter(Boolean).join('').toUpperCase() || '?'; }
+
+const CCX_MODELES = [
+  { id: 'presentation', label: '👋 Présenter le client', objet: n => `Nouveau client — ${n}`,
+    corps: (n, ide, d) => `Bonjour,\n\nJe vous présente ${n}${ide ? ` (${ide})` : ''}, que je suis côté assurances.\n\n${d.resume}\n\nJe reste à disposition pour toute question.` },
+  { id: 'documents', label: '📎 Transmettre des documents', objet: n => `${n} — documents`,
+    corps: (n, ide, d) => `Bonjour,\n\nVous trouverez en pièce jointe les documents de ${n}${ide ? ` (${ide})` : ''}.\n\n${d.resume}\n\nBonne réception.` },
+  { id: 'question', label: '❓ Poser une question', objet: n => `${n} — question`,
+    corps: (n, ide) => `Bonjour,\n\nAu sujet de ${n}${ide ? ` (${ide})` : ''} :\n\n[ta question]\n\nMerci d’avance pour ton retour.` },
+  { id: 'salaires', label: '👥 Salaires et personnel', objet: n => `${n} — salaires et assurances du personnel`,
+    corps: (n, ide, d) => `Bonjour,\n\nPour ${n}${ide ? ` (${ide})` : ''}, voici la situation côté assurances du personnel :\n\n${d.personnel || '—'}\n\nPouvez-vous me confirmer les masses salariales à jour ?` },
+  { id: 'libre', label: '✏️ Message libre', objet: n => n || 'Message', corps: () => 'Bonjour,\n\n' },
+];
 
 async function ccxEquipe(forcer) {
   if (!forcer && _ccx.equipe && Date.now() - _ccx.t < 300000) return _ccx.equipe;
@@ -24,174 +37,232 @@ async function ccxEquipe(forcer) {
   return _ccx.equipe;
 }
 
-// Les modèles : ce qu'on écrit vraiment à la fiduciaire à propos d'un client.
-const CCX_MODELES = [
-  { id: 'presentation', label: 'Présenter le client', objet: c => `Nouveau client — ${c.nom}`,
-    corps: (c, d) => `Bonjour,\n\nJe vous présente ${c.nom}${c.ide ? ` (${c.ide})` : ''}, que je suis côté assurances.\n\n${d.resume}\n\nJe reste à disposition pour toute question.` },
-  { id: 'documents', label: 'Transmettre des documents', objet: c => `${c.nom} — documents`,
-    corps: (c, d) => `Bonjour,\n\nVous trouverez en pièce jointe les documents de ${c.nom}${c.ide ? ` (${c.ide})` : ''}.\n\n${d.resume}\n\nBonne réception.` },
-  { id: 'question', label: 'Poser une question', objet: c => `${c.nom} — question`,
-    corps: (c) => `Bonjour,\n\nAu sujet de ${c.nom}${c.ide ? ` (${c.ide})` : ''} :\n\n[ta question]\n\nMerci d’avance pour ton retour.` },
-  { id: 'salaires', label: 'Salaires / RH', objet: c => `${c.nom} — salaires et assurances du personnel`,
-    corps: (c, d) => `Bonjour,\n\nPour ${c.nom}${c.ide ? ` (${c.ide})` : ''}, voici la situation côté assurances du personnel :\n\n${d.personnel || '—'}\n\nPouvez-vous me confirmer les masses salariales à jour ?` },
-  { id: 'libre', label: 'Message libre', objet: c => `${c.nom}`, corps: () => 'Bonjour,\n\n' },
-];
-
 function ccxContexte(client) {
   const contrats = (typeof allContrats !== 'undefined' ? allContrats : [])
-    .filter(x => x.client_id === client.id && !['résilié', 'annulé', 'mandat_resilie'].includes(x.statut || ''));
+    .filter(x => x.client_id === (client && client.id) && !['résilié', 'annulé', 'mandat_resilie'].includes(x.statut || ''));
   const ligne = ct => `- ${ct.produit || 'Contrat'}${ct.compagnie ? ' · ' + ct.compagnie : ''}${ct.numero_police ? ' · police ' + ct.numero_police : ''}${ct.prime_annuelle ? ' · CHF ' + fmtCHF(Math.round(ct.prime_annuelle)) + '/an' : ''}${ct.date_echeance ? ' · échéance ' + fmtDate(String(ct.date_echeance).slice(0, 10)) : ''}`;
   const perso = contrats.filter(ct => /laa|lpp|perte de gain|maladie|accident/i.test(ct.produit || ''));
   return {
     resume: contrats.length ? `Contrats en cours :\n${contrats.map(ligne).join('\n')}` : 'Aucun contrat enregistré à ce jour dans le CRM.',
     personnel: perso.length ? perso.map(ligne).join('\n') : '',
-    contrats,
   };
 }
 
-async function ccxOuvrir(clientId) {
-  const c = (typeof allClients !== 'undefined' ? allClients : []).find(x => x.id === clientId);
-  if (!c) return;
-  const equipe = await ccxEquipe();
-  _ccx.client = { id: c.id, nom: ccxNom(c), ide: c.ide || c.numero_ide || '' };
-  _ccx.pj = [];
-  const modele = CCX_MODELES[0];
-  creerModale('modal-ccx', `
-    <div class="opx-modale ccx" role="dialog" aria-modal="true" aria-labelledby="ccx-titre">
-      <h3 id="ccx-titre">🏢 Écrire à Cofidex — ${ccxEsc(_ccx.client.nom)}</h3>
-      <p class="opx-modale-sous">Le message est pré-rempli avec la situation du client. Relis, ajuste, choisis les pièces jointes, puis envoie.</p>
-      <label class="form-label">Destinataires</label>
-      <div class="ccx-equipe">${equipe.length ? equipe.map((p, i) => `
-        <label class="ccx-personne ${p.email ? '' : 'sans'}" title="${p.email ? ccxEsc(p.email) : 'Adresse e-mail à renseigner'}">
-          <input type="checkbox" value="${ccxEsc(p.email || '')}" ${p.email ? '' : 'disabled'} onchange="ccxMaj()"/>
-          <span><b>${ccxEsc([p.prenom, p.nom].filter(Boolean).join(' '))}</b><small>${ccxEsc(p.fonction || '')}${p.email_a_verifier && p.email ? ' · adresse à vérifier' : ''}${p.email ? '' : ' · sans adresse'}</small></span>
-        </label>`).join('') : '<div class="dbx-vide-petit">Aucun destinataire enregistré.</div>'}
-      </div>
-      <div class="form-field"><label class="form-label" for="ccx-autres">Autres destinataires <small>(séparés par des virgules)</small></label>
-        <input class="form-input" id="ccx-autres" placeholder="prenom@cofidex.ch" oninput="ccxMaj()"/></div>
-      <div class="form-field"><label class="form-label" for="ccx-modele">Motif</label>
-        <select class="form-select" id="ccx-modele" onchange="ccxAppliquerModele(this.value)">${CCX_MODELES.map(m => `<option value="${m.id}">${m.label}</option>`).join('')}</select></div>
-      <div class="form-field"><label class="form-label" for="ccx-objet">Objet</label><input class="form-input" id="ccx-objet" value="${ccxEsc(modele.objet(_ccx.client))}"/></div>
-      <div class="form-field"><label class="form-label" for="ccx-corps">Message</label>
-        <textarea class="form-input" id="ccx-corps" rows="12">${ccxEsc(modele.corps(_ccx.client, ccxContexte(c)))}</textarea></div>
-      <div class="form-field"><label class="form-label">Pièces jointes</label>
-        <div id="ccx-pj" class="ccx-pj"><span class="dbx-vide-petit">Chargement des documents du client…</span></div>
-        <label class="ccx-ajout">+ Fichier de l’ordinateur<input type="file" multiple hidden onchange="ccxAjouterFichiers(this)"/></label></div>
-      <div id="ccx-etat" class="ccx-etat"></div>
-      <div class="opx-modale-actions">
-        <button type="button" class="btn-secondary" onclick="document.getElementById('modal-ccx').remove()">Fermer</button>
-        <button type="button" class="btn-save" id="ccx-envoyer" onclick="ccxEnvoyer()">📨 Envoyer via Outlook</button>
-      </div>
-    </div>`, { padding: '16px' });
-  ccxChargerDocuments(c);
-  ccxMaj();
-}
-
-function ccxAppliquerModele(id) {
-  const m = CCX_MODELES.find(x => x.id === id) || CCX_MODELES[0];
-  const c = (allClients || []).find(x => x.id === _ccx.client.id);
+function ccxAppliquerModele(garderTexte) {
+  const c = ccxClient(), m = CCX_MODELES.find(x => x.id === _ccx.modele) || CCX_MODELES[0];
+  const nom = ccxNomClient(c) || '[client]', ide = (c && (c.ide || c.numero_ide)) || '';
+  if (!garderTexte) { _ccx.objet = m.objet(nom); _ccx.corps = m.corps(nom, ide, ccxContexte(c)); }
   const o = document.getElementById('ccx-objet'), t = document.getElementById('ccx-corps');
-  if (o) o.value = m.objet(_ccx.client);
-  if (t) t.value = m.corps(_ccx.client, ccxContexte(c));
+  if (o) o.value = _ccx.objet;
+  if (t) t.value = _ccx.corps;
 }
 
-// Les documents déjà rangés sur le client : mandat signé et offres/polices archivées.
-async function ccxChargerDocuments(c) {
+// ── La vue ──────────────────────────────────────────────────────────────────────────────────────
+function viewCofidex() {
+  const clients = (typeof allClients !== 'undefined' ? allClients : []).filter(c => c.statut !== 'inactif')
+    .map(c => ({ id: c.id, n: ccxNomClient(c) })).filter(c => c.n).sort((a, b) => a.n.localeCompare(b.n, 'fr'));
+  const c = ccxClient();
+  if (!_ccx.corps) ccxAppliquerModele();
+  setTimeout(() => { ccxEquipe().then(ccxRendreEquipe); ccxChargerDocuments(); ccxMajApercu(); }, 0);
+  return `<div class="ccx-vue">
+    <header class="dx-tete"><div><div class="dx-surtitre">Relation interne · fiduciaire Cofidex SA</div><h2>🏢 Écrire à Cofidex</h2>
+      <p class="dx-sous">Choisis les destinataires et le client : le message se remplit avec sa situation et ses documents. L’aperçu à droite montre ce qui part, signature comprise.</p></div>
+      <div class="dx-tete-actions">
+        <button type="button" class="btn-secondary" onclick="ccxCopier()">📋 Copier</button>
+        <button type="button" class="btn-save" id="ccx-envoyer" onclick="ccxEnvoyer()">📨 Envoyer via Outlook</button>
+      </div></header>
+
+    <section class="ccx-equipe-bloc dbx-carte">
+      <div class="ccx-bloc-tete"><b>Destinataires</b><span id="ccx-compte" class="ccx-doux">aucun</span></div>
+      <div class="ccx-equipe" id="ccx-equipe"><span class="ccx-doux">Chargement de l’équipe…</span></div>
+      <label class="form-label" for="ccx-autres">Autres adresses <small>(séparées par des virgules)</small></label>
+      <input class="form-input" id="ccx-autres" placeholder="prenom@cofidex.ch" oninput="ccxMajApercu()"/>
+    </section>
+
+    <div class="ccx-grille">
+      <section class="dbx-carte ccx-form">
+        <div class="form-field"><label class="form-label" for="ccx-client">Client concerné</label>
+          <input class="form-input" id="ccx-client" list="ccx-clients" placeholder="Rechercher un client…" value="${ccxEsc(ccxNomClient(c))}" onchange="ccxChoisirClient(this.value)"/>
+          <datalist id="ccx-clients">${clients.map(x => `<option value="${ccxEsc(x.n)}"></option>`).join('')}</datalist></div>
+        <div class="form-field"><label class="form-label" for="ccx-modele">Motif</label>
+          <select class="form-select" id="ccx-modele" onchange="_ccx.modele=this.value;ccxAppliquerModele();ccxMajApercu()">
+            ${CCX_MODELES.map(m => `<option value="${m.id}" ${m.id === _ccx.modele ? 'selected' : ''}>${m.label}</option>`).join('')}</select></div>
+        <div class="form-field"><label class="form-label" for="ccx-objet">Objet</label>
+          <input class="form-input" id="ccx-objet" value="${ccxEsc(_ccx.objet)}" oninput="_ccx.objet=this.value;ccxMajApercu()"/></div>
+        <div class="form-field"><label class="form-label" for="ccx-corps">Message</label>
+          <textarea class="form-input" id="ccx-corps" rows="16" oninput="_ccx.corps=this.value;ccxMajApercu()">${ccxEsc(_ccx.corps)}</textarea></div>
+        <div class="form-field"><label class="form-label">Pièces jointes <small>documents du client</small></label>
+          <div id="ccx-pj" class="ccx-pj"><span class="ccx-doux">Choisis d’abord un client.</span></div>
+          <label class="ccx-ajout">+ Fichier de l’ordinateur<input type="file" multiple hidden onchange="ccxAjouterFichiers(this)"/></label></div>
+      </section>
+
+      <section class="ccx-apercu-zone" aria-label="Aperçu du courriel">
+        <div class="ccx-barre"><b>Aperçu</b> <small>tel que l’équipe le recevra</small></div>
+        <div class="ccx-fenetre"><div class="ccx-tete" id="ccx-apercu-tete"></div><iframe id="ccx-apercu" title="Contenu du courriel" sandbox="allow-same-origin"></iframe></div>
+      </section>
+    </div>
+  </div>`;
+}
+
+function ccxRendreEquipe(equipe) {
+  const z = document.getElementById('ccx-equipe');
+  if (!z) return;
+  z.innerHTML = equipe.length ? equipe.map(p => {
+    const sans = !p.email;
+    const choisi = p.email && _ccx.dest.has(p.email);
+    return `<button type="button" class="ccx-personne ${choisi ? 'choisie' : ''} ${sans ? 'sans' : ''}" ${sans ? 'disabled' : ''}
+      onclick="ccxBasculer('${ccxEsc(p.email || '')}')" title="${sans ? 'Adresse à renseigner' : ccxEsc(p.email)}">
+      <span class="ccx-avatar">${ccxEsc(ccxInitiales(p))}</span>
+      <span class="ccx-qui"><b>${ccxEsc([p.prenom, p.nom].filter(Boolean).join(' '))}</b>
+        <small>${ccxEsc(p.fonction || '')}</small>
+        <em>${sans ? 'adresse à renseigner' : ccxEsc(p.email)}${p.email_a_verifier && p.email ? ' · à vérifier' : ''}</em></span>
+      <span class="ccx-coche">${choisi ? '✓' : ''}</span>
+    </button>`;
+  }).join('') : '<span class="ccx-doux">Aucun membre enregistré.</span>';
+}
+
+function ccxBasculer(email) {
+  if (!email) return;
+  if (_ccx.dest.has(email)) _ccx.dest.delete(email); else _ccx.dest.add(email);
+  ccxEquipe().then(ccxRendreEquipe);
+  ccxMajApercu();
+}
+
+function ccxChoisirClient(nom) {
+  const c = (typeof allClients !== 'undefined' ? allClients : []).find(x => ccxNomClient(x) === String(nom || '').trim());
+  if (!c) { showError('Client introuvable — choisis-le dans la liste.'); return; }
+  _ccx.clientId = c.id; _ccx.docs = []; _ccx.docsCoches = new Set();
+  ccxAppliquerModele();
+  ccxChargerDocuments();
+  ccxMajApercu();
+}
+
+async function ccxChargerDocuments() {
   const z = document.getElementById('ccx-pj');
+  const c = ccxClient();
+  if (!z) return;
+  if (!c) { z.innerHTML = '<span class="ccx-doux">Choisis d’abord un client.</span>'; return; }
+  z.innerHTML = '<span class="ccx-doux">Lecture des documents…</span>';
   const items = [];
   try {
-    if (typeof pjeMandatDuClient === 'function') {
-      const m = await dbGet('mandats_signes', `client_id=eq.${c.id}&signe=is.true&archive=is.false&select=id&limit=1`);
-      if (Array.isArray(m) && m[0]) items.push({ cle: 'mandat', nom: 'Mandat de courtage signé', source: 'mandat' });
-    }
-    const docs = await dbGet('documents_compagnies', `client_id=eq.${c.id}&select=id,titre,nom_fichier,chemin,type&order=created_at.desc&limit=25`);
-    (Array.isArray(docs) ? docs : []).forEach(d => { if (d.chemin) items.push({ cle: d.id, nom: d.nom_fichier || d.titre || 'Document', source: d.type || 'document', path: d.chemin }); });
+    const m = await dbGet('mandats_signes', `client_id=eq.${c.id}&signe=is.true&archive=is.false&select=id&limit=1`);
+    if (Array.isArray(m) && m[0]) items.push({ nom: 'Mandat de courtage signé.pdf', source: 'mandat signé', mandat: true });
+    const docs = await dbGet('documents_compagnies', `client_id=eq.${c.id}&select=id,titre,nom_fichier,chemin,type&order=created_at.desc&limit=30`);
+    (Array.isArray(docs) ? docs : []).forEach(d => { if (d.chemin) items.push({ nom: d.nom_fichier || d.titre || 'Document', source: d.type || 'document', path: d.chemin }); });
   } catch (e) { /* liste facultative */ }
   _ccx.docs = items;
-  if (!z) return;
-  z.innerHTML = items.length ? items.map((it, i) => `<label class="ccx-doc"><input type="checkbox" data-doc="${i}" onchange="ccxMaj()"/><span>📄 ${ccxEsc(it.nom)}<small>${ccxEsc(it.source)}</small></span></label>`).join('')
-    : '<span class="dbx-vide-petit">Aucun document rangé sur ce client.</span>';
+  z.innerHTML = (items.length ? items.map((it, i) => `<label class="ccx-doc"><input type="checkbox" data-doc="${i}" ${_ccx.docsCoches.has(i) ? 'checked' : ''} onchange="ccxCocherDoc(${i}, this.checked)"/><span>📄 ${ccxEsc(it.nom)}<small>${ccxEsc(it.source)}</small></span></label>`).join('')
+    : '<span class="ccx-doux">Aucun document rangé sur ce client.</span>')
+    + _ccx.locaux.map((f, i) => `<span class="ccx-doc fige">💻 ${ccxEsc(f.name)}<button type="button" onclick="ccxRetirerLocal(${i})" title="Retirer">✕</button></span>`).join('');
 }
 
-function ccxAjouterFichiers(input) {
-  [...(input.files || [])].forEach(f => _ccx.pj.push(f));
-  input.value = '';
-  const z = document.getElementById('ccx-pj');
-  if (z && _ccx.pj.length) z.insertAdjacentHTML('beforeend', _ccx.pj.slice(-1).map(f => `<span class="ccx-doc fige">💻 ${ccxEsc(f.name)}</span>`).join(''));
-  ccxMaj();
-}
+function ccxCocherDoc(i, oui) { if (oui) _ccx.docsCoches.add(i); else _ccx.docsCoches.delete(i); ccxMajApercu(); }
+function ccxAjouterFichiers(input) { [...(input.files || [])].forEach(f => _ccx.locaux.push(f)); input.value = ''; ccxChargerDocuments(); ccxMajApercu(); }
+function ccxRetirerLocal(i) { _ccx.locaux.splice(i, 1); ccxChargerDocuments(); ccxMajApercu(); }
 
 function ccxDestinataires() {
-  const coches = [...document.querySelectorAll('.ccx-equipe input:checked')].map(i => i.value).filter(Boolean);
   const libres = (document.getElementById('ccx-autres')?.value || '').split(/[,;\s]+/).filter(x => /@/.test(x));
-  return [...new Set([...coches, ...libres])];
+  return [...new Set([..._ccx.dest, ...libres])];
 }
 
-function ccxMaj() {
+// ── L'aperçu, construit avec les mêmes fonctions que l'envoi ────────────────────────────────────
+async function ccxMajApercu() {
   const dest = ccxDestinataires();
-  const nbDocs = document.querySelectorAll('#ccx-pj input:checked').length + _ccx.pj.length;
-  const e = document.getElementById('ccx-etat');
-  if (e) e.textContent = `${dest.length ? dest.join(', ') : 'Aucun destinataire choisi'}${nbDocs ? ` · ${nbDocs} pièce${nbDocs > 1 ? 's' : ''} jointe${nbDocs > 1 ? 's' : ''}` : ''}`;
+  const cpt = document.getElementById('ccx-compte');
+  if (cpt) cpt.textContent = dest.length ? dest.join(', ') : 'aucun';
   const b = document.getElementById('ccx-envoyer');
-  if (b) b.disabled = !dest.length;
+  if (b) b.disabled = !dest.length || !_ccx.clientId;
+  const tete = document.getElementById('ccx-apercu-tete'), f = document.getElementById('ccx-apercu');
+  if (!tete || !f) return;
+  const ag = typeof sigAgent === 'function' ? await sigAgent().catch(() => null) : null;
+  const compte = typeof sigCompteOutlook === 'function' ? await sigCompteOutlook().catch(() => null) : null;
+  const moi = (compte && compte.nom) || (ag && [ag.prenom, ag.nom].filter(Boolean).join(' ')) || '';
+  const adresse = (compte && compte.adresse) || (ag && ag.email) || '';
+  const pj = [..._ccx.docs.filter((_, i) => _ccx.docsCoches.has(i)).map(d => d.nom), ..._ccx.locaux.map(f2 => f2.name)];
+  tete.innerHTML = `<div class="ccx-objet-ap">${ccxEsc(_ccx.objet) || '<i>(sans objet)</i>'}</div>
+    <div class="ccx-exp"><span class="ccx-avatar petit">${ccxEsc((moi.split(/\s+/).map(x => x[0] || '').join('') || '✉').slice(0, 2).toUpperCase())}</span>
+      <div><div><b>${ccxEsc(moi)}</b> <span class="ccx-doux">${ccxEsc(adresse)}</span></div>
+        <div class="ccx-doux">À ${dest.length ? dest.map(ccxEsc).join(', ') : '—'}</div></div></div>
+    ${pj.length ? `<div class="ccx-pj-ap">${pj.map(n => `<span>📄 ${ccxEsc(n)}</span>`).join('')}</div>` : ''}`;
+  const texte = typeof sigTexteVersHtml === 'function' && ag ? sigTexteVersHtml(_ccx.corps, ag)
+    : `<div style="font-family:Aptos,Calibri,Arial,sans-serif;font-size:11pt">${ccxEsc(_ccx.corps).replace(/\n/g, '<br>')}</div>`;
+  let sig = (ag && ag.signature_email_actif && ag.signature_email_html) || '';
+  if (sig && typeof sigImages === 'function') {
+    const imgs = await sigImages(ag).catch(() => []);
+    imgs.forEach(im => { sig = sig.split(`cid:${im.contentId}`).join(`data:${im.contentType};base64,${im.contentBytes}`); });
+  }
+  f.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;padding:18px 20px;background:#fff;color:#000;font-family:Aptos,Calibri,Arial,sans-serif}img{max-width:100%;height:auto}</style></head><body>${texte}${sig ? '<br>' + sig : ''}</body></html>`;
+}
+
+function ccxCopier() {
+  const texte = `Objet : ${_ccx.objet}\n\n${_ccx.corps}`;
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(texte).then(() => showError('✓ Texte copié.'), () => showError('Copie impossible — sélectionne le texte.'));
 }
 
 async function ccxEnvoyer() {
   const dest = ccxDestinataires();
-  if (!dest.length) return;
-  const sujet = document.getElementById('ccx-objet')?.value || '';
-  const corps = document.getElementById('ccx-corps')?.value || '';
-  const b = document.getElementById('ccx-envoyer');
+  const c = ccxClient();
+  if (!dest.length || !c) { showError('Choisis au moins un destinataire et un client.'); return; }
   if (!confirm(`Envoyer ce courriel à ${dest.join(', ')} ?`)) return;
   if (typeof assurerTokenOutlook === 'function' && !(await assurerTokenOutlook())) { showError('Connecte-toi à Outlook (bouton Microsoft) pour envoyer.'); return; }
+  const b = document.getElementById('ccx-envoyer');
   if (b) b.disabled = true;
   try {
-    const pieces = [];
     const b64 = blob => new Promise((ok, ko) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1] || ''); fr.onerror = ko; fr.readAsDataURL(blob); });
-    for (const el of document.querySelectorAll('#ccx-pj input:checked')) {
-      const it = _ccx.docs[Number(el.dataset.doc)];
-      if (!it) continue;
-      const blob = it.source === 'mandat' && typeof pjeMandatDuClient === 'function'
-        ? (await pjeMandatDuClient(_ccx.client.id))?.blob : await pjeTelecharger(it.path);
-      if (blob) pieces.push({ '@odata.type': '#microsoft.graph.fileAttachment', name: it.nom.replace(/[\\/:*?"<>|]/g, '-') + (/\.\w{2,4}$/.test(it.nom) ? '' : '.pdf'), contentType: blob.type || 'application/pdf', contentBytes: await b64(blob) });
+    const pieces = [];
+    for (const i of _ccx.docsCoches) {
+      const it = _ccx.docs[i]; if (!it) continue;
+      const blob = it.mandat && typeof pjeMandatDuClient === 'function' ? (await pjeMandatDuClient(c.id))?.blob
+        : (typeof pjeTelecharger === 'function' ? await pjeTelecharger(it.path) : null);
+      if (blob) pieces.push({ '@odata.type': '#microsoft.graph.fileAttachment', name: it.nom.replace(/[\\/:*?"<>|]/g, '-'), contentType: blob.type || 'application/pdf', contentBytes: await b64(blob) });
     }
-    for (const f of _ccx.pj) pieces.push({ '@odata.type': '#microsoft.graph.fileAttachment', name: f.name, contentType: f.type || 'application/octet-stream', contentBytes: await b64(f) });
+    for (const f of _ccx.locaux) pieces.push({ '@odata.type': '#microsoft.graph.fileAttachment', name: f.name, contentType: f.type || 'application/octet-stream', contentBytes: await b64(f) });
     const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
       method: 'POST', headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: { subject: sujet, body: { contentType: 'text', content: corps }, toRecipients: dest.map(address => ({ emailAddress: { address } })), ...(pieces.length ? { attachments: pieces } : {}) }, saveToSentItems: true }),
+      body: JSON.stringify({ message: { subject: _ccx.objet, body: { contentType: 'text', content: _ccx.corps }, toRecipients: dest.map(address => ({ emailAddress: { address } })), ...(pieces.length ? { attachments: pieces } : {}) }, saveToSentItems: true }),
     });
     if (!r.ok) { showError(r.status === 401 ? 'Session Outlook expirée — reconnecte-toi puis réessaie.' : 'Échec de l’envoi via Outlook.'); if (b) b.disabled = false; return; }
-    document.getElementById('modal-ccx')?.remove();
     showError(`✓ Courriel envoyé à ${dest.join(', ')}.`);
-    if (typeof ajouterActiviteClient === 'function') await ajouterActiviteClient(_ccx.client.id, 'email', `Courriel à Cofidex (${dest.join(', ')}) : ${sujet}`);
+    if (typeof ajouterActiviteClient === 'function') await ajouterActiviteClient(c.id, 'email', `Courriel à Cofidex (${dest.join(', ')}) : ${_ccx.objet}`);
+    _ccx.locaux = []; _ccx.docsCoches = new Set();
+    ccxChargerDocuments(); ccxMajApercu();
   } catch (e) { showError('Envoi impossible : ' + (e.message || e)); if (b) b.disabled = false; }
 }
 
-// Le bouton sur la fiche client, à côté de « Rendez-vous ».
-(function ccxBrancher() {
-  let t = null;
-  const poser = () => {
-    const zone = document.querySelector('#main-content .fcx-actions-principales');
-    if (!zone || zone.querySelector('.ccx-btn')) return;
-    const m = (document.querySelector('#main-content .fcx-actions button[onclick*="ouvrirModaleNouveauRdv("]')?.getAttribute('onclick') || '').match(/ouvrirModaleNouveauRdv\('([^']+)'\)/);
-    if (!m) return;
-    zone.insertAdjacentHTML('beforeend', `<button type="button" class="fcx-btn-verre ccx-btn" onclick="ccxOuvrir('${m[1]}')" title="Écrire à l’équipe Cofidex au sujet de ce client">🏢 Cofidex</button>`);
-  };
-  const go = () => { const main = document.getElementById('main-content'); if (main) new MutationObserver(() => { clearTimeout(t); t = setTimeout(poser, 120); }).observe(main, { childList: true, subtree: true }); poser(); };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', go); else go();
-
+(function ccxStyles() {
   const st = document.createElement('style');
   st.textContent = `
-    .ccx { width: min(680px, 95vw); }
-    .ccx-equipe { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 6px; margin-bottom: 12px; }
-    .ccx-personne { display: flex; gap: 8px; align-items: flex-start; padding: 7px 9px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface-alt); cursor: pointer; font-size: 12.5px; }
-    .ccx-personne.sans { opacity: .55; cursor: not-allowed; }
-    .ccx-personne small { display: block; color: var(--text-muted); font-size: 10.5px; }
+    .ccx-doux { color: var(--text-muted); font-size: var(--t-xs, 11.5px); }
+    .ccx-equipe-bloc { padding: 14px 16px; margin-bottom: 16px; }
+    .ccx-bloc-tete { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+    .ccx-equipe { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 8px; margin-bottom: 12px; }
+    .ccx-personne { display: flex; gap: 10px; align-items: center; text-align: left; padding: 8px 10px; border: 1px solid var(--border); border-radius: 12px;
+      background: var(--surface-alt); cursor: pointer; font: inherit; color: var(--text); }
+    .ccx-personne:hover { border-color: var(--accent-border); }
+    .ccx-personne.choisie { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+    .ccx-personne.sans { opacity: .5; cursor: not-allowed; }
+    .ccx-avatar { flex: 0 0 34px; height: 34px; border-radius: 50%; background: #113679; color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 12px; }
+    .ccx-avatar.petit { flex-basis: 30px; height: 30px; }
+    .ccx-qui { display: flex; flex-direction: column; min-width: 0; font-size: 12.5px; }
+    .ccx-qui small, .ccx-qui em { color: var(--text-muted); font-size: 10.5px; font-style: normal; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .ccx-coche { margin-left: auto; color: var(--accent); font-weight: 700; }
+    .ccx-grille { display: grid; grid-template-columns: minmax(340px, 480px) 1fr; gap: 18px; align-items: start; }
+    .ccx-form { display: flex; flex-direction: column; gap: 6px; padding: 16px; }
+    .ccx-apercu-zone { position: sticky; top: 12px; background: #E5E7EB; border-radius: 16px; padding: 14px; }
+    .ccx-barre { display: flex; gap: 8px; align-items: baseline; color: #1f2937; font-size: 12.5px; margin-bottom: 8px; }
+    .ccx-barre small { color: #6b7280; }
+    .ccx-fenetre { background: #fff; border-radius: 10px; box-shadow: 0 10px 30px rgba(0,0,0,.14); overflow: hidden; color: #111; }
+    .ccx-tete { padding: 14px 18px 10px; border-bottom: 1px solid #e5e7eb; font-family: 'Segoe UI', Arial, sans-serif; }
+    .ccx-objet-ap { font-size: 16px; font-weight: 600; margin-bottom: 9px; }
+    .ccx-exp { display: flex; gap: 10px; align-items: center; font-size: 12.5px; }
+    .ccx-pj-ap { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+    .ccx-pj-ap span { border: 1px solid #d1d5db; border-radius: 8px; padding: 3px 8px; font-size: 11.5px; background: #f9fafb; }
+    .ccx-fenetre iframe { border: 0; width: 100%; min-height: 560px; background: #fff; }
     .ccx-pj { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
     .ccx-doc { display: inline-flex; align-items: center; gap: 6px; border: 1px solid var(--border); border-radius: 999px; padding: 4px 10px; font-size: 12px; cursor: pointer; background: var(--surface); }
-    .ccx-doc.fige { cursor: default; }
+    .ccx-doc.fige { cursor: default; } .ccx-doc button { border: 0; background: none; color: var(--text-muted); cursor: pointer; }
     .ccx-doc small { color: var(--text-muted); margin-left: 4px; font-size: 10.5px; }
     .ccx-ajout { display: inline-block; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--accent); }
-    .ccx-etat { font-size: 11.5px; color: var(--text-muted); margin: 8px 0; }`;
+    @media (max-width: 1100px) { .ccx-grille { grid-template-columns: 1fr; } .ccx-apercu-zone { position: static; } }`;
   document.head.appendChild(st);
 })();

@@ -893,6 +893,7 @@ const SECTIONS = [
     { id: 'messages-clients', icon: '💬', label: 'Messages clients', staff: true, groupe: 'Relation client' },
     { id: 'demandes-polices', icon: '📤', label: 'Demandes de polices', staff: true, groupe: 'Relation client' },
     { id: 'courriers', icon: '📨', label: 'Courriers clients', staff: true, avance: true, groupe: 'Relation client' },
+    { id: 'cofidex', icon: '🏢', label: 'Écrire à Cofidex', staff: true, groupe: 'Relation client' },
     { id: 'documents-compagnies', icon: '📥', label: 'Documents compagnies', staff: true, avance: true, groupe: 'Relation client' },
     { id: 'dossier-financement', icon: '🏦', label: 'Dossiers financement', staff: true, avance: true, groupe: 'Relation client' },
 
@@ -1650,6 +1651,7 @@ async function renderView() {
     // Marquage OZ / Assurex-EX des clients sans entité (js/39)
     // Courriers clients avec en-tête Assurex / EX.GROUP (js/45)
     case 'courriers': main.innerHTML = typeof viewCourriers === 'function' ? viewCourriers() : ''; break;
+    case 'cofidex': main.innerHTML = typeof viewCofidex === 'function' ? viewCofidex() : ''; break;
     // Préparation d'un dossier de prêt hypothécaire, check-list Assurex (js/50)
     case 'dossier-financement': main.innerHTML = typeof viewDossierFinancement === 'function' ? viewDossierFinancement() : ''; break;
     // Messages et demandes venus de l'espace client REX CLOUD (js/51)

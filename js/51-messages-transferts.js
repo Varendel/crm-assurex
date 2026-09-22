@@ -325,10 +325,10 @@ function viewMessagesClients() {
     </header>
     ${mcTableauDeBord()}
     <div class="mcx-onglets" role="tablist">
-      <button type="button" role="tab" class="${_mc.onglet === 'messages' ? 'actif' : ''}" onclick="_mc.ongletChoisi=true;_mc.onglet='messages';navigate('messages-clients',{silent:true})">💬 Messages <span>${nbO('messages')}</span></button>
-      <button type="button" role="tab" class="${_mc.onglet === 'sinistres' ? 'actif' : ''}" onclick="_mc.ongletChoisi=true;_mc.onglet='sinistres';navigate('messages-clients',{silent:true})">🛟 Sinistres <span>${nbO('sinistres')}</span></button>
-      <button type="button" role="tab" class="${_mc.onglet === 'documents' ? 'actif' : ''}" onclick="_mc.ongletChoisi=true;_mc.onglet='documents';navigate('messages-clients',{silent:true})">📄 Documents <span>${nbO('documents')}</span></button>
-      <button type="button" role="tab" class="${_mc.onglet === 'transferts' ? 'actif' : ''}" onclick="_mc.ongletChoisi=true;_mc.onglet='transferts';navigate('messages-clients',{silent:true})">🤝 Transferts de gestion <span>${nouveauxT}</span></button>
+      <button type="button" role="tab" class="${_mc.onglet === 'messages' ? 'actif' : ''}${nbO('messages') ? ' a-attente' : ''}" onclick="_mc.ongletChoisi=true;_mc.onglet='messages';navigate('messages-clients',{silent:true})">💬 Messages <span>${nbO('messages')}</span></button>
+      <button type="button" role="tab" class="${_mc.onglet === 'sinistres' ? 'actif' : ''}${nbO('sinistres') ? ' a-attente' : ''}" onclick="_mc.ongletChoisi=true;_mc.onglet='sinistres';navigate('messages-clients',{silent:true})">🛟 Sinistres <span>${nbO('sinistres')}</span></button>
+      <button type="button" role="tab" class="${_mc.onglet === 'documents' ? 'actif' : ''}${nbO('documents') ? ' a-attente' : ''}" onclick="_mc.ongletChoisi=true;_mc.onglet='documents';navigate('messages-clients',{silent:true})">📄 Documents <span>${nbO('documents')}</span></button>
+      <button type="button" role="tab" class="${_mc.onglet === 'transferts' ? 'actif' : ''}${nbO('transferts') ? ' a-attente' : ''}" onclick="_mc.ongletChoisi=true;_mc.onglet='transferts';navigate('messages-clients',{silent:true})">🤝 Transferts de gestion <span>${nouveauxT}</span></button>
     </div>
     ${_mc.onglet === 'messages' ? `
       <div class="mcx-filtres">${['nouveau', 'lu', 'traite', 'tout'].map(f => `<button type="button" class="${_mc.filtre === f ? 'actif' : ''}" onclick="_mc.filtre='${f}';navigate('messages-clients',{silent:true})">${f === 'tout' ? 'Tous' : MT_STATUTS_MSG[f]}</button>`).join('')}</div>
@@ -361,17 +361,22 @@ function mcTableauDeBord() {
   const delai = repondus.length
     ? Math.round(repondus.reduce((s, m) => s + (new Date(m.repondu_le) - new Date(m.created_at)), 0) / repondus.length / 3600000)
     : null;
-  const k = (i, label, valeur, sous) => typeof dbxKpi === 'function'
-    ? dbxKpi({ i, label, valeur, sous })
-    : `<div class="dbx-kpi"><b>${valeur}</b><span>${label}</span><small>${sous}</small></div>`;
+  // 22.09.2026 : une case qui compte quelque chose en attente s'éclaire, et un clic ouvre l'onglet.
+  const k = (i, label, valeur, sous, onglet) => {
+    const onclick = onglet ? `_mc.ongletChoisi=true;_mc.onglet='${onglet}';navigate('messages-clients',{silent:true})` : undefined;
+    const h = typeof dbxKpi === 'function'
+      ? dbxKpi({ i, label, valeur, sous, onclick })
+      : `<div class="dbx-kpi"><b>${valeur}</b><span>${label}</span><small>${sous}</small></div>`;
+    return onglet && Number(valeur) > 0 ? h.replace('class="dbx-kpi', 'class="dbx-kpi a-attente') : h;
+  };
   const sinAFaire = nb('sinistres');
   const sinNeufs = (_mc.sinistres || []).filter(s => s.statut === 'declare').length;
   const docAFaire = nb('documents');
   return `<div class="dbx-kpis mcx-bord">
-    ${k(0, 'Messages à traiter', nouveaux, `${enRetard ? `${enRetard} en attente depuis plus de 48 h` : 'tout est suivi'} · ${attente.length} demande(s) client en attente au total`)}
-    ${k(1, 'Sinistres ouverts', sinAFaire, sinNeufs ? `${sinNeufs} à annoncer à l’assureur` : 'tous annoncés')}
-    ${k(2, 'Documents à envoyer', docAFaire, `${(_mc.documents || []).length} demande(s) au total`)}
-    ${k(3, 'Transferts · polices', trAFaire, `${attendues} police(s) attendue(s) · ${recues} reçue(s)`)}
+    ${k(0, 'Messages à traiter', nouveaux, `${enRetard ? `${enRetard} en attente depuis plus de 48 h` : 'tout est suivi'} · ${attente.length} demande(s) client en attente au total`, 'messages')}
+    ${k(1, 'Sinistres ouverts', sinAFaire, sinNeufs ? `${sinNeufs} à annoncer à l’assureur` : 'tous annoncés', 'sinistres')}
+    ${k(2, 'Documents à envoyer', docAFaire, `${(_mc.documents || []).length} demande(s) au total`, 'documents')}
+    ${k(3, 'Transferts · polices', trAFaire, `${attendues} police(s) attendue(s) · ${recues} reçue(s)`, 'transferts')}
     ${k(4, 'Délai moyen de réponse', delai === null ? '—' : delai, delai === null ? 'aucune réponse enregistrée' : 'heures entre le message et la réponse')}
   </div>`;
 }

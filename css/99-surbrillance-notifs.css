@@ -1,0 +1,45 @@
+/* ═══ SURBRILLANCE DES BOUTONS QUI ONT UNE NOTIFICATION (js/125, 22.09.2026) ═══════════════════════
+   Orange = vient de l'espace client (même règle que css/99-demandes-espace) ; rouge = tâches. */
+:root { --snb-client: #F97316; --snb-tache: #EF4444; }
+
+#nav .snb-notif {
+  --snb: var(--snb-tache);
+  position: relative;
+  background: color-mix(in srgb, var(--snb) 20%, transparent) !important;
+  box-shadow: inset 3px 0 0 var(--snb), 0 0 0 1px color-mix(in srgb, var(--snb) 45%, transparent);
+  color: #fff !important;
+  animation: snbPouls 2.4s ease-in-out infinite;
+}
+#nav .snb-notif.snb-client { --snb: var(--snb-client); }
+#nav .snb-notif .nav-compteur { box-shadow: 0 0 0 2px color-mix(in srgb, var(--snb) 35%, transparent); }
+@keyframes snbPouls {
+  0%, 100% { box-shadow: inset 3px 0 0 var(--snb), 0 0 0 1px color-mix(in srgb, var(--snb) 45%, transparent); }
+  50% { box-shadow: inset 3px 0 0 var(--snb), 0 0 0 1px var(--snb), 0 0 14px color-mix(in srgb, var(--snb) 45%, transparent); }
+}
+/* Rubrique repliée qui contient une notification : un point lumineux à côté du titre. */
+#nav .nav-section-btn.snb-notif::after {
+  content: ''; position: absolute; right: 34px; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%;
+  background: var(--snb); box-shadow: 0 0 8px var(--snb);
+}
+
+/* Onglets de Messages clients (js/51) */
+.mcx-onglets button.a-attente {
+  border-color: var(--snb-client) !important;
+  background: color-mix(in srgb, var(--snb-client) 16%, transparent) !important;
+  color: var(--text) !important;
+  box-shadow: 0 0 0 1px var(--snb-client), 0 0 12px color-mix(in srgb, var(--snb-client) 35%, transparent);
+  animation: snbOnglet 2.4s ease-in-out infinite;
+}
+.mcx-onglets button.a-attente span { background: var(--snb-client) !important; color: #fff !important; }
+@keyframes snbOnglet { 50% { box-shadow: 0 0 0 1px var(--snb-client), 0 0 20px color-mix(in srgb, var(--snb-client) 55%, transparent); } }
+
+/* Cases de compteurs en tête de Messages clients : la case qui a quelque chose en attente s'éclaire. */
+.mcx-bord .dbx-kpi.a-attente {
+  border-color: var(--snb-client) !important;
+  background: color-mix(in srgb, var(--snb-client) 12%, var(--surface)) !important;
+  box-shadow: 0 0 0 1px var(--snb-client), 0 6px 20px color-mix(in srgb, var(--snb-client) 28%, transparent);
+  animation: snbOnglet 2.4s ease-in-out infinite; cursor: pointer;
+}
+.mcx-bord .dbx-kpi.a-attente .dbx-kpi-valeur { color: var(--snb-client); }
+
+@media (prefers-reduced-motion: reduce) { #nav .snb-notif, .mcx-onglets button.a-attente, .mcx-bord .dbx-kpi.a-attente { animation: none; } }

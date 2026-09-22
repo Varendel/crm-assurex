@@ -300,7 +300,13 @@ function dbxVueAujourdhui(D, actions) {
       ${typeof htmlHorlogeLuxe === 'function' ? `<section class="dbx-carte dbx-anim dbx-horloge" style="--i:4" aria-label="Horloge">
         <div class="hl-haut">${htmlHorlogeLuxe()}</div>
       </section>
-      <section class="dbx-carte dbx-anim dbx-agenda2" style="--i:4" aria-label="Agenda sur deux jours">${htmlAgenda2Jours()}</section>` : ''}
+      ` : ''}
+      <!-- 22.09.2026 : « il y a un agenda de la semaine à droite plus bas, il faut conserver
+           celui-ci et le mettre à la place de l'actuel en haut ». L'agenda Outlook de la semaine
+           (js/03, mountCalendarWidget) prend la place de l'agenda sur deux jours, à côté de l'horloge. -->
+      <section class="dbx-carte dbx-carte-agenda dbx-anim dbx-agenda-semaine" style="--i:4" aria-label="Agenda de la semaine">
+        <div id="calendar-widget-container"></div>
+      </section>
     </div>
     <!-- Bandeau « Récurrence sourcée OZ » retiré du tableau de bord le 20.09.2026 (demande de
          Jonathan) : il reste dans le cockpit (js/34) et dans les objectifs (js/42). -->
@@ -324,9 +330,6 @@ function dbxVueAujourdhui(D, actions) {
         </section>
         ${/* 22.09.2026 : la carte EcoHub (logo, état du flux, synchronisation) aussi sur « Aujourd'hui »,
              elle n'était que dans « Pilotage » — on ne la voyait jamais. */ typeof ehmCarteDashboard === 'function' ? ehmCarteDashboard() : ''}
-        <section class="dbx-carte dbx-carte-agenda dbx-anim" style="--i:6" aria-label="Agenda">
-          <div id="calendar-widget-container"></div>
-        </section>
       </div>
     </div>`;
 }

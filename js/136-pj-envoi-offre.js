@@ -41,8 +41,8 @@ async function pjeDocuments(oppId) {
 }
 
 function pjeRendre() {
-  const z = document.getElementById('pje-liste');
-  if (!z) return;
+  const zones = ['pje-liste', 'pjf-liste'].map(id => document.getElementById(id)).filter(Boolean);
+  if (!zones.length) return;
   const lignes = [
     ..._pje.items.map((it, i) => `<label class="pje-ligne"><input type="checkbox" data-pje="d${i}" ${it.coche ? 'checked' : ''} onchange="pjeCocher('d',${i},this.checked)"/>
       <span class="pje-nom">📄 ${pjeEsc(it.nom)}</span><span class="pje-src">${pjeEsc(it.source)}</span>
@@ -50,9 +50,31 @@ function pjeRendre() {
     ..._pje.locaux.map((f, i) => `<label class="pje-ligne"><input type="checkbox" ${f.coche ? 'checked' : ''} onchange="pjeCocher('l',${i},this.checked)"/>
       <span class="pje-nom">💻 ${pjeEsc(f.file.name)}</span><span class="pje-src">${pjeTaille(f.file.size)} · ordinateur</span></label>`),
   ];
-  z.innerHTML = lignes.length ? lignes.join('') : '<div class="pje-vide">Aucun document déposé sur l’affaire.</div>';
+  const vide = _pje.sansOpp ? 'Pas d’affaire liée à cette demande — ajoute les fichiers depuis l’ordinateur.' : 'Aucun document déposé sur l’affaire.';
+  zones.forEach(z => { z.innerHTML = lignes.length ? lignes.join('') : `<div class="pje-vide">${vide}</div>`; });
   const n = _pje.items.filter(x => x.coche).length + _pje.locaux.filter(x => x.coche).length;
-  const c = document.getElementById('pje-compte'); if (c) c.textContent = n ? `${n} cochée${n > 1 ? 's' : ''}` : 'aucune';
+  ['pje-compte', 'pjf-compte'].forEach(id => { const c = document.getElementById(id); if (c) c.textContent = n ? `${n} cochée${n > 1 ? 's' : ''}` : 'aucune'; });
+}
+
+// ── Dans le formulaire de demande d'offre (js/26), juste au-dessus de « Relire et envoyer » ──────
+// « Je suis dans l'opportunité, j'ai uploadé des documents dans l'opp ; je clique sur demande
+// d'offre : vers le bouton Envoyer, il faut un sélecteur des documents de l'opp à joindre. »
+// Même sélection que dans l'aperçu : ce qui est coché ici est coché dans l'aperçu et part à l'envoi.
+async function pjfPoser() {
+  // Formulaire rapide (js/26) : au-dessus de la barre d'envoi ; formulaire détaillé (js/07) : au-dessus
+  // de « Générer l'email ».
+  const barre = document.querySelector('#main-content .dx-barre') || document.querySelector('#main-content button[onclick^="genererEmailDemandeOffre"]');
+  if (!barre || document.getElementById('pjf')) return;
+  barre.insertAdjacentHTML('beforebegin', `<section class="pje pjf" id="pjf">
+    <div class="pje-tete"><b>📎 Pièces jointes à la demande</b> <span id="pjf-compte" class="pje-src">…</span>
+      <label class="pje-ajout">+ Fichier de l’ordinateur<input type="file" multiple hidden onchange="pjeAjouterLocaux(this)"/></label></div>
+    <div id="pjf-liste" class="pje-liste"><div class="pje-vide">Recherche des documents de l’affaire…</div></div></section>`);
+  const oid = document.getElementById('do-opportunite-id')?.value || null;
+  if (_pje.form !== oid) { _pje.items = []; _pje.locaux = []; }
+  _pje.form = oid; _pje.sansOpp = !oid;
+  const avant = new Map(_pje.items.map(x => [x.path, x.coche]));
+  try { _pje.items = oid ? (await pjeDocuments(oid)).map(x => ({ ...x, coche: !!avant.get(x.path) })) : []; } catch (e) { _pje.items = []; }
+  pjeRendre();
 }
 function pjeCocher(t, i, v) { (t === 'd' ? _pje.items : _pje.locaux)[i].coche = v; pjeRendre(); }
 function pjeAjouterLocaux(input) {
@@ -88,7 +110,10 @@ async function pjePreparer() {
   const ouvrir = ouvrirApercuEmailDemandeOffre;
   window.ouvrirApercuEmailDemandeOffre = function () {
     const r = ouvrir.apply(this, arguments);
-    _pje.items = []; _pje.locaux = [];
+    // Venant du formulaire (sélection déjà faite) : on la garde ; sinon on repart de zéro.
+    const duFormulaire = !!document.getElementById('pjf');
+    if (!duFormulaire) { _pje.items = []; _pje.locaux = []; }
+    const avant = new Map(_pje.items.map(x => [x.path, x.coche]));
     const ctx = window._apercuEmailDemandeOffre || {};
     const actions = document.querySelector('#modal-apercu-email-do .btn-save')?.parentElement;
     if (actions) {
@@ -98,7 +123,9 @@ async function pjePreparer() {
         <div id="pje-liste" class="pje-liste"><div class="pje-vide">Recherche des documents de l’affaire…</div></div>
         <div class="pje-note">Jointes à l’envoi « via Outlook » uniquement (Copier / client mail : à joindre toi-même).</div></div>`);
     }
-    pjeOppDe(ctx).then(async oid => { ctx.oppId = ctx.oppId || oid; _pje.items = oid ? await pjeDocuments(oid) : []; pjeRendre(); }).catch(() => pjeRendre());
+    pjeRendre();
+    pjeOppDe(ctx).then(async oid => { ctx.oppId = ctx.oppId || oid; _pje.sansOpp = !oid;
+      _pje.items = oid ? (await pjeDocuments(oid)).map(x => ({ ...x, coche: !!avant.get(x.path) })) : []; pjeRendre(); }).catch(() => pjeRendre());
     return r;
   };
 
@@ -130,8 +157,17 @@ async function pjePreparer() {
       await ajouterLigneHistoriqueOpportunite(ctx.oppId, `📎 Joint à la demande d’offre : ${pj.map(x => x.name).join(', ')}`);
   };
 
+  let tPjf = null;
+  const guetter = () => { const m = document.getElementById('main-content'); if (m) new MutationObserver(() => { clearTimeout(tPjf); tPjf = setTimeout(() => pjfPoser().catch(() => {}), 150); }).observe(m, { childList: true, subtree: true }); };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', guetter); else guetter();
+
   const st = document.createElement('style');
   st.textContent = `
+    .pje.pjf { margin: 16px 0 12px; background: var(--surface); }
+    .pje.pjf .pje-liste { max-height: 240px; }`;
+  document.head.appendChild(st);
+  const st2 = document.createElement('style');
+  st2.textContent = `
     .pje { border: 1px solid var(--border); border-radius: 12px; padding: 10px 12px; margin: -4px 0 14px; background: var(--surface-alt); }
     .pje-tete { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; font-size: 13px; color: var(--text); }
     .pje-ajout { margin-left: auto; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--accent); }
@@ -143,5 +179,5 @@ async function pjePreparer() {
     .pje-voir { background: none; border: 0; cursor: pointer; font-size: 14px; padding: 0 2px; }
     .pje-vide, .pje-note { font-size: 11.5px; color: var(--text-muted); padding: 4px; }
     @media (max-width: 560px) { .pje-ligne { grid-template-columns: auto minmax(0, 1fr) auto; } .pje-src { display: none; } }`;
-  document.head.appendChild(st);
+  document.head.appendChild(st2);
 })();

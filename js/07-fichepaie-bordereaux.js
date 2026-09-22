@@ -2619,6 +2619,28 @@ function viewNouvelleOpportunite() {
   // tout le formulaire d'affaire. L'id #o-notes est inchangé — saveOpportunite() continue de
   // fonctionner sans modification.
   const blocNotes = sectionCard('Notes', '#64748b', `<div class="form-field"><textarea class="form-input" id="o-notes" rows="4" style="resize:vertical;width:100%">${opp?.notes || ''}</textarea></div>`);
+  // « L'affaire en bref » à la création (22.09.2026) : les questions du parcours (js/90, nature de
+  // l'affaire et situation actuelle) étaient posées seulement APRÈS coup, en rouvrant l'affaire.
+  // Posées ici, elles évitent l'aller-retour — et l'échéance du contrat actuel, qui commande la date
+  // limite de résiliation, est connue dès le départ. Mêmes colonnes, mêmes noms que le parcours.
+  const blocBref = (typeof PAF_TYPES !== 'undefined' && !rh) ? sectionCard('🧭 L’affaire en bref', '#38bdf8', `
+    <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:10px">Ce que le client a aujourd’hui et ce que nous visons. C’est ce qui permet de comparer honnêtement — et de résilier à temps.</div>
+    <label class="form-label">Nature de l’affaire</label>
+    <div class="obr-choix">${Object.entries(PAF_TYPES).map(([k, t]) => `
+      <label class="obr-radio ${opp?.type_affaire === k ? 'actif' : ''}">
+        <input type="radio" name="o-type-affaire" value="${k}" ${opp?.type_affaire === k ? 'checked' : ''} onchange="obrMajType(this.value)"/>
+        <b>${t.nom}</b><small>${t.aide}</small>
+      </label>`).join('')}</div>
+    <div id="o-bref-actuel" style="display:${opp?.type_affaire === 'transfert' ? '' : 'none'};margin-top:12px">
+      <label class="form-label">Ce qu’il a aujourd’hui</label>
+      <div class="form-grid">
+        <div class="form-field"><label class="form-label" for="o-a-cie">Compagnie actuelle</label><input class="form-input" id="o-a-cie" value="${qa(opp?.actuel_compagnie || '')}" placeholder="Ex. Helvetia"/></div>
+        <div class="form-field"><label class="form-label" for="o-a-prime">Prime actuelle (CHF/an)</label><input class="form-input" id="o-a-prime" inputmode="decimal" value="${opp?.actuel_prime ?? ''}"/></div>
+        <div class="form-field"><label class="form-label" for="o-a-police">N° de police</label><input class="form-input" id="o-a-police" value="${qa(opp?.actuel_police || '')}"/></div>
+        <div class="form-field"><label class="form-label" for="o-a-ech">Échéance du contrat actuel</label><input class="form-input" id="o-a-ech" type="date" value="${opp?.actuel_echeance || ''}"/></div>
+      </div>
+      <div style="font-size:11px;color:var(--text-muted);margin-top:6px">L’échéance commande tout le calendrier : elle fixe la date limite de résiliation, donc celle à laquelle l’affaire doit être conclue.</div>
+    </div>`) : '';
   // "Emails détectés" — remplace entièrement l'ancien "État des dossiers" (compagnies_envoi,
   // statuts envoyée/reçue/soumise au client, boutons marquer reçue/joindre offre/signature —
   // décision de Jonathan le 07.08.2026 : trop de friction, jamais assez clair). Approche radicale-
@@ -2658,6 +2680,7 @@ function viewNouvelleOpportunite() {
       <div style="flex:1;min-width:280px">${blocEtatEmails}</div>
       <div style="flex:1;min-width:280px">${blocHistorique}</div>
     </div>${blocTaches}${blocDocuments}` : ''}
+    ${blocBref}
     ${blocNotes}
     ${blocContrat}
     <div style="display:flex;gap:10px;margin-top:8px;flex-wrap:wrap;align-items:center">
@@ -2666,6 +2689,29 @@ function viewNouvelleOpportunite() {
       <button class="btn-secondary" onclick="opportuniteEnEditionId=null;navigate('opportunites')">Annuler</button>
       <button class="btn-save" onclick="saveOpportunite('${opp ? opp.id : ''}')">✓ ${opp ? 'Enregistrer les modifications' : 'Enregistrer'}</button>
     </div>`;
+}
+
+// ── « L'affaire en bref » dans le formulaire ────────────────────────────────────────────────────
+// La situation actuelle n'est demandée que pour un changement d'assureur : c'est le seul cas où il
+// y a quelque chose à résilier. Les autres natures n'ont pas de contrat en cours à décrire.
+function obrMajType(valeur) {
+  const z = document.getElementById('o-bref-actuel');
+  if (z) z.style.display = valeur === 'transfert' ? '' : 'none';
+  document.querySelectorAll('.obr-radio').forEach(l => l.classList.toggle('actif', l.querySelector('input')?.value === valeur));
+}
+function obrChamps() {
+  const type = document.querySelector('input[name="o-type-affaire"]:checked')?.value || null;
+  if (!document.getElementById('o-bref-actuel')) return {};   // section absente (session RH)
+  const txt = id => (document.getElementById(id)?.value || '').trim() || null;
+  const nb = id => { const v = (document.getElementById(id)?.value || '').replace(/['’\s]/g, '').replace(',', '.'); const n = Number(v); return v === '' || !isFinite(n) ? null : n; };
+  const transfert = type === 'transfert';
+  return {
+    type_affaire: type,
+    actuel_compagnie: transfert ? txt('o-a-cie') : null,
+    actuel_prime: transfert ? nb('o-a-prime') : null,
+    actuel_police: transfert ? txt('o-a-police') : null,
+    actuel_echeance: transfert ? txt('o-a-ech') : null,
+  };
 }
 
 // ── Historique d'une opportunité (colonne jsonb opportunites.historique — tableau de lignes
@@ -2910,6 +2956,9 @@ async function saveOpportunite(id) {
     produits: lignesProduits.map(l => l.id),
     produits_primes: produitsPrimes,
     commission_estimee: commissionEstimee,
+    // « L'affaire en bref » (22.09.2026) : mêmes colonnes que le parcours (js/90), remplies dès la
+    // création. Les champs n'existent pas en session RH : on ne touche alors à rien.
+    ...obrChamps(),
     ...(rh ? { cree_par: `${currentUser.prenom} ${currentUser.nom}`.trim() } : {}),
   };
   const btn = document.querySelector('.btn-save');

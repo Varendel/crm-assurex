@@ -207,3 +207,11 @@ html:not([data-theme="clair"]) body:not(.mode-cloud):not(.mode-espace-client) .o
 .paf-sauter { margin-top: 8px; align-self: flex-start; background: none; border: 1px dashed var(--border);
   color: var(--text-muted); border-radius: 999px; padding: 4px 12px; font: inherit; font-size: var(--t-xs, 12px); cursor: pointer; }
 .paf-sauter:hover { color: var(--text); border-color: var(--accent-border); border-style: solid; }
+
+/* « L'affaire en bref » dans le formulaire d'opportunité (22.09.2026) — mêmes choix que le parcours. */
+.obr-choix { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 8px; }
+.obr-radio { display: flex; flex-direction: column; gap: 2px; padding: 9px 12px; border: 1px solid var(--border); border-radius: 10px;
+  background: var(--surface-alt); cursor: pointer; font-size: var(--t-s, 13px); color: var(--text); }
+.obr-radio small { color: var(--text-muted); font-size: var(--t-xs, 11.5px); }
+.obr-radio input { position: absolute; opacity: 0; pointer-events: none; }
+.obr-radio.actif { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }

@@ -53,7 +53,7 @@
 #ecran-chargement-crm .ecc-point { position: absolute; left: 53.48%; top: 70.39%; width: 4.5%; aspect-ratio: 1;
   transform: translate(-50%, -50%); border-radius: 7%; background: #00CFFF;
   animation: lg-point 2.6s ease-in-out infinite; }
-#ecran-chargement-crm .ecc-piste { position: relative; width: min(470px, 84vw); height: 20px; }   /* plus de Rex au-dessus de la barre (22.09.2026) */
+#ecran-chargement-crm .ecc-piste { position: relative; width: min(470px, 84vw); height: 104px; }   /* Rex avance au-dessus de la barre (remis le 22.09.2026 à la demande de Jonathan) */
 #ecran-chargement-crm .ecc-rex { position: absolute; bottom: 14px; left: 0; height: 84px; width: auto;
   filter: drop-shadow(0 6px 12px rgba(0,0,0,.3)); animation: ecc-avance 2.6s cubic-bezier(.45,0,.55,1) infinite; }
 #ecran-chargement-crm .ecc-barre { position: absolute; left: 0; right: 0; bottom: 0; height: 9px; border-radius: 999px;

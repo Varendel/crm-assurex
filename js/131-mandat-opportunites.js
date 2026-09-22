@@ -25,7 +25,10 @@ async function mopDecorer() {
   if (!main) return;
   const cibles = main.querySelectorAll('[onclick*="editerOpportunite(\'"]:not([data-mop])');
   const fiche = main.querySelector('.opx-hero .fcx-contacts [onclick^="showClient(\'"]:not([data-mop])');
-  if (!cibles.length && !fiche) return;
+  // « Ajoute le logo mandat signé à côté de Fil de l'affaire » : le titre du fil, et l'affaire lue
+  // sur le bouton « E-mails Outlook » de la même en-tête.
+  const fil = [...main.querySelectorAll('.opx-h3:not([data-mop])')].find(h => /^Fil de l/.test(h.textContent.trim()));
+  if (!cibles.length && !fiche && !fil) return;
   const avec = await mopClientsAvecMandat();
   const clientDeOpp = id => { const o = (typeof allOpportunites !== 'undefined' ? allOpportunites : []).find(x => x.id === id); return o && o.client_id; };
   cibles.forEach(el => {
@@ -43,6 +46,14 @@ async function mopDecorer() {
     fiche.setAttribute('data-mop', '');
     const m = (fiche.getAttribute('onclick') || '').match(/showClient\('([^']+)'\)/);
     if (m && avec.has(m[1])) fiche.insertAdjacentHTML('afterend', `<span class="fcx-chip mop-chip" title="Mandat de courtage signé enregistré">${MOP_BADGE} Mandat signé</span>`);
+  }
+  if (fil) {
+    fil.setAttribute('data-mop', '');
+    const tete = fil.closest('.dbx-carte-tete') || fil.parentElement;
+    const b = tete && tete.querySelector('[onclick*="opChercherEmails(\'"], [onchange*="mopUploaderMandat(\'"]');
+    const m = b && ((b.getAttribute('onclick') || b.getAttribute('onchange') || '').match(/\('([^']+)'/));
+    const cid = m && clientDeOpp(m[1]);
+    if (cid && avec.has(cid)) fil.insertAdjacentHTML('beforeend', `<span class="mop-fil-badge" title="Mandat de courtage signé enregistré">${MOP_BADGE.replace('width="18" height="18"', 'width="22" height="22"')}<span>Mandat signé</span></span>`);
   }
 }
 
@@ -108,6 +119,9 @@ async function mopUploaderMandat(oppId, input) {
     .mop-chip { display: inline-flex; align-items: center; gap: 5px; }
     .mop-chip .mop-badge { margin: 0; }
     .mop-fil-actions { display: inline-flex; flex-wrap: wrap; gap: 4px 14px; align-items: center; justify-content: flex-end; }
-    .mop-upload { cursor: pointer; }`;
+    .mop-upload { cursor: pointer; }
+    .mop-fil-badge { display: inline-flex; align-items: center; gap: 5px; margin-left: 10px; padding: 2px 9px 2px 3px; border-radius: 999px; vertical-align: 2px;
+      font-size: var(--t-xs, 12px); font-weight: 600; color: #15803D; background: color-mix(in srgb, #16A34A 12%, var(--surface, #fff)); border: 1px solid color-mix(in srgb, #16A34A 35%, transparent); }
+    .mop-fil-badge .mop-badge { width: 22px; height: 22px; margin: 0; }`;
   document.head.appendChild(st);
 })();

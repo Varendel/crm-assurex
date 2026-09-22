@@ -166,21 +166,99 @@ function renderFilActivite() {
     .map(([v, l]) => `<button type="button" class="${_ja.filtre === v ? 'actif' : ''}" onclick="_ja.filtre='${v}';renderFilActivite()">${l}</button>`).join('');
   const liste = _ja.items.filter(i => _ja.filtre === 'tout' || i.type === _ja.filtre);
   if (!liste.length) { zoneFil.innerHTML = '<div class="table-empty">Rien pour l’instant.</div>'; return; }
-  zoneFil.innerHTML = liste.slice(0, 120).map(i => {
-    const t = JA_TYPES[i.type] || JA_TYPES.modification;
-    // Notes et tâches posées par la synchronisation EcoHub : elles gardent leur pictogramme (la case
-    // cochée dit « tâche ») et portent en plus une petite pastille EcoHub qui dit d'où elles viennent.
-    const pastille = i.type !== 'ecohub' && /ecohub/i.test(i.qui || '')
-      ? '<span class="ja-pastille-ecohub"><img src="assets/logos/ecohub-icone.svg" alt=""/></span>' : '';
-    return `<div class="ja-item">
-      <span class="ja-icone" style="background:${t.fond}" aria-hidden="true">${t.icone}${pastille}</span>
+  zoneFil.innerHTML = jaRegrouperSemaines(liste.slice(0, 120)).map(g => g.items.length > 1 ? jaGroupeHtml(g) : jaItemHtml(g.items[0])).join('');
+}
+
+// Pictogramme d'une ligne. Notes et tâches posées par la synchronisation EcoHub gardent leur
+// pictogramme (la case cochée dit « tâche ») et portent une petite pastille EcoHub en coin.
+function jaIconeHtml(i) {
+  const t = JA_TYPES[i.type] || JA_TYPES.modification;
+  const pastille = i.type !== 'ecohub' && /ecohub/i.test(i.qui || '')
+    ? '<span class="ja-pastille-ecohub"><img src="assets/logos/ecohub-icone.svg" alt=""/></span>' : '';
+  return `<span class="ja-icone" style="background:${t.fond}" aria-hidden="true">${t.icone}${pastille}</span>`;
+}
+
+function jaItemHtml(i) {
+  return `<div class="ja-item">
+      ${jaIconeHtml(i)}
       <div class="ja-corps">
         <div class="ja-item-titre">${jaEsc(i.titre)}</div>
         ${i.detail ? `<div class="ja-item-detail">${jaEsc(i.detail)}</div>` : ''}
         <div class="ja-item-meta">${jaEsc(i.qui || '')}${i.qui ? ' · ' : ''}${jaQuand(i.date)}</div>
       </div>
     </div>`;
-  }).join('');
+}
+
+// ── Regroupement par semaine (22.09.2026) ──────────────────────────────────────────────────────
+// « Regroupe les notes d'une même semaine sur une ligne avec les différentes dates : ça évite que
+// ça bouffe toute la place. » Les entrées de même nature d'une même semaine (lundi → dimanche)
+// tiennent sur une ligne : le nombre, les jours en pastilles, et le détail replié. Les demandes
+// du client (REX CLOUD) restent une par ligne : chacune appelle une réponse, aucune ne doit se
+// cacher dans un groupe.
+const JA_NON_GROUPES = ['message'];
+
+function jaLundi(iso) {
+  const d = new Date(iso);
+  if (isNaN(d)) return '';
+  const l = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+  l.setDate(l.getDate() - ((l.getDay() + 6) % 7));
+  return `${l.getFullYear()}-${String(l.getMonth() + 1).padStart(2, '0')}-${String(l.getDate()).padStart(2, '0')}`;
+}
+
+function jaRegrouperSemaines(liste) {
+  const groupes = [], parCle = new Map();
+  for (const i of liste) {
+    const lundi = i.date ? jaLundi(i.date) : '';
+    if (!lundi || JA_NON_GROUPES.includes(i.type)) { groupes.push({ items: [i] }); continue; }
+    const cle = i.type + '|' + lundi;
+    // La liste est triée du plus récent au plus ancien : le groupe prend la place de son entrée
+    // la plus récente, les suivantes de la semaine viennent s'y ranger.
+    if (parCle.has(cle)) parCle.get(cle).items.push(i);
+    else { const g = { type: i.type, lundi, items: [i] }; parCle.set(cle, g); groupes.push(g); }
+  }
+  return groupes;
+}
+
+function jaJourCourt(iso) {
+  const d = new Date(iso);
+  return d.toLocaleDateString('fr-CH', { weekday: 'short', day: '2-digit', month: '2-digit' }).replace(',', '').replace(/\.$/, '');
+}
+
+function jaGroupeHtml(g) {
+  const t = JA_TYPES[g.type] || JA_TYPES.modification;
+  const n = g.items.length;
+  const [a, m, j] = g.lundi.split('-').map(Number);
+  const lundi = new Date(a, m - 1, j);
+  const cetteSemaine = g.lundi === jaLundi(new Date().toISOString());
+  const semaine = cetteSemaine ? 'cette semaine'
+    : `semaine du ${lundi.toLocaleDateString('fr-CH', { day: 'numeric', month: 'long' })}`;
+  const nom = (t.label || '').toLowerCase();
+  // Une pastille par jour (plusieurs entrées le même jour : « ×2 »), du plus ancien au plus récent.
+  const jours = [];
+  [...g.items].reverse().forEach(i => {
+    const k = new Date(i.date).toDateString();
+    const x = jours.find(y => y.k === k);
+    if (x) x.n++; else jours.push({ k, lib: jaJourCourt(i.date), n: 1 });
+  });
+  const auteurs = [...new Set(g.items.map(i => i.qui).filter(Boolean))];
+  return `<details class="ja-item ja-groupe">
+      <summary>
+        ${jaIconeHtml(g.items[0])}
+        <div class="ja-corps">
+          <div class="ja-item-titre">${n} ${jaEsc(nom)} · ${jaEsc(semaine)}</div>
+          <div class="ja-jours">${jours.map(x => `<span class="ja-jour">${jaEsc(x.lib)}${x.n > 1 ? ` <b>×${x.n}</b>` : ''}</span>`).join('')}</div>
+          <div class="ja-item-meta">${jaEsc(auteurs.join(', '))}${auteurs.length ? ' · ' : ''}<span class="ja-voir">Voir le détail</span></div>
+        </div>
+      </summary>
+      <div class="ja-groupe-liste">${g.items.map(i => `
+        <div class="ja-sous">
+          <span class="ja-sous-date">${jaEsc(jaJourCourt(i.date))}</span>
+          <div class="ja-sous-corps">
+            ${i.titre && !(i.titre === 'Note' && i.detail) ? `<div class="ja-item-titre">${jaEsc(i.titre)}</div>` : ''}
+            ${i.detail ? `<div class="ja-item-detail">${jaEsc(i.detail)}</div>` : ''}
+          </div>
+        </div>`).join('')}</div>
+    </details>`;
 }
 
 async function publierActivite() {

@@ -76,6 +76,25 @@
   box-shadow: 0 1px 3px rgba(0,0,0,.15); }
 .ja-pastille-ecohub img { width: 10px; height: 11px; display: block; }
 
+/* ── Journal d'activité : une ligne par semaine (js/17, 22.09.2026) ─────────────────────────────── */
+.ja-groupe { display: block; }
+.ja-groupe > summary { display: flex; gap: 10px; cursor: pointer; list-style: none; }
+.ja-groupe > summary::-webkit-details-marker { display: none; }
+.ja-jours { display: flex; flex-wrap: wrap; gap: 4px; margin: 3px 0 1px; }
+.ja-jour { padding: 1px 8px; border-radius: 999px; font-size: var(--t-xs); white-space: nowrap;
+  background: var(--surface-alt); border: 1px solid var(--border); color: var(--text-muted); text-transform: capitalize; }
+.ja-jour b { font-weight: 600; color: var(--text); }
+.ja-voir { color: var(--accent); }
+.ja-voir::after { content: ' ▾'; }
+.ja-groupe[open] .ja-voir { font-size: 0; }
+.ja-groupe[open] .ja-voir::before { content: 'Replier'; font-size: var(--t-xs); }
+.ja-groupe[open] .ja-voir::after { content: ' ▴'; font-size: var(--t-xs); }
+.ja-groupe-liste { margin: 8px 0 0 38px; display: flex; flex-direction: column; gap: 6px;
+  border-left: 2px solid var(--border); padding-left: 10px; }
+.ja-sous { display: flex; gap: 10px; align-items: baseline; }
+.ja-sous-date { flex: 0 0 64px; font-size: var(--t-xs); font-weight: 600; color: var(--text-muted); text-transform: capitalize; }
+.ja-sous-corps { min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+
 /* ── Les pastilles EcoHub (js/59, js/61 — 22.09.2026) ─────────────────────────────────────────── */
 .dcx-pastille { display: inline-flex; align-items: center; gap: 4px; padding: 1px 8px; border-radius: 999px;
   font-size: var(--t-xs); font-weight: 600; white-space: nowrap; }

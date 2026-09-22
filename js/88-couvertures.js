@@ -73,6 +73,7 @@ function couRendre(client, contrats, isEntreprise) {
         <span class="cou-pct ton-${ton}">${pct} %</span>
       </div>
       ${cctBadge}
+      ${client && client.id ? `<span class="cou-mandat" data-cou-mandat="${couEsc(client.id)}" aria-live="polite"></span>` : ''}
     </header>
 
     ${manquantes.length ? `
@@ -119,6 +120,54 @@ function couCarteHtml(c) {
       </li>`).join('')}</ul>
   </div>`;
 }
+
+// ── Le badge « mandat » (22.09.2026) ────────────────────────────────────────────────────────────
+// « Crée un logo mandat avec un vu vert et ajoute-le comme badge sur les couvertures, pour
+// comprendre en un clin d'œil. » Le champ clients.mandat vaut « oui » partout : il ne dit rien. La
+// preuve, c'est un mandat signé et non archivé dans mandats_signes — on le lit après l'affichage
+// (le bloc est rendu d'un trait), puis on remplit la pastille laissée dans l'en-tête.
+//   · signé     → logo au vu vert, « Mandat signé » + date ; un clic l'ouvre.
+//   · pas signé → pastille grise en pointillé, « Pas de mandat » ; un clic propose d'en créer un.
+const _couMandats = new Map();   // client_id → { m, t } (cache de 60 s : la fiche se redessine souvent)
+
+async function couMandatDe(clientId) {
+  const c = _couMandats.get(clientId);
+  if (c && Date.now() - c.t < 60000) return c.m;
+  const r = await dbGet('mandats_signes', `client_id=eq.${clientId}&signe=is.true&archive=is.false&select=id,created_at,fichier_nom&order=created_at.desc&limit=1`).catch(() => null);
+  const m = Array.isArray(r) ? (r[0] || false) : null;   // null = lecture impossible : on n'affiche rien
+  if (m !== null) _couMandats.set(clientId, { m, t: Date.now() });
+  return m;
+}
+
+async function couRemplirMandats() {
+  for (const el of document.querySelectorAll('[data-cou-mandat]:not([data-rempli])')) {
+    el.setAttribute('data-rempli', '');
+    const id = el.getAttribute('data-cou-mandat');
+    const m = await couMandatDe(id);
+    if (m === null) { el.remove(); continue; }
+    if (m) {
+      el.className = 'cou-mandat oui';
+      el.title = `${m.fichier_nom || 'Mandat de courtage'} — cliquer pour l’ouvrir`;
+      el.innerHTML = `<img src="assets/logos/mandat-signe.svg" alt="" width="20" height="20"/><span>Mandat signé<small>${fmtDate(String(m.created_at).slice(0, 10))}</small></span>`;
+      el.setAttribute('role', 'button'); el.tabIndex = 0;
+      el.onclick = () => typeof voirMandatSauvegarde === 'function' && voirMandatSauvegarde(m.id);
+    } else {
+      el.className = 'cou-mandat non';
+      el.title = 'Aucun mandat signé enregistré — cliquer pour en créer un';
+      el.innerHTML = `<img src="assets/logos/mandat-signe.svg" alt="" width="20" height="20"/><span>Pas de mandat</span>`;
+      el.setAttribute('role', 'button'); el.tabIndex = 0;
+      el.onclick = () => typeof ouvrirOptionsMandatCourtage === 'function' && ouvrirOptionsMandatCourtage(id);
+    }
+    el.onkeydown = e => { if (e.key === 'Enter') el.onclick(); };
+  }
+}
+
+// La pastille est posée dans le HTML ; on la remplit dès qu'elle arrive dans la page.
+(function couObserverMandats() {
+  const o = new MutationObserver(() => { if (document.querySelector('[data-cou-mandat]:not([data-rempli])')) couRemplirMandats(); });
+  const go = () => o.observe(document.body, { childList: true, subtree: true });
+  if (document.body) go(); else document.addEventListener('DOMContentLoaded', go);
+})();
 
 // On remplace la fonction de js/04 : elle est appelée par son nom depuis la fiche client, donc
 // rien d'autre n'est à toucher, et l'ancienne reste en place si ce fichier n'est pas chargé.

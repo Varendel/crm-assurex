@@ -252,9 +252,21 @@ const RXA_DECOR = `
     <linearGradient id="rxaBrume" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFB88A" stop-opacity="0"/><stop offset=".7" stop-color="#FFB88A" stop-opacity=".07"/><stop offset="1" stop-color="#7FE0C8" stop-opacity=".10"/></linearGradient>
     <linearGradient id="rxaFlancClair" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#C9D8FF" stop-opacity=".30"/><stop offset="1" stop-color="#8FA8E0" stop-opacity=".12"/></linearGradient>
     <linearGradient id="rxaFlancOmbre" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0A1F4D" stop-opacity=".30"/><stop offset="1" stop-color="#0A1F4D" stop-opacity=".12"/></linearGradient>
+    <linearGradient id="rxaQueue" x1="0" y1="0" x2="62" y2="-36" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#FFD27A" stop-opacity="1"/><stop offset=".3" stop-color="#FF7A2E" stop-opacity=".8"/><stop offset="1" stop-color="#FF5A1F" stop-opacity="0"/></linearGradient>
     <linearGradient id="rxaSol" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6FD3B0" stop-opacity=".16"/><stop offset="1" stop-color="#6FD3B0" stop-opacity="0"/></linearGradient>
   </defs>
   <rect x="0" y="96" width="420" height="56" fill="url(#rxaBrume)"/>
+  <!-- 22.09.2026 : « ajoute une pluie de météorites derrière Rex ». Tout au fond, derrière la
+       montagne : des traînées qui tombent en biais, de droite à gauche, chacune à son rythme ; la
+       tête brille, la queue s'efface, et chaque météore s'éteint avant l'horizon. -->
+  <g class="rxa-meteores" stroke-linecap="round">
+    <g transform="translate(360 -6)"><g class="rxa-meteore" style="animation-duration:5.2s;animation-delay:-.4s"><path d="M0 0 L62 -36" stroke="url(#rxaQueue)" stroke-width="3"/><circle r="3" fill="#FFF6E0"/></g></g>
+    <g transform="translate(290 -10) scale(.7)"><g class="rxa-meteore" style="animation-duration:6.8s;animation-delay:-2.9s"><path d="M0 0 L62 -36" stroke="url(#rxaQueue)" stroke-width="3"/><circle r="3" fill="#FFF6E0"/></g></g>
+    <g transform="translate(410 4) scale(.85)"><g class="rxa-meteore" style="animation-duration:7.6s;animation-delay:-5.1s"><path d="M0 0 L62 -36" stroke="url(#rxaQueue)" stroke-width="3"/><circle r="3" fill="#FFF6E0"/></g></g>
+    <g transform="translate(230 -14) scale(.55)"><g class="rxa-meteore" style="animation-duration:5.9s;animation-delay:-1.7s"><path d="M0 0 L62 -36" stroke="url(#rxaQueue)" stroke-width="3"/><circle r="3" fill="#FFF6E0"/></g></g>
+    <g transform="translate(330 -18) scale(.6)"><g class="rxa-meteore" style="animation-duration:8.4s;animation-delay:-6.3s"><path d="M0 0 L62 -36" stroke="url(#rxaQueue)" stroke-width="3"/><circle r="3" fill="#FFF6E0"/></g></g>
+    <g transform="translate(180 -8) scale(.45)"><g class="rxa-meteore" style="animation-duration:9.2s;animation-delay:-3.8s"><path d="M0 0 L62 -36" stroke="url(#rxaQueue)" stroke-width="3"/><circle r="3" fill="#FFF6E0"/></g></g>
+  </g>
   <!-- La montagne lointaine, derrière le volcan. -->
   <path d="M150 150 L196 98 Q204 90 212 96 L236 116 L252 104 Q258 100 264 106 L318 150 Z" fill="#B8C8F0" opacity=".09"/>
   <!-- Le volcan fume : des bouffées rondes naissent du cratère, montent en grossissant et
@@ -445,6 +457,18 @@ function rxaPoser() {
     /* Les coulées turquoise du volcan luisent doucement. */
     .rxa-lave { animation: rxaLave 5s ease-in-out infinite; }
     @keyframes rxaLave { 0%, 100% { stroke-opacity: .12; } 50% { stroke-opacity: .38; } }
+    /* Météorites : chacune traverse en biais (vers le bas-gauche), brille, puis s'éteint ; l'essentiel
+       du cycle est une pause, pour une pluie clairsemée plutôt qu'un feu d'artifice. */
+    .rxa-meteore { opacity: 0; animation: rxaMeteore 6s linear infinite; }
+    .rxa-meteore circle { filter: drop-shadow(0 0 3px #FFB347) drop-shadow(0 0 6px #FF7A2E); }
+    @keyframes rxaMeteore {
+      0% { transform: translate(0, 0); opacity: 0; }
+      3% { opacity: 1; }
+      22% { transform: translate(-150px, 88px); opacity: .9; }
+      28% { transform: translate(-186px, 109px); opacity: 0; }
+      100% { transform: translate(-186px, 109px); opacity: 0; }
+    }
+    @media (prefers-reduced-motion: reduce) { .rxa-meteores { display: none; } }
     @media (prefers-reduced-motion: reduce) { .rxa-ptero, .rxa-ailes, .rxa-passe, .rxa-lave { animation: none; } .rxa-passe { display: none; } .rxa-bouffee { animation: none; opacity: .12; } }
     @media (max-width: 768px) { .rxa-scene .rxa-decor { height: 96px; right: -16px; } }
     @media (max-width: 768px) { img.dbx-hero-mascotte.rxa-flamme { height: 96px !important; margin-left: calc(-180 / 234 * 96px); } }`;

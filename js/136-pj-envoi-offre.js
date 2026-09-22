@@ -39,7 +39,7 @@ async function pjeDocuments(oppId) {
       if (Array.isArray(m) && m[0] && m[0].fichier_url) items.push({ path: m[0].fichier_url, nom: m[0].fichier_nom || 'Mandat de courtage signé.pdf', source: 'Mandat signé · joint d’office', defaut: true });
     } catch (e) { /* sans mandat : rien */ }
   }
-  return items;
+  return items.sort((a, b) => (b.defaut ? 1 : 0) - (a.defaut ? 1 : 0));   // le mandat en tête
 }
 
 function pjeRendre() {

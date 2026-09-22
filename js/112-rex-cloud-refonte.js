@@ -146,6 +146,43 @@ function rcTransfert() {
   </section>`;
 }
 
+// ── Mes documents signés (22.09.2026) ─────────────────────────────────────────────────────────
+// « L'idée, c'est qu'il existe une copie enregistrée mise à disposition sur l'espace client si
+// l'espace est créé ; sinon elle s'insère à la création. » La carte lit mandats_signes par
+// client_id (la règle d'accès « mandats_espace_client » n'ouvre que les siens) : un mandat signé
+// avant l'ouverture de l'espace y apparaît donc d'office le jour où l'espace est créé.
+function rcDocsSignes() {
+  return ((window._ec || {}).mandats || []).filter(m => m.signe && !m.archive && (m.html_snapshot || m.fichier_url))
+    .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+}
+
+function rcMandats() {
+  const docs = rcDocsSignes();
+  if (!docs.length) return '';
+  return `<section class="rc-carte rc-mandats" aria-labelledby="rc-man-titre">
+    <h2 id="rc-man-titre">Mes documents signés</h2>
+    <ul class="rc-liste">${docs.map(m => `<li>
+      <span class="rc-man-txt"><b>${rcEsc((m.fichier_nom || 'Mandat de courtage').split(' — ')[0])}</b>
+        <span>Signé le ${fmtDate(String(m.created_at || '').slice(0, 10))}</span></span>
+      <button type="button" class="rc-man-voir" onclick="rcVoirDocSigne('${m.id}')">Voir / télécharger</button>
+    </li>`).join('')}</ul>
+  </section>`;
+}
+
+async function rcVoirDocSigne(id) {
+  const m = rcDocsSignes().find(x => x.id === id);
+  if (!m) return;
+  // La copie enregistrée, telle que signée : même rendu que côté conseiller, imprimable en PDF.
+  if (m.html_snapshot) {
+    const w = window.open(URL.createObjectURL(new Blob([m.html_snapshot], { type: 'text/html;charset=utf-8' })), '_blank');
+    if (!w && typeof showError === 'function') showError('Autorisez les fenêtres pop-up pour afficher le document.');
+    return;
+  }
+  // Mandat signé à la main et déposé en PDF : lien signé à la volée, comme côté conseiller.
+  if (typeof ouvrirPieceJointe === 'function') { ouvrirPieceJointe(m.fichier_url); return; }
+  if (typeof showError === 'function') showError('Ce document s’ouvre depuis votre conseiller : écrivez-lui, il vous l’envoie.');
+}
+
 function rcAgenda() {
   const E = window._ec || {};
   const prochains = (E.rdv || []).filter(r => r.date_heure && r.date_heure >= new Date().toISOString() && r.statut !== 'annule');
@@ -195,7 +232,7 @@ function rcVue() {
   // gestes, le transfert, l'agenda et le conseiller se rangent à droite. Sur téléphone, la grille
   // redevient une seule colonne dans cet ordre-là.
   const contenu = onglet === 'accueil'
-    ? `${notif}<div class="rc-grille">${rcCouvertures()}${rcBandeauPrimes()}${rcActions()}${rcTransfert()}${rcAgenda()}${rcConseillerPied()}</div>`
+    ? `${notif}<div class="rc-grille">${rcCouvertures()}${rcBandeauPrimes()}${rcActions()}${rcTransfert()}${rcMandats()}${rcAgenda()}${rcConseillerPied()}</div>`
     : onglet === 'contrats' ? (typeof ecOngletContrats === 'function' ? ecOngletContrats() : '')
     : onglet === 'sinistres' ? (typeof ecOngletSinistres === 'function' ? ecOngletSinistres() : '')
     : onglet === 'demandes' ? (typeof ecOngletDemandes === 'function' ? ecOngletDemandes() : '')

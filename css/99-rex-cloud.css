@@ -285,3 +285,12 @@ body.mode-cloud .cloud-logo { display: block; width: min(440px, 100%); height: a
 /* La zone de contenu du CRM est plafonnée à 1080 px, calée à gauche : pas dans l'espace client. */
 body.mode-espace-client #main-content { max-width: none !important; width: 100%; }
 
+
+/* ── Mes documents signés (js/112, 22.09.2026) ── */
+.rc-mandats .rc-liste li { align-items: center; }
+.rc-man-txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.rc-man-txt b { color: var(--text); font-weight: 600; }
+.rc-man-txt span { font-size: 12.5px; }
+.rc-man-voir { flex-shrink: 0; border: 1px solid var(--accent-border, #BFDBFE); background: var(--accent-dim, #EFF6FF); color: var(--accent, #1D4ED8);
+  font: inherit; font-size: 13px; font-weight: 600; padding: 7px 12px; border-radius: 10px; cursor: pointer; }
+.rc-man-voir:hover { filter: brightness(.97); }

@@ -33,7 +33,9 @@ async function opSupprimerOffre(oppId, demandeId, idx) {
   if (typeof htmlOffresOpportunite !== 'function') return;
   const rendu = htmlOffresOpportunite;
   window.htmlOffresOpportunite = function () {
-    return rendu.apply(this, arguments).replace(
+    // data-lgp-non : le module qui ajoute un petit logo devant chaque nom de compagnie (js/105) laisse
+    // les offres tranquilles — leur logo est déjà en tête de carte.
+    return rendu.apply(this, arguments).replace('<div class="opx-offres">', '<div class="opx-offres" data-lgp-non>').replace(
       /(<button type="button" onclick="opSaisirOffre\('([^']+)','([^']+)',(\d+)\)">[^<]*<\/button>)/g,
       (m, bouton, opp, dem, i) => `${bouton}<button type="button" class="opx-offre-retirer" onclick="opSupprimerOffre('${opp}','${dem}',${i})" title="Retirer cette offre (erreur de saisie)" aria-label="Retirer cette offre">🗑</button>`);
   };

@@ -1,0 +1,42 @@
+/* ═══ OPPORTUNITÉ : L'AFFICHAGE DES OFFRES REÇUES (22.09.2026) ═════════════════════════════════════
+   « Revois l'affichage des offres reçues. » Les cartes étaient pensées pour une colonne large :
+   dans la colonne de droite de la fiche (≈ 370 px), les boutons passaient par-dessus le nom, le
+   statut se tassait lettre par lettre et le logo apparaissait deux fois. Trois étages désormais :
+     1. logo · compagnie + statut · prime (à droite, en grand) ;
+     2. franchise / couverture, en petit ;
+     3. les actions, alignées à droite, qui passent à la ligne sans rien recouvrir. */
+.opx-offres { display: flex; flex-direction: column; gap: 8px; }
+.opx-offre {
+  display: grid !important; grid-template-columns: 38px minmax(0, 1fr); grid-template-areas: "logo corps" "boutons boutons";
+  gap: 8px 10px; align-items: center; padding: 10px 12px !important; min-height: 0 !important;
+  border: 1px solid var(--border); border-left: 3px solid var(--offre-ton, var(--border)); border-radius: 12px; background: var(--surface);
+}
+.opx-offre.recue { --offre-ton: #16A34A; }
+.opx-offre.retenue { --offre-ton: #F59E0B; background: color-mix(in srgb, #F59E0B 6%, var(--surface)); }
+.opx-offre.relancer { --offre-ton: #EF4444; }
+.opx-offre.attente { --offre-ton: #38BDF8; }
+.opx-offre.declinee { --offre-ton: #94A3B8; opacity: .72; }
+
+.opx-offre-logo { grid-area: logo; display: flex; }
+.opx-offre-logo img, .opx-offre-logo > span { width: 38px !important; height: 38px !important; border-radius: 10px !important; background: #fff; }
+
+.opx-offre-corps { grid-area: corps; min-width: 0; display: grid !important; grid-template-columns: minmax(0, 1fr) auto; column-gap: 10px; row-gap: 2px; align-items: center; }
+.opx-offre-corps > b { grid-column: 1; font-size: var(--t-m); font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.opx-offre-corps > b .lgp-logo { display: none !important; }          /* le logo est déjà à gauche */
+.opx-offre-statut { grid-column: 1; justify-self: start; font-size: var(--t-xs) !important; font-weight: 600; padding: 1px 8px; border-radius: 999px;
+  white-space: nowrap; background: color-mix(in srgb, var(--offre-ton, #94A3B8) 16%, transparent); color: var(--offre-ton, var(--text-muted)) !important; }
+.opx-offre-prime { grid-column: 2; grid-row: 1 / span 2; text-align: right; font-size: 17px !important; font-weight: 700; white-space: nowrap; margin: 0 !important; }
+.opx-offre-prime small { display: block; font-size: 10px; font-weight: 500; color: var(--text-muted); }
+.opx-offre-prime em { display: block; font-style: normal; font-size: 10px; font-weight: 600; color: #16A34A; }
+.opx-offre-details { grid-column: 1 / -1; font-size: var(--t-xs); color: var(--text-muted); margin-top: 3px; }
+
+.opx-offre-boutons { grid-area: boutons; display: flex !important; flex-wrap: wrap; gap: 6px; justify-content: flex-end;
+  padding-top: 8px; border-top: 1px solid color-mix(in srgb, var(--border) 70%, transparent); position: static !important; }
+.opx-offre-boutons > button, .opx-offre-boutons > label {
+  display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; cursor: pointer;
+  font: inherit; font-size: 12px !important; font-weight: 500; padding: 5px 10px !important; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface-alt); color: var(--text);
+}
+.opx-offre-boutons > button:hover, .opx-offre-boutons > label:hover { border-color: var(--accent-border); color: var(--accent); }
+.opx-offre-boutons .opx-offre-retirer { padding: 5px 8px !important; }
+.opx-offre-boutons .opx-offre-signee { background: #16A34A !important; border-color: #16A34A !important; color: #fff !important; font-weight: 600; }

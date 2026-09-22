@@ -9,7 +9,7 @@
 // stockage et ajoutés au message ; le reste de l'envoi (confirmation, statut des compagnies) est
 // celui de js/07, inchangé. Le texte annonce déjà « documents en pièce jointe » : il dit vrai.
 
-const PJE_MAX = 3.5 * 1024 * 1024;   // limite d'un envoi Graph en une requête (≈ 4 Mo encodés)
+const PJE_MAX = 2.5 * 1024 * 1024;   // envoi Graph en une requête (≈ 4 Mo encodés), signature et ses images comprises (js/138)
 const _pje = { items: [], locaux: [] };
 
 function pjeEsc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }

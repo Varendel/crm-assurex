@@ -1598,7 +1598,9 @@ function ouvrirApercuEmailMandat({ clientId, cies, emails, sansEmail, sujet, cor
       ${mdxTeteModale('✉️', 'Aperçu avant envoi', 'Rien n’est envoyé automatiquement — relis, corrige si besoin, puis choisis comment le transmettre.', 'modal-apercu-email-mandat', 'mdx-apercu-titre')}
       <div class="mdx-destinataires"><span class="mdx-dest-label">À</span>${emails.length ? emails.map(e => `<span class="mdx-puce">${mdxEsc(e)}</span>`).join('') : '<span class="mdx-puce alerte">aucun e-mail connu</span>'}</div>
       ${sansEmail.length ? `<div class="mdx-alerte orange">⚠ <span>Pas d’e-mail enregistré pour : <b>${sansEmail.map(mdxEsc).join(', ')}</b></span></div>` : ''}
-      <div class="mdx-alerte">📎 <span>Joins le mandat signé (PDF) : il n’est pas attaché automatiquement.</span></div>
+      <!-- 22.09.2026 : le mandat est désormais joint tout seul (PDF archivé, ou fabriqué depuis la
+           signature faite dans le CRM — js/136). L'ancien avertissement n'a plus lieu d'être. -->
+      <div class="mdx-alerte">📎 <span id="mdx-pj-mandat">Le mandat signé sera joint automatiquement à l’envoi via Outlook.</span></div>
       <div class="form-field"><label class="form-label" for="apercu-mandat-sujet">Objet</label><input class="form-input" id="apercu-mandat-sujet" value="${mdxEsc(sujet)}"/></div>
       <div class="form-field mdx-champ-corps"><label class="form-label" for="apercu-mandat-corps">Message</label><textarea class="form-input" id="apercu-mandat-corps" rows="10">${String(corps || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')}</textarea></div>
       <div class="opx-modale-actions mdx-actions mdx-actions-envoi">
@@ -1644,14 +1646,26 @@ async function envoyerApercuEmailMandatViaOutlook() {
   const sujet = document.getElementById('apercu-mandat-sujet')?.value || '';
   const corps = document.getElementById('apercu-mandat-corps')?.value || '';
   if (!ctx.emails.length) { showError("Aucune compagnie sélectionnée n'a d'email enregistré — ajoute-en dans Paramètres → Contacts compagnies."); return; }
-  if (!confirm(`Envoyer ce courriel à ${ctx.emails.join(', ')} depuis jo@cofidex.ch ?\n\nN'oublie pas : le mandat signé (PDF) n'est pas joint automatiquement.`)) return;
+  if (!confirm(`Envoyer ce courriel à ${ctx.emails.join(', ')} depuis le compte Outlook connecté ?\n\nLe mandat signé est joint automatiquement.`)) return;
   if (!(await assurerTokenOutlook())) { showError('Connecte-toi à Outlook (bouton Microsoft dans le menu) pour envoyer.'); return; }
+  // Le mandat signé part avec le courriel : c'est tout l'objet de l'envoi (22.09.2026).
+  let pieces = [];
+  if (typeof pjeMandatDuClient === 'function' && ctx.clientId) {
+    try {
+      showError('⏳ Préparation du mandat…');
+      const m = await pjeMandatDuClient(ctx.clientId);
+      if (m) {
+        const b64 = await new Promise((ok, ko) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1] || ''); fr.onerror = ko; fr.readAsDataURL(m.blob); });
+        pieces = [{ '@odata.type': '#microsoft.graph.fileAttachment', name: m.name, contentType: m.type, contentBytes: b64 }];
+      } else if (!confirm('Aucun mandat signé trouvé pour ce client : envoyer le courriel sans pièce jointe ?')) return;
+    } catch (e) { if (!confirm('Le mandat n’a pas pu être préparé (' + (e.message || e) + ').\n\nEnvoyer sans pièce jointe ?')) return; }
+  }
   try {
     const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
       method: 'POST',
       headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        message: { subject: sujet, body: { contentType: 'text', content: corps }, toRecipients: ctx.emails.map(e => ({ emailAddress: { address: e } })) },
+        message: { subject: sujet, body: { contentType: 'text', content: corps }, toRecipients: ctx.emails.map(e => ({ emailAddress: { address: e } })), ...(pieces.length ? { attachments: pieces } : {}) },
         saveToSentItems: true,
       }),
     });

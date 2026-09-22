@@ -137,6 +137,19 @@ async function pjeMandatPdf(it) {
   } finally { hote.remove(); }
 }
 
+// Le mandat signé d'un client, prêt à joindre : le PDF archivé, ou celui fabriqué depuis la
+// signature faite dans le CRM. Utilisé par « Poser le mandat aux compagnies » (js/05) et par la
+// demande d'offre. Renvoie null si le client n'a pas de mandat signé.
+async function pjeMandatDuClient(clientId) {
+  if (!clientId) return null;
+  const r = await dbGet('mandats_signes', `client_id=eq.${clientId}&signe=is.true&archive=is.false&select=id,fichier_url,fichier_nom,html_snapshot,created_at&order=created_at.desc`);
+  const m = (Array.isArray(r) ? r : []).find(x => x.fichier_url || x.html_snapshot);
+  if (!m) return null;
+  const nom = (m.fichier_nom || 'Mandat de courtage signé').replace(/\.(pdf|html?)$/i, '').replace(/[\\/:*?"<>|]/g, '-') + '.pdf';
+  const blob = m.fichier_url ? await pjeTelecharger(m.fichier_url) : await pjeMandatPdf({ mandatId: m.id, html: m.html_snapshot, nom });
+  return { name: nom, type: blob.type || 'application/pdf', blob };
+}
+
 async function pjePreparer() {
   const out = [];
   for (const it of _pje.items.filter(x => x.coche)) {

@@ -1,0 +1,28 @@
+/* ═══ CHARGEMENTS : REX QUI TOURNE (22.09.2026) ══════════════════════════════════════════════════
+   « Crée-moi un logo de Rex qui tourne en rond pour les chargements. »
+
+   Toutes les attentes du CRM passent par la même classe `.loader` (« Chargement… »,
+   « Actualisation des données… », une trentaine d'endroits) : on remplace son petit cercle par Rex
+   qui fait un tour complet sur lui-même, sans toucher à un seul appel.
+
+   L'animation est une bande de 8 images (assets/logos/rex/chargement/rex-tour-sprite.webp,
+   8 × 160 px, tirée de la planche anim-tour8) lue par `steps(8)` : un seul fichier de 50 Ko,
+   aucun script, et le tour ne dépend pas du fil principal — il continue même quand la page
+   calcule.
+
+   Mouvement réduit : Rex reste de face, immobile (la règle de css/90 coupe déjà l'animation
+   de `.loader::before`).
+   ═══════════════════════════════════════════════════════════════════════════════════════════════ */
+
+.loader { flex-direction: column; gap: 12px; text-align: center; }
+.loader::before {
+  content: ''; width: 64px; height: 64px; border: none; border-radius: 0;
+  background: url('../assets/logos/rex/chargement/rex-tour-sprite.webp') 0 0 / 800% 100% no-repeat;
+  animation: rexTour .9s steps(8) infinite;
+  /* Une ombre au sol, pour qu'il tourne sur place plutôt que de flotter. */
+  filter: drop-shadow(0 4px 3px rgba(0, 0, 0, .18));
+}
+@keyframes rexTour { from { background-position: 0 0; } to { background-position: 114.2857% 0; } }
+
+/* Les petites attentes dans une carte (agenda, Outlook…) : un Rex plus petit. */
+.loader[style*="padding:20px"]::before, .dbx-carte .loader::before { width: 44px; height: 44px; }

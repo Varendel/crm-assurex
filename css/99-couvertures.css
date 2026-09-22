@@ -127,6 +127,27 @@
 }
 .cou-lien:hover { text-decoration-style: solid; }
 
+/* ── Lisibilité (22.09.2026 — « les couvertures c'est illisible ») ─────────────────────────────────
+   Trois défauts constatés sur une fiche entreprise : les logos marine (Helvetia, Baloise…)
+   disparaissaient sur le fond sombre ; les branches à découvrir, grises sur gris, ne se voyaient
+   plus ; et les contrats s'écrivaient en 10–11 px. */
+.cou-nom { font-size: var(--t-m, 13.5px); }
+.cou-prime { font-size: var(--t-s, 12.5px); color: var(--text); font-weight: 500; }
+.cou-liste { gap: 5px; margin-top: 9px; }
+.cou-liste li { padding: 7px 9px; gap: 10px; }
+.cou-liste b { font-size: var(--t-s, 12.5px); font-weight: 600; white-space: normal; line-height: 1.3; }
+.cou-liste small { font-size: var(--t-xs, 11px); color: var(--text-secondary, var(--text-muted)); margin-top: 1px; }
+/* Le logo de la compagnie sur une pastille blanche : lisible dans toutes les ambiances. */
+.cou-logo { width: 30px; height: 30px; border-radius: 8px; background: #fff; align-items: center; justify-content: center;
+  border: 1px solid rgba(15, 23, 42, .10); box-shadow: 0 1px 2px rgba(0,0,0,.12); }
+/* Les manques : pointillé ambre et libellé au contraste normal — ils doivent se lire, c'est eux
+   qui décident du prochain appel. */
+.cou-carte.vide { border-color: color-mix(in srgb, var(--c-alerte, #F59E0B) 45%, var(--border));
+  background: color-mix(in srgb, var(--c-alerte, #F59E0B) 6%, transparent); }
+.cou-carte.vide .cou-ico { opacity: .85; filter: none; }
+.cou-carte.vide .cou-nom { color: var(--text); font-size: var(--t-s, 12.5px); line-height: 1.3; }
+.cou-sous { font-size: var(--t-s, 12.5px); color: var(--text); }
+
 @media (max-width: 620px) {
   .cou-jauge-boite { flex-basis: 100%; }
   .cou-grille { grid-template-columns: 1fr; }

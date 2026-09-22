@@ -43,3 +43,21 @@
 .mcx-bord .dbx-kpi.a-attente .dbx-kpi-valeur { color: var(--snb-client); }
 
 @media (prefers-reduced-motion: reduce) { #nav .snb-notif, .mcx-onglets button.a-attente, .mcx-bord .dbx-kpi.a-attente { animation: none; } }
+
+/* ── Les deux vues de travail principales en couleur (22.09.2026) ────────────────────────────────
+   « Utilise une couleur pour Pipeline, c'est ma vue principale de travail, ainsi que le tableau de
+   bord — pour les boutons. » Deux accents distincts, lisibles d'un coup d'œil dans le menu :
+   turquoise pour le tableau de bord, violet pour le pipeline. L'état actif les renforce. */
+#nav :is(.nav-solo-btn, .nav-item)[onclick="navigate('dashboard')"] { --vp: #00CFFF; }
+#nav :is(.nav-solo-btn, .nav-item)[onclick="navigate('opportunites')"] { --vp: #A78BFA; }
+#nav :is(.nav-solo-btn, .nav-item):is([onclick="navigate('dashboard')"], [onclick="navigate('opportunites')"]) {
+  background: color-mix(in srgb, var(--vp) 16%, transparent) !important;
+  box-shadow: inset 3px 0 0 var(--vp), 0 0 0 1px color-mix(in srgb, var(--vp) 35%, transparent) !important;
+  color: #fff !important; font-weight: 600;
+}
+#nav :is(.nav-solo-btn, .nav-item):is([onclick="navigate('dashboard')"], [onclick="navigate('opportunites')"]) svg { color: var(--vp) !important; stroke: var(--vp); }
+#nav :is(.nav-solo-btn, .nav-item):is([onclick="navigate('dashboard')"], [onclick="navigate('opportunites')"]):hover { background: color-mix(in srgb, var(--vp) 26%, transparent) !important; }
+#nav :is(.nav-solo-btn, .nav-item):is([onclick="navigate('dashboard')"], [onclick="navigate('opportunites')"]).active {
+  background: color-mix(in srgb, var(--vp) 32%, transparent) !important;
+  box-shadow: inset 4px 0 0 var(--vp), 0 0 0 1px var(--vp), 0 0 14px color-mix(in srgb, var(--vp) 35%, transparent) !important;
+}

@@ -66,11 +66,7 @@ function viewCofidex() {
   setTimeout(() => { ccxEquipe().then(ccxRendreEquipe); ccxChargerDocuments(); ccxMajApercu(); }, 0);
   return `<div class="ccx-vue">
     <header class="dx-tete"><div><div class="dx-surtitre">Relation interne · fiduciaire Cofidex SA</div><h2>🏢 Écrire à Cofidex</h2>
-      <p class="dx-sous">Choisis les destinataires et le client : le message se remplit avec sa situation et ses documents. L’aperçu à droite montre ce qui part, signature comprise.</p></div>
-      <div class="dx-tete-actions">
-        <button type="button" class="btn-secondary" onclick="ccxCopier()">📋 Copier</button>
-        <button type="button" class="btn-save" id="ccx-envoyer" onclick="ccxEnvoyer()">📨 Envoyer via Outlook</button>
-      </div></header>
+      <p class="dx-sous">Choisis les destinataires et le client : le message se remplit avec sa situation et ses documents. L’aperçu à droite montre ce qui part, signature comprise.</p></div></header>
 
     <section class="ccx-equipe-bloc dbx-carte">
       <div class="ccx-bloc-tete"><b>Destinataires</b><span id="ccx-compte" class="ccx-doux">aucun</span></div>
@@ -94,6 +90,10 @@ function viewCofidex() {
         <div class="form-field"><label class="form-label">Pièces jointes <small>documents du client</small></label>
           <div id="ccx-pj" class="ccx-pj"><span class="ccx-doux">Choisis d’abord un client.</span></div>
           <label class="ccx-ajout">+ Fichier de l’ordinateur<input type="file" multiple hidden onchange="ccxAjouterFichiers(this)"/></label></div>
+        <div class="ccx-actions">
+          <button type="button" class="btn-secondary" onclick="ccxCopier()">📋 Copier</button>
+          <button type="button" class="btn-save" id="ccx-envoyer" onclick="ccxEnvoyer()">📨 Envoyer via Outlook</button>
+        </div>
       </section>
 
       <section class="ccx-apercu-zone" aria-label="Aperçu du courriel">

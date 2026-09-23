@@ -72,15 +72,17 @@ function htmlFichesRecentes() {
   const lignes = lus.map((r, i) => {
     const cle = 'h' + i;
     window._rechercheGlobaleActions[cle] = () => { fermerRechercheGlobale(); r.ouvrir(); };
-    return `<div onmousedown="window._rechercheGlobaleActions['${cle}']()" style="display:flex;align-items:center;gap:10px;padding:9px 16px;cursor:pointer;border-bottom:1px solid var(--border)" onmouseover="this.style.background='rgba(56,189,248,0.06)'" onmouseout="this.style.background='transparent'">
-      <span style="font-size:15px;flex-shrink:0">${r.icone}</span>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:12.5px;font-weight:500;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${recEsc(r.titre)}</div>
-        ${r.sous ? `<div style="font-size:10.5px;color:var(--text-muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${recEsc(r.sous)}</div>` : ''}
+    // Couleurs par classe, pas par variable : dans le bandeau, --text vaut du blanc, et le panneau
+    // affichait du blanc sur blanc.
+    return `<div class="rec-ligne" onmousedown="window._rechercheGlobaleActions['${cle}']()">
+      <span class="rec-ico">${r.icone}</span>
+      <div class="rec-txt">
+        <div class="rec-titre">${recEsc(r.titre)}</div>
+        ${r.sous ? `<div class="rec-sous">${recEsc(r.sous)}</div>` : ''}
       </div>
     </div>`;
   }).join('');
-  return `<div style="padding:7px 16px 4px;font-size:10px;font-weight:500;color:var(--text-dim);text-transform:uppercase;letter-spacing:.5px">🕘 Reprendre</div>${lignes}`;
+  return `<div class="rec-entete">🕘 Reprendre</div>${lignes}`;
 }
 
 (function recBrancher() {
@@ -100,9 +102,44 @@ function htmlFichesRecentes() {
       return origine.apply(this, arguments);
     };
   }
-  // Le déclencheur qui manquait : au CLIC dans le champ, pas seulement en tapant.
-  document.addEventListener('focusin', e => {
-    if (e.target && e.target.id === 'recherche-globale-input'
-      && typeof renderResultatsRechercheGlobale === 'function') renderResultatsRechercheGlobale();
+  // Le déclencheur qui manquait : au CLIC dans le champ.
+  //
+  // 23.09.2026, correction : j'écoutais `focusin`, c'est-à-dire N'IMPORTE QUELLE prise de focus —
+  // y compris celle que le CRM donne lui-même au champ (Ctrl K, retour sur le tableau de bord) ou
+  // un parcours au clavier. Le panneau s'ouvrait donc tout seul et restait posé sur « + Client » et
+  // « + Opportunité », qu'on ne pouvait plus cliquer. On n'écoute plus que le CLIC : une intention,
+  // pas un effet de bord. Et il se referme sur Échap et au premier clic ailleurs.
+  document.addEventListener('click', e => {
+    const champ = e.target && e.target.closest && e.target.closest('#recherche-globale-input');
+    if (champ && typeof renderResultatsRechercheGlobale === 'function') { renderResultatsRechercheGlobale(); return; }
+    // Clic ailleurs : si ce n'est pas dans le panneau lui-même, on ferme.
+    const zone = document.getElementById('recherche-globale-resultats');
+    if (zone && zone.style.display !== 'none' && !(e.target.closest && e.target.closest('#recherche-globale-resultats'))
+      && typeof fermerRechercheGlobale === 'function') fermerRechercheGlobale();
   });
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && typeof fermerRechercheGlobale === 'function') fermerRechercheGlobale();
+  });
+
+  // Le panneau prenait `var(--surface)`, qui vaut un blanc translucide à l'intérieur du bandeau :
+  // on voyait le bandeau au travers, et il ressemblait à un défaut d'affichage. Couleurs explicites.
+  const st = document.createElement('style');
+  st.textContent = `
+    #recherche-globale-resultats {
+      background: #FFFFFF; color: #0E1B33;
+      border: 1px solid #E2E7EF; box-shadow: 0 18px 44px rgba(6, 20, 44, .34); z-index: 400;
+    }
+    html:not([data-theme="clair"]) #recherche-globale-resultats {
+      background: #16233A; color: #E8EEF8; border-color: #2A3A57;
+    }
+    .rec-entete { padding: 8px 16px 5px; font-size: 10px; font-weight: 700; letter-spacing: .06em;
+      text-transform: uppercase; opacity: .6; }
+    .rec-ligne { display: flex; align-items: center; gap: 10px; padding: 9px 16px; cursor: pointer;
+      border-top: 1px solid rgba(127, 127, 127, .18); }
+    .rec-ligne:hover { background: rgba(0, 149, 184, .12); }
+    .rec-ico { font-size: 15px; flex-shrink: 0; }
+    .rec-txt { flex: 1; min-width: 0; }
+    .rec-titre { font-size: 13px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .rec-sous { font-size: 11px; opacity: .65; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }`;
+  document.head.appendChild(st);
 })();

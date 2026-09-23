@@ -61,16 +61,59 @@ async function relCharger() {
       parCompagnie.get(cle).items.push({ d, e, idx, o, ...due });
     });
   }
-  // Le rang et l'urgence d'un groupe sont ceux du dossier le plus avancé : c'est le plus ancien
-  // silence qui donne le ton, sinon la relance d'un dossier pressé s'écrit sur le ton du premier jour.
-  _rel.lignes = [...parCompagnie.values()].map(g => {
+  _rel.lignes = relGrouper(parCompagnie);
+  _rel.sel = new Set(_rel.lignes.map((_, i) => i));
+  _rel.charge = true;
+}
+
+// Le rang et l'urgence d'un groupe sont ceux du dossier le plus avancé : c'est le plus ancien
+// silence qui donne le ton, sinon la relance d'un dossier pressé s'écrit sur le ton du premier jour.
+function relGrouper(parCompagnie) {
+  return [...parCompagnie.values()].map(g => {
     const rang = Math.max(...g.items.map(x => x.rang));
     const depuis = Math.max(...g.items.map(x => x.depuis));
     const urgent = g.items.some(x => x.urgent);
     return { ...g, rang, depuis, urgent, objet: relObjet(g, rang, depuis), corps: relCorps(g, rang) };
   }).sort((a, b) => (b.urgent - a.urgent) || (b.rang - a.rang) || (b.depuis - a.depuis));
+}
+
+// ── La même chose, pour UNE affaire (23.09.2026) ────────────────────────────────────────────────
+// « Sous Offres des compagnies, mets un bouton relancer les compagnies (générer e-mail). »
+//
+// Une différence de fond avec la liste générale : ici c'est LE COURTIER qui décide de relancer,
+// maintenant, sur ce dossier-là. On ne lui oppose donc pas le calendrier — toutes les compagnies
+// qui n'ont pas répondu sont proposées, même celles sollicitées hier. Le délai reste affiché
+// (« 2 j de silence »), pour qu'il voie ce qu'il fait ; il ne filtre plus.
+function relLignesOpp(oppId) {
+  const o = (typeof allOpportunites !== 'undefined' ? allOpportunites : []).find(x => x.id === oppId);
+  const demandes = (window._opDemandes && window._opDemandes[oppId]) || [];
+  const parCompagnie = new Map();
+  for (const d of demandes) {
+    (Array.isArray(d.compagnies_envoi) ? d.compagnies_envoi : []).forEach((e, idx) => {
+      if (!e || !e.email || e.prime || e.recue_le || e.retenue) return;
+      if (e.statut === 'déclinée') return;
+      const rang = Number(e.relances) || (e.relance_le ? 1 : 0);
+      const depuis = relJours(e.relance_le || e.envoye_le);
+      if (depuis === null) return;                       // jamais envoyée : il n'y a rien à relancer
+      const jEcheance = o && o.date_echeance ? -relJours(o.date_echeance) : null;
+      const urgent = jEcheance !== null && jEcheance >= 0 && jEcheance <= REL_ECHEANCE_PROCHE;
+      const cle = String(e.email).trim().toLowerCase();
+      if (!parCompagnie.has(cle)) parCompagnie.set(cle, { email: e.email, compagnie: e.compagnie || '', items: [] });
+      parCompagnie.get(cle).items.push({ d, e, idx, o, rang, depuis, urgent, jEcheance });
+    });
+  }
+  return relGrouper(parCompagnie);
+}
+
+async function relOuvrirOpp(oppId) {
+  _rel.lignes = relLignesOpp(oppId);
+  if (!_rel.lignes.length) {
+    showError('Aucune compagnie en attente de réponse sur cette affaire.');
+    return;
+  }
   _rel.sel = new Set(_rel.lignes.map((_, i) => i));
-  _rel.charge = true;
+  relRendre(`🔔 Relancer les compagnies`,
+    `${_rel.lignes.length} compagnie${_rel.lignes.length > 1 ? 's' : ''} sans réponse sur cette affaire — le message est déjà écrit, à toi de le relire.`);
 }
 
 // ── Le texte ────────────────────────────────────────────────────────────────────────────────────
@@ -156,6 +199,15 @@ function relMajCompte() {
   if (b) { b.textContent = `📨 Envoyer ${_rel.sel.size} relance${_rel.sel.size > 1 ? 's' : ''}`; b.disabled = !_rel.sel.size; }
 }
 
+function relRendre(titre, sous) {
+  creerModale('modal-relances', `<div class="opx-modale opx-modale-large rel-modale" role="dialog" aria-labelledby="rel-titre">
+    <h3 id="rel-titre">${relEsc(titre)}</h3>
+    <div class="opx-modale-sous">${relEsc(sous)}</div>
+    <div id="rel-liste"></div>
+  </div>`, { padding: '16px' });
+  relRemplir();
+}
+
 async function relOuvrir() {
   creerModale('modal-relances', `<div class="opx-modale opx-modale-large rel-modale" role="dialog" aria-labelledby="rel-titre">
     <h3 id="rel-titre">🔔 Relances d'offres</h3>
@@ -169,7 +221,14 @@ async function relOuvrir() {
   m.querySelector('.opx-modale-sous').textContent = n
     ? `${n} compagnie${n > 1 ? 's' : ''} à relancer — un message par compagnie, regroupant ses dossiers.`
     : 'Rien à relancer aujourd’hui : toutes les demandes envoyées sont dans les délais.';
-  document.getElementById('rel-liste').innerHTML = n
+  relRemplir();
+}
+
+function relRemplir() {
+  const n = _rel.lignes.length;
+  const zone = document.getElementById('rel-liste');
+  if (!zone) return;
+  zone.innerHTML = n
     ? _rel.lignes.map(relLigneHtml).join('') + `<div class="opx-modale-actions">
         <button type="button" class="btn-secondary" onclick="document.getElementById('modal-relances').remove()">Fermer</button>
         <button type="button" class="btn-save" id="rel-envoyer" onclick="relEnvoyer()"></button></div>`
@@ -201,6 +260,31 @@ async function relEnvoyer() {
   if (envoyes) showError(`✓ ${envoyes} relance${envoyes > 1 ? 's' : ''} envoyée${envoyes > 1 ? 's' : ''}.`);
   if (typeof opRafraichir === 'function') opRafraichir();
 }
+
+// ── Le bouton, sur la fiche de l'affaire ────────────────────────────────────────────────────────
+// « Sous Offres des compagnies, mets un bouton relancer les compagnies (générer e-mail). »
+// C'est là qu'on y pense : on regarde les offres reçues, on voit qui manque, on relance. L'écran
+// des courriels sert à faire la tournée du matin ; celui-ci à traiter un dossier.
+(function relPoserFiche() {
+  if (typeof viewFicheOpportunite !== 'function') return;
+  const origine = viewFicheOpportunite;
+  window.viewFicheOpportunite = function (o) {
+    const html = origine.apply(this, arguments);
+    if (o && o.id) setTimeout(() => {
+      const tete = [...document.querySelectorAll('.opx-carte .dbx-carte-tete')]
+        .find(t => /Offres des compagnies/i.test(t.textContent || ''));
+      if (!tete || tete.querySelector('.rel-opp')) return;
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'dbx-lien rel-opp';
+      b.textContent = '🔔 Relancer les compagnies';
+      b.title = 'Écrit le courriel de relance pour chaque compagnie qui n’a pas répondu — relisible avant envoi';
+      b.onclick = () => relOuvrirOpp(o.id);
+      tete.appendChild(b);
+    }, 60);
+    return html;
+  };
+})();
 
 // ── Le bouton, dans l'écran des courriels ───────────────────────────────────────────────────────
 (function relPoser() {

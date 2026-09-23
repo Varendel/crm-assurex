@@ -273,6 +273,11 @@ async function ccxEnvoyer() {
     .ccx-doc.fige { cursor: default; } .ccx-doc button { border: 0; background: none; color: var(--text-muted); cursor: pointer; }
     .ccx-doc small { color: var(--text-muted); margin-left: 4px; font-size: 10.5px; }
     .ccx-ajout { display: inline-block; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--accent); }
-    @media (max-width: 1100px) { .ccx-grille { grid-template-columns: 1fr; } .ccx-apercu-zone { position: static; } }`;
+    /* Le bouton d'envoi est sous le message, au bout du formulaire : on écrit, puis on envoie. */
+    .ccx-actions { display: flex; gap: 10px; justify-content: flex-end; align-items: center;
+      margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--border); }
+    .ccx-actions .btn-save { flex: 0 0 auto; }
+    @media (max-width: 1100px) { .ccx-grille { grid-template-columns: 1fr; } .ccx-apercu-zone { position: static; } }
+    @media (max-width: 560px) { .ccx-actions { flex-direction: column-reverse; align-items: stretch; } }`;
   document.head.appendChild(st2);
 })();

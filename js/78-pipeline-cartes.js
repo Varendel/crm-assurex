@@ -103,10 +103,25 @@ function plcCarte(o, stade, couleur, tousLesStades, nomClient, rhMode) {
   </div>`;
 }
 
+// 23.09.2026 : « classe les opp par ordre alphabétique dans le kanban. » Les cartes sortaient dans
+// l'ordre d'arrivée en base — retrouver quelqu'un dans une colonne d'une quinzaine relevait de la
+// fouille. On trie sur le nom affiché (celui du client, ou le prospect débarrassé de son 🆕), puis
+// sur l'intitulé pour un client qui a plusieurs affaires au même stade. localeCompare en français :
+// « É » se range avec « e », et « Immeuble 2 » avant « Immeuble 10 ».
+function plcCleAlpha(nomClient, o) {
+  return String(nomClient(o) || '').replace(/[^\p{L}\p{N}]+$/u, '').trim();
+}
+function plcTriAlpha(nomClient) {
+  const opts = { sensitivity: 'base', numeric: true };
+  return (a, b) => plcCleAlpha(nomClient, a).localeCompare(plcCleAlpha(nomClient, b), 'fr', opts)
+    || String(a.titre || '').localeCompare(String(b.titre || ''), 'fr', opts);
+}
+
 // On remplace le rendu du kanban sans toucher aux trois autres vues ni au glisser-déposer.
 function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, tousLesStades, nomClient, rhMode) {
+  const alpha = plcTriAlpha(nomClient);
   const colonnes = stades.map(stade => {
-    const opps = OPPS.filter(o => o.stade === stade);
+    const opps = OPPS.filter(o => o.stade === stade).sort(alpha);
     const couleur = stadeColor[stade];
     const total = opps.reduce((s, o) => s + Number(o.montant_potentiel || 0), 0);
     const renseignees = opps.filter(o => Number(o.montant_potentiel || 0) > 0).length;
@@ -130,7 +145,7 @@ function renderKanbanOpportunites(OPPS, gagnees, perdues, stades, stadeColor, to
     <details class="plc-fin" ${perdu ? '' : 'open'}>
       <summary style="--c:${couleur}">${perdu ? '✕' : '✓'} ${titre} (${liste.length})</summary>
       <div class="plc-fin-liste">
-        ${liste.map(o => `<div class="plc-fin-ligne" ${rhMode ? '' : `onclick="editerOpportunite('${o.id}')"`}>
+        ${[...liste].sort(alpha).map(o => `<div class="plc-fin-ligne" ${rhMode ? '' : `onclick="editerOpportunite('${o.id}')"`}>
           <span class="plc-fin-qui"><b>${plcEsc(nomClient(o))}</b><small>${plcEsc(o.titre || '')}</small>
             ${perdu && o.motif_perte ? `<em>Motif : ${plcEsc(o.motif_perte)}</em>` : ''}</span>
           ${rhMode ? '' : `<span class="plc-fin-montant">${Number(o.montant_potentiel || 0) > 0 ? 'CHF ' + fmtCHF(o.montant_potentiel) : '—'}</span>`}

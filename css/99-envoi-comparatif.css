@@ -1,0 +1,36 @@
+/* ── Fenêtre d'envoi du comparatif (23.09.2026) ─────────────────────────────────────────────────
+   Deux colonnes, comme l'aperçu de la demande d'offre (css de js/139) : à gauche ce qu'on écrit,
+   à droite le message tel qu'il partira. Sur téléphone, l'aperçu passe sous le formulaire — on
+   écrit d'abord, on vérifie ensuite. */
+
+.eco-corps { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; margin-top: 12px; }
+.eco-form { display: flex; flex-direction: column; gap: 12px; min-width: 0; }
+.eco-form .form-field { margin: 0; }
+.eco-form textarea.form-input { resize: vertical; line-height: 1.5; }
+.eco-aide { display: block; margin-top: 4px; color: var(--text-muted); font-size: 12px; line-height: 1.4; }
+
+/* Le tableau n'est pas éditable : on le dit à l'endroit où il s'insérera, plutôt que de laisser
+   chercher pourquoi il n'y a pas de champ pour lui. */
+.eco-fige {
+  padding: 10px 12px; border-radius: 10px; font-size: 12.5px; line-height: 1.45;
+  color: var(--text-muted); background: color-mix(in srgb, var(--border) 28%, transparent);
+  border: 1px dashed var(--border);
+}
+
+.eco-pj { display: flex; align-items: center; gap: 8px; padding: 6px 0; font-size: 13px; cursor: pointer; }
+.eco-pj input { width: 16px; height: 16px; flex: 0 0 auto; }
+.eco-pj small { color: var(--text-muted); }
+
+.eco-apercu { display: flex; flex-direction: column; min-width: 0; border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: #fff; }
+.eco-apercu-tete {
+  display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px; padding: 8px 12px;
+  background: var(--surface-2, #F4F6F9); border-bottom: 1px solid var(--border);
+  font-size: 12px; font-weight: 600; color: var(--text);
+}
+.eco-apercu-tete small { font-weight: 400; color: var(--text-muted); }
+.eco-apercu iframe { flex: 1; width: 100%; min-height: 380px; border: 0; background: #fff; }
+
+@media (max-width: 860px) {
+  .eco-corps { grid-template-columns: minmax(0, 1fr); }
+  .eco-apercu iframe { min-height: 280px; }
+}

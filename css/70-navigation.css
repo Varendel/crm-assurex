@@ -13,8 +13,13 @@
 .rex-bandeau, .rex-bandeau-hote { position: relative; overflow: hidden; border-radius: 20px; margin-bottom: 18px; color: #fff;
   background: radial-gradient(120% 150% at 100% 0%, rgba(0,207,255,0.26) 0%, transparent 55%), linear-gradient(135deg, #0B2458 0%, #113679 55%, #1A4A9C 100%);
   box-shadow: 0 16px 36px rgba(17,54,121,0.24); animation: dbx-entree .45s cubic-bezier(.2,.8,.2,1) both; }
-.rex-bandeau { display: flex; justify-content: space-between; align-items: flex-end; gap: 20px; flex-wrap: wrap; padding: 22px 28px; }
-.rex-bandeau-hote { padding: 22px 28px !important; }
+/* 23.09.2026 : « adapte la taille du bandeau à l'affichage ». 22 px de marge fixe, c'est confortable
+   sur un grand écran et c'est du gâchis sur un portable de 13 pouces, où le bandeau repoussait le
+   contenu utile sous la ligne de flottaison. La marge suit maintenant la largeur : de 14 px sur un
+   petit écran à 26 px sur un grand, sans palier visible. */
+.rex-bandeau { display: flex; justify-content: space-between; align-items: flex-end; gap: clamp(12px, 1.6vw, 20px);
+  flex-wrap: wrap; padding: clamp(14px, 1.9vw, 24px) clamp(16px, 2.4vw, 30px); }
+.rex-bandeau-hote { padding: clamp(14px, 1.9vw, 24px) clamp(16px, 2.4vw, 30px) !important; }
 .rex-bandeau-deco { position: absolute; inset: 0; pointer-events: none; }
 .rex-bandeau-deco::before { content: ''; position: absolute; width: 380px; height: 380px; right: -120px; top: -220px; border-radius: 50%; border: 1px solid rgba(255,255,255,0.09); }
 .rex-bandeau-deco::after { content: ''; position: absolute; width: 220px; height: 220px; left: 42%; bottom: -170px; border-radius: 50%; border: 1px solid rgba(0,207,255,0.22); }

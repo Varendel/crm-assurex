@@ -34,6 +34,35 @@ function mnuEsc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&a
 
 const MNU_LOUPE = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 4.5 4.5"/></svg>';
 const MNU_RETOUR = '<svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 12H6M11 6.5 5.5 12l5.5 5.5"/></svg>';
+const MNU_ACTUALISER = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 11a8 8 0 1 0-.6 4"/><path d="M20 4.5V11h-6"/></svg>';
+
+// ── Actualiser l'écran courant (23.09.2026) ────────────────────────────────────────────────────
+// « Un bouton refresh de la page actuelle à côté des flèches. » F5 recharge TOUTE l'application —
+// trois secondes, le menu qui se remonte, la position perdue. Ici on ne recharge que les données
+// et l'écran ouvert : les tables que le CRM garde en mémoire (clients, contrats, affaires, tâches)
+// sont relues, puis la vue est repeinte. On reste exactement où l'on est.
+async function mnuActualiser(bouton) {
+  if (bouton) { bouton.disabled = true; bouton.classList.add('tourne'); }
+  try {
+    if (typeof rechargerDonnees === 'function') await rechargerDonnees();
+    else if (typeof chargerDonnees === 'function') await chargerDonnees();
+    else {
+      // Pas de recharge globale exposée : on relit au moins les tables dont dépendent les écrans.
+      if (typeof allClients !== 'undefined') allClients = await dbGet('clients', 'select=*');
+      if (typeof allOpportunites !== 'undefined') allOpportunites = await dbGet('opportunites', 'select=*');
+      if (typeof allContrats !== 'undefined') allContrats = await dbGet('contrats', 'select=*');
+      if (typeof allRappels !== 'undefined') allRappels = await dbGet('rappels', 'select=*');
+    }
+    // La fiche ouverte doit être relue elle aussi, pas seulement la liste derrière.
+    if (typeof currentView !== 'undefined' && currentView === 'client' && typeof currentClientId !== 'undefined'
+      && currentClientId && typeof showClient === 'function') await showClient(currentClientId);
+    else if (typeof renderView === 'function') await renderView();
+    if (typeof showError === 'function') showError('✓ Écran actualisé.');
+  } catch (e) {
+    if (typeof showError === 'function') showError('Actualisation impossible : ' + (e.message || e));
+  }
+  if (bouton) { bouton.disabled = false; bouton.classList.remove('tourne'); }
+}
 
 // ── Où est-on ? ────────────────────────────────────────────────────────────────────────────────
 // La vue ouverte, retrouvée dans SECTIONS. Les fiches (client, rappel…) n'ont pas d'entrée de
@@ -101,6 +130,8 @@ function mnuPoserBarre() {
         <div class="rex-nav-fleches" role="group" aria-label="Se déplacer">
           <button type="button" class="rex-nav-btn" id="rex-retour" onclick="goBack()" disabled>${MNU_RETOUR}<span class="rex-nav-txt">Précédent</span></button>
           <button type="button" class="rex-nav-btn rex-nav-monter" id="rex-monter" onclick="navMonter()" hidden></button>
+          <button type="button" class="rex-nav-btn rex-nav-refaire" id="rex-refaire" onclick="mnuActualiser(this)"
+            title="Recharger les données de cet écran" aria-label="Actualiser">${MNU_ACTUALISER}</button>
         </div>
         <nav class="rex-fil" id="rex-fil" aria-label="Vous êtes ici"></nav>
       </div>

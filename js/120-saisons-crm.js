@@ -288,6 +288,25 @@ function scrPoser() {
     @keyframes scrDescend { 0%, 100% { transform: translateY(-18px); } 50% { transform: translateY(14px); } }
     @media (max-width: 768px) { .scr-sapin, .scr-cadeaux, .scr-lune, .scr-ch2 { display: none; } }
 
+    /* ── Les bandeaux courts (23.09.2026) ────────────────────────────────────────────────────────
+       « Revois le centrage du dessin sur le bandeau du pipeline. » Ces décors ont été réglés sur le
+       bandeau du tableau de bord, qui fait deux fois la hauteur. Reportés tels quels sur le bandeau
+       d'un écran de liste — pipeline, contrats, tâches — la toile débordait, la citrouille sortait
+       par le bas et la lune se posait sur le titre. Rien n'était centré parce que rien n'avait été
+       pensé pour cette hauteur-là.
+       On ne déplace pas chaque élément à la main : on les remet À L'ÉCHELLE du bandeau, en partant
+       de ses bords plutôt que de coordonnées absolues. */
+    :is(.rex-bandeau, .rex-bandeau-hote) .scr-coin { width: 56px; height: 56px; opacity: .22; }
+    :is(.rex-bandeau, .rex-bandeau-hote) .scr-c1 { width: 24px; left: 14px; bottom: 8px; }
+    :is(.rex-bandeau, .rex-bandeau-hote) .scr-f1 { width: 20px; left: auto; right: 30%; top: 16%; }
+    :is(.rex-bandeau, .rex-bandeau-hote) .scr-lune { right: 16px; top: 10px; width: 22px; }
+    :is(.rex-bandeau, .rex-bandeau-hote) .scr-chauve { width: 18px; }
+    :is(.rex-bandeau, .rex-bandeau-hote) .scr-ch1 { top: 26%; }
+    :is(.rex-bandeau, .rex-bandeau-hote) .scr-ch2 { top: 58%; width: 13px; }
+    :is(.rex-bandeau, .rex-bandeau-hote) .scr-sapin { width: 34px; }
+    :is(.rex-bandeau, .rex-bandeau-hote) .scr-cadeaux { width: 40px; }
+    :is(.rex-bandeau, .rex-bandeau-hote) .scr-boule { width: 18px; }
+
     /* Pâques */
     .scr-fanions { position: absolute; left: 0; top: 0; }
     .scr-panier, .scr-lapin, .scr-oeuf, .scr-tulipe { position: absolute; }

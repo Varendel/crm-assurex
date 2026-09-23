@@ -41,6 +41,13 @@
 .rex-nav-btn:disabled { cursor: default; color: var(--text-dim); }
 .rex-nav-btn:disabled svg { color: var(--text-dim); }
 .rex-nav-btn[hidden] { display: none; }
+/* Actualiser : carré, sans libellé — il tient dans la même barre que les flèches sans la rallonger.
+   L'icône tourne pendant la relecture : sur une opération d'une seconde, c'est le seul retour
+   qui dit que quelque chose se passe. */
+.rex-nav-refaire { min-width: 34px; padding: 0; justify-content: center; }
+.rex-nav-refaire.tourne svg { animation: rexTourne .8s linear infinite; }
+@keyframes rexTourne { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .rex-nav-refaire.tourne svg { animation: none; opacity: .5; } }
 .rex-nav-txt { max-width: 150px; overflow: hidden; text-overflow: ellipsis; }
 /* Écran moyen : la flèche ↑ nomme déjà la rubrique et le bandeau le titre de l'écran — le fil
    d'Ariane cède sa place aux deux flèches plutôt que de tout tronquer. */

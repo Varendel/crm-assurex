@@ -32,12 +32,41 @@ function otaLire(file) {
     if (!r.ok || d.error) throw new Error(d.error || 'lecture impossible');
     let prime = otaNombre(d.prime_annuelle);
     if (!prime && otaNombre(d.prime_mensuelle)) prime = Math.round(otaNombre(d.prime_mensuelle) * 12 * 100) / 100;
-    if (!prime && Array.isArray(d.lignes_prime)) { const s = d.lignes_prime.reduce((a, l) => a + (otaNombre(l && (l.prime_annuelle ?? l.prime ?? l.montant)) || 0), 0); if (s > 0) prime = Math.round(s * 100) / 100; }
-    return { prime, compagnie: d.compagnie || null, produit: d.produit || null, debut: d.date_debut || null, franchise: d.franchise || null };
+    // 23.09.2026 : l'addition des lignes de prime est juste pour une POLICE (RC + vol + casco),
+    // fausse pour une OFFRE à variantes, où elle additionnerait les variantes entre elles. On ne
+    // la garde donc que s'il n'y a qu'une seule ligne.
+    if (!prime && Array.isArray(d.lignes_prime) && d.lignes_prime.length === 1) {
+      prime = otaNombre(d.lignes_prime[0] && (d.lignes_prime[0].prime_annuelle ?? d.lignes_prime[0].prime ?? d.lignes_prime[0].montant));
+    }
+    return { prime, compagnie: d.compagnie || null, produit: d.produit || null, debut: d.date_debut || null, franchise: d.franchise || null, nom: file.name };
   })().catch(e => { console.warn('Lecture offre', e); return null; });
   _ota.set(file, p);
   return p;
 }
+
+// ── Le garde-fou des variantes (23.09.2026) ──────────────────────────────────────────────────────
+// « Rex détecte deux fois le montant faux et met le même que celle à 5000 CHF de franchise. »
+// Une offre AXA existe souvent en plusieurs variantes de franchise : même numéro d'offre, même
+// mise en page, seules la franchise et la prime changent. Rien, dans la lecture, ne relie une prime
+// à une franchise — et le même montant peut donc atterrir sur deux offres qui devaient différer.
+// D'où cette vérification : si le montant lu est DÉJÀ la prime d'une autre offre de la même
+// demande, on ne l'écrit pas et on le signale. Mieux vaut un champ vide qu'un chiffre faux.
+function otaDoublon(entrees, idx, prime) {
+  if (!Array.isArray(entrees) || !prime) return null;
+  const jumelle = entrees.find((x, i) => i !== idx && otaNombre(x && x.prime) === prime);
+  return jumelle ? (jumelle.compagnie || 'une autre offre') : null;
+}
+
+// Le contexte de la fenêtre « Offre reçue » : de quelle demande et de quelle ligne elle parle.
+// opSaisirOffre (js/25) le connaît, la fenêtre ne le portait nulle part.
+(function otaContexte() {
+  if (typeof opSaisirOffre !== 'function') return;
+  const origine = opSaisirOffre;
+  window.opSaisirOffre = function (oppId, demandeId, idx) {
+    window._otaCtx = { oppId, demandeId, idx };
+    return origine.apply(this, arguments);
+  };
+})();
 
 // ── Fenêtre « Offre reçue » : pré-remplissage dès le choix du PDF ─────────────────────────────────
 document.addEventListener('change', async (ev) => {
@@ -52,6 +81,16 @@ document.addEventListener('change', async (ev) => {
   if (!document.getElementById('of-fichier')) return;   // fenêtre fermée entre-temps
   if (!d || (!d.prime && !d.compagnie)) { st.className = 'ota-statut ota-rien'; st.textContent = 'REX n’a pas reconnu le tarif — saisis la prime à la main.'; return; }
   const remplir = (id, v) => { const el = document.getElementById(id); if (el && v && !el.value.trim()) { el.value = v; el.classList.add('ota-rempli'); return true; } return false; };
+  // Déjà la prime d'une autre offre de la même demande ? On ne la recopie pas : deux variantes de
+  // franchise n'ont pas la même prime, et le champ pré-rempli ne se distingue plus d'une saisie.
+  const ctx = window._otaCtx;
+  const dem = ctx && ctx.demandeId && window._opDemandes && (window._opDemandes[ctx.oppId] || []).find(x => x.id === ctx.demandeId);
+  const jumelle = dem ? otaDoublon(dem.compagnies_envoi, ctx.idx, d.prime) : null;
+  if (jumelle) {
+    st.className = 'ota-statut ota-rien';
+    st.textContent = `⚠️ REX a lu CHF ${fmtCHF(d.prime)}/an — c'est déjà la prime de l'offre ${jumelle}. Sur une offre à variantes, il relit souvent le même bloc : saisis la prime à la main.`;
+    return;
+  }
   const faits = [];
   if (remplir('of-prime', d.prime ? String(d.prime).replace('.', ',') : '')) faits.push(`prime CHF ${fmtCHF(d.prime)}/an`);
   if (remplir('of-compagnie', d.compagnie ? (typeof normaliserCompagnie === 'function' ? normaliserCompagnie(d.compagnie) : d.compagnie) : '')) faits.push(d.compagnie);
@@ -80,7 +119,16 @@ document.addEventListener('change', async (ev) => {
       const dem = Array.isArray(rows) && rows[0];
       const e = dem && (dem.compagnies_envoi || [])[idx];
       if (!e || otaNombre(e.prime)) return ok;
-      const entrees = dem.compagnies_envoi.map((x, i) => i === idx ? { ...x, prime: d.prime, prime_auto: true } : x);
+      // Même garde-fou qu'à la saisie : on n'inscrit pas une prime déjà portée par une autre offre.
+      const jumelle = otaDoublon(dem.compagnies_envoi, idx, d.prime);
+      if (jumelle) {
+        if (dem.opportunite_id && typeof ajouterLigneHistoriqueOpportunite === 'function')
+          await ajouterLigneHistoriqueOpportunite(dem.opportunite_id, `⚠️ REX a lu CHF ${fmtCHF(d.prime)}/an sur l’offre ${e.compagnie || ''} — c’est déjà la prime de l’offre ${jumelle}, donc non inscrite : à saisir à la main.`);
+        showError(`⚠️ Offre archivée — REX a lu CHF ${fmtCHF(d.prime)}/an, déjà la prime de l’offre ${jumelle} : saisis la prime à la main.`);
+        return ok;
+      }
+      // prime_source : le fichier d'où vient le montant, pour retrouver l'origine d'un chiffre faux.
+      const entrees = dem.compagnies_envoi.map((x, i) => i === idx ? { ...x, prime: d.prime, prime_auto: true, prime_source: d.nom || null } : x);
       const r = await dbPatch('demandes_offre', demandeOffreId, { compagnies_envoi: entrees });
       if (r && r.error) return ok;
       const liste = dem.opportunite_id && window._opDemandes && window._opDemandes[dem.opportunite_id];

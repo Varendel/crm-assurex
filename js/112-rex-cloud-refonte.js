@@ -216,6 +216,42 @@ function rcConseillerPied() {
   </section>`;
 }
 
+// ── Rex, petit assistant sur son nuage (23.09.2026) ────────────────────────────────────────────
+// « Est-ce qu'on pourrait le faire se balader sur son nuage et dire demandez-moi ? En gros le
+// transformer en mini assistant. Petites phases de bouge et immobilisations. »
+//
+// L'emblème était une image fixe. Il devient un bouton : le nuage dérive doucement puis s'immobilise
+// — l'animation passe l'essentiel de son cycle à l'arrêt, c'est ce qui la rend vivante plutôt
+// qu'agitée — et une bulle apparaît de temps en temps, quelques secondes, avec une phrase qui
+// tourne. Un clic mène au conseiller. La bulle se tait si le système demande moins d'animations.
+const RC_PHRASES = [
+  'Demandez-moi !',
+  'Une question sur vos contrats ?',
+  'Besoin d’une attestation ?',
+  'Un sinistre à annoncer ?',
+  'Je transmets à votre conseiller.',
+];
+
+function rcAssistantClic() {
+  if (typeof ecAllerOnglet === 'function') ecAllerOnglet('conseiller');
+}
+
+function rcAssistantVivre() {
+  const b = document.getElementById('rc-bulle');
+  if (!b || b._vit) return;
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  b._vit = true;
+  let i = Math.floor(Math.random() * RC_PHRASES.length);
+  const parler = () => {
+    if (!document.body.contains(b)) return;       // la vue a changé : on s'arrête là
+    b.textContent = RC_PHRASES[i++ % RC_PHRASES.length];
+    b.classList.add('visible');
+    setTimeout(() => b.classList.remove('visible'), 4200);
+    setTimeout(parler, 13000 + Math.random() * 7000);
+  };
+  setTimeout(parler, 1600);
+}
+
 // ── La page ────────────────────────────────────────────────────────────────────────────────────
 function rcVue() {
   const E = window._ec || {};
@@ -238,6 +274,7 @@ function rcVue() {
     : onglet === 'demandes' ? (typeof ecOngletDemandes === 'function' ? ecOngletDemandes() : '')
     : (typeof ecOngletConseiller === 'function' ? ecOngletConseiller() : '');
 
+  setTimeout(rcAssistantVivre, 0);
   const initiales = (nom || '?').split(/\s+/).filter(Boolean).map(m => m[0]).join('').slice(0, 2).toUpperCase();
   const prenom = c ? (c.prenom || c.nom || '') : '';
   return `<div class="rc" data-lgp-non>
@@ -258,7 +295,11 @@ function rcVue() {
         <h1>${rcEsc(nom || 'Bienvenue')}</h1>
         ${ident}
       </div>
-      <img class="rc-tete-embleme" src="assets/logos/rex/logo-cloud/embleme.png" alt="" aria-hidden="true"/>
+      <button type="button" class="rc-assistant" onclick="rcAssistantClic()"
+        aria-label="Demandez-moi — écrire à mon conseiller">
+        <span class="rc-bulle" id="rc-bulle" aria-hidden="true">Demandez-moi !</span>
+        <img class="rc-tete-embleme" src="assets/logos/rex/logo-cloud/embleme.png" alt="" aria-hidden="true"/>
+      </button>
     </section>
 
     <nav class="rc-onglets" role="tablist" aria-label="Sections de mon espace">

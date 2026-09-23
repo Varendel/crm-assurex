@@ -43,9 +43,49 @@ body.mode-espace-client #main-content { padding: 0 !important; }
 .rc-tete { padding: 26px 0 8px; }
 .rc-surtitre { display: block; font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--text-muted); }
 .rc-tete h1 { margin: 6px 0 4px; font-size: clamp(24px, 6vw, 32px); font-weight: 600; letter-spacing: -.02em; line-height: 1.15; text-wrap: balance; }
-.rc-tete .ec-ident { justify-content: center; margin: 0; }
+/* 23.09.2026 : la ligne « Né le … · 34 ans » vient de la fiche client, où elle est posée sur le
+   bandeau bleu — donc écrite en blanc. Ici le fond est clair : elle était invisible. */
+.rc-tete .ec-ident { justify-content: center; margin: 0; color: var(--text-muted); }
+.rc-tete .ec-ident em { color: var(--text-muted); }
+.rc-tete .ec-ident .ec-ident-sep { color: color-mix(in srgb, var(--text-muted) 50%, transparent); }
 /* L'emblème REX CLOUD (nuage + Rex + classeurs, une seule image) : sur PC seulement, à droite du nom. */
 .rc-tete-embleme { display: none; }
+.rc-assistant { display: none; }
+
+/* ── Rex, petit assistant sur son nuage ──────────────────────────────────────────────────────────
+   Le nuage dérive, s'arrête, repart : les paliers de l'animation durent plus longtemps que les
+   déplacements, sinon il s'agite au lieu de flotter. La bulle ne sort que quelques secondes. */
+@keyframes rcFlotte {
+  0%, 24%   { transform: translate(0, 0) rotate(0deg); }
+  32%       { transform: translate(-5px, -8px) rotate(-1.4deg); }
+  39%       { transform: translate(3px, -11px) rotate(.9deg); }
+  46%, 63%  { transform: translate(0, -5px) rotate(0deg); }
+  71%       { transform: translate(7px, -9px) rotate(1.3deg); }
+  79%       { transform: translate(2px, -3px) rotate(-.6deg); }
+  87%, 100% { transform: translate(0, 0) rotate(0deg); }
+}
+@keyframes rcBulleEntre {
+  0%   { opacity: 0; transform: translate(-50%, 6px) scale(.92); }
+  100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+.rc-bulle {
+  position: absolute; left: 50%; bottom: calc(100% - 10px); transform: translate(-50%, 6px) scale(.92);
+  max-width: 220px; width: max-content; padding: 9px 13px; border-radius: 14px;
+  background: var(--surface); border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  box-shadow: 0 10px 26px rgba(0, 40, 90, .14);
+  font-size: 13px; font-weight: 600; line-height: 1.3; color: var(--text); text-align: center;
+  opacity: 0; pointer-events: none; transition: opacity .35s ease, transform .35s ease;
+}
+.rc-bulle::after {
+  content: ''; position: absolute; top: 100%; left: 50%; transform: translateX(-50%);
+  border: 7px solid transparent; border-top-color: var(--surface);
+  filter: drop-shadow(0 1px 0 color-mix(in srgb, var(--border) 80%, transparent));
+}
+.rc-bulle.visible { opacity: 1; transform: translate(-50%, 0) scale(1); animation: rcBulleEntre .35s ease both; }
+@media (prefers-reduced-motion: reduce) {
+  .rc-assistant img { animation: none; }
+  .rc-bulle { display: none; }
+}
 
 /* ── Les onglets : une barre défilante, centrée quand elle tient ───────────────────────────────── */
 .rc-onglets {
@@ -96,8 +136,12 @@ body.mode-espace-client #main-content { padding: 0 !important; }
 /* ── Mes couvertures ──────────────────────────────────────────────────────────────────────────── */
 .rc-domaines { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
 .rc-domaine { border-radius: 14px; background: var(--surface-alt); border: 1px solid color-mix(in srgb, var(--border) 70%, transparent); overflow: hidden; }
+/* 23.09.2026 : en flex, un libellé long (« Ménage et habitation ») poussait le montant hors de la
+   carte, qui le coupait (« CHF 312/a »). En grille, la colonne du montant prend sa place d'abord :
+   c'est le titre qui se replie, jamais le prix. */
 .rc-domaine-tete {
-  display: flex; align-items: center; gap: 10px; width: 100%; padding: 12px 14px; cursor: pointer;
+  display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center;
+  column-gap: 10px; width: 100%; padding: 12px 14px; cursor: pointer;
   border: 0; background: none; color: var(--text); font: inherit; text-align: left;
 }
 .rc-domaine-tete:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
@@ -105,7 +149,7 @@ body.mode-espace-client #main-content { padding: 0 !important; }
   width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
   background: color-mix(in srgb, var(--rc-vert) 14%, transparent); color: var(--rc-vert);
 }
-.rc-domaine-tete b { flex: 1; font-size: 15px; font-weight: 600; }
+.rc-domaine-tete b { min-width: 0; font-size: 15px; font-weight: 600; line-height: 1.25; }
 .rc-domaine-prime { font-size: 13px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .rc-domaine-prime small { font-weight: 400; color: var(--text-muted); }
 .rc-contrats { list-style: none; margin: 0; padding: 0 14px 10px; display: flex; flex-direction: column; }
@@ -249,8 +293,13 @@ html:not([data-theme="clair"]) .rc-signature img { filter: brightness(0) invert(
   .rc-marque-logo { height: 46px; }
   .rc-tete { padding: 20px 0 6px; text-align: left; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
   .rc-tete-txt { min-width: 0; }
-  .rc-tete-embleme { display: block; flex-shrink: 0; height: 128px; width: auto;
-    filter: drop-shadow(0 10px 22px rgba(0, 40, 90, .16)); user-select: none; pointer-events: none; }
+  .rc-assistant { display: block; position: relative; flex-shrink: 0; border: 0; background: none;
+    padding: 0; cursor: pointer; font: inherit; }
+  .rc-tete-embleme { display: block; height: 128px; width: auto;
+    filter: drop-shadow(0 10px 22px rgba(0, 40, 90, .16)); user-select: none;
+    animation: rcFlotte 15s ease-in-out infinite; transition: transform .25s ease; }
+  .rc-assistant:hover .rc-tete-embleme, .rc-assistant:focus-visible .rc-tete-embleme { animation-play-state: paused; transform: scale(1.06); }
+  .rc-assistant:hover .rc-bulle, .rc-assistant:focus-visible .rc-bulle { opacity: 1; transform: translate(-50%, 0) scale(1); }
   .rc-tete .ec-ident { justify-content: flex-start; }
   .rc-onglets { justify-content: flex-start; margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; }
   .rc-grille { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 18px; align-items: start; }

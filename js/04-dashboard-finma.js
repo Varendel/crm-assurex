@@ -1043,6 +1043,22 @@ function renderTousContrats() {
   const totalPrimes = filtered.reduce((s,ct) => s + Number(ct.prime_annuelle||0), 0);
   const sanAgent = filtered.filter(ct => !ct.apporteur_id).length;
 
+  // Ce que la sélection représente en commissions (23.09.2026) : « quand je mets les filtres,
+  // savoir combien ça représente en commissions ». Les trois cartes par entité plus bas ignorent
+  // volontairement le filtre d'entité, pour pouvoir comparer OZ / Assurex côte à côte ; celle-ci
+  // suit EXACTEMENT la liste affichée, filtres de dates compris. Montant retenu par ligne :
+  // montant_final s'il est connu, sinon montant_estime. Annulées et extournées exclues : elles ne
+  // rapporteront rien.
+  const mtComm = c => Number(c.montant_final != null ? c.montant_final : (c.montant_estime || 0));
+  const commVivante = c => !['annulée', 'annulé', 'extourné'].includes(c.statut);
+  const idsFiltres = new Set(filtered.map(ct => ct.id));
+  const commFiltrees = allCommissionsAttente.filter(c => idsFiltres.has(c.contrat_id) && commVivante(c));
+  const commTotal = commFiltrees.reduce((s, c) => s + mtComm(c), 0);
+  const commEncaissees = commFiltrees.filter(c => c.statut === 'reçue' || c.statut === 'versé_oz').reduce((s, c) => s + mtComm(c), 0);
+  const commAttente = commTotal - commEncaissees;
+  const sansComm = filtered.length - new Set(commFiltrees.map(c => c.contrat_id)).size;
+  const chf = v => Math.round(v).toLocaleString();
+
   // Répartition "qui rapporte quoi" par entité : calculée sur les contrats filtrés par TOUS les
   // critères sauf l'entité elle-même (pour pouvoir comparer OZ / Assurex / non-marqués côte à
   // côte même quand aucun filtre entité n'est actif). Le montant de commission retenu par contrat
@@ -1056,6 +1072,10 @@ function renderTousContrats() {
     if (statutF && ct.statut !== statutF) return false;
     if (commF === 'oui' && ct.commissionne === false) return false;
     if (commF === 'non' && ct.commissionne !== false) return false;
+    // 23.09.2026 : les dates étaient oubliées ici, alors que la liste, elle, en tenait compte —
+    // les commissions par entité ne correspondaient donc pas aux contrats affichés.
+    if (dateDebutF && (!ct.date_debut || ct.date_debut < dateDebutF)) return false;
+    if (dateFinF && (!ct.date_debut || ct.date_debut > dateFinF)) return false;
     if (search) {
       const cl = allClients.find(c => c.id === ct.client_id);
       const nom = cl ? (estEntreprise(cl) ? cl.nom : `${cl.prenom} ${cl.nom}`) : '';
@@ -1079,6 +1099,9 @@ function renderTousContrats() {
   document.getElementById('tc-stats').innerHTML = `
     ${statCard('Contrats', filtered.length, '#38bdf8')}
     ${statCard('Primes/an', 'CHF ' + Math.round(totalPrimes).toLocaleString(), '#f59e0b')}
+    ${estRoleRH() ? '' : statCard('Commissions de la sélection', 'CHF ' + chf(commTotal), '#22c55e',
+      `${chf(commEncaissees)} encaissées · ${chf(commAttente)} en attente`)}
+    ${!estRoleRH() && sansComm > 0 ? statCard('Contrats sans commission', sansComm, '#64748b', 'aucune ligne rattachée') : ''}
     ${sanAgent > 0 ? statCard('Sans apporteur', sanAgent, '#64748b', 'toi seul') : ''}
     ${statCard(OZ_MINI_LOGO + ' OZ — commissions', 'CHF ' + Math.round(totOz.comm).toLocaleString(), '#38bdf8', totOz.count + ' contrat(s)')}
     ${statCard(COFIDEX_MINI_LOGO + ' Assurex/EX — commissions', 'CHF ' + Math.round(totAssurex.comm).toLocaleString(), '#a78bfa', totAssurex.count + ' contrat(s)')}

@@ -153,20 +153,28 @@ function dvPoserBoutons() {
 (function dvBrancher() {
   const st = document.createElement('style');
   st.textContent = `
-    /* Des boutons qui se voient. Même erreur que sur l'étiquette de version : fond transparent et
-       couleur héritée d'un gris déjà atténué, donc illisibles. Ici : fond plein, texte contrasté,
-       chacun sa couleur — le bleu ouvre à côté, le cyan coupe l'écran. */
-    .dv-boutons { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
-    .dv-boutons button { width: 100%; padding: 9px 10px; border: 0; border-radius: 9px;
-      font-size: 12px; font-weight: 700; letter-spacing: .01em; cursor: pointer;
-      display: flex; align-items: center; justify-content: center; gap: 6px;
-      box-shadow: 0 2px 6px rgba(0, 20, 55, .25); transition: filter .18s ease, transform .1s ease; }
-    .dv-boutons button:hover { filter: brightness(1.12); }
+    /* Affinés et translucides, avec une lueur discrète. Le fond plein de la version précédente se
+       lisait, mais il pesait autant qu'une entrée de menu pour deux fonctions qu'on emploie
+       rarement. Ici : une plaque de verre teintée, un liseré clair, et une lueur de la couleur de
+       la fonction — visible de près, invisible de loin. Le TEXTE, lui, reste plein et clair :
+       c'est la plaque qui est translucide, pas les lettres. */
+    .dv-boutons { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
+    .dv-boutons button { width: 100%; padding: 6px 9px; border-radius: 8px; cursor: pointer;
+      font-size: 10.5px; font-weight: 600; letter-spacing: .02em;
+      display: flex; align-items: center; justify-content: center; gap: 5px;
+      -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+      transition: background .2s ease, box-shadow .2s ease, transform .1s ease; }
+    .dv-boutons button:hover { transform: translateY(-1px); }
     .dv-boutons button:active { transform: translateY(1px); }
-    .dv-boutons button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
-    .dv-b-fenetre { background: #2563EB; color: #FFFFFF; }
-    .dv-b-volets { background: #00CFFF; color: #04121F; }
-    body.dv-actif .dv-b-volets { background: #F59E0B; color: #1F1503; }
+    .dv-boutons button:focus-visible { outline: 2px solid rgba(255, 255, 255, .75); outline-offset: 2px; }
+    .dv-b-fenetre { background: rgba(96, 165, 250, .16); border: 1px solid rgba(147, 197, 253, .38);
+      color: #DCEAFE; box-shadow: 0 0 10px rgba(96, 165, 250, .20), inset 0 1px 0 rgba(255, 255, 255, .14); }
+    .dv-b-fenetre:hover { background: rgba(96, 165, 250, .28); box-shadow: 0 0 16px rgba(96, 165, 250, .38), inset 0 1px 0 rgba(255, 255, 255, .2); }
+    .dv-b-volets { background: rgba(0, 207, 255, .14); border: 1px solid rgba(0, 207, 255, .40);
+      color: #CFF4FF; box-shadow: 0 0 10px rgba(0, 207, 255, .22), inset 0 1px 0 rgba(255, 255, 255, .14); }
+    .dv-b-volets:hover { background: rgba(0, 207, 255, .26); box-shadow: 0 0 16px rgba(0, 207, 255, .42), inset 0 1px 0 rgba(255, 255, 255, .2); }
+    body.dv-actif .dv-b-volets { background: rgba(245, 158, 11, .20); border-color: rgba(251, 191, 36, .52);
+      color: #FFE6B8; box-shadow: 0 0 12px rgba(245, 158, 11, .34), inset 0 1px 0 rgba(255, 255, 255, .16); }
     /* L'application est ramenée à gauche, le volet occupe le reste. On agit sur #app plutôt que sur
        body : le fond, les modales et les bandeaux gardent la pleine largeur. */
     body.dv-actif #app { width: var(--dv-part, 50%); max-width: var(--dv-part, 50%); overflow: hidden; }

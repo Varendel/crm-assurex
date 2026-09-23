@@ -95,17 +95,20 @@ async function verRecharger(bouton) {
 (function verBrancher() {
   const st = document.createElement('style');
   st.textContent = `
-    /* Troisième essai, et cette fois sans rien déduire. Le color-mix donnait du gris sur gris ;
-       hériter de la barre latérale héritait d'un gris déjà atténué, que l'opacité achevait. Une
-       pastille PLEINE, en cyan de la marque avec du texte sombre dessus : le contraste ne dépend
-       plus du thème, seulement d'elle-même. Aucune opacité — c'est elle qui tuait le texte. */
-    .crm-version { display: block; width: 100%; margin: 10px 0 0; padding: 7px 8px; border: 0; border-radius: 8px;
-      background: #00CFFF; color: #04121F; opacity: 1;
-      font-size: 12px; font-weight: 700; letter-spacing: .02em; text-align: center; cursor: pointer;
-      transition: background .2s ease; }
-    .crm-version:hover { background: #5CDFFF; }
-    .crm-version.retard { background: #F59E0B; color: #1F1503; font-weight: 700; opacity: 1; }
-    .crm-version.retard:hover { background: #FBBF24; }`;
+    /* Un filet tout en bas du menu, pas une pastille : la version est une information qu'on va
+       chercher, jamais une qu'on subit. Rouge tamisé — assez pour se distinguer du bleu du menu,
+       assez sourd pour ne pas appeler l'œil. Elle occupe toute la largeur en débordant du padding
+       du menu, d'où les marges négatives : un bandeau s'arrête aux bords, pas avant.
+       L'état « en retard » est la seule exception : lui doit se voir. */
+    .crm-version { display: block; width: calc(100% + 20px); margin: 10px -10px -18px; padding: 5px 8px;
+      border: 0; border-top: 1px solid rgba(255, 255, 255, .07);
+      background: rgba(0, 0, 0, .18); color: #C2666B;
+      font-size: 9.5px; font-weight: 600; letter-spacing: .06em; text-align: center; cursor: pointer;
+      transition: color .2s ease, background .2s ease; }
+    .crm-version:hover { color: #E38C90; background: rgba(0, 0, 0, .3); }
+    .crm-version.retard { background: #F59E0B; color: #1F1503; font-size: 11px; font-weight: 700;
+      letter-spacing: .01em; padding: 8px; border-top: 0; }
+    .crm-version.retard:hover { background: #FBBF24; color: #1F1503; }`;
   document.head.appendChild(st);
   const demarrer = () => { verPoser(); setTimeout(verControler, 4000); };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', demarrer); else demarrer();

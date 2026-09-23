@@ -95,14 +95,15 @@ async function verRecharger(bouton) {
 (function verBrancher() {
   const st = document.createElement('style');
   st.textContent = `
-    /* La couleur est HÉRITÉE de la barre latérale : quel que soit le thème, elle est par définition
-       lisible sur ce fond-là. Une couleur devinée (color-mix sur currentColor) donnait du gris sur
-       gris. L'état « en retard » est une pastille pleine : elle se lit partout. */
-    .crm-version { display: block; width: 100%; margin: 10px 0 0; padding: 6px 8px; border: 0; border-radius: 8px;
-      background: rgba(127, 127, 127, .14); color: inherit; opacity: .8;
-      font-size: 11.5px; font-weight: 600; letter-spacing: .02em; text-align: center; cursor: pointer;
-      transition: opacity .2s ease, background .2s ease; }
-    .crm-version:hover { opacity: 1; background: rgba(127, 127, 127, .26); }
+    /* Troisième essai, et cette fois sans rien déduire. Le color-mix donnait du gris sur gris ;
+       hériter de la barre latérale héritait d'un gris déjà atténué, que l'opacité achevait. Une
+       pastille PLEINE, en cyan de la marque avec du texte sombre dessus : le contraste ne dépend
+       plus du thème, seulement d'elle-même. Aucune opacité — c'est elle qui tuait le texte. */
+    .crm-version { display: block; width: 100%; margin: 10px 0 0; padding: 7px 8px; border: 0; border-radius: 8px;
+      background: #00CFFF; color: #04121F; opacity: 1;
+      font-size: 12px; font-weight: 700; letter-spacing: .02em; text-align: center; cursor: pointer;
+      transition: background .2s ease; }
+    .crm-version:hover { background: #5CDFFF; }
     .crm-version.retard { background: #F59E0B; color: #1F1503; font-weight: 700; opacity: 1; }
     .crm-version.retard:hover { background: #FBBF24; }`;
   document.head.appendChild(st);

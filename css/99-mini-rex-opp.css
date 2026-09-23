@@ -1,0 +1,61 @@
+/* ── Mini Rex sur la fiche d'affaire (23.09.2026) ───────────────────────────────────────────────
+   Même séquence que l'assistant de l'espace client (css/99-rex-cloud.css), aux deux tiers de la
+   taille et sur fond bleu. L'amplitude de la dérive est réduite d'autant : à 64 px, un déplacement
+   de 8 px qui passait inaperçu sur l'emblème devient un tremblement. */
+
+.mrx {
+  position: relative; flex: 0 0 auto; align-self: flex-end; margin-left: auto;
+  border: 0; background: none; padding: 0; cursor: pointer; line-height: 0;
+}
+.mrx img {
+  width: 64px; height: auto; display: block;
+  filter: drop-shadow(0 6px 14px rgba(0, 20, 55, .35));
+  animation: mrxFlotte 17s ease-in-out infinite;
+  transition: transform .25s ease;
+}
+.mrx:hover img, .mrx:focus-visible img { animation-play-state: paused; transform: scale(1.07); }
+.mrx:focus-visible { outline: 2px solid rgba(255, 255, 255, .8); outline-offset: 6px; border-radius: 12px; }
+
+@keyframes mrxFlotte {
+  0%, 26%   { transform: translate(0, 0) rotate(0deg); }
+  34%       { transform: translate(-3px, -5px) rotate(-1deg); }
+  41%       { transform: translate(2px, -7px) rotate(.6deg); }
+  48%, 66%  { transform: translate(0, -3px) rotate(0deg); }
+  73%       { transform: translate(4px, -6px) rotate(.9deg); }
+  81%       { transform: translate(1px, -2px) rotate(-.4deg); }
+  89%, 100% { transform: translate(0, 0) rotate(0deg); }
+}
+
+/* La bulle est blanche sur le bandeau bleu : c'est le seul endroit de la fiche où du texte sombre
+   sur fond clair se lit mieux que l'inverse. */
+.mrx-bulle {
+  position: absolute; right: 0; bottom: calc(100% + 6px); transform: translateY(6px) scale(.94);
+  width: max-content; max-width: 240px; padding: 8px 12px; border-radius: 13px;
+  background: #fff; box-shadow: 0 10px 26px rgba(0, 30, 70, .28);
+  font-size: 12.5px; font-weight: 600; line-height: 1.35; color: #0E1B33; text-align: left;
+  white-space: normal; opacity: 0; pointer-events: none;
+  transition: opacity .35s ease, transform .35s ease;
+}
+.mrx-bulle::after {
+  content: ''; position: absolute; top: 100%; right: 22px;
+  border: 7px solid transparent; border-top-color: #fff;
+}
+.mrx-bulle.visible { opacity: 1; transform: translateY(0) scale(1); }
+
+/* Cible du clic : « ce qu'il reste à faire » se signale une seconde, sinon on cherche ce qui a bougé. */
+.mrx-vise { animation: mrxVise 1.8s ease; }
+@keyframes mrxVise {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0, 207, 255, 0); }
+  30%      { box-shadow: 0 0 0 4px rgba(0, 207, 255, .45); }
+  70%      { box-shadow: 0 0 0 4px rgba(0, 207, 255, .25); }
+}
+
+@media (max-width: 720px) {
+  .mrx img { width: 46px; }
+  .mrx-bulle { max-width: 200px; font-size: 12px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mrx img { animation: none; }
+  .mrx-bulle { display: none; }
+  .mrx-vise { animation: none; }
+}

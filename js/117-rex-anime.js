@@ -423,16 +423,35 @@ function rxaSol(img) {
     if (!rd.height) return;
     const ligne = rd.top + rd.height * 151 / 170;          // la ligne de sol du dessin (viewBox 420 × 170)
     hero.style.setProperty('--rxa-sol', Math.max(8, Math.round(rh.bottom - ligne)) + 'px');
-    // 23.09.2026 : « mets la lune à la hauteur de Ctrl K ». On se cale sur la barre de recherche
-    // elle-même — hauteur de son milieu, et juste à sa droite — plutôt que sur un pourcentage qui
-    // la renvoyait derrière les boutons dès que le bandeau changeait de taille.
-    const rech = hero.querySelector('.dbx-recherche');
-    if (rech) {
-      const rr = rech.getBoundingClientRect();
-      if (rr.width > 0) {
-        hero.style.setProperty('--rxa-lune-y', Math.round(rh.bottom - (rr.top + rr.height / 2)) + 'px');
-        hero.style.setProperty('--rxa-lune-x', Math.round(rr.right - rh.left + 30) + 'px');
+    // ── La lune ──────────────────────────────────────────────────────────────────────────────────
+    // Troisième tentative, et la raison des deux premières : je lui donnais un ENDROIT (62 %, puis
+    // « 30 px à droite de la barre de recherche »), et cet endroit redevenait faux dès que le
+    // bandeau changeait de largeur ou qu'un bouton s'ajoutait — elle repassait derrière.
+    // Elle ne se place plus à un endroit : elle se place LÀ OÙ IL Y A DE LA PLACE. On mesure ce que
+    // le bandeau contient déjà (titre, barre de recherche, boutons, indicateurs) et on cherche, de
+    // droite à gauche, le premier emplacement libre à la hauteur du « Ctrl K » — la hauteur
+    // demandée. Si cette bande est pleine, on remonte tout en haut du bandeau. Recalculé à chaque
+    // redimensionnement : elle ne peut plus se retrouver cachée.
+    const lune = hero.querySelector('.rxa-lune');
+    if (lune) {
+      const T = Math.round(lune.getBoundingClientRect().width) || 84;
+      const rech = hero.querySelector('.dbx-recherche');
+      const rr = rech && rech.getBoundingClientRect();
+      const occupe = [...hero.querySelectorAll('h1, h2, h3, p, button, a, input, select, .dbx-kpi, .dbx-recherche')]
+        .map(e => e.getBoundingClientRect()).filter(r => r.width > 8 && r.height > 8);
+      const libre = (x, cy) => !occupe.some(r => x < r.right + 12 && x + T > r.left - 12
+        && cy - T / 2 < r.bottom + 8 && cy + T / 2 > r.top - 8);
+      const hauteurs = [];
+      if (rr && rr.width > 0) hauteurs.push(rr.top + rr.height / 2);   // la hauteur demandée
+      hauteurs.push(rh.top + T / 2 + 10);                              // à défaut, le haut du ciel
+      let pose = null;
+      for (const cy of hauteurs) {
+        for (let x = rh.right - 18 - T; x > rh.left + 10 && !pose; x -= 6) if (libre(x, cy)) pose = { x, cy };
+        if (pose) break;
       }
+      if (!pose) pose = { x: rh.right - 18 - T, cy: rh.top + T / 2 + 10 };
+      hero.style.setProperty('--rxa-lune-x', Math.round(pose.x - rh.left) + 'px');
+      hero.style.setProperty('--rxa-lune-b', Math.round(rh.bottom - pose.cy - T / 2) + 'px');
     }
   };
   requestAnimationFrame(caler);
@@ -505,10 +524,12 @@ function rxaPoser() {
     .rxa-horizon .rxa-etoiles { position: absolute; left: 0; right: 0; bottom: calc(var(--rxa-sol, 40px) + 60px); height: 48px;
       background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='48' viewBox='0 0 260 48'%3E%3Cg fill='%23ffffff'%3E%3Ccircle cx='18' cy='12' r='1.2' opacity='.55'/%3E%3Ccircle cx='63' cy='28' r='.9' opacity='.32'/%3E%3Ccircle cx='96' cy='7' r='1.4' opacity='.6'/%3E%3Ccircle cx='131' cy='21' r='.8' opacity='.28'/%3E%3Ccircle cx='168' cy='11' r='1.1' opacity='.48'/%3E%3Ccircle cx='199' cy='31' r='1' opacity='.36'/%3E%3Ccircle cx='232' cy='15' r='1.3' opacity='.54'/%3E%3Ccircle cx='247' cy='35' r='.8' opacity='.26'/%3E%3C/g%3E%3C/svg%3E") repeat-x left bottom / 260px 48px;
       animation: rxaScintille 7s ease-in-out infinite; }
-    /* La lune est dessinée APRÈS les collines : rien ne la couvre. Elle est posée à la hauteur du
-       milieu de la barre de recherche (le « Ctrl K »), juste à sa droite — mesuré dans
-       --rxa-lune-x / --rxa-lune-y, car en pourcentage elle finissait derrière les boutons. */
-    .rxa-horizon .rxa-lune { position: absolute; left: var(--rxa-lune-x, 62%); bottom: calc(var(--rxa-lune-y, 150px) - 42px); width: 84px; height: 84px;
+    /* La lune est dessinée APRÈS les collines : rien ne la couvre. Sa position vient entièrement de
+       la mesure faite dans rxaSol (--rxa-lune-x / --rxa-lune-b) : le premier emplacement libre à la
+       hauteur du « Ctrl K ». Plus aucun pourcentage ni décalage fixe — c'est ce qui la renvoyait
+       derrière les boutons à chaque changement de largeur. */
+    .rxa-horizon .rxa-lune { position: absolute; left: var(--rxa-lune-x, 62%); bottom: var(--rxa-lune-b, 150px);
+      width: var(--rxa-lune-t, 84px); height: var(--rxa-lune-t, 84px);
       animation: rxaLuneLuit 9s ease-in-out infinite; }
     .rxa-lune-corps { filter: drop-shadow(0 0 5px rgba(190, 225, 255, .6)); }
     @keyframes rxaScintille { 0%, 100% { opacity: .72; } 50% { opacity: 1; } }
@@ -517,9 +538,9 @@ function rxaPoser() {
     @media (max-width: 768px) {
       .rxa-horizon .rxa-collines { height: 58px; background-size: 190px 40px, 290px 58px; }
       .rxa-horizon .rxa-etoiles { bottom: calc(var(--rxa-sol, 40px) + 38px); height: 32px; background-size: 175px 32px; }
-      /* Sur téléphone le haut du bandeau porte la date et le titre : la lune redescend à gauche,
-         au-dessus des collines, dans la bande laissée libre par Rex. */
-      .rxa-horizon .rxa-lune { width: 54px; height: 54px; left: 6%; right: auto; bottom: calc(var(--rxa-sol, 40px) + 46px); } }
+      /* Sur téléphone elle est simplement plus petite : l'emplacement reste mesuré, comme sur PC
+         (avant, un « left: 6% » écrit en dur reprenait le dessus et la remettait sous le titre). */
+      .rxa-horizon .rxa-lune { --rxa-lune-t: 54px; } }
     /* Sur téléphone la barre de recherche prend toute la largeur : la mesure ne sert pas. */
     /* 23.09.2026 : « il y a un trait net d'arrêt de paysage ». Le décor mesure 420 px et se coupait
        net sur son bord gauche — brume, montagne et sol s'arrêtaient d'un coup au milieu du bandeau.

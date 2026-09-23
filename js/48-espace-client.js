@@ -27,17 +27,11 @@ function ecSousDomaineClient() {
     if (!/[?&]espace=client/.test(location.search) && !ecSousDomaineClient()) return;
     ecModeCloud(true);
     document.title = `${EC_MARQUE} — Espace client`;
-    // Logo EX.GROUP : on reprend celui du code (js/15) plutôt qu'une copie du tracé
     // Le lien « Vous êtes conseiller ? Ouvrir REX CRM » est retiré (21.09.2026, demande de
     // Jonathan) : un client n'a pas à voir l'entrée du CRM. Le conseiller passe par l'adresse
     // sans ?espace=client ; le sous-domaine dédié séparera bientôt les deux entièrement.
-    const ex = document.querySelector('.cloud-signature .cloud-ex');
-    if (ex && typeof LOGO_EXGROUPE_SVG !== 'undefined') {
-      const span = document.createElement('span');
-      span.className = 'cloud-ex';
-      span.innerHTML = LOGO_EXGROUPE_SVG;
-      ex.replaceWith(span);
-    }
+    // 23.09.2026 : la signature n'est plus remplacée par le logo EX.GROUP complet — l'écran de
+    // connexion porte « by EX. » et rien d'autre (demande de Jonathan).
   };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', appliquer); else appliquer();
 })();

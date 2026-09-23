@@ -689,6 +689,22 @@ async function opEnregistrerOffre(oppId, demandeId, idx) {
   if (statut !== 'reçue') { entree.retenue = false; if (statut === 'envoyée') entree.recue_le = null; }
   if (idx !== null) entrees[idx] = entree; else entrees.push(entree);
 
+  // 23.09.2026 — PERTE D'OFFRE CORRIGÉE. Le tableau partait de window._opDemandes, c'est-à-dire de
+  // la mémoire de la page, et il était réécrit EN ENTIER. Une offre ajoutée depuis ailleurs (un
+  // autre écran, un autre onglet, le dépôt automatique de js/137) n'y figurait pas : l'enregistrement
+  // suivant l'effaçait en silence. Cas vécu : deux offres AXA d'Allocia Palanca, il n'en restait
+  // qu'une. On relit donc la ligne juste avant d'écrire, et on ne remplace que l'entrée touchée.
+  if (d) {
+    try {
+      const frais = await dbGet('demandes_offre', `id=eq.${d.id}&select=compagnies_envoi`);
+      const vraies = Array.isArray(frais) && frais[0] && Array.isArray(frais[0].compagnies_envoi) ? frais[0].compagnies_envoi : null;
+      if (vraies && vraies.length >= entrees.length - 1) {
+        entrees = [...vraies];
+        if (idx !== null && entrees[idx]) entrees[idx] = entree; else entrees.push(entree);
+      }
+    } catch (e) { /* relecture impossible : on garde le tableau en mémoire */ }
+  }
+
   let r;
   if (d) r = await dbPatch('demandes_offre', d.id, { compagnies_envoi: entrees });
   else r = await dbPost('demandes_offre', { opportunite_id: oppId, client_id: o?.client_id || null, prospect_nom: o?.client_id ? null : (o?.prospect_nom || null), agent_id: opMonAgentId(o), donnees: {}, compagnies_envoi: entrees });

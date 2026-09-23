@@ -136,14 +136,20 @@ body.mode-espace-client #main-content { padding: 0 !important; }
 /* ── Mes couvertures ──────────────────────────────────────────────────────────────────────────── */
 .rc-domaines { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 10px; }
 .rc-domaine { border-radius: 14px; background: var(--surface-alt); border: 1px solid color-mix(in srgb, var(--border) 70%, transparent); overflow: hidden; }
-/* 23.09.2026 : en flex, un libellé long (« Ménage et habitation ») poussait le montant hors de la
-   carte, qui le coupait (« CHF 312/a »). En grille, la colonne du montant prend sa place d'abord :
-   c'est le titre qui se replie, jamais le prix. */
+/* 23.09.2026 : le libellé et le montant se disputaient une seule ligne — « Ménage et habitation »
+   poussait le prix hors de la carte, qui le coupait, et sur les cartes étroites les deux finissaient
+   collés (« VéhiculesCHF 2 124/an »). Le montant passe donc SOUS le titre : deux lignes, jamais de
+   collision, quelle que soit la largeur. */
 .rc-domaine-tete {
-  display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center;
-  column-gap: 10px; width: 100%; padding: 12px 14px; cursor: pointer;
+  display: grid; grid-template-columns: 34px minmax(0, 1fr);
+  grid-template-areas: "ico titre" "ico prix";
+  align-items: center; column-gap: 10px; row-gap: 1px;
+  width: 100%; padding: 12px 14px; cursor: pointer;
   border: 0; background: none; color: var(--text); font: inherit; text-align: left;
 }
+.rc-domaine-ico { grid-area: ico; }
+.rc-domaine-tete b { grid-area: titre; }
+.rc-domaine-prime { grid-area: prix; }
 .rc-domaine-tete:hover { background: color-mix(in srgb, var(--accent) 7%, transparent); }
 .rc-domaine-ico {
   width: 34px; height: 34px; border-radius: 10px; flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;

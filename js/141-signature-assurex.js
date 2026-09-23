@@ -28,11 +28,12 @@ function sigAssurexHtml(agent) {
   const nom = p.nom || [agent && agent.prenom, agent && agent.nom].filter(Boolean).join(' ') || '';
   const tel = (agent && agent.tel) || p.tel;
   const courriel = (agent && agent.email) || e;
-  const F = 'font-family:Aptos,Calibri,Arial,sans-serif;color:#0E1B33';
-  const ligne = (t, style = '') => `<p style="margin:0;font-size:11pt;${F};${style}">${t}</p>`;
+  // 23.09.2026 : meme reglage que le corps des courriels (SIG_POLICE, js/138) — Segoe UI, bleu fonce.
+  const F = 'font-family:Segoe UI,Segoe,Tahoma,Geneva,Verdana,sans-serif;color:#1F3864';
+  const ligne = (t, style = '') => `<p style="margin:0;font-size:10pt;${F};${style}">${t}</p>`;
   return `<div class="WordSection1" style="${F}">
     ${ligne('Meilleures salutations,')}
-    <p style="margin:11pt 0 0;font-size:11pt;${F}"><b>${nom}</b></p>
+    <p style="margin:11pt 0 0;font-size:10pt;${F}"><b>${nom}</b></p>
     ${ligne(`<b>${p.titre}</b>`)}
     ${ligne('Spécialiste en assurances &amp; prévoyance AFA | Agréé FINMA', 'margin-top:8pt')}
     <p style="margin:10pt 0 0"><img src="cid:${SIG_LOGO.cid}" alt="COFIDEX" width="${SIG_LOGO.largeur}" style="width:${SIG_LOGO.largeur}px;max-width:100%;height:auto;border:0"></p>

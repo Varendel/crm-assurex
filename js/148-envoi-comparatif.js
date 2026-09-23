@@ -142,8 +142,8 @@ const ECO_MENTION = `<p style="margin:14pt 0 0;font-size:8.5pt;color:#8A94A8;fon
 function ecoMessageHtml(avant, apres, entrees, actuel) {
   const corps = ecoTexteHtml(avant) + ecoActuelHtml(actuel) + ecoTableauHtml(entrees, actuel) + ecoTexteHtml(apres) + ECO_MENTION;
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse">
-    <tr><td align="center" style="padding:0">
-      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="640" style="width:100%;max-width:640px;border-collapse:collapse;text-align:left">
+    <tr><td align="left" style="padding:0">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="480" style="width:100%;max-width:480px;border-collapse:collapse;text-align:left">
         <tr><td style="padding:0">${corps}</td></tr>
       </table>
     </td></tr>
@@ -227,7 +227,7 @@ function ecoApercu() {
     const jointes = _eco.pieces.filter(p => p.coche);
     const bandeau = jointes.length
       ? `<div style="margin:0 0 14px;padding:8px 10px;background:#F4F6F9;border-radius:8px;font:11px Arial,sans-serif;color:#56627A">📎 ${jointes.map(p => ecoEsc(p.nom)).join(' · ')}</div>` : '';
-    f.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;padding:16px 18px;background:#EEF1F5;color:#000;word-wrap:break-word}.page{max-width:640px;margin:0 auto;background:#fff;padding:18px 20px;box-shadow:0 1px 4px rgba(0,0,0,.12)}</style></head><body><div class="page">${bandeau}${ecoMessageHtml(avant, apres, _eco.entrees, _eco.actuel)}</div></body></html>`;
+    f.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;padding:16px 18px;background:#EEF1F5;color:#000;word-wrap:break-word}.page{max-width:480px;margin:0;background:#fff;padding:16px 18px;box-shadow:0 1px 4px rgba(0,0,0,.12)}</style></head><body><div class="page">${bandeau}${ecoMessageHtml(avant, apres, _eco.entrees, _eco.actuel)}</div></body></html>`;
   }, 160);
 }
 

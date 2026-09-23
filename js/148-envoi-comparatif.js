@@ -150,6 +150,39 @@ function ecoMessageHtml(avant, apres, entrees, actuel) {
   </table>`;
 }
 
+// ── L'objet du message (23.09.2026) ─────────────────────────────────────────────────────────────
+// « L'objet du comparatif ne doit pas être le titre, mais le nom des couvertures. »
+//
+// Le titre d'une affaire est une note interne : « ASA et LAA », « Ménage / RC privée — Personeni
+// Christelle ». Le client ne l'a jamais vu et il n'y reconnaît rien. Ce qu'il cherche dans sa boîte,
+// c'est de quoi on lui parle : LAA, LPP, ménage. On prend donc les produits de l'affaire, ou à
+// défaut les couvertures des offres reçues.
+//
+// Les libellés du portefeuille sont longs (« LAAC — LAA complémentaire (sursalaire au-delà du
+// plafond LAA) ») : on garde ce qui précède la parenthèse ou le tiret, c'est-à-dire le nom usuel.
+function ecoNomCourt(v) {
+  let s = String(v || '').split(/\s[—–-]\s|\s*\(/)[0].trim();
+  if (s.length > 38) s = s.slice(0, 37).replace(/\s+\S*$/, '') + '…';
+  return s;
+}
+
+function ecoObjet(o, entrees) {
+  // Les produits de l'affaire d'abord, et SEULS s'ils existent : le champ « couverture » d'une offre
+  // décrit l'étendue (« RC 5 mio, inventaire 80 000 »), ce n'est pas un nom de branche. Les mêler
+  // donnait des objets absurdes.
+  const bruts = (Array.isArray(o.produits) && o.produits.length)
+    ? o.produits
+    : entrees.map(x => x.e.couverture);
+  const noms = [];
+  for (const b of bruts) {
+    const n = ecoNomCourt(b);
+    if (n && !noms.some(x => x.toLowerCase() === n.toLowerCase())) noms.push(n);
+    if (noms.length === 3) break;
+  }
+  const tete = entrees.length > 1 ? 'Vos offres' : 'Votre offre';
+  return noms.length ? `${tete} — ${noms.join(', ')}` : tete;   // jamais le titre : il est interne
+}
+
 // ── La fenêtre d'édition ───────────────────────────────────────────────────────────────────────
 function ecoOuvrir(oppId) {
   const o = (typeof allOpportunites !== 'undefined' ? allOpportunites : []).find(x => x.id === oppId);
@@ -192,7 +225,8 @@ function ecoOuvrir(oppId) {
             <input class="form-input" id="eco-a" type="email" value="${ecoEsc(dest)}" placeholder="adresse du client" oninput="ecoApercu()"/>
             ${dest ? '' : '<small class="eco-aide">Pas d’adresse sur la fiche client — saisis-la ici, ou complète la fiche.</small>'}</div>
           <div class="form-field"><label class="form-label" for="eco-objet">Objet</label>
-            <input class="form-input" id="eco-objet" value="${ecoEsc(`Vos offres — ${o.titre || nom}`)}" oninput="ecoApercu()"/></div>
+            <input class="form-input" id="eco-objet" value="${ecoEsc(ecoObjet(o, entrees))}" oninput="ecoApercu()"/>
+            <small class="eco-aide">Repris des couvertures comparées, pas du titre de l’affaire — que le client n’a jamais vu. Modifiable.</small></div>
           <div class="form-field"><label class="form-label" for="eco-avant">Avant le tableau</label>
             <textarea class="form-input" id="eco-avant" rows="4" oninput="ecoApercu()">${ecoEsc(avant)}</textarea></div>
           <div class="eco-fige">⚖️ Le tableau des ${entrees.length} offre${entrees.length > 1 ? 's' : ''} s’insère ici — il est fabriqué à partir des offres enregistrées. Pour le corriger, modifie l’offre.</div>

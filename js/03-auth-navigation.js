@@ -829,9 +829,6 @@ const SECTIONS = [
   { id: 'dashboard-solo', label: 'Tableau de bord', icon: '📊', solo: true, target: 'dashboard' },
   { id: 'pipeline-solo', label: 'Pipeline', icon: '🎯', solo: true, target: 'opportunites', rhAllowed: true },
   { id: 'oz-assure-solo', label: 'OZ Assure', solo: true, logo: true, target: 'oz-assure', signataireOnly: true },
-  // 22.09.2026 : « Mets le logo comme bouton… mets-le sous OZ. » Écrire à la fiduciaire Cofidex au
-  // sujet d'un client (js/142) : bouton logo, juste sous OZ Assure, pas une ligne de menu de plus.
-  { id: 'cofidex-solo', label: 'Écrire à Cofidex', solo: true, logoImg: 'assets/logos/cofidex.png', target: 'cofidex', staff: true },
 
   { id: 'vente', label: 'Vente', icon: '🚀', sub: [
     { id: 'clients-prives', icon: '🙂', label: 'Clients privés', rhAllowed: true, groupe: 'Clients' },
@@ -888,6 +885,9 @@ const SECTIONS = [
   ]},
 
   { id: 'admin', label: 'Admin', icon: '🗄️', sub: [
+    // 23.09.2026 : le bouton logo Cofidex devient une entrée de menu. Une vue, trois carnets
+    // d'adresses — équipe Cofidex, compagnies (par service), client (js/142).
+    { id: 'ecrire', icon: '✉️', label: 'Écrire un e-mail', staff: true, groupe: 'Relation client' },
     { id: 'messages-clients', icon: '💬', label: 'Messages clients', staff: true, groupe: 'Relation client' },
     { id: 'demandes-polices', icon: '📤', label: 'Demandes de polices', staff: true, groupe: 'Relation client' },
     { id: 'courriers', icon: '📨', label: 'Courriers clients', staff: true, avance: true, groupe: 'Relation client' },
@@ -929,12 +929,6 @@ function renderSidebar() {
       if (sec.logo) {
         nav += `<button class="nav-solo-btn nav-solo-logo ${active ? 'active' : ''}" onclick="navigate('${sec.target}')" title="OZ Assure">
           ${OZASSURE_LOGO_SVG}
-        </button>`;
-        return;
-      }
-      if (sec.logoImg) {
-        nav += `<button class="nav-solo-btn nav-solo-logo nav-cofidex ${active ? 'active' : ''}" onclick="navigate('${sec.target}')" title="${sec.label}">
-          <img src="${sec.logoImg}" alt="${sec.label}" class="nav-cofidex-logo"/><span class="nav-lib">Écrire à l’équipe</span>
         </button>`;
         return;
       }
@@ -1654,6 +1648,9 @@ async function renderView() {
     // Marquage OZ / Assurex-EX des clients sans entité (js/39)
     // Courriers clients avec en-tête Assurex / EX.GROUP (js/45)
     case 'courriers': main.innerHTML = typeof viewCourriers === 'function' ? viewCourriers() : ''; break;
+    // Écrire un e-mail : équipe Cofidex, compagnie ou client (js/142). « cofidex » reste accepté,
+    // c'était le nom de la vue avant qu'elle ne s'élargisse (23.09.2026).
+    case 'ecrire':
     case 'cofidex': main.innerHTML = typeof viewCofidex === 'function' ? viewCofidex() : ''; break;
     // Préparation d'un dossier de prêt hypothécaire, check-list Assurex (js/50)
     case 'dossier-financement': main.innerHTML = typeof viewDossierFinancement === 'function' ? viewDossierFinancement() : ''; break;

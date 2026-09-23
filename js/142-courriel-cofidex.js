@@ -1,16 +1,31 @@
-// ═══ ÉCRIRE À COFIDEX — VUE DÉDIÉE (22.09.2026) ═════════════════════════════════════════════════
-// « Laisse l'équipe et enlève le bouton Cofidex ; ajoute cette fonction de leur écrire dans une vue
-// dédiée inspirée des courriers sortants : une belle mise en page avec les membres d'équipe et un
-// sélecteur de client. »
+// ═══ ÉCRIRE UN E-MAIL — VUE UNIQUE (22.09.2026, élargie le 23.09.2026) ══════════════════════════
+// D'abord « écrire à Cofidex » : l'équipe de la fiduciaire, au sujet d'un client. Puis :
+// « Supprime le bouton Cofidex, crée un bouton pour les e-mails, regroupe dedans la fonction
+// collègues et les envois liés clients, pour pouvoir écrire directement aux compagnies. »
 //
-// Même principe que « Courriers clients » (js/45) : à gauche ce qu'on écrit, à droite l'aperçu de
-// ce qui part. En haut, l'équipe Cofidex (table equipe_cofidex) en cartes cliquables — on choisit
-// les destinataires d'un clic. Le client se choisit dans un champ de recherche : sa situation
-// (IDE, contrats, primes, échéances) remplit le message toute seule, et ses documents deviennent
-// des pièces jointes à cocher.
-// L'envoi passe par le compte Outlook connecté avec la signature (js/138), après confirmation.
+// La vue ne change pas de forme — à gauche ce qu'on écrit, à droite l'aperçu de ce qui part — elle
+// change de destinataire. UN sélecteur, TROIS carnets d'adresses :
+//   · Équipe Cofidex   → table equipe_cofidex ;
+//   · Compagnie        → table compagnies_contacts, par service (courtiers, individuel, collectif,
+//                        sinistres) — le bon guichet, pas une adresse générique ;
+//   · Client           → l'adresse de sa fiche.
+// Le client choisi reste le contexte commun : sa situation remplit le message, ses documents
+// deviennent des pièces jointes à cocher, et l'envoi est journalisé sur sa fiche.
+//
+// CE QUE CETTE VUE NE FAIT PAS, ET POURQUOI : les envois qui portent un processus — demande
+// d'offre, mandat, demande de police, changement d'adresse — gardent leur écran. Ils écrivent des
+// statuts, des dates de relance et des lignes d'historique qu'un composeur générique perdrait.
+// Ici, c'est le courriel qui n'avait nulle part où aller.
+//
+// L'envoi passe par envoyerCourriel (js/143) : compte Outlook réel, signature, confirmation.
 
-const _ccx = { equipe: null, t: 0, clientId: null, dest: new Set(), modele: 'presentation', objet: '', corps: '', docs: [], docsCoches: new Set(), locaux: [], charge: false };
+const _ccx = { equipe: null, t: 0, compagnies: null, tc: 0, cible: 'equipe', clientId: null, dest: new Set(), modele: 'presentation', objet: '', corps: '', docs: [], docsCoches: new Set(), locaux: [], charge: false };
+
+const CCX_CIBLES = [
+  { id: 'equipe', label: '🏢 Équipe Cofidex', aide: 'La fiduciaire, au sujet d’un client.' },
+  { id: 'compagnie', label: '🛡️ Compagnie', aide: 'Le bon service : courtiers, individuel, collectif, sinistres.' },
+  { id: 'client', label: '👤 Client', aide: 'Directement au client — l’envoi est classé sur sa fiche.' },
+];
 
 function ccxEsc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function ccxNomClient(c) { return !c ? '' : (typeof estEntreprise === 'function' && estEntreprise(c)) ? (c.nom || '') : [c.prenom, c.nom].filter(Boolean).join(' '); }
@@ -29,6 +44,42 @@ const CCX_MODELES = [
   { id: 'libre', label: '✏️ Message libre', objet: n => n || 'Message', corps: () => 'Bonjour,\n\n' },
 ];
 
+// Modèles propres à chaque carnet. Pour une compagnie, le message part des contrats que le client
+// a CHEZ ELLE : numéro de police et produit, c'est ce qu'on cite dans la première ligne.
+const CCX_MODELES_COMPAGNIE = [
+  { id: 'question-contrat', label: '❓ Question sur un contrat', objet: n => `${n} — question`,
+    corps: (n, ide, d) => `Madame, Monsieur,\n\nConcernant notre client ${n}${ide ? ` (${ide})` : ''} :\n\n${d.chezElle}\n\n[ta question]\n\nJe vous remercie d’avance de votre retour.` },
+  { id: 'document', label: '📎 Demande de document', objet: n => `${n} — demande de document`,
+    corps: (n, ide, d) => `Madame, Monsieur,\n\nPourriez-vous nous faire parvenir, pour notre client ${n}${ide ? ` (${ide})` : ''} :\n\n[document demandé]\n\n${d.chezElle}\n\nAvec nos remerciements.` },
+  { id: 'sinistre', label: '⚠️ Annoncer un sinistre', objet: n => `${n} — annonce de sinistre`,
+    corps: (n, ide, d) => `Madame, Monsieur,\n\nNous vous annonçons un sinistre pour notre client ${n}${ide ? ` (${ide})` : ''}.\n\n${d.chezElle}\n\nDate et circonstances : [à compléter]\n\nMerci de nous indiquer la marche à suivre et les pièces nécessaires.` },
+  { id: 'modification', label: '✏️ Modification de contrat', objet: n => `${n} — modification`,
+    corps: (n, ide, d) => `Madame, Monsieur,\n\nPour notre client ${n}${ide ? ` (${ide})` : ''}, nous vous prions de bien vouloir procéder à la modification suivante :\n\n[modification demandée]\n\n${d.chezElle}\n\nMerci de nous confirmer la prise en compte.` },
+  { id: 'libre', label: '✏️ Message libre', objet: n => n || 'Message', corps: () => 'Madame, Monsieur,\n\n' },
+];
+
+const CCX_MODELES_CLIENT = [
+  { id: 'information', label: '💬 Information', objet: n => `Votre dossier — ${n}`,
+    corps: (n, ide, d) => `Bonjour,\n\n${d.resume}\n\nJe reste à votre disposition pour toute question.` },
+  { id: 'documents', label: '📎 Transmettre des documents', objet: () => 'Vos documents',
+    corps: () => 'Bonjour,\n\nVous trouverez en pièce jointe les documents annoncés.\n\nBonne réception, et à disposition pour toute question.' },
+  { id: 'libre', label: '✏️ Message libre', objet: () => 'Message', corps: () => 'Bonjour,\n\n' },
+];
+
+function ccxModeles() {
+  return _ccx.cible === 'compagnie' ? CCX_MODELES_COMPAGNIE : _ccx.cible === 'client' ? CCX_MODELES_CLIENT : CCX_MODELES;
+}
+
+// Les contacts compagnie qui ont une adresse, groupés par compagnie (table compagnies_contacts,
+// écran Paramètres → Contacts compagnies, js/100).
+async function ccxCompagnies(forcer) {
+  if (!forcer && _ccx.compagnies && Date.now() - _ccx.tc < 300000) return _ccx.compagnies;
+  const r = await dbGet('compagnies_contacts', 'select=id,compagnie,service,libelle_contact,email,telephone,ordre&order=compagnie.asc,ordre.asc');
+  _ccx.compagnies = (Array.isArray(r) ? r : []).filter(c => c.email);
+  _ccx.tc = Date.now();
+  return _ccx.compagnies;
+}
+
 async function ccxEquipe(forcer) {
   if (!forcer && _ccx.equipe && Date.now() - _ccx.t < 300000) return _ccx.equipe;
   const r = await dbGet('equipe_cofidex', 'actif=is.true&select=id,prenom,nom,email,fonction,email_a_verifier,ordre&order=ordre');
@@ -42,14 +93,21 @@ function ccxContexte(client) {
     .filter(x => x.client_id === (client && client.id) && !['résilié', 'annulé', 'mandat_resilie'].includes(x.statut || ''));
   const ligne = ct => `- ${ct.produit || 'Contrat'}${ct.compagnie ? ' · ' + ct.compagnie : ''}${ct.numero_police ? ' · police ' + ct.numero_police : ''}${ct.prime_annuelle ? ' · CHF ' + fmtCHF(Math.round(ct.prime_annuelle)) + '/an' : ''}${ct.date_echeance ? ' · échéance ' + fmtDate(String(ct.date_echeance).slice(0, 10)) : ''}`;
   const perso = contrats.filter(ct => /laa|lpp|perte de gain|maladie|accident/i.test(ct.produit || ''));
+  // Quand on écrit à une compagnie, seuls ses contrats à elle comptent : on les reconnaît aux
+  // destinataires choisis (une adresse de compagnies_contacts porte le nom de sa compagnie).
+  const cies = new Set((_ccx.compagnies || []).filter(x => _ccx.dest.has(x.email)).map(x => String(x.compagnie || '').toLowerCase()));
+  const siens = cies.size ? contrats.filter(ct => cies.has(String(ct.compagnie || '').toLowerCase())) : [];
   return {
     resume: contrats.length ? `Contrats en cours :\n${contrats.map(ligne).join('\n')}` : 'Aucun contrat enregistré à ce jour dans le CRM.',
     personnel: perso.length ? perso.map(ligne).join('\n') : '',
+    chezElle: siens.length ? `Contrat${siens.length > 1 ? 's' : ''} concerné${siens.length > 1 ? 's' : ''} :\n${siens.map(ligne).join('\n')}`
+      : (cies.size ? 'Aucun contrat enregistré chez vous pour ce client à ce jour.' : '[contrat concerné]'),
   };
 }
 
 function ccxAppliquerModele(garderTexte) {
-  const c = ccxClient(), m = CCX_MODELES.find(x => x.id === _ccx.modele) || CCX_MODELES[0];
+  const c = ccxClient(), liste = ccxModeles(), m = liste.find(x => x.id === _ccx.modele) || liste[0];
+  _ccx.modele = m.id;
   const nom = ccxNomClient(c) || '[client]', ide = (c && (c.ide || c.numero_ide)) || '';
   if (!garderTexte) { _ccx.objet = m.objet(nom); _ccx.corps = m.corps(nom, ide, ccxContexte(c)); }
   const o = document.getElementById('ccx-objet'), t = document.getElementById('ccx-corps');
@@ -63,16 +121,22 @@ function viewCofidex() {
     .map(c => ({ id: c.id, n: ccxNomClient(c) })).filter(c => c.n).sort((a, b) => a.n.localeCompare(b.n, 'fr'));
   const c = ccxClient();
   if (!_ccx.corps) ccxAppliquerModele();
-  setTimeout(() => { ccxEquipe().then(ccxRendreEquipe); ccxChargerDocuments(); ccxMajApercu(); }, 0);
+  setTimeout(() => { ccxRendreDestinataires(); ccxChargerDocuments(); ccxMajApercu(); }, 0);
+  const cible = CCX_CIBLES.find(x => x.id === _ccx.cible) || CCX_CIBLES[0];
   return `<div class="ccx-vue">
-    <header class="dx-tete"><div><div class="dx-surtitre">Relation interne · fiduciaire Cofidex SA</div><h2>🏢 Écrire à Cofidex</h2>
-      <p class="dx-sous">Choisis les destinataires et le client : le message se remplit avec sa situation et ses documents. L’aperçu à droite montre ce qui part, signature comprise.</p></div></header>
+    <header class="dx-tete"><div><div class="dx-surtitre">Courriel sortant</div><h2>✉️ Écrire un e-mail</h2>
+      <p class="dx-sous">À l’équipe Cofidex, à une compagnie ou au client : le message se remplit avec sa situation et ses documents. L’aperçu à droite montre ce qui part, signature comprise.</p></div></header>
 
     <section class="ccx-equipe-bloc dbx-carte">
       <div class="ccx-bloc-tete"><b>Destinataires</b><span id="ccx-compte" class="ccx-doux">aucun</span></div>
-      <div class="ccx-equipe" id="ccx-equipe"><span class="ccx-doux">Chargement de l’équipe…</span></div>
+      <div class="ccx-onglets" role="tablist">
+        ${CCX_CIBLES.map(t => `<button type="button" role="tab" class="ccx-onglet ${t.id === _ccx.cible ? 'actif' : ''}"
+          aria-selected="${t.id === _ccx.cible}" onclick="ccxChangerCible('${t.id}')">${t.label}</button>`).join('')}
+      </div>
+      <div class="ccx-aide-cible">${ccxEsc(cible.aide)}</div>
+      <div class="ccx-equipe" id="ccx-equipe"><span class="ccx-doux">Chargement…</span></div>
       <label class="form-label" for="ccx-autres">Autres adresses <small>(séparées par des virgules)</small></label>
-      <input class="form-input" id="ccx-autres" placeholder="prenom@cofidex.ch" oninput="ccxMajApercu()"/>
+      <input class="form-input" id="ccx-autres" placeholder="prenom@cofidex.ch, courtiers@compagnie.ch" oninput="ccxMajApercu()"/>
     </section>
 
     <div class="ccx-grille">
@@ -82,7 +146,9 @@ function viewCofidex() {
           <datalist id="ccx-clients">${clients.map(x => `<option value="${ccxEsc(x.n)}"></option>`).join('')}</datalist></div>
         <div class="form-field"><label class="form-label" for="ccx-modele">Motif</label>
           <select class="form-select" id="ccx-modele" onchange="_ccx.modele=this.value;ccxAppliquerModele();ccxMajApercu()">
-            ${CCX_MODELES.map(m => `<option value="${m.id}" ${m.id === _ccx.modele ? 'selected' : ''}>${m.label}</option>`).join('')}</select></div>
+            ${ccxModeles().map(m => `<option value="${m.id}" ${m.id === _ccx.modele ? 'selected' : ''}>${m.label}</option>`).join('')}</select>
+          ${_ccx.cible === 'compagnie' ? `<p class="ccx-renvoi">Pour une <b>demande d’offre</b>, passe par l’affaire : le suivi des réponses et des relances s’y fait tout seul.
+            <button type="button" class="dbx-lien" onclick="navigate('nouvelle-demande-offre')">Ouvrir une demande d’offre →</button></p>` : ''}</div>
         <div class="form-field"><label class="form-label" for="ccx-objet">Objet</label>
           <input class="form-input" id="ccx-objet" value="${ccxEsc(_ccx.objet)}" oninput="_ccx.objet=this.value;ccxMajApercu()"/></div>
         <div class="form-field"><label class="form-label" for="ccx-corps">Message</label>
@@ -121,10 +187,75 @@ function ccxRendreEquipe(equipe) {
   }).join('') : '<span class="ccx-doux">Aucun membre enregistré.</span>';
 }
 
+// Les contacts d'une compagnie, un bloc par compagnie et une carte par service : c'est le service
+// qui compte (écrire à l'individuel pour une affaire collective coûte des jours — voir js/100).
+async function ccxRendreCompagnies() {
+  const z = document.getElementById('ccx-equipe');
+  if (!z) return;
+  const contacts = await ccxCompagnies();
+  if (!contacts.length) {
+    z.innerHTML = `<span class="ccx-doux">Aucun contact compagnie avec une adresse.
+      <button type="button" class="dbx-lien" onclick="navigate('contacts-services')">Les renseigner →</button></span>`;
+    return;
+  }
+  const parCie = new Map();
+  contacts.forEach(c => { const k = c.compagnie || '(sans nom)'; if (!parCie.has(k)) parCie.set(k, []); parCie.get(k).push(c); });
+  z.innerHTML = [...parCie.entries()].map(([cie, liste]) => `<div class="ccx-cie">
+    <div class="ccx-cie-tete">${typeof pictoCompagnie === 'function' ? pictoCompagnie(cie, 22) : ''}<b>${ccxEsc(cie)}</b></div>
+    ${liste.map(c => {
+      const choisi = _ccx.dest.has(c.email);
+      const service = typeof csvService === 'function' ? csvService(c.service).nom : (c.service || 'Contact');
+      return `<button type="button" class="ccx-personne ${choisi ? 'choisie' : ''}" onclick="ccxBasculer('${ccxEsc(c.email)}')" title="${ccxEsc(c.email)}">
+        <span class="ccx-qui"><b>${ccxEsc(service)}</b>
+          <small>${ccxEsc(c.libelle_contact || '')}</small>
+          <em>${ccxEsc(c.email)}</em></span>
+        <span class="ccx-coche">${choisi ? '✓' : ''}</span></button>`;
+    }).join('')}
+  </div>`).join('');
+}
+
+// Le client lui-même : une seule carte, celle de son adresse.
+function ccxRendreClient() {
+  const z = document.getElementById('ccx-equipe');
+  if (!z) return;
+  const c = ccxClient();
+  if (!c) { z.innerHTML = '<span class="ccx-doux">Choisis d’abord un client ci-dessous.</span>'; return; }
+  const email = String((typeof rlEmailClient === 'function' ? rlEmailClient(c) : c.email) || '').trim();
+  if (!email) {
+    z.innerHTML = `<span class="ccx-doux">Pas d’adresse e-mail sur la fiche de ${ccxEsc(ccxNomClient(c))}.
+      <button type="button" class="dbx-lien" onclick="showClient('${c.id}')">Ouvrir sa fiche →</button></span>`;
+    return;
+  }
+  const choisi = _ccx.dest.has(email);
+  z.innerHTML = `<button type="button" class="ccx-personne ${choisi ? 'choisie' : ''}" onclick="ccxBasculer('${ccxEsc(email)}')" title="${ccxEsc(email)}">
+    <span class="ccx-avatar">${ccxEsc(ccxInitiales({ prenom: c.prenom, nom: c.nom }))}</span>
+    <span class="ccx-qui"><b>${ccxEsc(ccxNomClient(c))}</b><small>client</small><em>${ccxEsc(email)}</em></span>
+    <span class="ccx-coche">${choisi ? '✓' : ''}</span></button>`;
+}
+
+function ccxRendreDestinataires() {
+  if (_ccx.cible === 'compagnie') return ccxRendreCompagnies();
+  if (_ccx.cible === 'client') return ccxRendreClient();
+  return ccxEquipe().then(ccxRendreEquipe);
+}
+
+// Changer de carnet remet les destinataires à zéro : une adresse d'équipe n'a rien à faire dans un
+// courriel à une compagnie, et le modèle de message change avec elle.
+function ccxChangerCible(id) {
+  if (!CCX_CIBLES.some(x => x.id === id) || id === _ccx.cible) return;
+  _ccx.cible = id;
+  _ccx.dest = new Set();
+  _ccx.modele = ccxModeles()[0].id;
+  ccxAppliquerModele();
+  navigate(currentView, { silent: true });
+}
+
 function ccxBasculer(email) {
   if (!email) return;
   if (_ccx.dest.has(email)) _ccx.dest.delete(email); else _ccx.dest.add(email);
-  ccxEquipe().then(ccxRendreEquipe);
+  ccxRendreDestinataires();
+  // Le texte suit les destinataires : pour une compagnie, il cite les contrats qu'elle couvre.
+  if (_ccx.cible === 'compagnie') ccxAppliquerModele();
   ccxMajApercu();
 }
 
@@ -133,6 +264,7 @@ function ccxChoisirClient(nom) {
   if (!c) { showError('Client introuvable — choisis-le dans la liste.'); return; }
   _ccx.clientId = c.id; _ccx.docs = []; _ccx.docsCoches = new Set();
   ccxAppliquerModele();
+  ccxRendreDestinataires();   // le carnet « Client » dépend de lui
   ccxChargerDocuments();
   ccxMajApercu();
 }
@@ -171,7 +303,8 @@ async function ccxMajApercu() {
   const cpt = document.getElementById('ccx-compte');
   if (cpt) cpt.textContent = dest.length ? dest.join(', ') : 'aucun';
   const b = document.getElementById('ccx-envoyer');
-  if (b) b.disabled = !dest.length || !_ccx.clientId;
+  // Un client est nécessaire dès que le message parle de lui ; le message libre s'en passe.
+  if (b) b.disabled = !dest.length || (!_ccx.clientId && _ccx.modele !== 'libre');
   const tete = document.getElementById('ccx-apercu-tete'), f = document.getElementById('ccx-apercu');
   if (!tete || !f) return;
   const ag = typeof sigAgent === 'function' ? await sigAgent().catch(() => null) : null;
@@ -202,7 +335,8 @@ function ccxCopier() {
 async function ccxEnvoyer() {
   const dest = ccxDestinataires();
   const c = ccxClient();
-  if (!dest.length || !c) { showError('Choisis au moins un destinataire et un client.'); return; }
+  if (!dest.length) { showError('Choisis au moins un destinataire.'); return; }
+  if (!c && _ccx.modele !== 'libre') { showError('Choisis le client concerné, ou passe en message libre.'); return; }
   const b = document.getElementById('ccx-envoyer');
   if (b) b.disabled = true;
   try {
@@ -216,29 +350,36 @@ async function ccxEnvoyer() {
       if (blob) pieces.push({ nom: it.nom, type: blob.type || 'application/pdf', blob });
     }
     for (const f of _ccx.locaux) pieces.push({ nom: f.name, type: f.type || 'application/octet-stream', blob: f });
-    const res = await envoyerCourriel({ a: dest, objet: _ccx.objet, texte: _ccx.corps, pieces, contexte: 'Cofidex' });
+    const quoi = { equipe: 'Cofidex', compagnie: 'compagnie', client: 'client' }[_ccx.cible] || 'courriel';
+    const res = await envoyerCourriel({ a: dest, objet: _ccx.objet, texte: _ccx.corps, pieces, contexte: quoi });
     if (!res.ok) { if (b) b.disabled = false; return; }
-    if (typeof ajouterActiviteClient === 'function') await ajouterActiviteClient(c.id, 'email', `Courriel à Cofidex (${dest.join(', ')}) : ${_ccx.objet}`);
+    // Trace sur la fiche du client : c'est là qu'on la cherche, quel que soit le destinataire.
+    if (c && typeof ajouterActiviteClient === 'function') {
+      const a = { equipe: 'Courriel à Cofidex', compagnie: 'Courriel à la compagnie', client: 'Courriel au client' }[_ccx.cible];
+      await ajouterActiviteClient(c.id, 'email', `${a} (${dest.join(', ')}) : ${_ccx.objet}`);
+    }
     _ccx.locaux = []; _ccx.docsCoches = new Set();
     ccxChargerDocuments(); ccxMajApercu();
   } catch (e) { showError('Envoi impossible : ' + (e.message || e)); if (b) b.disabled = false; }
 }
 
-// Le bouton du menu est rendu par la barre latérale elle-même (js/03, entrée « cofidex-solo », sous
-// OZ Assure) : ici, seulement son allure.
+// 23.09.2026 : le bouton logo Cofidex de la barre latérale est remplacé par l'entrée « Écrire un
+// e-mail » de la rubrique Relation client (js/03) — une vue, trois carnets, un seul chemin.
 (function ccxStyles() {
   const st = document.createElement('style');
   st.textContent = `
-    .nav-solo-btn.nav-cofidex { flex-direction: column; align-items: flex-start; gap: 3px; padding: 10px 12px;
-      border: 1px solid color-mix(in srgb, #113679 35%, var(--border)); border-radius: 12px;
-      background: color-mix(in srgb, #113679 8%, var(--surface)); }
-    .nav-solo-btn.nav-cofidex:hover { background: color-mix(in srgb, #113679 16%, var(--surface)); border-color: #113679; }
-    .nav-cofidex-logo { width: 116px; max-width: 100%; height: auto; display: block; }
-    :root:not([data-theme="light"]) .nav-cofidex-logo, [data-theme="dark"] .nav-cofidex-logo { filter: brightness(0) invert(1); opacity: .92; }
-    .nav-solo-btn.nav-cofidex .nav-lib { font-size: var(--t-xs, 11.5px); color: var(--text-muted); }
-    .sidebar-repliee .nav-solo-btn.nav-cofidex, .sidebar.repliee .nav-solo-btn.nav-cofidex { align-items: center; padding: 8px 4px; }
-    .sidebar-repliee .nav-cofidex-logo, .sidebar.repliee .nav-cofidex-logo { width: 34px; object-fit: cover; object-position: left; }
-    .sidebar-repliee .nav-solo-btn.nav-cofidex .nav-lib, .sidebar.repliee .nav-solo-btn.nav-cofidex .nav-lib { display: none; }`;
+    /* Les trois carnets d'adresses */
+    .ccx-onglets { display: flex; gap: 6px; flex-wrap: wrap; margin: 4px 0 6px; }
+    .ccx-onglet { border: 1px solid var(--border); background: var(--surface); color: var(--text-muted);
+      border-radius: 999px; padding: 6px 13px; font-size: 12.5px; font-weight: 500; cursor: pointer; }
+    .ccx-onglet:hover { border-color: var(--accent-border); color: var(--text); }
+    .ccx-onglet.actif { background: var(--accent-dim); border-color: var(--accent-border); color: var(--accent); font-weight: 600; }
+    .ccx-aide-cible { font-size: 11.5px; color: var(--text-muted); margin-bottom: 10px; }
+    .ccx-cie { margin-bottom: 10px; }
+    .ccx-cie-tete { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--text); margin-bottom: 4px; }
+    .ccx-renvoi { margin: 8px 0 0; font-size: 11.5px; color: var(--text-muted);
+      background: var(--surface-alt); border: 1px dashed var(--border); border-radius: 10px; padding: 8px 10px; }
+    .ccx-renvoi .dbx-lien { margin-left: 4px; }`;
   document.head.appendChild(st);
   const st2 = document.createElement('style');
   st2.textContent = `

@@ -823,7 +823,8 @@ function opComparer(oppId) {
           <div class="opx-comp-prime">${e.prime ? 'CHF ' + fmtCHF(e.prime) : '—'}<small>par an</small></div>
           <div class="opx-comp-ecart">${ecart === null ? '' : ecart === 0 ? (entrees.length > 1 ? '🏆 Meilleur prix' : '') : '+ CHF ' + fmtCHF(ecart)}</div>
           <dl><dt>Franchise</dt><dd>${opEsc(e.franchise || '—')}</dd><dt>Couverture</dt><dd>${opEsc(e.couverture || '—')}</dd><dt>Remarque</dt><dd>${opEsc(e.remarque || '—')}</dd></dl>
-          <button type="button" class="${e.retenue ? 'btn-save' : 'btn-secondary'}" onclick="opRetenir('${oppId}','${d.id}',${idx})">${e.retenue ? '★ Retenue' : 'Retenir cette offre'}</button>
+          <button type="button" class="${e.retenue ? 'btn-save' : 'btn-secondary'}" onclick="opRetenir('${oppId}','${d.id}',${idx})"
+            title="${e.retenue ? 'Cliquer à nouveau pour la libérer — l’affaire n’aura plus d’offre retenue' : 'Mettre cette offre en avant auprès du client'}">${e.retenue ? '★ Retenue — cliquer pour libérer' : 'Retenir cette offre'}</button>
         </div>`;
       }).join('')}</div>
       <div class="form-field" style="margin-top:16px"><label class="form-label" for="opx-reco">Recommandation au client</label>
@@ -836,14 +837,21 @@ function opComparer(oppId) {
     </div>`, { padding: '16px' });
 }
 
+// 23.09.2026 : « je veux pouvoir désélectionner les offres retenues. » On ne pouvait que déplacer
+// l'étoile d'une offre à l'autre, jamais l'enlever — et une affaire sans offre retenue est un cas
+// parfaitement normal : les trois offres partent au client, c'est LUI qui tranche. Le bouton
+// bascule donc : recliquer sur l'offre retenue la libère.
 async function opRetenir(oppId, demandeId, idx) {
   const demandes = window._opDemandes[oppId] || [];
+  const dOrigine = demandes.find(x => x.id === demandeId);
+  const eOrigine = dOrigine && (dOrigine.compagnies_envoi || [])[idx];
+  const liberer = !!(eOrigine && (eOrigine.retenue || eOrigine.statut === 'retenue'));
   let compagnieRetenue = null, prime = null;
   for (const d of demandes) {
     const entrees = [...(d.compagnies_envoi || [])];
     let change = false;
     entrees.forEach((e, i) => {
-      const cible = d.id === demandeId && i === idx;
+      const cible = !liberer && d.id === demandeId && i === idx;
       if (cible) { compagnieRetenue = e.compagnie; prime = e.prime; }
       if (!!e.retenue !== cible) {
         entrees[i] = { ...e, retenue: cible, statut: cible ? 'retenue' : (e.statut === 'retenue' ? 'reçue' : e.statut) };
@@ -854,14 +862,23 @@ async function opRetenir(oppId, demandeId, idx) {
       // 23.09.2026 (audit) : on relit la liste avant d'écrire, sinon on efface les offres ajoutées
       // ailleurs entre-temps. Voir majListeJson (js/146).
       const r = await majListeJson('demandes_offre', d.id, 'compagnies_envoi',
-        l => l.map((e, i) => (d.id === demandeId && i === idx) ? { ...e, retenue: true, statut: 'retenue' }
+        l => l.map((e, i) => (!liberer && d.id === demandeId && i === idx) ? { ...e, retenue: true, statut: 'retenue' }
           : (e && (e.retenue || e.statut === 'retenue') ? { ...e, retenue: false, statut: 'reçue' } : e)), entrees);
       if (r && r.error) { showError('Choix non enregistré : ' + errMsg(r)); return; }
       d.compagnies_envoi = r.liste;
     }
   }
   const o = allOpportunites.find(x => x.id === oppId);
-  if (o && compagnieRetenue) {
+  if (o && liberer) {
+    // La compagnie de l'affaire venait de l'offre retenue : elle repart avec elle, sinon la fiche
+    // continue d'annoncer un assureur choisi alors que plus rien n'est choisi.
+    const ancienne = typeof normaliserCompagnie === 'function' ? normaliserCompagnie(eOrigine.compagnie || '') : (eOrigine.compagnie || '');
+    if (o.compagnie && ancienne && o.compagnie === ancienne) {
+      const r = await dbPatch('opportunites', oppId, { compagnie: null });
+      if (!(r && r.error)) o.compagnie = null;
+    }
+    await ajouterLigneHistoriqueOpportunite(oppId, `☆ Offre libérée : ${eOrigine.compagnie || '—'} n’est plus retenue`);
+  } else if (o && compagnieRetenue) {
     const nom = typeof normaliserCompagnie === 'function' ? normaliserCompagnie(compagnieRetenue) : compagnieRetenue;
     const r = await dbPatch('opportunites', oppId, { compagnie: nom });
     if (!(r && r.error)) o.compagnie = nom;

@@ -91,7 +91,9 @@ RXA_SEQUENCES.flamme = (() => {
   const APPUI_DROIT = 350, APPUI_GAUCHE = 227, LARGEUR = 516;
   function construire(img) {
     let G = -D, R = 0, FLAMME_MIN = -D / 2;
-    const hero = img && img.closest('.dbx-hero');
+    // 23.09.2026 : « le Rex du dash qui se balade le long de l'opp ». Le même trajet, mesuré sur le
+    // bandeau de l'affaire quand c'est là qu'il vit.
+    const hero = img && img.closest('.dbx-hero, .opx-hero');
     if (hero && img.style.transform === '') {
       const ri = img.getBoundingClientRect(), rh = hero.getBoundingClientRect();
       if (ri.width > 0) {
@@ -399,7 +401,9 @@ function rxaDecor(img) {
   const scene = document.createElement('span');
   scene.className = 'rxa-scene';
   img.parentNode.insertBefore(scene, img);
-  scene.insertAdjacentHTML('afterbegin', RXA_DECOR);
+  // Le petit Rex des fiches d'affaire garde la séquence, pas le paysage : le volcan mesure 170 px
+  // de haut, il écraserait un bandeau de fiche, et les étoiles rendraient les indicateurs illisibles.
+  if (!img.classList.contains('rxa-petit')) scene.insertAdjacentHTML('afterbegin', RXA_DECOR);
   scene.appendChild(img);
   rxaSol(img);
 }
@@ -412,16 +416,24 @@ function rxaDecor(img) {
 // liseré vert d'eau, quelques touffes d'herbe et cailloux. Elle s'efface vers la gauche pour ne
 // pas passer sous la barre de recherche.
 function rxaSol(img) {
-  const hero = img && img.closest('.dbx-hero');
+  const hero = img && img.closest('.dbx-hero, .opx-hero');
   if (!hero) return;
-  rxaHorizon(hero);
+  if (!img.classList.contains('rxa-petit')) rxaHorizon(hero);
   if (!hero.querySelector(':scope > .rxa-sol')) hero.insertAdjacentHTML('beforeend', '<span class="rxa-sol" aria-hidden="true"></span>');
   const caler = () => {
+    if (!hero.isConnected) return;
     const d = hero.querySelector('.rxa-decor');
-    if (!d || !hero.isConnected) return;
-    const rh = hero.getBoundingClientRect(), rd = d.getBoundingClientRect();
-    if (!rd.height) return;
-    const ligne = rd.top + rd.height * 151 / 170;          // la ligne de sol du dessin (viewBox 420 × 170)
+    const rh = hero.getBoundingClientRect();
+    let ligne;
+    if (d) {
+      const rd = d.getBoundingClientRect();
+      if (!rd.height) return;
+      ligne = rd.top + rd.height * 151 / 170;              // la ligne de sol du dessin (viewBox 420 × 170)
+    } else {
+      const ri = img.getBoundingClientRect();              // sans décor : Rex marche sur le bas de son image
+      if (!ri.height) return;
+      ligne = ri.bottom;
+    }
     hero.style.setProperty('--rxa-sol', Math.max(8, Math.round(rh.bottom - ligne)) + 'px');
     // ── La lune ──────────────────────────────────────────────────────────────────────────────────
     // Troisième tentative, et la raison des deux premières : je lui donnais un ENDROIT (62 %, puis
@@ -459,7 +471,7 @@ function rxaSol(img) {
   if (!window._rxaSolResize) {
     window._rxaSolResize = true;
     let t = null;
-    window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => document.querySelectorAll('.dbx-hero').forEach(h => { const i = h.querySelector('img.dbx-hero-mascotte'); if (i) rxaSol(i); }), 150); });
+    window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => document.querySelectorAll('.dbx-hero, .opx-hero').forEach(h => { const i = h.querySelector('img.dbx-hero-mascotte'); if (i) rxaSol(i); }), 150); });
   }
 }
 
@@ -498,12 +510,19 @@ function rxaPoser() {
          négative, pour que Rex reste exactement où il était ; le pivot du miroir suit ses pieds. */
       margin-left: calc(-180 / 234 * 170px); transform-origin: 53.7% 100%; position: relative; z-index: 2; pointer-events: none; }
     .dbx-hero-droite .rexb-compagnon { display: none !important; }
+    /* Le même Rex, en petit, sur le bandeau d'une affaire (23.09.2026) : « le Rex du dash qui se
+       balade le long de l'opp ». Même séquence, même trajet mesuré, deux tiers de la taille. Il
+       passe DEVANT les indicateurs comme il passe devant la barre de recherche, et laisse passer
+       les clics. La marge négative suit la hauteur, sinon ses pieds se décalent. */
+    img.dbx-hero-mascotte.rxa-flamme.rxa-petit { height: 104px !important; margin-left: calc(-180 / 234 * 104px); }
+    .opx-rex { position: absolute; right: 10px; bottom: 0; z-index: 4; line-height: 0; pointer-events: none; }
+    .opx-hero .rxa-scene { line-height: 0; }
     /* L'ancienne pose fixe ne s'affiche jamais : Rex n'apparaît qu'animé (22.09.2026). */
-    .dbx-hero img.dbx-hero-mascotte:not(.rxa-flamme) { visibility: hidden; }
+    :is(.dbx-hero, .opx-hero) img.dbx-hero-mascotte:not(.rxa-flamme) { visibility: hidden; }
     /* Le décor : derrière Rex, calé sur ses pieds, étendu vers la gauche pour son trajet de marche. */
     .rxa-scene { position: relative; display: inline-block; line-height: 0; }
     /* Le sol jusqu'au bas du bandeau (rxaSol) : hauteur mesurée dans --rxa-sol. */
-    .dbx-hero > .rxa-sol { position: absolute !important; left: 0; right: 0; bottom: 0; height: var(--rxa-sol, 40px); z-index: 0 !important;
+    :is(.dbx-hero, .opx-hero) > .rxa-sol { position: absolute !important; left: 0; right: 0; bottom: 0; height: var(--rxa-sol, 40px); z-index: 0 !important;
       pointer-events: none; border-radius: 0 0 inherit inherit; border-bottom-left-radius: inherit; border-bottom-right-radius: inherit;
       background:
         url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='40' viewBox='0 0 140 40'%3E%3Cg fill='%236FD3B0' fill-opacity='.22'%3E%3Cpath d='M12 6 l2 -6 l1 6 l2 -4 l0 4 z'/%3E%3Cpath d='M78 7 l1.5 -5 l1 5 l2 -3.5 l0 3.5 z'/%3E%3Cpath d='M118 5 l1.5 -4 l1 4 z'/%3E%3C/g%3E%3Cg fill='%23ffffff' fill-opacity='.10'%3E%3Cellipse cx='44' cy='14' rx='3' ry='1.4'/%3E%3Cellipse cx='101' cy='22' rx='2.2' ry='1'/%3E%3Cellipse cx='23' cy='27' rx='1.6' ry='.8'/%3E%3C/g%3E%3C/svg%3E") repeat-x 0 0 / 140px 40px,
@@ -517,7 +536,7 @@ function rxaPoser() {
     .dbx-hero .dbx-recherche:focus-within { z-index: 6; }
     /* L'horizon sur toute la largeur : motifs répétés, donc identiques du téléphone au grand écran.
        Tout est calé sur la ligne de sol mesurée (--rxa-sol), comme le volcan. */
-    .dbx-hero > .rxa-horizon { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; border-radius: inherit; }
+    :is(.dbx-hero, .opx-hero) > .rxa-horizon { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; border-radius: inherit; }
     .rxa-horizon .rxa-collines { position: absolute; left: 0; right: 0; bottom: var(--rxa-sol, 40px); height: 108px;
       background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='62' viewBox='0 0 300 62'%3E%3Cpath d='M0 62 L0 42 Q30 26 62 36 Q94 46 124 32 Q156 18 190 34 Q224 50 256 38 Q280 29 300 36 L300 62 Z' fill='%230A1F4D' fill-opacity='.26'/%3E%3Cpath d='M0 42 Q30 26 62 36 Q94 46 124 32 Q156 18 190 34 Q224 50 256 38 Q280 29 300 36' fill='none' stroke='%237FE0C8' stroke-opacity='.13' stroke-width='1.2'/%3E%3C/svg%3E") repeat-x left bottom / 300px 62px,
         url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='460' height='90' viewBox='0 0 460 90'%3E%3Cpath d='M0 90 L0 62 Q40 44 78 56 Q116 68 150 48 Q188 26 228 44 Q268 62 306 50 Q344 38 382 56 Q420 74 460 58 L460 90 Z' fill='%23C9D8FF' fill-opacity='.09'/%3E%3C/svg%3E") repeat-x left bottom / 460px 90px; }
@@ -551,7 +570,7 @@ function rxaPoser() {
     /* Rex marche et s'adosse jusqu'aux bords du bandeau : la partie transparente de son image ne
        doit pas élargir la page (défilement de côté sur iPhone). Le vertical reste libre (résultats
        de la recherche). */
-    .dbx-hero { overflow-x: clip; }
+    :is(.dbx-hero, .opx-hero) { overflow-x: clip; }
     .rxa-bouffee { transform-box: fill-box; transform-origin: 50% 50%; opacity: 0; animation: rxaBouffee 8s linear infinite; }
     @keyframes rxaBouffee {
       0% { transform: translate(0, 0) scale(.35); opacity: 0; }
@@ -582,7 +601,9 @@ function rxaPoser() {
     @media (prefers-reduced-motion: reduce) { .rxa-meteores { display: none; } }
     @media (prefers-reduced-motion: reduce) { .rxa-ptero, .rxa-ailes, .rxa-passe, .rxa-lave { animation: none; } .rxa-passe { display: none; } .rxa-bouffee { animation: none; opacity: .12; } }
     @media (max-width: 768px) { .rxa-scene .rxa-decor { height: 96px; right: -16px; } }
-    @media (max-width: 768px) { img.dbx-hero-mascotte.rxa-flamme { height: 96px !important; margin-left: calc(-180 / 234 * 96px); } }`;
+    @media (max-width: 768px) {
+      img.dbx-hero-mascotte.rxa-flamme { height: 96px !important; margin-left: calc(-180 / 234 * 96px); }
+      img.dbx-hero-mascotte.rxa-flamme.rxa-petit { height: 68px !important; margin-left: calc(-180 / 234 * 68px); } }`;
   st.textContent += `
     .sidebar .rex-mascotte-menu, img.dbx-hero-mascotte { object-fit: contain; object-position: center bottom; }
     .sidebar .rex-mascotte-menu:hover, img.dbx-hero-mascotte:hover { cursor: pointer; }

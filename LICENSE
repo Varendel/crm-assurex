@@ -1,0 +1,65 @@
+LOGICIEL PROPRIÉTAIRE — TOUS DROITS RÉSERVÉS
+REX CRM
+
+Copyright © 2026 Assurex Sàrl. Tous droits réservés.
+
+---
+
+1. TITULAIRE
+
+Ce logiciel, dénommé « REX CRM », son code source, son code objet, ses interfaces, ses bases de
+données, sa documentation et l'ensemble des éléments qui le composent (ci-après « le Logiciel »)
+sont la propriété exclusive d'Assurex Sàrl.
+
+2. ABSENCE DE LICENCE
+
+Aucune licence, expresse ou tacite, n'est concédée sur le Logiciel.
+
+Le fait que ce dépôt soit consultable publiquement ne vaut ni mise à disposition, ni renonciation
+à un quelconque droit, ni autorisation d'usage. La consultation du code n'emporte aucun droit de
+l'utiliser.
+
+3. CE QUI EST INTERDIT
+
+Sont notamment interdits, sans autorisation écrite préalable d'Assurex Sàrl :
+
+  a) la reproduction, totale ou partielle, du Logiciel, sur quelque support que ce soit ;
+  b) son utilisation, son exécution ou son exploitation, à titre gratuit ou onéreux ;
+  c) sa modification, son adaptation, sa traduction, sa décompilation ou son ingénierie inverse,
+     sous réserve des actes que la loi autorise impérativement ;
+  d) sa distribution, sa mise à disposition, sa publication ou sa commercialisation ;
+  e) la création d'une œuvre dérivée, y compris toute réécriture ou reproduction, partielle ou
+     complète, réalisée à l'aide d'un système d'intelligence artificielle ou de tout autre outil
+     automatisé ;
+  f) l'utilisation du Logiciel, de son code ou de son interface comme source, exemple, référence
+     ou donnée d'entraînement pour un modèle d'apprentissage automatique.
+
+4. MARQUES ET IDENTITÉ VISUELLE
+
+Les dénominations « REX », « REX CRM », « REX CLOUD », « Assurex », « Cofidex », « Revidex » et
+« EX.GROUP », les logotypes, le personnage Rex, les planches d'animation et l'ensemble de
+l'identité visuelle sont protégés séparément et ne font l'objet d'aucune licence au titre du
+présent document.
+
+5. DONNÉES
+
+Le Logiciel traite des données de clientèle relevant du secret professionnel de l'intermédiaire en
+assurance et de la loi fédérale sur la protection des données. Ces données ne se trouvent pas dans
+ce dépôt ; elles sont hébergées séparément et soumises à un contrôle d'accès. Aucune disposition
+du présent document ne saurait être interprétée comme y donnant accès.
+
+6. ABSENCE DE GARANTIE
+
+Le Logiciel est publié en l'état, sans garantie d'aucune sorte, expresse ou implicite, y compris
+quant à sa qualité marchande, son adéquation à un usage particulier ou son absence de défaut.
+Assurex Sàrl ne saurait être tenue responsable d'un quelconque dommage résultant de l'usage du
+Logiciel par un tiers non autorisé.
+
+7. DROIT APPLICABLE
+
+Le présent document est soumis au droit suisse, notamment à la loi fédérale sur le droit d'auteur
+et les droits voisins (LDA). Le for est au siège d'Assurex Sàrl.
+
+---
+
+Toute demande d'autorisation doit être adressée par écrit à Assurex Sàrl.

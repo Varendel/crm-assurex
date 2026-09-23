@@ -32,13 +32,31 @@ function otaLire(file) {
     if (!r.ok || d.error) throw new Error(d.error || 'lecture impossible');
     let prime = otaNombre(d.prime_annuelle);
     if (!prime && otaNombre(d.prime_mensuelle)) prime = Math.round(otaNombre(d.prime_mensuelle) * 12 * 100) / 100;
-    // 23.09.2026 : l'addition des lignes de prime est juste pour une POLICE (RC + vol + casco),
-    // fausse pour une OFFRE à variantes, où elle additionnerait les variantes entre elles. On ne
-    // la garde donc que s'il n'y a qu'une seule ligne.
-    if (!prime && Array.isArray(d.lignes_prime) && d.lignes_prime.length === 1) {
-      prime = otaNombre(d.lignes_prime[0] && (d.lignes_prime[0].prime_annuelle ?? d.lignes_prime[0].prime ?? d.lignes_prime[0].montant));
+    // 23.09.2026, matin : l'addition des lignes est juste pour une POLICE (RC + vol + casco),
+    // fausse pour une OFFRE à variantes, où elle additionne des variantes entre elles. J'avais donc
+    // limité l'addition à une ligne unique — et cassé le cas le plus courant en entreprise.
+    //
+    // 23.09.2026, après-midi : « il n'a pas détecté la prime. » Une offre Groupe Mutuel IJM/LAA/LPP
+    // porte une ligne PAR GARANTIE et aucun total annuel : ma restriction la faisait retomber sur
+    // rien, en silence. Les deux cas se distinguent pourtant très bien :
+    //   · des GARANTIES différentes (IJM, LAA, LPP…) s'additionnent — c'est une seule police ;
+    //   · des VARIANTES portent le même libellé et ne diffèrent que par la franchise : on n'y touche
+    //     pas, c'est au courtier de choisir laquelle il retient.
+    let composee = 0;
+    const lignes = Array.isArray(d.lignes_prime) ? d.lignes_prime : [];
+    if (!prime && lignes.length) {
+      const montant = l => otaNombre(l && (l.prime_annuelle ?? l.prime ?? l.montant));
+      const etiquette = l => String((l && (l.produit ?? l.garantie ?? l.libelle ?? l.nom)) || '').trim().toLowerCase();
+      const valides = lignes.filter(montant);
+      const noms = new Set(valides.map(etiquette));
+      if (valides.length === 1) prime = montant(valides[0]);
+      // Autant de libellés distincts que de lignes, et tous renseignés : ce sont des garanties.
+      else if (valides.length > 1 && noms.size === valides.length && !noms.has('')) {
+        prime = Math.round(valides.reduce((s, l) => s + montant(l), 0) * 100) / 100;
+        composee = valides.length;
+      }
     }
-    return { prime, compagnie: d.compagnie || null, produit: d.produit || null, debut: d.date_debut || null, franchise: d.franchise || null, nom: file.name };
+    return { prime, composee, compagnie: d.compagnie || null, produit: d.produit || null, debut: d.date_debut || null, franchise: d.franchise || null, nom: file.name };
   })().catch(e => { console.warn('Lecture offre', e); return null; });
   _ota.set(file, p);
   return p;
@@ -92,7 +110,9 @@ document.addEventListener('change', async (ev) => {
     return;
   }
   const faits = [];
-  if (remplir('of-prime', d.prime ? String(d.prime).replace('.', ',') : '')) faits.push(`prime CHF ${fmtCHF(d.prime)}/an`);
+  // Une prime composée est un total que REX a fabriqué, pas un chiffre lu sur l'offre : il se dit.
+  if (remplir('of-prime', d.prime ? String(d.prime).replace('.', ',') : ''))
+    faits.push(d.composee ? `prime CHF ${fmtCHF(d.prime)}/an — total de ${d.composee} garanties` : `prime CHF ${fmtCHF(d.prime)}/an`);
   if (remplir('of-compagnie', d.compagnie ? (typeof normaliserCompagnie === 'function' ? normaliserCompagnie(d.compagnie) : d.compagnie) : '')) faits.push(d.compagnie);
   if (remplir('of-couverture', d.produit)) faits.push('produit');
   if (remplir('of-franchise', d.franchise)) faits.push('franchise');

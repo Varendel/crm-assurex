@@ -1,68 +1,71 @@
-// ═══ REX SE BALADE AUSSI SUR LA FICHE D'AFFAIRE (23.09.2026) ════════════════════════════════════
+// ═══ REX SE BALADE DANS LES BANDEAUX (23.09.2026) ═══════════════════════════════════════════════
 // « Dans l'opp, mets un mini Rex qui exécute la même séquence mais adaptée en petit. »
-// puis : « j'ai demandé le Rex du dash qui se balade le long de l'opp, pas Rex cloud. »
-// puis : « je veux le mini Rex dans CET espace, pas plus loin. Fais-le se poser sur les deux bords
-//          et cracher des flammes. Adapte la séquence à la longueur. »
+// puis : « j'ai demandé le Rex du dash, pas Rex cloud » — puis : « dans CET espace, pas plus loin,
+// qu'il s'appuie sur quelque chose » — puis : « ajoute un petit décor préhistorique, et un mini
+// Rex ici aussi » (sur la fiche client).
 //
-// Deux erreurs avant d'arriver ici, et elles se ressemblent : j'ai d'abord pris le mauvais Rex
-// (l'emblème du nuage de l'espace client, qui flotte sur place), puis je l'ai lâché sur toute la
-// largeur du bandeau — il passait devant les chiffres et les boutons.
+// Tout le trajet vient de js/117 : c'est le Rex du tableau de bord, en plus petit, borné à son
+// couloir. Ici on ne fait que DEUX choses : trouver le creux, et y poser son image.
 //
-// Le bandeau d'une fiche n'est pas celui du tableau de bord : il est plein. Mais il reste un creux,
-// entre les coordonnées du client et le rail des étapes, à gauche des boutons. C'est là qu'il doit
-// vivre — et ce creux se MESURE, il ne se devine pas : sa largeur change avec le nom du client, le
-// nombre de boutons et la largeur de l'écran. On cherche donc le plus grand espace libre à cette
-// hauteur, on y pose Rex, et js/117 borne son trajet à ce rectangle (classe .rxa-zone).
+// TROUVER LE CREUX, sans rien savoir de l'écran. Ma version précédente s'appuyait sur des repères
+// propres à la fiche d'affaire (bloc d'identité, rail des étapes) — elle ne pouvait pas servir
+// ailleurs. On cherche maintenant à l'aveugle : on essaie des lignes de sol de bas en haut et on
+// retient la PREMIÈRE assez large et assez haute. La première en partant du bas, et pas la plus
+// grande : un personnage qui marche se pose en bas, et c'est là que la place est perdue de toute
+// façon. Sur une fiche d'affaire ça tombe au-dessus du rail des étapes ; sur une fiche client, à
+// droite des boutons. Aucun des deux écrans n'a eu besoin d'être décrit.
 
-const MRX_H_MAX = 104, MRX_H_MIN = 44;
+const MRX_H_MAX = 104, MRX_H_MIN = 44, MRX_L_MIN = 220;
 
-// Le creux se cherche en deux temps, et l'ordre compte. Ma première version prenait pour plafond le
-// bas du bloc d'identité sur TOUTE la largeur — or ce bloc n'occupe que la gauche : à droite des
-// coordonnées, l'espace libre commence bien plus haut, sous la rangée de boutons. Elle ne trouvait
-// donc qu'une bande de vingt pixels, et renonçait.
-//   1. le couloir : le plus large passage sans bouton, juste au-dessus du rail des étapes ;
-//   2. la hauteur : ce qui surplombe CE couloir-là, et rien d'autre.
-function mrxLibre(hero) {
-  const rh = hero.getBoundingClientRect();
-  const rail = hero.querySelector('.opx-etapes');
-  if (!rail) return null;
-  const bas = rail.getBoundingClientRect().top - 4;   // Rex marche sur la ligne du rail
+function mrxRects(hero) {
+  return [...hero.querySelectorAll('h1, h2, h3, p, button, a, input, select, kbd, img, .fcx-chip, .opx-kpi, .opx-identite, .opx-etapes')]
+    .filter(e => !e.closest('.opx-rex'))                 // Rex ne se gêne pas lui-même
+    .map(e => e.getBoundingClientRect())
+    .filter(r => r.width > 4 && r.height > 4);
+}
 
-  // .opx-identite en entier, et pas seulement ses pastilles : le titre de l'affaire est un champ
-  // libre, il descend plus bas dès que le client a un nom long.
-  const tous = [...hero.querySelectorAll('.opx-identite, button, a, input, select, kbd, .fcx-chip, .opx-kpi')]
-    .map(e => e.getBoundingClientRect()).filter(r => r.width > 4 && r.height > 4);
-
-  // 1. Le couloir, cherché sur la hauteur minimale qu'il faut à Rex pour tenir debout.
+function mrxCouloir(rh, tous, bas) {
   const gene = tous.filter(r => r.bottom > bas - MRX_H_MIN && r.top < bas).sort((a, b) => a.left - b.left);
-  let x = rh.left + 14, meilleur = null;
-  const retenir = (de, a) => { if (a - de > (meilleur ? meilleur.l : 0)) meilleur = { x: de, l: a - de }; };
+  let x = rh.left + 14, m = null;
+  const retenir = (de, a) => { if (a - de > (m ? m.l : 0)) m = { x: de, l: a - de }; };
   for (const r of gene) { retenir(x, r.left - 8); x = Math.max(x, r.right + 8); }
   retenir(x, rh.right - 14);
-  // 220 px : les deux appuis en prennent 68, il doit rester de quoi marcher entre eux.
-  if (!meilleur || meilleur.l < 220) return null;   // trop étroit : on s'abstient plutôt que d'entasser
+  return m && m.l >= MRX_L_MIN ? m : null;
+}
 
-  // 2. La hauteur : ce qui déborde au-dessus du couloir, plafonné. On ne l'agrandit pas parce
-  //    qu'il y a de la place, et on renonce plutôt que de le faire chevaucher les boutons.
-  const plafond = tous
-    .filter(r => r.right > meilleur.x - 8 && r.left < meilleur.x + meilleur.l + 8 && r.bottom <= bas)
-    .reduce((m, r) => Math.max(m, r.bottom), rh.top + 6) + 4;
-  const h = Math.min(MRX_H_MAX, Math.floor(bas - plafond));
-  if (h < MRX_H_MIN) return null;
+function mrxLibre(hero) {
+  const rh = hero.getBoundingClientRect();
+  if (rh.height < MRX_H_MIN + 20) return null;
+  const tous = mrxRects(hero);
+  for (let bas = Math.round(rh.bottom - 6); bas > rh.top + MRX_H_MIN; bas -= 6) {
+    const m = mrxCouloir(rh, tous, bas);
+    if (!m) continue;
+    // La hauteur : ce qui surplombe CE couloir, et rien d'autre. Plafonnée — on ne l'agrandit pas
+    // parce qu'il y a de la place.
+    const plafond = tous
+      .filter(r => r.right > m.x - 8 && r.left < m.x + m.l + 8 && r.bottom <= bas)
+      .reduce((mx, r) => Math.max(mx, r.bottom), rh.top + 6) + 4;
+    const h = Math.min(MRX_H_MAX, Math.floor(bas - plafond));
+    if (h < MRX_H_MIN) continue;
+    return { gauche: Math.round(m.x - rh.left), largeur: Math.round(m.l),
+             bas: Math.round(rh.bottom - bas), hauteur: h };
+  }
+  return null;
+}
 
-  return { gauche: Math.round(meilleur.x - rh.left), largeur: Math.round(meilleur.l),
-           bas: Math.round(rh.bottom - bas), hauteur: h };
+function mrxHero() {
+  // La fiche d'affaire d'abord si elle est là ; sinon n'importe quel bandeau de fiche.
+  return document.querySelector('.opx-hero') || document.querySelector('.fcx-hero');
 }
 
 function mrxCaler() {
-  const hero = document.querySelector('.opx-hero');
+  const hero = mrxHero();
   const zone = hero && hero.querySelector('.opx-rex');
   if (!hero || !zone) return;
   const l = mrxLibre(hero);
   if (!l) { zone.style.display = 'none'; return; }
-  // `position` est posé ici AUSSI, en plus de la feuille de js/117 : si pour une raison quelconque
-  // cette feuille n'était pas encore appliquée, le span resterait dans le flux et ajouterait sa
-  // hauteur au bandeau — c'est-à-dire une centaine de pixels de vide sous les indicateurs.
+  // `position` est posé ici AUSSI, en plus de la feuille de js/117 : si cette feuille n'était pas
+  // encore appliquée, le span resterait dans le flux et ajouterait sa hauteur au bandeau.
   zone.style.position = 'absolute';
   zone.style.display = 'block';
   zone.style.setProperty('--rxa-petit-h', l.hauteur + 'px');
@@ -76,29 +79,30 @@ function mrxCaler() {
 }
 
 function mrxPoser() {
-  const hero = document.querySelector('.opx-hero');
+  const hero = mrxHero();
   if (!hero || hero.querySelector('.opx-rex')) return;
   // La piste porte .rxa-zone — c'est elle qui borne le trajet, pas le creux entier : les 34 px de
-  // marge de chaque côté sont la place des deux appuis (panneau à gauche, dossiers à droite), pour
-  // qu'il s'adosse CONTRE eux au lieu de passer devant.
+  // marge de chaque côté sont la place des deux appuis, pour qu'il s'adosse CONTRE eux.
   const scene = typeof RXA_PETIT_SCENE === 'string' ? RXA_PETIT_SCENE : '';
+  const prehist = hero.classList.contains('opx-hero') ? '' : ' mrx-prehist';
   hero.insertAdjacentHTML('beforeend',
-    `<span class="opx-rex" aria-hidden="true">${scene}<span class="opx-piste rxa-zone"><img class="dbx-hero-mascotte rxa-petit" src="assets/logos/rex/anim-confiant/1.png" alt=""/></span></span>`);
+    `<span class="opx-rex${prehist}" aria-hidden="true">${scene}<span class="opx-piste rxa-zone"><img class="dbx-hero-mascotte rxa-petit" src="assets/logos/rex/anim-confiant/1.png" alt=""/></span></span>`);
   if (typeof rxaPoser === 'function') rxaPoser();
-  // Deux passages : le premier avant que les images d'animation soient arrivées (la hauteur est
-  // alors fausse), le second une fois le bandeau posé pour de bon.
   requestAnimationFrame(mrxCaler);
   setTimeout(mrxCaler, 500);
 }
 
 (function mrxBrancher() {
-  if (typeof viewFicheOpportunite !== 'function') return;
-  const origine = viewFicheOpportunite;
-  window.viewFicheOpportunite = function () {
-    const html = origine.apply(this, arguments);
-    setTimeout(mrxPoser, 0);
-    return html;
-  };
-  let t = null;
-  window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(mrxCaler, 160); });
+  const main = document.getElementById('main-content');
+  if (main) {
+    let t = null;
+    // Un observateur plutôt qu'un enrobage par écran : la fiche client et la fiche d'affaire ne
+    // passent pas par la même fonction, et demain il y en aura d'autres.
+    new MutationObserver(() => { clearTimeout(t); t = setTimeout(mrxPoser, 90); })
+      .observe(main, { childList: true, subtree: true });
+  }
+  let r = null;
+  window.addEventListener('resize', () => { clearTimeout(r); r = setTimeout(mrxCaler, 160); });
+  const demarrer = () => setTimeout(mrxPoser, 200);
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', demarrer); else demarrer();
 })();

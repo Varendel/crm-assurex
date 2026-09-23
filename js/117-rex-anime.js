@@ -595,6 +595,26 @@ function rxaPoser() {
       background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 64' preserveAspectRatio='xMidYMax meet'%3E%3Crect x='11' y='10' width='4' height='54' rx='1.4' fill='%230A1F4D' fill-opacity='.55'/%3E%3Cpath d='M3 13h16l5 6-5 6H3z' fill='%237FE0C8' fill-opacity='.34'/%3E%3Cpath d='M3 13h16l5 6-5 6H3z' fill='none' stroke='%23C9EFE6' stroke-opacity='.4' stroke-width='.9'/%3E%3Crect x='6' y='18' width='10' height='1.8' rx='.9' fill='%23E8F3FF' fill-opacity='.5'/%3E%3C/svg%3E") no-repeat center bottom / contain; }
     .opxp-dossiers { position: absolute; right: 2px; bottom: 0; width: 30px; height: 62%;
       background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 34' preserveAspectRatio='xMidYMax meet'%3E%3Crect x='1' y='22' width='38' height='12' rx='2' fill='%23C9D8FF' fill-opacity='.26'/%3E%3Crect x='4' y='12' width='31' height='11' rx='2' fill='%237FE0C8' fill-opacity='.26'/%3E%3Crect x='8' y='2' width='24' height='11' rx='2' fill='%23C9D8FF' fill-opacity='.34'/%3E%3Cg fill='%230A1F4D' fill-opacity='.35'%3E%3Crect x='11' y='5' width='9' height='1.8' rx='.9'/%3E%3Crect x='7' y='15' width='9' height='1.8' rx='.9'/%3E%3Crect x='4' y='25' width='9' height='1.8' rx='.9'/%3E%3C/g%3E%3C/svg%3E") no-repeat center bottom / contain; }
+    /* ── Le décor préhistorique de la fiche client (23.09.2026) ──────────────────────────────────
+       « Ajoute un petit décor préhistorique, et un mini Rex ici aussi. » Volcan au fond, fougères
+       à gauche, rocher à droite : Rex s'y adosse comme il s'adosse au panneau sur une affaire.
+       Un seul jeu s'affiche à la fois — celui de l'écran où l'on est. */
+    .opxp-volcan, .opxp-fougeres, .opxp-rocher { display: none; }
+    .opx-rex.mrx-prehist .opxp-panneau, .opx-rex.mrx-prehist .opxp-dossiers { display: none; }
+    .opx-rex.mrx-prehist .opxp-volcan,
+    .opx-rex.mrx-prehist .opxp-fougeres,
+    .opx-rex.mrx-prehist .opxp-rocher { display: block; }
+
+    /* Le volcan : au fond, derrière tout, juste un profil et une lueur. */
+    .opxp-volcan { position: absolute; right: 28%; bottom: 0; width: 84px; height: 62%;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 84 62' preserveAspectRatio='xMidYMax meet'%3E%3Cpath d='M0 62 L26 16 q6-9 14-9 t14 9 L84 62 Z' fill='%230A1F4D' fill-opacity='.42'/%3E%3Cpath d='M26 16 q6-9 14-9 t14 9 q-7 5-14 5 t-14-5Z' fill='%23FF8A3D' fill-opacity='.5'/%3E%3Cpath d='M33 9 q3-7 7-7 t7 7' fill='none' stroke='%23FFC07A' stroke-opacity='.55' stroke-width='1.6'/%3E%3C/svg%3E") no-repeat center bottom / contain; }
+    /* Les fougères : l'appui de gauche, plus haut que Rex pour qu'on le voie s'y coller. */
+    .opxp-fougeres { position: absolute; left: 0; bottom: 0; width: 30px; height: 92%;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 30 60' preserveAspectRatio='xMidYMax meet'%3E%3Cg fill='none' stroke='%237FE0C8' stroke-opacity='.5' stroke-width='1.7' stroke-linecap='round'%3E%3Cpath d='M15 60 C15 42 12 30 6 20'/%3E%3Cpath d='M12 44 l-6-3M13 38 l-6-4M14 32 l-5-5M15 26 l-4-6'/%3E%3Cpath d='M16 60 C17 44 21 33 27 25'/%3E%3Cpath d='M19 45 l6-2M20 39 l6-3M21 33 l5-4'/%3E%3C/g%3E%3Cellipse cx='15' cy='59' rx='9' ry='2.4' fill='%230A1F4D' fill-opacity='.3'/%3E%3C/svg%3E") no-repeat center bottom / contain; }
+    /* Le rocher : l'appui de droite, à hauteur d'épaule. */
+    .opxp-rocher { position: absolute; right: 0; bottom: 0; width: 34px; height: 54%;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 34 24' preserveAspectRatio='xMidYMax meet'%3E%3Cpath d='M2 24 L7 9 q3-5 8-5 t9 5 l6 15 Z' fill='%23C9D8FF' fill-opacity='.26'/%3E%3Cpath d='M7 9 q3-5 8-5 t9 5' fill='none' stroke='%23E8F3FF' stroke-opacity='.34' stroke-width='1.2'/%3E%3Cpath d='M12 24 l3-9 4 4 2-6' fill='none' stroke='%230A1F4D' stroke-opacity='.26' stroke-width='1.1'/%3E%3C/svg%3E") no-repeat center bottom / contain; }
+
     @media (prefers-reduced-motion: reduce) { .opxp-etoiles { animation: none; } }
     .fcx-hero .rxa-scene { line-height: 0; }
     /* L'ancienne pose fixe ne s'affiche jamais : Rex n'apparaît qu'animé (22.09.2026). */

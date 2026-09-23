@@ -39,22 +39,52 @@ function ecoTexteHtml(t) {
     .map(p => `<p style="margin:0 0 11pt;${F}">${ecoEsc(p.trim()).replace(/\n/g, '<br>')}</p>`).join('');
 }
 
+// 23.09.2026 : « la mise en page du mail est bonne mais le tableau pas trop, fais un joli tableau. »
+//
+// Une grille de quatre colonnes se lit sur un écran d'ordinateur et devient illisible sur un
+// téléphone : « 10 % des prestations, au maximum 50 000 » passe à la ligne trois fois dans une
+// colonne de 60 px. Or un comparatif d'offres se lit d'abord sur un téléphone.
+//
+// Une CARTE par offre : le nom et la prime sur la même ligne — les deux choses qu'on cherche —
+// puis franchise et couverture en dessous, en libellé/valeur. Elle tient dans n'importe quelle
+// largeur sans jamais se couper.
+//
+// Contrainte Outlook : il rend le HTML avec le moteur de Word. Ni flex, ni grid, ni ombre, et les
+// coins arrondis sont ignorés (on les laisse : les autres messageries en profitent). Donc des
+// tableaux imbriqués et des styles en ligne, c'est le seul terrain sûr.
 function ecoTableauHtml(entrees) {
-  const F = 'font-family:Aptos,Calibri,Arial,sans-serif';
-  const th = 'background:#113679;color:#fff;text-align:left;padding:7px 10px;font-size:11pt';
-  const td = 'padding:8px 10px;border-bottom:1px solid #E2E7EF;font-size:11pt;vertical-align:top';
-  return `<table style="border-collapse:collapse;width:100%;${F};color:#0E1B33;margin:10px 0 16px">
-    <thead><tr>
-      <th style="${th}">Compagnie</th><th style="${th};text-align:right">Prime annuelle</th>
-      <th style="${th}">Franchise</th><th style="${th}">Couverture</th>
-    </tr></thead><tbody>
-    ${entrees.map(({ e }) => `<tr${e.retenue ? ' style="background:#ECFDF5"' : ''}>
-      <td style="${td}">${e.retenue ? '<b>✓ </b>' : ''}<b>${ecoEsc(e.compagnie || '—')}</b>${e.retenue ? '<br><span style="font-size:9.5pt;color:#16A34A">notre proposition</span>' : ''}</td>
-      <td style="${td};text-align:right;white-space:nowrap"><b>${e.prime ? 'CHF ' + fmtCHF(e.prime) : '—'}</b></td>
-      <td style="${td}">${ecoEsc(e.franchise || '—')}</td>
-      <td style="${td}">${ecoEsc(e.couverture || '—')}</td>
-    </tr>`).join('')}
-    </tbody></table>`;
+  const F = 'font-family:Aptos,Calibri,Arial,Helvetica,sans-serif';
+  const ligne = (libelle, valeur) => !valeur ? '' : `<tr>
+    <td style="${F};font-size:9.5pt;color:#7A869A;padding:3px 10px 3px 0;white-space:nowrap;vertical-align:top;text-transform:uppercase;letter-spacing:.04em">${libelle}</td>
+    <td style="${F};font-size:10.5pt;color:#2B3752;padding:3px 0;vertical-align:top;line-height:1.4">${ecoEsc(valeur)}</td></tr>`;
+
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin:14px 0 18px">
+    ${entrees.map(({ e }) => `<tr><td style="padding:0 0 10px">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;border:1px solid ${e.retenue ? '#BBE8D2' : '#E2E7EF'};border-left:4px solid ${e.retenue ? '#16A34A' : '#C8D2E4'};border-radius:10px;background:${e.retenue ? '#F4FCF8' : '#FFFFFF'}">
+        <tr><td style="padding:13px 16px 12px">
+
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse">
+            <tr>
+              <td style="${F};font-size:13.5pt;font-weight:700;color:#113679;padding:0 10px 0 0;vertical-align:middle;line-height:1.25">${ecoEsc(e.compagnie || '—')}</td>
+              <td style="${F};font-size:14pt;font-weight:700;color:#0E1B33;text-align:right;white-space:nowrap;vertical-align:middle">${e.prime ? 'CHF ' + fmtCHF(e.prime) : '—'}</td>
+            </tr>
+            <tr>
+              <td style="${F};font-size:9pt;color:#16A34A;font-weight:600;padding:2px 10px 0 0;letter-spacing:.03em">${e.retenue ? '✓ NOTRE PROPOSITION' : '&nbsp;'}</td>
+              <td style="${F};font-size:9pt;color:#7A869A;text-align:right;padding-top:2px">par an</td>
+            </tr>
+          </table>
+
+          ${(e.franchise || e.couverture || e.remarque) ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin-top:11px;border-top:1px solid ${e.retenue ? '#DCF0E6' : '#EDF1F7'};padding-top:4px">
+            <tr><td style="height:8px;line-height:8px;font-size:0">&nbsp;</td><td></td></tr>
+            ${ligne('Franchise', e.franchise)}
+            ${ligne('Couverture', e.couverture)}
+            ${ligne('Remarque', e.remarque)}
+          </table>` : ''}
+
+        </td></tr>
+      </table>
+    </td></tr>`).join('')}
+  </table>`;
 }
 
 const ECO_MENTION = `<p style="margin:14pt 0 0;font-size:8.5pt;color:#8A94A8;font-family:Aptos,Calibri,Arial,sans-serif">Comparaison établie sur la prime annuelle indiquée par chaque compagnie ; les franchises et l’étendue des couvertures diffèrent d’une offre à l’autre. Seules les conditions générales et particulières des polices font foi.</p>`;

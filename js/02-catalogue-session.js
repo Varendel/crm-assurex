@@ -241,6 +241,46 @@ function produitsLcaPourCompagnie(compagnieTexte) {
   return null;
 }
 
+// \u2500\u2500\u2500 Produits ENTREPRISE par compagnie (23.09.2026) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// \u00ab Les produits entreprise du Groupe Mutuel ne sont pas renseign\u00e9s, je pense, et Rex n'arrive pas
+// \u00e0 reconna\u00eetre. \u00bb Constat exact : il existait un catalogue par compagnie pour la sant\u00e9 LCA
+// (ci-dessus) et RIEN pour l'entreprise. Les branches g\u00e9n\u00e9riques (LAA, LAAC, LPP, perte de gain)
+// existaient bien dans CATALOGUE_PRODUITS, mais sans les options propres \u00e0 chaque assureur \u2014 or
+// c'est exactement ce qui figure sur une proposition et ce que la lecture automatique tente de
+// retrouver. Sans r\u00e9f\u00e9rence, elle n'a rien \u00e0 quoi rattacher ce qu'elle lit.
+//
+// CE QUI EST \u00c9CRIT ICI EST V\u00c9RIFI\u00c9, ligne \u00e0 ligne, sur la proposition Groupe Mutuel n\u00b0 621247 du
+// 23.09.2026 (dossier Katogan). Je n'ai PAS compl\u00e9t\u00e9 de m\u00e9moire le reste de la gamme entreprise du
+// Groupe Mutuel : inventer un nom de plan dans le CRM d'un courtier, c'est le retrouver un jour
+// dans un document remis \u00e0 un client. Les entr\u00e9es manquantes se compl\u00e9teront au fil des
+// propositions re\u00e7ues \u2014 le champ reste libre en attendant.
+const CATALOGUE_ENTREPRISE_PAR_COMPAGNIE = {
+  'groupe mutuel': {
+    laa: ['Accidents professionnels (AP)', 'Accidents non professionnels (ANP)',
+          'Garantie de taux (CP0267.10)', 'R\u00e9duction des frais de gestion li\u00e9e \u00e0 la LAA (CP0279.01)'],
+    laac: ['Frais de traitement \u2014 hospitalisation en chambre commune',
+           'Indemnit\u00e9 journali\u00e8re 20 % du salaire, d\u00e9lai d\u2019attente 2 jours',
+           'Couverture des rechutes et s\u00e9quelles tardives d\u2019accidents ant\u00e9rieurs',
+           'Extension \u2014 r\u00e9ductions pour faute et entreprise t\u00e9m\u00e9raire',
+           'Assurance exc\u00e9dentaire (gain au-del\u00e0 du plafond LAA)'],
+    perte_gain_maladie_lca: ['Couverture 720 jours', 'D\u00e9lai d\u2019attente 30 jours',
+                             'Compl\u00e9ment \u00e0 la LAPG \u2014 maternit\u00e9'],
+    lpp_entreprise: ['Pr\u00e9voyance Basis+ (0007)'],
+  },
+};
+
+// Les options connues pour une branche entreprise chez une compagnie donn\u00e9e. Null = on ne sait pas,
+// et dans ce cas le formulaire garde ses modules g\u00e9n\u00e9riques et la saisie libre : ne rien proposer
+// vaut mieux que proposer la gamme d'un autre assureur.
+function produitsEntreprisePourCompagnie(compagnieTexte, produitId) {
+  const s = (compagnieTexte || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+  if (!s || !produitId) return null;
+  for (const [cle, branches] of Object.entries(CATALOGUE_ENTREPRISE_PAR_COMPAGNIE)) {
+    if (s.includes(cle)) return branches[produitId] || null;
+  }
+  return null;
+}
+
 // Assureurs qui ne vendent QUE de la santé (LAMal/LCA) — pas de RC, véhicule, prévoyance, etc.
 // Sert à restreindre la liste "Catégorie" du formulaire Nouveau contrat à "Santé" uniquement dès
 // que l'une de ces compagnies est renseignée (demande de Jonathan le 21.08.2026 : "Helsana il ne

@@ -1085,7 +1085,15 @@ function updateModulesOptions() {
       ajouterLignePrime(); ajouterLignePrime(); ajouterLignePrime();
     }
   }
-  const modules = (produit && !estSante) ? produit.modules : [];
+  // 23.09.2026 : quand la compagnie a sa propre gamme pour cette branche entreprise (Groupe Mutuel
+  // et ses options LAA/LAAC/IJM/LPP, voir CATALOGUE_ENTREPRISE_PAR_COMPAGNIE), on propose CELLE-LÀ
+  // plutôt que la liste générique. Une option de la bonne compagnie se coche ; une option
+  // générique se retape à la main, et c'est là que les libellés divergent d'un contrat à l'autre —
+  // après quoi plus rien ne se reconnaît ni ne se compare.
+  const modulesCie = (produit && !estSante && typeof produitsEntreprisePourCompagnie === 'function')
+    ? produitsEntreprisePourCompagnie(document.getElementById('ct-compagnie')?.value || '', produit.id)
+    : null;
+  const modules = (produit && !estSante) ? (modulesCie || produit.modules) : [];
   // Le bloc "Modules complémentaires" reste toujours visible (même sans liste prédéfinie pour ce
   // produit, ex: RC véhicule) car le bouton "+ Ajouter un module complémentaire" (libellé libre)
   // est toujours disponible en dessous — sauf pour la Santé, masquée ci-dessus.

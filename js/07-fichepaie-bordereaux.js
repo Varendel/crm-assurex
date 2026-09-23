@@ -2374,6 +2374,16 @@ function viderClientOpportunite() {
 // modale (pas une navigation vers une autre page) qui, une fois le client créé, se contente de
 // re-brancher #o-client / #o-client-recherche via selectionnerClientOpportunite() — le reste du
 // formulaire sous-jacent n'est jamais touché. Demande de Jonathan le 21.08.2026.
+// « Personeni Christelle » a donné prénom = Personeni, nom = Christelle. Impossible de trancher :
+// dans le portefeuille on écrit les prospects « Nom Prénom », mais « Jean Dupont » s'écrit dans
+// l'autre sens. Plutôt que de deviner et de se tromper une fois sur deux, on propose et on offre
+// l'échange en un clic.
+function occInverserNom() {
+  const p = document.getElementById('occ-prenom'), n = document.getElementById('occ-nom');
+  if (!p || !n) return;
+  const t = p.value; p.value = n.value; n.value = t;
+}
+
 function ouvrirCreationClientDepuisOpportunite() {
   const nomTape = (document.getElementById('o-prospect-nom')?.value || '').trim();
   const ressembleEntreprise = /\b(SA|S\.A\.|Sàrl|Sarl|SNC|AG|GmbH|Fondation|Association)\b/i.test(nomTape);
@@ -2393,7 +2403,10 @@ function ouvrirCreationClientDepuisOpportunite() {
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px 12px;margin-top:8px">
           <div class="form-field" style="grid-column:span 2"><label class="form-label">Civilité</label><select class="form-select" id="occ-civilite"><option value="">—</option><option value="Monsieur">Monsieur</option><option value="Madame">Madame</option></select></div>
           <div class="form-field"><label class="form-label">Prénom *</label><input class="form-input" id="occ-prenom" value="${qa(prenomDevine)}" placeholder="Jean"/></div>
-          <div class="form-field"><label class="form-label">Nom *</label><input class="form-input" id="occ-nom" value="${qa(nomDevine)}" placeholder="Dupont"/></div>
+          <div class="form-field"><label class="form-label">Nom *
+            <button type="button" onclick="occInverserNom()" title="Inverser prénom et nom"
+              style="float:right;background:none;border:0;color:var(--accent);font-size:11px;cursor:pointer;padding:0">↔ inverser</button>
+          </label><input class="form-input" id="occ-nom" value="${qa(nomDevine)}" placeholder="Dupont"/></div>
           <div class="form-field" style="grid-column:span 2"><label class="form-label">Email *</label><input class="form-input" id="occ-email" type="email" placeholder="jean@email.ch"/></div>
           <div class="form-field"><label class="form-label">Mobile</label><input class="form-input" id="occ-mobile" placeholder="+41 79 XXX XX XX"/></div>
           <div class="form-field"><label class="form-label">NPA *</label><input class="form-input" id="occ-npa" placeholder="1000"/></div>
@@ -2522,6 +2535,21 @@ async function creerClientDepuisOpportunite() {
     const nouveauId = (result[0] && result[0].id) || allClients.slice().sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0))[0]?.id;
     document.getElementById('modal-creation-client-opp')?.remove();
     if (nouveauId) selectionnerClientOpportunite(nouveauId);
+    // 23.09.2026 : le bouton promet « Créer et lier à l'opportunité », et ne liait rien. La fiche
+    // était bien créée, mais le rattachement n'existait que dans le FORMULAIRE : tant qu'on ne
+    // l'enregistrait pas, l'affaire gardait client_id = null et son prospect. Deux écritures, l'une
+    // immédiate et l'autre différée, sans que rien ne le dise — et une affaire orpheline à l'arrivée.
+    // Le lien part maintenant en base tout de suite, comme la fiche.
+    if (nouveauId && typeof opportuniteEnEditionId !== 'undefined' && opportuniteEnEditionId) {
+      const r = await dbPatch('opportunites', opportuniteEnEditionId, { client_id: nouveauId, prospect_nom: null });
+      if (r && r.error) showError('Fiche créée, mais le rattachement à l’affaire a échoué : ' + errMsg(r));
+      else {
+        const o = (typeof allOpportunites !== 'undefined' ? allOpportunites : []).find(x => x.id === opportuniteEnEditionId);
+        if (o) { o.client_id = nouveauId; o.prospect_nom = null; }
+        if (typeof ajouterLigneHistoriqueOpportunite === 'function')
+          await ajouterLigneHistoriqueOpportunite(opportuniteEnEditionId, '👤 Fiche client créée et rattachée à l’affaire');
+      }
+    }
   } else {
     const detail = result && result.detail ? JSON.stringify(result.detail) : 'connexion';
     if (erreurEl) { erreurEl.textContent = 'Erreur lors de la création (' + detail + ').'; erreurEl.style.display = ''; }

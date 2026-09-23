@@ -124,7 +124,7 @@ RXA_SEQUENCES.flamme = (() => {
       }
     };
     const cracher = (deX, aX) => { const t = [130, 130, 130, 150, 240, 260, 160, 140]; for (let k = 0; k < 8; k++) etapes.push({ f: FG + k, ms: t[k], x: deX + (aX - deX) * (k + 1) / 8, miroir: false }); };
-    const sauter = () => SAUT_Y.forEach((y, k) => etapes.push({ f: SA + k, ms: SAUT_MS[k], x: 0, y, miroir: false }));
+    const sauter = (x = 0, miroir = false) => SAUT_Y.forEach((y, k) => etapes.push({ f: SA + k, ms: SAUT_MS[k], x, y, miroir }));
     const adosser = (pose, x) => etapes.push({ f: AP + pose, ms: 2400, x, miroir: false });
     const C = Math.max(G / 2, -D / 2, FLAMME_MIN);
     tourner([0, 1, 2, 3], 0);                 // de profil → de face
@@ -135,10 +135,19 @@ RXA_SEQUENCES.flamme = (() => {
     marcher(C, 0, false);                     // revient
     tourner([0, 1, 2, 3, 4, 5, 6, 7], 0);     // demi-tour vers la gauche
     cracher(0, C);                            // repart en crachant une longue flamme turquoise
-    marcher(C, G, true);                      // traverse tout le bandeau, par-dessus la recherche
+    // 23.09.2026 : « rajoute flamme et saut le long de la barre pour rallonger le trajet ». La
+    // longue traversée est coupée en trois : il saute au premier tiers, crache au second.
+    const T1 = C + (G - C) * 0.38, T2 = C + (G - C) * 0.72, T3 = G + (R - G) * 0.5;
+    marcher(C, T1, true);
+    sauter(T1, true);                         // un saut en chemin, face à sa marche
+    marcher(T1, T2, true);
+    cracher(T2, T2 - 4);                      // une flamme au passage
+    marcher(T2, G, true);                     // jusqu'au bord gauche, par-dessus la recherche
     tourner([7, 6, 5, 4, 3, 2, 1, 0], G);     // se retourne vers la droite…
     adosser(1, G);                            // … et s'adosse contre le bord gauche du bandeau
-    marcher(G, R, false);                     // traverse jusqu'au bord droit du bandeau
+    marcher(G, T3, false);                    // retraverse, avec un saut à mi-chemin
+    sauter(T3, false);
+    marcher(T3, R, false);                    // jusqu'au bord droit du bandeau
     tourner([0, 1, 2, 3, 4, 5, 6, 7], R);     // se retourne vers la gauche…
     adosser(0, R);                            // … et s'adosse contre le bord du bandeau
     marcher(R, 0, true);                      // revient à sa place
@@ -368,6 +377,7 @@ const RXA_DECOR = `
 const RXA_HORIZON = `
 <span class="rxa-horizon" aria-hidden="true">
   <span class="rxa-etoiles"></span>
+  <span class="rxa-collines"></span>
   <svg class="rxa-lune" viewBox="0 0 100 100" focusable="false">
     <defs>
       <radialGradient id="rxaHalo"><stop offset=".30" stop-color="%23EAF6FF" stop-opacity=".50"/><stop offset=".55" stop-color="%239FD8FF" stop-opacity=".16"/><stop offset="1" stop-color="%239FD8FF" stop-opacity="0"/></radialGradient>
@@ -377,7 +387,6 @@ const RXA_HORIZON = `
     <circle class="rxa-lune-corps" cx="50" cy="50" r="19" fill="url(%23rxaLuneCorps)" opacity=".9"/>
     <g fill="%23AFC6E6" opacity=".5"><circle cx="44" cy="45" r="3.1"/><circle cx="56" cy="53" r="2.1"/><circle cx="48" cy="58" r="1.5"/></g>
   </svg>
-  <span class="rxa-collines"></span>
 </span>`.replace(/%23/g, '#');
 
 function rxaHorizon(hero) {
@@ -479,14 +488,17 @@ function rxaPoser() {
     /* L'horizon sur toute la largeur : motifs répétés, donc identiques du téléphone au grand écran.
        Tout est calé sur la ligne de sol mesurée (--rxa-sol), comme le volcan. */
     .dbx-hero > .rxa-horizon { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; border-radius: inherit; }
-    .rxa-horizon .rxa-collines { position: absolute; left: 0; right: 0; bottom: var(--rxa-sol, 40px); height: 92px;
+    .rxa-horizon .rxa-collines { position: absolute; left: 0; right: 0; bottom: var(--rxa-sol, 40px); height: 108px;
       background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='62' viewBox='0 0 300 62'%3E%3Cpath d='M0 62 L0 42 Q30 26 62 36 Q94 46 124 32 Q156 18 190 34 Q224 50 256 38 Q280 29 300 36 L300 62 Z' fill='%230A1F4D' fill-opacity='.26'/%3E%3Cpath d='M0 42 Q30 26 62 36 Q94 46 124 32 Q156 18 190 34 Q224 50 256 38 Q280 29 300 36' fill='none' stroke='%237FE0C8' stroke-opacity='.13' stroke-width='1.2'/%3E%3C/svg%3E") repeat-x left bottom / 300px 62px,
         url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='460' height='90' viewBox='0 0 460 90'%3E%3Cpath d='M0 90 L0 62 Q40 44 78 56 Q116 68 150 48 Q188 26 228 44 Q268 62 306 50 Q344 38 382 56 Q420 74 460 58 L460 90 Z' fill='%23C9D8FF' fill-opacity='.09'/%3E%3C/svg%3E") repeat-x left bottom / 460px 90px; }
     .rxa-horizon .rxa-etoiles { position: absolute; left: 0; right: 0; bottom: calc(var(--rxa-sol, 40px) + 60px); height: 48px;
       background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='48' viewBox='0 0 260 48'%3E%3Cg fill='%23ffffff'%3E%3Ccircle cx='18' cy='12' r='1.2' opacity='.55'/%3E%3Ccircle cx='63' cy='28' r='.9' opacity='.32'/%3E%3Ccircle cx='96' cy='7' r='1.4' opacity='.6'/%3E%3Ccircle cx='131' cy='21' r='.8' opacity='.28'/%3E%3Ccircle cx='168' cy='11' r='1.1' opacity='.48'/%3E%3Ccircle cx='199' cy='31' r='1' opacity='.36'/%3E%3Ccircle cx='232' cy='15' r='1.3' opacity='.54'/%3E%3Ccircle cx='247' cy='35' r='.8' opacity='.26'/%3E%3C/g%3E%3C/svg%3E") repeat-x left bottom / 260px 48px;
       animation: rxaScintille 7s ease-in-out infinite; }
-    /* La lune se pose dans le ciel libre entre le texte et le volcan — jamais derrière le titre. */
-    .rxa-horizon .rxa-lune { position: absolute; left: 54%; bottom: calc(var(--rxa-sol, 40px) + 44px); width: 76px; height: 76px;
+    /* La lune est dessinée APRÈS les collines : rien ne la couvre. Elle se place dans le ciel du
+       paysage, à gauche du volcan — la seule zone toujours libre sur ordinateur : le haut est pris
+       par les boutons (Outlook, + Client, + Opportunité), le milieu gauche par le texte et la
+       barre de recherche (23.09.2026, « la lune est cachée »). */
+    .rxa-horizon .rxa-lune { position: absolute; right: 30%; bottom: calc(var(--rxa-sol, 40px) + 62px); width: 84px; height: 84px;
       animation: rxaLuneLuit 9s ease-in-out infinite; }
     .rxa-lune-corps { filter: drop-shadow(0 0 5px rgba(190, 225, 255, .6)); }
     @keyframes rxaScintille { 0%, 100% { opacity: .72; } 50% { opacity: 1; } }
@@ -495,8 +507,14 @@ function rxaPoser() {
     @media (max-width: 768px) {
       .rxa-horizon .rxa-collines { height: 58px; background-size: 190px 40px, 290px 58px; }
       .rxa-horizon .rxa-etoiles { bottom: calc(var(--rxa-sol, 40px) + 38px); height: 32px; background-size: 175px 32px; }
-      .rxa-horizon .rxa-lune { width: 54px; height: 54px; left: 6%; bottom: calc(var(--rxa-sol, 40px) + 46px); } }
-    .rxa-scene .rxa-decor { position: absolute; right: -30px; bottom: 0; height: 170px; width: auto; aspect-ratio: 420 / 170; z-index: 1; pointer-events: none; overflow: visible; }
+      /* Sur téléphone le haut du bandeau porte la date et le titre : la lune redescend à gauche,
+         au-dessus des collines, dans la bande laissée libre par Rex. */
+      .rxa-horizon .rxa-lune { width: 54px; height: 54px; left: 6%; right: auto; bottom: calc(var(--rxa-sol, 40px) + 46px); } }
+    /* 23.09.2026 : « il y a un trait net d'arrêt de paysage ». Le décor mesure 420 px et se coupait
+       net sur son bord gauche — brume, montagne et sol s'arrêtaient d'un coup au milieu du bandeau.
+       Son bord gauche se fond maintenant dans les collines répétées, qui prennent le relais. */
+    .rxa-scene .rxa-decor { position: absolute; right: -30px; bottom: 0; height: 170px; width: auto; aspect-ratio: 420 / 170; z-index: 1; pointer-events: none; overflow: visible;
+      -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 17%, #000 100%); mask-image: linear-gradient(to right, transparent 0%, #000 17%, #000 100%); }
     .rxa-scene img { position: relative; z-index: 2; }
     /* Rex marche et s'adosse jusqu'aux bords du bandeau : la partie transparente de son image ne
        doit pas élargir la page (défilement de côté sur iPhone). Le vertical reste libre (résultats

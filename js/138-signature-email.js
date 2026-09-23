@@ -135,6 +135,20 @@ async function sigImages(ag) {
   return out;
 }
 
+// 23.09.2026 : « pour le paramétrage mail : Segoe UI 10, couleur bleu foncé. » Une seule
+// déclaration, et TOUS les courriels du CRM la suivent — ils passent tous par ce convertisseur.
+const SIG_POLICE = 'font-family:Segoe UI,Segoe,Tahoma,Geneva,Verdana,sans-serif;font-size:10pt;color:#1F3864';
+
+// La formule d'appel. « Bonjour Madame, » — la civilité, pas le prénom : on écrit à un client, pas
+// à un ami. Sur 254 fiches, 70 n'ont pas de civilité renseignée : pour celles-là « Bonjour, » tout
+// court, qui ne se trompe jamais. Mieux vaut sobre que familier à tort.
+function sigFormuleAppel(client) {
+  const civ = String((client && client.civilite) || '').trim().toLowerCase();
+  if (civ.startsWith('mme') || civ.startsWith('madame')) return 'Bonjour Madame,';
+  if (civ.startsWith('m.') || civ.startsWith('monsieur')) return 'Bonjour Monsieur,';
+  return 'Bonjour,';
+}
+
 // Texte brut → HTML (police des e-mails Outlook) ; retire la formule finale « Prénom Nom / Assurex »
 function sigTexteVersHtml(texte, ag) {
   let paras = String(texte || '').replace(/\r\n/g, '\n').split(/\n{2,}/);
@@ -142,7 +156,7 @@ function sigTexteVersHtml(texte, ag) {
   const der = (paras[paras.length - 1] || '').trim().toLowerCase();
   if (der && der.length < 90 && ((nom && der.includes(nom)) || /assurex s[àa]rl|meilleures salutations|^cordialement/.test(der))) paras.pop();
   const corps = paras.map(p => `<p style="margin:0 0 11pt">${sigEsc(p).replace(/\n/g, '<br>')}</p>`).join('');
-  return `<div style="font-family:Aptos,Calibri,Arial,sans-serif;font-size:11pt;color:#000">${corps}</div>`;
+  return `<div style="${SIG_POLICE}">${corps}</div>`;
 }
 
 // ── Branchement ─────────────────────────────────────────────────────────────────────────────────

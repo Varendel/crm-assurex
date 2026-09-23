@@ -28,7 +28,7 @@
   font-size: 12px; font-weight: 600; color: var(--text);
 }
 .eco-apercu-tete small { font-weight: 400; color: var(--text-muted); }
-.eco-apercu iframe { flex: 1; width: 100%; min-height: 380px; border: 0; background: #fff; }
+.eco-apercu iframe { flex: 1; width: 100%; min-height: 380px; border: 0; background: #EEF1F5; }
 
 @media (max-width: 860px) {
   .eco-corps { grid-template-columns: minmax(0, 1fr); }

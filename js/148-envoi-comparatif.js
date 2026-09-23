@@ -34,7 +34,7 @@ function ecoEntrees(oppId) {
 
 // Texte libre → paragraphes. Une ligne vide sépare deux paragraphes, un simple retour va à la ligne.
 function ecoTexteHtml(t) {
-  const F = 'font-family:Aptos,Calibri,Arial,sans-serif;font-size:11pt;color:#0E1B33';
+  const F = 'font-family:Segoe UI,Segoe,Tahoma,Geneva,Verdana,sans-serif;font-size:10pt;color:#1F3864';
   return String(t || '').split(/\n{2,}/).filter(p => p.trim())
     .map(p => `<p style="margin:0 0 11pt;${F}">${ecoEsc(p.trim()).replace(/\n/g, '<br>')}</p>`).join('');
 }
@@ -56,7 +56,7 @@ function ecoTexteHtml(t) {
 // message comme elle ouvre l'écran : le client lit d'abord ce qu'il a, ensuite ce qu'on propose.
 function ecoActuelHtml(ct) {
   if (!ct) return '';
-  const F = 'font-family:Aptos,Calibri,Arial,Helvetica,sans-serif';
+  const F = 'font-family:Segoe UI,Segoe,Tahoma,Geneva,Verdana,sans-serif';
   const prime = Number(ct.prime_annuelle) || 0;
   const l = (k, v) => !v ? '' : `<tr>
     <td style="${F};font-size:9.5pt;color:#8A94A8;padding:3px 10px 3px 0;white-space:nowrap;vertical-align:top;text-transform:uppercase;letter-spacing:.04em">${k}</td>
@@ -67,8 +67,8 @@ function ecoActuelHtml(ct) {
         <tr><td style="padding:13px 16px 12px">
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse">
             <tr>
-              <td style="${F};font-size:13pt;font-weight:700;color:#4A5568;padding:0 10px 0 0;vertical-align:middle">${ecoEsc(ct.compagnie || '—')}</td>
-              <td style="${F};font-size:13.5pt;font-weight:700;color:#4A5568;text-align:right;white-space:nowrap;vertical-align:middle">${prime ? 'CHF ' + fmtCHF(prime) : '—'}</td>
+              <td style="${F};font-size:12pt;font-weight:700;color:#4A5568;padding:0 10px 0 0;vertical-align:middle">${ecoEsc(ct.compagnie || '—')}</td>
+              <td style="${F};font-size:12.5pt;font-weight:700;color:#4A5568;text-align:right;white-space:nowrap;vertical-align:middle">${prime ? 'CHF ' + fmtCHF(prime) : '—'}</td>
             </tr>
             <tr>
               <td style="${F};font-size:9pt;color:#8A94A8;font-weight:600;padding:2px 10px 0 0;letter-spacing:.03em">VOTRE COUVERTURE ACTUELLE</td>
@@ -88,7 +88,7 @@ function ecoActuelHtml(ct) {
 }
 
 function ecoTableauHtml(entrees, actuel) {
-  const F = 'font-family:Aptos,Calibri,Arial,Helvetica,sans-serif';
+  const F = 'font-family:Segoe UI,Segoe,Tahoma,Geneva,Verdana,sans-serif';
   const ref = Number(actuel && actuel.prime_annuelle) || 0;
   // L'écart avec la couverture actuelle : le seul chiffre que le client retient vraiment.
   const ecart = p => {
@@ -101,7 +101,7 @@ function ecoTableauHtml(entrees, actuel) {
   };
   const ligne = (libelle, valeur) => !valeur ? '' : `<tr>
     <td style="${F};font-size:9.5pt;color:#7A869A;padding:3px 10px 3px 0;white-space:nowrap;vertical-align:top;text-transform:uppercase;letter-spacing:.04em">${libelle}</td>
-    <td style="${F};font-size:10.5pt;color:#2B3752;padding:3px 0;vertical-align:top;line-height:1.4">${ecoEsc(valeur)}</td></tr>`;
+    <td style="${F};font-size:10pt;color:#1F3864;padding:3px 0;vertical-align:top;line-height:1.4">${ecoEsc(valeur)}</td></tr>`;
 
   return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin:14px 0 18px">
     ${entrees.map(({ e }) => `<tr><td style="padding:0 0 10px">
@@ -110,8 +110,8 @@ function ecoTableauHtml(entrees, actuel) {
 
           <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse">
             <tr>
-              <td style="${F};font-size:13.5pt;font-weight:700;color:#113679;padding:0 10px 0 0;vertical-align:middle;line-height:1.25">${ecoEsc(e.compagnie || '—')}</td>
-              <td style="${F};font-size:14pt;font-weight:700;color:#0E1B33;text-align:right;white-space:nowrap;vertical-align:middle">${e.prime ? 'CHF ' + fmtCHF(e.prime) : '—'}</td>
+              <td style="${F};font-size:12pt;font-weight:700;color:#113679;padding:0 10px 0 0;vertical-align:middle;line-height:1.25">${ecoEsc(e.compagnie || '—')}</td>
+              <td style="${F};font-size:13pt;font-weight:700;color:#1F3864;text-align:right;white-space:nowrap;vertical-align:middle">${e.prime ? 'CHF ' + fmtCHF(e.prime) : '—'}</td>
             </tr>
             <tr>
               <td style="${F};font-size:9pt;color:#16A34A;font-weight:600;padding:2px 10px 0 0;letter-spacing:.03em">${e.retenue ? '✓ NOTRE PROPOSITION' : '&nbsp;'}</td>
@@ -132,10 +132,22 @@ function ecoTableauHtml(entrees, actuel) {
   </table>`;
 }
 
-const ECO_MENTION = `<p style="margin:14pt 0 0;font-size:8.5pt;color:#8A94A8;font-family:Aptos,Calibri,Arial,sans-serif">Comparaison établie sur la prime annuelle indiquée par chaque compagnie ; les franchises et l’étendue des couvertures diffèrent d’une offre à l’autre. Seules les conditions générales et particulières des polices font foi.</p>`;
+const ECO_MENTION = `<p style="margin:14pt 0 0;font-size:8.5pt;color:#8A94A8;font-family:Segoe UI,Segoe,Tahoma,Geneva,Verdana,sans-serif">Comparaison établie sur la prime annuelle indiquée par chaque compagnie ; les franchises et l’étendue des couvertures diffèrent d’une offre à l’autre. Seules les conditions générales et particulières des polices font foi.</p>`;
 
+// 23.09.2026 : « l'affichage c'est une page A4 paysage, corrige-moi ça. » Le message n'avait aucune
+// largeur de page : dans un aperçu de 1900 px, il s'étalait sur 1900 px. Un courriel se lit sur une
+// colonne — au-delà de 700 px environ, l'œil perd la ligne en revenant à la marge gauche.
+// Une table centrée plutôt qu'un `max-width` sur un div : Outlook rend le HTML avec le moteur de
+// Word, qui ignore max-width mais respecte la largeur d'une table.
 function ecoMessageHtml(avant, apres, entrees, actuel) {
-  return ecoTexteHtml(avant) + ecoActuelHtml(actuel) + ecoTableauHtml(entrees, actuel) + ecoTexteHtml(apres) + ECO_MENTION;
+  const corps = ecoTexteHtml(avant) + ecoActuelHtml(actuel) + ecoTableauHtml(entrees, actuel) + ecoTexteHtml(apres) + ECO_MENTION;
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse">
+    <tr><td align="center" style="padding:0">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="640" style="width:100%;max-width:640px;border-collapse:collapse;text-align:left">
+        <tr><td style="padding:0">${corps}</td></tr>
+      </table>
+    </td></tr>
+  </table>`;
 }
 
 // ── La fenêtre d'édition ───────────────────────────────────────────────────────────────────────
@@ -151,7 +163,9 @@ function ecoOuvrir(oppId) {
   if (typeof opSauverReco === 'function') opSauverReco(oppId, true);   // le texte reste sur l'affaire
 
   const nom = typeof opNomClient === 'function' ? opNomClient(o) : '';
-  const avant = `${client && client.prenom ? `Bonjour ${client.prenom},` : 'Bonjour,'}\n\nVous trouverez ci-dessous la comparaison des offres reçues pour ${o.titre || nom}.`;
+  // La civilité, pas le prénom — on écrit à un client (js/138).
+  const appel = typeof sigFormuleAppel === 'function' ? sigFormuleAppel(client) : 'Bonjour,';
+  const avant = `${appel}\n\nVous trouverez ci-dessous la comparaison des offres reçues pour ${o.titre || nom}.`;
   const apres = `${reco ? reco + '\n\n' : ''}Les offres des compagnies sont jointes à ce message. Je reste à disposition pour en discuter.`;
 
   // Les PDF : celui de l'offre retenue coché d'office, les autres disponibles.
@@ -213,7 +227,7 @@ function ecoApercu() {
     const jointes = _eco.pieces.filter(p => p.coche);
     const bandeau = jointes.length
       ? `<div style="margin:0 0 14px;padding:8px 10px;background:#F4F6F9;border-radius:8px;font:11px Arial,sans-serif;color:#56627A">📎 ${jointes.map(p => ecoEsc(p.nom)).join(' · ')}</div>` : '';
-    f.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;padding:16px 18px;background:#fff;color:#000;word-wrap:break-word}</style></head><body>${bandeau}${ecoMessageHtml(avant, apres, _eco.entrees, _eco.actuel)}</body></html>`;
+    f.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;padding:16px 18px;background:#EEF1F5;color:#000;word-wrap:break-word}.page{max-width:640px;margin:0 auto;background:#fff;padding:18px 20px;box-shadow:0 1px 4px rgba(0,0,0,.12)}</style></head><body><div class="page">${bandeau}${ecoMessageHtml(avant, apres, _eco.entrees, _eco.actuel)}</div></body></html>`;
   }, 160);
 }
 

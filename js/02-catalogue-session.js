@@ -258,9 +258,11 @@ const CATALOGUE_ENTREPRISE_PAR_COMPAGNIE = {
   'groupe mutuel': {
     laa: ['Accidents professionnels (AP)', 'Accidents non professionnels (ANP)',
           'Garantie de taux (CP0267.10)', 'R\u00e9duction des frais de gestion li\u00e9e \u00e0 la LAA (CP0279.01)'],
+    // Pas de virgule dans un libell\u00e9 de module : la fiche client les affiche en d\u00e9coupant sur
+    // \u00ab , \u00bb (js/05), un module virgul\u00e9 s'y couperait en deux.
     laac: ['Frais de traitement \u2014 hospitalisation en chambre commune',
-           'Indemnit\u00e9 journali\u00e8re 20 % du salaire, d\u00e9lai d\u2019attente 2 jours',
-           'Couverture des rechutes et s\u00e9quelles tardives d\u2019accidents ant\u00e9rieurs',
+           'Indemnit\u00e9 journali\u00e8re 20 % du salaire (d\u00e9lai d\u2019attente 2 jours)',
+           'Rechutes et s\u00e9quelles tardives d\u2019accidents ant\u00e9rieurs',
            'Extension \u2014 r\u00e9ductions pour faute et entreprise t\u00e9m\u00e9raire',
            'Assurance exc\u00e9dentaire (gain au-del\u00e0 du plafond LAA)'],
     perte_gain_maladie_lca: ['Couverture 720 jours', 'D\u00e9lai d\u2019attente 30 jours',

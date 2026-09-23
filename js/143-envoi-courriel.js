@@ -27,15 +27,47 @@ async function envPiece(p) {
   return { '@odata.type': '#microsoft.graph.fileAttachment', name: nom, contentType: p.type || blob.type || 'application/octet-stream', contentBytes: await envB64(blob) };
 }
 
-async function envoyerCourriel({ a, copie, cci, objet, texte, html, pieces, confirmer = true, contexte = '', silencieux = false } = {}) {
-  const dest = envListe(a), cc = envListe(copie), bcc = envListe(cci);
+async function envoyerCourriel({ a, copie, cci, objet, texte, html, pieces, confirmer = true, contexte = '', silencieux = false, cciMulti = true } = {}) {
+  let dest = envListe(a);
+  const cc = envListe(copie);
+  let bcc = envListe(cci);
   if (!dest.length) { if (!silencieux) showError('Aucun destinataire : rien n’a été envoyé.'); return { ok: false, statut: 'sans-destinataire' }; }
 
   const compte = typeof sigCompteOutlook === 'function' ? await sigCompteOutlook().catch(() => null) : null;
+  const moi = (compte && compte.adresse) || '';
+  const meme = (x, y) => !!x && !!y && x.toLowerCase() === y.toLowerCase();
+  const dedans = (l, x) => l.some(y => meme(y, x));
+
+  // ── DEUX RÈGLES, POUR TOUS LES ENVOIS DU CRM (23.09.2026) ─────────────────────────────────────
+  // « En multi-sélecteur, l'envoi doit se faire en cci. Copie-moi pour info, toujours. »
+  //
+  // 1. PLUSIEURS DESTINATAIRES → TOUS EN COPIE CACHÉE. Ce n'est pas une question de présentation :
+  //    sur une demande d'offre adressée à trois compagnies, un champ « À » visible apprend à
+  //    chacune qui sont ses concurrentes sur le dossier. L'adresse en clair devient une information
+  //    commerciale qu'on n'a pas choisi de donner — et, côté clients, une liste d'adresses
+  //    diffusée sans leur accord. L'en-tête « À » porte donc l'expéditeur, et les destinataires
+  //    passent en cci. `cciMulti: false` permet l'exception, pour un cas où la liste DOIT se voir.
+  // 2. UNE COPIE À SOI, systématique, en cci — sans alourdir l'en-tête du destinataire. Outlook
+  //    garde déjà une trace dans les éléments envoyés ; ce qui manquait, c'est de RECEVOIR ce qui
+  //    part, dans la même boîte que les réponses.
+  const groupe = dest.length > 1 && cciMulti;
+  if (groupe) {
+    bcc = [...bcc, ...dest.filter(x => !dedans(bcc, x))];
+    dest = moi ? [moi] : [dest[0]];          // sans compte Outlook connu, on garde au moins le premier
+    bcc = bcc.filter(x => !dedans(dest, x));
+  }
+  if (moi && !dedans(dest, moi) && !dedans(cc, moi) && !dedans(bcc, moi)) bcc.push(moi);
+
   if (confirmer) {
-    const depuis = compte && compte.adresse ? compte.adresse : 'le compte Outlook connecté';
-    const suite = [cc.length ? `en copie : ${cc.join(', ')}` : '', pieces && pieces.length ? `${pieces.length} pièce(s) jointe(s)` : ''].filter(Boolean).join(' · ');
-    if (!confirm(`Envoyer ${contexte ? `ce courriel (${contexte})` : 'ce courriel'} à ${dest.join(', ')} depuis ${depuis} ?${suite ? `\n\n${suite}` : ''}`)) return { ok: false, annule: true, statut: 'annulé' };
+    const depuis = moi || 'le compte Outlook connecté';
+    const vrais = groupe ? bcc.filter(x => !meme(x, moi)) : dest;
+    const suite = [
+      groupe ? `⚠️ ${vrais.length} destinataires, tous en copie cachée — ils ne se voient pas entre eux` : '',
+      cc.length ? `en copie : ${cc.join(', ')}` : '',
+      moi ? `copie à toi : ${moi}` : '',
+      pieces && pieces.length ? `${pieces.length} pièce(s) jointe(s)` : '',
+    ].filter(Boolean).join('\n');
+    if (!confirm(`Envoyer ${contexte ? `ce courriel (${contexte})` : 'ce courriel'} à ${vrais.join(', ')} depuis ${depuis} ?${suite ? `\n\n${suite}` : ''}`)) return { ok: false, annule: true, statut: 'annulé' };
   }
   if (typeof assurerTokenOutlook === 'function' && !(await assurerTokenOutlook())) {
     if (!silencieux) showError('Connecte-toi à Outlook (bouton Microsoft dans le menu) pour envoyer.');
@@ -93,6 +125,9 @@ async function envoyerCourriel({ a, copie, cci, objet, texte, html, pieces, conf
     if (!silencieux) showError('Erreur réseau lors de l’envoi via Outlook : ' + (e.message || e));
     return { ok: false, statut: 'reseau' };
   }
-  if (!silencieux) showError(`✓ Courriel envoyé à ${dest.join(', ')}${cc.length ? ` (copie : ${cc.join(', ')})` : ''}.`);
-  return { ok: true, statut: 'envoyé', destinataires: dest, copie: cc, expediteur: (compte && compte.adresse) || null };
+  // Le message de confirmation nomme les VRAIS destinataires, pas l'en-tête technique : quand
+  // l'envoi est groupé, « À » ne porte que l'expéditeur, et annoncer ça n'apprendrait rien.
+  const reels = groupe ? bcc.filter(x => !meme(x, moi)) : dest;
+  if (!silencieux) showError(`✓ Courriel envoyé à ${reels.join(', ')}${groupe ? ' (en copie cachée)' : ''}${cc.length ? ` · copie : ${cc.join(', ')}` : ''}.`);
+  return { ok: true, statut: 'envoyé', destinataires: reels, copie: cc, cachee: groupe, expediteur: moi || null };
 }

@@ -93,7 +93,12 @@ RXA_SEQUENCES.flamme = (() => {
     let G = -D, R = 0, FLAMME_MIN = -D / 2;
     // 23.09.2026 : « le Rex du dash qui se balade le long de l'opp ». Le même trajet, mesuré sur le
     // bandeau de l'affaire quand c'est là qu'il vit.
-    const hero = img && img.closest('.dbx-hero, .opx-hero');
+    // Puis : « je veux le mini Rex dans CET espace, pas plus loin. » Sur une fiche, le bandeau est
+    // plein de boutons et d'indicateurs : il traversait devant tout. Quand son conteneur porte
+    // .rxa-zone, c'est CE rectangle qui borne son trajet — pas le bandeau (voir js/149, qui mesure
+    // le creux libre).
+    const petit = !!(img && img.classList.contains('rxa-petit'));
+    const hero = img && (img.closest('.rxa-zone') || img.closest('.dbx-hero, .opx-hero'));
     if (hero && img.style.transform === '') {
       const ri = img.getBoundingClientRect(), rh = hero.getBoundingClientRect();
       if (ri.width > 0) {
@@ -129,6 +134,30 @@ RXA_SEQUENCES.flamme = (() => {
     const sauter = (x = 0, miroir = false) => SAUT_Y.forEach((y, k) => etapes.push({ f: SA + k, ms: SAUT_MS[k], x, y, miroir }));
     const adosser = (pose, x) => etapes.push({ f: AP + pose, ms: 2400, x, miroir: false });
     const C = Math.max(G / 2, -D / 2, FLAMME_MIN);
+
+    // ── La version courte, pour le creux d'une fiche d'affaire ───────────────────────────────────
+    // « Fais-le se poser sur les deux bords et cracher des flammes. Adapte la séquence à la
+    // longueur. » Le trajet du bandeau dure près d'une minute et compte trois étapes intermédiaires
+    // — dans un creux de 600 px, ça donne un va-et-vient frénétique. Ici : il salue, traverse en
+    // crachant, se pose contre le bord gauche, retraverse, se pose contre le bord droit et crache
+    // de là. Deux appuis, deux flammes, et rien entre les deux qui remplisse du vide.
+    if (petit) {
+      const demi = G * 0.45;
+      tourner([0, 1, 2, 3], 0);               // de profil → de face
+      sauter(0, false);                       // un salut pour commencer
+      tourner([3, 4, 5, 6, 7], 0);            // se met de profil vers la gauche
+      cracher(0, demi);                       // s'élance en crachant sa flamme
+      marcher(demi, G, true);                 // jusqu'au bord gauche du creux
+      tourner([7, 6, 5, 4, 3, 2, 1, 0], G);   // se retourne…
+      adosser(1, G);                          // … et s'y adosse
+      marcher(G, 0, false);                   // retraverse
+      tourner([0, 1, 2, 3, 4, 5, 6, 7], 0);   // se retourne…
+      adosser(0, 0);                          // … et s'adosse au bord droit
+      cracher(0, -2);                         // d'où il crache, vers l'intérieur
+      tourner([7, 6, 5, 4, 3, 2, 1, 0], 0);   // reprend sa pose : tout recommence
+      return etapes;
+    }
+
     tourner([0, 1, 2, 3], 0);                 // de profil → de face
     sauter();                                 // un saut de joie, sur place
     tourner([3, 4, 5, 6, 7], 0);              // sourire en clignant, puis profil gauche
@@ -514,8 +543,13 @@ function rxaPoser() {
        balade le long de l'opp ». Même séquence, même trajet mesuré, deux tiers de la taille. Il
        passe DEVANT les indicateurs comme il passe devant la barre de recherche, et laisse passer
        les clics. La marge négative suit la hauteur, sinon ses pieds se décalent. */
-    img.dbx-hero-mascotte.rxa-flamme.rxa-petit { height: 104px !important; margin-left: calc(-180 / 234 * 104px); }
-    .opx-rex { position: absolute; right: 10px; bottom: 0; z-index: 4; line-height: 0; pointer-events: none; }
+    /* Sa taille suit la hauteur réellement disponible dans le creux (mesurée par js/149) : un Rex
+       de 104 px dans une bande de 60 déborde sur les boutons du dessus. */
+    img.dbx-hero-mascotte.rxa-flamme.rxa-petit { height: var(--rxa-petit-h, 104px) !important;
+      margin-left: calc(-180 / 234 * var(--rxa-petit-h, 104px)); }
+    /* Le creux est mesuré par js/149, qui pose left / width / bottom. Rex se range à sa droite :
+       c'est de là qu'il part, et c'est là qu'il revient. */
+    .opx-rex { position: absolute; right: auto; bottom: 0; z-index: 4; line-height: 0; pointer-events: none; text-align: right; }
     .opx-hero .rxa-scene { line-height: 0; }
     /* L'ancienne pose fixe ne s'affiche jamais : Rex n'apparaît qu'animé (22.09.2026). */
     :is(.dbx-hero, .opx-hero) img.dbx-hero-mascotte:not(.rxa-flamme) { visibility: hidden; }

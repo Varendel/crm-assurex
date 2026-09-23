@@ -351,6 +351,37 @@ const RXA_DECOR = `
   <rect x="0" y="151" width="420" height="2" rx="1" fill="#fff" opacity=".14"/>
 </svg>`;
 
+// ── L'horizon, sur toute la largeur du bandeau (23.09.2026) ─────────────────────────────────────
+// « Continue le paysage le long du bandeau bleu sur iPhone et aussi PC, va jusqu'au bout, intègre
+// deux trois éléments supplémentaires comme une lune luminescente. »
+//
+// Le décor (volcan, cycadée, rochers) tient dans 420 px calés sur Rex, à droite : à gauche, le
+// bandeau redevenait un aplat. Cette couche-ci part du bord gauche et va jusqu'au bord droit.
+// Elle est faite de MOTIFS RÉPÉTÉS plutôt que d'un grand dessin étiré : un iPhone de 360 px et un
+// écran de 1600 px montrent alors exactement les mêmes collines, ni écrasées ni distendues.
+// Trois éléments s'ajoutent au paysage : deux rangs de collines, un ciel étoilé qui scintille, et
+// une lune luminescente à halo. Tout est posé sur la ligne de sol mesurée (--rxa-sol), donc à la
+// même hauteur que le volcan, et reste très translucide pour ne pas gêner le texte du bandeau.
+const RXA_HORIZON = `
+<span class="rxa-horizon" aria-hidden="true">
+  <span class="rxa-etoiles"></span>
+  <svg class="rxa-lune" viewBox="0 0 100 100" focusable="false">
+    <defs>
+      <radialGradient id="rxaHalo"><stop offset=".30" stop-color="%23EAF6FF" stop-opacity=".50"/><stop offset=".55" stop-color="%239FD8FF" stop-opacity=".16"/><stop offset="1" stop-color="%239FD8FF" stop-opacity="0"/></radialGradient>
+      <radialGradient id="rxaLuneCorps" cx="38%" cy="34%"><stop offset="0" stop-color="%23FFFFFF"/><stop offset=".68" stop-color="%23EAF3FF"/><stop offset="1" stop-color="%23BFD6F2"/></radialGradient>
+    </defs>
+    <circle cx="50" cy="50" r="49" fill="url(%23rxaHalo)"/>
+    <circle class="rxa-lune-corps" cx="50" cy="50" r="19" fill="url(%23rxaLuneCorps)" opacity=".9"/>
+    <g fill="%23AFC6E6" opacity=".5"><circle cx="44" cy="45" r="3.1"/><circle cx="56" cy="53" r="2.1"/><circle cx="48" cy="58" r="1.5"/></g>
+  </svg>
+  <span class="rxa-collines"></span>
+</span>`.replace(/%23/g, '#');
+
+function rxaHorizon(hero) {
+  if (!hero || hero.querySelector(':scope > .rxa-horizon')) return;
+  hero.insertAdjacentHTML('afterbegin', RXA_HORIZON);
+}
+
 function rxaDecor(img) {
   if (!img || (img.parentElement && img.parentElement.classList.contains('rxa-scene'))) return;
   const scene = document.createElement('span');
@@ -371,6 +402,7 @@ function rxaDecor(img) {
 function rxaSol(img) {
   const hero = img && img.closest('.dbx-hero');
   if (!hero) return;
+  rxaHorizon(hero);
   if (!hero.querySelector(':scope > .rxa-sol')) hero.insertAdjacentHTML('beforeend', '<span class="rxa-sol" aria-hidden="true"></span>');
   const caler = () => {
     const d = hero.querySelector('.rxa-decor');
@@ -435,6 +467,26 @@ function rxaPoser() {
         url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='40' viewBox='0 0 140 40'%3E%3Cg fill='%236FD3B0' fill-opacity='.22'%3E%3Cpath d='M12 6 l2 -6 l1 6 l2 -4 l0 4 z'/%3E%3Cpath d='M78 7 l1.5 -5 l1 5 l2 -3.5 l0 3.5 z'/%3E%3Cpath d='M118 5 l1.5 -4 l1 4 z'/%3E%3C/g%3E%3Cg fill='%23ffffff' fill-opacity='.10'%3E%3Cellipse cx='44' cy='14' rx='3' ry='1.4'/%3E%3Cellipse cx='101' cy='22' rx='2.2' ry='1'/%3E%3Cellipse cx='23' cy='27' rx='1.6' ry='.8'/%3E%3C/g%3E%3C/svg%3E") repeat-x 0 0 / 140px 40px,
         linear-gradient(to bottom, rgba(111, 211, 176, .20) 0, rgba(111, 211, 176, .20) 1px, rgba(111, 211, 176, .09) 2px, rgba(10, 31, 77, .30) 100%);
       -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 42%, #000 100%); mask-image: linear-gradient(to right, transparent 0%, #000 42%, #000 100%); }
+    /* L'horizon sur toute la largeur : motifs répétés, donc identiques du téléphone au grand écran.
+       Tout est calé sur la ligne de sol mesurée (--rxa-sol), comme le volcan. */
+    .dbx-hero > .rxa-horizon { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; border-radius: inherit; }
+    .rxa-horizon .rxa-collines { position: absolute; left: 0; right: 0; bottom: var(--rxa-sol, 40px); height: 92px;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='62' viewBox='0 0 300 62'%3E%3Cpath d='M0 62 L0 42 Q30 26 62 36 Q94 46 124 32 Q156 18 190 34 Q224 50 256 38 Q280 29 300 36 L300 62 Z' fill='%230A1F4D' fill-opacity='.26'/%3E%3Cpath d='M0 42 Q30 26 62 36 Q94 46 124 32 Q156 18 190 34 Q224 50 256 38 Q280 29 300 36' fill='none' stroke='%237FE0C8' stroke-opacity='.13' stroke-width='1.2'/%3E%3C/svg%3E") repeat-x left bottom / 300px 62px,
+        url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='460' height='90' viewBox='0 0 460 90'%3E%3Cpath d='M0 90 L0 62 Q40 44 78 56 Q116 68 150 48 Q188 26 228 44 Q268 62 306 50 Q344 38 382 56 Q420 74 460 58 L460 90 Z' fill='%23C9D8FF' fill-opacity='.09'/%3E%3C/svg%3E") repeat-x left bottom / 460px 90px; }
+    .rxa-horizon .rxa-etoiles { position: absolute; left: 0; right: 0; bottom: calc(var(--rxa-sol, 40px) + 60px); height: 48px;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='260' height='48' viewBox='0 0 260 48'%3E%3Cg fill='%23ffffff'%3E%3Ccircle cx='18' cy='12' r='1.2' opacity='.55'/%3E%3Ccircle cx='63' cy='28' r='.9' opacity='.32'/%3E%3Ccircle cx='96' cy='7' r='1.4' opacity='.6'/%3E%3Ccircle cx='131' cy='21' r='.8' opacity='.28'/%3E%3Ccircle cx='168' cy='11' r='1.1' opacity='.48'/%3E%3Ccircle cx='199' cy='31' r='1' opacity='.36'/%3E%3Ccircle cx='232' cy='15' r='1.3' opacity='.54'/%3E%3Ccircle cx='247' cy='35' r='.8' opacity='.26'/%3E%3C/g%3E%3C/svg%3E") repeat-x left bottom / 260px 48px;
+      animation: rxaScintille 7s ease-in-out infinite; }
+    /* La lune se pose dans le ciel libre entre le texte et le volcan — jamais derrière le titre. */
+    .rxa-horizon .rxa-lune { position: absolute; left: 54%; bottom: calc(var(--rxa-sol, 40px) + 44px); width: 76px; height: 76px;
+      animation: rxaLuneLuit 9s ease-in-out infinite; }
+    .rxa-lune-corps { filter: drop-shadow(0 0 5px rgba(190, 225, 255, .6)); }
+    @keyframes rxaScintille { 0%, 100% { opacity: .72; } 50% { opacity: 1; } }
+    @keyframes rxaLuneLuit { 0%, 100% { opacity: .82; transform: scale(1); } 50% { opacity: 1; transform: scale(1.05); } }
+    @media (prefers-reduced-motion: reduce) { .rxa-horizon .rxa-etoiles, .rxa-horizon .rxa-lune { animation: none; } }
+    @media (max-width: 768px) {
+      .rxa-horizon .rxa-collines { height: 58px; background-size: 190px 40px, 290px 58px; }
+      .rxa-horizon .rxa-etoiles { bottom: calc(var(--rxa-sol, 40px) + 38px); height: 32px; background-size: 175px 32px; }
+      .rxa-horizon .rxa-lune { width: 54px; height: 54px; left: 6%; bottom: calc(var(--rxa-sol, 40px) + 46px); } }
     .rxa-scene .rxa-decor { position: absolute; right: -30px; bottom: 0; height: 170px; width: auto; aspect-ratio: 420 / 170; z-index: 1; pointer-events: none; overflow: visible; }
     .rxa-scene img { position: relative; z-index: 2; }
     /* Rex marche et s'adosse jusqu'aux bords du bandeau : la partie transparente de son image ne

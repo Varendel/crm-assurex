@@ -60,6 +60,10 @@ function mrxCaler() {
   if (!hero || !zone) return;
   const l = mrxLibre(hero);
   if (!l) { zone.style.display = 'none'; return; }
+  // `position` est posé ici AUSSI, en plus de la feuille de js/117 : si pour une raison quelconque
+  // cette feuille n'était pas encore appliquée, le span resterait dans le flux et ajouterait sa
+  // hauteur au bandeau — c'est-à-dire une centaine de pixels de vide sous les indicateurs.
+  zone.style.position = 'absolute';
   zone.style.display = 'block';
   zone.style.setProperty('--rxa-petit-h', l.hauteur + 'px');
   zone.style.left = l.gauche + 'px';

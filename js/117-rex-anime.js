@@ -464,8 +464,12 @@ function rxaDecor(img) {
 function rxaSol(img) {
   const hero = img && img.closest('.dbx-hero, .opx-hero');
   if (!hero) return;
-  if (!img.classList.contains('rxa-petit')) rxaHorizon(hero);
-  if (!hero.querySelector(':scope > .rxa-sol')) hero.insertAdjacentHTML('beforeend', '<span class="rxa-sol" aria-hidden="true"></span>');
+  const petit = img.classList.contains('rxa-petit');
+  if (!petit) rxaHorizon(hero);
+  // Sur une fiche, Rex marche en HAUT du bandeau, dans le creux : son sol est celui de son propre
+  // paysage (js/149). La bande de sol du bandeau, elle, part du bas — elle n'aurait rien sous quoi
+  // se ranger et couvrirait les indicateurs. On ne la pose pas.
+  if (!petit && !hero.querySelector(':scope > .rxa-sol')) hero.insertAdjacentHTML('beforeend', '<span class="rxa-sol" aria-hidden="true"></span>');
   const caler = () => {
     if (!hero.isConnected) return;
     const d = hero.querySelector('.rxa-decor');
@@ -480,7 +484,10 @@ function rxaSol(img) {
       if (!ri.height) return;
       ligne = ri.bottom;
     }
-    hero.style.setProperty('--rxa-sol', Math.max(8, Math.round(rh.bottom - ligne)) + 'px');
+    // --rxa-sol = la hauteur du sol depuis le bas du bandeau. Sans bande de sol (cas d'une fiche),
+    // la variable sert encore aux décors de saison (la citrouille s'y pose) : on lui donne une
+    // valeur courte plutôt que les trois cents pixels qui séparent le creux du bas du bandeau.
+    hero.style.setProperty('--rxa-sol', (petit ? 26 : Math.max(8, Math.round(rh.bottom - ligne))) + 'px');
     // ── La lune ──────────────────────────────────────────────────────────────────────────────────
     // Troisième tentative, et la raison des deux premières : je lui donnais un ENDROIT (62 %, puis
     // « 30 px à droite de la barre de recherche »), et cet endroit redevenait faux dès que le

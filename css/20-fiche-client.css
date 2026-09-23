@@ -5,7 +5,10 @@
    ═══════════════════════════════════════════════════════════════════════════════════ */
 
 /* ═══ FICHE CLIENT — en-tête moderne (js/20-fiche-client-entete.js, 19.09.2026) ═══ */
-  .fcx-hero { position: relative; border-radius: 22px; padding: 26px 28px 20px; margin-bottom: 16px; color: #fff; overflow: hidden;
+  /* 23.09.2026 : la marge suit la largeur de l'écran plutôt qu'un 26 px figé — confortable sur un
+     grand écran, du gâchis sur un portable, où le bandeau repoussait le contenu utile sous la
+     ligne de flottaison. */
+  .fcx-hero { position: relative; border-radius: 22px; padding: clamp(16px, 2vw, 26px) clamp(18px, 2.4vw, 28px) clamp(14px, 1.5vw, 20px); margin-bottom: 16px; color: #fff; overflow: hidden;
     background: radial-gradient(110% 150% at 100% 0%, rgba(0,207,255,0.26) 0%, transparent 55%), linear-gradient(135deg, #0B2458 0%, #113679 55%, #1A4A9C 100%);
     box-shadow: 0 18px 40px rgba(17,54,121,0.26); animation: dbx-entree .5s cubic-bezier(.2,.8,.2,1) both; }
   .fcx-hero-deco { position: absolute; inset: 0; pointer-events: none; }

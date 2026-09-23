@@ -91,16 +91,19 @@ RXA_SEQUENCES.flamme = (() => {
   const APPUI_DROIT = 350, APPUI_GAUCHE = 227, LARGEUR = 516;
   function construire(img) {
     let G = -D, R = 0, FLAMME_MIN = -D / 2;
-    const hero = img && img.closest('.dbx-hero'), rech = hero && hero.querySelector('.dbx-recherche');
+    const hero = img && img.closest('.dbx-hero');
     if (hero && img.style.transform === '') {
-      const ri = img.getBoundingClientRect(), rh = hero.getBoundingClientRect(), rr = rech && rech.getBoundingClientRect();
+      const ri = img.getBoundingClientRect(), rh = hero.getBoundingClientRect();
       if (ri.width > 0) {
         const pct = px => px / ri.width * 100, bord = p => ri.left + p / LARGEUR * ri.width;
-        // Barre de recherche à sa hauteur et à sa gauche : il s'y adosse. Sinon (téléphone, où
-        // elle passe au-dessus), il s'adosse au bord gauche du bandeau.
-        const aCote = rr && rr.width > 0 && rr.right < ri.left + ri.width * 0.5 && rr.bottom > ri.top + ri.height * 0.3;
-        const g = pct((aCote ? rr.right + 2 : rh.left + 10) - bord(APPUI_GAUCHE)), r = pct(rh.right - 12 - bord(APPUI_DROIT));
-        if (g < -8 && g > -160) G = g;
+        // 23.09.2026 : « fais défiler Rex le long de la barre, même devant la recherche sur PC ».
+        // Il s'arrêtait au bord droit de la barre de recherche et s'y adossait ; il la traverse
+        // maintenant par-dessus — il passe devant dans l'ordre d'empilement, et laisse passer les
+        // clics (pointer-events: none) — jusqu'au bord gauche du bandeau, comme sur téléphone.
+        // La barre repasse devant dès qu'on écrit dedans (:focus-within, plus bas dans le CSS).
+        const g = pct(rh.left + 10 - bord(APPUI_GAUCHE)), r = pct(rh.right - 12 - bord(APPUI_DROIT));
+        // La borne large laisse la traversée complète des grands écrans (≈ -370 % en 1920 px).
+        if (g < -8 && g > -420) G = g;
         R = Math.max(0, Math.min(40, r));
         // La longue flamme part du bord gauche de l'image : elle ne doit pas sortir du bandeau.
         FLAMME_MIN = Math.min(0, pct(rh.left + 6 - ri.left));
@@ -132,9 +135,9 @@ RXA_SEQUENCES.flamme = (() => {
     marcher(C, 0, false);                     // revient
     tourner([0, 1, 2, 3, 4, 5, 6, 7], 0);     // demi-tour vers la gauche
     cracher(0, C);                            // repart en crachant une longue flamme turquoise
-    marcher(C, G, true);                      // jusqu'au bout de la barre de recherche
+    marcher(C, G, true);                      // traverse tout le bandeau, par-dessus la recherche
     tourner([7, 6, 5, 4, 3, 2, 1, 0], G);     // se retourne vers la droite…
-    adosser(1, G);                            // … et s'adosse contre la barre de recherche
+    adosser(1, G);                            // … et s'adosse contre le bord gauche du bandeau
     marcher(G, R, false);                     // traverse jusqu'au bord droit du bandeau
     tourner([0, 1, 2, 3, 4, 5, 6, 7], R);     // se retourne vers la gauche…
     adosser(0, R);                            // … et s'adosse contre le bord du bandeau
@@ -466,7 +469,13 @@ function rxaPoser() {
       background:
         url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='40' viewBox='0 0 140 40'%3E%3Cg fill='%236FD3B0' fill-opacity='.22'%3E%3Cpath d='M12 6 l2 -6 l1 6 l2 -4 l0 4 z'/%3E%3Cpath d='M78 7 l1.5 -5 l1 5 l2 -3.5 l0 3.5 z'/%3E%3Cpath d='M118 5 l1.5 -4 l1 4 z'/%3E%3C/g%3E%3Cg fill='%23ffffff' fill-opacity='.10'%3E%3Cellipse cx='44' cy='14' rx='3' ry='1.4'/%3E%3Cellipse cx='101' cy='22' rx='2.2' ry='1'/%3E%3Cellipse cx='23' cy='27' rx='1.6' ry='.8'/%3E%3C/g%3E%3C/svg%3E") repeat-x 0 0 / 140px 40px,
         linear-gradient(to bottom, rgba(111, 211, 176, .20) 0, rgba(111, 211, 176, .20) 1px, rgba(111, 211, 176, .09) 2px, rgba(10, 31, 77, .30) 100%);
-      -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 42%, #000 100%); mask-image: linear-gradient(to right, transparent 0%, #000 42%, #000 100%); }
+      /* 23.09.2026 : Rex traverse maintenant tout le bandeau — le sol le suit jusqu'au bord, il ne
+         s'efface plus qu'au tout début pour adoucir le raccord avec le coin arrondi. */
+      -webkit-mask-image: linear-gradient(to right, transparent 0%, #000 10%, #000 100%); mask-image: linear-gradient(to right, transparent 0%, #000 10%, #000 100%); }
+    /* Rex passe DEVANT la barre de recherche… */
+    .dbx-hero > .dbx-hero-droite { z-index: 3; }
+    /* … mais elle repasse devant dès qu'on écrit dedans, résultats compris. */
+    .dbx-hero .dbx-recherche:focus-within { z-index: 6; }
     /* L'horizon sur toute la largeur : motifs répétés, donc identiques du téléphone au grand écran.
        Tout est calé sur la ligne de sol mesurée (--rxa-sol), comme le volcan. */
     .dbx-hero > .rxa-horizon { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; border-radius: inherit; }

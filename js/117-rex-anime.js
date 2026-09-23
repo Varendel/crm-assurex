@@ -425,6 +425,23 @@ function rxaHorizon(hero) {
   hero.insertAdjacentHTML('afterbegin', RXA_HORIZON);
 }
 
+// ── Le décor du couloir d'une fiche d'affaire (23.09.2026) ──────────────────────────────────────
+// « Fais-le s'appuyer sur quelque chose, dessine quelque chose de cohérent. Ajoute aussi un paysage
+// d'inspiration libre. » Il s'adossait au vide : le geste existait, l'objet manquait.
+//
+// Aux deux bouts, deux objets du métier plutôt qu'un décor de fantaisie : à gauche un panneau
+// indicateur — l'affaire avance vers quelque part — à droite une pile de dossiers, celle des
+// classeurs du logo REX CLOUD. Entre les deux, un paysage bas : collines lointaines, quelques
+// étoiles, un croissant de lune. Tout est en motifs répétés, donc juste à toutes les largeurs.
+//
+// Rex marche sur une PISTE en retrait de 34 px de chaque côté : c'est ce qui lui laisse la place de
+// s'appuyer contre les objets au lieu de passer devant.
+const RXA_PETIT_SCENE = `<span class="opx-paysage" aria-hidden="true">
+  <span class="opxp-etoiles"></span><span class="opxp-lune"></span>
+  <span class="opxp-collines"></span>
+  <span class="opxp-panneau"></span><span class="opxp-dossiers"></span>
+</span>`;
+
 function rxaDecor(img) {
   if (!img || (img.parentElement && img.parentElement.classList.contains('rxa-scene'))) return;
   const scene = document.createElement('span');
@@ -547,9 +564,30 @@ function rxaPoser() {
        de 104 px dans une bande de 60 déborde sur les boutons du dessus. */
     img.dbx-hero-mascotte.rxa-flamme.rxa-petit { height: var(--rxa-petit-h, 104px) !important;
       margin-left: calc(-180 / 234 * var(--rxa-petit-h, 104px)); }
-    /* Le creux est mesuré par js/149, qui pose left / width / bottom. Rex se range à sa droite :
-       c'est de là qu'il part, et c'est là qu'il revient. */
-    .opx-rex { position: absolute; right: auto; bottom: 0; z-index: 4; line-height: 0; pointer-events: none; text-align: right; }
+    /* Le creux est mesuré par js/149, qui pose left / width / bottom. Rex se range à droite de sa
+       piste : c'est de là qu'il part, et c'est là qu'il revient. */
+    .opx-rex { position: absolute; right: auto; bottom: 0; z-index: 4; line-height: 0; pointer-events: none; }
+    .opx-piste { position: absolute; left: 34px; right: 34px; bottom: 0; top: 0; text-align: right; z-index: 1; }
+    .opx-paysage { position: absolute; inset: 0; overflow: hidden; border-radius: 10px; z-index: 0; }
+    /* Les collines et les étoiles : des motifs répétés, donc identiques quelle que soit la largeur
+       du creux — un dessin unique étiré serait déformé sur les écrans larges. */
+    .opxp-collines { position: absolute; left: 0; right: 0; bottom: 0; height: 58%;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='40' viewBox='0 0 300 40'%3E%3Cpath d='M0 40 L0 26 Q34 14 68 22 Q102 30 136 18 Q172 6 206 20 Q240 34 272 22 Q288 16 300 21 L300 40 Z' fill='%230A1F4D' fill-opacity='.30'/%3E%3Cpath d='M0 26 Q34 14 68 22 Q102 30 136 18 Q172 6 206 20 Q240 34 272 22 Q288 16 300 21' fill='none' stroke='%237FE0C8' stroke-opacity='.16' stroke-width='1.1'/%3E%3C/svg%3E") repeat-x left bottom / 300px 40px; }
+    .opxp-etoiles { position: absolute; left: 0; right: 0; top: 2px; height: 42%;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='210' height='26' viewBox='0 0 210 26'%3E%3Cg fill='%23ffffff'%3E%3Ccircle cx='16' cy='7' r='1' opacity='.5'/%3E%3Ccircle cx='58' cy='16' r='.8' opacity='.3'/%3E%3Ccircle cx='89' cy='5' r='1.2' opacity='.55'/%3E%3Ccircle cx='124' cy='14' r='.7' opacity='.26'/%3E%3Ccircle cx='158' cy='8' r='1' opacity='.44'/%3E%3Ccircle cx='191' cy='18' r='.9' opacity='.32'/%3E%3C/g%3E%3C/svg%3E") repeat-x left top / 210px 26px;
+      animation: rxaScintille 7s ease-in-out infinite; }
+    /* La lune est posée à droite du couloir, au-dessus de la pile de dossiers : c'est le seul coin
+       que Rex ne traverse pas. */
+    .opxp-lune { position: absolute; right: 12%; top: 4px; width: 15px; height: 15px;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M17.6 15.2A8 8 0 0 1 8.8 3.4a8 8 0 1 0 8.8 11.8Z' fill='%23E8F3FF' fill-opacity='.72'/%3E%3C/svg%3E") no-repeat center / contain;
+      filter: drop-shadow(0 0 4px rgba(190, 225, 255, .5)); }
+    /* Les deux appuis. Le panneau dépasse Rex en hauteur, la pile lui arrive à l'épaule : dans les
+       deux cas on voit contre QUOI il s'adosse, et pas seulement qu'il s'arrête. */
+    .opxp-panneau { position: absolute; left: 2px; bottom: 0; width: 26px; height: 96%;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 26 64' preserveAspectRatio='xMidYMax meet'%3E%3Crect x='11' y='10' width='4' height='54' rx='1.4' fill='%230A1F4D' fill-opacity='.55'/%3E%3Cpath d='M3 13h16l5 6-5 6H3z' fill='%237FE0C8' fill-opacity='.34'/%3E%3Cpath d='M3 13h16l5 6-5 6H3z' fill='none' stroke='%23C9EFE6' stroke-opacity='.4' stroke-width='.9'/%3E%3Crect x='6' y='18' width='10' height='1.8' rx='.9' fill='%23E8F3FF' fill-opacity='.5'/%3E%3C/svg%3E") no-repeat center bottom / contain; }
+    .opxp-dossiers { position: absolute; right: 2px; bottom: 0; width: 30px; height: 62%;
+      background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 34' preserveAspectRatio='xMidYMax meet'%3E%3Crect x='1' y='22' width='38' height='12' rx='2' fill='%23C9D8FF' fill-opacity='.26'/%3E%3Crect x='4' y='12' width='31' height='11' rx='2' fill='%237FE0C8' fill-opacity='.26'/%3E%3Crect x='8' y='2' width='24' height='11' rx='2' fill='%23C9D8FF' fill-opacity='.34'/%3E%3Cg fill='%230A1F4D' fill-opacity='.35'%3E%3Crect x='11' y='5' width='9' height='1.8' rx='.9'/%3E%3Crect x='7' y='15' width='9' height='1.8' rx='.9'/%3E%3Crect x='4' y='25' width='9' height='1.8' rx='.9'/%3E%3C/g%3E%3C/svg%3E") no-repeat center bottom / contain; }
+    @media (prefers-reduced-motion: reduce) { .opxp-etoiles { animation: none; } }
     .opx-hero .rxa-scene { line-height: 0; }
     /* L'ancienne pose fixe ne s'affiche jamais : Rex n'apparaît qu'animé (22.09.2026). */
     :is(.dbx-hero, .opx-hero) img.dbx-hero-mascotte:not(.rxa-flamme) { visibility: hidden; }

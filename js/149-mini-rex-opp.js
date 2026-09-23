@@ -39,7 +39,8 @@ function mrxLibre(hero) {
   const retenir = (de, a) => { if (a - de > (meilleur ? meilleur.l : 0)) meilleur = { x: de, l: a - de }; };
   for (const r of gene) { retenir(x, r.left - 8); x = Math.max(x, r.right + 8); }
   retenir(x, rh.right - 14);
-  if (!meilleur || meilleur.l < 150) return null;   // trop étroit pour marcher : on s'abstient
+  // 220 px : les deux appuis en prennent 68, il doit rester de quoi marcher entre eux.
+  if (!meilleur || meilleur.l < 220) return null;   // trop étroit : on s'abstient plutôt que d'entasser
 
   // 2. La hauteur : ce qui déborde au-dessus du couloir, plafonné. On ne l'agrandit pas parce
   //    qu'il y a de la place, et on renonce plutôt que de le faire chevaucher les boutons.
@@ -73,8 +74,12 @@ function mrxCaler() {
 function mrxPoser() {
   const hero = document.querySelector('.opx-hero');
   if (!hero || hero.querySelector('.opx-rex')) return;
+  // La piste porte .rxa-zone — c'est elle qui borne le trajet, pas le creux entier : les 34 px de
+  // marge de chaque côté sont la place des deux appuis (panneau à gauche, dossiers à droite), pour
+  // qu'il s'adosse CONTRE eux au lieu de passer devant.
+  const scene = typeof RXA_PETIT_SCENE === 'string' ? RXA_PETIT_SCENE : '';
   hero.insertAdjacentHTML('beforeend',
-    '<span class="opx-rex rxa-zone" aria-hidden="true"><img class="dbx-hero-mascotte rxa-petit" src="assets/logos/rex/anim-confiant/1.png" alt=""/></span>');
+    `<span class="opx-rex" aria-hidden="true">${scene}<span class="opx-piste rxa-zone"><img class="dbx-hero-mascotte rxa-petit" src="assets/logos/rex/anim-confiant/1.png" alt=""/></span></span>`);
   if (typeof rxaPoser === 'function') rxaPoser();
   // Deux passages : le premier avant que les images d'animation soient arrivées (la hauteur est
   // alors fausse), le second une fois le bandeau posé pour de bon.

@@ -52,8 +52,53 @@ function ecoTexteHtml(t) {
 // Contrainte Outlook : il rend le HTML avec le moteur de Word. Ni flex, ni grid, ni ombre, et les
 // coins arrondis sont ignorés (on les laisse : les autres messageries en profitent). Donc des
 // tableaux imbriqués et des styles en ligne, c'est le seul terrain sûr.
-function ecoTableauHtml(entrees) {
+// La couverture actuelle, si le courtier l'a choisie dans le comparateur (js/155). Elle ouvre le
+// message comme elle ouvre l'écran : le client lit d'abord ce qu'il a, ensuite ce qu'on propose.
+function ecoActuelHtml(ct) {
+  if (!ct) return '';
   const F = 'font-family:Aptos,Calibri,Arial,Helvetica,sans-serif';
+  const prime = Number(ct.prime_annuelle) || 0;
+  const l = (k, v) => !v ? '' : `<tr>
+    <td style="${F};font-size:9.5pt;color:#8A94A8;padding:3px 10px 3px 0;white-space:nowrap;vertical-align:top;text-transform:uppercase;letter-spacing:.04em">${k}</td>
+    <td style="${F};font-size:10.5pt;color:#4A5568;padding:3px 0;vertical-align:top;line-height:1.4">${ecoEsc(v)}</td></tr>`;
+  return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin:14px 0 4px">
+    <tr><td style="padding:0 0 6px">
+      <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:separate;border:1px solid #DFE5EE;border-left:4px solid #A9B4C6;border-radius:10px;background:#F7F9FC">
+        <tr><td style="padding:13px 16px 12px">
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse">
+            <tr>
+              <td style="${F};font-size:13pt;font-weight:700;color:#4A5568;padding:0 10px 0 0;vertical-align:middle">${ecoEsc(ct.compagnie || '—')}</td>
+              <td style="${F};font-size:13.5pt;font-weight:700;color:#4A5568;text-align:right;white-space:nowrap;vertical-align:middle">${prime ? 'CHF ' + fmtCHF(prime) : '—'}</td>
+            </tr>
+            <tr>
+              <td style="${F};font-size:9pt;color:#8A94A8;font-weight:600;padding:2px 10px 0 0;letter-spacing:.03em">VOTRE COUVERTURE ACTUELLE</td>
+              <td style="${F};font-size:9pt;color:#8A94A8;text-align:right;padding-top:2px">par an</td>
+            </tr>
+          </table>
+          <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="width:100%;border-collapse:collapse;margin-top:11px;border-top:1px solid #E6EBF2">
+            <tr><td style="height:8px;line-height:8px;font-size:0">&nbsp;</td><td></td></tr>
+            ${l('Produit', ct.produit)}
+            ${l('Couverture', ct.modules)}
+            ${l('Police', ct.numero_police)}
+          </table>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>`;
+}
+
+function ecoTableauHtml(entrees, actuel) {
+  const F = 'font-family:Aptos,Calibri,Arial,Helvetica,sans-serif';
+  const ref = Number(actuel && actuel.prime_annuelle) || 0;
+  // L'écart avec la couverture actuelle : le seul chiffre que le client retient vraiment.
+  const ecart = p => {
+    const n = Number(p) || 0;
+    if (!ref || !n) return '';
+    const d = Math.round((n - ref) * 100) / 100;
+    if (d === 0) return `<span style="${F};font-size:9.5pt;color:#7A869A">même prime qu’aujourd’hui</span>`;
+    const baisse = d < 0;
+    return `<span style="${F};font-size:10pt;font-weight:700;color:${baisse ? '#16A34A' : '#DC2626'}">${baisse ? '−' : '+'} CHF ${fmtCHF(Math.abs(d))}</span><span style="${F};font-size:9pt;color:#7A869A"> / an ${baisse ? 'd’économie' : 'de plus'}</span>`;
+  };
   const ligne = (libelle, valeur) => !valeur ? '' : `<tr>
     <td style="${F};font-size:9.5pt;color:#7A869A;padding:3px 10px 3px 0;white-space:nowrap;vertical-align:top;text-transform:uppercase;letter-spacing:.04em">${libelle}</td>
     <td style="${F};font-size:10.5pt;color:#2B3752;padding:3px 0;vertical-align:top;line-height:1.4">${ecoEsc(valeur)}</td></tr>`;
@@ -70,7 +115,7 @@ function ecoTableauHtml(entrees) {
             </tr>
             <tr>
               <td style="${F};font-size:9pt;color:#16A34A;font-weight:600;padding:2px 10px 0 0;letter-spacing:.03em">${e.retenue ? '✓ NOTRE PROPOSITION' : '&nbsp;'}</td>
-              <td style="${F};font-size:9pt;color:#7A869A;text-align:right;padding-top:2px">par an</td>
+              <td style="${F};font-size:9pt;color:#7A869A;text-align:right;padding-top:2px">${ecart(e.prime) || 'par an'}</td>
             </tr>
           </table>
 
@@ -89,8 +134,8 @@ function ecoTableauHtml(entrees) {
 
 const ECO_MENTION = `<p style="margin:14pt 0 0;font-size:8.5pt;color:#8A94A8;font-family:Aptos,Calibri,Arial,sans-serif">Comparaison établie sur la prime annuelle indiquée par chaque compagnie ; les franchises et l’étendue des couvertures diffèrent d’une offre à l’autre. Seules les conditions générales et particulières des polices font foi.</p>`;
 
-function ecoMessageHtml(avant, apres, entrees) {
-  return ecoTexteHtml(avant) + ecoTableauHtml(entrees) + ecoTexteHtml(apres) + ECO_MENTION;
+function ecoMessageHtml(avant, apres, entrees, actuel) {
+  return ecoTexteHtml(avant) + ecoActuelHtml(actuel) + ecoTableauHtml(entrees, actuel) + ecoTexteHtml(apres) + ECO_MENTION;
 }
 
 // ── La fenêtre d'édition ───────────────────────────────────────────────────────────────────────
@@ -114,6 +159,9 @@ function ecoOuvrir(oppId) {
   const uneRetenue = avecPdf.some(x => x.e.retenue);
   _eco.opp = o;
   _eco.entrees = entrees;
+  // La couverture actuelle choisie dans le comparateur (js/155) suit dans le message : le client
+  // lit d'abord ce qu'il a, puis l'écart. Si rien n'a été choisi, rien n'apparaît.
+  _eco.actuel = typeof cexContrat === 'function' ? cexContrat(oppId) : null;
   _eco.pieces = avecPdf.map(x => ({
     path: x.e.offre_path, nom: x.e.offre_nom || `Offre ${x.e.compagnie || ''}.pdf`,
     compagnie: x.e.compagnie || '', coche: uneRetenue ? !!x.e.retenue : true,
@@ -165,7 +213,7 @@ function ecoApercu() {
     const jointes = _eco.pieces.filter(p => p.coche);
     const bandeau = jointes.length
       ? `<div style="margin:0 0 14px;padding:8px 10px;background:#F4F6F9;border-radius:8px;font:11px Arial,sans-serif;color:#56627A">📎 ${jointes.map(p => ecoEsc(p.nom)).join(' · ')}</div>` : '';
-    f.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;padding:16px 18px;background:#fff;color:#000;word-wrap:break-word}</style></head><body>${bandeau}${ecoMessageHtml(avant, apres, _eco.entrees)}</body></html>`;
+    f.srcdoc = `<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;padding:16px 18px;background:#fff;color:#000;word-wrap:break-word}</style></head><body>${bandeau}${ecoMessageHtml(avant, apres, _eco.entrees, _eco.actuel)}</body></html>`;
   }, 160);
 }
 
@@ -193,7 +241,7 @@ async function ecoPartir(oppId) {
   if (bouton) { bouton.disabled = true; bouton.textContent = '⏳ Préparation…'; }
   const pieces = await ecoPieces();
   const res = await envoyerCourriel({
-    a: dest, objet, html: ecoMessageHtml(avant, apres, _eco.entrees), pieces, contexte: 'comparatif d’offres',
+    a: dest, objet, html: ecoMessageHtml(avant, apres, _eco.entrees, _eco.actuel), pieces, contexte: 'comparatif d’offres',
   });
   if (bouton) { bouton.disabled = false; bouton.textContent = '📨 Envoyer'; }
   if (!res.ok) return;

@@ -98,7 +98,7 @@ RXA_SEQUENCES.flamme = (() => {
     // .rxa-zone, c'est CE rectangle qui borne son trajet — pas le bandeau (voir js/149, qui mesure
     // le creux libre).
     const petit = !!(img && img.classList.contains('rxa-petit'));
-    const hero = img && (img.closest('.rxa-zone') || img.closest('.dbx-hero, .opx-hero'));
+    const hero = img && (img.closest('.rxa-zone') || img.closest('.dbx-hero, .fcx-hero'));
     if (hero && img.style.transform === '') {
       const ri = img.getBoundingClientRect(), rh = hero.getBoundingClientRect();
       if (ri.width > 0) {
@@ -438,8 +438,9 @@ function rxaHorizon(hero) {
 // s'appuyer contre les objets au lieu de passer devant.
 const RXA_PETIT_SCENE = `<span class="opx-paysage" aria-hidden="true">
   <span class="opxp-etoiles"></span><span class="opxp-lune"></span>
-  <span class="opxp-collines"></span>
+  <span class="opxp-collines"></span><span class="opxp-volcan"></span>
   <span class="opxp-panneau"></span><span class="opxp-dossiers"></span>
+  <span class="opxp-fougeres"></span><span class="opxp-rocher"></span>
 </span>`;
 
 function rxaDecor(img) {
@@ -462,7 +463,7 @@ function rxaDecor(img) {
 // liseré vert d'eau, quelques touffes d'herbe et cailloux. Elle s'efface vers la gauche pour ne
 // pas passer sous la barre de recherche.
 function rxaSol(img) {
-  const hero = img && img.closest('.dbx-hero, .opx-hero');
+  const hero = img && img.closest('.dbx-hero, .fcx-hero');
   if (!hero) return;
   const petit = img.classList.contains('rxa-petit');
   if (!petit) rxaHorizon(hero);
@@ -524,7 +525,7 @@ function rxaSol(img) {
   if (!window._rxaSolResize) {
     window._rxaSolResize = true;
     let t = null;
-    window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => document.querySelectorAll('.dbx-hero, .opx-hero').forEach(h => { const i = h.querySelector('img.dbx-hero-mascotte'); if (i) rxaSol(i); }), 150); });
+    window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(() => document.querySelectorAll('.dbx-hero, .fcx-hero').forEach(h => { const i = h.querySelector('img.dbx-hero-mascotte'); if (i) rxaSol(i); }), 150); });
   }
 }
 
@@ -595,13 +596,13 @@ function rxaPoser() {
     .opxp-dossiers { position: absolute; right: 2px; bottom: 0; width: 30px; height: 62%;
       background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 34' preserveAspectRatio='xMidYMax meet'%3E%3Crect x='1' y='22' width='38' height='12' rx='2' fill='%23C9D8FF' fill-opacity='.26'/%3E%3Crect x='4' y='12' width='31' height='11' rx='2' fill='%237FE0C8' fill-opacity='.26'/%3E%3Crect x='8' y='2' width='24' height='11' rx='2' fill='%23C9D8FF' fill-opacity='.34'/%3E%3Cg fill='%230A1F4D' fill-opacity='.35'%3E%3Crect x='11' y='5' width='9' height='1.8' rx='.9'/%3E%3Crect x='7' y='15' width='9' height='1.8' rx='.9'/%3E%3Crect x='4' y='25' width='9' height='1.8' rx='.9'/%3E%3C/g%3E%3C/svg%3E") no-repeat center bottom / contain; }
     @media (prefers-reduced-motion: reduce) { .opxp-etoiles { animation: none; } }
-    .opx-hero .rxa-scene { line-height: 0; }
+    .fcx-hero .rxa-scene { line-height: 0; }
     /* L'ancienne pose fixe ne s'affiche jamais : Rex n'apparaît qu'animé (22.09.2026). */
-    :is(.dbx-hero, .opx-hero) img.dbx-hero-mascotte:not(.rxa-flamme) { visibility: hidden; }
+    :is(.dbx-hero, .fcx-hero) img.dbx-hero-mascotte:not(.rxa-flamme) { visibility: hidden; }
     /* Le décor : derrière Rex, calé sur ses pieds, étendu vers la gauche pour son trajet de marche. */
     .rxa-scene { position: relative; display: inline-block; line-height: 0; }
     /* Le sol jusqu'au bas du bandeau (rxaSol) : hauteur mesurée dans --rxa-sol. */
-    :is(.dbx-hero, .opx-hero) > .rxa-sol { position: absolute !important; left: 0; right: 0; bottom: 0; height: var(--rxa-sol, 40px); z-index: 0 !important;
+    :is(.dbx-hero, .fcx-hero) > .rxa-sol { position: absolute !important; left: 0; right: 0; bottom: 0; height: var(--rxa-sol, 40px); z-index: 0 !important;
       pointer-events: none; border-radius: 0 0 inherit inherit; border-bottom-left-radius: inherit; border-bottom-right-radius: inherit;
       background:
         url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='40' viewBox='0 0 140 40'%3E%3Cg fill='%236FD3B0' fill-opacity='.22'%3E%3Cpath d='M12 6 l2 -6 l1 6 l2 -4 l0 4 z'/%3E%3Cpath d='M78 7 l1.5 -5 l1 5 l2 -3.5 l0 3.5 z'/%3E%3Cpath d='M118 5 l1.5 -4 l1 4 z'/%3E%3C/g%3E%3Cg fill='%23ffffff' fill-opacity='.10'%3E%3Cellipse cx='44' cy='14' rx='3' ry='1.4'/%3E%3Cellipse cx='101' cy='22' rx='2.2' ry='1'/%3E%3Cellipse cx='23' cy='27' rx='1.6' ry='.8'/%3E%3C/g%3E%3C/svg%3E") repeat-x 0 0 / 140px 40px,
@@ -615,7 +616,7 @@ function rxaPoser() {
     .dbx-hero .dbx-recherche:focus-within { z-index: 6; }
     /* L'horizon sur toute la largeur : motifs répétés, donc identiques du téléphone au grand écran.
        Tout est calé sur la ligne de sol mesurée (--rxa-sol), comme le volcan. */
-    :is(.dbx-hero, .opx-hero) > .rxa-horizon { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; border-radius: inherit; }
+    :is(.dbx-hero, .fcx-hero) > .rxa-horizon { position: absolute; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; border-radius: inherit; }
     .rxa-horizon .rxa-collines { position: absolute; left: 0; right: 0; bottom: var(--rxa-sol, 40px); height: 108px;
       background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='62' viewBox='0 0 300 62'%3E%3Cpath d='M0 62 L0 42 Q30 26 62 36 Q94 46 124 32 Q156 18 190 34 Q224 50 256 38 Q280 29 300 36 L300 62 Z' fill='%230A1F4D' fill-opacity='.26'/%3E%3Cpath d='M0 42 Q30 26 62 36 Q94 46 124 32 Q156 18 190 34 Q224 50 256 38 Q280 29 300 36' fill='none' stroke='%237FE0C8' stroke-opacity='.13' stroke-width='1.2'/%3E%3C/svg%3E") repeat-x left bottom / 300px 62px,
         url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='460' height='90' viewBox='0 0 460 90'%3E%3Cpath d='M0 90 L0 62 Q40 44 78 56 Q116 68 150 48 Q188 26 228 44 Q268 62 306 50 Q344 38 382 56 Q420 74 460 58 L460 90 Z' fill='%23C9D8FF' fill-opacity='.09'/%3E%3C/svg%3E") repeat-x left bottom / 460px 90px; }
@@ -649,7 +650,7 @@ function rxaPoser() {
     /* Rex marche et s'adosse jusqu'aux bords du bandeau : la partie transparente de son image ne
        doit pas élargir la page (défilement de côté sur iPhone). Le vertical reste libre (résultats
        de la recherche). */
-    :is(.dbx-hero, .opx-hero) { overflow-x: clip; }
+    :is(.dbx-hero, .fcx-hero) { overflow-x: clip; }
     .rxa-bouffee { transform-box: fill-box; transform-origin: 50% 50%; opacity: 0; animation: rxaBouffee 8s linear infinite; }
     @keyframes rxaBouffee {
       0% { transform: translate(0, 0) scale(.35); opacity: 0; }

@@ -96,7 +96,7 @@ function dvBasculer() {
     </div>`);
   document.body.classList.add('dv-actif');
   const b = document.getElementById('dv-b-volets');
-  if (b) b.textContent = '⫽ Fermer le 2ᵉ volet';
+  if (b) { b.textContent = '⫽ Fermer'; b.title = 'Fermer le second volet'; }
   dvPoser(part);
   dvTirer();
 }
@@ -111,7 +111,7 @@ function dvFermer() {
   document.getElementById('dv-volet')?.remove();
   document.getElementById('dv-poignee')?.remove();
   const b = document.getElementById('dv-b-volets');
-  if (b) b.textContent = '⫽ Deux volets';
+  if (b) { b.textContent = '⫽ Volets'; b.title = 'Couper l’écran en deux, un menu de chaque côté'; }
 }
 
 // La poignée : pendant le glissement, l'iframe cesse de recevoir la souris — sans ça le curseur
@@ -144,8 +144,8 @@ function dvPoserBoutons() {
   d.id = 'dv-boutons';
   d.className = 'dv-boutons';
   d.innerHTML = `
-    <button type="button" class="dv-b-fenetre" onclick="dvNouvelleFenetre()" title="Ouvrir ce dossier dans une seconde fenêtre du CRM">⧉ Nouvelle fenêtre</button>
-    <button type="button" class="dv-b-volets" id="dv-b-volets" onclick="dvBasculer()" title="Couper l’écran en deux, un menu de chaque côté">⫽ Deux volets</button>`;
+    <button type="button" class="dv-b-fenetre" onclick="dvNouvelleFenetre()" title="Ouvrir ce dossier dans une seconde fenêtre du CRM">⧉ Fenêtre</button>
+    <button type="button" class="dv-b-volets" id="dv-b-volets" onclick="dvBasculer()" title="Couper l’écran en deux, un menu de chaque côté">⫽ Volets</button>`;
   const version = document.getElementById('crm-version');
   zone.insertBefore(d, version || null);
 }
@@ -158,10 +158,13 @@ function dvPoserBoutons() {
        rarement. Ici : une plaque de verre teintée, un liseré clair, et une lueur de la couleur de
        la fonction — visible de près, invisible de loin. Le TEXTE, lui, reste plein et clair :
        c'est la plaque qui est translucide, pas les lettres. */
-    .dv-boutons { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
-    .dv-boutons button { width: 100%; padding: 6px 9px; border-radius: 8px; cursor: pointer;
-      font-size: 10.5px; font-weight: 600; letter-spacing: .02em;
-      display: flex; align-items: center; justify-content: center; gap: 5px;
+    /* 23.09.2026 : « scinde-les en vertical pour gagner l'espace ». Côte à côte plutôt que l'un
+       sous l'autre : deux fonctions rares ne méritent pas deux lignes dans un menu où la place
+       manque. Les libellés raccourcissent en conséquence — le titre au survol dit le reste. */
+    .dv-boutons { display: flex; gap: 5px; margin-top: 10px; }
+    .dv-boutons button { flex: 1; min-width: 0; padding: 6px 4px; border-radius: 8px; cursor: pointer;
+      font-size: 10px; font-weight: 600; letter-spacing: .01em; white-space: nowrap;
+      display: flex; align-items: center; justify-content: center; gap: 4px;
       -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
       transition: background .2s ease, box-shadow .2s ease, transform .1s ease; }
     .dv-boutons button:hover { transform: translateY(-1px); }

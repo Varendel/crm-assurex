@@ -2343,6 +2343,7 @@ function rechercheClientOpportunite(texte) {
 function selectionnerClientOpportunite(clientId) {
   const c = allClients.find(cl => cl.id === clientId);
   if (!c) return;
+  window._oppClientRetire = false;   // on rattache : le détachement demandé plus tôt est annulé
   const nomAffiche = estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`;
   document.getElementById('o-client').value = c.id;
   document.getElementById('o-client-recherche').value = nomAffiche;
@@ -2359,7 +2360,19 @@ function selectionnerClientOpportunite(clientId) {
     champ.appendChild(btn);
   }
 }
+// Le rattachement à enregistrer. Un champ vide n'est PAS une demande de détacher : c'est très
+// souvent un champ qui n'a pas pu se remplir. Seul le bouton « ✕ Retirer » détache vraiment.
+function oppClientPourEnregistrement() {
+  const saisi = (document.getElementById('o-client')?.value || '').trim();
+  if (saisi) return saisi;
+  if (window._oppClientRetire) return null;                 // détachement explicite
+  const id = typeof opportuniteEnEditionId !== 'undefined' ? opportuniteEnEditionId : null;
+  const o = id && typeof allOpportunites !== 'undefined' ? allOpportunites.find(x => x.id === id) : null;
+  return (o && o.client_id) || null;                        // on garde ce qui existait
+}
+
 function viderClientOpportunite() {
+  window._oppClientRetire = true;
   document.getElementById('o-client').value = '';
   document.getElementById('o-client-recherche').value = '';
   const prospectField = document.getElementById('o-prospect-field');
@@ -2971,8 +2984,16 @@ async function saveOpportunite(id) {
   }, 0);
   const body = {
     titre,
-    client_id: document.getElementById('o-client').value || null,
-    prospect_nom: document.getElementById('o-client').value ? null : (document.getElementById('o-prospect-nom').value.trim() || null),
+    // 23.09.2026 : « pourquoi la fiche se délie de l'opportunité ? » Parce qu'on écrivait ici ce que
+    // le champ caché contenait, sans se demander s'il avait été REMPLI. Si le formulaire s'ouvrait
+    // avant que la liste des clients soit chargée, ou si la fiche n'y figurait pas, le champ restait
+    // vide — et le premier enregistrement écrivait client_id = null. L'affaire se retrouvait
+    // détachée sans que rien ne le signale, et le lien était perdu.
+    // On ne délie désormais que si le courtier l'a DEMANDÉ (bouton « ✕ Retirer », qui pose le
+    // drapeau). Sinon, champ vide = on n'y touche pas.
+    client_id: oppClientPourEnregistrement(),
+    prospect_nom: (document.getElementById('o-client').value || oppClientPourEnregistrement())
+      ? null : (document.getElementById('o-prospect-nom').value.trim() || null),
     compagnie: compagnieBody || null,
     montant_potentiel: montantPotentiel,
     probabilite: parseInt(document.getElementById('o-prob').value) || 50,

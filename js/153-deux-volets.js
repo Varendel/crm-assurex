@@ -198,6 +198,18 @@ function dvPoserBoutons() {
     /* Pendant le glissement : l'iframe ne doit pas happer le curseur. */
     body.dv-glisse { user-select: none; }
     body.dv-glisse .dv-volet iframe { pointer-events: none; }
+
+    /* 23.09.2026 : « si je clique sur la loupe, un truc flou empêche de sélectionner le client. »
+       Le voile de la palette (js/74) est un calque PLEIN ÉCRAN, flouté, en z-index 10500 : en mode
+       deux volets il recouvrait aussi le volet de droite, et tout clic de ce côté tombait dessus.
+       On le ramène à la taille du volet qui l'a ouvert — une palette appartient à son volet, pas à
+       la fenêtre — et on retire le flou, qui n'apportait rien et donnait ce halo trouble. */
+    body.dv-actif .nav-palette-fond {
+      right: auto; width: var(--dv-part, 50%);
+      -webkit-backdrop-filter: none; backdrop-filter: none;
+      background: rgba(4, 12, 28, .58);
+    }
+    body.dv-actif .nav-palette { width: min(560px, 100%); }
     @media (max-width: ${DV_MIN_LARGEUR - 1}px) { .dv-boutons button:last-child { display: none; } }`;
   document.head.appendChild(st);
 

@@ -80,6 +80,7 @@ function opRafraichir() {
 }
 
 function opModeFormulaire(id) {
+  window._oppClientRetire = false;   // nouveau formulaire : aucun détachement demandé (js/07)
   window._oppFormulairePour = id;
   opRafraichir();
   window.scrollTo({ top: 0 });

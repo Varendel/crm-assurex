@@ -587,7 +587,7 @@ function viewNouveauContrat() {
       </select></div>
       <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="ct-statut"><option value="actif">Actif</option><option value="en_cours">En cours de signature</option><option value="renouveler">À renouveler (échéance passée)</option><option value="annulé">Annulé (réserve refusée / non abouti)</option></select></div>
       <div class="form-field"><label class="form-label">Préavis de résiliation</label><select class="form-select" id="ct-preavis">
-        <option value="">Automatique (1 mois LAMal, 3 mois sinon)</option>
+        <option value="">Automatique — 3 mois LCA, 6 mois LPP, 1 mois LAMal</option>
         <option value="1">1 mois</option><option value="2">2 mois</option><option value="3">3 mois</option><option value="6">6 mois</option><option value="12">12 mois</option>
       </select><div style="font-size:10px;color:var(--text-muted);margin-top:3px">Sert à calculer la date limite de résiliation dans les renouvellements et l'espace client.</div></div>
       <div class="form-field"><label class="form-label">Commissionné ?</label><select class="form-select" id="ct-commissionne" onchange="document.getElementById('ct-rappel-note').style.display = this.value==='non' ? '' : 'none'"><option value="oui">Oui</option><option value="non">Non (pas de convention de collaboration)</option></select>
@@ -1554,7 +1554,8 @@ function estimerCommissionProduit(produitId, compagnieNom, primeSaisie, dureeAnn
 // placement) partage la même règle de commission : 4% du capital de production. Élargi le
 // 27.08.2026 après que Jonathan a signalé qu'un 3b risque pur retombait à CHF 0 (seuls vie_3a et
 // vie_3b_mixte étaient couverts jusque-là).
-const PRODUITS_VIE_PRIVEE_CAPITAL = ['vie_3a', 'compte_3a', 'vie_3b_mixte', 'vie_3b_risque', 'vie_3b_placement'];
+const PRODUITS_VIE_PRIVEE_CAPITAL = ['vie_3a', 'vie_3a_risque', 'incapacite_gain', 'compte_3a',
+  'vie_3b_mixte', 'vie_3b_risque', 'vie_3b_placement'];
 
 function calculerCommissionEstimee() {
   const produit = getProduitSelectionne();
@@ -1706,9 +1707,16 @@ function calculerCommissionEstimee() {
   // toute la gamme 3a/3b (règle confirmée par Jonathan le 27.08.2026) ──
   if (PRODUITS_VIE_PRIVEE_CAPITAL.includes(produitId)) {
     const duree = parseFloat(document.getElementById('ct-duree')?.value) || 1;
-    const capitalProduction = primeMensuelle * 12 * duree;
+    // Le capital de production, c'est la prime ANNUELLE × la durée — jamais « × 12 » en plus.
+    // Jusqu'au 23.09.2026 le calcul faisait `primeMensuelle × 12 × durée` : juste tant que la
+    // périodicité est mensuelle, faux d'un facteur 12 dès qu'elle ne l'est pas. Le champ de prime
+    // contient le montant PAR PÉRIODE (c'est la périodicité qui dit laquelle) ; sur un 3a payé
+    // annuellement — le cas le plus courant — on multipliait donc la prime annuelle par 12, d'où
+    // un capital et une commission 12× trop élevés (signalé par Jonathan sur le contrat Zurich de
+    // Camille Sauthier). primeAnnuelle porte déjà la périodicité : elle vaut dans tous les cas.
+    const capitalProduction = Math.round(primeAnnuelle * duree * 100) / 100;
     const montant = Math.round(capitalProduction * (TAUX_COMMISSION.vie_taux_capital / 100));
-    return { montant, detail: `${TAUX_COMMISSION.vie_taux_capital}% × CHF ${fmtCHF(capitalProduction)} (capital = ${primeMensuelle} × 12 × ${duree} ans) = CHF ${fmtCHF(montant)}` };
+    return { montant, detail: `${TAUX_COMMISSION.vie_taux_capital}% × CHF ${fmtCHF(capitalProduction)} (capital = prime annuelle CHF ${fmtCHF(primeAnnuelle)} × ${duree} ans) = CHF ${fmtCHF(montant)}` };
   }
 
   // ── LPP (prévoyance professionnelle 2e pilier) ─────────────────────────
@@ -1844,7 +1852,8 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
     // préavis (LAMal 1 mois, sinon 3 mois par défaut), jusque-là posés seulement à la modification.
     periodicite: dejaAnnuelle ? (/^LCA — /.test(produitLabel) ? 12 : 1) : (parseInt(document.getElementById('ct-periodicite')?.value) || 12),
     type_commission: document.getElementById('ct-nature-commission')?.value || 'acquisition',
-    preavis_mois: Number(document.getElementById('ct-preavis')?.value) || (/lamal/i.test(produitLabel) ? 1 : 3),
+    preavis_mois: Number(document.getElementById('ct-preavis')?.value)
+      || (typeof preavisStandard === 'function' ? preavisStandard(produitLabel) : (/lamal/i.test(produitLabel) ? 1 : 3)),
     // "Dont prime risque + frais" (base de calcul COG Swiss Life) n'était utilisée que pour le
     // calcul en direct puis jetée — jamais sauvegardée nulle part, donc invisible/reperdue dès la
     // fiche rechargée. Persistée ici pour de bon (demande de Jonathan le 25.08.2026 : "la prime...

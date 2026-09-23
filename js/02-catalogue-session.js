@@ -149,6 +149,11 @@ const CATALOGUE_PRODUITS = {
   'Prévoyance privée': [
     // ── Pilier 3a ────────────────────────────────────────────────────────
     { id: 'vie_3a', label: 'Assurance vie liée 3a (pilier 3a)', segment: 'prive', modules: ['Risque pur (décès/invalidité)', 'Mixte (épargne + risque)', 'Fonds de placement 3a'] },
+    // Le risque pur 3a existait jusqu'ici seulement comme MODULE de vie_3a — impossible à ficher
+    // comme contrat à part entière, alors que c'est un produit vendu seul (demande de Jonathan le
+    // 23.09.2026 : « ajoute 3a assurance risque pure et incapacité de gain dans les produits »).
+    { id: 'vie_3a_risque', label: 'Assurance risque pur 3a (décès / incapacité de gain)', segment: 'prive', modules: ['Décès seul', 'Décès + incapacité de gain', 'Incapacité de gain seule', 'Libération du service des primes'] },
+    { id: 'incapacite_gain', label: 'Assurance incapacité de gain (rente IG)', segment: 'prive', modules: ['Rente d\'incapacité de gain', 'Délai d\'attente 3 mois', 'Délai d\'attente 12 mois', 'Libération du service des primes'] },
     { id: 'compte_3a', label: 'Compte de prévoyance 3a (bancaire)', segment: 'prive', modules: [] },
     // ── Pilier 3b ────────────────────────────────────────────────────────
     { id: 'vie_3b_mixte', label: 'Assurance vie mixte 3b (pilier 3b)', segment: 'prive', modules: ['Épargne + risque', 'Capital garanti', 'Participation aux excédents'] },
@@ -239,6 +244,26 @@ function produitsLcaPourCompagnie(compagnieTexte) {
     if (s.includes(cle)) return produits;
   }
   return null;
+}
+
+// \u2500\u2500\u2500 Pr\u00e9avis de r\u00e9siliation par d\u00e9faut (23.09.2026) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// \u00ab Pr\u00e9avis de r\u00e9siliation standard c'est 3 mois LCA, 6 mois LPP, LAMal 1 mois. \u00bb
+//
+// Le CRM ne connaissait que deux cas \u2014 LAMal 1 mois, tout le reste 3 \u2014 et la LPP tombait donc dans
+// \u00ab tout le reste \u00bb. Or six mois au lieu de trois, sur un contrat d'entreprise, ce n'est pas un
+// d\u00e9tail de pr\u00e9sentation : c'est la diff\u00e9rence entre une r\u00e9siliation qui part \u00e0 temps et une ann\u00e9e
+// de plus chez l'assureur qu'on voulait quitter. Le calcul de la date limite (js/11), les lettres
+// de r\u00e9siliation (js/45) et l'espace client s'appuient tous sur ce chiffre.
+//
+// L'ordre est celui des cas, du plus g\u00e9n\u00e9ral au plus particulier ; la LAMal en dernier, c'est elle
+// l'exception.
+const PREAVIS_STANDARD = { lca: 3, lpp: 6, lamal: 1 };
+
+function preavisStandard(produitLabel) {
+  const p = String(produitLabel || '').toLowerCase();
+  if (/\blpp\b|2e pilier|pr[\u00e9e]voyance professionnelle/.test(p)) return PREAVIS_STANDARD.lpp;
+  if (/lamal|assurance de base/.test(p)) return PREAVIS_STANDARD.lamal;
+  return PREAVIS_STANDARD.lca;
 }
 
 // \u2500\u2500\u2500 Produits ENTREPRISE par compagnie (23.09.2026) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
@@ -397,7 +422,8 @@ const PRODUIT_BRANCHES = {
   // Protection juridique
   pj_privee: ['protection_juridique'], pj_pro: ['protection_juridique'],
   // Vie / prévoyance liée
-  vie_3a: ['vie'], compte_3a: ['vie'], vie_3b_mixte: ['vie'], vie_3b_risque: ['vie'], vie_3b_placement: ['vie'],
+  vie_3a: ['vie'], vie_3a_risque: ['vie'], incapacite_gain: ['vie'], compte_3a: ['vie'],
+  vie_3b_mixte: ['vie'], vie_3b_risque: ['vie'], vie_3b_placement: ['vie'],
   libre_passage: ['vie'], prevoyance_enfant: ['vie'],
   // LPP (2e pilier collectif)
   lpp_entreprise: ['lpp'], lpp_individuelle: ['lpp'],

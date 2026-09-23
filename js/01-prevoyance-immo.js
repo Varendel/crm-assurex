@@ -322,7 +322,7 @@ const SWISS_LIFE_LPP_FP = {
 
 const TAUX_COMMISSION = {
   sante_facteur_mensuel: 16,   // santé complémentaire : prime mensuelle x 16 (acquisition unique)
-  vie_taux_capital: 4,         // vie 3a : 4% du capital de production (prime mensuelle x12 x nb années)
+  vie_taux_capital: 4,         // vie 3a/3b : 4% du capital de production (= prime ANNUELLE x nb d'années, jamais x12 en plus)
   lpp_taux: 6.3,               // LPP Swiss Life : taux 6.3% (Annexe B convention SL1102, vérifié 25.08.2026)
   lamal_forfait: 70,           // LAMal : forfait unique CHF 70.- par contrat à la signature
   // COG annuelle LPP = base risque+frais × FP (par produit exact, voir SWISS_LIFE_LPP_FP) × 6.3% (versée trimestriellement)

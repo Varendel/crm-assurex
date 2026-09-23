@@ -41,6 +41,9 @@ function rnEstLamal(ct) {
 
 function rnPreavis(ct) {
   if (ct.preavis_mois !== null && ct.preavis_mois !== undefined && ct.preavis_mois !== '') return Number(ct.preavis_mois);
+  // 23.09.2026 : la LPP est à 6 mois, pas 3 — elle tombait jusqu'ici dans « tout le reste ».
+  // Règle commune : preavisStandard (js/02).
+  if (typeof preavisStandard === 'function') return preavisStandard(ct.produit);
   return rnEstLamal(ct) ? 1 : 3;
 }
 

@@ -2864,7 +2864,7 @@ function ligneesProduitsOpportunite() {
 // (pas encore de vrai champ "durée"), on estime automatiquement la durée restante jusqu'à 65 ans
 // depuis la date de naissance du client déjà fiché, décision de Jonathan le 06.08.2026 (plutôt
 // qu'un champ à ressaisir à la main). Repli sur 1 an si la date de naissance est inconnue.
-const PRODUITS_VIE_DUREE_65ANS = ['vie_3a', 'vie_3b_mixte'];
+const PRODUITS_VIE_DUREE_65ANS = ['vie_3a', 'vie_3a_risque', 'incapacite_gain', 'vie_3b_mixte'];
 // Produits santé complémentaire (LCA) rémunérés selon la règle prime MENSUELLE × 16, INDÉPENDANTE
 // de la compagnie choisie (contrairement à LPP/RC/véhicules dont le taux dépend de la compagnie) —
 // voir TAUX_COMMISSION.sante_facteur_mensuel (js/01) et calculerCommissionEstimee (js/09). Doit

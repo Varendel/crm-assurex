@@ -1897,7 +1897,10 @@ async function creerContratDepuisImport(idx) {
     // Mêmes champs de base que la saisie manuelle (harmonisation 19.09.2026)
     commissionne: true,
     periodicite: 1,
-    preavis_mois: /lamal/i.test(l.brancheInterne || '') ? 1 : 3,
+    // Règle commune (js/02) : 3 mois LCA, 6 mois LPP, 1 mois LAMal.
+    preavis_mois: typeof preavisStandard === 'function'
+      ? preavisStandard(l.produit || l.brancheInterne || '')
+      : (/lamal/i.test(l.brancheInterne || '') ? 1 : 3),
     apporteur_id: (allClients.find(c => c.id === l.clientId) || {}).apporteur_id || null,
   };
   const r = await dbPost('contrats', body);

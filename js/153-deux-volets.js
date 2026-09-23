@@ -95,6 +95,8 @@ function dvBasculer() {
       <iframe id="dv-cadre" title="Second dossier" src="${dvLien(null, true)}"></iframe>
     </div>`);
   document.body.classList.add('dv-actif');
+  const b = document.getElementById('dv-b-volets');
+  if (b) b.textContent = '⫽ Fermer le 2ᵉ volet';
   dvPoser(part);
   dvTirer();
 }
@@ -108,6 +110,8 @@ function dvFermer() {
   document.body.classList.remove('dv-actif');
   document.getElementById('dv-volet')?.remove();
   document.getElementById('dv-poignee')?.remove();
+  const b = document.getElementById('dv-b-volets');
+  if (b) b.textContent = '⫽ Deux volets';
 }
 
 // La poignée : pendant le glissement, l'iframe cesse de recevoir la souris — sans ça le curseur
@@ -140,8 +144,8 @@ function dvPoserBoutons() {
   d.id = 'dv-boutons';
   d.className = 'dv-boutons';
   d.innerHTML = `
-    <button type="button" onclick="dvNouvelleFenetre()" title="Ouvrir ce dossier dans une seconde fenêtre du CRM">⧉ Nouvelle fenêtre</button>
-    <button type="button" onclick="dvBasculer()" title="Couper l’écran en deux, un menu de chaque côté">⫽ Deux volets</button>`;
+    <button type="button" class="dv-b-fenetre" onclick="dvNouvelleFenetre()" title="Ouvrir ce dossier dans une seconde fenêtre du CRM">⧉ Nouvelle fenêtre</button>
+    <button type="button" class="dv-b-volets" id="dv-b-volets" onclick="dvBasculer()" title="Couper l’écran en deux, un menu de chaque côté">⫽ Deux volets</button>`;
   const version = document.getElementById('crm-version');
   zone.insertBefore(d, version || null);
 }
@@ -149,11 +153,20 @@ function dvPoserBoutons() {
 (function dvBrancher() {
   const st = document.createElement('style');
   st.textContent = `
-    .dv-boutons { display: flex; flex-direction: column; gap: 5px; margin-top: 10px; }
-    .dv-boutons button { width: 100%; padding: 7px 8px; border: 1px solid color-mix(in srgb, currentColor 22%, transparent);
-      border-radius: 8px; background: transparent; color: inherit; font-size: 11.5px; font-weight: 600;
-      cursor: pointer; opacity: .85; transition: opacity .2s ease, background .2s ease; }
-    .dv-boutons button:hover { opacity: 1; background: rgba(127, 127, 127, .18); }
+    /* Des boutons qui se voient. Même erreur que sur l'étiquette de version : fond transparent et
+       couleur héritée d'un gris déjà atténué, donc illisibles. Ici : fond plein, texte contrasté,
+       chacun sa couleur — le bleu ouvre à côté, le cyan coupe l'écran. */
+    .dv-boutons { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+    .dv-boutons button { width: 100%; padding: 9px 10px; border: 0; border-radius: 9px;
+      font-size: 12px; font-weight: 700; letter-spacing: .01em; cursor: pointer;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+      box-shadow: 0 2px 6px rgba(0, 20, 55, .25); transition: filter .18s ease, transform .1s ease; }
+    .dv-boutons button:hover { filter: brightness(1.12); }
+    .dv-boutons button:active { transform: translateY(1px); }
+    .dv-boutons button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+    .dv-b-fenetre { background: #2563EB; color: #FFFFFF; }
+    .dv-b-volets { background: #00CFFF; color: #04121F; }
+    body.dv-actif .dv-b-volets { background: #F59E0B; color: #1F1503; }
     /* L'application est ramenée à gauche, le volet occupe le reste. On agit sur #app plutôt que sur
        body : le fond, les modales et les bandeaux gardent la pleine largeur. */
     body.dv-actif #app { width: var(--dv-part, 50%); max-width: var(--dv-part, 50%); overflow: hidden; }

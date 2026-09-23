@@ -257,7 +257,11 @@ function scrPoser() {
     .scr-coin-d { left: auto; right: 0; transform: scaleX(-1); width: 70px; height: 70px; opacity: .22; }
     .scr-coin svg { width: 100%; height: 100%; }
     .scr-c1, .scr-c2 { position: absolute; width: 38px; opacity: .9; filter: drop-shadow(0 0 8px rgba(255,160,40,.45)); }
-    .scr-c1 { left: 22px; bottom: 10px; }
+    /* 23.09.2026 : « remonte la citrouille ». À 10 px du bas, elle était dans les pattes de Rex,
+       qui marche sur la ligne de sol du bandeau. Elle se pose maintenant SUR cette ligne, mesurée
+       par js/117 (--rxa-sol) : au bon endroit quelle que soit la hauteur du bandeau, au lieu d'un
+       nombre de pixels choisi une fois pour toutes. */
+    .scr-c1 { left: 22px; bottom: calc(var(--rxa-sol, 40px) + 16px); }
     .scr-c2 { left: 16px; bottom: 74px; width: 30px; opacity: .8; }
     .scr-c1 svg, .scr-c2 svg, .scr-f1 svg, .scr-f2 svg { width: 100%; height: auto; display: block; }
     .scr-f1, .scr-f2 { position: absolute; width: 30px; opacity: .55; animation: scrFlotte 7s ease-in-out infinite; }

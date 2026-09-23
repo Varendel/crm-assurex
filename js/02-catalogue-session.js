@@ -279,7 +279,13 @@ function preavisStandard(produitLabel) {
 // Groupe Mutuel : inventer un nom de plan dans le CRM d'un courtier, c'est le retrouver un jour
 // dans un document remis \u00e0 un client. Les entr\u00e9es manquantes se compl\u00e9teront au fil des
 // propositions re\u00e7ues \u2014 le champ reste libre en attendant.
-const CATALOGUE_ENTREPRISE_PAR_COMPAGNIE = {
+//
+// 23.09.2026 (suite) : le même mécanisme sert maintenant AUSSI aux produits privés — il n'avait
+// d'« entreprise » que son nom, la recherche se fait sur (compagnie, produit) sans savoir de quel
+// segment il s'agit. D'où le renommage. Les thèmes de placement d'un 3a en font partie : ce n'est
+// pas un détail de présentation, c'est ce qui est écrit sur la police et ce qu'il faut retrouver
+// pour comparer deux offres.
+const CATALOGUE_PRODUITS_PAR_COMPAGNIE = {
   'groupe mutuel': {
     laa: ['Accidents professionnels (AP)', 'Accidents non professionnels (ANP)',
           'Garantie de taux (CP0267.10)', 'R\u00e9duction des frais de gestion li\u00e9e \u00e0 la LAA (CP0279.01)'],
@@ -294,15 +300,35 @@ const CATALOGUE_ENTREPRISE_PAR_COMPAGNIE = {
                              'Compl\u00e9ment \u00e0 la LAPG \u2014 maternit\u00e9'],
     lpp_entreprise: ['Pr\u00e9voyance Basis+ (0007)'],
   },
+  // V\u00e9rifi\u00e9 sur l'offre SmartFlex du 23.09.2026 (dossier Sauthier) et sur la fiche \u00ab th\u00e8me de
+  // placement Durabilit\u00e9 \u00bb (donn\u00e9es au 31.08.2026). SmartFlex compte d'autres th\u00e8mes de placement
+  // que Durabilit\u00e9 ; ils s'ajouteront quand leur fiche sera l\u00e0, pas de m\u00e9moire.
+  'axa': {
+    vie_3a: ['SmartFlex \u2014 th\u00e8me de placement Durabilit\u00e9 (ISIN CH0457194865)',
+             'Lib\u00e9ration du paiement des primes en cas d\u2019incapacit\u00e9 de gain',
+             'Option \u2014 s\u00e9curisation des rendements',
+             'Option \u2014 gestion de la phase finale du contrat',
+             'Option \u2014 adaptation des primes en pr\u00e9voyance 3a'],
+    vie_3a_risque: ['Lib\u00e9ration du paiement des primes en cas d\u2019incapacit\u00e9 de gain'],
+    vie_3b_placement: ['SmartFlex \u2014 th\u00e8me de placement Durabilit\u00e9 (ISIN CH0457194865)'],
+  },
+  // V\u00e9rifi\u00e9 sur l'offre Swiss Life n\u00b0 106.900.290 du 23.09.2026 (m\u00eame dossier).
+  'swiss life': {
+    vie_3a: ['Opportunities Duo \u2014 capital en cas de vie et de d\u00e9c\u00e8s (capital d\u00e9c\u00e8s garanti)',
+             'Opportunities Duo \u2014 exon\u00e9ration des primes en cas d\u2019incapacit\u00e9 de gain',
+             'Strat\u00e9gie de placement Balanced (split de primes constant)',
+             'Gestion d\u2019un plan de sortie'],
+    vie_3a_risque: ['Exon\u00e9ration des primes en cas d\u2019incapacit\u00e9 de gain'],
+  },
 };
 
 // Les options connues pour une branche entreprise chez une compagnie donn\u00e9e. Null = on ne sait pas,
 // et dans ce cas le formulaire garde ses modules g\u00e9n\u00e9riques et la saisie libre : ne rien proposer
 // vaut mieux que proposer la gamme d'un autre assureur.
-function produitsEntreprisePourCompagnie(compagnieTexte, produitId) {
+function produitsPourCompagnie(compagnieTexte, produitId) {
   const s = (compagnieTexte || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
   if (!s || !produitId) return null;
-  for (const [cle, branches] of Object.entries(CATALOGUE_ENTREPRISE_PAR_COMPAGNIE)) {
+  for (const [cle, branches] of Object.entries(CATALOGUE_PRODUITS_PAR_COMPAGNIE)) {
     if (s.includes(cle)) return branches[produitId] || null;
   }
   return null;

@@ -77,7 +77,12 @@ async function synchroniserOutlookInterne(oppIdFiltre) {
         }
       });
       if (modifie) {
-        await dbPatch('demandes_offre', d.id, { compagnies_envoi: compagniesEnvoi });
+        // 23.09.2026 (audit) : la synchronisation Outlook peut durer plusieurs secondes — on relit
+        // la liste avant d'écrire, pour ne pas effacer une offre saisie pendant ce temps (js/146).
+        const vues = new Map(compagniesEnvoi.map((e, i) => [i, e]));
+        await majListeJson('demandes_offre', d.id, 'compagnies_envoi',
+          l => l.map((e, i) => (vues.has(i) && vues.get(i).recue_le && !e.recue_le)
+            ? { ...e, statut: 'reçue', recue_le: vues.get(i).recue_le } : e), compagniesEnvoi);
         if (d.opportunite_id) {
           for (const c of compagniesRecuesCetteFois) {
             await ajouterLigneHistoriqueOpportunite(d.opportunite_id, `📨 Offre reçue — ${c.compagnie} — ${fmtDate(c.recue_le)}`);

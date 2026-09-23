@@ -77,9 +77,11 @@ async function mvcConfirmer(oppId) {
   sel.forEach(y => { if (!parDemande.has(y.x.d.id)) parDemande.set(y.x.d.id, { d: y.x.d, idx: new Set() }); parDemande.get(y.x.d.id).idx.add(y.x.idx); });
   for (const { d, idx } of parDemande.values()) {
     const entrees = (d.compagnies_envoi || []).map((e, i) => idx.has(i) ? { ...e, retenue: true, statut: 'retenue' } : e);
-    const r = await dbPatch('demandes_offre', d.id, { compagnies_envoi: entrees });
+    // 23.09.2026 (audit) : relecture avant écriture — voir majListeJson (js/146).
+    const r = await majListeJson('demandes_offre', d.id, 'compagnies_envoi',
+      l => l.map((e, i) => idx.has(i) ? { ...e, retenue: true, statut: 'retenue' } : e), entrees);
     if (r && r.error) { showError('Offres non retenues : ' + errMsg(r)); if (btn) btn.disabled = false; return; }
-    d.compagnies_envoi = entrees;
+    d.compagnies_envoi = r.liste;
   }
   // 2. Affaire gagnée (ou qui le reste), prime cumulée.
   const primeCumulee = sel.reduce((s, y) => s + (Number(y.x.e.prime) || 0) * y.n, 0);

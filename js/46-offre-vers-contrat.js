@@ -79,9 +79,13 @@ async function ovcConfirmer(oppId, demandeId, idx) {
       if (!!e.retenue !== cible) { entrees[i] = { ...e, retenue: cible, statut: cible ? 'retenue' : (e.statut === 'retenue' ? 'reçue' : e.statut) }; change = true; }
     });
     if (change) {
-      const r = await dbPatch('demandes_offre', d.id, { compagnies_envoi: entrees });
+      // 23.09.2026 (audit) : relecture avant écriture, sinon on efface les offres ajoutées
+      // ailleurs entre-temps — voir majListeJson (js/146).
+      const r = await majListeJson('demandes_offre', d.id, 'compagnies_envoi',
+        l => l.map((e, i) => { const cible = d.id === demandeId && i === idx;
+          return (!!e.retenue !== cible) ? { ...e, retenue: cible, statut: cible ? 'retenue' : (e.statut === 'retenue' ? 'reçue' : e.statut) } : e; }), entrees);
       if (r && r.error) { showError('Offre non retenue : ' + errMsg(r)); if (btn) btn.disabled = false; return; }
-      d.compagnies_envoi = entrees;
+      d.compagnies_envoi = r.liste;
     }
   }
   // 2. Opportunité gagnée

@@ -851,9 +851,13 @@ async function opRetenir(oppId, demandeId, idx) {
       }
     });
     if (change) {
-      const r = await dbPatch('demandes_offre', d.id, { compagnies_envoi: entrees });
+      // 23.09.2026 (audit) : on relit la liste avant d'écrire, sinon on efface les offres ajoutées
+      // ailleurs entre-temps. Voir majListeJson (js/146).
+      const r = await majListeJson('demandes_offre', d.id, 'compagnies_envoi',
+        l => l.map((e, i) => (d.id === demandeId && i === idx) ? { ...e, retenue: true, statut: 'retenue' }
+          : (e && (e.retenue || e.statut === 'retenue') ? { ...e, retenue: false, statut: 'reçue' } : e)), entrees);
       if (r && r.error) { showError('Choix non enregistré : ' + errMsg(r)); return; }
-      d.compagnies_envoi = entrees;
+      d.compagnies_envoi = r.liste;
     }
   }
   const o = allOpportunites.find(x => x.id === oppId);

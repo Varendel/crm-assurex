@@ -117,12 +117,19 @@ async function changerStatutOffrePipeline(demandeId, index) {
     });
     envoi.forEach((y, i) => { if (i !== index && y && (y.retenue || y.statut === 'retenue')) envoi[i] = { ...y, retenue: false, statut: 'reçue' }; });
   }
-  const r = await dbPatch('demandes_offre', demandeId, { compagnies_envoi: envoi });
+  // 23.09.2026 (audit) : _pipelineDemandes date du dernier chargement du pipeline — on relit la
+  // liste avant d'écrire, sinon une offre ajoutée depuis la fiche disparaît. Voir js/146.
+  const r = await majListeJson('demandes_offre', demandeId, 'compagnies_envoi', l => {
+    const n = l.map((y, i) => (i === index ? { ...y, ...e } : (nouveau === 'retenue' && y && (y.retenue || y.statut === 'retenue') ? { ...y, retenue: false, statut: 'reçue' } : y)));
+    if (!n[index]) n[index] = e;
+    return n;
+  }, envoi);
   if (r && r.error) { showError('Statut de l’offre non enregistré : ' + errMsg(r)); return; }
-  d.compagnies_envoi = envoi;
+  d.compagnies_envoi = r.liste;
   for (const a of autres) {
-    const ra = await dbPatch('demandes_offre', a.x.id, { compagnies_envoi: a.liste });
-    if (!(ra && ra.error)) a.x.compagnies_envoi = a.liste;
+    const ra = await majListeJson('demandes_offre', a.x.id, 'compagnies_envoi',
+      l => l.map(y => (y && (y.retenue || y.statut === 'retenue') ? { ...y, retenue: false, statut: 'reçue' } : y)), a.liste);
+    if (!(ra && ra.error)) a.x.compagnies_envoi = ra.liste;
   }
   if (nouveau === 'retenue' && d.opportunite_id) {
     const o = (typeof allOpportunites !== 'undefined' ? allOpportunites : []).find(x => x.id === d.opportunite_id);

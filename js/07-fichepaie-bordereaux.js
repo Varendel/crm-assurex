@@ -3032,10 +3032,11 @@ async function uploaderFichiersOpportunite(oppId) {
     } catch (e) { /* fichier ignoré en cas d'échec — les autres continuent d'être tentés */ }
   }
   if (nouveaux.length) {
-    const piecesJointes = [...dejaLa, ...nouveaux];
-    const r = await dbPatch('opportunites', oppId, { pieces_jointes: piecesJointes });
+    // 23.09.2026 (audit) : on ajoute \u00e0 la liste RELUE en base \u2014 l'ancienne version r\u00e9\u00e9crivait la
+    // copie en m\u00e9moire et perdait les pi\u00e8ces d\u00e9pos\u00e9es ailleurs depuis. Voir majListeJson (js/146).
+    const r = await majListeJson('opportunites', oppId, 'pieces_jointes', l => [...l, ...nouveaux], [...dejaLa, ...nouveaux]);
     if (r && r.error) { showError('Erreur lors de l\u2019enregistrement des fichiers : ' + errMsg(r)); return; }
-    opp.pieces_jointes = piecesJointes;
+    opp.pieces_jointes = r.liste;
   }
   if (statusZone) statusZone.textContent = nouveaux.length === fichiers.length ? `✓ ${nouveaux.length} fichier(s) déposé(s).` : `⚠️ ${nouveaux.length}/${fichiers.length} fichier(s) déposé(s) — certains ont échoué.`;
   navigate('nouvelle-opportunite');
@@ -3045,10 +3046,15 @@ async function supprimerPieceJointeOpportunite(oppId, index) {
   const opp = allOpportunites.find(o => o.id === oppId);
   if (!opp || !Array.isArray(opp.pieces_jointes)) return;
   if (!confirm('Retirer ce fichier ?')) return;
-  const piecesJointes = opp.pieces_jointes.filter((_, i) => i !== index);
-  const r = await dbPatch('opportunites', oppId, { pieces_jointes: piecesJointes });
+  // On retire le fichier DÉSIGNÉ (par son chemin) dans la liste relue : un simple numéro de
+  // position aurait supprimé le mauvais si une pièce avait été ajoutée entre-temps (audit 23.09.2026).
+  const vise = opp.pieces_jointes[index];
+  const clef = vise && (vise.path || vise.nom);
+  const r = await majListeJson('opportunites', oppId, 'pieces_jointes',
+    l => l.filter(p => !(p && clef && (p.path || p.nom) === clef)),
+    opp.pieces_jointes.filter((_, i) => i !== index));
   if (r && r.error) { showError('Erreur lors de la suppression : ' + errMsg(r)); return; }
-  opp.pieces_jointes = piecesJointes;
+  opp.pieces_jointes = r.liste;
   navigate('nouvelle-opportunite');
 }
 

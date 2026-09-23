@@ -182,7 +182,13 @@ async function oxoRecue(i) {
     const entree = { compagnie_id: null, compagnie, email: null, envoye_le: null, statut: 'reçue', recue_le: new Date().toISOString() };
     const d = (window._opDemandes && window._opDemandes[oppId] || [])[0] || null;
     let r;
-    if (d) { const entrees = [...(d.compagnies_envoi || []), entree]; r = await dbPatch('demandes_offre', d.id, { compagnies_envoi: entrees }); demandeId = d.id; idx = entrees.length - 1; }
+    // 23.09.2026 (audit) : l'ajout partait de la liste en mémoire et la réécrivait entière — toute
+    // offre saisie ailleurs depuis l'ouverture de l'écran disparaissait. Voir majListeJson (js/146).
+    if (d) {
+      r = await majListeJson('demandes_offre', d.id, 'compagnies_envoi', l => [...l, entree], [...(d.compagnies_envoi || [])]);
+      demandeId = d.id; idx = r && r.liste ? r.liste.length - 1 : 0;
+      if (r && r.liste) d.compagnies_envoi = r.liste;
+    }
     else {
       r = await dbPost('demandes_offre', { opportunite_id: oppId, client_id: o?.client_id || null, prospect_nom: o?.client_id ? null : (o?.prospect_nom || null),
         agent_id: typeof opMonAgentId === 'function' ? opMonAgentId(o) : null, donnees: {}, compagnies_envoi: [entree] });

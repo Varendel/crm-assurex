@@ -44,11 +44,15 @@ async function envoyerCourriel({ a, copie, cci, objet, texte, html, pieces, conf
 
   // Corps : le texte devient du HTML à la mise en forme Outlook, suivi de la signature.
   const ag = typeof sigAgent === 'function' ? await sigAgent().catch(() => null) : null;
+  const avecSig = ag && ag.signature_email_actif && ag.signature_email_html;
   let contenu = html || '';
   let type = html ? 'html' : 'text';
   const jointes = [];
-  if (!html && ag && ag.signature_email_actif && ag.signature_email_html) {
-    contenu = `<html><head><meta charset="utf-8"></head><body>${typeof sigTexteVersHtml === 'function' ? sigTexteVersHtml(texte || '', ag) : ''}<br>${ag.signature_email_html}</body></html>`;
+  // 23.09.2026 : la signature s'ajoute AUSSI aux corps déjà en HTML (comparatif d'offres…) —
+  // auparavant un appel avec `html` partait sans elle, ce qui n'a aucune raison d'être.
+  if (avecSig) {
+    const corps = html || (typeof sigTexteVersHtml === 'function' ? sigTexteVersHtml(texte || '', ag) : '');
+    contenu = `<html><head><meta charset="utf-8"></head><body>${corps}<br>${ag.signature_email_html}</body></html>`;
     type = 'html';
     if (typeof sigImages === 'function') jointes.push(...(await sigImages(ag).catch(() => [])));
   } else if (!html) {

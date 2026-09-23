@@ -229,7 +229,7 @@ function renderEquipementListe() {
 
 // Produit enregistré pour une police externe (libellé reconnu par le besoin correspondant)
 const EQ_PRODUIT_EXTERNE = {
-  lamal: 'Assurance maladie (LAMal)', complementaire: 'Complémentaire santé', rc_menage: 'RC + inventaire du ménage',
+  lamal: 'LAMal', complementaire: 'Complémentaire santé', rc_menage: 'RC + inventaire du ménage',
   prevoyance: 'Assurance vie liée 3a (pilier 3a)', pj: 'Protection juridique privée', rc_ent: 'RC entreprise / exploitation',
   laa: 'LAA (assurance-accidents obligatoire)', pgm: 'Perte de gain maladie collective', lpp: 'LPP collective (2e pilier entreprise)',
   choses: 'Choses entreprise (inventaire commercial)', pj_ent: 'Protection juridique professionnelle / entreprise',

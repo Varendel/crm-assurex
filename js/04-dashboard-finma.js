@@ -920,8 +920,13 @@ function exporterContratsCsv() {
 // Depuis le 19.09.2026, appliquée aussi À L'ENREGISTREMENT (saisie, modification, import) pour
 // que la base ne diverge plus selon le formulaire utilisé.
 const ALIAS_PRODUITS = {
-  'lamal (assurance de base)': 'Assurance maladie (LAMal)',
-  'lamal': 'Assurance maladie (LAMal)',
+  // 23.09.2026 : « assurance maladie, enlève, laisse juste LAMal ». Le mot ne disait rien de plus
+  // que le sigle, et il prenait toute la ligne sur téléphone et dans l'espace client. Les 90
+  // contrats déjà enregistrés ont été renommés du même coup.
+  'lamal (assurance de base)': 'LAMal',
+  'assurance maladie (lamal)': 'LAMal',
+  'assurance maladie': 'LAMal',
+  'lamal': 'LAMal',
   'rc véhicule à moteur (obligatoire)': 'RC véhicule (obligatoire)',
   'assurance vie liée — pilier 3a': 'Assurance vie liée 3a (pilier 3a)',
   'assurance vie liee 3a (pilier 3a)': 'Assurance vie liée 3a (pilier 3a)',

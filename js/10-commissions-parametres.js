@@ -658,6 +658,36 @@ const AGENDA_HEURE_DEBUT = 7;
 const AGENDA_HEURE_FIN = 20;
 const AGENDA_COULEURS = ['#38bdf8', '#4ade80', '#f59e0b', '#a78bfa', '#f87171', '#fb923c'];
 
+// Répartit en colonnes les rendez-vous qui se chevauchent (24.09.2026).
+// Avant, toutes les barres d'une journée étaient posées « left:2px; right:2px » : deux rendez-vous
+// à la même heure se recouvraient exactement et le second masquait le premier. On forme des
+// grappes de rendez-vous qui se chevauchent, puis, dans chaque grappe, chacun prend la première
+// colonne libre — même principe qu'Outlook. Une journée chargée s'étale donc en largeur au lieu
+// d'empiler des barres invisibles.
+function agendaRepartirColonnes(barres) {
+  const tri = [...barres].sort((a, b) => a.debut - b.debut || b.fin - a.fin);
+  const sortie = [];
+  let grappe = [], finGrappe = -Infinity;
+  const clore = () => {
+    const finsParColonne = [];
+    grappe.forEach(b => {
+      let c = finsParColonne.findIndex(fin => fin <= b.debut);
+      if (c === -1) { finsParColonne.push(b.fin); c = finsParColonne.length - 1; }
+      else finsParColonne[c] = b.fin;
+      b.col = c;
+    });
+    grappe.forEach(b => { b.nbCols = finsParColonne.length; sortie.push(b); });
+    grappe = []; finGrappe = -Infinity;
+  };
+  tri.forEach(b => {
+    if (grappe.length && b.debut >= finGrappe) clore();
+    grappe.push(b);
+    finGrappe = Math.max(finGrappe, b.fin);
+  });
+  if (grappe.length) clore();
+  return sortie;
+}
+
 function renderAgendaSemaine() {
   const qa = (s) => (s || '').toString().replace(/"/g, '&quot;');
   const base = new Date();
@@ -681,22 +711,36 @@ function renderAgendaSemaine() {
     const horaires = evsJour.filter(ev => !ev.isAllDay);
     const estAujourdhui = isSameDay(jour, aujourdhui);
 
-    const badgesJournee = journeeEntiere.map(ev => `<div style="background:var(--accent-dim);color:var(--accent);font-size:10px;font-weight: 500;border-radius:5px;padding:2px 6px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${qa(ev.subject || 'Sans titre')}">${ev.subject || 'Sans titre'}</div>`).join('');
+    // Plus de deux évènements sur la journée entière écrasaient la grille horaire sous les badges.
+    // On en montre deux, le reste est résumé et lisible au survol.
+    const badge = (texte, titre) => `<div style="background:var(--accent-dim);color:var(--accent);font-size:10px;font-weight: 500;border-radius:5px;padding:2px 6px;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis" title="${qa(titre || texte)}">${texte}</div>`;
+    const badgesJournee = journeeEntiere.slice(0, 2).map(ev => badge(ev.subject || 'Sans titre')).join('')
+      + (journeeEntiere.length > 2
+        ? badge(`+${journeeEntiere.length - 2} autre${journeeEntiere.length - 2 > 1 ? 's' : ''}`,
+            journeeEntiere.slice(2).map(e => e.subject || 'Sans titre').join(' · '))
+        : '');
 
-    const batons = horaires.map((ev, i) => {
+    const barres = agendaRepartirColonnes(horaires.map((ev, i) => {
       const start = dateEvenementGraph(ev.start.dateTime);
       const end = dateEvenementGraph(ev.end.dateTime);
-      const startH = Math.min(Math.max(start.getHours() + start.getMinutes() / 60, AGENDA_HEURE_DEBUT), AGENDA_HEURE_FIN);
-      let endH = Math.min(Math.max(end.getHours() + end.getMinutes() / 60, AGENDA_HEURE_DEBUT), AGENDA_HEURE_FIN);
-      if (endH <= startH) endH = Math.min(startH + 0.5, AGENDA_HEURE_FIN);
-      const top = ((startH - AGENDA_HEURE_DEBUT) / plageH) * 100;
-      const height = ((endH - startH) / plageH) * 100;
-      const color = AGENDA_COULEURS[i % AGENDA_COULEURS.length];
-      const hDeb = start.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
-      const hFin = end.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
-      return `<div title="${qa(ev.subject || 'Sans titre')} (${hDeb}-${hFin})" style="position:absolute;left:2px;right:2px;top:${top}%;height:${Math.max(height,3)}%;background:${color};border-radius:5px;padding:3px 5px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.25)">
-        <div style="font-size:9.5px;font-weight: 500;color:#0b1220;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${hDeb}</div>
-        <div style="font-size:10px;font-weight: 500;color:#0b1220;line-height:1.25;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical">${ev.subject || 'Sans titre'}</div>
+      const debut = Math.min(Math.max(start.getHours() + start.getMinutes() / 60, AGENDA_HEURE_DEBUT), AGENDA_HEURE_FIN);
+      let fin = Math.min(Math.max(end.getHours() + end.getMinutes() / 60, AGENDA_HEURE_DEBUT), AGENDA_HEURE_FIN);
+      if (fin <= debut) fin = Math.min(debut + 0.5, AGENDA_HEURE_FIN);
+      return { ev, debut, fin, couleur: AGENDA_COULEURS[i % AGENDA_COULEURS.length], start, end };
+    }));
+
+    const batons = barres.map(b => {
+      const top = ((b.debut - AGENDA_HEURE_DEBUT) / plageH) * 100;
+      const hauteur = ((b.fin - b.debut) / plageH) * 100;
+      const largeur = 100 / b.nbCols;
+      const hDeb = b.start.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
+      const hFin = b.end.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
+      // À trois colonnes ou plus, la place manque pour l'heure ET le titre : le titre seul reste,
+      // l'heure est dans l'infobulle. Au-delà, mieux vaut un libellé lisible qu'un détail illisible.
+      const serre = b.nbCols >= 3;
+      return `<div title="${qa(b.ev.subject || 'Sans titre')} (${hDeb}–${hFin})" style="position:absolute;left:calc(${b.col * largeur}% + 2px);width:calc(${largeur}% - 4px);top:${top}%;height:${Math.max(hauteur, 3)}%;background:${b.couleur};border-radius:5px;padding:3px 5px;overflow:hidden;box-shadow:0 1px 4px rgba(0,0,0,0.25)">
+        ${serre ? '' : `<div style="font-size:9.5px;font-weight: 500;color:#0b1220;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${hDeb}</div>`}
+        <div style="font-size:${serre ? '9' : '10'}px;font-weight: 500;color:#0b1220;line-height:1.25;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:${serre ? 3 : 2};-webkit-box-orient:vertical">${b.ev.subject || 'Sans titre'}</div>
       </div>`;
     }).join('');
 
@@ -721,7 +765,12 @@ function renderAgendaSemaine() {
     </div>
   </div>`;
 
-  return `${nav}<div style="display:flex;gap:6px;height:560px">${axeHeures}${colonnes}</div>`;
+  // Sur écran étroit, sept colonnes de 110 px débordaient sans qu'on puisse atteindre la fin de
+  // semaine. Le défilement horizontal est explicite, et la largeur minimale garde des colonnes
+  // lisibles au lieu de les écraser.
+  return `${nav}<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+    <div style="display:flex;gap:6px;height:560px;min-width:760px">${axeHeures}${colonnes}</div>
+  </div>`;
 }
 
 // ═══ CAMPAGNES ═══

@@ -55,6 +55,18 @@ async function viewDemandeOffreSimple() {
     if (existante && existante.donnees && existante.donnees.precisions) { const p = document.getElementById('dx-precisions'); if (p) p.value = existante.donnees.precisions; }
     dxDetecterBranches();
     dxApercu();
+    // Sauvegarde automatique : une seule écoute posée sur le conteneur, qui capte aussi les
+    // champs créés plus tard (lignes collaborateur, véhicules). `capture: true` pour attraper
+    // les évènements des champs imbriqués.
+    const zone = document.querySelector('.dx');
+    if (zone && !zone.dataset.sauvAuto) {
+      zone.dataset.sauvAuto = '1';
+      ['input', 'change'].forEach(ev => zone.addEventListener(ev, e => {
+        if (e.target && e.target.id === 'dx-client-recherche') return; // géré par dxChoisirClient
+        dxSauvegardeAuto();
+      }, true));
+      if (existante) dxEtatSauvegarde('ok');
+    }
   }, 0);
 
   const tuiles = DX_BRANCHES.map(b => `<button type="button" class="dx-tuile" data-br="${b.id}" data-pour="${b.pour}" aria-pressed="false" onclick="dxBasculer('${b.id}')"><span class="dx-tuile-icone">${b.icone}</span><span>${b.label}</span><span class="dx-tuile-coche" aria-hidden="true">✓</span></button>`).join('');
@@ -249,6 +261,7 @@ async function viewDemandeOffreSimple() {
     </div>
 
     <div class="dx-barre">
+      <span id="dx-etat-sauv" style="font-size:11.5px;color:var(--text-muted);margin-right:auto"></span>
       <button type="button" class="btn-secondary" onclick="dxEnregistrer(true)">💾 Enregistrer</button>
       <button type="button" class="btn-secondary" onclick="dxImprimer()">🖨️ PDF</button>
       <button type="button" class="btn-save" id="dx-btn-envoyer" onclick="dxEnvoyer()">✉️ Relire et envoyer</button>
@@ -289,6 +302,8 @@ function dxChoisirClient(id) {
   dxPrefillClient(c, false);
   dxDetecterBranches();
   dxApercu();
+  // Le client vient d'être rattaché : c'est le moment où la demande devient enregistrable.
+  dxSauvegardeAuto();
 }
 
 // Reprend les données connues du client dans les champs encore vides
@@ -508,7 +523,46 @@ function dxApercu() {
 }
 
 // ── Enregistrer / envoyer / imprimer ────────────────────────────────────────────────────────
-async function dxEnregistrer(avecMessage) {
+// ── Enregistrement ──────────────────────────────────────────────────────────────────────────
+// 24.09.2026 : deux appels partis avant que le premier n'ait rendu son id produisent deux INSERT
+// au lieu d'un INSERT puis un UPDATE — donc deux demandes pour la même affaire. Avec la sauvegarde
+// automatique qui suit, le cas devient fréquent (frappe + clic sur « Envoyer »). Les appels sont
+// donc mis à la queue leu leu : le second voit l'id du premier et met à jour au lieu de créer.
+let _dxFileEnregistrement = Promise.resolve();
+function dxEnregistrer(avecMessage) {
+  const suivant = _dxFileEnregistrement.then(() => dxEnregistrerReel(avecMessage),
+    () => dxEnregistrerReel(avecMessage));
+  _dxFileEnregistrement = suivant.catch(() => {});
+  return suivant;
+}
+
+// Sauvegarde automatique : sans elle, fermer l'écran par mégarde perdait toute la saisie, et
+// « Enregistrer » restait un geste à ne pas oublier. Dès que le client ou le prospect est connu,
+// toute modification est écrite après une courte pause de frappe.
+let _dxMinuteurSauv = null;
+function dxSauvegardeAuto() {
+  const sel = document.getElementById('do-client');
+  const prospect = (document.getElementById('do-prospect-nom')?.value || '').trim();
+  if (!(sel && sel.value) && !prospect) return;      // rien à rattacher : on n'enregistre pas
+  dxEtatSauvegarde('en cours');
+  clearTimeout(_dxMinuteurSauv);
+  _dxMinuteurSauv = setTimeout(async () => {
+    const id = await dxEnregistrer(false).catch(() => null);
+    dxEtatSauvegarde(id ? 'ok' : 'echec');
+  }, 1500);
+}
+
+function dxEtatSauvegarde(etat) {
+  const el = document.getElementById('dx-etat-sauv');
+  if (!el) return;
+  const heure = new Date().toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
+  el.textContent = etat === 'en cours' ? '⏳ Enregistrement…'
+    : etat === 'ok' ? `✓ Enregistré à ${heure}`
+    : '⚠️ Enregistrement impossible — clique sur 💾';
+  el.style.color = etat === 'echec' ? 'var(--c-alerte-texte, #B45309)' : 'var(--text-muted)';
+}
+
+async function dxEnregistrerReel(avecMessage) {
   const body = construireBodyDemandeOffre();
   body.donnees.branches = [...window._dx.branches];
   body.donnees.precisions = (document.getElementById('dx-precisions')?.value || '').trim() || null;

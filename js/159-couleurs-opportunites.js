@@ -76,7 +76,7 @@ function copDecorer() {
        couleur — mais en dégradé, fort à gauche et éteint avant la moitié. Un aplat aurait l'air
        d'une propriété de l'affaire (comme une catégorie) ; un lavis qui s'efface a l'air d'un
        état : ça passera quand la tâche sera faite.
-       On peint en `background-image` par-dessus le fond existant : le thème clair/sombre garde
+       On peint en background-image par-dessus le fond existant : le thème clair/sombre garde
        sa couleur de carte, on ne fait que la teinter. */
     .cop-dort, .cop-echue, .cop-bientot, .cop-ajour {
       background-image: linear-gradient(95deg,

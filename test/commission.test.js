@@ -34,7 +34,11 @@ const { window } = dom;
 global.window = window;
 global.document = window.document;
 
-const combined = ['js/01-prevoyance-immo.js', 'js/02-catalogue-session.js', 'js/09-rappels-vehicules.js']
+// js/07 doit être chargé AVANT js/09 : il y définit PRODUITS_SANTE_X16, que le calcul de
+// commission de js/09 consulte pour les complémentaires santé (prime × 16). Dans le navigateur
+// l'ordre d'index.html s'en charge ; ici il faut le reproduire, sinon le test casse sur une
+// ReferenceError qui n'existe pas en production (24.09.2026).
+const combined = ['js/01-prevoyance-immo.js', 'js/02-catalogue-session.js', 'js/07-fichepaie-bordereaux.js', 'js/09-rappels-vehicules.js']
   .map(p => fs.readFileSync(path.join(ROOT, p), 'utf8'))
   .join('\n;\n');
 window.eval(combined);

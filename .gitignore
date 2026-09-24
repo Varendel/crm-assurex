@@ -1,0 +1,5 @@
+# Dépendances installées localement pour faire tourner les tests (jsdom).
+# Elles sont réinstallées à la volée par controles.yml — elles n'ont rien à faire dans le dépôt,
+# qui est public : 1850 fichiers de bibliothèques tierces noieraient l'historique du CRM.
+node_modules/
+package-lock.json

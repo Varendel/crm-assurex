@@ -25,13 +25,16 @@ function check(label, actual, expected) {
 }
 
 // RC véhicule (rc_vehicule) : doit exclure Swiss Life, HOTELA, CSS, CAP, goCaution, Helsana, SUVA, PAX...
-// et garder AXA, La Vaudoise, Zurich, Baloise, La Mobilière, Allianz, Generali
+// et garder AXA, La Vaudoise, Zurich, Helvetia, La Mobilière, Allianz, Generali
+// 24.09.2026 : « Baloise » n'est plus attendu comme compagnie à part entière — la fusion avec
+// Helvetia (2026) est actée dans ALIAS_COMPAGNIES (js/09), qui normalise toutes ses variantes
+// en « Helvetia ». Le test datait d'avant et échouait sur un choix métier volontaire.
 const suggRCVehicule = getCompagniesConnues('rc_vehicule');
 console.log('  RC véhicule ->', suggRCVehicule.join(', '));
 ['Swiss Life','HOTELA','Gastrosocial','CSS','CAP','goCaution','SwissCaution','Helsana','Sanitas','SUVA','Visana','SWICA','Groupe Mutuel'].forEach(c => {
   check(`RC véhicule EXCLUT ${c}`, suggRCVehicule.includes(c), false);
 });
-['AXA','Zurich','Baloise','Allianz','Generali'].forEach(c => {
+['AXA','Zurich','Helvetia','Allianz','Generali'].forEach(c => {
   check(`RC véhicule GARDE ${c}`, suggRCVehicule.includes(c), true);
 });
 
@@ -51,7 +54,7 @@ console.log('  Vie 3a ->', suggVie.join(', '));
 ['Helsana','CSS','HOTELA','Gastrosocial','SUVA','CAP','goCaution','Visana','SWICA','Groupe Mutuel'].forEach(c => {
   check(`Vie 3a EXCLUT ${c}`, suggVie.includes(c), false);
 });
-['Swiss Life','AXA','Zurich','Baloise'].forEach(c => {
+['Swiss Life','AXA','Zurich','Helvetia'].forEach(c => {
   check(`Vie 3a GARDE ${c}`, suggVie.includes(c), true);
 });
 

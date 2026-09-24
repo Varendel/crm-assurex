@@ -1523,7 +1523,11 @@ function ouvrirEnvoiMandatCompagnies(clientId) {
   const m = creerModale('modal-envoi-mandat', `
     <div class="opx-modale mdx-modale mdx-modale-flex" role="dialog" aria-modal="true" aria-labelledby="mdx-envoi-titre">
       ${mdxTeteModale('✉️', 'Envoyer le mandat', client ? `${mdxEsc(mdxNomClient(client))} · choisis les compagnies destinataires` : 'Choisis les compagnies destinataires', 'modal-envoi-mandat', 'mdx-envoi-titre')}
-      <div class="mdx-alerte">📎 <span>Un e-mail pré-rempli s’ouvrira ensuite, <b>à relire avant tout envoi</b>. Le mandat signé (PDF) n’est pas joint automatiquement : pense à l’ajouter.</span></div>
+      <!-- 24.09.2026 : cet encart annonçait encore que le mandat n'était PAS joint, alors que
+           l'envoi le joint tout seul depuis le 22.09 (pjeMandatDuClient, js/136). Un avertissement
+           faux est pire que pas d'avertissement : on le croit, et on ajoute le PDF une deuxième
+           fois à la main. -->
+      <div class="mdx-alerte">📎 <span>Un e-mail pré-rempli s’ouvrira ensuite, <b>à relire avant tout envoi</b>. Le mandat signé et ta signature y seront joints automatiquement.</span></div>
       ${contacts.length > 6 ? `<input class="form-input mdx-recherche" type="search" placeholder="Rechercher une compagnie…" aria-label="Rechercher une compagnie" oninput="mdxFiltrerCompagnies(this.value)"/>` : ''}
       <div class="mdx-cies" id="mdx-cies">
         ${contacts.map(c => `
@@ -1577,14 +1581,16 @@ function genererApercuMandat(clientId) {
   const c = allClients.find(x => x.id === clientId);
   const nomClient = c ? (estEntreprise(c) ? c.nom : `${c.prenom} ${c.nom}`) : 'Client';
   const sujet = `Mandat — ${nomClient}`;
-  // Texte dicté par Jonathan le 12.08.2026 — ne pas reformuler. Signature ajoutée en dur pour la
-  // même raison que pour les demandes d'offre (js/07) : un mailto: pré-rempli n'active PAS la
-  // signature par défaut du client mail.
+  // Texte dicté par Jonathan le 12.08.2026 — ne pas reformuler.
+  //
+  // 24.09.2026 : le « Prénom Nom / Assurex Sàrl » écrit en dur à la fin datait du temps du mailto:,
+  // qui n'active pas la signature du client mail. L'envoi passe maintenant par envoyerCourriel
+  // (js/143), qui ajoute la vraie signature — les deux se suivaient donc dans le message reçu.
+  // On retire celle du texte et on garde la vraie.
   const corps = [
     `Bonjour,`,
     `Concernant le PA cité en objet, je vous serai reconnaissant de bien vouloir enregistrer le mandat ci-joint, et nous faire parvenir une copie des polices en vigueur chez vous pour copie pour nos dossiers.`,
     `Tout en vous remerciant d\u2019avance, je vous souhaite une agréable journée.`,
-    `${currentUser ? currentUser.prenom + ' ' + currentUser.nom : ''}\nAssurex Sàrl`,
   ].join('\n\n');
 
   document.getElementById('modal-envoi-mandat')?.remove();
@@ -1600,7 +1606,7 @@ function ouvrirApercuEmailMandat({ clientId, cies, emails, sansEmail, sujet, cor
       ${sansEmail.length ? `<div class="mdx-alerte orange">⚠ <span>Pas d’e-mail enregistré pour : <b>${sansEmail.map(mdxEsc).join(', ')}</b></span></div>` : ''}
       <!-- 22.09.2026 : le mandat est désormais joint tout seul (PDF archivé, ou fabriqué depuis la
            signature faite dans le CRM — js/136). L'ancien avertissement n'a plus lieu d'être. -->
-      <div class="mdx-alerte">📎 <span id="mdx-pj-mandat">Le mandat signé sera joint automatiquement à l’envoi via Outlook.</span></div>
+      <div class="mdx-alerte">📎 <span id="mdx-pj-mandat">Le mandat signé sera joint automatiquement à l’envoi via Outlook, et ta signature ajoutée sous le message — inutile de les écrire ici.</span></div>
       <div class="form-field"><label class="form-label" for="apercu-mandat-sujet">Objet</label><input class="form-input" id="apercu-mandat-sujet" value="${mdxEsc(sujet)}"/></div>
       <div class="form-field mdx-champ-corps"><label class="form-label" for="apercu-mandat-corps">Message</label><textarea class="form-input" id="apercu-mandat-corps" rows="10">${String(corps || '').replace(/&/g, '&amp;').replace(/</g, '&lt;')}</textarea></div>
       <div class="opx-modale-actions mdx-actions mdx-actions-envoi">

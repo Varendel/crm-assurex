@@ -795,6 +795,21 @@ function getProduitSelectionne() {
   return null;
 }
 
+// La pastille de classement d'une ligne de prime. Gris = déduit du libellé ; orange = c'est une
+// taxe ; le point signale un classement forcé à la main, qu'aucun changement de libellé ne défera.
+(function styleLignePrimeTaxe() {
+  const st = document.createElement('style');
+  st.textContent = `
+    .ct-prime-ligne-badge-taxe { font: inherit; font-size: 9.5px; font-weight: 500; white-space: nowrap;
+      border-radius: 5px; padding: 2px 6px; cursor: pointer; border: 1px solid var(--border);
+      background: transparent; color: var(--text-muted); }
+    .ct-prime-ligne-badge-taxe[data-taxe="1"] { color: var(--c-alerte-texte);
+      background: color-mix(in srgb, var(--c-alerte) 12%, transparent);
+      border-color: color-mix(in srgb, var(--c-alerte) 30%, transparent); }
+    .ct-prime-ligne-badge-taxe[data-force="1"]::after { content: " •"; }`;
+  document.head.appendChild(st);
+})();
+
 // ═══ Lignes de prime (Nouveau contrat) — chaque ligne de la police (RC privée, inventaire du
 // ménage, modules complémentaires, taxes légales, etc.) est saisie séparément ; la prime totale
 // est calculée une seule fois, automatiquement, comme somme de ces lignes — jamais ressaisie à la main.
@@ -807,7 +822,8 @@ function ajouterLignePrime(libelle = '', montant = '') {
   const libelleEch = (libelle || '').toString().replace(/"/g, '&quot;');
   ligne.innerHTML = `
     <input class="form-input ct-prime-ligne-libelle" placeholder="Ex: Responsabilité civile privée" value="${libelleEch}" style="flex:1" oninput="refreshCategoriesLignesPrime(); calculerPrimeTotaleLignes()"/>
-    <span class="ct-prime-ligne-badge-taxe" title="Taxes/émoluments légaux — exclus du volume de prime et du calcul de commission" style="display:none;font-size:9.5px;font-weight: 500;color:var(--c-alerte-texte);background:color-mix(in srgb, var(--c-alerte) 12%, transparent);border:1px solid color-mix(in srgb, var(--c-alerte) 30%, transparent);border-radius:5px;padding:2px 6px;white-space:nowrap">hors commission</span>
+    <input type="hidden" class="ct-prime-ligne-taxe" value=""/>
+    <button type="button" class="ct-prime-ligne-badge-taxe" onclick="basculerLigneTaxe(this)" title="Droit de timbre / taxe légale — exclu du volume de prime et du calcul de commission. Clique pour forcer ou retirer ce classement."></button>
     <select class="form-select ct-prime-ligne-categorie" style="display:none;width:190px;font-size:11px" onchange="calculerPrimeTotaleLignes()"></select>
     <input class="form-input ct-prime-ligne-montant" type="number" step="0.01" placeholder="CHF" value="${montant}" style="width:120px" oninput="calculerPrimeTotaleLignes()"/>
     <button type="button" onclick="this.parentElement.remove(); calculerPrimeTotaleLignes()" style="background:color-mix(in srgb, var(--c-danger) 12%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;flex-shrink:0">✕</button>
@@ -819,9 +835,30 @@ function ajouterLignePrime(libelle = '', montant = '') {
 // Taxes/émoluments légaux (ex: "Taxes légales", "Taxe cantonale", "Droit de timbre fédéral") ne
 // sont pas rémunérés par les compagnies — à exclure du volume de prime et de la base de commission,
 // tout en restant visibles/reportées dans le détail (elles font bien partie du montant facturé au client).
-function _estLigneTaxe(libelle) {
+//
+// 24.09.2026 : le classement se devinait UNIQUEMENT sur le libellé. Ça tient pour ce qu'on tape
+// soi-même, pas pour ce que la lecture automatique d'une police ramène — « Stempelabgabe »,
+// « Timbre fédéral 5 % », « Bundesstempel » passaient tous à travers et venaient gonfler la base
+// de commission. Deux corrections : le vocabulaire s'élargit, et surtout le classement devient
+// CORRIGEABLE à la main (la pastille se clique), parce qu'aucune liste de mots ne sera complète.
+const TAXE_MOTS = /\btaxes?\b|\bdroits? de timbre\b|\btimbre\b|stempel|\bemolument|\bfrais de police\b/;
+
+function _estLigneTaxe(libelle, ligne) {
+  const force = ligne && ligne.querySelector('.ct-prime-ligne-taxe')?.value;
+  if (force === '1') return true;
+  if (force === '0') return false;
   const s = (libelle || '').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  return /\btaxes?\b|\bdroit de timbre\b|\bemolument/.test(s);
+  return TAXE_MOTS.test(s);
+}
+
+// La pastille bascule entre trois états : automatique (d'après le libellé), forcé « taxe », forcé
+// « prime ». Trois et pas deux : on doit pouvoir revenir à l'automatique sans recharger la page.
+function basculerLigneTaxe(bouton) {
+  const ligne = bouton.closest('.ct-prime-ligne');
+  const champ = ligne && ligne.querySelector('.ct-prime-ligne-taxe');
+  if (!champ) return;
+  champ.value = champ.value === '' ? '1' : champ.value === '1' ? '0' : '';
+  calculerPrimeTotaleLignes();
 }
 function calculerPrimeTotaleLignes() {
   const lignes = Array.from(document.querySelectorAll('.ct-prime-ligne'));
@@ -831,8 +868,16 @@ function calculerPrimeTotaleLignes() {
     const libelle = ligne.querySelector('.ct-prime-ligne-libelle')?.value || '';
     const montant = parseFloat(ligne.querySelector('.ct-prime-ligne-montant')?.value) || 0;
     const badge = ligne.querySelector('.ct-prime-ligne-badge-taxe');
-    const estTaxe = _estLigneTaxe(libelle);
-    if (badge) badge.style.display = estTaxe ? '' : 'none';
+    const estTaxe = _estLigneTaxe(libelle, ligne);
+    if (badge) {
+      // La pastille reste visible même quand la ligne n'est PAS une taxe : c'est elle qui permet
+      // de le corriger. En gris tant qu'elle ne fait que constater, en orange quand elle classe.
+      const force = ligne.querySelector('.ct-prime-ligne-taxe')?.value;
+      badge.textContent = estTaxe ? 'droit de timbre / taxe' : 'prime';
+      badge.dataset.taxe = estTaxe ? '1' : '0';
+      badge.dataset.force = force === '' ? '' : '1';
+      badge.style.display = '';
+    }
     if (estTaxe) totalTaxes += montant; else totalCommissionnable += montant;
   });
   const total = Math.round(totalCommissionnable * 100) / 100;
@@ -861,7 +906,10 @@ function collecterLignesPrimeSaisies() {
     const montant = parseFloat(ligne.querySelector('.ct-prime-ligne-montant')?.value) || 0;
     const catSelect = ligne.querySelector('.ct-prime-ligne-categorie');
     const categorie = (catSelect && catSelect.style.display !== 'none' && catSelect.value) ? catSelect.value : null;
-    return { libelle, montant, categorie };
+    // Le classement en taxe est PERSISTÉ, pas seulement déduit : une police rouverte dans six mois
+    // doit retrouver le classement corrigé à la main, pas le redeviner sur le libellé.
+    const taxe = _estLigneTaxe(libelle, ligne);
+    return { libelle, montant, categorie, taxe };
   }).filter(l => l.libelle || l.montant > 0);
 }
 
@@ -984,7 +1032,7 @@ function refreshCategoriesLignesPrime() {
       select.value = _deviner_categorie_ligne(table, libelle);
       select.dataset.compagnie = table.cle;
     }
-    select.style.display = _estLigneTaxe(libelle) ? 'none' : '';
+    select.style.display = _estLigneTaxe(libelle, ligne) ? 'none' : '';
   });
 }
 // Calcule la commission en sommant chaque ligne de prime (hors taxes) × son propre taux de
@@ -1000,7 +1048,7 @@ function _commissionParLignes(table) {
   for (const ligne of lignes) {
     const libelle = ligne.querySelector('.ct-prime-ligne-libelle')?.value || '';
     const montant = parseFloat(ligne.querySelector('.ct-prime-ligne-montant')?.value) || 0;
-    if (montant <= 0 || _estLigneTaxe(libelle)) continue;
+    if (montant <= 0 || _estLigneTaxe(libelle, ligne)) continue;
     const select = ligne.querySelector('.ct-prime-ligne-categorie');
     const catId = select ? select.value : null;
     const cat = catId ? table.categories.find(c => c.id === catId) : null;

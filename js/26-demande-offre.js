@@ -436,7 +436,20 @@ function dxCorpsEmail() {
     const amelio = liste([oui(lpp.amelio_rentes, 'rentes'), oui(lpp.amelio_epargne, 'épargne'), oui(lpp.amelio_tranches, 'tranches de cotisations'), oui(lpp.amelio_rendement, 'rendement')]);
     let t = `- LPP${l.length ? ' — ' + l.join(', ') : ''}${amelio.length ? `\n  Améliorations souhaitées : ${amelio.join(', ')}` : ''}`;
     if (dxNombre(lpp.exc_h) || dxNombre(lpp.exc_f)) t += `\n  Salaires excédentaires : hommes ${dxCHF(lpp.exc_h)} / femmes ${dxCHF(lpp.exc_f)}`;
-    if (d.collaborateurs_lpp.length) t += `\n  Collaborateurs à assurer (${d.collaborateurs_lpp.length}) :\n${d.collaborateurs_lpp.map(c => `  • ${[c.prenom, c.nom].filter(Boolean).join(' ')}${c.date_naissance ? ', né(e) le ' + fmtDate(c.date_naissance) : ''}${c.salaire ? ', salaire AVS ' + dxCHF(c.salaire) : ''}`).join('\n')}`;
+    // La compagnie établit une offre LPP nominative : elle a besoin de la ligne entière, adresse
+    // privée comprise, pas seulement du nom et du salaire (24.09.2026).
+    if (d.collaborateurs_lpp.length) t += `\n  Collaborateurs à assurer (${d.collaborateurs_lpp.length}) :\n${d.collaborateurs_lpp.map(c => {
+      const detail = liste([
+        c.sexe === 'H' ? 'homme' : (c.sexe === 'F' ? 'femme' : null),
+        c.date_naissance ? 'né(e) le ' + fmtDate(c.date_naissance) : null,
+        c.avs ? 'AVS ' + c.avs : null,
+        c.fonction || null,
+        dxNombre(c.taux_activite) ? c.taux_activite + ' %' : null,
+        c.date_entree ? 'entrée le ' + fmtDate(c.date_entree) : null,
+        c.salaire ? 'salaire AVS ' + dxCHF(c.salaire) : null,
+      ]).join(', ');
+      return `  • ${[c.prenom, c.nom].filter(Boolean).join(' ')}${detail ? ' — ' + detail : ''}${c.adresse ? `\n    ${c.adresse}` : ''}`;
+    }).join('\n')}`;
     blocs.push(t);
   }
   if (a.has('rc')) {

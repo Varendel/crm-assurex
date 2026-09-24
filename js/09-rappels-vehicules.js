@@ -337,9 +337,25 @@ function appliquerProduitTrouve(resultat) {
   return true;
 }
 
+// Le PDF en cours d'import, gardé en mémoire pour pouvoir le rouvrir pendant la relecture.
+// L'URL objet est révoquée à chaque nouveau fichier : sans ça, chaque import laisserait un
+// blob en mémoire jusqu'au rechargement de la page.
+let _policeImporteeUrl = null, _policeImporteeNom = '';
+
+function ouvrirPoliceImportee() {
+  if (!_policeImporteeUrl) { showError('Aucune police chargée — choisis d’abord un PDF.'); return; }
+  const w = window.open(_policeImporteeUrl, '_blank');
+  if (!w) showError('Autorise les fenêtres pop-up pour afficher la police.');
+}
+
 async function importPolicePdfAI(input) {
   const file = input.files[0];
   if (!file) return;
+  if (_policeImporteeUrl) URL.revokeObjectURL(_policeImporteeUrl);
+  _policeImporteeUrl = URL.createObjectURL(file);
+  _policeImporteeNom = file.name || 'police.pdf';
+  const boutonVoir = document.getElementById('police-import-voir');
+  if (boutonVoir) { boutonVoir.hidden = false; boutonVoir.title = `Rouvrir ${_policeImporteeNom}`; }
   const statusEl = document.getElementById('police-import-status');
   const label = document.getElementById('police-import-label');
   statusEl.textContent = '🤖 Lecture du PDF en cours...';
@@ -478,14 +494,10 @@ async function importPolicePdfAI(input) {
     // Conserver le fichier pour l'archiver après création du contrat
     window._policePdfFileFromImport = file;
 
-    // Lien "Voir le PDF importé" à côté du message de succès — pratique pour comparer visuellement
-    // ce que l'IA a extrait avec le document source avant d'enregistrer. On libère l'URL blob
-    // précédente (si un import antérieur non enregistré traîne) pour éviter une fuite mémoire.
-    if (window._policePdfPreviewUrl) URL.revokeObjectURL(window._policePdfPreviewUrl);
-    window._policePdfPreviewUrl = URL.createObjectURL(file);
-
-    statusEl.innerHTML = `<span style="color:var(--c-succes-texte);font-weight: 600">✓ Formulaire pré-rempli depuis le PDF</span> — vérifie les données, précise si le contrat sera commissionné ou non, puis enregistre.
-      <a href="${window._policePdfPreviewUrl}" target="_blank" rel="noopener" style="margin-left:8px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:5px 12px;font-size:12px;font-weight: 500;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px;vertical-align:middle">👁 Voir le PDF importé</a>`;
+    // L'URL objet du PDF est créée une seule fois, en tête de cette fonction (_policeImporteeUrl),
+    // et sert au bouton « 👁️ Voir la police importée » posé à côté des onglets — donc visible
+    // aussi après la bascule sur la saisie manuelle. Plus de second blob créé ici.
+    statusEl.innerHTML = `<span style="color:var(--c-succes-texte);font-weight: 600">✓ Formulaire pré-rempli depuis le PDF</span> — vérifie les données, précise si le contrat sera commissionné ou non, puis enregistre.`;
 
     // Le PDF est lu : le travail continue sur le formulaire, pas ici.
     if (typeof ctBasculerOnglet === 'function') ctBasculerOnglet('manuel');
@@ -513,9 +525,16 @@ function viewNouveauContrat() {
          première chose qu'on voit pour une action qu'on ne fait pas. Les deux voies sont
          maintenant exclusives, et l'automatique bascule sur le formulaire dès que le PDF est lu —
          c'est là que le travail continue, la relecture du pré-rempli. -->
-    <div class="ct-onglets" role="tablist">
+    <div class="ct-onglets" role="tablist" style="display:flex;align-items:center;gap:8px">
       <button type="button" class="ct-onglet actif" id="ct-onglet-auto" role="tab" aria-selected="true" onclick="ctBasculerOnglet('auto')">🤖 Depuis une police PDF</button>
       <button type="button" class="ct-onglet" id="ct-onglet-manuel" role="tab" aria-selected="false" onclick="ctBasculerOnglet('manuel')">✍️ Saisie manuelle</button>
+      <!-- 24.09.2026 : « J'avais demandé un bouton de visualisation des polices en cours d'import. »
+           Il existait — mais posé DANS l'onglet automatique, que le code masque aussitôt le PDF lu
+           en basculant sur la saisie manuelle : il n'était donc jamais visible au moment de relire.
+           Il vit maintenant à côté des onglets, donc dans les deux, et apparaît même quand
+           l'extraction échoue — c'est là qu'on a le plus besoin de rouvrir le document. -->
+      <button type="button" id="police-import-voir" hidden onclick="ouvrirPoliceImportee()"
+        style="margin-left:auto;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:7px 15px;font-size:12.5px;font-weight:600;cursor:pointer">👁️ Voir la police importée</button>
     </div>
 
     <!-- ── Zone import IA ─────────────────────────────────────── -->

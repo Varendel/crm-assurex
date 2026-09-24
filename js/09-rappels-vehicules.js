@@ -1233,25 +1233,19 @@ function updateModulesOptions() {
       combinablesList.innerHTML = '';
     } else {
       combinablesField.style.display = 'block';
-      // La calculette RC+Casco n'a de sens que pour les produits véhicule (casco combinable) —
-      // pas pour ménage ou santé/LCA, qui n'ont rien à voir avec RC/Casco.
-      const estContexteVehicule = combinablesIds.includes('casco_partielle') || combinablesIds.includes('casco_complete');
+      // 24.09.2026 — la « calculette RC + Casco » a été retirée d'ici. Elle faisait doublon avec les
+      // lignes de prime, qui portent déjà un montant chacune et dont le total se calcule seul ; et
+      // elle les CONTREDISAIT depuis que le droit de timbre se classe ligne par ligne : son champ
+      // « Prime totale » se définissait comme « timbre fédéral et taxes déjà inclus », c'est-à-dire
+      // l'inverse de la base de commission. Un outil qui déduit un montant par soustraction à partir
+      // d'un total taxes comprises ne peut que fausser ce qu'on cherche.
       combinablesList.innerHTML = combinablesIds.map(id => {
         const p = getProduitParId(id);
         return p ? `
         <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--text);cursor:pointer">
           <input type="checkbox" class="ct-combinable-checkbox" value="${p.id}" onchange="toggleCombinablePrime('${p.id}')" style="width:15px;height:15px;cursor:pointer"/>+ ${p.label}
         </label>` : '';
-      }).join('') + '<div id="ct-combinables-primes" style="width:100%;margin-top:8px"></div>' +
-        (!estContexteVehicule ? '' : `<div id="ct-calculette-vehicule" style="display:none;width:100%;margin-top:10px;padding:12px 14px;background:var(--surface-alt);border:1px solid var(--border);border-radius:9px">
-          <div style="font-size:11px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;margin-bottom:8px">🧮 Calculette RC + Casco — remplis 2 montants, le 3e se calcule</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px">
-            <div><label class="form-label" style="font-size:10.5px">Prime totale (CHF)</label><input class="form-input" id="ct-calc-total" type="number" placeholder="1929.60" oninput="calculerSoldeVehicule('total')"/></div>
-            <div><label class="form-label" style="font-size:10.5px">RC (CHF)</label><input class="form-input" id="ct-calc-rc" type="number" placeholder="327.60" oninput="calculerSoldeVehicule('rc')"/></div>
-            <div><label class="form-label" style="font-size:10.5px">Casco (CHF)</label><input class="form-input" id="ct-calc-casco" type="number" placeholder="1602.00" oninput="calculerSoldeVehicule('casco')"/></div>
-          </div>
-          <div style="font-size:10px;color:var(--text-muted);margin-top:6px">Prime totale = montant final de la police (timbre fédéral et taxes déjà inclus). Remplis-en deux, le troisième se déduit automatiquement et se reporte dans les champs ci-dessus.</div>
-        </div>`);
+      }).join('') + '<div id="ct-combinables-primes" style="width:100%;margin-top:8px"></div>';
     }
   }
 
@@ -1403,44 +1397,7 @@ function toggleCombinablePrime(produitId) {
   } else if (!checkbox.checked && existant) {
     existant.remove();
   }
-  // La calculette RC+Casco n'a de sens que si au moins une case Casco/combinable est cochée
-  const calculette = document.getElementById('ct-calculette-vehicule');
-  if (calculette) {
-    const auMoinsUneCochee = document.querySelectorAll('.ct-combinable-checkbox:checked').length > 0;
-    calculette.style.display = auMoinsUneCochee ? 'block' : 'none';
-  }
   updateCommissionPreview();
-}
-
-// Calculette RC + Casco : remplis 2 des 3 montants (Total / RC / Casco), le 3e se déduit par soustraction
-// et se reporte automatiquement dans les vrais champs du formulaire (Prime RC + prime du 1er combinable coché).
-function calculerSoldeVehicule(champModifie) {
-  const totalEl = document.getElementById('ct-calc-total');
-  const rcEl = document.getElementById('ct-calc-rc');
-  const cascoEl = document.getElementById('ct-calc-casco');
-  if (!totalEl || !rcEl || !cascoEl) return;
-  const total = parseFloat(totalEl.value);
-  const rc = parseFloat(rcEl.value);
-  const casco = parseFloat(cascoEl.value);
-
-  if (champModifie !== 'casco' && !isNaN(total) && !isNaN(rc)) {
-    cascoEl.value = Math.round((total - rc) * 100) / 100;
-  } else if (champModifie !== 'rc' && !isNaN(total) && !isNaN(casco)) {
-    rcEl.value = Math.round((total - casco) * 100) / 100;
-  } else if (champModifie !== 'total' && !isNaN(rc) && !isNaN(casco)) {
-    totalEl.value = Math.round((rc + casco) * 100) / 100;
-  }
-
-  // Reporte les valeurs dans les vrais champs du formulaire (source de vérité pour l'enregistrement)
-  const rcFinal = parseFloat(rcEl.value);
-  const cascoFinal = parseFloat(cascoEl.value);
-  if (!isNaN(rcFinal)) {
-    setOuAjouterLignePrime('Prime RC (calculette)', rcFinal);
-  }
-  if (!isNaN(cascoFinal)) {
-    const premierCombinable = document.querySelector('.ct-combinable-prime-input');
-    if (premierCombinable) premierCombinable.value = cascoFinal;
-  }
 }
 
 // Normalise les variantes connues d'un même assureur vers un nom canonique unique

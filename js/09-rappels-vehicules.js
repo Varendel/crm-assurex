@@ -487,8 +487,12 @@ async function importPolicePdfAI(input) {
     statusEl.innerHTML = `<span style="color:var(--c-succes-texte);font-weight: 600">✓ Formulaire pré-rempli depuis le PDF</span> — vérifie les données, précise si le contrat sera commissionné ou non, puis enregistre.
       <a href="${window._policePdfPreviewUrl}" target="_blank" rel="noopener" style="margin-left:8px;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:7px;padding:5px 12px;font-size:12px;font-weight: 500;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;gap:5px;vertical-align:middle">👁 Voir le PDF importé</a>`;
 
+    // Le PDF est lu : le travail continue sur le formulaire, pas ici.
+    if (typeof ctBasculerOnglet === 'function') ctBasculerOnglet('manuel');
+
   } catch(e) {
-    statusEl.textContent = '✗ ' + e.message + ' — remplis manuellement le formulaire ci-dessous.';
+    // En cas d'échec on RESTE sur cet onglet : le message d'erreur y vit, basculer l'effacerait.
+    statusEl.innerHTML = '✗ ' + e.message + ' — passe à l’onglet « Saisie manuelle » pour remplir le formulaire.';
     statusEl.style.color = '#f87171';
   } finally {
     label.style.opacity = '1';
@@ -503,8 +507,19 @@ function viewNouveauContrat() {
   return `
     <h2 style="margin:0 0 16px;font-size:18px;font-weight: 600;color:var(--text)">Nouveau contrat</h2>
 
+    <!-- ── Deux onglets (24.09.2026) ───────────────────────────────────────────────────────────
+         « Prévois deux onglets, un pour la saisie manuelle et un automatique. » La zone d'import
+         trônait en haut de l'écran même quand on saisissait tout à la main : elle occupait la
+         première chose qu'on voit pour une action qu'on ne fait pas. Les deux voies sont
+         maintenant exclusives, et l'automatique bascule sur le formulaire dès que le PDF est lu —
+         c'est là que le travail continue, la relecture du pré-rempli. -->
+    <div class="ct-onglets" role="tablist">
+      <button type="button" class="ct-onglet actif" id="ct-onglet-auto" role="tab" aria-selected="true" onclick="ctBasculerOnglet('auto')">🤖 Depuis une police PDF</button>
+      <button type="button" class="ct-onglet" id="ct-onglet-manuel" role="tab" aria-selected="false" onclick="ctBasculerOnglet('manuel')">✍️ Saisie manuelle</button>
+    </div>
+
     <!-- ── Zone import IA ─────────────────────────────────────── -->
-    <div style="background:linear-gradient(135deg,rgba(0,207,255,0.06) 0%,rgba(56,189,248,0.04) 100%);border:1.5px dashed var(--accent-border);border-radius:14px;padding:16px 20px;margin-bottom:22px">
+    <div id="ct-pan-auto" style="background:linear-gradient(135deg,rgba(0,207,255,0.06) 0%,rgba(56,189,248,0.04) 100%);border:1.5px dashed var(--accent-border);border-radius:14px;padding:16px 20px;margin-bottom:22px">
       <div style="font-size:13px;font-weight: 600;color:var(--text);margin-bottom:4px">🤖 Import automatique depuis une police PDF</div>
       <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:12px">REX lit le PDF, extrait les données et pré-remplit le formulaire. Tu n'as plus qu'à confirmer si le contrat est commissionné ou non.</div>
       <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
@@ -512,9 +527,11 @@ function viewNouveauContrat() {
           📎 Choisir une police PDF
           <input type="file" accept="application/pdf" onchange="importPolicePdfAI(this)" style="display:none"/>
         </label>
-        <div id="police-import-status" style="font-size:12px;color:var(--text-muted)">ou remplis le formulaire manuellement ci-dessous</div>
+        <div id="police-import-status" style="font-size:12px;color:var(--text-muted)">le formulaire s’ouvrira pré-rempli, à relire</div>
       </div>
     </div>
+
+    <div id="ct-pan-manuel" hidden>
 
     ${opp ? `<div style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:12px 16px;margin-bottom:18px;font-size:12.5px;color:var(--text)">
       ✓ Pré-rempli depuis l'opportunité gagnée <strong>"${opp.titre}"</strong> — montant potentiel estimé : <strong>CHF ${fmtCHF((opp.montant_potentiel||0))}</strong>. Vérifie/ajuste la prime exacte ci-dessous avant d'enregistrer.
@@ -533,9 +550,14 @@ function viewNouveauContrat() {
       <div class="form-field" style="grid-column:span 2" id="ct-modules-field"><label class="form-label">Modules complémentaires</label><div id="ct-modules-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div><div style="font-size:10px;color:var(--text-muted);margin-top:4px" id="ct-modules-hint"></div>
         <div id="ct-modules-custom-list" style="margin-top:8px"></div>
         <button type="button" onclick="ajouterModuleComplementaire()" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight: 500;cursor:pointer;margin-top:6px">+ Ajouter un module complémentaire</button>
-        <div style="font-size:10px;color:var(--text-muted);margin-top:4px">Ex: "Assurances complémentaires et services" (AXA) — sert à lister les options incluses dans la police, à titre de détail. Si cette option a sa propre prime à reporter dans le total, ajoute-la plutôt comme "ligne de prime" ci-dessous (section "Lignes de prime").</div>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:4px">Options <strong>sans prime propre</strong>, à lister pour mémoire (ex: « Assurances complémentaires et services » chez AXA). Dès qu'une option a son propre montant, elle va dans les <strong>lignes de prime</strong> ci-dessous — c'est là que le total se calcule.</div>
       </div>
-      <div class="form-field" style="grid-column:span 2" id="ct-combinables-field"><label class="form-label">Produits souvent combinés</label><div id="ct-combinables-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div></div>
+      <!-- 24.09.2026 : trois listes d'ajouts se disputaient l'écran — modules, produits combinés,
+           lignes de prime — et une note expliquait laquelle choisir. Elles restent trois parce
+           qu'elles ne font pas la même chose (un module est un libellé, un produit combiné devient
+           un CONTRAT à part, une ligne de prime porte un montant), mais l'écran le dit maintenant
+           au lieu de le faire deviner. -->
+      <div class="form-field" style="grid-column:span 2" id="ct-combinables-field"><label class="form-label">Produits souvent combinés <span style="font-weight:400;color:var(--text-muted);font-size:10px">(chacun deviendra son propre contrat, avec sa prime)</span></label><div id="ct-combinables-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div></div>
       <div class="form-field" style="grid-column:span 2;display:none" id="ct-plaques-field">
         <label class="form-label" id="ct-plaques-label">Plaques d'immatriculation de la flotte</label>
         <div id="ct-plaques-list" style="display:flex;flex-direction:column;gap:6px;margin-top:6px"></div>
@@ -573,7 +595,16 @@ function viewNouveauContrat() {
         <option value="1">Annuelle</option>
       </select></div>
       <div class="form-field" id="ct-duree-field" style="display:none"><label class="form-label">Durée du contrat (années)</label><input class="form-input" id="ct-duree" type="number" placeholder="10" value="1" oninput="this.dataset.manuel='1';updateCommissionPreview()"/><div style="font-size:10px;color:var(--text-muted);margin-top:3px">Calculée automatiquement depuis les dates d'entrée en vigueur et d'échéance — modifiable manuellement.</div></div>
-      <div class="form-field" id="ct-manuel-field"><label class="form-label">Montant manuel (CHF) — remplace le calcul automatique si rempli</label><input class="form-input" id="ct-manuel" type="number" placeholder="0 = laisser le calcul automatique" oninput="updateCommissionPreview()"/></div>
+      <!-- 24.09.2026 : ce champ écrasait SILENCIEUSEMENT tout le calcul dès qu'il était rempli, et
+           il était visible en permanence, à hauteur d'œil, entre deux champs ordinaires. Replié :
+           il reste à un clic pour le dépannage, mais on ne le remplit plus par inadvertance. -->
+      <div class="form-field" id="ct-manuel-field" style="grid-column:span 2">
+        <details>
+          <summary style="cursor:pointer;font-size:12px;color:var(--text-muted)">Forcer le montant de la commission</summary>
+          <input class="form-input" id="ct-manuel" type="number" placeholder="0 = laisser le calcul automatique" oninput="updateCommissionPreview()" style="margin-top:8px"/>
+          <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Remplace entièrement le calcul automatique tant qu'il est rempli, quel que soit le produit.</div>
+        </details>
+      </div>
       <div class="form-field"><label class="form-label">Date d'entrée en vigueur</label><input class="form-input" id="ct-date" type="date" onchange="updateCommissionPreview()"/></div>
       <div class="form-field"><label class="form-label">Date de signature</label><input class="form-input" id="ct-date-signature" type="date"/></div>
       <div class="form-field"><label class="form-label">Date d'échéance</label><input class="form-input" id="ct-echeance" type="date" onchange="updateCommissionPreview()"/></div>
@@ -609,8 +640,35 @@ function viewNouveauContrat() {
     <div style="display:flex;gap:10px;margin-top:14px">
       <button class="btn-secondary" onclick="prefillOpportunite=null; prefillOpportuniteProduitId=null; oppFileAttenteProduits=[]; navigate(contratClientId ? 'clients' : 'suivi')">Annuler</button>
       <button class="btn-save" onclick="saveContrat()">✓ Enregistrer le contrat</button>
+    </div>
     </div>`;
 }
+
+// Bascule entre les deux onglets. Appelée aussi par la lecture du PDF, qui enchaîne sur le
+// formulaire une fois le pré-remplissage fait : rester sur l'onglet d'import laisserait croire
+// qu'il reste quelque chose à y faire.
+function ctBasculerOnglet(nom) {
+  const manuel = nom === 'manuel';
+  const panAuto = document.getElementById('ct-pan-auto');
+  const panManuel = document.getElementById('ct-pan-manuel');
+  if (panAuto) panAuto.hidden = manuel;
+  if (panManuel) panManuel.hidden = !manuel;
+  [['ct-onglet-auto', !manuel], ['ct-onglet-manuel', manuel]].forEach(([id, actif]) => {
+    const b = document.getElementById(id);
+    if (b) { b.classList.toggle('actif', actif); b.setAttribute('aria-selected', String(actif)); }
+  });
+}
+
+(function ctStyleOnglets() {
+  const st = document.createElement('style');
+  st.textContent = `
+    .ct-onglets { display: inline-flex; gap: 4px; padding: 3px; margin: 0 0 18px;
+      border: 1px solid var(--border); border-radius: 11px; background: var(--surface-alt); }
+    .ct-onglet { border: 0; background: transparent; color: var(--text-muted); font: inherit;
+      font-size: 12.5px; font-weight: 600; padding: 8px 16px; border-radius: 8px; cursor: pointer; }
+    .ct-onglet.actif { background: var(--accent-dim); color: var(--accent); }`;
+  document.head.appendChild(st);
+})();
 
 function initSegmentContrat() {
   const segmentSelect = document.getElementById('ct-segment');
@@ -625,6 +683,11 @@ function initSegmentContrat() {
   if (lignesList && !lignesList.children.length) {
     ajouterLignePrime();
     calculerPrimeTotaleLignes();
+  }
+  // Arrivée depuis une opportunité gagnée ou une fiche client : le formulaire est déjà pré-rempli,
+  // l'onglet d'import n'a plus rien à offrir — on ouvre directement sur la saisie.
+  if ((typeof prefillOpportunite !== 'undefined' && prefillOpportunite) || contratClientId) {
+    if (typeof ctBasculerOnglet === 'function') ctBasculerOnglet('manuel');
   }
   updateCategorieOptions();
   // Si on arrive depuis une opportunité gagnée : priorité au produit précis choisi au pipeline

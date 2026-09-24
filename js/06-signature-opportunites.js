@@ -1559,13 +1559,33 @@ async function impChercherDecomptesOutlook() {
   if (typeof assurerTokenOutlook === 'function' && !(await assurerTokenOutlook())) { showError('Connecte-toi à Outlook (bouton Microsoft dans le menu) pour chercher les décomptes.'); return; }
   if (btn) { btn.disabled = true; btn.textContent = '🔄 Recherche…'; }
   try {
+    // 24.09.2026 — « le bouton me dit aucun décompte reçu dans les 90 j », alors qu'un fichier
+    // Vaudoise IGB2B était arrivé la veille. La requête était refusée par Graph, et le refus passait
+    // inaperçu : deux fautes qui s'additionnent.
+    //   1. `$filter` portait sur hasAttachments ET receivedDateTime, mais `$orderby` sur
+    //      receivedDateTime seul. Graph refuse de trier sur une propriété quand le filtre en vise
+    //      une autre (InefficientFilter) et répond 400. On ne filtre donc plus que sur la date —
+    //      celle qu'on trie — et on écarte les messages sans pièce jointe ici.
+    //   2. Seul le 401 était testé. Un 400 renvoie un corps sans `value` : `|| []` le transformait
+    //      en « aucun décompte trouvé ». Une erreur déguisée en résultat, c'est le pire des deux.
     const depuis = new Date(Date.now() - 90 * 864e5).toISOString();
-    const r = await fetch(`https://graph.microsoft.com/v1.0/me/messages?$filter=hasAttachments eq true and receivedDateTime ge ${depuis}&$orderby=receivedDateTime desc&$top=250&$select=id,subject,from,receivedDateTime`, { headers: { Authorization: `Bearer ${msalAccessToken}` } });
-    if (r.status === 401) { showError('Session Outlook expirée — reconnecte-toi puis réessaie.'); return; }
-    const msgs = ((await r.json()).value || []).filter(m => {
+    const interessant = m => {
       const de = ((m.from && m.from.emailAddress && m.from.emailAddress.address) || '').toLowerCase();
       return IMP_DOMAINES_COMPAGNIES.some(d => de.includes(d)) || /commission|d[ée]compte|bordereau|\bbrd\b|igb2b|provision|indemnit|r[ée]mun[ée]ration|courtage/i.test(m.subject || '');
-    }).slice(0, 60);
+    };
+    let url = `https://graph.microsoft.com/v1.0/me/messages?$filter=receivedDateTime ge ${depuis}&$orderby=receivedDateTime desc&$top=100&$select=id,subject,from,receivedDateTime,hasAttachments`;
+    const msgs = [];
+    // Pagination : 90 jours de courrier dépassent largement une page. Sans elle, un décompte un peu
+    // ancien restait invisible sans que rien ne le signale.
+    for (let page = 0; page < 8 && url && msgs.length < 60; page++) {
+      const r = await fetch(url, { headers: { Authorization: `Bearer ${msalAccessToken}` } });
+      if (r.status === 401) { showError('Session Outlook expirée — reconnecte-toi puis réessaie.'); return; }
+      const j = await r.json().catch(() => null);
+      if (!r.ok) throw new Error((j && j.error && j.error.message) || `Outlook a refusé la recherche (${r.status}).`);
+      ((j && j.value) || []).filter(m => m.hasAttachments && interessant(m)).forEach(m => msgs.push(m));
+      url = (j && j['@odata.nextLink']) || null;
+    }
+    msgs.splice(60);
     const trouves = [];
     for (const m of msgs) {
       const ra = await fetch(`https://graph.microsoft.com/v1.0/me/messages/${m.id}/attachments?$select=id,name,contentType,size`, { headers: { Authorization: `Bearer ${msalAccessToken}` } });

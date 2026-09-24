@@ -238,9 +238,10 @@ refreshCategoriesLignesPrime(); calculerPrimeTotaleLignes();
 assertClose(calculerCommissionEstimee().montant, 200.00,
   'GM ménage — le timbre fédéral reste hors de la base de commission');
 
-// ── Domaine Vie : aucune estimation tant que le taux ‰ de l'avenant est inconnu ─────────────
-// Avant, le calcul générique appliquait 4 % du capital de production à un 3a Groupe Mutuel,
-// alors que GM commissionne en ‰ d'un capital VALORISÉ. Mieux vaut zéro et une explication.
+// ── Domaine Vie : 4 % du capital de production (= 40 ‰), valorisation 100 % ──────────────────
+// Règle confirmée par Jonathan le 24.09.2026. Capital = prime annuelle × durée — le « × 12 »
+// dont il parle est celui qui transforme la prime MENSUELLE en prime annuelle, pas un facteur
+// supplémentaire : le champ primeAnnuelle le porte déjà (cf. correction du 23.09 sur Sauthier).
 reset();
 document.getElementById('ct-compagnie').value = 'Groupe Mutuel';
 document.getElementById('ct-categorie').value = 'prive';
@@ -249,10 +250,26 @@ document.getElementById('ct-duree').value = '10';
 ajouterLignePrime('Prime 3a', 3000);
 refreshCategoriesLignesPrime(); calculerPrimeTotaleLignes();
 const gmVie = calculerCommissionEstimee();
-assertClose(gmVie.montant, 0, 'GM Vie → 0 (taux ‰ de l’avenant inconnu)');
-if (/‰/.test(gmVie.detail || '') && /valoris/i.test(gmVie.detail || '')) { pass++; console.log('PASS  GM Vie — le détail explique le ‰ et le capital valorisé'); }
-else { fail++; console.log(`FAIL  GM Vie — explication insuffisante : "${gmVie.detail}"`); }
+assertClose(gmVie.montant, 1200, 'GM Vie 3000 × 10 ans × 4% = 1200');
+
+// Cas réel : offre Sauthier n° 10110911451, 208.–/mois sur 21 ans.
+reset();
+document.getElementById('ct-compagnie').value = 'Groupe Mutuel';
+document.getElementById('ct-produit').value = 'Assurance vie liée 3a (pilier 3a)';
+document.getElementById('ct-periodicite').value = '12';
+document.getElementById('ct-duree').value = '21';
+ajouterLignePrime('Prime 3a mensuelle', 208);
+refreshCategoriesLignesPrime(); calculerPrimeTotaleLignes();
+assertClose(calculerCommissionEstimee().montant, 2096.64,
+  'GM VariaInvest Sauthier : 208 × 12 × 21 ans × 4%');
+
+// GM calcule sur la prime d'ÉPARGNE seule (49'008.75 au pied de l'offre, hors libération 161.95) :
+// le détail doit le rappeler, sinon on annonce 136.– de commission de trop.
+const gmVi = calculerCommissionEstimee();
+if (/épargne/i.test(gmVi.detail || '')) { pass++; console.log('PASS  GM Vie — le détail rappelle que la base est la prime d’épargne seule'); }
+else { fail++; console.log(`FAIL  GM Vie — le détail ne parle pas de la prime d'épargne : "${gmVi.detail}"`); }
 document.getElementById('ct-duree').value = '1';
+document.getElementById('ct-periodicite').value = '1';
 
 console.log(`\n${pass} tests passés, ${fail} échoués.`);
 process.exit(fail > 0 ? 1 : 0);

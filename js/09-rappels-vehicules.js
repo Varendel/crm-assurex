@@ -1886,9 +1886,16 @@ function calculerCommissionEstimee() {
     // (50 à 140 % selon la branche) et sur la prime du risque normal.
     if (taux == null && typeof PRODUITS_VIE_PRIVEE_CAPITAL !== 'undefined'
         && PRODUITS_VIE_PRIVEE_CAPITAL.includes(produitId)) {
+      const V = G.vie;
+      if (V.taux_pour_mille == null) {
+        return { montant: 0, detail: `Groupe Mutuel — Vie : taux ‰ de l'avenant non renseigné, montant à saisir à la main.` };
+      }
+      const annees = parseFloat(document.getElementById('ct-duree')?.value) || 1;
+      const capital = Math.round(primeAnnuelle * annees * 100) / 100;
+      const montant = Math.round(capital * V.taux_pour_mille / 10) / 100;   // ‰ → montant
       return {
-        montant: 0,
-        detail: `Groupe Mutuel — Vie : commission en ‰ du capital de production VALORISÉ (50 à 140 % selon la branche, tabelle ${G.vie.edition}), sur la prime du risque normal. Le taux ‰ est fixé par ton avenant, pas encore renseigné → montant à saisir à la main.`,
+        montant,
+        detail: `Groupe Mutuel — Vie : ${V.taux_pour_mille} ‰ (${V.taux_pour_mille / 10} %) × CHF ${fmtCHF(capital)} (capital de production = prime annuelle CHF ${fmtCHF(primeAnnuelle)} × ${annees} ans) = CHF ${fmtCHF(montant)} · valorisation 100 % pour VariaInvest, tabelle Vie ${V.edition}. GM calcule sur la prime d'ÉPARGNE seule : déduis la prime de libération avant de t'y fier.`,
       };
     }
 

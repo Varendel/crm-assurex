@@ -461,7 +461,14 @@ const TAUX_COMMISSION = {
     // l'intermédiaire, encore vierge au 24.09.2026. Tant qu'il est inconnu, on n'estime rien.
     vie: {
       edition: '01.07.2026',
-      taux_pour_mille: null,   // ← à renseigner depuis l'avenant signé
+      // 4 % du capital de production = 40 ‰ (Jonathan, 24.09.2026). Cohérent avec la tabelle :
+      // VariaInvest est valorisé à 100 %, donc capital valorisé = capital de production.
+      // Capital = prime MENSUELLE × 12 × nombre d'années de contrat.
+      // ⚠️ GM calcule ce capital sur la seule prime d'ÉPARGNE : sur l'offre Sauthier n° 10110911451,
+      // le pied de page annonce « p 49'008.75 (100%) », soit 2'333.75 × 21 — la prime de libération
+      // du paiement des primes (161.95) en est exclue. En partant des 208.–/mois on obtient 52'416,
+      // donc 136.– de commission de trop. Prendre la prime d'épargne seule quand elle est connue.
+      taux_pour_mille: 40,
       // Valorisation du capital, en % — clé : code de branche GM.
       valorisation: {
         FPU: 50, FPE: 85, PE: 85, VI: 100, VI_VL: 50, VIPE: 50, VIPE_VL: 50, VE: 90,

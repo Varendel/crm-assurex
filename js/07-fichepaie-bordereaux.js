@@ -2147,9 +2147,37 @@ function ouvrirApercuEmailDemandeOffre({ demandeOffreId, cies, emails, sansEmail
         <button class="btn-secondary" onclick="document.getElementById('modal-apercu-email-do').remove()">Fermer</button>
         <button class="btn-secondary" onclick="copierApercuEmailDemandeOffre()">📋 Copier</button>
         <button class="btn-secondary" onclick="ouvrirMailtoApercuDemandeOffre()">📧 Ouvrir dans mon client mail</button>
+        <button class="btn-secondary" onclick="envoyerEssaiApercuEmail()" title="Envoie ce courriel à toi seul, tel qu'il partira — personne d'autre ne le reçoit">📤 M'envoyer un essai</button>
         <button class="btn-save" style="margin-left:auto" onclick="${actionEnvoi || 'envoyerApercuEmailDemandeOffreViaOutlook()'}">📨 Envoyer maintenant via Outlook</button>
       </div>
     </div>`, { padding: '16px' });
+}
+
+// ── L'essai (24.09.2026) ────────────────────────────────────────────────────────────────────────
+// « Crée la fonction et le bouton : à partir de tous les e-mails sortants, envoyer un e-mail test
+// à l'expéditeur. » Le même message, les mêmes pièces jointes, la même signature — expédié à soi
+// seul. L'aperçu à droite montre déjà beaucoup, mais il ne traverse pas Outlook : seul un vrai
+// envoi dit comment le moteur de rendu de Word traitera le tableau, si les images de la signature
+// arrivent, et si la pièce jointe pèse trop lourd.
+//
+// Rien de ce qui suit un envoi réel n'est exécuté : aucune compagnie n'est marquée « envoyée »,
+// aucune ligne ne rejoint le fil de l'affaire, la fenêtre reste ouverte pour corriger et renvoyer.
+async function envoyerEssaiApercuEmail() {
+  const ctx = window._apercuEmailDemandeOffre;
+  if (!ctx) return;
+  const sujet = document.getElementById('apercu-email-sujet')?.value || '';
+  const corps = document.getElementById('apercu-email-corps')?.value || '';
+  let pieces = [];
+  try {
+    // Les mêmes pièces que l'envoi réel : un essai sans elles ne prouverait pas grand-chose.
+    if (ctx.mandatClientId && typeof pjeMandatDuClient === 'function') {
+      const m = await pjeMandatDuClient(ctx.mandatClientId);
+      if (m) pieces = [{ nom: m.name, type: m.type, blob: m.blob }];
+    } else if (typeof pjePreparer === 'function') {
+      pieces = await pjePreparer();
+    }
+  } catch (e) { showError('Pièces jointes non préparées pour l’essai : ' + (e.message || e)); }
+  await envoyerCourriel({ a: [], objet: sujet, texte: corps, pieces, test: true, contexte: 'essai' });
 }
 
 function copierApercuEmailDemandeOffre() {

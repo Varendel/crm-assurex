@@ -27,14 +27,26 @@ async function envPiece(p) {
   return { '@odata.type': '#microsoft.graph.fileAttachment', name: nom, contentType: p.type || blob.type || 'application/octet-stream', contentBytes: await envB64(blob) };
 }
 
-async function envoyerCourriel({ a, copie, cci, objet, texte, html, pieces, confirmer = true, contexte = '', silencieux = false, cciMulti = true } = {}) {
+// `test: true` — l'envoi part UNIQUEMENT à soi, objet préfixé, personne d'autre n'est touché :
+// de quoi voir le message tel qu'il arrivera (mise en forme Outlook, signature, pièces jointes)
+// avant de l'expédier pour de bon. Demandé le 24.09.2026, pour tous les e-mails sortants.
+async function envoyerCourriel({ a, copie, cci, objet, texte, html, pieces, confirmer = true, contexte = '', silencieux = false, cciMulti = true, test = false } = {}) {
   let dest = envListe(a);
-  const cc = envListe(copie);
+  let cc = envListe(copie);
   let bcc = envListe(cci);
-  if (!dest.length) { if (!silencieux) showError('Aucun destinataire : rien n’a été envoyé.'); return { ok: false, statut: 'sans-destinataire' }; }
+  if (!dest.length && !test) { if (!silencieux) showError('Aucun destinataire : rien n’a été envoyé.'); return { ok: false, statut: 'sans-destinataire' }; }
 
   const compte = typeof sigCompteOutlook === 'function' ? await sigCompteOutlook().catch(() => null) : null;
-  const moi = (compte && compte.adresse) || '';
+  // 24.09.2026 — « As-tu ajouté la règle jo@cofidex en cci de tous les e-mails sortants ? » Elle
+  // était là, mais suspendue à `compte.adresse` : session Outlook froide ou illisible, et `moi`
+  // restait vide, donc AUCUNE copie — en silence. Une règle qui ne s'applique que lorsque tout va
+  // bien n'est pas une règle. On retombe donc sur l'adresse de l'agent connecté au CRM, puis sur
+  // celle de la session : ce sont les mêmes, et elles, on les connaît sans Outlook.
+  const agentSig = typeof sigAgent === 'function' ? await sigAgent().catch(() => null) : null;
+  const moi = (compte && compte.adresse)
+    || (agentSig && agentSig.email)
+    || (typeof currentUser !== 'undefined' && currentUser && currentUser.email)
+    || '';
   const meme = (x, y) => !!x && !!y && x.toLowerCase() === y.toLowerCase();
   const dedans = (l, x) => l.some(y => meme(y, x));
 
@@ -50,15 +62,25 @@ async function envoyerCourriel({ a, copie, cci, objet, texte, html, pieces, conf
   // 2. UNE COPIE À SOI, systématique, en cci — sans alourdir l'en-tête du destinataire. Outlook
   //    garde déjà une trace dans les éléments envoyés ; ce qui manquait, c'est de RECEVOIR ce qui
   //    part, dans la même boîte que les réponses.
-  const groupe = dest.length > 1 && cciMulti;
+  // L'essai court-circuite les deux règles : un test qui partirait aux vraies compagnies ne serait
+  // pas un test. On remplace la liste, on préfixe l'objet, et on n'exécute rien de ce qui suit
+  // l'envoi côté appelant (statut des compagnies, historique) — c'est à l'appelant de s'arrêter là.
+  if (test) {
+    if (!moi) { if (!silencieux) showError('Impossible d’envoyer un test : aucune adresse connue pour toi.'); return { ok: false, statut: 'sans-expediteur' }; }
+    dest = [moi]; cc = []; bcc = [];
+    objet = `[TEST] ${objet || ''}`;
+  }
+  const groupe = !test && dest.length > 1 && cciMulti;
   if (groupe) {
     bcc = [...bcc, ...dest.filter(x => !dedans(bcc, x))];
     dest = moi ? [moi] : [dest[0]];          // sans compte Outlook connu, on garde au moins le premier
     bcc = bcc.filter(x => !dedans(dest, x));
   }
-  if (moi && !dedans(dest, moi) && !dedans(cc, moi) && !dedans(bcc, moi)) bcc.push(moi);
+  if (!test && moi && !dedans(dest, moi) && !dedans(cc, moi) && !dedans(bcc, moi)) bcc.push(moi);
 
-  if (confirmer) {
+  if (confirmer && test) {
+    if (!confirm(`Envoyer un ESSAI de ce courriel à toi seul (${moi}) ?\n\nAucune compagnie ni aucun client ne le recevra.`)) return { ok: false, annule: true, statut: 'annulé' };
+  } else if (confirmer) {
     const depuis = moi || 'le compte Outlook connecté';
     const vrais = groupe ? bcc.filter(x => !meme(x, moi)) : dest;
     const suite = [

@@ -39,13 +39,17 @@ function ilbPoser() {
   const st = document.createElement('style');
   st.textContent = `
     ${ILB_HEROS.split(', ').join(', ')} { position: relative; }
+    /* Posé en premier enfant et laissé en arrière-plan : tout ce qui suit dans le bandeau se peint
+       naturellement par-dessus, sans qu'on ait à toucher au positionnement des autres éléments.
+       24.09.2026 — une première version forçait « position: relative » sur TOUS les enfants directs
+       du bandeau pour les faire passer devant. C'était inutile (l'ordre du DOM y suffit) et
+       destructeur : Rex et son décor, qui se placent en absolu dans ce même bandeau, se
+       retrouvaient repositionnés par cette règle. */
     .ilb-decor {
-      position: absolute; right: -14px; top: 50%; transform: translateY(-50%);
-      height: 150%; max-height: 260px; width: auto; aspect-ratio: 1;
-      color: currentColor; opacity: .06; pointer-events: none; z-index: 0;
+      position: absolute; right: -10px; top: 50%; transform: translateY(-50%);
+      height: 120%; max-height: 190px; width: auto; aspect-ratio: 1;
+      color: currentColor; opacity: .05; pointer-events: none; z-index: 0;
     }
-    /* Le contenu du bandeau repasse devant : sans ça, un titre pourrait se retrouver dessous. */
-    ${ILB_HEROS.split(', ').map(s => `${s} > *:not(.ilb-decor)`).join(', ')} { position: relative; z-index: 1; }
     @media (max-width: 760px) { .ilb-decor { display: none; } }`;
   document.head.appendChild(st);
 

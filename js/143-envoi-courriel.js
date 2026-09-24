@@ -4,7 +4,10 @@
 // d'expéditeur écrite en dur à deux endroits, et une signature qu'il avait fallu injecter en
 // réécrivant window.fetch. Tout passe désormais par envoyerCourriel() :
 //
-//   await envoyerCourriel({ a: ['x@y.ch'], copie: [...], objet, texte, pieces, contexte: 'demande d’offre' })
+//   await envoyerCourriel({ a: ['x@y.ch'], cci: [...], objet, texte, pieces, contexte: 'demande d’offre' })
+//
+// `copie` = Cc, VISIBLE du destinataire : réservé aux cas où la personne en copie DOIT se voir.
+// Toute copie interne « pour information » passe par `cci` (24.09.2026).
 //
 // Elle s'occupe : du compte Outlook connecté (et l'annonce dans la confirmation), de la signature
 // de l'expéditeur (js/138), du passage du texte en HTML à la mise en forme Outlook, des pièces

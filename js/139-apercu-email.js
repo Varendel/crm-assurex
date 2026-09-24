@@ -59,7 +59,7 @@ async function aemRendre() {
     <div class="aem-exp"><span class="aem-avatar">${aemEsc(init)}</span>
       <div><div><b>${aemEsc(moi)}</b> <span class="aem-de${autre ? ' aem-de-autre' : ''}" title="Compte Outlook qui envoie l’e-mail">${aemEsc(email) || 'compte Outlook non connecté'}</span>${autre ? ' <b class="aem-de-autre">⚠️ pas l’adresse de ta session CRM</b>' : ''}</div>
         <div class="aem-lignes"><span>À</span> ${d.to.length ? puces(d.to) : '<i>aucun destinataire</i>'}</div>
-        ${d.cc.length ? `<div class="aem-lignes"><span>Cc</span> ${puces(d.cc)}</div>` : ''}</div></div>
+        ${d.cc.length ? `<div class="aem-lignes"><span>Cci</span> ${puces(d.cc)}<em style="font-size:10.5px;color:var(--text-muted);font-style:normal">copie cachée — la compagnie ne la voit pas</em></div>` : ''}</div></div>
     ${d.pj.length ? `<div class="aem-pj">${d.pj.map(p => `<span class="aem-fichier">📄 ${aemEsc(p.nom)}${p.taille ? ` <small>${typeof pjeTaille === 'function' ? pjeTaille(p.taille) : ''}</small>` : ''}</span>`).join('')}</div>` : ''}`;
   const f = z.querySelector('iframe');
   const html = await aemCorpsHtml(d);

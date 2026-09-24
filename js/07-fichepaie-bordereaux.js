@@ -2355,8 +2355,11 @@ async function envoyerApercuEmailDemandeOffreViaOutlook() {
     try { pieces = (await pjePreparer()).map(p => ({ nom: p.name, type: p.type, contentBytes: p.contentBytes })); }
     catch (e) { showError('Envoi arrêté : ' + (e.message || e)); return; }
   }
-  const copie = typeof sigCopiesDemandes === 'function' ? (await sigCopiesDemandes().catch(() => [])) : [];
-  const res = await envoyerCourriel({ a: ctx.emails, copie, objet: sujet, texte: corps, pieces, contexte: 'demande d’offre' });
+  // 24.09.2026 — « J'ai demandé CCI, pas CC. » Les collègues marqués « copie des demandes
+  // d'offre » partaient en copie VISIBLE : la compagnie voyait toute la boucle interne du
+  // cabinet sur chaque demande. C'est une copie pour information, elle va en copie cachée.
+  const cci = typeof sigCopiesDemandes === 'function' ? (await sigCopiesDemandes().catch(() => [])) : [];
+  const res = await envoyerCourriel({ a: ctx.emails, cci, objet: sujet, texte: corps, pieces, contexte: 'demande d’offre' });
   const envoiOk = res.ok;
   if (!envoiOk) return;
   if (pieces.length && ctx.oppId && typeof ajouterLigneHistoriqueOpportunite === 'function') {

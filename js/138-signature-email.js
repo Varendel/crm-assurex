@@ -203,5 +203,5 @@ async function sigLigneMaj(el, avecCopie) {
       <label><input type="checkbox" id="sig-sans"/> sans signature</label>`
     : '<span class="sig-ko">✍️ Pas encore de signature enregistrée</span>'}
     <button type="button" onclick="sigReprendreOutlook()">↻ ${ok ? 'Mettre à jour' : 'Reprendre ma signature Outlook'}</button>
-    ${copies.length ? `<span>📋 En copie : <b>${copies.map(sigEsc).join(', ')}</b></span>` : ''}`;
+    ${copies.length ? `<span>📋 En copie cachée (Cci) : <b>${copies.map(sigEsc).join(', ')}</b></span>` : ''}`;
 }

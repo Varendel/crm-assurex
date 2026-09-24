@@ -577,8 +577,16 @@ function viewNouveauContrat() {
         <label class="form-label"><span id="ct-prime-lignes-label-text">Lignes de prime *</span> <span id="ct-prime-lignes-hint" style="font-weight:400;color:var(--text-muted);font-size:10px">(reporte chaque ligne de la police — ex: Responsabilité civile privée, Inventaire du ménage, Assurances complémentaires et services, Taxes légales)</span></label>
         <div id="ct-prime-lignes-list" style="display:flex;flex-direction:column;gap:6px;margin-top:6px"></div>
         <button type="button" id="ct-prime-lignes-add-btn" onclick="ajouterLignePrime()" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight: 500;cursor:pointer;margin-top:8px">+ Ajouter une ligne</button>
+        <!-- 24.09.2026 : seule la base de commission était affichée. « Sinon je ne sais pas si le
+             total est juste quand j'importe » — c'est vrai : le chiffre imprimé sur la police,
+             c'est le total AVEC le timbre, et c'est celui-là qu'on recompte. On montre donc les
+             deux : le total de la police pour vérifier la saisie, la base pour la commission. -->
         <div style="display:flex;justify-content:space-between;align-items:center;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)">
-          <span style="font-size:12px;font-weight: 500;color:var(--text-muted);text-transform:uppercase">Prime totale <span style="font-weight:400;text-transform:none">(hors taxes — base de commission)</span></span>
+          <span style="font-size:12px;font-weight: 500;color:var(--text-muted);text-transform:uppercase">Total de la police <span style="font-weight:400;text-transform:none">(timbre et taxes compris — à comparer au document)</span></span>
+          <span id="ct-prime-total-police" style="font-size:17px;font-weight: 600;color:var(--text)">CHF 0</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">
+          <span style="font-size:12px;font-weight: 500;color:var(--text-muted);text-transform:uppercase">dont base de commission <span style="font-weight:400;text-transform:none">(hors taxes)</span></span>
           <span id="ct-prime-total-affiche" style="font-size:17px;font-weight: 600;color:var(--accent)">CHF 0</span>
         </div>
         <div id="ct-prime-taxes-note" style="font-size:10px;color:var(--text-muted);margin-top:3px;text-align:right"></div>
@@ -971,12 +979,19 @@ function calculerPrimeTotaleLignes() {
   const hidden = document.getElementById('ct-prime-mensuelle');
   if (hidden) hidden.value = total > 0 ? total : '';
   const decimales = lignes.some(l => (parseFloat(l.querySelector('.ct-prime-ligne-montant')?.value) || 0) % 1 !== 0);
+  const chf = v => 'CHF ' + v.toLocaleString('fr-CH', { minimumFractionDigits: decimales ? 2 : 0 });
   const affiche = document.getElementById('ct-prime-total-affiche');
-  if (affiche) affiche.textContent = 'CHF ' + total.toLocaleString('fr-CH', { minimumFractionDigits: decimales ? 2 : 0 });
+  if (affiche) affiche.textContent = chf(total);
+  // Le total de la police : tout ce qui a été saisi, taxes comprises. C'est le seul chiffre
+  // comparable à celui imprimé sur le document — sans lui, une ligne oubliée ou une faute de
+  // frappe ne se voit pas, puisque la base de commission, elle, a l'air juste quoi qu'il arrive.
+  const totalPolice = Math.round((totalCommissionnable + totalTaxes) * 100) / 100;
+  const affichePolice = document.getElementById('ct-prime-total-police');
+  if (affichePolice) affichePolice.textContent = chf(totalPolice);
   const note = document.getElementById('ct-prime-taxes-note');
   if (note) {
     note.textContent = totalTaxes > 0
-      ? `Hors base de commission : CHF ${fmtCHF(Math.round(totalTaxes * 100) / 100)} — taxes, droit de timbre, supplément de fractionnement (facturés au client, mais ne rémunèrent pas le courtage)`
+      ? `Dont hors commission : CHF ${fmtCHF(Math.round(totalTaxes * 100) / 100)} — taxes, droit de timbre, supplément de fractionnement (facturés au client, mais ne rémunèrent pas le courtage)`
       : '';
   }
   updateCommissionPreview();

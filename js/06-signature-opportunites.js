@@ -1507,25 +1507,41 @@ function viewImportDecompte() {
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
       <h2 style="margin:0;font-size:18px;font-weight: 600;color:var(--text)">📥 Importer un décompte compagnie (PDF ou Excel)</h2>
     </div>
-    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Lit directement le fichier envoyé par une compagnie — Excel norme IG B2B (testé avec La Vaudoise) ou PDF lu automatiquement par l'IA (pour les compagnies comme AXA qui n'envoient que du PDF). Réconcilie automatiquement les contrats par n° de police, propose un client probable par le nom quand le contrat n'est pas trouvé, reprend directement le taux et le montant déjà calculés par la compagnie dans le fichier, puis crée en un clic le bordereau numéroté (BRD 001, 002…) avec les commissions déjà rapprochées dessus.</div>
+    <div style="font-size:12px;color:var(--text-muted);margin-bottom:16px">Lit le fichier tel que la compagnie l'envoie, quel qu'en soit le format. Réconcilie les contrats par n° de police, propose un client probable par le nom quand le contrat n'est pas trouvé, reprend le taux et le montant déjà calculés par la compagnie, puis crée en un clic le bordereau numéroté (BRD 001, 002…) avec les commissions rapprochées dessus.</div>
 
     ${sectionCard('Fichier', '#38bdf8', `
-      <input type="file" id="imp-file-input" accept=".xlsx,.xls" style="display:none" onchange="analyserDecompteExcel()"/>
-      <input type="file" id="imp-pdf-input" accept="application/pdf" style="display:none" onchange="analyserDecomptePdf(this)"/>
-      <input type="file" id="imp-xml-input" accept=".xml,application/xml,text/xml" style="display:none" onchange="analyserDecompteXml(this)"/>
-      <button class="btn-secondary" onclick="window._decomptePeriodeXml=null;document.getElementById('imp-file-input').click()">📎 Choisir le fichier Excel</button>
-      <button class="btn-secondary" style="margin-left:8px" onclick="window._decomptePeriodeXml=null;document.getElementById('imp-pdf-input').click()">📄 Choisir un PDF (ex: AXA)</button>
-      <button class="btn-secondary" style="margin-left:8px" onclick="document.getElementById('imp-xml-input').click()">🧾 Fichier XML IG B2B (ex: Swiss Life)</button>
-      <span id="imp-file-nom" style="margin-left:10px;font-size:12px;color:var(--text-muted)"></span>
+      <!-- 24.09.2026 — refonte. Il y avait TROIS boutons « choisir le fichier », un par format, à
+           l'utilisateur de savoir lequel cliquer. Or le format se lit sur l'extension : c'est au
+           CRM de le faire. Une seule zone, on y dépose ou on y clique, elle route.
+           Et surtout : elle sait maintenant distinguer un décompte de COMMISSIONS d'un décompte de
+           PRIMES (Liste_Billing IG B2B, envoyé par la Vaudoise avant le versement). Les deux se
+           ressemblent et arrivent du même expéditeur ; déposer le second ici importait des primes
+           comme si c'étaient des commissions, sans un mot. -->
+      <input type="file" id="imp-file-input" accept=".xlsx,.xls,.xml,application/xml,text/xml,application/pdf" style="display:none" onchange="impRouterFichier(this)"/>
+      <div id="imp-zone" class="imp-zone" tabindex="0" role="button"
+           onclick="window._decomptePeriodeXml=null;document.getElementById('imp-file-input').click()"
+           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();this.click();}"
+           ondragover="event.preventDefault();this.classList.add('survol')"
+           ondragleave="this.classList.remove('survol')"
+           ondrop="impDeposer(event, this)">
+        <div class="imp-zone-titre">Dépose le décompte ici, ou clique pour le choisir</div>
+        <div class="imp-zone-formats">
+          <span title="Norme IG B2B — Vaudoise, Helsana…">📊 Excel IG B2B</span>
+          <span title="Norme IG B2B 5.4.1 — Swiss Life, Allianz, Agence des Gouttes">🧾 XML IG B2B</span>
+          <span title="Compagnies qui n'envoient que du PDF — lu par l'IA">📄 PDF</span>
+        </div>
+        <div id="imp-file-nom" class="imp-zone-nom"></div>
+      </div>
       <div id="imp-pdf-status" style="margin-top:8px;font-size:12px"></div>
-      <div style="margin-top:14px"><label class="form-label">Nature des commissions de ce lot</label>
-        <select class="form-select" id="imp-nature-commission" style="max-width:320px">
+      <details style="margin-top:14px">
+        <summary style="cursor:pointer;font-size:12px;color:var(--text-muted)">Nature des commissions de ce lot — automatique</summary>
+        <select class="form-select" id="imp-nature-commission" style="max-width:320px;margin-top:8px">
           <option value="auto">Automatique, ligne par ligne (recommandé)</option>
           <option value="gestion">Gestion (décompte périodique de portefeuille)</option>
           <option value="acquisition">Acquisition (nouvelles affaires)</option>
         </select>
-        <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Automatique : taux ≥ 25 % ou commission ≥ 25 % de la prime annuelle → acquisition ; sinon la nature de la commission en attente du contrat, à défaut gestion.</div>
-      </div>
+        <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Un XML IG B2B porte déjà la nature de chaque ligne (<code>typeComm</code>) : ce réglage ne sert qu'aux Excel et aux PDF. Automatique : taux ≥ 25 % ou commission ≥ 25 % de la prime annuelle → acquisition ; sinon la nature de la commission en attente du contrat, à défaut gestion.</div>
+      </details>
       <div style="margin-top:14px"><label class="form-label">Encaissé par</label>
         <div class="imp-encaisse" role="radiogroup" aria-label="Encaissé par">
           <label><input type="radio" name="imp-encaisse-par" value="assurex" checked/> <span><img src="assets/logos/assurex.png" alt="Assurex" class="imp-logo-assurex"/></span></label>
@@ -1545,6 +1561,70 @@ function viewImportDecompte() {
     <div id="imp-resultats"></div>
   `;
 }
+
+// ═══ ROUTAGE DU FICHIER DÉPOSÉ (24.09.2026) ═══════════════════════════════════════════════════
+// Le format se déduit de l'extension, et la NATURE du document de son nom. Les deux décomptes
+// IG B2B de la Vaudoise arrivent du même expéditeur, dans le même format, à quelques jours
+// d'écart : « Liste_Comm_courtier… » porte les commissions, « Liste_Billing_courtier… » porte les
+// primes qui les produiront. Confondre les deux, c'est encaisser des primes comme des commissions.
+// En-tête interne : le décompte de prime s'annonce « Décompte de prime » en première cellule.
+const IMP_EST_PRIMES = /billing|_prime|décompte[ _-]?de[ _-]?prime|praemien|primes?_courtier/i;
+
+function impRouterFichier(input) {
+  const file = input && input.files && input.files[0];
+  if (!file) return;
+  const nom = file.name || '';
+  const statut = document.getElementById('imp-pdf-status');
+  const afficheNom = document.getElementById('imp-file-nom');
+  if (afficheNom) afficheNom.textContent = nom;
+
+  if (IMP_EST_PRIMES.test(nom)) {
+    input.value = '';
+    if (afficheNom) afficheNom.textContent = '';
+    if (statut) {
+      statut.innerHTML = `<span style="color:var(--c-alerte-texte);font-weight:600">⚠ Ceci est un décompte de PRIMES, pas de commissions.</span>
+        <div style="color:var(--text-muted);margin-top:4px">« ${String(nom).replace(/</g, '&lt;')} » annonce les primes que la compagnie va facturer — la commission suivra dans un décompte séparé. L'importer ici créerait des commissions qui n'existent pas encore. Garde-le pour le rapprochement quand le décompte de commissions arrivera.</div>`;
+    }
+    return;
+  }
+  if (statut) statut.textContent = '';
+
+  window._decomptePeriodeXml = /\.xml$/i.test(nom) ? window._decomptePeriodeXml : null;
+  if (/\.xml$/i.test(nom)) return analyserDecompteXml(input);
+  if (/\.pdf$/i.test(nom)) return analyserDecomptePdf(input);
+  if (/\.xlsx?$/i.test(nom)) return analyserDecompteExcel();
+  if (statut) statut.innerHTML = `<span style="color:var(--c-danger-texte)">Format non reconnu (${String(nom).replace(/</g, '&lt;')}) — attendu : .xlsx, .xml ou .pdf.</span>`;
+}
+
+function impDeposer(event, zone) {
+  event.preventDefault();
+  zone.classList.remove('survol');
+  const f = event.dataTransfer && event.dataTransfer.files && event.dataTransfer.files[0];
+  if (!f) return;
+  const input = document.getElementById('imp-file-input');
+  if (!input) return;
+  // On repasse par l'input : tout le reste du code lit le fichier là, pas dans l'événement.
+  const dt = new DataTransfer();
+  dt.items.add(f);
+  input.files = dt.files;
+  impRouterFichier(input);
+}
+
+(function impStyleZone() {
+  const st = document.createElement('style');
+  st.textContent = `
+    .imp-zone { border: 1.5px dashed var(--accent-border); border-radius: 14px; padding: 22px 20px;
+      text-align: center; cursor: pointer; background: color-mix(in srgb, var(--accent) 4%, transparent);
+      transition: background .15s, border-color .15s; }
+    .imp-zone:hover, .imp-zone:focus-visible, .imp-zone.survol {
+      background: color-mix(in srgb, var(--accent) 9%, transparent); border-color: var(--accent); outline: none; }
+    .imp-zone-titre { font-size: 13.5px; font-weight: 600; color: var(--text); }
+    .imp-zone-formats { display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 14px; margin-top: 10px; }
+    .imp-zone-formats span { font-size: 11.5px; color: var(--text-muted); border: 1px solid var(--border);
+      border-radius: 999px; padding: 3px 10px; background: var(--surface); }
+    .imp-zone-nom { font-size: 12px; color: var(--accent); font-weight: 600; margin-top: 10px; }`;
+  document.head.appendChild(st);
+})();
 
 // ═══ DÉCOMPTES REÇUS PAR E-MAIL (Outlook, 19.09.2026) ═════════════════════════════════════════
 // Le CRM a déjà le droit de lire la boîte (Mail.Read, js/03). On liste les e-mails reçus des

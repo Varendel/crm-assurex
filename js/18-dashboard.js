@@ -593,10 +593,21 @@ function dbxVuePilotage(D) {
     <div class="dbx-raccourcis dbx-anim" style="--i:9">
       ${[['🔁', 'Renouvellements', 'renouvellements'], ['🧩', 'Équipement', 'equipement'], ['🧭', 'Sources des clients', 'sources'], ['💰', 'Suivi financier', 'suivi-financier'], ['📋', 'Rapport FINMA', 'rapport-finma']]
         .map(([i, l, v]) => `<button type="button" onclick="navigate('${v}')"><span aria-hidden="true">${i}</span>${l}</button>`).join('')}
+      <!-- 24.09.2026 : « mets-en aussi un dans le tableau de bord ». Celui-ci ne se contente pas
+           d'ouvrir l'écran : il lance la recherche Outlook dans la foulée, parce que c'est la seule
+           raison d'y aller. -->
+      <button type="button" onclick="dbxChercherDecomptes()"><span aria-hidden="true">📬</span>Chercher les décomptes</button>
       <button type="button" onclick="dbxBasculer(true)"><span aria-hidden="true">🗂️</span>Vue classique détaillée</button>
     </div>
 
     ${typeof ehmCarteDashboard === 'function' ? ehmCarteDashboard() : ''}`;
+}
+
+// Ouvre l'import et lance la recherche Outlook dans la foulée : c'est la seule raison d'y aller
+// depuis le tableau de bord. Le petit délai laisse la vue se rendre avant qu'on cherche son bouton.
+function dbxChercherDecomptes() {
+  navigate('import-decompte');
+  setTimeout(() => { if (typeof impChercherDecomptesOutlook === 'function') impChercherDecomptesOutlook(); }, 250);
 }
 
 // ── Après affichage : compteurs animés, nouveautés ────────────────────────────────────────────

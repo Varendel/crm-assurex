@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<title>Fond d'écran EX.GROUP — Rex</title>
+<!--
+  FOND D'ÉCRAN ANIMÉ EX.GROUP (24.09.2026)
+  « Un fond d'écran avec mini Rex animé et le logo de la boîte. »
+
+  Rien n'est dessiné ici : la page rejoue les planches d'animation déjà présentes dans
+  assets/logos/rex/ (marche 8 images, salut, pouce, joie, saut, demi-tour, flamme 60 images).
+  Rex traverse le bas de l'écran, s'arrête de temps en temps pour saluer, lever le pouce ou
+  cracher une flamme, puis repart dans l'autre sens.
+
+  POUR L'UTILISER SUR WINDOWS
+  Un fichier HTML ne se pose pas directement comme fond d'écran : il faut un lecteur.
+  Lively Wallpaper (gratuit, Microsoft Store) fait ça très bien —
+  « + » → « Parcourir » → choisir ce fichier. La page se met en pause toute seule quand une
+  fenêtre la recouvre, pour ne pas consommer de batterie pour rien.
+
+  Ouvert simplement dans un navigateur en plein écran (F11), ça marche aussi : c'est ce qu'il
+  faut faire pour le regarder avant de l'installer.
+-->
+<style>
+  :root {
+    --marine: #0a1e3f;
+    --marine-clair: #113679;
+    --cyan: #00cfff;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--marine); }
+
+  /* Le fond : dégradé profond + deux halos, pour que les icônes du bureau restent lisibles
+     par-dessus. Un fond clair comme celui du logo rendrait les libellés blancs illisibles. */
+  .scene {
+    position: fixed; inset: 0;
+    background:
+      radial-gradient(1200px 800px at 18% 22%, rgba(0, 207, 255, .16), transparent 60%),
+      radial-gradient(900px 700px at 82% 78%, rgba(17, 54, 121, .55), transparent 62%),
+      linear-gradient(160deg, #081831 0%, #0a1e3f 45%, #071427 100%);
+    overflow: hidden;
+  }
+
+  /* Poussière lumineuse, très discrète : elle donne de la profondeur sans distraire. */
+  .grain { position: absolute; inset: 0; opacity: .5; }
+  .grain span {
+    position: absolute; border-radius: 50%; background: var(--cyan);
+    animation: derive linear infinite;
+  }
+  @keyframes derive {
+    from { transform: translate3d(0, 0, 0); opacity: 0; }
+    12%  { opacity: .55; }
+    88%  { opacity: .55; }
+    to   { transform: translate3d(0, -120vh, 0); opacity: 0; }
+  }
+
+  /* Le sol : une simple ligne de lumière sur laquelle Rex marche. */
+  .sol {
+    position: absolute; left: 0; right: 0; bottom: 16vh; height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(0, 207, 255, .38) 25%, rgba(0, 207, 255, .38) 75%, transparent);
+  }
+
+  .marque {
+    position: absolute; left: 50%; top: 42%; transform: translate(-50%, -50%);
+    text-align: center; user-select: none;
+  }
+  .marque img { width: min(46vw, 620px); height: auto; display: block; filter: drop-shadow(0 18px 45px rgba(0, 0, 0, .55)); }
+  .marque .baseline {
+    margin-top: 18px; font: 500 clamp(11px, 1.05vw, 15px)/1.6 Geist, 'Segoe UI', system-ui, sans-serif;
+    letter-spacing: .34em; text-transform: uppercase; color: rgba(255, 255, 255, .5);
+  }
+
+  /* Rex. `image-rendering: auto` volontaire : les planches sont en haute définition, un rendu
+     pixelisé les abîmerait. L'ombre portée est fausse mais suffit à le poser au sol. */
+  #rex {
+    position: absolute; bottom: 16vh; left: 0;
+    height: clamp(120px, 15vh, 220px); width: auto;
+    transform-origin: 50% 100%;
+    filter: drop-shadow(0 10px 18px rgba(0, 0, 0, .45));
+    will-change: transform;
+  }
+  #ombre {
+    position: absolute; bottom: calc(16vh - 6px); left: 0;
+    width: clamp(70px, 9vh, 130px); height: 12px; border-radius: 50%;
+    background: radial-gradient(ellipse at center, rgba(0, 0, 0, .40), transparent 70%);
+    will-change: transform;
+  }
+
+  .horloge {
+    position: absolute; right: 4vw; bottom: 4vh; text-align: right;
+    font-family: Geist, 'Segoe UI', system-ui, sans-serif; color: rgba(255, 255, 255, .82);
+    user-select: none; text-shadow: 0 2px 14px rgba(0, 0, 0, .6);
+  }
+  .horloge .h { font-size: clamp(38px, 5vw, 74px); font-weight: 600; letter-spacing: -.02em; line-height: 1; }
+  .horloge .d { margin-top: 6px; font-size: clamp(11px, 1.1vw, 15px); font-weight: 500; letter-spacing: .16em;
+    text-transform: uppercase; color: rgba(255, 255, 255, .48); }
+</style>
+</head>
+<body>
+<div class="scene">
+  <div class="grain" id="grain"></div>
+  <div class="sol"></div>
+
+  <div class="marque">
+    <img src="../assets/logos/exgroup-blanc.png" alt="EX.GROUP"/>
+    <div class="baseline">Assurances &amp; prévoyance</div>
+  </div>
+
+  <div id="ombre"></div>
+  <img id="rex" alt=""/>
+
+  <div class="horloge">
+    <div class="h" id="heure">--:--</div>
+    <div class="d" id="date"></div>
+  </div>
+</div>
+
+<script>
+// ── Les planches disponibles dans assets/logos/rex/ ────────────────────────────────────────
+// `ms` = durée d'affichage d'une image. La marche est rapide, les poses le sont moins.
+const A = '../assets/logos/rex/';
+const ANIMS = {
+  marche:   { dossier: 'anim-marche8',  n: 8,  ext: 'webp', ms: 90  },
+  salut:    { dossier: 'anim-salut',    n: 7,  ext: 'png',  ms: 130 },
+  pouce:    { dossier: 'anim-pouce',    n: 7,  ext: 'png',  ms: 130 },
+  joie:     { dossier: 'anim-joie',     n: 7,  ext: 'png',  ms: 120 },
+  saut:     { dossier: 'anim-saut8',    n: 8,  ext: 'webp', ms: 85  },
+  demitour: { dossier: 'anim-demitour8',n: 8,  ext: 'webp', ms: 85  },
+  flamme:   { dossier: 'anim-flamme',   n: 60, ext: 'webp', ms: 45  },
+};
+const chemin = (a, i) => `${A}${ANIMS[a].dossier}/${i}.${ANIMS[a].ext}`;
+
+// Préchargement : sans lui, la première boucle saccade le temps que le disque suive.
+Object.keys(ANIMS).forEach(a => {
+  for (let i = 1; i <= ANIMS[a].n; i++) { const im = new Image(); im.src = chemin(a, i); }
+});
+
+const rex = document.getElementById('rex');
+const ombre = document.getElementById('ombre');
+
+// Ce que Rex fait quand il s'arrête. La marche revient forcément entre deux poses.
+const POSES = ['salut', 'pouce', 'joie', 'flamme', 'saut'];
+const etat = { anim: 'marche', image: 1, dernier: 0, x: -140, sens: 1, arretJusqua: 0, prochainArret: 0 };
+
+function largeurUtile() { return window.innerWidth + 200; }
+
+function choisirProchainArret() {
+  // Entre 18 % et 78 % de la largeur : Rex ne s'arrête jamais collé à un bord.
+  etat.prochainArret = window.innerWidth * (0.18 + Math.random() * 0.60);
+}
+choisirProchainArret();
+
+function lancerPose() {
+  const pose = POSES[Math.floor(Math.random() * POSES.length)];
+  etat.anim = pose;
+  etat.image = 1;
+  // La flamme compte 60 images : on la joue une fois, les autres deux fois.
+  const tours = pose === 'flamme' ? 1 : 2;
+  etat.arretJusqua = performance.now() + ANIMS[pose].n * ANIMS[pose].ms * tours;
+}
+
+function boucle(t) {
+  const enPose = t < etat.arretJusqua;
+
+  // Avancement image par image
+  const def = ANIMS[etat.anim];
+  if (t - etat.dernier >= def.ms) {
+    etat.dernier = t;
+    etat.image = etat.image % def.n + 1;
+    rex.src = chemin(etat.anim, etat.image);
+  }
+
+  if (!enPose) {
+    if (etat.anim !== 'marche') { etat.anim = 'marche'; etat.image = 1; }
+    // ~48 px/s à 60 images/s, indépendamment de la taille de l'écran.
+    etat.x += etat.sens * 0.8;
+
+    // Demi-tour au bord : on repart dans l'autre sens et on retourne l'image.
+    if (etat.x > largeurUtile() - 100) { etat.sens = -1; choisirProchainArret(); }
+    if (etat.x < -140) { etat.sens = 1; choisirProchainArret(); }
+
+    // Arrêt programmé, seulement en marchant vers la droite pour que ce soit lisible.
+    if (etat.sens === 1 && etat.x > etat.prochainArret) {
+      lancerPose();
+      etat.prochainArret = Infinity;   // un seul arrêt par traversée
+    }
+  }
+
+  const miroir = etat.sens === -1 ? ' scaleX(-1)' : '';
+  rex.style.transform = `translate3d(${etat.x}px, 0, 0)${miroir}`;
+  ombre.style.transform = `translate3d(${etat.x + 18}px, 0, 0)`;
+  requestAnimationFrame(boucle);
+}
+requestAnimationFrame(boucle);
+
+// ── Poussière lumineuse ────────────────────────────────────────────────────────────────────
+const grain = document.getElementById('grain');
+for (let i = 0; i < 34; i++) {
+  const s = document.createElement('span');
+  const taille = 1 + Math.random() * 2.6;
+  s.style.width = s.style.height = taille + 'px';
+  s.style.left = Math.random() * 100 + '%';
+  s.style.top = (100 + Math.random() * 30) + '%';
+  s.style.animationDuration = (22 + Math.random() * 26) + 's';
+  s.style.animationDelay = (-Math.random() * 40) + 's';
+  s.style.opacity = .2 + Math.random() * .4;
+  grain.appendChild(s);
+}
+
+// ── Horloge ────────────────────────────────────────────────────────────────────────────────
+function majHorloge() {
+  const d = new Date();
+  document.getElementById('heure').textContent =
+    d.toLocaleTimeString('fr-CH', { hour: '2-digit', minute: '2-digit' });
+  document.getElementById('date').textContent =
+    d.toLocaleDateString('fr-CH', { weekday: 'long', day: 'numeric', month: 'long' });
+}
+majHorloge();
+setInterval(majHorloge, 15000);
+</script>
+</body>
+</html>

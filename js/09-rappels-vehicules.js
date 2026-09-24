@@ -886,7 +886,7 @@ function ajouterLignePrime(libelle = '', montant = '') {
   ligne.innerHTML = `
     <input class="form-input ct-prime-ligne-libelle" placeholder="Ex: Responsabilité civile privée" value="${libelleEch}" style="flex:1" oninput="refreshCategoriesLignesPrime(); calculerPrimeTotaleLignes()"/>
     <input type="hidden" class="ct-prime-ligne-taxe" value=""/>
-    <button type="button" class="ct-prime-ligne-badge-taxe" onclick="basculerLigneTaxe(this)" title="Droit de timbre / taxe légale — exclu du volume de prime et du calcul de commission. Clique pour forcer ou retirer ce classement."></button>
+    <button type="button" class="ct-prime-ligne-badge-taxe" onclick="basculerLigneTaxe(this)" title="Hors base de commission : droit de timbre, taxes et émoluments, supplément pour prime fractionnée, frais d'encaissement. Clique pour forcer ou retirer ce classement."></button>
     <select class="form-select ct-prime-ligne-categorie" style="display:none;width:190px;font-size:11px" onchange="calculerPrimeTotaleLignes()"></select>
     <input class="form-input ct-prime-ligne-montant" type="number" step="0.01" placeholder="CHF" value="${montant}" style="width:120px" oninput="calculerPrimeTotaleLignes()"/>
     <button type="button" onclick="this.parentElement.remove(); calculerPrimeTotaleLignes()" style="background:color-mix(in srgb, var(--c-danger) 12%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:6px;width:28px;height:28px;cursor:pointer;font-size:13px;flex-shrink:0">✕</button>
@@ -904,7 +904,13 @@ function ajouterLignePrime(libelle = '', montant = '') {
 // « Timbre fédéral 5 % », « Bundesstempel » passaient tous à travers et venaient gonfler la base
 // de commission. Deux corrections : le vocabulaire s'élargit, et surtout le classement devient
 // CORRIGEABLE à la main (la pastille se clique), parce qu'aucune liste de mots ne sera complète.
-const TAXE_MOTS = /\btaxes?\b|\bdroits? de timbre\b|\btimbre\b|stempel|\bemolument|\bfrais de police\b/;
+// La liste dit « hors commission », pas « taxes » : le supplément pour prime fractionnée n'est pas
+// une taxe, mais il est exclu de la base au même titre. La légende du fichier IG B2B de la Vaudoise
+// est explicite sur la colonne « Prime commis. » : « prime utilisée pour le calcul de la commission :
+// hors TF, frais, rabais et SURPRIMES de facturation » — en allemand « Fakturierungs-Rabatte und
+// -Mehrprämie ». Le fractionnement est facturé par l'assureur pour son propre travail
+// d'encaissement ; il ne rémunère personne d'autre.
+const TAXE_MOTS = /\btaxes?\b|\bdroits? de timbre\b|\btimbre\b|stempel|\bemolument|\bfrais de police\b|fractionn|[ée]chelonn|ratenzuschlag|teilzahlung|surprime de facturation|frais d'encaissement/;
 
 function _estLigneTaxe(libelle, ligne) {
   const force = ligne && ligne.querySelector('.ct-prime-ligne-taxe')?.value;
@@ -936,7 +942,7 @@ function calculerPrimeTotaleLignes() {
       // La pastille reste visible même quand la ligne n'est PAS une taxe : c'est elle qui permet
       // de le corriger. En gris tant qu'elle ne fait que constater, en orange quand elle classe.
       const force = ligne.querySelector('.ct-prime-ligne-taxe')?.value;
-      badge.textContent = estTaxe ? 'droit de timbre / taxe' : 'prime';
+      badge.textContent = estTaxe ? 'hors commission' : 'prime';
       badge.dataset.taxe = estTaxe ? '1' : '0';
       badge.dataset.force = force === '' ? '' : '1';
       badge.style.display = '';
@@ -952,7 +958,7 @@ function calculerPrimeTotaleLignes() {
   const note = document.getElementById('ct-prime-taxes-note');
   if (note) {
     note.textContent = totalTaxes > 0
-      ? `Taxes/émoluments légaux exclus : CHF ${fmtCHF(Math.round(totalTaxes * 100) / 100)} (facturés au client mais hors volume de prime et hors commission)`
+      ? `Hors base de commission : CHF ${fmtCHF(Math.round(totalTaxes * 100) / 100)} — taxes, droit de timbre, supplément de fractionnement (facturés au client, mais ne rémunèrent pas le courtage)`
       : '';
   }
   updateCommissionPreview();

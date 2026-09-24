@@ -827,6 +827,15 @@ function showFormCollaborateur(clientId) {
         <div class="form-field"><label class="form-label">N° de téléphone</label><input class="form-input" id="col-tel" placeholder="079 123 45 67"/></div>
         <div class="form-field" style="grid-column:span 2"><label class="form-label">Adresse privée</label><input class="form-input" id="col-adresse" placeholder="Rue des Alpes 12, 1000 Lausanne"/></div>
         <div class="form-field" style="grid-column:span 2"><label class="form-label">N° AVS</label><input class="form-input" id="col-avs" placeholder="756.1234.5678.90" maxlength="16"/></div>
+        <!-- 24.09.2026 : les trois colonnes existaient déjà en base mais aucun écran ne les
+             remplissait. Ce sont pourtant elles qui font les assurances de personnes : le salaire
+             annuel brut détermine le salaire coordonné LPP et le gain assuré LAA, la date d'entrée
+             fixe le début de couverture, et le taux d'occupation décide de l'assujettissement aux
+             accidents non professionnels (dès 8 h par semaine). -->
+        <div class="form-field"><label class="form-label">Salaire annuel brut (CHF)</label><input class="form-input" id="col-salaire" type="number" step="0.01" placeholder="72000"/></div>
+        <div class="form-field"><label class="form-label">Taux d'occupation (%)</label><input class="form-input" id="col-taux" type="number" min="0" max="100" placeholder="100"/></div>
+        <div class="form-field"><label class="form-label">Date d'entrée</label><input class="form-input" id="col-entree" type="date"/></div>
+        <div class="form-field"><label class="form-label">Fonction</label><input class="form-input" id="col-fonction" maxlength="120" placeholder="Cuisinier, employée de bureau…"/></div>
       </div>
       <div style="display:flex;gap:10px;margin-top:20px">
         <button class="btn-secondary" onclick="document.getElementById('modal-collaborateur').remove()">Annuler</button>

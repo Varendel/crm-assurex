@@ -355,7 +355,15 @@ async function importPolicePdfAI(input) {
   _policeImporteeUrl = URL.createObjectURL(file);
   _policeImporteeNom = file.name || 'police.pdf';
   const boutonVoir = document.getElementById('police-import-voir');
-  if (boutonVoir) { boutonVoir.hidden = false; boutonVoir.title = `Rouvrir ${_policeImporteeNom}`; }
+  if (boutonVoir) {
+    boutonVoir.hidden = false;
+    boutonVoir.disabled = false;
+    boutonVoir.style.opacity = '1';
+    boutonVoir.style.cursor = 'pointer';
+    boutonVoir.style.borderColor = 'var(--accent-border)';
+    boutonVoir.style.color = 'var(--accent)';
+    boutonVoir.title = `Rouvrir ${_policeImporteeNom}`;
+  }
   const statusEl = document.getElementById('police-import-status');
   const label = document.getElementById('police-import-label');
   statusEl.textContent = '🤖 Lecture du PDF en cours...';
@@ -533,8 +541,12 @@ function viewNouveauContrat() {
            en basculant sur la saisie manuelle : il n'était donc jamais visible au moment de relire.
            Il vit maintenant à côté des onglets, donc dans les deux, et apparaît même quand
            l'extraction échoue — c'est là qu'on a le plus besoin de rouvrir le document. -->
-      <button type="button" id="police-import-voir" hidden onclick="ouvrirPoliceImportee()"
-        style="margin-left:auto;background:var(--surface);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:7px 15px;font-size:12.5px;font-weight:600;cursor:pointer">👁️ Voir la police importée</button>
+      <!-- Il était masqué jusqu'au choix d'un PDF : Jonathan l'a cherché sans le trouver, ce qui
+           revient au même que s'il n'existait pas. Il est donc toujours là, simplement désactivé
+           tant qu'aucun document n'est chargé — on voit qu'il existe et ce qu'il attend. -->
+      <button type="button" id="police-import-voir" disabled onclick="ouvrirPoliceImportee()"
+        title="Choisis d'abord une police PDF"
+        style="margin-left:auto;background:var(--surface);border:1px solid var(--border);color:var(--text-muted);border-radius:9px;padding:7px 15px;font-size:12.5px;font-weight:600;cursor:not-allowed;opacity:.55">👁️ Voir la police importée</button>
     </div>
 
     <!-- ── Zone import IA ─────────────────────────────────────── -->

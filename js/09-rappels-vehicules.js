@@ -2159,9 +2159,24 @@ async function saveContrat() {
 
   // Créer un contrat + commission distincts pour chaque produit combiné véhicule/ménage coché
   // (la LCA est gérée séparément juste après : un client peut avoir plusieurs produits LCA)
+  //
+  // 24.09.2026 — SAUF s'il figure déjà comme ligne de prime de ce contrat-ci. Cas réel, Kisann SA :
+  // une police AXA véhicule n° 22.866.452 saisie avec ses quatre lignes (RC, complémentaires,
+  // timbre, casco complète 415.37), et la case « + Casco complète » cochée par-dessus. Résultat :
+  // deux contrats pour une seule police, et surtout la casco commissionnée DEUX FOIS — une fois
+  // dans le calcul ligne par ligne du contrat principal (CHF 29,08), une fois sur le contrat
+  // dupliqué (CHF 29,00). Une police est une police : si son montant est déjà dans les lignes,
+  // il n'y a rien à créer à côté.
+  const lignesDejaSaisies = (typeof collecterLignesPrimeSaisies === 'function' ? collecterLignesPrimeSaisies() : [])
+    .map(l => String(l.libelle || '').trim().toLowerCase()).filter(Boolean);
   for (const id of combinablesCoches) {
     if (id === 'lca_autre_compagnie') continue;
     const produitCombinable = getProduitParId(id);
+    const dejaEnLigne = lignesDejaSaisies.includes(String(produitCombinable.label || '').trim().toLowerCase());
+    if (dejaEnLigne) {
+      showError(`« ${produitCombinable.label} » est déjà une ligne de prime de cette police — pas de second contrat créé.`);
+      continue;
+    }
     const input = document.querySelector(`.ct-combinable-prime-input[data-produit-id="${id}"]`);
     const primeCombinableAnnuelle = parseFloat(input.value) || 0;
     // Taux appris des décomptes réels de cette compagnie pour ce produit quand on en a (19.09.2026),

@@ -816,30 +816,35 @@ async function saveEditContrat(contratId, clientId, returnTo) {
   document.getElementById('modal-edit-contrat').remove();
   if (returnTo) { navigate(returnTo); } else { showClient(clientId); }
 }
-function showFormCollaborateur(clientId) {
+// 24.09.2026 — « Mets un bouton éditer collaborateur. » Le même formulaire sert à créer et à
+// corriger : un second écran qui dirait les mêmes champs finirait par diverger du premier.
+// Avec un `colId`, on pré-remplit et on met à jour ; sans, on crée. Rien d'autre ne change.
+function showFormCollaborateur(clientId, colId) {
+  const col = colId ? (allCollaborateurs || []).find(x => x.id === colId) : null;
+  const v = (k) => (col && col[k] != null ? String(col[k]).replace(/"/g, '&quot;') : '');
   creerModale('modal-collaborateur', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:480px">
-      <h3 style="margin:0 0 20px;font-size:16px;font-weight: 600;color:var(--text)">Nouveau collaborateur</h3>
+      <h3 style="margin:0 0 20px;font-size:16px;font-weight: 600;color:var(--text)">${col ? 'Modifier le collaborateur' : 'Nouveau collaborateur'}</h3>
       <div class="form-grid">
-        <div class="form-field"><label class="form-label">Nom *</label><input class="form-input" id="col-nom" placeholder="Dupont"/></div>
-        <div class="form-field"><label class="form-label">Prénom *</label><input class="form-input" id="col-prenom" placeholder="Jean"/></div>
-        <div class="form-field"><label class="form-label">Date de naissance</label><input class="form-input" id="col-naissance" type="date"/></div>
-        <div class="form-field"><label class="form-label">N° de téléphone</label><input class="form-input" id="col-tel" placeholder="079 123 45 67"/></div>
-        <div class="form-field" style="grid-column:span 2"><label class="form-label">Adresse privée</label><input class="form-input" id="col-adresse" placeholder="Rue des Alpes 12, 1000 Lausanne"/></div>
-        <div class="form-field" style="grid-column:span 2"><label class="form-label">N° AVS</label><input class="form-input" id="col-avs" placeholder="756.1234.5678.90" maxlength="16"/></div>
+        <div class="form-field"><label class="form-label">Nom *</label><input class="form-input" id="col-nom" value="${v('nom')}" placeholder="Dupont"/></div>
+        <div class="form-field"><label class="form-label">Prénom *</label><input class="form-input" id="col-prenom" value="${v('prenom')}" placeholder="Jean"/></div>
+        <div class="form-field"><label class="form-label">Date de naissance</label><input class="form-input" id="col-naissance" type="date" value="${v('date_naissance')}"/></div>
+        <div class="form-field"><label class="form-label">N° de téléphone</label><input class="form-input" id="col-tel" value="${v('mobile')}" placeholder="079 123 45 67"/></div>
+        <div class="form-field" style="grid-column:span 2"><label class="form-label">Adresse privée</label><input class="form-input" id="col-adresse" value="${v('adresse')}" placeholder="Rue des Alpes 12, 1000 Lausanne"/></div>
+        <div class="form-field" style="grid-column:span 2"><label class="form-label">N° AVS</label><input class="form-input" id="col-avs" value="${v('avs')}" placeholder="756.1234.5678.90" maxlength="16"/></div>
         <!-- 24.09.2026 : les trois colonnes existaient déjà en base mais aucun écran ne les
              remplissait. Ce sont pourtant elles qui font les assurances de personnes : le salaire
              annuel brut détermine le salaire coordonné LPP et le gain assuré LAA, la date d'entrée
              fixe le début de couverture, et le taux d'occupation décide de l'assujettissement aux
              accidents non professionnels (dès 8 h par semaine). -->
-        <div class="form-field"><label class="form-label">Salaire annuel brut (CHF)</label><input class="form-input" id="col-salaire" type="number" step="0.01" placeholder="72000"/></div>
-        <div class="form-field"><label class="form-label">Taux d'occupation (%)</label><input class="form-input" id="col-taux" type="number" min="0" max="100" placeholder="100"/></div>
-        <div class="form-field"><label class="form-label">Date d'entrée</label><input class="form-input" id="col-entree" type="date"/></div>
-        <div class="form-field"><label class="form-label">Fonction</label><input class="form-input" id="col-fonction" maxlength="120" placeholder="Cuisinier, employée de bureau…"/></div>
+        <div class="form-field"><label class="form-label">Salaire annuel brut (CHF)</label><input class="form-input" id="col-salaire" type="number" step="0.01" value="${v('salaire')}" placeholder="72000"/></div>
+        <div class="form-field"><label class="form-label">Taux d'occupation (%)</label><input class="form-input" id="col-taux" type="number" min="0" max="100" value="${v('taux_activite')}" placeholder="100"/></div>
+        <div class="form-field"><label class="form-label">Date d'entrée</label><input class="form-input" id="col-entree" type="date" value="${v('date_entree')}"/></div>
+        <div class="form-field"><label class="form-label">Fonction</label><input class="form-input" id="col-fonction" maxlength="120" value="${v('fonction')}" placeholder="Cuisinier, employée de bureau…"/></div>
       </div>
       <div style="display:flex;gap:10px;margin-top:20px">
         <button class="btn-secondary" onclick="document.getElementById('modal-collaborateur').remove()">Annuler</button>
-        <button class="btn-save" onclick="saveCollaborateur('${clientId}')">✓ Enregistrer</button>
+        <button class="btn-save" onclick="saveCollaborateur('${clientId}'${colId ? `,'${colId}'` : ''})">✓ Enregistrer</button>
       </div>
     </div>`, { overflowY: false });
   setTimeout(() => initAdresseAutocomplete('col-adresse', ({ rue, npa, ville, canton }) => {
@@ -848,7 +853,7 @@ function showFormCollaborateur(clientId) {
   }), 0);
 }
 
-async function saveCollaborateur(clientId) {
+async function saveCollaborateur(clientId, colId) {
   const nom = document.getElementById('col-nom').value.trim();
   const prenom = document.getElementById('col-prenom').value.trim();
   if (!nom || !prenom) { showError('Nom et prénom obligatoires.'); return; }
@@ -867,9 +872,17 @@ async function saveCollaborateur(clientId) {
   };
   const btn = document.querySelector('#modal-collaborateur .btn-save');
   if (btn) { btn.textContent = 'Enregistrement...'; btn.disabled = true; }
-  const res = await dbPost('collaborateurs', body);
+  // `client_id` n'est pas renvoyé à la mise à jour : un collaborateur ne change pas d'employeur
+  // en passant par ce formulaire, et le renvoyer permettrait de le déplacer par accident.
+  const res = colId
+    ? await dbPatch('collaborateurs', colId, (({ client_id, ...reste }) => reste)(body))
+    : await dbPost('collaborateurs', body);
   if (res && res.error) { showError('Erreur: ' + errMsg(res)); if (btn) { btn.textContent = '✓ Enregistrer'; btn.disabled = false; } return; }
-  logAction('add_collaborateur_avs', 'collaborateurs', res && res[0] ? res[0].id : null, `${prenom} ${nom}`);
+  logAction(colId ? 'edit_collaborateur' : 'add_collaborateur_avs', 'collaborateurs',
+    colId || (res && res[0] ? res[0].id : null), `${prenom} ${nom}`);
+  // Le cache en mémoire alimente le formulaire d'édition : sans ce rafraîchissement, rouvrir
+  // « Éditer » juste après une correction ré-afficherait l'ancienne valeur.
+  allCollaborateurs = await dbGet('collaborateurs', 'select=*').catch(() => allCollaborateurs);
   document.getElementById('modal-collaborateur').remove();
   showClient(clientId);
 }

@@ -678,6 +678,12 @@ async function showClient(id) {
           <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Téléphone</th>
           <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Adresse privée</th>
           <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">N° AVS</th>
+          <!-- 24.09.2026 : les trois colonnes qui font les assurances de personnes étaient
+               saisissables mais invisibles ici. Un salaire qu'on ne voit pas est un salaire qu'on
+               ne corrige pas. -->
+          <th style="padding:8px 12px;text-align:right;border-bottom:1px solid var(--border)">Salaire</th>
+          <th style="padding:8px 12px;text-align:right;border-bottom:1px solid var(--border)">Taux</th>
+          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Entrée</th>
           <th style="padding:8px 12px;border-bottom:1px solid var(--border)"></th>
         </tr></thead>
         <tbody>${collaborateurs.map(col => `
@@ -688,7 +694,11 @@ async function showClient(id) {
             <td style="padding:10px 12px;color:var(--text-muted)">${col.mobile || '—'}</td>
             <td style="padding:10px 12px;color:var(--text-muted)">${col.adresse || '—'}</td>
             <td style="padding:10px 12px;color:var(--text-muted);font-family:monospace">${col.avs || '—'}</td>
-            <td style="padding:10px 12px;text-align:right">
+            <td style="padding:10px 12px;color:var(--text);text-align:right;white-space:nowrap">${col.salaire ? 'CHF ' + fmtCHF(col.salaire) : '—'}</td>
+            <td style="padding:10px 12px;color:var(--text-muted);text-align:right">${col.taux_activite ? col.taux_activite + ' %' : '—'}</td>
+            <td style="padding:10px 12px;color:var(--text-muted)">${fmtDate(col.date_entree)}</td>
+            <td style="padding:10px 12px;text-align:right;white-space:nowrap">
+              <button onclick="showFormCollaborateur('${c.id}','${col.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:4px 10px;font-size:11px;font-weight: 500;cursor:pointer;margin-right:6px">Éditer</button>
               <button onclick="deleteCollaborateur('${col.id}','${c.id}')" style="background:color-mix(in srgb, var(--c-danger) 10%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:6px;padding:4px 10px;font-size:11px;font-weight: 500;cursor:pointer">Supprimer</button>
             </td>
           </tr>`).join('')}

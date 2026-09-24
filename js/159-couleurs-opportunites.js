@@ -70,16 +70,42 @@ function copDecorer() {
 (function copBrancher() {
   const st = document.createElement('style');
   st.textContent = `
-    /* La bande est posée en ombre portée intérieure : elle n'ajoute aucune largeur, donc elle ne
-       décale ni les cartes du kanban ni les colonnes des tableaux. */
-    .cop-dort, .cop-echue, .cop-bientot, .cop-ajour { box-shadow: inset 4px 0 0 0 var(--cop-c); }
-    .cop-dort    { --cop-c: #b91c1c; }
-    .cop-echue   { --cop-c: #ef4444; }
-    .cop-bientot { --cop-c: #f59e0b; }
-    .cop-ajour   { --cop-c: color-mix(in srgb, #16a34a 55%, transparent); }
-    /* Sur une ligne de tableau, l'ombre intérieure ne porte pas : on borde la première cellule. */
+    /* 24.09.2026 — « Je ne vois pas de différence. Marque mieux, que l'opp elle-même prenne la
+       couleur de son état, mais comme un EFFET : on comprend que c'est temporaire. »
+       Une simple bande de 4 px se perdait dans la page. La carte entière est donc lavée de sa
+       couleur — mais en dégradé, fort à gauche et éteint avant la moitié. Un aplat aurait l'air
+       d'une propriété de l'affaire (comme une catégorie) ; un lavis qui s'efface a l'air d'un
+       état : ça passera quand la tâche sera faite.
+       On peint en `background-image` par-dessus le fond existant : le thème clair/sombre garde
+       sa couleur de carte, on ne fait que la teinter. */
+    .cop-dort, .cop-echue, .cop-bientot, .cop-ajour {
+      background-image: linear-gradient(95deg,
+        color-mix(in srgb, var(--cop-c) var(--cop-f, 20%), transparent) 0%,
+        color-mix(in srgb, var(--cop-c) calc(var(--cop-f, 20%) / 3), transparent) 38%,
+        transparent 62%);
+      box-shadow: inset 3px 0 0 0 var(--cop-c);
+      transition: background-image .25s ease;
+    }
+    .cop-dort    { --cop-c: #b91c1c; --cop-f: 26%; }
+    .cop-echue   { --cop-c: #ef4444; --cop-f: 24%; }
+    .cop-bientot { --cop-c: #f59e0b; --cop-f: 22%; }
+    .cop-ajour   { --cop-c: #16a34a; --cop-f: 14%; }
+    /* Ce qui presse respire — lentement, et seulement ce qui presse. Le vert et l'ambre ne bougent
+       pas : une page où tout clignote ne dit plus rien. */
+    .cop-dort, .cop-echue { animation: cop-respire 3.2s ease-in-out infinite; }
+    @keyframes cop-respire {
+      0%, 100% { --cop-f: 26%; }
+      50%      { --cop-f: 12%; }
+    }
+    @property --cop-f { syntax: '<percentage>'; inherits: true; initial-value: 20%; }
+    @media (prefers-reduced-motion: reduce) { .cop-dort, .cop-echue { animation: none; } }
+    /* Sur une ligne de tableau, le fond et l'ombre se posent cellule par cellule. */
+    tr.cop-dort, tr.cop-echue, tr.cop-bientot, tr.cop-ajour { background-image: none; box-shadow: none; }
+    tr.cop-dort > *, tr.cop-echue > *, tr.cop-bientot > *, tr.cop-ajour > * {
+      background-color: color-mix(in srgb, var(--cop-c) calc(var(--cop-f, 20%) / 2), transparent);
+    }
     tr.cop-dort > *:first-child, tr.cop-echue > *:first-child,
-    tr.cop-bientot > *:first-child, tr.cop-ajour > *:first-child { box-shadow: inset 4px 0 0 0 var(--cop-c); }
+    tr.cop-bientot > *:first-child, tr.cop-ajour > *:first-child { box-shadow: inset 3px 0 0 0 var(--cop-c); }
     .cop-legende { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: 0 0 10px;
       font-size: 11px; color: var(--text-muted); }
     .cop-leg-item { display: inline-flex; align-items: center; gap: 5px; }

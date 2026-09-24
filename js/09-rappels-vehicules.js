@@ -1843,16 +1843,41 @@ function calculerCommissionEstimee() {
   // estimation : mieux vaut zéro qu'un taux deviné.
   if (/groupe\s*mutuel|^gma?\b/i.test(normaliserCompagnie(compagnieChoisie))) {
     const G = TAUX_COMMISSION.groupe_mutuel;
-    const tauxGm = produitId === 'laa' ? G.laa
-      : produitId === 'laac' ? G.laac
-      : (produitId === 'perte_gain_maladie_lca' || produitId === 'ijm') ? G.ijm
-      : null;
-    if (tauxGm != null) {
-      const montant = Math.round(primeAnnuelle * tauxGm) / 100;
-      const nom = produitId === 'laa' ? 'LAA' : produitId === 'laac' ? 'complémentaire LAA (LAAC)' : 'indemnité journalière maladie';
+    // La durée du contrat détermine le taux (3 ou 5 ans). En l'absence de durée saisie on retient
+    // 3 ans : c'est le cas courant ET le taux le plus bas — une estimation trop basse se corrige,
+    // une estimation trop haute fait espérer un encaissement qui ne viendra pas.
+    const dureeSaisie = parseFloat(document.getElementById('ct-duree')?.value) || 0;
+    const duree = dureeSaisie >= 5 ? 5 : 3;
+    // « Gestion (portefeuille existant) » = renouvellement au sens de l'art. 4 : moitié du taux.
+    const estRenouvellement = (document.getElementById('ct-nature-commission')?.value || '') === 'gestion';
+
+    let taux = null, nom = null, base = primeAnnuelle, noteBase = '';
+    if (produitId === 'laa') { taux = G.laa[duree]; nom = `LAA sur ${duree} ans`; }
+    else if (produitId === 'laac') { taux = G.laac[duree]; nom = `complémentaire LAA (LAAC) sur ${duree} ans`; }
+    else if (produitId === 'perte_gain_maladie_lca' || produitId === 'ijm') {
+      // Le taux dépend du délai d'attente, pas de la durée (art. 1). Le formulaire ne porte pas
+      // ce délai : on retient le palier le plus bas plutôt que de supposer le plus favorable.
+      taux = G.ijm_par_delai[G.ijm_par_delai.length - 1].taux;
+      nom = 'indemnité journalière collective';
+      noteBase = ` — palier « 31 jours et plus » retenu faute de délai d'attente saisi ; 3–6 j = ${G.ijm_par_delai[1].taux}%, 7–14 j = ${G.ijm_par_delai[2].taux}%`;
+    } else if (produitId === 'lpp_entreprise') {
+      taux = G.lpp[3];
+      nom = 'prévoyance professionnelle sur 3 ans';
+      // Art. 3 : la base est la prime de RISQUE nette, jamais la prime totale (qui contient
+      // l'épargne et les frais de gestion). Même champ que pour Swiss Life.
+      const risque = parseFloat(document.getElementById('ct-prime-risque-frais')?.value) || 0;
+      if (risque > 0) { base = risque; noteBase = ' — sur la prime de risque nette'; }
+      else { noteBase = ' — ⚠️ calculé sur la prime TOTALE : renseigne la prime de risque nette, seule base contractuelle'; }
+    }
+    if (taux != null) {
+      const tauxApplique = estRenouvellement ? taux * G.renouvellement : taux;
+      const montant = Math.round(base * tauxApplique) / 100;
       return {
         montant,
-        detail: `Groupe Mutuel — ${nom} : ${tauxGm}% × CHF ${fmtCHF(primeAnnuelle)} = CHF ${fmtCHF(montant)}${G.provisoire ? ' — ⚠️ taux provisoire, à confirmer avec la convention entreprise' : ''}`,
+        detail: `Groupe Mutuel — ${nom} : ${tauxApplique}% × CHF ${fmtCHF(base)} = CHF ${fmtCHF(montant)}`
+          + (estRenouvellement ? ` (renouvellement : moitié du taux d'acquisition ${taux}%)` : '')
+          + noteBase
+          + ` · Tabelle Domaine entreprises ${G.edition}. Une pondération sectorielle peut réduire ce montant (art. 1 à 3).`,
       };
     }
   }

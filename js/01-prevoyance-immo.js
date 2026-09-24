@@ -400,17 +400,38 @@ const TAUX_COMMISSION = {
   gastrosocial: {
     lpp: 1.60,
   },
-  // Groupe Mutuel — branches ENTREPRISE. ⚠️ TAUX PROVISOIRES, communiqués de mémoire par Jonathan
-  // le 24.09.2026 en attendant la convention entreprise et ses annexes (demandées à Valérie Dubuis
-  // et Antoine Meyer, Groupe Mutuel — échanges des 18 et 22.09.2026). Le dossier
-  // « Conventions\Groupe Mutuel » ne contient à ce jour que la tabelle du domaine SANTÉ.
-  // À remplacer par les taux contractuels dès réception — et à vérifier : la tabelle santé montre
-  // que GM raisonne parfois en multiples de prime mensuelle plutôt qu'en pourcentage.
+  // Groupe Mutuel — « Tabelle de rémunération, Domaine entreprises », édition 01.06.2025.
+  // Document reçu de Jonathan le 24.09.2026 ; il REMPLACE les taux provisoires de mémoire
+  // (4 / 10 / 7 %), qui sous-estimaient la commission d'un facteur ~2,7.
+  //
+  // Trois principes communs aux trois branches :
+  //   · la base est la prime nette ANNUALISÉE de la PREMIÈRE année d'affiliation ;
+  //   · le taux dépend de la DURÉE du contrat (3 ou 5 ans), pas seulement de la branche ;
+  //   · un facteur de pondération sectoriel peut diviser la commission (art. 1, 2 et 3).
   groupe_mutuel: {
-    laa: 4.00,     // Assurance-accidents selon la LAA
-    laac: 10.00,   // Assurance complémentaire à la LAA
-    ijm: 7.00,     // Indemnité journalière maladie (perte de gain)
-    provisoire: true,
+    edition: '01.06.2025',
+    // Art. 1 — Indemnité journalière collective (BE/PC/PL), selon le délai d'attente en jours.
+    // Pour le produit PL, seule la prime long terme compte.
+    ijm_par_delai: [
+      { jusqua: 2, taux: 10 },
+      { jusqua: 6, taux: 20 },
+      { jusqua: 14, taux: 30 },
+      { jusqua: 30, taux: 20 },
+      { jusqua: Infinity, taux: 15 },
+    ],
+    // Art. 2 — Accidents collectifs, par durée de contrat.
+    laa: { 3: 11, 5: 18 },
+    laac: { 3: 25, 5: 40 },
+    // Art. 3 — Prévoyance professionnelle : sur la prime de RISQUE nette, pas la prime totale.
+    lpp: { 3: 24 },
+    // Art. 4 — Renouvellement signé : la moitié de la commission d'acquisition.
+    renouvellement: 0.50,
+    // Pondérations à appliquer à la main, faute d'information fiable dans le formulaire :
+    ponderation_secteur_ijm: 0.40,        // art. 1 : sport, arts, discothèques, parcs d'attractions…
+    ponderation_laa_ap_eleve: 0.40,       // art. 2 : contrats LAA dont le taux AP net ≥ 21.01 ‰
+    ponderation_lpp_classe6: 0.30,        // art. 3 : classe de risque 6
+    // Art. 7 — Plafond par couverture, pour les RENOUVELLEMENTS de contrats existants seulement.
+    plafond_renouvellement: 100000,
   },
   // Vaudoise Générale — Tabelle de commissions A1 non-vie, édition 01.11.2024
   // (Convention de collaboration de courtage signée le 09.09.2025 — entrée en vigueur 01.09.2025)

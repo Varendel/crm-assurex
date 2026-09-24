@@ -163,12 +163,11 @@ setLignes('AXA', [
   else { fail++; console.log(`FAIL  ${compagnie} → montant ${r.montant} inattendu (aucune table connue ne devrait produire un chiffre)`); }
 });
 
-// ═══ 4. GROUPE MUTUEL — branches entreprise, taux PROVISOIRES du 24.09.2026 ═══
+// ═══ 4. GROUPE MUTUEL — Tabelle de rémunération Domaine entreprises, édition 01.06.2025 ═══
 // Chiffres réels de la proposition GM n° 621247 (Katogan / Dorentina Ismaili, signée le
 // 23.09.2026) : LAA 928.80, LAAC 200.00, LPP 2'760.40, IJM 0.00 — total 3'889.20.
-// Ce test fige les trois taux communiqués par Jonathan en attendant la convention entreprise :
-// le jour où les vrais taux arrivent, il échouera et forcera à le mettre à jour, plutôt que de
-// laisser des chiffres provisoires passer pour contractuels.
+// Les taux viennent du document contractuel, pas de mémoire : LAA 11%/18%, LAAC 25%/40%,
+// LPP 24% sur la prime de RISQUE, IJM 10 à 30% selon le délai d'attente.
 // `ct-produit` porte le LIBELLÉ du catalogue, pas l'identifiant : getProduitSelectionne() fait
 // la correspondance. Passer l'identifiant renvoie null et le calcul retombe sur la répartition
 // par ligne — d'où des montants inattendus. (Constaté en écrivant ce test, 24.09.2026.)
@@ -185,20 +184,42 @@ function commissionGm(libelleProduit, libelleLigne, montant, attendu, label) {
   return r;
 }
 
-const gmLaa = commissionGm('LAA', 'Assurance-accidents selon la LAA', 928.80, 37.15,
-  'GM LAA 928.80 × 4% (Katogan n° 621247)');
-commissionGm('LAAC (complémentaire)', 'Assurance complémentaire à la LAA', 200.00, 20.00,
-  'GM LAAC 200.00 × 10% (Katogan n° 621247)');
-commissionGm('Perte de gain maladie LCA', 'Indemnité journalière maladie', 5000, 350.00,
-  'GM indemnité journalière 5000 × 7%');
+const gmLaa = commissionGm('LAA', 'Assurance-accidents selon la LAA', 928.80, 102.17,
+  'GM LAA 928.80 × 11% sur 3 ans (Katogan n° 621247)');
+commissionGm('LAAC (complémentaire)', 'Assurance complémentaire à la LAA', 200.00, 50.00,
+  'GM LAAC 200.00 × 25% sur 3 ans (Katogan n° 621247)');
 
-// Le caractère provisoire doit être ÉCRIT là où Jonathan le lit, pas seulement dans le code.
-if (/provisoire/i.test(gmLaa.detail || '')) { pass++; console.log('PASS  GM — le détail annonce que le taux est provisoire'); }
-else { fail++; console.log(`FAIL  GM — le détail ne dit pas que le taux est provisoire : "${gmLaa.detail}"`); }
+// Sur 5 ans, les taux changent — c'est la durée qui commande, pas la branche seule.
+reset();
+document.getElementById('ct-compagnie').value = 'Groupe Mutuel';
+document.getElementById('ct-produit').value = 'LAA';
+document.getElementById('ct-duree').value = '5';
+ajouterLignePrime('Assurance-accidents selon la LAA', 928.80);
+refreshCategoriesLignesPrime(); calculerPrimeTotaleLignes();
+assertClose(calculerCommissionEstimee().montant, 167.18, 'GM LAA 928.80 × 18% sur 5 ans');
+document.getElementById('ct-duree').value = '1';
 
-// Les branches GM sans taux connu ne doivent TOUJOURS rien produire.
-commissionGm('LPP collective', 'Prévoyance professionnelle LPP', 2760.40, 0,
-  'GM LPP → 0 (aucun taux connu, saisie manuelle)');
+// Art. 4 — un renouvellement vaut la moitié de la commission d'acquisition.
+reset();
+document.getElementById('ct-compagnie').value = 'Groupe Mutuel';
+document.getElementById('ct-produit').value = 'LAAC (complémentaire)';
+document.getElementById('ct-nature-commission').value = 'gestion';
+ajouterLignePrime('Assurance complémentaire à la LAA', 200.00);
+refreshCategoriesLignesPrime(); calculerPrimeTotaleLignes();
+assertClose(calculerCommissionEstimee().montant, 25.00, 'GM LAAC renouvellement = moitié de 25%');
+document.getElementById('ct-nature-commission').value = 'acquisition';
+
+// L'édition de la tabelle doit être citée : sans elle, impossible de savoir si un chiffre
+// d'il y a six mois suivait encore les mêmes règles.
+if (/01\.06\.2025/.test(gmLaa.detail || '')) { pass++; console.log('PASS  GM — le détail cite l’édition de la tabelle'); }
+else { fail++; console.log(`FAIL  GM — le détail ne cite pas l’édition : "${gmLaa.detail}"`); }
+
+// Art. 3 — la LPP se commissionne sur la prime de RISQUE nette. Sans elle, le CRM calcule sur la
+// prime totale mais DOIT le dire, sinon le chiffre passe pour contractuel.
+const gmLpp = commissionGm('LPP collective', 'Prévoyance professionnelle LPP', 2760.40, 662.50,
+  'GM LPP 2760.40 × 24% (prime totale, faute de prime de risque)');
+if (/prime de risque nette/i.test(gmLpp.detail || '')) { pass++; console.log('PASS  GM LPP — le détail réclame la prime de risque nette'); }
+else { fail++; console.log(`FAIL  GM LPP — le détail ne réclame pas la prime de risque : "${gmLpp.detail}"`); }
 
 console.log(`\n${pass} tests passés, ${fail} échoués.`);
 process.exit(fail > 0 ? 1 : 0);

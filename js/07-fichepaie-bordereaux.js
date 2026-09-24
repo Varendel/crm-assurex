@@ -1657,6 +1657,8 @@ async function viewNouvelleDemandeOffre() {
       <div class="form-grid">
         <div class="form-field"><label class="form-label">Chiffre d'affaires (CHF)</label><input class="form-input" id="do-ca" type="number"/></div>
         <div class="form-field"><label class="form-label">Nombre de collaborateurs</label><input class="form-input" id="do-nb-collab" type="number"/></div>
+        <div class="form-field"><label class="form-label">Salaires AVS — hommes <span style="color:var(--text-muted);font-weight:400">(sans accident)</span></label><input class="form-input" id="do-avs-h" type="number"/></div>
+        <div class="form-field"><label class="form-label">Salaires AVS — femmes <span style="color:var(--text-muted);font-weight:400">(sans accident)</span></label><input class="form-input" id="do-avs-f" type="number"/></div>
         <div class="form-field"><label class="form-label">Masse salariale AP — hommes</label><input class="form-input" id="do-ap-h" type="number"/></div>
         <div class="form-field"><label class="form-label">Masse salariale AP — femmes</label><input class="form-input" id="do-ap-f" type="number"/></div>
         <div class="form-field"><label class="form-label">Masse salariale ANP — hommes</label><input class="form-input" id="do-anp-h" type="number"/></div>
@@ -1929,7 +1931,9 @@ function prefillChampsDemandeOffre(existante) {
   setVal('do-contact', i.contact); setVal('do-adresse', i.adresse); setVal('do-tel', i.tel); setVal('do-email', i.email);
   setVal('do-avs', i.avs); setVal('do-activite', i.activite); setVal('do-lieu-risque', i.lieu_risque);
   setVal('do-suva', i.suva); setVal('do-independant', i.independant);
-  setVal('do-ca', b.ca); setVal('do-nb-collab', b.nb_collab); setVal('do-ap-h', b.ap_h); setVal('do-ap-f', b.ap_f);
+  setVal('do-ca', b.ca); setVal('do-nb-collab', b.nb_collab);
+  setVal('do-avs-h', b.avs_h); setVal('do-avs-f', b.avs_f);
+  setVal('do-ap-h', b.ap_h); setVal('do-ap-f', b.ap_f);
   setVal('do-anp-h', b.anp_h); setVal('do-anp-f', b.anp_f); setVal('do-exc-avs-h', b.exc_avs_h); setVal('do-exc-avs-f', b.exc_avs_f);
   setVal('do-masse-chef', b.masse_chef);
   setChk('do-perte-gain', ap.perte_gain); setChk('do-pg-14j', ap.pg_14j); setChk('do-pg-30j', ap.pg_30j); setChk('do-pg-60j', ap.pg_60j);
@@ -2163,6 +2167,10 @@ async function genererEmailDemandeOffre() {
   // bug réel repéré par Jonathan le 10.08.2026 : l'email additionnait AP/ANP hommes/femmes en un
   // seul total, alors qu'il avait renseigné chaque case séparément et voulait les voir toutes.
   const detailMasseSalariale = [
+    // Sans accident à demander, il n'y a pas de ventilation AP/ANP : c'est la masse AVS brute,
+    // hommes / femmes, que la compagnie attend (ajouté le 24.09.2026).
+    ['Salaires AVS — hommes', val('do-avs-h')],
+    ['Salaires AVS — femmes', val('do-avs-f')],
     ['Masse salariale AP — hommes', val('do-ap-h')],
     ['Masse salariale AP — femmes', val('do-ap-f')],
     ['Masse salariale ANP — hommes', val('do-anp-h')],
@@ -2371,7 +2379,7 @@ function construireBodyDemandeOffre() {
 
   const donnees = {
     identite: { contact: val('do-contact'), adresse: val('do-adresse'), tel: val('do-tel'), email: val('do-email'), avs: val('do-avs'), activite: val('do-activite'), lieu_risque: val('do-lieu-risque'), suva: val('do-suva'), independant: val('do-independant') },
-    base_calcul: { ca: val('do-ca'), nb_collab: val('do-nb-collab'), ap_h: val('do-ap-h'), ap_f: val('do-ap-f'), anp_h: val('do-anp-h'), anp_f: val('do-anp-f'), exc_avs_h: val('do-exc-avs-h'), exc_avs_f: val('do-exc-avs-f'), masse_chef: val('do-masse-chef') },
+    base_calcul: { ca: val('do-ca'), nb_collab: val('do-nb-collab'), avs_h: val('do-avs-h'), avs_f: val('do-avs-f'), ap_h: val('do-ap-h'), ap_f: val('do-ap-f'), anp_h: val('do-anp-h'), anp_f: val('do-anp-f'), exc_avs_h: val('do-exc-avs-h'), exc_avs_f: val('do-exc-avs-f'), masse_chef: val('do-masse-chef') },
     assurances_personnes: { perte_gain: chk('do-perte-gain'), pg_14j: chk('do-pg-14j'), pg_30j: chk('do-pg-30j'), pg_60j: chk('do-pg-60j'), laa: chk('do-laa'), laaf: chk('do-laaf'), laac: chk('do-laac'), semi_privee: chk('do-semi-privee'), lpp: chk('do-lpp') },
     assurances_vie: { a3a: chk('do-3a'), a3a_indep: chk('do-3a-indep'), a3b: chk('do-3b'), risque_pure: chk('do-risque-pure'), versement_unique: chk('do-versement-unique'), budget_epargne: val('do-budget-epargne'), pa: val('do-pa') },
     assurances_choses: { inventaire: val('do-inventaire'), rc_commerce: chk('do-rc-commerce'), prejudice_fortune: chk('do-prejudice-fortune'), cyber: chk('do-cyber'), construction: chk('do-construction'), technique: chk('do-technique'), perte_exploit: chk('do-perte-exploit') },

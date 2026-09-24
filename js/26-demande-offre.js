@@ -134,7 +134,16 @@ async function viewDemandeOffreSimple() {
                   ${dxChamp('do-nb-collab', 'Nombre de collaborateurs', 'inputmode="numeric"')}
                 </div>
               </div>
-              <div class="dx-rub" data-dx="pgm laa lpp">
+              <!-- La ventilation AP / ANP / excédentaire n'a de sens que si on demande de l'accident :
+                   ce sont des notions LAA. Pour une perte de gain ou une LPP seules, la compagnie
+                   veut la masse salariale AVS tout court, ventilée hommes / femmes (24.09.2026). -->
+              <div class="dx-rub" data-dx="pgm lpp !laa">
+                <h4>💶 Masse salariale AVS <small>ventilée hommes / femmes</small></h4>
+                <div class="form-grid dx-grid-3">
+                  ${dxChamp('do-avs-h', 'Salaires AVS — hommes', 'inputmode="decimal"')}${dxChamp('do-avs-f', 'Salaires AVS — femmes', 'inputmode="decimal"')}<div></div>
+                </div>
+              </div>
+              <div class="dx-rub" data-dx="laa">
                 <h4>💶 Masse salariale AVS <small>max. 148'200 par personne en LAA · dès 8 h/sem. soumis ANP</small></h4>
                 <div class="form-grid dx-grid-3">
                   ${dxChamp('do-ap-h', 'AP — hommes', 'inputmode="decimal"')}${dxChamp('do-ap-f', 'AP — femmes', 'inputmode="decimal"')}${dxChamp('do-masse-chef', "Chef d'entreprise", 'inputmode="decimal"')}
@@ -320,8 +329,13 @@ function dxAppliquer(viderMasques) {
   const actives = window._dx.branches;
   document.querySelectorAll('.dx-tuile').forEach(t => { const on = actives.has(t.dataset.br); t.classList.toggle('actif', on); t.setAttribute('aria-pressed', on); });
   document.querySelectorAll('[data-dx]').forEach(el => {
-    const cles = el.dataset.dx.split(' ');
-    const visible = cles.some(k => k === 'e' ? window._dx.entreprise : actives.has(k));
+    // Une clé préfixée de « ! » exclut : `data-dx="pgm lpp !laa"` = visible pour la perte de gain
+    // ou la LPP, mais pas si l'accident est demandé (là c'est la ventilation AP/ANP qui s'applique).
+    const cles = el.dataset.dx.split(' ').filter(Boolean);
+    const positives = cles.filter(k => k[0] !== '!');
+    const negatives = cles.filter(k => k[0] === '!').map(k => k.slice(1));
+    const actif = k => k === 'e' ? window._dx.entreprise : actives.has(k);
+    const visible = positives.some(actif) && !negatives.some(actif);
     const etaitVisible = !el.hidden;
     el.hidden = !visible;
     if (!visible && etaitVisible && viderMasques) {
@@ -398,7 +412,8 @@ function dxCorpsEmail() {
     i.lieu_risque ? `Lieu du risque : ${i.lieu_risque}` : null,
   ]).join('\n');
 
-  const masses = [['Masse salariale AP — hommes', b.ap_h], ['Masse salariale AP — femmes', b.ap_f], ['Masse salariale ANP — hommes', b.anp_h], ['Masse salariale ANP — femmes', b.anp_f],
+  const masses = [['Salaires AVS — hommes', b.avs_h], ['Salaires AVS — femmes', b.avs_f],
+    ['Masse salariale AP — hommes', b.ap_h], ['Masse salariale AP — femmes', b.ap_f], ['Masse salariale ANP — hommes', b.anp_h], ['Masse salariale ANP — femmes', b.anp_f],
     ['Salaire excédentaire AVS — hommes', b.exc_avs_h], ['Salaire excédentaire AVS — femmes', b.exc_avs_f], ["Masse salariale chef d'entreprise", b.masse_chef]].filter(([, v]) => dxNombre(v) > 0);
   const taille = liste([
     b.ca ? `Chiffre d'affaires : ${dxCHF(b.ca)}` : null,

@@ -103,13 +103,57 @@ function initAdresseAutocomplete(inputId, onSelect) {
   input.addEventListener('blur', () => setTimeout(_closeAddrDropdown, 200));
 }
 
+// ── ADRESSES FRANÇAISES (24.09.2026) ───────────────────────────────────────────────────────────
+// « Est-ce que ça existe et facilement connectable, une recherche d'adresse française ? » Oui : la
+// Base Adresse Nationale, publiée par l'État français. Sans clé, sans compte, CORS ouvert, licence
+// ouverte — exactement les mêmes conditions que geo.admin.ch pour la Suisse. Les deux sources sont
+// donc interrogées EN PARALLÈLE sur le même champ : on ne demande pas à qui saisit de choisir le
+// pays d'abord, l'adresse se reconnaît d'elle-même.
+//
+// Testé le 24.09.2026 contre les deux points d'entrée. `api-adresse.data.gouv.fr` est l'historique ;
+// `data.geopf.fr` est celui de la Géoplateforme de l'IGN, qui lui succède. Les deux répondent, et
+// le second sert de repli — le jour où le premier s'arrête, rien ne casse.
+const BAN_POINTS = [
+  'https://api-adresse.data.gouv.fr/search/',
+  'https://data.geopf.fr/geocodage/search',
+];
+
+async function _fetchAdressesFr(q) {
+  for (const base of BAN_POINTS) {
+    try {
+      const r = await fetch(`${base}?q=${encodeURIComponent(q)}&limit=5&autocomplete=1`);
+      if (!r.ok) continue;
+      const d = await r.json();
+      const traits = (d && d.features) || [];
+      if (!traits.length) return [];
+      // On rend le MÊME objet que le suisse pour que la liste et la sélection ne sachent pas d'où
+      // ça vient : rue, npa, ville. Le canton n'a pas d'équivalent — on met le département, qui
+      // joue le même rôle d'orientation à l'écran.
+      return traits.filter(t => t.properties && t.properties.label).map(t => {
+        const p = t.properties;
+        const rue = [p.housenumber, p.street].filter(Boolean).join(' ') || p.name || '';
+        return {
+          _fr: true,
+          label: p.label,
+          sous: p.context || '',
+          parsed: { rue, npa: p.postcode || '', ville: p.city || '', canton: '', pays: 'France' },
+        };
+      });
+    } catch (e) { /* point suivant */ }
+  }
+  return [];
+}
+
 async function _fetchAddrSuggestions(q, input, onSelect) {
   try {
-    const url = `https://api3.geo.admin.ch/rest/services/api/SearchServer?searchText=${encodeURIComponent(q)}&type=locations&origins=address&limit=8&lang=fr`;
-    const r = await fetch(url);
-    if (!r.ok) return;
-    const data = await r.json();
-    _showAddrDropdown(data.results || [], input, onSelect);
+    const urlCh = `https://api3.geo.admin.ch/rest/services/api/SearchServer?searchText=${encodeURIComponent(q)}&type=locations&origins=address&limit=8&lang=fr`;
+    // Les deux pays en même temps, et aucune ne doit pouvoir faire tomber l'autre : une source
+    // indisponible rend une liste vide, elle n'annule pas la recherche.
+    const [ch, fr] = await Promise.all([
+      fetch(urlCh).then(r => (r.ok ? r.json() : null)).then(d => (d && d.results) || []).catch(() => []),
+      _fetchAdressesFr(q),
+    ]);
+    _showAddrDropdown([...ch, ...fr], input, onSelect);
   } catch(e) { console.error('Addr autocomplete error', e); }
 }
 
@@ -121,13 +165,15 @@ function _showAddrDropdown(results, input, onSelect) {
   dd.id = 'addr-autocomplete-dd';
   dd.style.cssText = `position:fixed;top:${rect.bottom + 2}px;left:${rect.left}px;width:${Math.max(rect.width, 320)}px;background:var(--surface);border:1px solid var(--border);border-radius:10px;z-index:99999;overflow:hidden;box-shadow:0 8px 24px rgba(0,0,0,0.5);max-height:260px;overflow-y:auto`;
   results.forEach(res => {
+    // Deux origines, une seule liste : le suisse arrive en `attrs`, le français déjà mis en forme.
     const attrs = res.attrs || {};
-    const parsed = _parseGeoDetail(attrs.detail);
-    const label = attrs.label ? attrs.label.replace(/<[^>]+>/g, '') : '';
+    const parsed = res._fr ? res.parsed : _parseGeoDetail(attrs.detail);
+    const label = res._fr ? res.label : (attrs.label ? attrs.label.replace(/<[^>]+>/g, '') : '');
     if (!label) return;
+    const sous = res._fr ? `🇫🇷 ${res.sous}` : (parsed.canton ? `Canton ${parsed.canton}` : '');
     const item = document.createElement('div');
     item.style.cssText = 'padding:10px 14px;cursor:pointer;font-size:13px;color:var(--text);border-bottom:1px solid var(--border);line-height:1.4;transition:background 0.1s';
-    item.innerHTML = `<div style="font-weight: 600">${label}</div>${parsed.canton ? `<div style="font-size:11px;color:var(--text-muted)">Canton ${parsed.canton}</div>` : ''}`;
+    item.innerHTML = `<div style="font-weight: 600">${label}</div>${sous ? `<div style="font-size:11px;color:var(--text-muted)">${sous}</div>` : ''}`;
     item.addEventListener('mousedown', () => { onSelect(parsed); _closeAddrDropdown(); });
     item.addEventListener('mouseover', () => item.style.background = 'var(--surface-hover)');
     item.addEventListener('mouseout', () => item.style.background = 'transparent');

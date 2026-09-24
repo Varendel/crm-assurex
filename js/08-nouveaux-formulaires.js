@@ -860,6 +860,10 @@ async function saveCollaborateur(clientId) {
     mobile: document.getElementById('col-tel').value.trim() || null,
     adresse: document.getElementById('col-adresse').value.trim() || null,
     avs: document.getElementById('col-avs').value.trim() || null,
+    salaire: parseFloat(document.getElementById('col-salaire')?.value) || null,
+    taux_activite: parseInt(document.getElementById('col-taux')?.value, 10) || null,
+    date_entree: document.getElementById('col-entree')?.value || null,
+    fonction: document.getElementById('col-fonction')?.value.trim() || null,
   };
   const btn = document.querySelector('#modal-collaborateur .btn-save');
   if (btn) { btn.textContent = 'Enregistrement...'; btn.disabled = true; }

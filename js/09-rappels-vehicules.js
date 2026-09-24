@@ -538,7 +538,16 @@ function viewNouveauContrat() {
       ${oppFileAttenteProduits.length ? `<div style="margin-top:6px;color:var(--accent)">📋 ${oppFileAttenteProduits.length} autre(s) contrat(s) à créer ensuite pour cette même opportunité, une fois celui-ci enregistré.</div>` : ''}
       ${!opp.client_id && opp.prospect_nom ? `<div style="margin-top:8px;color:var(--c-alerte-texte)">⚠ "<strong>${opp.prospect_nom}</strong>" n'a pas encore de fiche client — sélectionne un client existant ci-dessous, ou <a href="#" onclick="navigate('nouveau-client'); return false;" style="color:var(--c-alerte-texte);text-decoration:underline">crée sa fiche maintenant</a> puis reviens enregistrer ce contrat.</div>` : ''}
     </div>` : ''}
-    ${sectionCard('Informations contrat', '#4ade80', `<div class="form-grid">
+    <!-- ── Quatre sections au lieu d'une grille de trente champs (24.09.2026) ──────────────────
+         « Refais cette vue, élimine les soucis remontés et les vestiges. » Tout était empilé dans
+         un seul bloc « Informations contrat », dans l'ordre où les champs avaient été ajoutés au
+         fil des mois : le n° de police entre les modules et les primes, les quatre réglages de
+         commission éparpillés du début à la fin, les champs conditionnels (durée, prime risque,
+         FP Swiss Life) loin de ce qu'ils modifient. Rien n'est supprimé ici — les identifiants
+         sont les mêmes, donc tout le code qui les lit continue de fonctionner. C'est l'ordre et
+         le regroupement qui changent : on suit maintenant la police qu'on a sous les yeux —
+         de quoi s'agit-il, combien ça coûte, quand ça court, ce que ça rapporte. -->
+    ${sectionCard('1 · Le contrat', '#4ade80', `<div class="form-grid">
       ${!contratClientId ? `<div class="form-field" style="grid-column:span 2"><label class="form-label">Client *</label><select class="form-select" id="ct-client" onchange="syncSegmentFromClient()"><option value="">— Sélectionner un client —</option>${clientOptions}</select></div>` : ''}
       <div class="form-field"><label class="form-label">Type de client *</label><select class="form-select" id="ct-segment" onchange="updateCategorieOptions()">
         <option value="prive">Privé</option>
@@ -547,23 +556,23 @@ function viewNouveauContrat() {
       <div class="form-field"><label class="form-label">Compagnie *</label><input class="form-input" id="ct-compagnie" value="${opp && opp.compagnie ? opp.compagnie : ''}" placeholder="Swiss Life, AXA, Helsana..." list="compagnies-suggestions" autocomplete="off" oninput="refreshCategoriesLignesPrime(); updateCommissionPreview(); refreshLcaLignesOptions()" onchange="appliquerRestrictionCategorieCompagnie()"/><datalist id="compagnies-suggestions">${getCompagniesConnues(getProduitSelectionne() ? getProduitSelectionne().id : null).map(c => `<option value="${c}">`).join('')}</datalist></div>
       <div class="form-field"><label class="form-label">Catégorie *</label><select class="form-select" id="ct-categorie" onchange="updateProduitOptions()"></select></div>
       <div class="form-field"><label class="form-label">Produit *</label><select class="form-select" id="ct-produit" onchange="updateModulesOptions(); updateCommissionPreview()"><option value="">— Sélectionner —</option></select></div>
+      <div class="form-field"><label class="form-label">N° de police</label><input class="form-input" id="ct-police" placeholder="Optionnel"/></div>
       <div class="form-field" style="grid-column:span 2" id="ct-modules-field"><label class="form-label">Modules complémentaires</label><div id="ct-modules-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div><div style="font-size:10px;color:var(--text-muted);margin-top:4px" id="ct-modules-hint"></div>
         <div id="ct-modules-custom-list" style="margin-top:8px"></div>
         <button type="button" onclick="ajouterModuleComplementaire()" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:7px;padding:6px 12px;font-size:11.5px;font-weight: 500;cursor:pointer;margin-top:6px">+ Ajouter un module complémentaire</button>
         <div style="font-size:10px;color:var(--text-muted);margin-top:4px">Options <strong>sans prime propre</strong>, à lister pour mémoire (ex: « Assurances complémentaires et services » chez AXA). Dès qu'une option a son propre montant, elle va dans les <strong>lignes de prime</strong> ci-dessous — c'est là que le total se calcule.</div>
       </div>
-      <!-- 24.09.2026 : trois listes d'ajouts se disputaient l'écran — modules, produits combinés,
-           lignes de prime — et une note expliquait laquelle choisir. Elles restent trois parce
-           qu'elles ne font pas la même chose (un module est un libellé, un produit combiné devient
-           un CONTRAT à part, une ligne de prime porte un montant), mais l'écran le dit maintenant
-           au lieu de le faire deviner. -->
-      <div class="form-field" style="grid-column:span 2" id="ct-combinables-field"><label class="form-label">Produits souvent combinés <span style="font-weight:400;color:var(--text-muted);font-size:10px">(chacun deviendra son propre contrat, avec sa prime)</span></label><div id="ct-combinables-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div></div>
       <div class="form-field" style="grid-column:span 2;display:none" id="ct-plaques-field">
         <label class="form-label" id="ct-plaques-label">Plaques d'immatriculation de la flotte</label>
         <div id="ct-plaques-list" style="display:flex;flex-direction:column;gap:6px;margin-top:6px"></div>
         <button type="button" class="btn-secondary" id="ct-plaques-add-btn" style="margin-top:8px;font-size:12px;padding:6px 14px" onclick="ajouterPlaqueFlotte()">+ Ajouter une plaque</button>
       </div>
-      <div class="form-field"><label class="form-label">N° de police</label><input class="form-input" id="ct-police" placeholder="Optionnel"/></div>
+    </div>`)}
+
+    ${sectionCard('2 · Les primes', '#38bdf8', `<div class="form-grid">
+      <!-- Les produits combinés sont ici et plus dans « Le contrat » : chacun porte une prime et
+           deviendra son propre contrat. Leur place est auprès des montants, pas de l'identité. -->
+      <div class="form-field" style="grid-column:span 2" id="ct-combinables-field"><label class="form-label">Produits souvent combinés <span style="font-weight:400;color:var(--text-muted);font-size:10px">(chacun deviendra son propre contrat, avec sa prime)</span></label><div id="ct-combinables-list" style="display:flex;flex-wrap:wrap;gap:8px 18px;margin-top:6px"></div></div>
       <div class="form-field" style="grid-column:span 2" id="ct-prime-lignes-field">
         <label class="form-label"><span id="ct-prime-lignes-label-text">Lignes de prime *</span> <span id="ct-prime-lignes-hint" style="font-weight:400;color:var(--text-muted);font-size:10px">(reporte chaque ligne de la police — ex: Responsabilité civile privée, Inventaire du ménage, Assurances complémentaires et services, Taxes légales)</span></label>
         <div id="ct-prime-lignes-list" style="display:flex;flex-direction:column;gap:6px;margin-top:6px"></div>
@@ -574,14 +583,6 @@ function viewNouveauContrat() {
         </div>
         <div id="ct-prime-taxes-note" style="font-size:10px;color:var(--text-muted);margin-top:3px;text-align:right"></div>
         <input type="hidden" id="ct-prime-mensuelle" value=""/>
-      </div>
-      <div class="form-field" id="ct-produit-swisslife-lpp-field" style="display:none">
-        <label class="form-label">Produit Swiss Life exact — détermine le facteur produit (FP)</label>
-        <select class="form-select" id="ct-produit-swisslife-lpp" onchange="updateCommissionPreview()">
-          <option value="">— Sélectionner —</option>
-          ${Object.keys(SWISS_LIFE_LPP_FP).map(nom => `<option value="${nom}">${nom} (FP ${SWISS_LIFE_LPP_FP[nom].toFixed(2)})</option>`).join('')}
-        </select>
-        <div style="font-size:10px;color:var(--text-muted);margin-top:3px">Annexe A à la convention d'indemnisation Prévoyance professionnelle (PP), valable dès 01.01.2024 — le FP varie selon le produit exact, jamais 1.20 partout.</div>
       </div>
       <div class="form-field" id="ct-prime-risque-frais-field" style="display:none">
         <label class="form-label">Dont prime risque + frais (CHF/an) — base de calcul COG</label>
@@ -595,19 +596,41 @@ function viewNouveauContrat() {
         <option value="1">Annuelle</option>
       </select></div>
       <div class="form-field" id="ct-duree-field" style="display:none"><label class="form-label">Durée du contrat (années)</label><input class="form-input" id="ct-duree" type="number" placeholder="10" value="1" oninput="this.dataset.manuel='1';updateCommissionPreview()"/><div style="font-size:10px;color:var(--text-muted);margin-top:3px">Calculée automatiquement depuis les dates d'entrée en vigueur et d'échéance — modifiable manuellement.</div></div>
-      <!-- 24.09.2026 : ce champ écrasait SILENCIEUSEMENT tout le calcul dès qu'il était rempli, et
-           il était visible en permanence, à hauteur d'œil, entre deux champs ordinaires. Replié :
-           il reste à un clic pour le dépannage, mais on ne le remplit plus par inadvertance. -->
-      <div class="form-field" id="ct-manuel-field" style="grid-column:span 2">
-        <details>
-          <summary style="cursor:pointer;font-size:12px;color:var(--text-muted)">Forcer le montant de la commission</summary>
-          <input class="form-input" id="ct-manuel" type="number" placeholder="0 = laisser le calcul automatique" oninput="updateCommissionPreview()" style="margin-top:8px"/>
-          <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Remplace entièrement le calcul automatique tant qu'il est rempli, quel que soit le produit.</div>
-        </details>
-      </div>
+    </div>`)}
+
+    ${sectionCard('3 · Dates et statut', '#a78bfa', `<div class="form-grid">
       <div class="form-field"><label class="form-label">Date d'entrée en vigueur</label><input class="form-input" id="ct-date" type="date" onchange="updateCommissionPreview()"/></div>
       <div class="form-field"><label class="form-label">Date de signature</label><input class="form-input" id="ct-date-signature" type="date"/></div>
       <div class="form-field"><label class="form-label">Date d'échéance</label><input class="form-input" id="ct-echeance" type="date" onchange="updateCommissionPreview()"/></div>
+      <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="ct-statut"><option value="actif">Actif</option><option value="en_cours">En cours de signature</option><option value="renouveler">À renouveler (échéance passée)</option><option value="annulé">Annulé (réserve refusée / non abouti)</option></select></div>
+      <div class="form-field" style="grid-column:span 2"><label class="form-label">Préavis de résiliation</label><select class="form-select" id="ct-preavis">
+        <option value="">Automatique — 3 mois LCA, 6 mois LPP, 1 mois LAMal</option>
+        <option value="1">1 mois</option><option value="2">2 mois</option><option value="3">3 mois</option><option value="6">6 mois</option><option value="12">12 mois</option>
+      </select><div style="font-size:10px;color:var(--text-muted);margin-top:3px">Sert à calculer la date limite de résiliation dans les renouvellements et l'espace client.</div></div>
+    </div>`)}
+
+    ${sectionCard('4 · Rémunération', '#f59e0b', `<div class="form-grid">
+      <!-- Les quatre réglages de commission étaient dispersés du haut au bas de l'ancien bloc
+           unique : « commissionné ? » tout en bas, « montant manuel » au milieu, le FP Swiss Life
+           coincé entre deux champs de prime. Ils décident tous du même nombre : ils sont ensemble. -->
+      <div class="form-field"><label class="form-label">Commissionné ?</label><select class="form-select" id="ct-commissionne" onchange="document.getElementById('ct-rappel-note').style.display = this.value==='non' ? '' : 'none'"><option value="oui">Oui</option><option value="non">Non (pas de convention de collaboration)</option></select>
+        <div id="ct-rappel-note" style="display:none;font-size:10.5px;color:var(--text-muted);margin-top:4px">ℹ️ Pas de commission créée. Un rappel sera généré 6 mois avant la date d'échéance pour proposer un transfert vers une compagnie partenaire.</div>
+      </div>
+      <div class="form-field"><label class="form-label">Nature de la commission</label><select class="form-select" id="ct-nature-commission" onchange="updateCommissionPreview()"><option value="acquisition">Acquisition (nouvelle affaire)</option><option value="gestion">Gestion (portefeuille existant)</option></select></div>
+      <div class="form-field" id="ct-produit-swisslife-lpp-field" style="display:none">
+        <label class="form-label">Produit Swiss Life exact — détermine le facteur produit (FP)</label>
+        <select class="form-select" id="ct-produit-swisslife-lpp" onchange="updateCommissionPreview()">
+          <option value="">— Sélectionner —</option>
+          ${Object.keys(SWISS_LIFE_LPP_FP).map(nom => `<option value="${nom}">${nom} (FP ${SWISS_LIFE_LPP_FP[nom].toFixed(2)})</option>`).join('')}
+        </select>
+        <div style="font-size:10px;color:var(--text-muted);margin-top:3px">Annexe A à la convention d'indemnisation Prévoyance professionnelle (PP), valable dès 01.01.2024 — le FP varie selon le produit exact, jamais 1.20 partout.</div>
+      </div>
+      <!-- Vie / 3a (19.09.2026) : en plus de l'acquisition, certaines compagnies (Swiss Life : 1 %) versent une
+           commission sur chaque paiement d'épargne du client — créée comme commission de gestion annuelle
+           répartie selon la périodicité (un versement par paiement : chaque décompte s'y additionne). -->
+      <div class="form-field"><label class="form-label" for="ct-comm-paiement">Commission de paiement sur l'épargne (%)</label>
+        <input class="form-input" id="ct-comm-paiement" inputmode="decimal" placeholder="ex. 1 — vie / 3a uniquement"/>
+        <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Vie / 3a : % versé par la compagnie sur chaque prime d'épargne payée (Swiss Life : 1 %). Laisse vide si aucune.</div></div>
       <div class="form-field"><label class="form-label">Agent / Apporteur</label><select class="form-select" id="ct-apporteur">
         <option value="">— Aucun / pas de partage —</option>
         ${allAgents.map(a => `<option value="${a.id}" ${contratClientId && allClients.find(c=>c.id===contratClientId)?.apporteur_id===a.id ? 'selected' : ''}>${a.prenom} ${a.nom}${a.role==='signataire'?' (moi-même)':''}</option>`).join('')}
@@ -616,21 +639,16 @@ function viewNouveauContrat() {
         <option value="">— Aucun —</option>
         ${allAgents.filter(a => a.role !== 'signataire').map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('')}
       </select></div>
-      <div class="form-field"><label class="form-label">Statut</label><select class="form-select" id="ct-statut"><option value="actif">Actif</option><option value="en_cours">En cours de signature</option><option value="renouveler">À renouveler (échéance passée)</option><option value="annulé">Annulé (réserve refusée / non abouti)</option></select></div>
-      <div class="form-field"><label class="form-label">Préavis de résiliation</label><select class="form-select" id="ct-preavis">
-        <option value="">Automatique — 3 mois LCA, 6 mois LPP, 1 mois LAMal</option>
-        <option value="1">1 mois</option><option value="2">2 mois</option><option value="3">3 mois</option><option value="6">6 mois</option><option value="12">12 mois</option>
-      </select><div style="font-size:10px;color:var(--text-muted);margin-top:3px">Sert à calculer la date limite de résiliation dans les renouvellements et l'espace client.</div></div>
-      <div class="form-field"><label class="form-label">Commissionné ?</label><select class="form-select" id="ct-commissionne" onchange="document.getElementById('ct-rappel-note').style.display = this.value==='non' ? '' : 'none'"><option value="oui">Oui</option><option value="non">Non (pas de convention de collaboration)</option></select>
-        <div id="ct-rappel-note" style="display:none;font-size:10.5px;color:var(--text-muted);margin-top:4px">ℹ️ Pas de commission créée. Un rappel sera généré 6 mois avant la date d'échéance pour proposer un transfert vers une compagnie partenaire.</div>
+      <!-- Ce champ écrasait SILENCIEUSEMENT tout le calcul dès qu'il était rempli, et restait
+           visible en permanence entre deux champs ordinaires. Replié : à un clic pour le
+           dépannage, mais on ne le remplit plus par inadvertance. -->
+      <div class="form-field" id="ct-manuel-field" style="grid-column:span 2">
+        <details>
+          <summary style="cursor:pointer;font-size:12px;color:var(--text-muted)">Forcer le montant de la commission</summary>
+          <input class="form-input" id="ct-manuel" type="number" placeholder="0 = laisser le calcul automatique" oninput="updateCommissionPreview()" style="margin-top:8px"/>
+          <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Remplace entièrement le calcul automatique tant qu'il est rempli, quel que soit le produit.</div>
+        </details>
       </div>
-      <div class="form-field"><label class="form-label">Nature de la commission</label><select class="form-select" id="ct-nature-commission" onchange="updateCommissionPreview()"><option value="acquisition">Acquisition (nouvelle affaire)</option><option value="gestion">Gestion (portefeuille existant)</option></select></div>
-      <!-- Vie / 3a (19.09.2026) : en plus de l'acquisition, certaines compagnies (Swiss Life : 1 %) versent une
-           commission sur chaque paiement d'épargne du client — créée comme commission de gestion annuelle
-           répartie selon la périodicité (un versement par paiement : chaque décompte s'y additionne). -->
-      <div class="form-field"><label class="form-label" for="ct-comm-paiement">Commission de paiement sur l'épargne (%)</label>
-        <input class="form-input" id="ct-comm-paiement" inputmode="decimal" placeholder="ex. 1 — vie / 3a uniquement"/>
-        <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Vie / 3a : % versé par la compagnie sur chaque prime d'épargne payée (Swiss Life : 1 %). Laisse vide si aucune.</div></div>
     </div>`)}
     <div id="commission-preview" style="background:var(--accent-dim);border:1px solid var(--accent-border);border-radius:10px;padding:14px 18px;margin-top:14px">
       <div style="font-size:11px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;margin-bottom:4px" id="commission-preview-label">Commission d'acquisition estimée</div>

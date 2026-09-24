@@ -1963,11 +1963,16 @@ function prefillChampsDemandeOffre(existante) {
     const rows = document.querySelectorAll('.do-collab-row');
     const row = rows[rows.length - 1];
     if (!row) return;
-    if (row.querySelector('.do-collab-nom')) row.querySelector('.do-collab-nom').value = c.nom || '';
-    if (row.querySelector('.do-collab-prenom')) row.querySelector('.do-collab-prenom').value = c.prenom || '';
-    if (row.querySelector('.do-collab-naissance')) row.querySelector('.do-collab-naissance').value = c.date_naissance || '';
-    if (row.querySelector('.do-collab-adresse')) row.querySelector('.do-collab-adresse').value = c.adresse || '';
-    if (row.querySelector('.do-collab-avs')) row.querySelector('.do-collab-avs').value = c.avs || '';
+    const pose = (sel, v) => { const el = row.querySelector(sel); if (el) el.value = v || ''; };
+    pose('.do-collab-nom', c.nom);
+    pose('.do-collab-prenom', c.prenom);
+    pose('.do-collab-sexe', c.sexe);
+    pose('.do-collab-naissance', c.date_naissance);
+    pose('.do-collab-adresse', c.adresse);
+    pose('.do-collab-avs', c.avs);
+    pose('.do-collab-fonction', c.fonction);
+    pose('.do-collab-taux', c.taux_activite);
+    pose('.do-collab-entree', c.date_entree);
     const salaireEl = row.querySelector('.do-collab-salaire');
     if (salaireEl) { salaireEl.value = c.salaire || ''; verifierPlafondLppCollaborateur(salaireEl); }
   });
@@ -2052,9 +2057,13 @@ function reprendreCollaborateursChoisis() {
     const set = (sel, val) => { const el = row.querySelector(sel); if (el && val != null && val !== '') el.value = val; };
     set('.do-collab-nom', k.nom);
     set('.do-collab-prenom', k.prenom);
+    set('.do-collab-sexe', k.sexe);
     set('.do-collab-naissance', k.date_naissance);
-    set('.do-collab-adresse', k.adresse);
     set('.do-collab-avs', k.avs);
+    set('.do-collab-adresse', k.adresse);
+    set('.do-collab-fonction', k.fonction);
+    set('.do-collab-taux', k.taux_activite);
+    set('.do-collab-entree', k.date_entree);
     set('.do-collab-salaire', k.salaire);
     // Le contrôle du plafond LPP doit se déclencher aussi sur une reprise, pas seulement à la
     // frappe : un salaire au-dessus de 90'720 repris en silence fausserait l'offre.
@@ -2074,15 +2083,28 @@ function ajouterCollaborateurDemandeOffre() {
   wrapper.className = 'do-collab-wrapper';
   const row = document.createElement('div');
   row.className = 'do-collab-row';
-  row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr 130px 1.6fr 120px 110px 28px;gap:8px;align-items:center';
+  // 24.09.2026 : « toute la ligne collaborateur doit être reprise, adresse privée incluse ».
+  // La ligne porte donc l'intégralité de ce que la fiche du collaborateur contient d'utile à une
+  // offre LPP — sexe et taux d'activité sont tarifants, la date d'entrée détermine l'affiliation.
+  // Deux rangs plutôt qu'un seul : à dix colonnes, l'adresse devenait illisible.
+  row.style.cssText = 'display:block';
   row.innerHTML = `
-    <input class="form-input do-collab-nom" placeholder="Nom"/>
-    <input class="form-input do-collab-prenom" placeholder="Prénom"/>
-    <input class="form-input do-collab-naissance" type="date" title="Date de naissance"/>
-    <input class="form-input do-collab-adresse" placeholder="Adresse privée"/>
-    <input class="form-input do-collab-avs" placeholder="N° AVS"/>
-    <input class="form-input do-collab-salaire" type="number" placeholder="Salaire AVS" oninput="verifierPlafondLppCollaborateur(this)"/>
-    <button type="button" onclick="this.closest('.do-collab-wrapper').remove()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px">✕</button>`;
+    <div style="display:grid;grid-template-columns:1fr 1fr 86px 138px 150px 28px;gap:8px;align-items:center">
+      <input class="form-input do-collab-nom" placeholder="Nom"/>
+      <input class="form-input do-collab-prenom" placeholder="Prénom"/>
+      <select class="form-select do-collab-sexe" title="Sexe"><option value="">Sexe</option><option value="H">H</option><option value="F">F</option></select>
+      <input class="form-input do-collab-naissance" type="date" title="Date de naissance"/>
+      <input class="form-input do-collab-avs" placeholder="N° AVS"/>
+      <button type="button" title="Retirer ce collaborateur" onclick="this.closest('.do-collab-wrapper').remove()" style="background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:16px">✕</button>
+    </div>
+    <div style="display:grid;grid-template-columns:2fr 1fr 92px 138px 122px 28px;gap:8px;align-items:center;margin-top:6px">
+      <input class="form-input do-collab-adresse" placeholder="Adresse privée"/>
+      <input class="form-input do-collab-fonction" placeholder="Fonction"/>
+      <input class="form-input do-collab-taux" type="number" min="0" max="100" placeholder="Taux %"/>
+      <input class="form-input do-collab-entree" type="date" title="Date d'entrée"/>
+      <input class="form-input do-collab-salaire" type="number" placeholder="Salaire AVS" oninput="verifierPlafondLppCollaborateur(this)"/>
+      <span></span>
+    </div>`;
   const warning = document.createElement('div');
   warning.className = 'do-collab-warning';
   warning.style.cssText = 'font-size:10.5px;color:#f59e0b;margin:3px 0 0 2px;display:none';
@@ -2371,9 +2393,13 @@ function construireBodyDemandeOffre() {
   const collaborateursLpp = [...document.querySelectorAll('.do-collab-row')].map(row => ({
     nom: row.querySelector('.do-collab-nom')?.value || '',
     prenom: row.querySelector('.do-collab-prenom')?.value || '',
+    sexe: row.querySelector('.do-collab-sexe')?.value || '',
     date_naissance: row.querySelector('.do-collab-naissance')?.value || '',
     adresse: row.querySelector('.do-collab-adresse')?.value || '',
     avs: row.querySelector('.do-collab-avs')?.value || '',
+    fonction: row.querySelector('.do-collab-fonction')?.value || '',
+    taux_activite: row.querySelector('.do-collab-taux')?.value || '',
+    date_entree: row.querySelector('.do-collab-entree')?.value || '',
     salaire: row.querySelector('.do-collab-salaire')?.value || '',
   })).filter(c => c.nom || c.prenom || c.avs);
 

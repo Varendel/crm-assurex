@@ -1866,7 +1866,14 @@ function prefillDemandeOffreDepuisDetailsClient(cp) {
   setVal('do-independant', d.independant);
 
   setVal('do-ca', cp.revenu);
-  setVal('do-nb-collab', cp.taux_activite);
+  // clients.taux_activite est à double usage : « Nb collaborateurs » sur une fiche entreprise,
+  // « Taux d'activité (%) » sur une fiche privée. Quand les deux se mélangent à la saisie, on
+  // se retrouve avec « 100 collaborateurs » pour une Sàrl qui en a un (cas Maison Solar Swiss,
+  // 24.09.2026). Le nombre de collaborateurs réellement fichés est un fait, pas une saisie :
+  // il prime dès qu'il y en a au moins un.
+  const nbFiches = (typeof allCollaborateurs !== 'undefined' ? allCollaborateurs : [])
+    .filter(k => k.client_id === cp.id).length;
+  setVal('do-nb-collab', nbFiches || cp.taux_activite);
   setVal('do-ap-h', d.ms_ap_h); setVal('do-ap-f', d.ms_ap_f);
   setVal('do-anp-h', d.ms_anp_h); setVal('do-anp-f', d.ms_anp_f);
   setVal('do-exc-avs-h', d.exc_h); setVal('do-exc-avs-f', d.exc_f);
@@ -1991,7 +1998,9 @@ function ouvrirReprisesCollaborateurs() {
   const clientId = document.getElementById('do-client')?.value || null;
   const liste = (typeof allCollaborateurs !== 'undefined' ? allCollaborateurs : [])
     .filter(k => clientId && k.client_id === clientId);
-  if (!clientId) { showError('Choisis d’abord le client : les collaborateurs sont fichés sur lui.'); return; }
+  // Depuis une opportunité sur un prospect pas encore fiché, il n'y a pas de client : le dire
+  // clairement plutôt que d'ouvrir une fenêtre vide.
+  if (!clientId) { showError('Aucun client rattaché — le personnel est fiché sur le client. Choisis-le en haut de la demande.'); return; }
   if (!liste.length) { showError('Aucun collaborateur fiché sur ce client — ajoute-les d’abord sur sa fiche.'); return; }
 
   const dejaLa = new Set(Array.from(document.querySelectorAll('.do-collab-row')).map(r =>
@@ -2049,6 +2058,9 @@ function reprendreCollaborateursChoisis() {
     if (sal && typeof verifierPlafondLppCollaborateur === 'function') verifierPlafondLppCollaborateur(sal);
   });
   document.getElementById('modal-reprise-collabs')?.remove();
+  // Une valeur posée par script ne déclenche pas « input » : sans cet appel, l'aperçu de l'e-mail
+  // de la vue simplifiée resterait sans les collaborateurs qu'on vient de reprendre.
+  if (typeof dxApercu === 'function') dxApercu();
   showError(`✓ ${ids.length} collaborateur${ids.length > 1 ? 's repris' : ' repris'}.`);
 }
 
@@ -2140,7 +2152,12 @@ async function genererEmailDemandeOffre() {
   if (val('do-inventaire')) besoins.push(`Inventaire (CHF ${fmtCHF(val('do-inventaire'))})`);
 
   const ca = val('do-ca') || (clientSel && clientSel.revenu ? String(clientSel.revenu) : '');
-  const nbCollab = val('do-nb-collab') || (clientSel && clientSel.taux_activite ? String(clientSel.taux_activite) : '');
+  // Même précaution qu'au préremplissage : le nombre de collaborateurs fichés prime sur
+  // clients.taux_activite, champ à double usage qui vaut parfois un taux d'occupation.
+  const nbFichesClient = clientSel ? (typeof allCollaborateurs !== 'undefined' ? allCollaborateurs : [])
+    .filter(k => k.client_id === clientSel.id).length : 0;
+  const nbCollab = val('do-nb-collab') || (nbFichesClient ? String(nbFichesClient)
+    : (clientSel && clientSel.taux_activite ? String(clientSel.taux_activite) : ''));
 
   // Détail de la masse salariale, ligne par ligne, EXACTEMENT comme saisi sur ce formulaire —
   // bug réel repéré par Jonathan le 10.08.2026 : l'email additionnait AP/ANP hommes/femmes en un

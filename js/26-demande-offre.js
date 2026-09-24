@@ -170,7 +170,13 @@ async function viewDemandeOffreSimple() {
                 <div class="dx-pastilles"><span class="dx-pastilles-label">Améliorations</span>${dxCk('do-amelio-rentes', 'Rentes')}${dxCk('do-amelio-epargne', 'Épargne')}${dxCk('do-amelio-tranches', 'Tranches')}${dxCk('do-amelio-rendement', 'Rendement')}</div>
                 <div class="form-label" style="margin-top:12px">Collaborateurs à assurer</div>
                 <div id="do-collabs-list" class="dx-lignes" oninput="dxApercu()"></div>
-                <button type="button" class="dx-ajouter" onclick="ajouterCollaborateurDemandeOffre()">+ Collaborateur</button>
+                <div style="display:flex;gap:8px;flex-wrap:wrap">
+                  <button type="button" class="dx-ajouter" onclick="ajouterCollaborateurDemandeOffre()">+ Collaborateur</button>
+                  <!-- 24.09.2026 : la reprise à choix multiples avait été posée sur l'ancien formulaire
+                       détaillé (js/07) alors que c'est CETTE vue qui sert au quotidien, y compris depuis
+                       une opportunité. Le personnel est déjà fiché sur le client : on coche, on reprend. -->
+                  <button type="button" class="dx-ajouter" onclick="ouvrirReprisesCollaborateurs()">👥 Reprendre le personnel fiché</button>
+                </div>
               </div>
               <div class="dx-rub" data-dx="rc">
                 <h4>🛡️ Responsabilité civile</h4>

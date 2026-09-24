@@ -1,3 +1,3 @@
-// Reecrit a chaque commit (voir js/150-version-en-ligne.js). Le numero est le rang du commit :
-// il ne recule jamais, et se lit sous Assurex dans le menu.
-const CRM_VERSION = { n: 762, date: '23.09 17:56' };
+// Réécrit automatiquement à chaque commit par .githooks/pre-commit — ne pas modifier à la main.
+// Le numéro est le rang du commit : il ne recule jamais, et se lit sous Assurex dans le menu.
+const CRM_VERSION = { n: 802, date: '24.09 19:01' };

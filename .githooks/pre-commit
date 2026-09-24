@@ -1,0 +1,39 @@
+#!/bin/sh
+# Réécrit version.js avant chaque commit (24.09.2026).
+#
+# js/150 annonçait « version.js, réécrit à chaque commit » — mais rien ne le réécrivait : le
+# fichier est resté figé sur v762 · 23.09 17:56, et l'étiquette sous Assurex ne bougeait plus.
+# Elle était donc pire qu'absente : elle affirmait une version fausse, alors que son rôle est
+# précisément de dire si la copie qui tourne est à jour.
+#
+# Le hook est versionné dans .githooks/ (et non dans .git/hooks, qui ne se clone pas) ; il est
+# activé par :  git config core.hooksPath .githooks
+#
+# Deux écritures, pas une :
+#   1. version.js — le rang du commit en cours (celui d'après HEAD) et l'horodatage ;
+#   2. son « ?v= » dans index.html — sans quoi le navigateur resservirait l'ancien version.js
+#      depuis son cache, et l'étiquette resterait périmée malgré la réécriture.
+
+set -e
+
+n=$(( $(git rev-list --count HEAD 2>/dev/null || echo 0) + 1 ))
+horodatage=$(date +"%d.%m %H:%M")
+cachet=$(date +%s)
+
+cat > version.js <<FIN
+// Réécrit automatiquement à chaque commit par .githooks/pre-commit — ne pas modifier à la main.
+// Le numéro est le rang du commit : il ne recule jamais, et se lit sous Assurex dans le menu.
+const CRM_VERSION = { n: ${n}, date: '${horodatage}' };
+FIN
+
+# Le compte de références doit être identique avant/après : une substitution trop large ici
+# casserait les 161 balises <script> d'un coup (déjà vu le 21.09 avec un remplacement PowerShell).
+avant=$(grep -c 'src="js/[^"]*?v=' index.html || true)
+sed -i "s#version\.js?v=[0-9]*#version.js?v=${cachet}#" index.html
+apres=$(grep -c 'src="js/[^"]*?v=' index.html || true)
+if [ "$avant" != "$apres" ]; then
+  echo "pre-commit : index.html abîmé (${avant} -> ${apres} références) — commit interrompu." >&2
+  exit 1
+fi
+
+git add version.js index.html

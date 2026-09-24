@@ -532,19 +532,26 @@ function renderCalendarWidget() {
 
   function dayCard(date, label) {
     const evs = eventsForDay(date);
+    // 24.09.2026 : « Que ça se mette en ligne et colonnes si trop nombreux. » Une journée à six
+    // rendez-vous empilait six blocs et poussait la carte suivante hors de l'écran. Au-delà de
+    // trois, les rendez-vous passent sur plusieurs colonnes — la carte reste de hauteur lisible
+    // et on voit la journée d'un coup d'œil au lieu de la dérouler.
+    const enColonnes = evs.length > 3;
     return `<div style="flex:1;min-width:0">
-      <div style="font-size:11px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">${label}</div>
+      <div style="font-size:11px;font-weight: 500;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:8px">${label}${enColonnes ? ` <span style="text-transform:none;letter-spacing:0;font-weight:400">· ${evs.length} rendez-vous</span>` : ''}</div>
+      <div style="${enColonnes ? 'display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;align-items:start' : ''}">
       ${evs.length ? evs.map(ev => {
         const start = dateEvenementGraph(ev.start.dateTime);
         const end = ev.end && ev.end.dateTime ? dateEvenementGraph(ev.end.dateTime) : null;
         const heure = ev.isAllDay ? 'Jour entier' : start.toLocaleTimeString('fr-CH', { hour:'2-digit', minute:'2-digit' }) + (end ? ' – ' + end.toLocaleTimeString('fr-CH',{hour:'2-digit',minute:'2-digit'}) : '');
-        return `<div style="display:flex;gap:8px;margin-bottom:8px;background:var(--surface-alt);border-left:3px solid var(--accent);border-radius:8px;padding:8px 10px">
+        return `<div title="${(ev.subject || 'Sans titre').replace(/"/g, '&quot;')} — ${heure}" style="display:flex;gap:8px;${enColonnes ? '' : 'margin-bottom:8px;'}background:var(--surface-alt);border-left:3px solid var(--accent);border-radius:8px;padding:8px 10px">
           <div style="flex:1;min-width:0">
-            <div style="font-size:12px;font-weight: 500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${ev.subject || 'Sans titre'}</div>
-            <div style="font-size:10.5px;color:var(--text-muted);margin-top:1px">${heure}${ev.location && ev.location.displayName ? ' · ' + ev.location.displayName : ''}</div>
+            <div style="font-size:12px;font-weight: 500;color:var(--text);${enColonnes ? 'display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden' : 'white-space:nowrap;overflow:hidden;text-overflow:ellipsis'}">${ev.subject || 'Sans titre'}</div>
+            <div style="font-size:10.5px;color:var(--text-muted);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${heure}${ev.location && ev.location.displayName ? ' · ' + ev.location.displayName : ''}</div>
           </div>
         </div>`;
       }).join('') : `<div style="font-size:11.5px;color:var(--text-muted);padding:8px 0">Aucun rendez-vous</div>`}
+      </div>
     </div>`;
   }
 

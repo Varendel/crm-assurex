@@ -400,6 +400,18 @@ const TAUX_COMMISSION = {
   gastrosocial: {
     lpp: 1.60,
   },
+  // Groupe Mutuel — branches ENTREPRISE. ⚠️ TAUX PROVISOIRES, communiqués de mémoire par Jonathan
+  // le 24.09.2026 en attendant la convention entreprise et ses annexes (demandées à Valérie Dubuis
+  // et Antoine Meyer, Groupe Mutuel — échanges des 18 et 22.09.2026). Le dossier
+  // « Conventions\Groupe Mutuel » ne contient à ce jour que la tabelle du domaine SANTÉ.
+  // À remplacer par les taux contractuels dès réception — et à vérifier : la tabelle santé montre
+  // que GM raisonne parfois en multiples de prime mensuelle plutôt qu'en pourcentage.
+  groupe_mutuel: {
+    laa: 4.00,     // Assurance-accidents selon la LAA
+    laac: 10.00,   // Assurance complémentaire à la LAA
+    ijm: 7.00,     // Indemnité journalière maladie (perte de gain)
+    provisoire: true,
+  },
   // Vaudoise Générale — Tabelle de commissions A1 non-vie, édition 01.11.2024
   // (Convention de collaboration de courtage signée le 09.09.2025 — entrée en vigueur 01.09.2025)
   // Non-vie : uniquement des Commissions d'Encaissement (art. 2.2.1 du Règlement),

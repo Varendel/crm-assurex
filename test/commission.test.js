@@ -163,5 +163,42 @@ setLignes('AXA', [
   else { fail++; console.log(`FAIL  ${compagnie} → montant ${r.montant} inattendu (aucune table connue ne devrait produire un chiffre)`); }
 });
 
+// ═══ 4. GROUPE MUTUEL — branches entreprise, taux PROVISOIRES du 24.09.2026 ═══
+// Chiffres réels de la proposition GM n° 621247 (Katogan / Dorentina Ismaili, signée le
+// 23.09.2026) : LAA 928.80, LAAC 200.00, LPP 2'760.40, IJM 0.00 — total 3'889.20.
+// Ce test fige les trois taux communiqués par Jonathan en attendant la convention entreprise :
+// le jour où les vrais taux arrivent, il échouera et forcera à le mettre à jour, plutôt que de
+// laisser des chiffres provisoires passer pour contractuels.
+// `ct-produit` porte le LIBELLÉ du catalogue, pas l'identifiant : getProduitSelectionne() fait
+// la correspondance. Passer l'identifiant renvoie null et le calcul retombe sur la répartition
+// par ligne — d'où des montants inattendus. (Constaté en écrivant ce test, 24.09.2026.)
+function commissionGm(libelleProduit, libelleLigne, montant, attendu, label) {
+  reset();
+  document.getElementById('ct-compagnie').value = 'Groupe Mutuel';
+  document.getElementById('ct-categorie').value = 'entreprise';
+  document.getElementById('ct-produit').value = libelleProduit;
+  ajouterLignePrime(libelleLigne, montant);
+  refreshCategoriesLignesPrime();
+  calculerPrimeTotaleLignes();
+  const r = calculerCommissionEstimee();
+  assertClose(r.montant, attendu, label);
+  return r;
+}
+
+const gmLaa = commissionGm('LAA', 'Assurance-accidents selon la LAA', 928.80, 37.15,
+  'GM LAA 928.80 × 4% (Katogan n° 621247)');
+commissionGm('LAAC (complémentaire)', 'Assurance complémentaire à la LAA', 200.00, 20.00,
+  'GM LAAC 200.00 × 10% (Katogan n° 621247)');
+commissionGm('Perte de gain maladie LCA', 'Indemnité journalière maladie', 5000, 350.00,
+  'GM indemnité journalière 5000 × 7%');
+
+// Le caractère provisoire doit être ÉCRIT là où Jonathan le lit, pas seulement dans le code.
+if (/provisoire/i.test(gmLaa.detail || '')) { pass++; console.log('PASS  GM — le détail annonce que le taux est provisoire'); }
+else { fail++; console.log(`FAIL  GM — le détail ne dit pas que le taux est provisoire : "${gmLaa.detail}"`); }
+
+// Les branches GM sans taux connu ne doivent TOUJOURS rien produire.
+commissionGm('LPP collective', 'Prévoyance professionnelle LPP', 2760.40, 0,
+  'GM LPP → 0 (aucun taux connu, saisie manuelle)');
+
 console.log(`\n${pass} tests passés, ${fail} échoués.`);
 process.exit(fail > 0 ? 1 : 0);

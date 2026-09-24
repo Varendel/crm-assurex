@@ -1835,6 +1835,28 @@ function calculerCommissionEstimee() {
     }
   }
 
+  // ── Groupe Mutuel, branches entreprise (24.09.2026) ────────────────────────────────────────
+  // Jusqu'ici GM ne rendait aucune estimation : faute de convention entreprise au dossier, le CRM
+  // refusait d'inventer un taux. Jonathan a communiqué les trois taux de mémoire en attendant les
+  // documents — ils sont donc annoncés comme PROVISOIRES dans le détail affiché, pour qu'aucun
+  // chiffre ne soit pris pour contractuel. Les autres branches GM (LPP, RC, choses) restent sans
+  // estimation : mieux vaut zéro qu'un taux deviné.
+  if (/groupe\s*mutuel|^gma?\b/i.test(normaliserCompagnie(compagnieChoisie))) {
+    const G = TAUX_COMMISSION.groupe_mutuel;
+    const tauxGm = produitId === 'laa' ? G.laa
+      : produitId === 'laac' ? G.laac
+      : (produitId === 'perte_gain_maladie_lca' || produitId === 'ijm') ? G.ijm
+      : null;
+    if (tauxGm != null) {
+      const montant = Math.round(primeAnnuelle * tauxGm) / 100;
+      const nom = produitId === 'laa' ? 'LAA' : produitId === 'laac' ? 'complémentaire LAA (LAAC)' : 'indemnité journalière maladie';
+      return {
+        montant,
+        detail: `Groupe Mutuel — ${nom} : ${tauxGm}% × CHF ${fmtCHF(primeAnnuelle)} = CHF ${fmtCHF(montant)}${G.provisoire ? ' — ⚠️ taux provisoire, à confirmer avec la convention entreprise' : ''}`,
+      };
+    }
+  }
+
   // ── Santé / complémentaire — taux fixe, indépendant de la compagnie (voir PRODUITS_SANTE_X16, js/07) ──
   if (PRODUITS_SANTE_X16.includes(produitId)) {
     const montant = Math.round(primeMensuelle * TAUX_COMMISSION.sante_facteur_mensuel);
@@ -1865,7 +1887,12 @@ function calculerCommissionEstimee() {
   // était introuvable dans ces annexes et a été retiré à sa demande (25.08.2026) — plus de
   // commission à CHF 0 forcée en dessous d'un montant.
   // Swiss Life ne rémunère que sur risque + frais — jamais sur la part épargne de la prime totale.
-  if (produitId === 'lpp_entreprise') {
+  // 24.09.2026 : cette formule est CELLE DE SWISS LIFE. Elle s'appliquait à toute LPP, quelle que
+  // soit la compagnie — une LPP Groupe Mutuel Prévoyance (GMP) ressortait ainsi à CHF 209.- avec
+  // le facteur produit par défaut de Swiss Life, un chiffre sans aucun fondement contractuel
+  // (constaté sur la proposition Katogan n° 621247). Hors Swiss Life, on ne devine rien : la
+  // commission reste à saisir à la main tant que la convention de la compagnie n'est pas codée.
+  if (produitId === 'lpp_entreprise' && /swiss\s*life/i.test(normaliserCompagnie(compagnieChoisie))) {
     const primeRisqueFrais = parseFloat(document.getElementById('ct-prime-risque-frais')?.value) || 0;
     const baseCalcul = primeRisqueFrais > 0 ? primeRisqueFrais : primeAnnuelle;
     const produitSwissLife = document.getElementById('ct-produit-swisslife-lpp')?.value || '';

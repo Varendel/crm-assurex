@@ -313,7 +313,9 @@ function renderCartePrioriteOpportunite(s, nomClient, stadeColor, rhMode) {
   const o = s.o;
   const valeurPonderee = Math.round((o.montant_potentiel || 0) * (o.probabilite || 0) / 100);
   const borderColor = s.tier === 'urgent' ? '#f87171' : s.tier === 'suivre' ? '#f59e0b' : 'var(--border)';
-  return `<div style="background:var(--surface-alt);border:1px solid ${borderColor};border-left:3px solid ${borderColor};border-radius:12px;padding:14px 16px">
+  // La classe opp-carte-priorite sert de prise à la couleur d'état (js/159) : sans elle, la
+  // teinte se poserait sur le bloc de texte cliquable, pas sur la carte entière.
+  return `<div class="opp-carte-priorite" style="background:var(--surface-alt);border:1px solid ${borderColor};border-left:3px solid ${borderColor};border-radius:12px;padding:14px 16px">
     <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap">
       <div style="flex:1;min-width:200px;cursor:pointer" onclick="editerOpportunite('${o.id}')">
         <div style="font-size:13.5px;font-weight: 600;color:var(--text)">${o.cree_par ? PICTO_CREE_EQUIPE + ' ' : ''}${o.titre}</div>

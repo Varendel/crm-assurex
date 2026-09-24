@@ -57,13 +57,23 @@ function copDecorer() {
   main.querySelectorAll('[onclick*="editerOpportunite(\'"]').forEach(el => {
     const m = (el.getAttribute('onclick') || '').match(/editerOpportunite\('([^']+)'\)/);
     if (!m) return;
+    // L'élément cliquable n'est pas toujours la carte : sur les cartes de priorité, c'est le bloc
+    // de texte à l'intérieur. On remonte donc à la carte quand il y en a une, sinon on teinte
+    // l'élément lui-même (lignes de tableau, listes).
+    const cible = el.closest('.kanban-card, .table-row, .opp-carte-priorite') || el;
     const etat = copEtat(opps.find(x => x.id === m[1]));
     // On repose la classe à chaque passage : une tâche terminée doit faire virer la couleur au
     // rendu suivant, sans recharger la page.
-    if (el.dataset.cop === (etat || '')) return;
-    el.dataset.cop = etat || '';
-    el.classList.remove('cop-dort', 'cop-echue', 'cop-bientot', 'cop-ajour');
-    if (etat) { el.classList.add('cop-' + etat); el.title = COP_TITRES[etat]; }
+    if (cible.dataset.cop === (etat || '')) return;
+    cible.dataset.cop = etat || '';
+    cible.classList.remove('cop-dort', 'cop-echue', 'cop-bientot', 'cop-ajour');
+    if (etat) {
+      cible.classList.add('cop-' + etat);
+      // Ne pas écraser une infobulle existante (« Glisser vers un autre stade » sur le kanban) :
+      // on la complète.
+      const dejaLa = (cible.getAttribute('title') || '').split(' — ')[0];
+      cible.title = dejaLa && dejaLa !== COP_TITRES[etat] ? `${dejaLa} — ${COP_TITRES[etat]}` : COP_TITRES[etat];
+    }
   });
 }
 

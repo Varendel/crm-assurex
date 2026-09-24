@@ -2126,13 +2126,19 @@ async function genererEmailDemandeOffre() {
 // fonction ne fait QUE construire un aperçu modifiable ; l'envoi (si souhaité) est une action
 // séparée et explicite déclenchée depuis cet aperçu (envoyerApercuEmailDemandeOffreViaOutlook),
 // jamais automatique.
-function ouvrirApercuEmailDemandeOffre({ demandeOffreId, cies, emails, sansEmail, sujet, corps }) {
-  window._apercuEmailDemandeOffre = { demandeOffreId, cies, emails, oppId: document.getElementById('do-opportunite-id')?.value || null };
+// 24.09.2026 — cette fenêtre est devenue LE rédacteur d'e-mail du CRM : aperçu en direct à droite
+// (js/139), pièces jointes (js/136), signature réelle (js/138). La pose du mandat avait le sien,
+// resté à l'époque du mailto: — sans aperçu, sans signature visible, sans les pièces. Plutôt que
+// d'entretenir deux fenêtres, celle-ci accepte désormais un titre et une action d'envoi : c'est la
+// même fenêtre, avec un autre bouton au bout. Sans ces paramètres, rien ne change pour la demande
+// d'offre.
+function ouvrirApercuEmailDemandeOffre({ demandeOffreId, cies, emails, sansEmail, sujet, corps, titre, sousTitre, actionEnvoi, mandatClientId }) {
+  window._apercuEmailDemandeOffre = { demandeOffreId, cies, emails, mandatClientId: mandatClientId || null, oppId: document.getElementById('do-opportunite-id')?.value || null };
   const qa = (s) => (s || '').toString().replace(/"/g, '&quot;');
   creerModale('modal-apercu-email-do', `
     <div style="background:var(--surface);border-radius:14px;padding:22px;max-width:600px;width:100%;max-height:90vh;display:flex;flex-direction:column">
-      <div style="font-size:16px;font-weight: 600;color:var(--text);margin-bottom:4px">✉️ Aperçu — demande d'offre</div>
-      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:12px">Ce courriel n'est PAS envoyé automatiquement — relis-le, corrige-le si besoin, puis choisis comment le transmettre.</div>
+      <div style="font-size:16px;font-weight: 600;color:var(--text);margin-bottom:4px">${titre || "✉️ Aperçu — demande d'offre"}</div>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:12px">${sousTitre || "Ce courriel n'est PAS envoyé automatiquement — relis-le, corrige-le si besoin, puis choisis comment le transmettre."}</div>
       <div style="font-size:11px;color:var(--text-muted);margin-bottom:10px"><strong>Destinataires :</strong> ${emails.length ? emails.join(', ') : '— aucun email connu'}</div>
       ${sansEmail.length ? `<div style="font-size:11px;color:var(--c-alerte-texte);margin-bottom:10px">⚠ Pas d'email enregistré pour : ${sansEmail.join(', ')}</div>` : ''}
       <div class="form-field" style="margin-bottom:8px"><label class="form-label">Objet</label><input class="form-input" id="apercu-email-sujet" value="${qa(sujet)}"/></div>
@@ -2141,7 +2147,7 @@ function ouvrirApercuEmailDemandeOffre({ demandeOffreId, cies, emails, sansEmail
         <button class="btn-secondary" onclick="document.getElementById('modal-apercu-email-do').remove()">Fermer</button>
         <button class="btn-secondary" onclick="copierApercuEmailDemandeOffre()">📋 Copier</button>
         <button class="btn-secondary" onclick="ouvrirMailtoApercuDemandeOffre()">📧 Ouvrir dans mon client mail</button>
-        <button class="btn-save" style="margin-left:auto" onclick="envoyerApercuEmailDemandeOffreViaOutlook()">📨 Envoyer maintenant via Outlook</button>
+        <button class="btn-save" style="margin-left:auto" onclick="${actionEnvoi || 'envoyerApercuEmailDemandeOffreViaOutlook()'}">📨 Envoyer maintenant via Outlook</button>
       </div>
     </div>`, { padding: '16px' });
 }

@@ -1643,8 +1643,29 @@ function genererApercuMandat(clientId) {
   ouvrirApercuEmailMandat({ clientId, cies, emails, sansEmail, sujet, corps });
 }
 
+// 24.09.2026 — « J'ai demandé à ce que la pose des mandats ouvre écrire e-mail prérempli. »
+// C'est fait : on n'ouvre plus une fenêtre maison, on ouvre LE rédacteur du CRM (js/07 + l'aperçu
+// en direct de js/139, les pièces jointes de js/136, la signature de js/138). Même fenêtre que la
+// demande d'offre, pré-remplie, avec l'aperçu à droite tel que la compagnie le recevra — seul le
+// bouton d'envoi diffère, parce que la suite (marquer le mandat posé) n'est pas la même.
 function ouvrirApercuEmailMandat({ clientId, cies, emails, sansEmail, sujet, corps }) {
   window._apercuEmailMandat = { clientId, cies, emails };
+  if (typeof ouvrirApercuEmailDemandeOffre === 'function') {
+    // Le mandat signé apparaît dans les pièces jointes de l'aperçu : il part vraiment (il est
+    // reconstruit au moment de l'envoi par pjeMandatDuClient), autant que ça se voie avant.
+    if (typeof _pje !== 'undefined') {
+      _pje.items = [{ path: `mandat-client:${clientId}`, nom: 'Mandat de courtage signé.pdf', source: 'Mandat signé · joint d’office', defaut: true, coche: true }];
+      _pje.locaux = [];
+    }
+    const c = allClients.find(x => x.id === clientId);
+    return ouvrirApercuEmailDemandeOffre({
+      demandeOffreId: null, cies, emails, sansEmail, sujet, corps,
+      mandatClientId: clientId,
+      titre: '✉️ Pose du mandat',
+      sousTitre: `${c ? mdxEsc(mdxNomClient(c)) + ' — ' : ''}rien n’est envoyé automatiquement : relis, corrige, puis envoie. Le mandat signé est joint.`,
+      actionEnvoi: 'envoyerApercuEmailMandatViaOutlook()',
+    });
+  }
   const m = creerModale('modal-apercu-email-mandat', `
     <div class="opx-modale mdx-modale mdx-modale-flex mdx-modale-large" role="dialog" aria-modal="true" aria-labelledby="mdx-apercu-titre">
       ${mdxTeteModale('✉️', 'Aperçu avant envoi', 'Rien n’est envoyé automatiquement — relis, corrige si besoin, puis choisis comment le transmettre.', 'modal-apercu-email-mandat', 'mdx-apercu-titre')}

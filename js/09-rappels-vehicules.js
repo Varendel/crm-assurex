@@ -2075,17 +2075,12 @@ async function saveContrat() {
     const prime = parseFloat(ligne.querySelector('.ct-module-custom-prime')?.value);
     modulesChoisis.push(!isNaN(prime) && prime > 0 ? `${nom} (CHF ${fmtCHF(prime)})` : nom);
   });
-  // Détail des "lignes de prime" (ex: RC véhicule + Casco complète + Casco partielle, ou RC privée +
-  // inventaire du ménage) — persisté ici pour que les couvertures annexes restent visibles sur la
-  // fiche client (ligne du contrat) et sur la fiche contrat, au lieu de disparaître dans le seul
-  // total sommé. N'ajoute rien si une seule ligne (le champ "Prime" suffit déjà dans ce cas).
-  const lignesPrimeSaisies = Array.from(document.querySelectorAll('.ct-prime-ligne')).map(ligne => ({
-    libelle: (ligne.querySelector('.ct-prime-ligne-libelle')?.value || '').trim(),
-    montant: parseFloat(ligne.querySelector('.ct-prime-ligne-montant')?.value) || 0,
-  })).filter(l => l.libelle && l.montant > 0);
-  if (lignesPrimeSaisies.length > 1) {
-    lignesPrimeSaisies.forEach(l => modulesChoisis.push(`${l.libelle} (CHF ${fmtCHF(l.montant)})`));
-  }
+  // 24.09.2026 — les lignes de prime étaient RECOPIÉES ici dans les modules. À l'époque c'était le
+  // seul moyen de les voir sur la fiche client ; depuis, elles sont persistées telles quelles dans
+  // detail_lignes et la fiche les affiche déjà. Résultat sur une police LAA : les huit lignes
+  // apparaissaient deux fois d'affilée sur la même carte, une fois derrière 🔗 et une fois derrière
+  // 📋, mot pour mot. Un module est ce qui décrit la couverture ; une ligne de prime est un montant.
+  // Les deux ne se recopient pas l'un dans l'autre.
   const { montant: commissionEstimee, detail } = calculerCommissionEstimee();
 
   const btn = document.querySelector('.btn-save');

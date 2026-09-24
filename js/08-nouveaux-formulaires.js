@@ -849,7 +849,9 @@ function showFormCollaborateur(clientId, colId) {
     </div>`, { overflowY: false });
   setTimeout(() => initAdresseAutocomplete('col-adresse', ({ rue, npa, ville, canton }) => {
     const el = document.getElementById('col-adresse');
-    if (el) el.value = [rue, npa, ville].filter(Boolean).join(', ');
+    // « Rue X 59, 1000 Lausanne » — une seule virgule, celle qui sépare la rue de la localité.
+    // La version précédente en mettait une entre le NPA et la ville, ce qui ne s'écrit pas.
+    if (el) el.value = [rue, [npa, ville].filter(Boolean).join(' ')].filter(Boolean).join(', ');
   }), 0);
 }
 

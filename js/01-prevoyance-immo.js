@@ -118,7 +118,17 @@ const BAN_POINTS = [
   'https://data.geopf.fr/geocodage/search',
 ];
 
+// Le numéro de maison tapé par l'utilisateur, quand la Base Adresse Nationale ne le connaît pas.
+// Beaucoup de rues n'ont pas toutes leurs plaques référencées : la recherche rend alors la RUE,
+// sans numéro. Choisir cette suggestion effaçait le « 59 » qu'on venait de taper — sans le dire.
+// On le récupère du texte saisi pour le recoller sur une suggestion de type « street ».
+function _numeroSaisi(q) {
+  const m = String(q || '').trim().match(/(?:^|\s)(\d+\s*[a-zA-Z]?)(?=\s|,|$)/);
+  return m ? m[1].replace(/\s+/g, '') : '';
+}
+
 async function _fetchAdressesFr(q) {
+  const numero = _numeroSaisi(q);
   for (const base of BAN_POINTS) {
     try {
       const r = await fetch(`${base}?q=${encodeURIComponent(q)}&limit=5&autocomplete=1`);
@@ -131,10 +141,14 @@ async function _fetchAdressesFr(q) {
       // joue le même rôle d'orientation à l'écran.
       return traits.filter(t => t.properties && t.properties.label).map(t => {
         const p = t.properties;
-        const rue = [p.housenumber, p.street].filter(Boolean).join(' ') || p.name || '';
+        // L'usage suisse met le numéro APRÈS la rue ; la BAN le rend avant. On suit l'usage local,
+        // c'est ce qui sera imprimé sur une police.
+        const voie = p.street || p.name || '';
+        const num = p.housenumber || (p.type === 'street' ? numero : '');
+        const rue = [voie, num].filter(Boolean).join(' ').trim();
         return {
           _fr: true,
-          label: p.label,
+          label: num && !p.housenumber ? `${rue} — ${p.postcode || ''} ${p.city || ''}`.trim() : p.label,
           sous: p.context || '',
           parsed: { rue, npa: p.postcode || '', ville: p.city || '', canton: '', pays: 'France' },
         };

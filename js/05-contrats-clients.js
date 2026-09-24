@@ -670,12 +670,16 @@ async function showClient(id) {
         <button class="btn-add" onclick="showFormCollaborateur('${c.id}')" title="Ajouter un collaborateur" style="display:flex;align-items:center;gap:6px">👤+ Ajouter</button>
       </div>
       ${collaborateurs.length > 0 ? `
-      <table style="width:100%;border-collapse:collapse;font-size:13px">
+      <!-- 24.09.2026 : en ajoutant salaire, taux et date d'entrée, le tableau est passé à neuf
+           colonnes et débordait de la fiche, rogné à droite. Il défile horizontalement plutôt que
+           d'être tronqué — et les colonnes qui n'ont pas besoin de s'étirer ne s'étirent plus. -->
+      <div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+      <table style="width:100%;min-width:980px;border-collapse:collapse;font-size:13px">
         <thead><tr style="color:var(--text-muted);font-size:11px;text-transform:uppercase;letter-spacing:0.5px">
           <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Nom</th>
           <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Prénom</th>
-          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Naissance</th>
-          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Téléphone</th>
+          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">Naissance</th>
+          <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap">Téléphone</th>
           <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">Adresse privée</th>
           <th style="padding:8px 12px;text-align:left;border-bottom:1px solid var(--border)">N° AVS</th>
           <!-- 24.09.2026 : les trois colonnes qui font les assurances de personnes étaient
@@ -690,20 +694,20 @@ async function showClient(id) {
           <tr style="border-bottom:1px solid var(--border)">
             <td style="padding:10px 12px;font-weight: 600;color:var(--text)">${col.nom || '—'}</td>
             <td style="padding:10px 12px;color:var(--text)">${col.prenom || '—'}</td>
-            <td style="padding:10px 12px;color:var(--text-muted)">${fmtDate(col.date_naissance)}</td>
-            <td style="padding:10px 12px;color:var(--text-muted)">${col.mobile || '—'}</td>
-            <td style="padding:10px 12px;color:var(--text-muted)">${col.adresse || '—'}</td>
+            <td style="padding:10px 12px;color:var(--text-muted);white-space:nowrap">${fmtDate(col.date_naissance)}</td>
+            <td style="padding:10px 12px;color:var(--text-muted);white-space:nowrap">${col.mobile || '—'}</td>
+            <td style="padding:10px 12px;color:var(--text-muted);min-width:220px">${col.adresse || '—'}</td>
             <td style="padding:10px 12px;color:var(--text-muted);font-family:monospace">${col.avs || '—'}</td>
             <td style="padding:10px 12px;color:var(--text);text-align:right;white-space:nowrap">${col.salaire ? 'CHF ' + fmtCHF(col.salaire) : '—'}</td>
             <td style="padding:10px 12px;color:var(--text-muted);text-align:right">${col.taux_activite ? col.taux_activite + ' %' : '—'}</td>
-            <td style="padding:10px 12px;color:var(--text-muted)">${fmtDate(col.date_entree)}</td>
+            <td style="padding:10px 12px;color:var(--text-muted);white-space:nowrap">${fmtDate(col.date_entree)}</td>
             <td style="padding:10px 12px;text-align:right;white-space:nowrap">
               <button onclick="showFormCollaborateur('${c.id}','${col.id}')" style="background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent-border);border-radius:6px;padding:4px 10px;font-size:11px;font-weight: 500;cursor:pointer;margin-right:6px">Éditer</button>
               <button onclick="deleteCollaborateur('${col.id}','${c.id}')" style="background:color-mix(in srgb, var(--c-danger) 10%, transparent);color:var(--c-danger-texte);border:1px solid color-mix(in srgb, var(--c-danger) 30%, transparent);border-radius:6px;padding:4px 10px;font-size:11px;font-weight: 500;cursor:pointer">Supprimer</button>
             </td>
           </tr>`).join('')}
         </tbody>
-      </table>` : '<div class="table-empty">Aucun collaborateur enregistré.</div>'}
+      </table></div>` : '<div class="table-empty">Aucun collaborateur enregistré.</div>'}
     </div>
 
     <div id="tab-flotte" class="hidden">

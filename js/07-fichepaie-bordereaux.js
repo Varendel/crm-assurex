@@ -1717,7 +1717,14 @@ async function viewNouvelleDemandeOffre() {
       <div style="margin-top:16px">
         <label class="form-label">Collaborateurs à assurer (LPP)</label>
         <div id="do-collabs-list" style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px"></div>
-        <button type="button" class="btn-secondary" style="font-size:12px;padding:6px 14px" onclick="ajouterCollaborateurDemandeOffre()">+ Ajouter un collaborateur</button>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button type="button" class="btn-secondary" style="font-size:12px;padding:6px 14px" onclick="ajouterCollaborateurDemandeOffre()">+ Ajouter un collaborateur</button>
+          <!-- 24.09.2026 : « Il faut pouvoir reprendre les collaborateurs pour les demandes d'offre,
+               à choix multiples. » Ils sont déjà fichés sur le client — les retaper à la main pour
+               chaque demande, c'est du temps perdu et une occasion de se tromper sur un AVS ou un
+               salaire. On coche, on reprend. -->
+          <button type="button" class="btn-secondary" style="font-size:12px;padding:6px 14px" onclick="ouvrirReprisesCollaborateurs()">👥 Reprendre des collaborateurs fichés</button>
+        </div>
       </div>`)}
 
     ${sectionCard('Responsabilité civile', '#f87171', `<div class="form-grid">
@@ -1976,6 +1983,75 @@ function ajouterPlaqueDemandeOffre() {
 // nécessaires à la compagnie pour établir une offre LPP nominative. Chaque ligne est enveloppée
 // dans un wrapper (do-collab-wrapper) pour pouvoir afficher, juste en dessous, un avertissement de
 // dépassement du plafond LPP sans casser la mise en page en grille de la ligne de champs.
+// ── Reprendre les collaborateurs déjà fichés (24.09.2026) ──────────────────────────────────────
+// À choix multiples, et sans écraser ce qui est déjà saisi : on AJOUTE des lignes. Celles qui
+// correspondent à un collaborateur déjà présent dans la liste sont décochées et signalées — on ne
+// veut pas se retrouver avec la même personne deux fois sur une offre LPP.
+function ouvrirReprisesCollaborateurs() {
+  const clientId = document.getElementById('do-client')?.value || null;
+  const liste = (typeof allCollaborateurs !== 'undefined' ? allCollaborateurs : [])
+    .filter(k => clientId && k.client_id === clientId);
+  if (!clientId) { showError('Choisis d’abord le client : les collaborateurs sont fichés sur lui.'); return; }
+  if (!liste.length) { showError('Aucun collaborateur fiché sur ce client — ajoute-les d’abord sur sa fiche.'); return; }
+
+  const dejaLa = new Set(Array.from(document.querySelectorAll('.do-collab-row')).map(r =>
+    `${(r.querySelector('.do-collab-nom')?.value || '').trim().toLowerCase()}|${(r.querySelector('.do-collab-prenom')?.value || '').trim().toLowerCase()}`));
+  const esc = v => String(v ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+  creerModale('modal-reprise-collabs', `
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;width:100%;max-width:560px;max-height:85vh;display:flex;flex-direction:column">
+      <h3 style="margin:0 0 4px;font-size:16px;font-weight:600;color:var(--text)">👥 Reprendre des collaborateurs</h3>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">Coche ceux à ajouter à la demande d'offre. Les lignes déjà saisies ne sont pas proposées deux fois.</div>
+      <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted);margin-bottom:8px;cursor:pointer">
+        <input type="checkbox" onchange="document.querySelectorAll('.rpc-case:not(:disabled)').forEach(c=>c.checked=this.checked)"/> Tout cocher
+      </label>
+      <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px">
+        ${liste.map(k => {
+          const cle = `${(k.nom || '').trim().toLowerCase()}|${(k.prenom || '').trim().toLowerCase()}`;
+          const present = dejaLa.has(cle);
+          return `<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;cursor:${present ? 'default' : 'pointer'};opacity:${present ? '.5' : '1'}">
+            <input type="checkbox" class="rpc-case" value="${esc(k.id)}" ${present ? 'disabled' : ''}/>
+            <span style="flex:1;min-width:0">
+              <b style="font-size:13px;color:var(--text)">${esc(k.prenom)} ${esc(k.nom)}</b>
+              <span style="display:block;font-size:11px;color:var(--text-muted)">${[k.fonction, k.salaire ? 'CHF ' + fmtCHF(k.salaire) : null, k.taux_activite ? k.taux_activite + ' %' : null, k.avs].filter(Boolean).map(esc).join(' · ') || '—'}</span>
+            </span>
+            ${present ? '<span style="font-size:10.5px;color:var(--text-muted)">déjà dans la liste</span>' : ''}
+          </label>`;
+        }).join('')}
+      </div>
+      <div style="display:flex;gap:10px;margin-top:16px;justify-content:flex-end">
+        <button class="btn-secondary" onclick="document.getElementById('modal-reprise-collabs').remove()">Annuler</button>
+        <button class="btn-save" onclick="reprendreCollaborateursChoisis()">✓ Reprendre</button>
+      </div>
+    </div>`, { padding: '16px' });
+}
+
+function reprendreCollaborateursChoisis() {
+  const ids = Array.from(document.querySelectorAll('.rpc-case:checked')).map(c => c.value);
+  if (!ids.length) { showError('Coche au moins un collaborateur.'); return; }
+  const liste = typeof allCollaborateurs !== 'undefined' ? allCollaborateurs : [];
+  ids.forEach(id => {
+    const k = liste.find(x => x.id === id);
+    if (!k) return;
+    ajouterCollaborateurDemandeOffre();
+    const row = document.querySelector('#do-collabs-list .do-collab-wrapper:last-child .do-collab-row');
+    if (!row) return;
+    const set = (sel, val) => { const el = row.querySelector(sel); if (el && val != null && val !== '') el.value = val; };
+    set('.do-collab-nom', k.nom);
+    set('.do-collab-prenom', k.prenom);
+    set('.do-collab-naissance', k.date_naissance);
+    set('.do-collab-adresse', k.adresse);
+    set('.do-collab-avs', k.avs);
+    set('.do-collab-salaire', k.salaire);
+    // Le contrôle du plafond LPP doit se déclencher aussi sur une reprise, pas seulement à la
+    // frappe : un salaire au-dessus de 90'720 repris en silence fausserait l'offre.
+    const sal = row.querySelector('.do-collab-salaire');
+    if (sal && typeof verifierPlafondLppCollaborateur === 'function') verifierPlafondLppCollaborateur(sal);
+  });
+  document.getElementById('modal-reprise-collabs')?.remove();
+  showError(`✓ ${ids.length} collaborateur${ids.length > 1 ? 's repris' : ' repris'}.`);
+}
+
 function ajouterCollaborateurDemandeOffre() {
   const list = document.getElementById('do-collabs-list');
   const wrapper = document.createElement('div');

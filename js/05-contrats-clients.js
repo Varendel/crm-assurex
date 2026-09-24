@@ -230,6 +230,22 @@ function voirConstellationFamiliale(clientId) {
 
   const nodeAjouterEnfant = `<div class="fam-node-vide" onclick="ouvrirLienFamilial('${clientId}','enfant')" title="Relier un enfant déjà présent dans le CRM">🧒 + Ajouter un enfant</div>`;
 
+  // ── Le conjoint (24.09.2026) ────────────────────────────────────────────────────────────────
+  // « Ajoute lier un conjoint ou un époux. » Il se place sur la MÊME ligne que la fiche courante,
+  // pas au-dessus ni en dessous : un couple est une génération, pas une filiation. Et le lien est
+  // symétrique — les deux fiches se pointent mutuellement — là où pere_id / mere_id sont dirigés.
+  const conjoint = c.conjoint_id ? liste.find(x => x.id === c.conjoint_id) : null;
+  const nodeConjoint = conjoint
+    ? `<div class="fam-node" style="position:relative">
+         <div onclick="fermerModaleConstellation(); showClient('${conjoint.id}')">
+           <div class="fam-node-icon">${conjoint.civilite === 'Madame' ? '👩' : conjoint.civilite === 'Monsieur' ? '👨' : '🙂'}</div>
+           <div class="fam-node-nom">${conjoint.prenom || ''} ${conjoint.nom || ''}</div>
+           <div class="fam-node-sub">Conjoint${conjoint.ville ? ' · ' + conjoint.ville : ''}</div>
+         </div>
+         <button onclick="event.stopPropagation(); delierFamille('${clientId}','conjoint')" title="Retirer ce lien" style="position:absolute;top:2px;right:4px;background:none;border:none;color:var(--text-muted);cursor:pointer;font-size:12px">✕</button>
+       </div>`
+    : `<div class="fam-node-vide" onclick="ouvrirLienFamilial('${clientId}','conjoint')" title="Relier le conjoint, déjà présent dans le CRM">💍 + Lier un conjoint</div>`;
+
   const aDesParents = !!(pere || mere);
 
   creerModale('modal-constellation', `
@@ -250,6 +266,7 @@ function voirConstellationFamiliale(clientId) {
             <div class="fam-node-nom">${c.prenom || ''} ${c.nom || ''}</div>
             <div class="fam-node-sub">Cette fiche</div>
           </div>
+          ${nodeConjoint}
         </div>
         <div class="fam-connector"></div>
         <div class="fam-row">${enfants.map(nodeEnfant).join('')}${nodeAjouterEnfant}</div>
@@ -269,7 +286,8 @@ function ouvrirLienFamilial(clientId, role) {
   const liste = (typeof allClients !== 'undefined' ? allClients : []);
   const c = liste.find(x => x.id === clientId);
   if (!c) return;
-  const titre = role === 'pere' ? '👨 Lier un père' : role === 'mere' ? '👩 Lier une mère' : '🧒 Ajouter un enfant';
+  const titre = role === 'pere' ? '👨 Lier un père' : role === 'mere' ? '👩 Lier une mère'
+    : role === 'conjoint' ? '💍 Lier un conjoint' : '🧒 Ajouter un enfant';
   const candidats = liste.filter(x => x.id !== clientId && !estEntreprise(x));
   const suggestions = candidats.map(x => `<option value="${(x.prenom||'')} ${(x.nom||'')}${x.ville ? ' — ' + x.ville : ''}">`).join('');
   creerModale('modal-lien-famille', `
@@ -307,6 +325,23 @@ async function confirmerLienFamilial(clientId, role) {
   } else if (role === 'mere') {
     r = await dbPatch('clients', clientId, { mere_id: match.id });
     if (!r || !r.error) c.mere_id = match.id;
+  } else if (role === 'conjoint') {
+    // Symétrique : les deux fiches se pointent. Si l'un des deux était déjà marié à quelqu'un
+    // d'autre dans le CRM, on détache d'abord l'ancien lien — sinon une fiche resterait à pointer
+    // vers un conjoint qui ne la reconnaît plus, et la constellation afficherait un couple à trois.
+    const anciens = [c.conjoint_id, match.conjoint_id].filter(id => id && id !== clientId && id !== match.id);
+    for (const id of anciens) {
+      await dbPatch('clients', id, { conjoint_id: null });
+      const ex = liste.find(x => x.id === id);
+      if (ex) ex.conjoint_id = null;
+    }
+    r = await dbPatch('clients', clientId, { conjoint_id: match.id });
+    if (!r || !r.error) {
+      c.conjoint_id = match.id;
+      const r2 = await dbPatch('clients', match.id, { conjoint_id: clientId });
+      if (!r2 || !r2.error) match.conjoint_id = clientId;
+      else r = r2;
+    }
   } else {
     // "Ajouter un enfant" : c devient le père ou la mère du client sélectionné, selon sa civilité.
     const champ = c.civilite === 'Madame' ? 'mere_id' : 'pere_id';
@@ -330,6 +365,17 @@ function delierFamille(clientId, role) {
     let r;
     if (role === 'pere') { r = await dbPatch('clients', clientId, { pere_id: null }); if (!r || !r.error) c.pere_id = null; }
     else if (role === 'mere') { r = await dbPatch('clients', clientId, { mere_id: null }); if (!r || !r.error) c.mere_id = null; }
+    else if (role === 'conjoint') {
+      // Des deux côtés, comme il a été posé.
+      const autreId = c.conjoint_id;
+      r = await dbPatch('clients', clientId, { conjoint_id: null });
+      if (!r || !r.error) c.conjoint_id = null;
+      if (autreId) {
+        await dbPatch('clients', autreId, { conjoint_id: null });
+        const autre = liste.find(x => x.id === autreId);
+        if (autre) autre.conjoint_id = null;
+      }
+    }
     else if (role.startsWith('enfant:')) {
       const enfantId = role.slice('enfant:'.length);
       const enfant = liste.find(x => x.id === enfantId);
@@ -348,7 +394,7 @@ function delierFamille(clientId, role) {
 // un lien (père, mère, ou enfant) — demande de Jonathan.
 function aConstellationFamiliale(c) {
   const liste = (typeof allClients !== 'undefined' ? allClients : []);
-  return !!(c.pere_id || c.mere_id || liste.some(x => x.id !== c.id && (x.pere_id === c.id || x.mere_id === c.id)));
+  return !!(c.pere_id || c.mere_id || c.conjoint_id || liste.some(x => x.id !== c.id && (x.pere_id === c.id || x.mere_id === c.id || x.conjoint_id === c.id)));
 }
 
 // Construit un lien d'appel Microsoft Teams pour un client — priorité à l'e-mail (identifiant

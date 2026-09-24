@@ -432,6 +432,48 @@ const TAUX_COMMISSION = {
     ponderation_lpp_classe6: 0.30,        // art. 3 : classe de risque 6
     // Art. 7 — Plafond par couverture, pour les RENOUVELLEMENTS de contrats existants seulement.
     plafond_renouvellement: 100000,
+
+    // ── Domaine PATRIMOINE, édition 01.06.2024 ────────────────────────────────────────────────
+    // Base commune : pourcentage de la prime client annualisée de la PREMIÈRE année,
+    // **hors timbre fédéral** — le CRM sait déjà isoler le timbre dans les lignes de prime.
+    // Le niveau du produit (« basic » ou « plus ») double presque la commission : on retient
+    // « basic », le moins favorable, tant que le niveau n'est pas saisi.
+    patrimoine: {
+      edition: '01.06.2024',
+      menage: { basic: 50, plus: 75 },        // HomeProtect — MN
+      rc_privee: { basic: 50, plus: 75 },     // SelfProtect — RC
+      cyber: { 1: 20, 3: 60 },                // CyberProtect — CY, selon la durée du contrat
+      // Protection juridique : forfaits en francs par personne, pas un pourcentage (art. 1).
+      pj_forfaits: {
+        individuel: { priva: 150, strada: 125, duo: 225 },
+        convention_cadre: { priva: 35, strada: 30, duo: 60 },
+      },
+      legissana: 10,
+    },
+
+    // ── Domaine VIE, édition 01.07.2026 ───────────────────────────────────────────────────────
+    // GM ne commissionne PAS « 4 % du capital de production » comme le reste du CRM. Trois
+    // différences de fond (art. 1 et 2) :
+    //   · le taux est en ‰ (pour mille), pas en % ;
+    //   · il s'applique à un capital de production VALORISÉ — de 50 % à 140 % selon la branche ;
+    //   · la base est la prime du risque NORMAL, pas la prime totale.
+    // Et le taux lui-même ne figure pas dans la tabelle : il est fixé par l'avenant propre à
+    // l'intermédiaire, encore vierge au 24.09.2026. Tant qu'il est inconnu, on n'estime rien.
+    vie: {
+      edition: '01.07.2026',
+      taux_pour_mille: null,   // ← à renseigner depuis l'avenant signé
+      // Valorisation du capital, en % — clé : code de branche GM.
+      valorisation: {
+        FPU: 50, FPE: 85, PE: 85, VI: 100, VI_VL: 50, VIPE: 50, VIPE_VL: 50, VE: 90,
+        T: 140, TD: 140, T2: 140, TD2: 140, RSI: 140, RIG: 100, CI: 50, IP: 100,
+        RSA: 140, TA: 140, TDA: 140, DA: 100, CHV: 60, PLV: 100,
+      },
+      // Durée maximale prise en compte dans le capital, par branche.
+      duree_max: { VI: 35, VIPE: 20, VE: 20, T: 25, TD: 25, T2: 25, TD2: 25, RSI: 25,
+        RIG: 25, CI: 20, IP: 25, RSA: 25, TA: 25, TDA: 25, DA: 20, CHV: 35, PLV: 35 },
+      // FPE et PE : la valorisation baisse de 10 points par année manquante sous 10 ans.
+      decote_sous_dix_ans: 10,
+    },
   },
   // Vaudoise Générale — Tabelle de commissions A1 non-vie, édition 01.11.2024
   // (Convention de collaboration de courtage signée le 09.09.2025 — entrée en vigueur 01.09.2025)

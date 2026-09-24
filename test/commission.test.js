@@ -221,5 +221,38 @@ const gmLpp = commissionGm('LPP collective', 'Prévoyance professionnelle LPP', 
 if (/prime de risque nette/i.test(gmLpp.detail || '')) { pass++; console.log('PASS  GM LPP — le détail réclame la prime de risque nette'); }
 else { fail++; console.log(`FAIL  GM LPP — le détail ne réclame pas la prime de risque : "${gmLpp.detail}"`); }
 
+// ── Domaine Patrimoine, édition 01.06.2024 ──────────────────────────────────────────────────
+// Le timbre fédéral ne doit JAMAIS entrer dans la base (art. 2 et 3) : on le met dans la police
+// pour vérifier qu'il est bien exclu — c'est le total commissionnable qui sert de base.
+commissionGm('Inventaire du ménage', 'Inventaire du ménage HomeProtect', 400, 200.00,
+  'GM ménage 400 × 50% (HomeProtect basic)');
+commissionGm('RC privée', 'Responsabilité civile privée SelfProtect', 200, 100.00,
+  'GM RC privée 200 × 50% (SelfProtect basic)');
+
+reset();
+document.getElementById('ct-compagnie').value = 'Groupe Mutuel';
+document.getElementById('ct-produit').value = 'Inventaire du ménage';
+ajouterLignePrime('Inventaire du ménage HomeProtect', 400);
+ajouterLignePrime('Droit de timbre fédéral', 20);
+refreshCategoriesLignesPrime(); calculerPrimeTotaleLignes();
+assertClose(calculerCommissionEstimee().montant, 200.00,
+  'GM ménage — le timbre fédéral reste hors de la base de commission');
+
+// ── Domaine Vie : aucune estimation tant que le taux ‰ de l'avenant est inconnu ─────────────
+// Avant, le calcul générique appliquait 4 % du capital de production à un 3a Groupe Mutuel,
+// alors que GM commissionne en ‰ d'un capital VALORISÉ. Mieux vaut zéro et une explication.
+reset();
+document.getElementById('ct-compagnie').value = 'Groupe Mutuel';
+document.getElementById('ct-categorie').value = 'prive';
+document.getElementById('ct-produit').value = 'Assurance vie liée 3a (pilier 3a)';
+document.getElementById('ct-duree').value = '10';
+ajouterLignePrime('Prime 3a', 3000);
+refreshCategoriesLignesPrime(); calculerPrimeTotaleLignes();
+const gmVie = calculerCommissionEstimee();
+assertClose(gmVie.montant, 0, 'GM Vie → 0 (taux ‰ de l’avenant inconnu)');
+if (/‰/.test(gmVie.detail || '') && /valoris/i.test(gmVie.detail || '')) { pass++; console.log('PASS  GM Vie — le détail explique le ‰ et le capital valorisé'); }
+else { fail++; console.log(`FAIL  GM Vie — explication insuffisante : "${gmVie.detail}"`); }
+document.getElementById('ct-duree').value = '1';
+
 console.log(`\n${pass} tests passés, ${fail} échoués.`);
 process.exit(fail > 0 ? 1 : 0);

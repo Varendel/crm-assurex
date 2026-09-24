@@ -1869,6 +1869,29 @@ function calculerCommissionEstimee() {
       if (risque > 0) { base = risque; noteBase = ' — sur la prime de risque nette'; }
       else { noteBase = ' — ⚠️ calculé sur la prime TOTALE : renseigne la prime de risque nette, seule base contractuelle'; }
     }
+    // ── Domaine Patrimoine (ménage, RC privée, cyber) ────────────────────────────────────────
+    // La base est la prime annualisée HORS TIMBRE FÉDÉRAL : c'est exactement le total
+    // commissionnable que les lignes de prime calculent déjà (le timbre en est exclu).
+    if (taux == null) {
+      const P = G.patrimoine;
+      if (produitId === 'menage') { taux = P.menage.basic; nom = 'inventaire du ménage (HomeProtect)'; noteBase = ' — niveau « basic » retenu ; « plus » = 75 %'; }
+      else if (produitId === 'rc_privee') { taux = P.rc_privee.basic; nom = 'RC privée (SelfProtect)'; noteBase = ' — niveau « basic » retenu ; « plus » = 75 %'; }
+      else if (produitId === 'cyber_entreprise') { taux = dureeSaisie >= 3 ? P.cyber[3] : P.cyber[1]; nom = `cyberassurance (CyberProtect) sur ${dureeSaisie >= 3 ? 3 : 1} an${dureeSaisie >= 3 ? 's' : ''}`; }
+      if (taux != null) noteBase += ` · Tabelle Domaine patrimoine ${P.edition}, sur la prime annualisée hors timbre fédéral`;
+    }
+
+    // ── Domaine Vie : on n'estime rien tant que le taux ‰ de l'avenant est inconnu ────────────
+    // Le calcul générique « 4 % du capital de production », appliqué plus bas à toute la gamme
+    // 3a/3b, n'a aucun fondement chez GM : la commission y est en ‰ d'un capital VALORISÉ
+    // (50 à 140 % selon la branche) et sur la prime du risque normal.
+    if (taux == null && typeof PRODUITS_VIE_PRIVEE_CAPITAL !== 'undefined'
+        && PRODUITS_VIE_PRIVEE_CAPITAL.includes(produitId)) {
+      return {
+        montant: 0,
+        detail: `Groupe Mutuel — Vie : commission en ‰ du capital de production VALORISÉ (50 à 140 % selon la branche, tabelle ${G.vie.edition}), sur la prime du risque normal. Le taux ‰ est fixé par ton avenant, pas encore renseigné → montant à saisir à la main.`,
+      };
+    }
+
     if (taux != null) {
       const tauxApplique = estRenouvellement ? taux * G.renouvellement : taux;
       const montant = Math.round(base * tauxApplique) / 100;

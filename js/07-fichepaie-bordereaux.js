@@ -2019,21 +2019,26 @@ function ouvrirReprisesCollaborateurs() {
   creerModale('modal-reprise-collabs', `
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;width:100%;max-width:560px;max-height:85vh;display:flex;flex-direction:column">
       <h3 style="margin:0 0 4px;font-size:16px;font-weight:600;color:var(--text)">👥 Reprendre des collaborateurs</h3>
-      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">Coche ceux à ajouter à la demande d'offre. Les lignes déjà saisies ne sont pas proposées deux fois.</div>
+      <div style="font-size:11.5px;color:var(--text-muted);margin-bottom:14px">Coche ceux à reprendre. Une personne déjà présente voit sa ligne mise à jour depuis sa fiche — jamais dupliquée.</div>
       <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text-muted);margin-bottom:8px;cursor:pointer">
-        <input type="checkbox" onchange="document.querySelectorAll('.rpc-case:not(:disabled)').forEach(c=>c.checked=this.checked)"/> Tout cocher
+        <input type="checkbox" onchange="document.querySelectorAll('.rpc-case').forEach(c=>c.checked=this.checked)"/> Tout cocher
       </label>
       <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:4px">
         ${liste.map(k => {
           const cle = `${(k.nom || '').trim().toLowerCase()}|${(k.prenom || '').trim().toLowerCase()}`;
           const present = dejaLa.has(cle);
-          return `<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;cursor:${present ? 'default' : 'pointer'};opacity:${present ? '.5' : '1'}">
-            <input type="checkbox" class="rpc-case" value="${esc(k.id)}" ${present ? 'disabled' : ''}/>
+          // 24.09.2026 : la case était DÉSACTIVÉE quand la personne figurait déjà dans la liste.
+          // En rouvrant une demande enregistrée, tout le personnel s'y trouve — donc plus rien
+          // n'était cochable et Jonathan a légitimement conclu que le CRM « ne le trouvait plus ».
+          // On la laisse cochable : reprendre quelqu'un de déjà présent MET À JOUR sa ligne depuis
+          // sa fiche (salaire revu, taux changé), ce qui est précisément ce qu'on veut.
+          return `<label style="display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--border);border-radius:8px;cursor:pointer">
+            <input type="checkbox" class="rpc-case" value="${esc(k.id)}"/>
             <span style="flex:1;min-width:0">
               <b style="font-size:13px;color:var(--text)">${esc(k.prenom)} ${esc(k.nom)}</b>
               <span style="display:block;font-size:11px;color:var(--text-muted)">${[k.fonction, k.salaire ? 'CHF ' + fmtCHF(k.salaire) : null, k.taux_activite ? k.taux_activite + ' %' : null, k.avs].filter(Boolean).map(esc).join(' · ') || '—'}</span>
             </span>
-            ${present ? '<span style="font-size:10.5px;color:var(--text-muted)">déjà dans la liste</span>' : ''}
+            ${present ? '<span style="font-size:10.5px;color:var(--text-muted);white-space:nowrap">déjà là — sera mis à jour</span>' : ''}
           </label>`;
         }).join('')}
       </div>
@@ -2048,11 +2053,20 @@ function reprendreCollaborateursChoisis() {
   const ids = Array.from(document.querySelectorAll('.rpc-case:checked')).map(c => c.value);
   if (!ids.length) { showError('Coche au moins un collaborateur.'); return; }
   const liste = typeof allCollaborateurs !== 'undefined' ? allCollaborateurs : [];
+  let majs = 0;
   ids.forEach(id => {
     const k = liste.find(x => x.id === id);
     if (!k) return;
-    ajouterCollaborateurDemandeOffre();
-    const row = document.querySelector('#do-collabs-list .do-collab-wrapper:last-child .do-collab-row');
+    // Si la personne a déjà une ligne (nom + prénom), on la RÉUTILISE au lieu d'en ajouter une
+    // seconde : reprendre quelqu'un de déjà présent sert à rafraîchir sa ligne depuis sa fiche.
+    const cle = `${(k.nom || '').trim().toLowerCase()}|${(k.prenom || '').trim().toLowerCase()}`;
+    let row = Array.from(document.querySelectorAll('#do-collabs-list .do-collab-row')).find(r =>
+      `${(r.querySelector('.do-collab-nom')?.value || '').trim().toLowerCase()}|${(r.querySelector('.do-collab-prenom')?.value || '').trim().toLowerCase()}` === cle);
+    if (row) majs++;
+    else {
+      ajouterCollaborateurDemandeOffre();
+      row = document.querySelector('#do-collabs-list .do-collab-wrapper:last-child .do-collab-row');
+    }
     if (!row) return;
     const set = (sel, val) => { const el = row.querySelector(sel); if (el && val != null && val !== '') el.value = val; };
     set('.do-collab-nom', k.nom);
@@ -2074,7 +2088,9 @@ function reprendreCollaborateursChoisis() {
   // Une valeur posée par script ne déclenche pas « input » : sans cet appel, l'aperçu de l'e-mail
   // de la vue simplifiée resterait sans les collaborateurs qu'on vient de reprendre.
   if (typeof dxApercu === 'function') dxApercu();
-  showError(`✓ ${ids.length} collaborateur${ids.length > 1 ? 's repris' : ' repris'}.`);
+  const ajouts = ids.length - majs;
+  showError(`✓ ${[ajouts ? `${ajouts} collaborateur${ajouts > 1 ? 's repris' : ' repris'}` : null,
+    majs ? `${majs} ligne${majs > 1 ? 's mises' : ' mise'} à jour` : null].filter(Boolean).join(', ')}.`);
 }
 
 function ajouterCollaborateurDemandeOffre() {

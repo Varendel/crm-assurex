@@ -1523,6 +1523,7 @@ function renderEtatDossiers(demandesOffre, refreshType, refreshId) {
         soumisClient: !!e.soumis_client,
         soumisClientLe: e.soumis_client_le || null,
         offrePath: e.offre_path || null,
+        sharepointUrl: e.sharepoint_url || null,
       }));
     } else {
       lignes.push({ demandeOffreId: d.id, idx: null, clientId: d.client_id || '', libelle: `Demande d'offre du ${fmtDate(d.created_at)}`, statut: d.statut || 'envoyée', compagnie: null, email: null, envoyeLe: d.created_at, recuLe: null, soumisClient: false, soumisClientLe: null, offrePath: null });
@@ -1541,6 +1542,15 @@ function renderEtatDossiers(demandesOffre, refreshType, refreshId) {
       return `<button type="button" onclick="event.stopPropagation();marquerCompagnieRecue('${l.demandeOffreId}',${l.idx},'${refreshType || ''}','${refreshId || ''}')" style="background:var(--surface);border:1px solid var(--border);color:var(--text-muted);border-radius:6px;padding:3px 8px;font-size:10px;font-weight: 500;cursor:pointer">✓ Marquer reçue</button>`;
     }
     const boutons = [];
+    // Le dossier SharePoint passe devant : quand l'offre y est classée, on l'OUVRE là-bas, on ne
+    // la redescend pas. Le stockage du CRM reste en repli pour tout ce qui y est déjà.
+    if (l.sharepointUrl) {
+      boutons.push(`<button type="button" onclick="event.stopPropagation();spdOuvrir('${l.sharepointUrl}')" style="background:var(--surface);border:1px solid #38bdf844;color:#38bdf8;border-radius:6px;padding:3px 8px;font-size:10px;font-weight: 500;cursor:pointer">📁 Dossier client</button>`);
+    } else {
+      boutons.push(`<label onclick="event.stopPropagation()" style="cursor:pointer;background:var(--surface);border:1px solid #38bdf844;color:#38bdf8;border-radius:6px;padding:3px 8px;font-size:10px;font-weight: 500">📁 Classer dans le dossier client
+        <input type="file" accept="application/pdf" style="display:none" onclick="event.stopPropagation()" onchange="event.stopPropagation();spdClasserOffre('${l.demandeOffreId}',${l.idx},this,'${refreshType || ''}','${refreshId || ''}')">
+      </label>`);
+    }
     boutons.push(l.offrePath
       ? `<button type="button" onclick="event.stopPropagation();ouvrirPieceJointe('${l.offrePath}')" style="background:var(--surface);border:1px solid var(--border);color:var(--text-muted);border-radius:6px;padding:3px 8px;font-size:10px;font-weight: 500;cursor:pointer">📄 Voir l'offre</button>`
       : `<label onclick="event.stopPropagation()" style="cursor:pointer;background:var(--accent-dim);border:1px solid var(--accent-border);color:var(--accent);border-radius:6px;padding:3px 8px;font-size:10px;font-weight: 500">📎 Joindre l'offre

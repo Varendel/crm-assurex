@@ -16,6 +16,78 @@
 // DÉJÀ demandé confirmation lui-même (confirmer: false).
 
 const ENVOI_TAILLE_MAX = 3.5 * 1024 * 1024;   // limite d'un envoi Graph en une requête
+// 24.09.2026 — « Je n'arrive jamais à joindre les mandats, taille pièce jointe. » Au-delà de
+// ~4 Mo, /sendMail refuse en une seule requête : le CRM abandonnait avec « envoie-les en deux
+// fois », ce qui ne résout rien quand c'est UN seul mandat qui pèse trop. Microsoft prévoit une
+// autre voie pour ce cas : créer un brouillon, téléverser la pièce en tranches via une session,
+// puis envoyer le brouillon. On y bascule automatiquement — Jonathan n'a rien à faire.
+const ENVOI_TRANCHE = 3276800;                // 3,125 Mio : multiple de 320 Kio, exigé par Graph
+const ENVOI_PIECE_MAX = 3 * 1024 * 1024;      // au-delà, la pièce passe par une session
+function envTaille(j) { return j && j.contentBytes ? Math.floor(j.contentBytes.length * 0.75) : 0; }
+
+// Téléverse une pièce en tranches dans un brouillon déjà créé.
+async function envTeleverserPiece(idBrouillon, jointe) {
+  const H = { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' };
+  const taille = envTaille(jointe);
+  const rs = await fetch(`https://graph.microsoft.com/v1.0/me/messages/${idBrouillon}/attachments/createUploadSession`, {
+    method: 'POST', headers: H,
+    body: JSON.stringify({ AttachmentItem: { attachmentType: 'file', name: jointe.name, size: taille, contentType: jointe.contentType } }),
+  });
+  if (!rs.ok) throw new Error(`session de téléversement refusée (${rs.status})`);
+  const { uploadUrl } = await rs.json();
+  if (!uploadUrl) throw new Error('session de téléversement sans adresse');
+
+  // base64 → octets, une seule fois : les tranches sont ensuite découpées dedans.
+  const binaire = atob(jointe.contentBytes);
+  const octets = new Uint8Array(binaire.length);
+  for (let i = 0; i < binaire.length; i++) octets[i] = binaire.charCodeAt(i);
+
+  for (let debut = 0; debut < octets.length; debut += ENVOI_TRANCHE) {
+    const fin = Math.min(debut + ENVOI_TRANCHE, octets.length);
+    const rp = await fetch(uploadUrl, {
+      method: 'PUT',
+      headers: { 'Content-Range': `bytes ${debut}-${fin - 1}/${octets.length}`, 'Content-Type': 'application/octet-stream' },
+      body: octets.slice(debut, fin),
+    });
+    // 201/200 = terminé ; 202 = tranche acceptée, on continue.
+    if (!rp.ok) throw new Error(`téléversement interrompu à ${Math.round(debut / 1024 / 1024 * 10) / 10} Mo (${rp.status})`);
+  }
+}
+
+// Envoi par brouillon : seule voie possible au-delà de ~4 Mo.
+async function envEnvoyerParBrouillon(message, jointes, silencieux) {
+  const H = { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' };
+  const petites = jointes.filter(j => envTaille(j) <= ENVOI_PIECE_MAX);
+  const grosses = jointes.filter(j => envTaille(j) > ENVOI_PIECE_MAX);
+  // Les images de signature (inline, référencées par cid) restent posées à la création du
+  // brouillon : elles sont petites et doivent garder leur contentId.
+  const rb = await fetch('https://graph.microsoft.com/v1.0/me/messages', {
+    method: 'POST', headers: H,
+    body: JSON.stringify({ ...message, ...(petites.length ? { attachments: petites } : {}) }),
+  });
+  if (rb.status === 401) { if (!silencieux) showError('Session Outlook expirée — reconnecte-toi (bouton Microsoft) puis réessaie.'); return { ok: false, statut: 'jeton-expire' }; }
+  if (!rb.ok) {
+    let detail = ''; try { detail = (await rb.json())?.error?.message || ''; } catch (e) { /* illisible */ }
+    if (!silencieux) showError(`Impossible de préparer le message${detail ? ' : ' + detail : ` (code ${rb.status})`}.`);
+    return { ok: false, statut: 'refus', code: rb.status, detail };
+  }
+  const brouillon = await rb.json();
+  if (!silencieux && grosses.length) showError(`⏳ Envoi de ${grosses.length} pièce${grosses.length > 1 ? 's' : ''} volumineuse${grosses.length > 1 ? 's' : ''} — patiente quelques secondes…`);
+  try {
+    for (const g of grosses) await envTeleverserPiece(brouillon.id, g);
+  } catch (e) {
+    // Le brouillon reste dans Outlook : mieux vaut le dire que de le laisser traîner en silence.
+    if (!silencieux) showError(`Pièce jointe non transmise (${e.message}) — un brouillon a été laissé dans Outlook, tu peux le finir à la main.`);
+    return { ok: false, statut: 'televersement', detail: e.message };
+  }
+  const re = await fetch(`https://graph.microsoft.com/v1.0/me/messages/${brouillon.id}/send`, { method: 'POST', headers: H });
+  if (!re.ok) {
+    let detail = ''; try { detail = (await re.json())?.error?.message || ''; } catch (e) { /* illisible */ }
+    if (!silencieux) showError(`Échec de l’envoi${detail ? ' : ' + detail : ` (code ${re.status})`} — le brouillon est dans Outlook.`);
+    return { ok: false, statut: 'refus', code: re.status, detail };
+  }
+  return { ok: true };
+}
 
 function envListe(v) { return (Array.isArray(v) ? v : [v]).map(x => String(x || '').trim()).filter(x => /@/.test(x)); }
 function envB64(blob) { return new Promise((ok, ko) => { const fr = new FileReader(); fr.onload = () => ok(String(fr.result).split(',')[1] || ''); fr.onerror = () => ko(fr.error); fr.readAsDataURL(blob); }); }
@@ -117,34 +189,34 @@ async function envoyerCourriel({ a, copie, cci, objet, texte, html, pieces, conf
   }
 
   for (const p of (pieces || [])) { const j = await envPiece(p); if (j) jointes.push(j); }
-  const poids = jointes.reduce((s, j) => s + (j.contentBytes ? j.contentBytes.length * 0.75 : 0), 0);
-  if (poids > ENVOI_TAILLE_MAX) {
-    if (!silencieux) showError(`Pièces jointes trop lourdes (${Math.round(poids / 1024 / 1024 * 10) / 10} Mo) — envoie-les en deux fois.`);
-    return { ok: false, statut: 'trop-lourd' };
-  }
+  const poids = jointes.reduce((s, j) => s + envTaille(j), 0);
+  const message = {
+    subject: objet || '',
+    body: { contentType: type, content: contenu },
+    toRecipients: dest.map(address => ({ emailAddress: { address } })),
+    ...(cc.length ? { ccRecipients: cc.map(address => ({ emailAddress: { address } })) } : {}),
+    ...(bcc.length ? { bccRecipients: bcc.map(address => ({ emailAddress: { address } })) } : {}),
+  };
 
   try {
-    const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: {
-          subject: objet || '',
-          body: { contentType: type, content: contenu },
-          toRecipients: dest.map(address => ({ emailAddress: { address } })),
-          ...(cc.length ? { ccRecipients: cc.map(address => ({ emailAddress: { address } })) } : {}),
-          ...(bcc.length ? { bccRecipients: bcc.map(address => ({ emailAddress: { address } })) } : {}),
-          ...(jointes.length ? { attachments: jointes } : {}),
-        },
-        saveToSentItems: true,
-      }),
-    });
-    if (r.status === 401) { if (!silencieux) showError('Session Outlook expirée — reconnecte-toi (bouton Microsoft) puis réessaie.'); return { ok: false, statut: 'jeton-expire' }; }
-    if (!r.ok) {
-      let detail = '';
-      try { detail = (await r.json())?.error?.message || ''; } catch (e) { /* réponse illisible */ }
-      if (!silencieux) showError(`Échec de l’envoi via Outlook${detail ? ' : ' + detail : ` (code ${r.status})`}.`);
-      return { ok: false, statut: 'refus', code: r.status, detail };
+    // Au-delà de la limite d'un envoi direct, on passe par le brouillon + téléversement en
+    // tranches, au lieu de renoncer.
+    if (poids > ENVOI_TAILLE_MAX) {
+      const r = await envEnvoyerParBrouillon(message, jointes, silencieux);
+      if (!r.ok) return r;
+    } else {
+      const r = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${msalAccessToken}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: { ...message, ...(jointes.length ? { attachments: jointes } : {}) }, saveToSentItems: true }),
+      });
+      if (r.status === 401) { if (!silencieux) showError('Session Outlook expirée — reconnecte-toi (bouton Microsoft) puis réessaie.'); return { ok: false, statut: 'jeton-expire' }; }
+      if (!r.ok) {
+        let detail = '';
+        try { detail = (await r.json())?.error?.message || ''; } catch (e) { /* réponse illisible */ }
+        if (!silencieux) showError(`Échec de l’envoi via Outlook${detail ? ' : ' + detail : ` (code ${r.status})`}.`);
+        return { ok: false, statut: 'refus', code: r.status, detail };
+      }
     }
   } catch (e) {
     if (!silencieux) showError('Erreur réseau lors de l’envoi via Outlook : ' + (e.message || e));

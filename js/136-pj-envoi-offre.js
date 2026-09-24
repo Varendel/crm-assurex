@@ -9,7 +9,13 @@
 // stockage et ajoutés au message ; le reste de l'envoi (confirmation, statut des compagnies) est
 // celui de js/07, inchangé. Le texte annonce déjà « documents en pièce jointe » : il dit vrai.
 
-const PJE_MAX = 2.5 * 1024 * 1024;   // envoi Graph en une requête (≈ 4 Mo encodés), signature et ses images comprises (js/138)
+// 24.09.2026 — « Je n'arrive jamais à joindre les mandats, taille pièce jointe. » La limite était
+// à 2,5 Mo parce que l'envoi passait forcément par /sendMail en une requête (plafonnée à ~4 Mo
+// une fois encodée en base64). Depuis que js/143 bascule tout seul sur un brouillon + téléversement
+// en tranches au-delà de cette taille, la seule limite qui reste est celle de la boîte Outlook
+// elle-même — 25 à 35 Mo selon la configuration Exchange. On se garde une marge à 20 Mo :
+// au-delà, c'est le serveur du destinataire qui refuserait, et mieux vaut le dire avant l'envoi.
+const PJE_MAX = 20 * 1024 * 1024;
 const _pje = { items: [], locaux: [] };
 
 function pjeEsc(v) { return String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
@@ -158,7 +164,7 @@ async function pjePreparer() {
   }
   _pje.locaux.filter(x => x.coche).forEach(f => out.push({ name: f.file.name, type: f.file.type || 'application/octet-stream', blob: f.file }));
   const total = out.reduce((s, x) => s + x.blob.size, 0);
-  if (total > PJE_MAX) throw new Error(`pièces jointes trop lourdes (${pjeTaille(total)}, maximum ${pjeTaille(PJE_MAX)}) — décoche-en une partie`);
+  if (total > PJE_MAX) throw new Error(`pièces jointes trop lourdes (${pjeTaille(total)}, maximum ${pjeTaille(PJE_MAX)}) — la boîte du destinataire les refuserait ; décoche-en une partie ou envoie un lien`);
   for (const x of out) x.contentBytes = await pjeB64(x.blob);
   return out;
 }

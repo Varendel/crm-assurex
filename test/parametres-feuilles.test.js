@@ -27,7 +27,12 @@ window.eval(['js/01-prevoyance-immo.js', 'js/02-catalogue-session.js']
 // De quoi faire tourner le module sans charger tout le CRM.
 window.viewApparence = function () { return '<h2>Apparence</h2><p>réglages du thème</p>'; };
 window.viewAgents = function () { return '<h2>Paramètres — Agents</h2><p>liste des agents</p>'; };
-window.SECTIONS = [{ id: 'rh', label: 'RH', sub: [{ id: 'agents', label: 'Agents' }, { id: 'fiche-paie', label: 'Fiches de paie' }] }];
+// viewContactsCompagnies est ASYNCHRONE dans le CRM : elle va chercher ses contacts en base.
+window.viewContactsCompagnies = function () { return Promise.resolve('<h2>Contacts</h2><p>les contacts compagnies</p>'); };
+window.SECTIONS = [
+  { id: 'rh', label: 'RH', sub: [{ id: 'agents', label: 'Agents' }, { id: 'fiche-paie', label: 'Fiches de paie' }] },
+  { id: 'settings', label: 'Réglages', sub: [{ id: 'contacts-compagnies', label: 'Contacts compagnies' }, { id: 'apparence', label: 'Apparence' }] },
+];
 let vueDemandee = null;
 window.navigate = function (v) { vueDemandee = v; };
 window.eval(fs.readFileSync(path.join(ROOT, 'js/163-parametres-feuilles.js'), 'utf8'));
@@ -83,9 +88,12 @@ check('RH : pas de barre de feuilles pour une seule feuille', html.includes('prm
 check('RH : l’Apparence reste accessible', html.includes('réglages du thème'), true);
 window.estRoleRH = () => false;
 
-// ── « Agents » quitte le menu RH ───────────────────────────────────────────────────────────────
+// ── Les pages devenues des feuilles quittent le menu ───────────────────────────────────────────
 const rh = window.SECTIONS.find(s => s.id === 'rh');
 check('Agents retiré du menu RH', rh.sub.map(v => v.id), ['fiche-paie']);
+const reglages = window.SECTIONS.find(s => s.id === 'settings');
+check('Contacts compagnies retiré des Réglages', reglages.sub.map(v => v.id), ['apparence']);
+check('Apparence reste dans le menu', reglages.sub.some(v => v.id === 'apparence'), true);
 
 // ── Les anciens liens vers 'agents' continuent de marcher ──────────────────────────────────────
 window.localStorage.removeItem('crm_parametres_feuille'); vueDemandee = null;
@@ -93,8 +101,29 @@ window.navigate('agents');
 check('navigate(agents) ouvre Paramètres', vueDemandee, 'apparence');
 check('… sur la feuille Agents', memoire(), 'agents');
 vueDemandee = null;
+window.navigate('contacts-compagnies');
+check('navigate(contacts-compagnies) ouvre Paramètres', vueDemandee, 'apparence');
+check('… sur la bonne feuille', memoire(), 'contacts-compagnies');
+vueDemandee = null;
 window.navigate('portefeuille');
 check('les autres vues ne sont pas détournées', vueDemandee, 'portefeuille');
+vueDemandee = null;
+window.navigate('apparence');
+check('apparence reste apparence, pas de boucle', vueDemandee, 'apparence');
 
-console.log(`\n${pass} réussis, ${fail} échoués`);
-process.exit(fail ? 1 : 0);
+// ── Une feuille asynchrone : chargement d'abord, contenu ensuite ───────────────────────────────
+(async () => {
+  window.localStorage.setItem('crm_parametres_feuille', 'contacts-compagnies');
+  const html = window.viewApparence();
+  check('la feuille asynchrone affiche un chargement', html.includes('Chargement…'), true);
+  check('… dans un conteneur identifiable', /id="prm-[a-z0-9]+"/.test(html), true);
+  // Le conteneur doit exister dans le document pour que le remplacement trouve sa cible.
+  window.document.body.innerHTML = html;
+  await new Promise(r => setTimeout(r, 10));
+  check('… puis le contenu remplace le chargement',
+    window.document.body.innerHTML.includes('les contacts compagnies'), true);
+  check('… et le chargement a disparu', window.document.body.innerHTML.includes('Chargement…'), false);
+
+  console.log(`\n${pass} réussis, ${fail} échoués`);
+  process.exit(fail ? 1 : 0);
+})();

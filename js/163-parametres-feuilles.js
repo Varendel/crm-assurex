@@ -21,9 +21,13 @@ const PRM_MEMOIRE = 'crm_parametres_feuille';
 
 // Une feuille : son onglet, et ce qu'elle affiche. `staff` exclut la session RH — la page Agents
 // montre les commissions générées, elle n'a rien à faire sous ses yeux.
+// `asynchrone` : la feuille rend une promesse. On affiche alors un chargement, puis on remplace
+// — viewContactsCompagnies va chercher ses contacts en base avant de savoir quoi écrire.
 const PRM_FEUILLES = [
   { id: 'apparence', icone: '🎨', label: 'Apparence', rendu: () => (typeof _prmApparenceOrigine === 'function' ? _prmApparenceOrigine() : '') },
   { id: 'agents', icone: '🧑‍🤝‍🧑', label: 'Agents', staff: true, rendu: () => (typeof viewAgents === 'function' ? viewAgents() : '<p>Page Agents indisponible.</p>') },
+  { id: 'contacts-compagnies', icone: '🏢', label: 'Contacts compagnies', staff: true, asynchrone: true,
+    rendu: () => (typeof viewContactsCompagnies === 'function' ? viewContactsCompagnies() : Promise.resolve('<p>Page Contacts compagnies indisponible.</p>')) },
 ];
 
 let _prmApparenceOrigine = null;
@@ -65,30 +69,49 @@ function prmBarreHtml(active) {
   window.viewApparence = function () {
     const active = prmFeuilleActive();
     if (!active) return _prmApparenceOrigine.apply(this, arguments);
+    // Une feuille asynchrone ne peut rien rendre tout de suite : on pose la page, puis on remplit.
+    // Le jeton évite qu'une réponse lente n'écrase une feuille ouverte entre-temps.
+    let corps;
+    if (active.asynchrone) {
+      const jeton = 'prm-' + Date.now().toString(36);
+      corps = `<div id="${jeton}" class="loader">Chargement…</div>`;
+      Promise.resolve().then(() => active.rendu()).then(h => {
+        const z = document.getElementById(jeton);
+        if (z && prmFeuilleActive().id === active.id) z.outerHTML = h;
+      }).catch(e => {
+        const z = document.getElementById(jeton);
+        if (z) z.innerHTML = `<p class="prm-echec">Cette feuille n’a pas pu se charger : ${prmEsc(e && e.message || e)}</p>`;
+      });
+    } else {
+      corps = active.rendu();
+    }
     return `<div class="prm-page">
       <h2 class="prm-titre">Paramètres</h2>
       ${prmBarreHtml(active)}
-      <div class="prm-contenu" role="tabpanel">${active.rendu()}</div>
+      <div class="prm-contenu" role="tabpanel">${corps}</div>
     </div>`;
   };
 
-  // « Agents » sort du menu RH : la page vit désormais dans Paramètres, et deux chemins vers le
-  // même écran, c'est un de trop.
+  // Les pages devenues des feuilles sortent du menu : elles vivent désormais dans Paramètres, et
+  // deux chemins vers le même écran, c'est un de trop. On retire l'entrée où qu'elle soit.
+  const dansLeMenu = PRM_FEUILLES.map(f => f.id).filter(id => id !== 'apparence');
   if (typeof SECTIONS !== 'undefined' && Array.isArray(SECTIONS)) {
-    const rh = SECTIONS.find(s => s.id === 'rh');
-    if (rh && Array.isArray(rh.sub)) {
-      const i = rh.sub.findIndex(v => v.id === 'agents');
-      if (i >= 0) rh.sub.splice(i, 1);
+    for (const sec of SECTIONS) {
+      if (!Array.isArray(sec.sub)) continue;
+      for (const id of dansLeMenu) {
+        const i = sec.sub.findIndex(v => v.id === id);
+        if (i >= 0) sec.sub.splice(i, 1);
+      }
     }
   }
 
-  // Les liens qui pointent encore vers 'agents' (favoris, recherche rapide, raccourcis) doivent
+  // Les liens qui pointent encore vers ces vues (favoris, recherche rapide, raccourcis) doivent
   // continuer de marcher : ils ouvrent Paramètres sur la bonne feuille au lieu d'une page nue.
   if (typeof navigate === 'function' && !navigate._prmRedirige) {
     const origine = navigate;
     const enveloppe = function (vue, ...reste) {
-      if (vue === 'agents') {
-        try { localStorage.setItem(PRM_MEMOIRE, 'agents'); } catch (e) {}
+      if (dansLeMenu.includes(vue)) {
+        try { localStorage.setItem(PRM_MEMOIRE, vue); } catch (e) {}
         return origine.call(this, 'apparence', ...reste);
       }
       return origine.call(this, vue, ...reste);
@@ -115,6 +138,7 @@ function prmBarreHtml(active) {
     /* La feuille rendue porte souvent son propre titre (« Paramètres — Agents ») : il ferait
        doublon sous celui de la page. On masque le premier h2 de la feuille, pas les suivants. */
     .prm-contenu > h2:first-child { display: none; }
+    .prm-echec { font-size: var(--t-s, 13px); color: var(--c-danger-texte, #b91c1c); }
   `;
   document.head.appendChild(s);
 })();

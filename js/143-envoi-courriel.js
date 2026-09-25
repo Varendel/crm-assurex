@@ -111,6 +111,17 @@ async function envoyerCourriel({ a, copie, cci, objet, texte, html, pieces, conf
   let bcc = envListe(cci);
   if (!dest.length && !test) { if (!silencieux) showError('Aucun destinataire : rien n’a été envoyé.'); return { ok: false, statut: 'sans-destinataire' }; }
 
+  // 25.09.2026 — UN COURRIEL VIDE NE PART PAS. Un mandat est parti à Zurich sans objet ni texte :
+  // l'appelant lisait des champs qui n'existaient plus et `?.value || ''` a fourni deux chaînes
+  // vides, en silence (js/05). La compagnie a reçu une signature et une pièce jointe, sans un mot ;
+  // il a fallu s'en excuser par un second courriel. Aucun envoi légitime du CRM n'a d'objet vide
+  // ET de corps vide : c'est la signature d'un champ perdu, pas d'une intention. On refuse, on le
+  // dit, et le message reste à l'écran pour être corrigé plutôt que d'arriver vierge chez un tiers.
+  if (!String(objet || '').trim() && !String(texte || '').trim() && !String(html || '').trim()) {
+    if (!silencieux) showError('Courriel vide (ni objet ni texte) : rien n’a été envoyé. Signale-le — c’est un défaut du CRM, pas une fausse manœuvre.');
+    return { ok: false, statut: 'courriel-vide' };
+  }
+
   const compte = typeof sigCompteOutlook === 'function' ? await sigCompteOutlook().catch(() => null) : null;
   // 24.09.2026 — « As-tu ajouté la règle jo@cofidex en cci de tous les e-mails sortants ? » Elle
   // était là, mais suspendue à `compte.adresse` : session Outlook froide ou illisible, et `moi`

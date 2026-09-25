@@ -157,6 +157,16 @@ async function viewDemandeOffreSimple() {
               <!-- La ventilation AP / ANP / excédentaire n'a de sens que si on demande de l'accident :
                    ce sont des notions LAA. Pour une perte de gain ou une LPP seules, la compagnie
                    veut la masse salariale AVS tout court, ventilée hommes / femmes (24.09.2026). -->
+              <!-- 25.09.2026 — « salaire AVS à annualiser pour les demandes d'offres ». Une
+                   compagnie tarife sur la masse salariale ANNUELLE. Or un salaire se discute au
+                   mois, et c'est au mois qu'il arrive sur la fiche du collaborateur. Le formulaire
+                   ne disait nulle part quelle unité il attendait : on la demande, une fois pour
+                   toute la demande, et le total annualisé s'affiche pour qu'aucun doute ne parte
+                   à la compagnie. -->
+              <div class="dx-rub" data-dx="pgm laa lpp">
+                ${dxListe('do-salaires-base', 'Les montants de salaire (masse salariale et fiches collaborateurs) sont', BASES_SALAIRE.map(b => [b[0], b[1]]))}
+                <div class="dx-annualise" id="dx-annualise"></div>
+              </div>
               <div class="dx-rub" data-dx="pgm lpp !laa">
                 <h4>💶 Masse salariale AVS <small>ventilée hommes / femmes</small></h4>
                 <div class="form-grid dx-grid-3">
@@ -435,12 +445,16 @@ function dxCorpsEmail() {
     i.lieu_risque ? `Lieu du risque : ${i.lieu_risque}` : null,
   ]).join('\n');
 
+  // 25.09.2026 — la compagnie tarife sur l'ANNÉE. Ce qui est saisi au mois est multiplié ici, une
+  // seule fois, juste avant de partir ; sans réponse à la question posée dans le formulaire, rien
+  // n'est multiplié — mieux vaut un chiffre brut qu'un chiffre inventé.
+  const annuel = v => (typeof annualiserSalaire === 'function' ? annualiserSalaire(v, b.salaires_base) : dxNombre(v));
   const masses = [['Salaires AVS — hommes', b.avs_h], ['Salaires AVS — femmes', b.avs_f],
     ['Masse salariale AP — hommes', b.ap_h], ['Masse salariale AP — femmes', b.ap_f], ['Masse salariale ANP — hommes', b.anp_h], ['Masse salariale ANP — femmes', b.anp_f],
     ['Salaire excédentaire AVS — hommes', b.exc_avs_h], ['Salaire excédentaire AVS — femmes', b.exc_avs_f], ["Masse salariale chef d'entreprise", b.masse_chef]].filter(([, v]) => dxNombre(v) > 0);
   const taille = liste([
     b.ca ? `Chiffre d'affaires : ${dxCHF(b.ca)}` : null,
-    masses.length ? `Masse salariale :\n${masses.map(([l, v]) => `- ${l} : ${dxCHF(v)}`).join('\n')}` : null,
+    masses.length ? `Masse salariale annuelle :\n${masses.map(([l, v]) => `- ${l} : ${dxCHF(annuel(v))}`).join('\n')}` : null,
     b.nb_collab ? `Nombre de collaborateurs : ${b.nb_collab}` : null,
   ]).join('\n');
 
@@ -458,7 +472,7 @@ function dxCorpsEmail() {
       lpp.cap_invalidite ? `capital invalidité ${dxCHF(lpp.cap_invalidite)}` : null, lpp.cap_deces ? `capital décès ${dxCHF(lpp.cap_deces)}` : null]);
     const amelio = liste([oui(lpp.amelio_rentes, 'rentes'), oui(lpp.amelio_epargne, 'épargne'), oui(lpp.amelio_tranches, 'tranches de cotisations'), oui(lpp.amelio_rendement, 'rendement')]);
     let t = `- LPP${l.length ? ' — ' + l.join(', ') : ''}${amelio.length ? `\n  Améliorations souhaitées : ${amelio.join(', ')}` : ''}`;
-    if (dxNombre(lpp.exc_h) || dxNombre(lpp.exc_f)) t += `\n  Salaires excédentaires : hommes ${dxCHF(lpp.exc_h)} / femmes ${dxCHF(lpp.exc_f)}`;
+    if (dxNombre(lpp.exc_h) || dxNombre(lpp.exc_f)) t += `\n  Salaires excédentaires : hommes ${dxCHF(annuel(lpp.exc_h))} / femmes ${dxCHF(annuel(lpp.exc_f))}`;
     // La compagnie établit une offre LPP nominative : elle a besoin de la ligne entière, adresse
     // privée comprise, pas seulement du nom et du salaire (24.09.2026).
     if (d.collaborateurs_lpp.length) t += `\n  Collaborateurs à assurer (${d.collaborateurs_lpp.length}) :\n${d.collaborateurs_lpp.map(c => {
@@ -469,7 +483,7 @@ function dxCorpsEmail() {
         c.fonction || null,
         dxNombre(c.taux_activite) ? c.taux_activite + ' %' : null,
         c.date_entree ? 'entrée le ' + fmtDate(c.date_entree) : null,
-        c.salaire ? 'salaire AVS ' + dxCHF(c.salaire) : null,
+        c.salaire ? 'salaire AVS annuel ' + dxCHF(annuel(c.salaire)) : null,
       ]).join(', ');
       return `  • ${[c.prenom, c.nom].filter(Boolean).join(' ')}${detail ? ' — ' + detail : ''}${c.adresse ? `\n    ${c.adresse}` : ''}`;
     }).join('\n')}`;
@@ -520,9 +534,32 @@ function dxCorpsEmail() {
 function opAuteurDx() { return currentUser ? `${currentUser.prenom || ''} ${currentUser.nom || ''}`.trim() : ''; }
 
 let _dxMinuterie = null;
+// Ce que la compagnie recevra vraiment, affiché sous le choix de base : on ne multiplie jamais en
+// silence dans le dos de celui qui saisit. S'il a tapé des mensuels et l'a dit, il voit la masse
+// annuelle ; s'il a tapé des annuels, la ligne le confirme sans rien changer.
+const DX_CHAMPS_SALAIRE = ['do-avs-h', 'do-avs-f', 'do-ap-h', 'do-ap-f', 'do-anp-h', 'do-anp-f',
+  'do-exc-avs-h', 'do-exc-avs-f', 'do-masse-chef'];
+
+function dxAnnualisation() {
+  const zone = document.getElementById('dx-annualise');
+  if (!zone) return;
+  const base = document.getElementById('do-salaires-base')?.value || '';
+  const saisi = DX_CHAMPS_SALAIRE.reduce((s, id) => s + dxNombre(document.getElementById(id)?.value), 0);
+  if (!saisi) { zone.textContent = ''; return; }
+  const facteur = typeof facteurAnnualisation === 'function' ? facteurAnnualisation(base) : 1;
+  const annuel = Math.round(saisi * facteur * 100) / 100;
+  zone.innerHTML = facteur === 1
+    ? (base
+      ? `<b>${dxCHF(annuel)}</b> de masse salariale transmise à la compagnie, telle que saisie.`
+      : `<span class="dx-annualise-alerte">Précise l’unité ci-dessus.</span> Sans réponse, les <b>${dxCHF(saisi)}</b> saisis partent tels quels — si ce sont des mensuels, l’offre sera douze fois trop basse.`)
+    : `${dxCHF(saisi)} × ${facteur} = <b>${dxCHF(annuel)}</b> de masse salariale annuelle transmise à la compagnie.`;
+}
+
 function dxApercu() {
   clearTimeout(_dxMinuterie);
   _dxMinuterie = setTimeout(() => {
+    // Un accessoire ne doit jamais empêcher l'aperçu de se construire (25.09.2026).
+    try { dxAnnualisation(); } catch (e) { console.warn('Annualisation : ' + e.message); }
     const zone = document.getElementById('dx-apercu');
     if (!zone) return;
     const { sujet, corps } = dxCorpsEmail();

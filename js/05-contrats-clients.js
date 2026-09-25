@@ -1782,8 +1782,8 @@ function ouvrirApercuEmailMandat({ clientId, cies, emails, sansEmail, sujet, cor
 }
 
 function copierApercuEmailMandat() {
-  const sujet = document.getElementById('apercu-mandat-sujet')?.value || '';
-  const corps = document.getElementById('apercu-mandat-corps')?.value || '';
+  const sujet = mdxChampApercu('sujet');
+  const corps = mdxChampApercu('corps');
   const texte = `Objet : ${sujet}\n\n${corps}`;
   if (navigator.clipboard && navigator.clipboard.writeText) {
     navigator.clipboard.writeText(texte).then(() => showError('✓ Texte copié.')).catch(() => showError('Impossible de copier automatiquement — sélectionne le texte manuellement.'));
@@ -1799,8 +1799,8 @@ function copierApercuEmailMandat() {
 function ouvrirMailtoApercuMandat() {
   const ctx = window._apercuEmailMandat;
   if (!ctx) return;
-  const sujet = document.getElementById('apercu-mandat-sujet')?.value || '';
-  const corps = document.getElementById('apercu-mandat-corps')?.value || '';
+  const sujet = mdxChampApercu('sujet');
+  const corps = mdxChampApercu('corps');
   const to = (ctx.emails || []).join(',');
   window.open(`mailto:${encodeURIComponent(to)}?subject=${encodeURIComponent(sujet)}&body=${encodeURIComponent(corps)}`, '_blank');
 }
@@ -1808,11 +1808,27 @@ function ouvrirMailtoApercuMandat() {
 // SEULE action qui envoie réellement quelque chose — déclenchée explicitement, jamais automatique.
 // Garantit l'expéditeur jo@cofidex.ch via Microsoft Graph (le compte connecté au CRM), même pattern
 // que pour les demandes d'offre (js/07).
+// 25.09.2026 — L'ENVOI VIERGE. Un mandat est parti à Zurich sans objet et sans une ligne de texte :
+// seulement la signature et le mandat en pièce jointe. Cause : le 24.09 la pose du mandat a été
+// rebranchée sur LE rédacteur du CRM (js/07, champs `apercu-email-sujet` / `apercu-email-corps`),
+// mais le bouton d'envoi, lui, lisait toujours les champs de l'ancienne fenêtre
+// (`apercu-mandat-…`). Ces identifiants n'existaient plus ; `?.value || ''` a rendu deux chaînes
+// vides, sans rien signaler, et le courriel est parti quand même. D'où deux corrections :
+//   · ici, on lit la fenêtre réellement ouverte, quelle qu'elle soit ;
+//   · dans js/143, un envoi sans objet NI texte est désormais refusé — un champ absent ne doit
+//     jamais se traduire par un message vide expédié à une compagnie.
+// L'essai « 📤 M'envoyer un essai », lui, lisait les bons champs : il était parfait, et c'est
+// précisément ce qui a endormi la méfiance. Un essai ne protège que ce qu'il emprunte.
+function mdxChampApercu(base) {
+  return document.getElementById(`apercu-email-${base}`)?.value
+    ?? document.getElementById(`apercu-mandat-${base}`)?.value ?? '';
+}
+
 async function envoyerApercuEmailMandatViaOutlook() {
   const ctx = window._apercuEmailMandat;
   if (!ctx) return;
-  const sujet = document.getElementById('apercu-mandat-sujet')?.value || '';
-  const corps = document.getElementById('apercu-mandat-corps')?.value || '';
+  const sujet = mdxChampApercu('sujet');
+  const corps = mdxChampApercu('corps');
   if (!ctx.emails.length) { showError("Aucune compagnie sélectionnée n'a d'email enregistré — ajoute-en dans Paramètres → Contacts compagnies."); return; }
   // Le mandat signé part avec le courriel : c'est tout l'objet de l'envoi (22.09.2026).
   let pieces = [];
@@ -1825,8 +1841,20 @@ async function envoyerApercuEmailMandatViaOutlook() {
     } catch (e) { if (!confirm('Le mandat n’a pas pu être préparé (' + (e.message || e) + ').\n\nEnvoyer sans pièce jointe ?')) return; }
   }
   // 22.09.2026 (audit, point 2) : compte Outlook réel, signature, erreurs — via envoyerCourriel (js/143).
-  const res = await envoyerCourriel({ a: ctx.emails, objet: sujet, texte: corps, pieces, contexte: 'mandat signé' });
+  // 25.09.2026 : la pose s'inscrit au fil de l'affaire (js/166). C'est le geste qui ouvre le
+  // dossier chez la compagnie ; jusqu'ici sa seule trace était dans Outlook.
+  const nomsCies = (ctx.cies || []).map(c => c.compagnie).filter(Boolean).join(', ');
+  const res = await envoyerCourriel({
+    a: ctx.emails, objet: sujet, texte: corps, pieces, contexte: 'mandat signé',
+    affaire: {
+      clientId: ctx.clientId,
+      libelle: `🤝 Mandat posé${nomsCies ? ` chez ${nomsCies}` : ''} — copie des polices en vigueur demandée${pieces.length ? ' (mandat signé joint)' : ' — SANS le mandat en pièce jointe'}`,
+    },
+  });
   if (!res.ok) return;
+  // La fenêtre à refermer est celle qui est ouverte : le rédacteur partagé depuis le 24.09.2026,
+  // l'ancienne s'il en reste une. Sans la première ligne, elle restait ouverte après l'envoi.
+  document.getElementById('modal-apercu-email-do')?.remove();
   document.getElementById('modal-apercu-email-mandat')?.remove();
 }
 

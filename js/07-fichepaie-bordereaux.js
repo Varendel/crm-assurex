@@ -1936,6 +1936,7 @@ function prefillChampsDemandeOffre(existante) {
   setVal('do-ap-h', b.ap_h); setVal('do-ap-f', b.ap_f);
   setVal('do-anp-h', b.anp_h); setVal('do-anp-f', b.anp_f); setVal('do-exc-avs-h', b.exc_avs_h); setVal('do-exc-avs-f', b.exc_avs_f);
   setVal('do-masse-chef', b.masse_chef); setVal('do-paiement-prime', b.paiement_prime);
+  setVal('do-salaires-base', b.salaires_base);
   setChk('do-perte-gain', ap.perte_gain); setChk('do-pg-14j', ap.pg_14j); setChk('do-pg-30j', ap.pg_30j); setChk('do-pg-60j', ap.pg_60j);
   setChk('do-laa', ap.laa); setChk('do-laaf', ap.laaf); setChk('do-laac', ap.laac); setChk('do-semi-privee', ap.semi_privee); setChk('do-lpp', ap.lpp);
   setChk('do-3a', av.a3a); setChk('do-3a-indep', av.a3a_indep); setChk('do-3b', av.a3b); setChk('do-risque-pure', av.risque_pure);
@@ -2204,6 +2205,12 @@ async function genererEmailDemandeOffre() {
   // Détail de la masse salariale, ligne par ligne, EXACTEMENT comme saisi sur ce formulaire —
   // bug réel repéré par Jonathan le 10.08.2026 : l'email additionnait AP/ANP hommes/femmes en un
   // seul total, alors qu'il avait renseigné chaque case séparément et voulait les voir toutes.
+  // 25.09.2026 : « salaire AVS à annualiser pour les demandes d'offres. » Les compagnies tarifent
+  // sur la masse de l'année ; la saisie, elle, se fait souvent au mois. Le formulaire demande
+  // désormais l'unité (do-salaires-base) et la conversion se fait ici, au dernier moment. Sans
+  // réponse, le facteur vaut 1 : on transmet ce qui a été écrit, jamais un chiffre supposé.
+  const baseSalaires = val('do-salaires-base');
+  const annuel = v => (typeof annualiserSalaire === 'function' ? annualiserSalaire(v, baseSalaires) : Number(v) || 0);
   const detailMasseSalariale = [
     // Sans accident à demander, il n'y a pas de ventilation AP/ANP : c'est la masse AVS brute,
     // hommes / femmes, que la compagnie attend (ajouté le 24.09.2026).
@@ -2228,7 +2235,7 @@ async function genererEmailDemandeOffre() {
   ].filter(Boolean).join('\n');
 
   const ligneMasseSalariale = detailMasseSalariale.length
-    ? `Masse salariale :\n${detailMasseSalariale.map(([label, v]) => `- ${label} : CHF ${Number(v).toLocaleString('fr-CH')}`).join('\n')}`
+    ? `Masse salariale annuelle :\n${detailMasseSalariale.map(([label, v]) => `- ${label} : CHF ${annuel(v).toLocaleString('fr-CH')}`).join('\n')}`
     : (masseSalarialeRepli ? `Masse salariale : CHF ${masseSalarialeRepli.toLocaleString('fr-CH')}` : '');
 
   const ligneTaille = [
@@ -2427,7 +2434,7 @@ function construireBodyDemandeOffre() {
 
   const donnees = {
     identite: { contact: val('do-contact'), adresse: val('do-adresse'), tel: val('do-tel'), email: val('do-email'), avs: val('do-avs'), activite: val('do-activite'), lieu_risque: val('do-lieu-risque'), suva: val('do-suva'), independant: val('do-independant') },
-    base_calcul: { ca: val('do-ca'), nb_collab: val('do-nb-collab'), avs_h: val('do-avs-h'), avs_f: val('do-avs-f'), ap_h: val('do-ap-h'), ap_f: val('do-ap-f'), anp_h: val('do-anp-h'), anp_f: val('do-anp-f'), exc_avs_h: val('do-exc-avs-h'), exc_avs_f: val('do-exc-avs-f'), masse_chef: val('do-masse-chef'), paiement_prime: val('do-paiement-prime') },
+    base_calcul: { ca: val('do-ca'), nb_collab: val('do-nb-collab'), avs_h: val('do-avs-h'), avs_f: val('do-avs-f'), ap_h: val('do-ap-h'), ap_f: val('do-ap-f'), anp_h: val('do-anp-h'), anp_f: val('do-anp-f'), exc_avs_h: val('do-exc-avs-h'), exc_avs_f: val('do-exc-avs-f'), masse_chef: val('do-masse-chef'), paiement_prime: val('do-paiement-prime'), salaires_base: val('do-salaires-base') },
     assurances_personnes: { perte_gain: chk('do-perte-gain'), pg_14j: chk('do-pg-14j'), pg_30j: chk('do-pg-30j'), pg_60j: chk('do-pg-60j'), laa: chk('do-laa'), laaf: chk('do-laaf'), laac: chk('do-laac'), semi_privee: chk('do-semi-privee'), lpp: chk('do-lpp') },
     assurances_vie: { a3a: chk('do-3a'), a3a_indep: chk('do-3a-indep'), a3b: chk('do-3b'), risque_pure: chk('do-risque-pure'), versement_unique: chk('do-versement-unique'), budget_epargne: val('do-budget-epargne'), pa: val('do-pa') },
     assurances_choses: { inventaire: val('do-inventaire'), rc_commerce: chk('do-rc-commerce'), prejudice_fortune: chk('do-prejudice-fortune'), cyber: chk('do-cyber'), construction: chk('do-construction'), technique: chk('do-technique'), perte_exploit: chk('do-perte-exploit') },

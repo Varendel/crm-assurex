@@ -697,6 +697,36 @@ function estRoleRH() {
   return !!(currentUser && currentUser.role === 'rh');
 }
 
+// ── Salaires : du mensuel à l'annuel (25.09.2026) ──────────────────────────────────────────────
+// « Salaire AVS à annualiser pour les demandes d'offres. »
+//
+// Une compagnie tarife une assurance de personnes sur la MASSE SALARIALE ANNUELLE : c'est la base
+// de la LAA, de la perte de gain et de la LPP. Or un salaire se discute au mois, et c'est au mois
+// qu'il arrive sur la fiche du collaborateur — la seule fiche renseignée du portefeuille porte
+// 3 500. Transmettre 3 500 là où la compagnie attend 45 500, c'est une offre douze fois trop
+// basse, qui ne sera pas tenue à la signature.
+//
+// Le facteur n'est pas toujours douze : beaucoup d'entreprises versent un treizième salaire, et
+// la masse AVS le comprend. D'où un choix explicite plutôt qu'une multiplication cachée.
+const BASES_SALAIRE = [
+  ['annuel', 'Annuels — déjà la masse de l’année', 1],
+  ['mensuel12', 'Mensuels — 12 mois', 12],
+  ['mensuel13', 'Mensuels — 13 mois (13e salaire)', 13],
+];
+function facteurAnnualisation(base) {
+  const e = BASES_SALAIRE.find(b => b[0] === String(base || '').toLowerCase());
+  return e ? e[2] : 1;   // sans choix, on ne multiplie pas : mieux vaut un chiffre brut qu'un chiffre inventé
+}
+function annualiserSalaire(montant, base) {
+  const n = Number(montant);
+  if (!Number.isFinite(n) || n === 0) return 0;
+  return Math.round(n * facteurAnnualisation(base) * 100) / 100;
+}
+function libelleBaseSalaire(base) {
+  const e = BASES_SALAIRE.find(b => b[0] === String(base || '').toLowerCase());
+  return e ? e[1] : '';
+}
+
 // Les agents que l'on peut désigner comme apporteur ou co-apporteur d'une affaire.
 // Un rôle RH est exclu (25.09.2026) : il saisit des dossiers mais ne prend aucune commission, et
 // l'inscrire comme apporteur ferait partir une part vers quelqu'un qui n'y a pas droit.

@@ -404,8 +404,15 @@ async function dpsAjouter() {
     const repere = `<button type="button" class="btn-secondary" onclick="dcxParcourir('${c.id}')">`;
     const i = html.indexOf(repere);
     const bouton = `<button type="button" class="btn-save dps-bouton" onclick="dpsOuvrir('${c.id}')">🔎 Chercher dans le dossier de dépôt</button>`;
-    if (i < 0) return html;
-    return html.slice(0, i) + `<span class="dps-boutons">${bouton}` + html.slice(i).replace('</button>', '</button></span>');
+    if (i >= 0) return html.slice(0, i) + `<span class="dps-boutons">${bouton}` + html.slice(i).replace('</button>', '</button></span>');
+    // 25.09.2026 — « il m'a semblé tomber sur un bouton tout à l'heure, je le retrouve plus ».
+    // On se greffait sur le libellé exact du bouton « Déposer un document » de js/59 : le jour où
+    // ce libellé change, le nôtre disparaissait sans un mot. On se rabat donc sur la fin de
+    // l'en-tête de la carte, et on laisse une trace si même ça échoue.
+    const tete = html.indexOf('</header>');
+    if (tete >= 0) return html.slice(0, tete) + `<span class="dps-boutons">${bouton}</span>` + html.slice(tete);
+    console.warn('[dps] Bouton « Chercher dans le dossier de dépôt » non greffé : aucun point d’accroche dans l’onglet Documents.');
+    return html;
   };
 })();
 

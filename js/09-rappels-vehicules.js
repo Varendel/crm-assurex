@@ -649,17 +649,27 @@ function viewNouveauContrat() {
         <input class="form-input" id="ct-prime-risque-frais" type="number" placeholder="Hors part épargne" oninput="updateCommissionPreview()"/>
         <div style="font-size:10px;color:var(--text-muted);margin-top:3px">Swiss Life rémunère uniquement sur risque + frais, pas sur la part épargne de la prime totale ci-dessus.</div>
       </div>
-      <!-- 25.09.2026 — « il faudra ajouter paiement de la prime à renseigner ; trimestre, semestre,
-           annuel en entreprise ». Le champ existait, sous le nom « Périodicité » : personne ne
-           faisait le lien. Une colonne contrats.paiement_prime avait même été créée à côté et
-           n'a jamais été remplie. C'est bien contrats.periodicite qui fait foi — elle pilote la
-           prévision d'encaissement (js/19) — on lui donne juste le nom que Jonathan emploie. -->
-      <div class="form-field"><label class="form-label">Paiement de la prime</label><select class="form-select" id="ct-periodicite" onchange="updateCommissionPreview()">
-        <option value="12">Mensuelle</option>
-        <option value="4">Trimestrielle</option>
-        <option value="2">Semestrielle</option>
-        <option value="1">Annuelle</option>
+      <!-- 25.09.2026 — ce champ ne dit PAS comment le client paie : il dit en combien de fois le
+           montant saisi ci-dessus couvre l'année (prime_annuelle = montant × périodicité). Le
+           renommer « Paiement de la prime » a été une erreur, corrigée le jour même : « une
+           périodicité annuelle peut être payée trimestriellement » (Jonathan). Le rythme de
+           paiement réel est le champ suivant, indépendant. -->
+      <div class="form-field"><label class="form-label">Le montant saisi ci-dessus couvre</label><select class="form-select" id="ct-periodicite" onchange="updateCommissionPreview()">
+        <option value="12">Un mois (× 12 = prime annuelle)</option>
+        <option value="4">Un trimestre (× 4)</option>
+        <option value="2">Un semestre (× 2)</option>
+        <option value="1">L’année entière</option>
       </select></div>
+      <!-- Le vrai rythme de paiement, sans effet sur la prime annuelle : une prime annuelle de
+           1 200.- peut être appelée en quatre fois 300.-. Demandé le 25.09.2026 ; la colonne
+           contrats.paiement_prime existait depuis longtemps, sans champ pour la remplir. -->
+      <div class="form-field"><label class="form-label">Paiement de la prime <span style="font-weight:400;color:var(--text-muted)">(rythme des appels)</span></label>
+        <select class="form-select" id="ct-paiement-prime" onchange="updateCommissionPreview()">
+          <option value="">— non renseigné —</option>
+          ${PAIEMENTS_PRIME.map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}
+        </select>
+        <div id="ct-paiement-prime-note" style="font-size:10px;color:var(--text-muted);margin-top:3px"></div>
+      </div>
       <div class="form-field" id="ct-duree-field" style="display:none"><label class="form-label">Durée du contrat (années)</label><input class="form-input" id="ct-duree" type="number" placeholder="10" value="1" oninput="this.dataset.manuel='1';updateCommissionPreview()"/><div style="font-size:10px;color:var(--text-muted);margin-top:3px">Calculée automatiquement depuis les dates d'entrée en vigueur et d'échéance — modifiable manuellement.</div></div>
     </div>`)}
 
@@ -2021,7 +2031,22 @@ function syncDureeDepuisDates() {
   dureeEl.value = Math.round((jours / 365.25) * 10) / 10;
 }
 
+// Ce que le client règle à chaque appel de prime. Purement informatif : le rythme de paiement
+// n'entre dans aucun calcul de commission — la commission se calcule sur la prime annuelle.
+function majNotePaiementPrime() {
+  const note = document.getElementById('ct-paiement-prime-note');
+  if (!note) return;
+  const n = typeof echeancesPaiementPrime === 'function' ? echeancesPaiementPrime(document.getElementById('ct-paiement-prime')?.value) : 0;
+  const perio = parseInt(document.getElementById('ct-periodicite')?.value) || 1;
+  const saisi = Number(document.getElementById('ct-prime-mensuelle')?.value) || 0;
+  const annuelle = Math.round(saisi * perio * 100) / 100;
+  note.textContent = (n > 1 && annuelle > 0)
+    ? `Soit ${n} appels de CHF ${fmtCHF(Math.round(annuelle / n * 100) / 100)} sur une prime annuelle de CHF ${fmtCHF(annuelle)}.`
+    : '';
+}
+
 function updateCommissionPreview() {
+  majNotePaiementPrime();
   const produit = getProduitSelectionne();
   const produitId = produit ? produit.id : null;
   const estVie3aOu3b = PRODUITS_VIE_PRIVEE_CAPITAL.includes(produitId);
@@ -2091,6 +2116,9 @@ async function creerContratEtCommission(clientId, compagnie, produitLabel, prime
     date_echeance: document.getElementById('ct-echeance').value || null,
     statut: document.getElementById('ct-statut').value,
     commissionne,
+    // Le rythme réel des appels de prime, distinct de `periodicite` (qui n'est qu'un facteur de
+    // conversion du montant saisi) : une prime annuelle peut être payée trimestriellement.
+    paiement_prime: document.getElementById('ct-paiement-prime')?.value || null,
     detail_lignes: detailLignes && detailLignes.length > 0 ? detailLignes : null,
     // Harmonisation (19.09.2026) : la périodicité n'était pas enregistrée (défaut base = annuelle),
     // alors que la fiche contrat recalcule la prime = lignes × périodicité → une prime mensuelle

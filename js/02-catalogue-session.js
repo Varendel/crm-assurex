@@ -57,15 +57,35 @@ function irVersClient(event, id) {
   return false;
 }
 
-// Le rythme de paiement de la prime — contrats.periodicite, en nombre d'échéances par an.
-// Nommé « Paiement de la prime » dans les écrans depuis le 25.09.2026 : « Périodicité » ne parlait
-// à personne. Une colonne contrats.paiement_prime existe en base, créée puis jamais remplie ni
-// lue : c'est periodicite qui fait foi, ici comme dans la prévision d'encaissement (js/19).
-const LIBELLES_PAIEMENT_PRIME = { 1: 'Annuel', 2: 'Semestriel', 4: 'Trimestriel', 12: 'Mensuel' };
-function libellePaiementPrime(periodicite) {
-  const n = Number(periodicite);
-  if (!n || !LIBELLES_PAIEMENT_PRIME[n]) return 'Annuel (par défaut)';
-  return LIBELLES_PAIEMENT_PRIME[n];
+// ── Deux notions distinctes, qu'il ne faut jamais confondre (25.09.2026) ───────────────────────
+// Jonathan : « Attention, une périodicité annuelle peut être payée trimestriellement. »
+//
+//   contrats.periodicite    = en combien de fois le MONTANT SAISI dans le formulaire couvre
+//                             l'année. C'est un facteur de conversion, rien d'autre :
+//                             prime_annuelle = montant saisi × periodicite. Mettre 4 sur une
+//                             prime déjà annuelle la quadruplerait.
+//   contrats.paiement_prime = le rythme auquel le client paie réellement. Indépendant du
+//                             précédent : une prime annuelle de 1 200.— peut très bien être
+//                             appelée en quatre fois 300.—.
+//
+// La colonne paiement_prime avait été créée pour ça, puis laissée vide faute de champ à l'écran.
+// Une première version de ce code (25.09.2026) l'avait prise pour un doublon de periodicite et
+// renommait bêtement le champ existant : c'était faux, les deux doivent coexister.
+const PAIEMENTS_PRIME = [
+  ['annuel', 'Annuel', 1],
+  ['semestriel', 'Semestriel', 2],
+  ['trimestriel', 'Trimestriel', 4],
+  ['mensuel', 'Mensuel', 12],
+];
+function libellePaiementPrime(paiement) {
+  const e = PAIEMENTS_PRIME.find(p => p[0] === String(paiement || '').toLowerCase());
+  return e ? e[1] : '';
+}
+// Nombre d'appels de prime par an — sert à afficher le montant d'une échéance de paiement,
+// jamais à calculer la prime annuelle.
+function echeancesPaiementPrime(paiement) {
+  const e = PAIEMENTS_PRIME.find(p => p[0] === String(paiement || '').toLowerCase());
+  return e ? e[2] : 0;
 }
 
 function estEntreprise(c) {

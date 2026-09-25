@@ -546,9 +546,18 @@ async function showEditContrat(contratId, returnTo) {
             <span id="ect-prime-total-affiche" style="font-size:17px;font-weight: 600;color:var(--accent)">CHF 0</span>
           </div>
         </div>
-        <div class="form-field"><label class="form-label">Paiement de la prime</label>
+        <!-- 25.09.2026 : ce champ dit en combien de fois le montant saisi couvre l'année (la prime
+             annuelle en est le produit), PAS comment le client paie. « Une périodicité annuelle
+             peut être payée trimestriellement » — le rythme réel est le champ d'à côté. -->
+        <div class="form-field"><label class="form-label">Le montant saisi couvre</label>
           <select class="form-select" id="ect-periodicite" onchange="updateApercuPrimeAnnuelle()">
             ${perioOpts.map(o => `<option value="${o.value}" ${String(o.value)===String(perioActuelle)?'selected':''}>${o.label}</option>`).join('')}
+          </select>
+        </div>
+        <div class="form-field"><label class="form-label">Paiement de la prime <span style="font-weight:400;color:var(--text-muted)">(rythme des appels)</span></label>
+          <select class="form-select" id="ect-paiement-prime">
+            <option value="">— non renseigné —</option>
+            ${PAIEMENTS_PRIME.map(([v, l]) => `<option value="${v}" ${ct.paiement_prime === v ? 'selected' : ''}>${l}</option>`).join('')}
           </select>
         </div>
         <div class="form-field" style="grid-column:span 2"><div id="ect-apercu-annuel" style="font-size:12px;color:var(--text-muted);padding:6px 12px;background:var(--surface-alt);border-radius:8px">Prime annuelle calculée : CHF ${fmtCHF((ct.prime_annuelle||0))}</div></div>
@@ -709,6 +718,8 @@ async function saveEditContrat(contratId, clientId, returnTo) {
     preavis_mois: (() => { const v = document.getElementById('ect-preavis')?.value; return v === '' || v == null ? null : Number(v); })(),
     prime_annuelle: primeAnnuelle,
     periodicite: periodicite,
+    // Distinct de periodicite : le rythme auquel la prime est réellement appelée.
+    paiement_prime: document.getElementById('ect-paiement-prime')?.value || null,
     detail_lignes: lignesPrimeEdit.length > 0 ? lignesPrimeEdit : null,
     statut: document.getElementById('ect-statut').value,
     commissionne,

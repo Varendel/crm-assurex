@@ -749,13 +749,20 @@ function showDetailContrat(contratId) {
             <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px">Apporteur</div>
             <div style="font-size:13px;font-weight: 600;color:var(--text)">${agent ? agent.prenom + ' ' + agent.nom : (signataire ? signataire.prenom + ' ' + signataire.nom : '—')}</div>
           </div>
-          <!-- 25.09.2026 : le rythme de paiement était saisissable mais invisible une fois le
-               contrat enregistré. C'est pourtant lui qui dit quand la prime tombe, et la prévision
-               d'encaissement s'en sert (js/19). -->
-          <div style="background:var(--surface-alt);border-radius:10px;padding:10px 14px;grid-column:span 2">
+          <!-- 25.09.2026 : le rythme de paiement n'était visible nulle part une fois le contrat
+               enregistré. Il ne se déduit PAS de la périodicité, qui n'est qu'un facteur de
+               conversion du montant saisi — « une périodicité annuelle peut être payée
+               trimestriellement ». Tant qu'il n'est pas renseigné, on ne l'invente pas. -->
+          ${(() => {
+            const n = typeof echeancesPaiementPrime === 'function' ? echeancesPaiementPrime(ct.paiement_prime) : 0;
+            const libelle = typeof libellePaiementPrime === 'function' ? libellePaiementPrime(ct.paiement_prime) : '';
+            return `<div style="background:var(--surface-alt);border-radius:10px;padding:10px 14px;grid-column:span 2">
             <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px">Paiement de la prime</div>
-            <div style="font-size:13px;font-weight: 600;color:var(--text)">${libellePaiementPrime(ct.periodicite)}${Number(ct.periodicite) > 1 ? ` · CHF ${fmtCHF(Math.round(Number(ct.prime_annuelle || 0) / Number(ct.periodicite) * 100) / 100)} par échéance` : ''}</div>
-          </div>
+            <div style="font-size:13px;font-weight: 600;color:${libelle ? 'var(--text)' : 'var(--text-muted)'}">${libelle
+              ? `${libelle}${n > 1 ? ` · ${n} appels de CHF ${fmtCHF(Math.round(Number(ct.prime_annuelle || 0) / n * 100) / 100)}` : ''}`
+              : 'Non renseigné'}</div>
+          </div>`;
+          })()}
         </div>
 
         <!-- Commission — masqué pour la session RH (hors périmètre financier) -->

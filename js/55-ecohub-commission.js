@@ -136,8 +136,18 @@ function ehcRapprocher(ligne) {
   const cle = v => String(v || '').toLowerCase().replace(/[^a-z0-9]/g, '');
   const police = cle(ligne.numero_police);
   if (police.length >= 4) {
-    const ct = contrats.find(x => cle(x.numero_police) === police);
-    if (ct) return { statut: 'contrat', contrat: ct, client: clients.find(c => c.id === ct.client_id) || null };
+    // Plusieurs contrats peuvent partager un numéro (santé + ménage chez Groupe Mutuel, RC + casco
+    // chez un assureur véhicule). On départage par la branche annoncée dans le décompte plutôt que
+    // de prendre le premier venu — même règle que l'import de bordereaux (scoreBrancheImport).
+    const candidats = contrats.filter(x => cle(x.numero_police) === police);
+    if (candidats.length) {
+      const branche = [ligne.produit, ligne.branche_ig].filter(Boolean).join(' ');
+      const ct = (candidats.length > 1 && typeof scoreBrancheImport === 'function')
+        ? candidats.reduce((m, c) => scoreBrancheImport(c, branche) > m.s ? { c, s: scoreBrancheImport(c, branche) } : m,
+            { c: candidats[0], s: -Infinity }).c
+        : candidats[0];
+      return { statut: 'contrat', contrat: ct, client: clients.find(c => c.id === ct.client_id) || null, candidats };
+    }
   }
   if (ligne.client_ide) {
     const ide = cle(ligne.client_ide);

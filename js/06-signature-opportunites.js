@@ -1849,6 +1849,16 @@ function marqueursBranche(texte) {
   if (/juridique|rechtsschutz/.test(t)) m.add('pj');
   if (/menage|inventaire|hausrat/.test(t)) m.add('menage');
   if (/cyber/.test(t)) m.add('cyber');
+  // 25.09.2026 — départage à numéro de police égal. Les familles ci-dessus ne couvraient que le
+  // véhicule : sur une police Groupe Mutuel qui porte à la fois « Complémentaire santé » et
+  // « RC + inventaire du ménage » (7623523), aucun marqueur ne sortait et le rapprochement prenait
+  // le premier contrat venu, au hasard de l'ordre de chargement.
+  if (/\blamal\b|\baos\b|assurance obligatoire des soins|assurance de base|grundversicherung|\bkvg\b/.test(t)) { m.add('sante'); m.add('lamal'); }
+  if (/complementaire sante|\blca\b|hospita|global ?care|optima|denta|praeventa|sana\b|\bvvg\b/.test(t)) { m.add('sante'); m.add('lca'); }
+  if (/perte de gain|indemnites? journalieres?|\bijm\b|\bktg\b/.test(t)) m.add('ijm');
+  if (/\blpp\b|\bbvg\b|prevoyance professionnelle|2e pilier|libre passage/.test(t)) m.add('lpp');
+  if (/pilier 3|\b3a\b|\b3b\b|assurance vie|incapacite de gain|rente ig|lebensversicherung/.test(t)) m.add('vie');
+  if (/batiment|immeuble|gebaude|\becab\b/.test(t)) m.add('batiment');
   return m;
 }
 
@@ -1886,6 +1896,16 @@ function scoreBrancheImport(c, brancheInterne) {
   marqB.forEach(m => { if (marqP.has(m)) score += 2; });
   if (marqB.has('rc') && marqP.has('casco')) score -= 2;
   if (marqB.has('casco') && marqP.has('rc') && !marqP.has('casco')) score -= 2;
+  // Mêmes pénalités croisées pour les familles ajoutées le 25.09.2026, sinon deux produits de la
+  // même famille (LAMal / complémentaire, LAA / perte de gain accident) restent à égalité.
+  if (marqB.has('lamal') && !marqB.has('lca') && marqP.has('lca') && !marqP.has('lamal')) score -= 2;
+  if (marqB.has('lca') && !marqB.has('lamal') && marqP.has('lamal') && !marqP.has('lca')) score -= 2;
+  if (marqB.has('accident') && !marqB.has('ijm') && marqP.has('ijm')) score -= 2;
+  if (marqB.has('ijm') && !marqB.has('accident') && marqP.has('accident') && !marqP.has('ijm')) score -= 2;
+  // Une branche santé n'a rien à faire sur un contrat ménage/RC, et réciproquement : c'est le cas
+  // exact de la police 7623523 (Groupe Mutuel).
+  if (marqB.has('sante') && (marqP.has('menage') || marqP.has('rc')) && !marqP.has('sante')) score -= 3;
+  if ((marqB.has('menage') || marqB.has('rc')) && marqP.has('sante') && !marqP.has('menage') && !marqP.has('rc')) score -= 3;
   if (!estStatutResilieOuAnnule(c.statut)) score += 0.5;
   return score;
 }

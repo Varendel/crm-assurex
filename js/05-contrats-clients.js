@@ -50,6 +50,17 @@ function estProduitPrevoyancePrivee(produitLabel) {
   return (CATALOGUE_PRODUITS['Prévoyance privée'] || []).some(p => p.label === produitLabel);
 }
 
+// Tout ce qui relève de la prévoyance au sens large : 3a/3b individuel ET LPP collective.
+// 25.09.2026 — Jonathan : « RIG Sauthier ne sortent pas dans prévoyance ». Et pour cause :
+// l'onglet Prévoyance n'affichait aucun contrat, seulement quatre cases cochées à la main et
+// les bilans enregistrés. Ses deux rentes d'incapacité de gain Zurich et ses deux 3a
+// n'apparaissaient que dans l'onglet Contrats, mélangés au reste.
+function estProduitPrevoyance(produitLabel) {
+  if (!produitLabel) return false;
+  return estProduitPrevoyancePrivee(produitLabel)
+    || (CATALOGUE_PRODUITS['Prévoyance'] || []).some(p => p.label === produitLabel);
+}
+
 // ═══ ASSURANCE PRÉNATALE — annonce de la naissance ═══
 async function ouvrirAnnonceNaissance(clientId) {
   const c = allClients.find(x => x.id === clientId);
@@ -587,12 +598,49 @@ async function showClient(id) {
     </div>
 
     <div id="tab-prevoyance" class="hidden">
-      ${sectionCard('Prévoyance', '#38bdf8', `<div class="info-grid">
+      ${(() => {
+        const prev = contrats.filter(ct => estProduitPrevoyance(ct.produit));
+        const actifs = prev.filter(ct => ct.statut === 'actif');
+        // Le « Pilier 3a » coché à la main mentait dès que la case n'était pas à jour : on croise
+        // maintenant avec les contrats réellement fichés, et la cotisation affichée est leur somme.
+        const troisA = actifs.filter(ct => /3a/i.test(ct.produit || ''));
+        const prime3a = troisA.reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
+        const plafond = typeof CF_PLAFOND_3A !== 'undefined' ? CF_PLAFOND_3A : 7258;
+        return sectionCard('Prévoyance', '#38bdf8', `<div class="info-grid">
         ${infoBlock('LPP (2e pilier)', c.lpp_actuel ? '✓ Affilié' : '✗ Non affilié')}
-        ${infoBlock('Pilier 3a', c.pilier3a ? '✓ Actif' : '✗ Aucun')}
-        ${infoBlock('Cotisation 3a', c.montant_3a ? 'CHF ' + c.montant_3a : '—')}
-        ${infoBlock('Plafond légal 2026', "CHF 7'056")}
-      </div>`)}
+        ${infoBlock('Pilier 3a', troisA.length ? `✓ ${troisA.length} contrat${troisA.length > 1 ? 's' : ''}` : (c.pilier3a ? '✓ Actif (non fiché)' : '✗ Aucun'))}
+        ${infoBlock('Cotisation 3a', prime3a ? 'CHF ' + fmtCHF(prime3a) + '/an' : (c.montant_3a ? 'CHF ' + c.montant_3a : '—'))}
+        ${infoBlock('Plafond légal 2026', 'CHF ' + fmtCHF(plafond), prime3a && prime3a < plafond ? `<span style="font-size:10.5px;color:var(--text-muted);margin-left:6px">marge ${fmtCHF(plafond - prime3a)}</span>` : '')}
+      </div>`);
+      })()}
+      ${(() => {
+        const prev = contrats.filter(ct => estProduitPrevoyance(ct.produit));
+        if (!prev.length) return sectionCard('Contrats de prévoyance', '#38bdf8',
+          `<div style="font-size:12px;color:var(--text-muted)">Aucun contrat de prévoyance fiché (3a, 3b, libre passage, rente d’incapacité de gain, LPP). Ajoute-le depuis l’onglet Contrats.</div>`);
+        const total = prev.filter(ct => ct.statut === 'actif').reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
+        return sectionCard(`Contrats de prévoyance (${prev.length})`, '#38bdf8', `
+          <div style="display:flex;flex-direction:column;gap:10px">
+            ${prev.map(ct => `
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--surface-alt);border-radius:9px;border:1px solid var(--border)">
+                <div style="display:flex;align-items:center;gap:12px">
+                  ${typeof pictoCompagnie === 'function' ? pictoCompagnie(ct.compagnie, 30) : ''}
+                  <div>
+                    <div style="font-size:13px;font-weight: 600;color:var(--text)">${ct.produit}</div>
+                    <div style="font-size:11px;color:var(--text-muted)">${ct.compagnie || ''}${ct.date_debut ? ' · Dès le ' + fmtDate(ct.date_debut) : ''}${ct.date_echeance ? ' → ' + fmtDate(ct.date_echeance) : ''}</div>
+                    <div style="font-size:11px;color:var(--text-muted)">${ct.numero_police ? 'Police № ' + ct.numero_police : ''}</div>
+                  </div>
+                </div>
+                <div style="text-align:right">
+                  <div style="font-weight: 600;color:var(--c-alerte-texte);font-size:13px">CHF ${fmtCHF(Number(ct.prime_annuelle || 0))}/an</div>
+                  <div style="font-size:10px;color:var(--text-muted)">CHF ${fmtCHF(Math.round(Number(ct.prime_annuelle || 0) / 12 * 100) / 100)}/mois</div>
+                  ${badge(ct.statut, ct.statut === 'actif' ? '#4ade80' : '#f59e0b')}
+                </div>
+              </div>`).join('')}
+            <div style="display:flex;justify-content:flex-end;gap:10px;padding-top:4px;font-size:12px;color:var(--text-muted)">
+              Total des contrats actifs <b style="color:var(--text)">CHF ${fmtCHF(total)}/an</b>
+            </div>
+          </div>`);
+      })()}
       ${sectionCard('🧮 Bilans de prévoyance enregistrés', '#a78bfa', bilansPrevoyance.length ? `
         <div style="display:flex;flex-direction:column;gap:8px">
           ${bilansPrevoyance.map(b => `

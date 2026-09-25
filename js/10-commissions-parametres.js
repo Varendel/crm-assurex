@@ -788,7 +788,7 @@ const CAMPAGNES_THEMES = [
 
 J'espère que vous allez bien. Je me permets de vous contacter car la période est idéale pour faire le point sur votre prévoyance.
 
-Avec le 3e pilier (pilier 3a), vous pouvez non seulement préparer votre retraite, mais aussi réduire votre charge fiscale de manière significative cette année — le plafond légal 2026 est de CHF 7'056.- pour les salariés.
+Avec le 3e pilier (pilier 3a), vous pouvez non seulement préparer votre retraite, mais aussi réduire votre charge fiscale de manière significative cette année — le plafond légal 2026 est de CHF 7'258.- pour les salariés affiliés à une caisse de pension.
 
 Auriez-vous 15 minutes pour qu'on regarde ensemble ce qui correspondrait le mieux à votre situation ?
 

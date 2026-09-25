@@ -13,6 +13,20 @@
 //
 // Confidentialité : on n'enregistre JAMAIS le contenu des champs saisis, seulement le texte des
 // boutons/liens cliqués ; les paramètres d'URL (ex. ?signer=<token>) sont retirés.
+// ── Le ton d'un message (25.09.2026) ───────────────────────────────────────────────────────────
+// showError sert à TOUT dans le CRM : les erreurs, mais aussi les 131 confirmations « ✓ … » et
+// les 11 « ⏳ Envoi en cours… ». Conséquence : un simple message d'attente s'affichait en rouge
+// avec un ⚠, et atterrissait dans journal_erreurs comme un incident (41 entrées « ⏳ » au
+// 25.09.2026, qui noyaient les vraies erreurs).
+// Le ton est déjà écrit dans le message lui-même, par une convention suivie partout — on se
+// contente de la lire. Un seul endroit décide, l'affichage (js/03) et le journal s'y tiennent.
+window.tonDuMessage = function (msg) {
+  const t = String(msg == null ? '' : msg).trim();
+  if (/^(✓|✔|👍|🎉)/.test(t)) return 'succes';
+  if (/^(⏳|⌛|↺|💡|ℹ|📨|✉)/.test(t)) return 'info';
+  return 'erreur';
+};
+
 (function () {
   const MAX_ENVOIS_PAR_SESSION = 40;
   const MAX_CLICS = 20;
@@ -105,7 +119,9 @@
     if (typeof window.showError !== 'function' || window.showError._journalise) return;
     const showErrorOriginal = window.showError;
     const enveloppe = function (msg, ...reste) {
-      if (typeof msg === 'string' && !msg.trim().startsWith('✓')) envoyer('showError', msg, new Error().stack);
+      // Seules les vraies erreurs partent au journal : ni les confirmations, ni les messages
+      // d'attente. Un « ⏳ Envoi en cours… » n'est pas un incident.
+      if (typeof msg === 'string' && window.tonDuMessage(msg) === 'erreur') envoyer('showError', msg, new Error().stack);
       return showErrorOriginal.call(this, msg, ...reste);
     };
     enveloppe._journalise = true;

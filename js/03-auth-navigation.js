@@ -580,10 +580,21 @@ function togglePass() {
   inp.type = inp.type === 'password' ? 'text' : 'password';
 }
 
+// 25.09.2026 — showError affichait TOUT en rouge, précédé d'un ⚠ : les erreurs comme les
+// 131 confirmations « ✓ … » et les messages d'attente « ⏳ Envoi en cours… ». Une sauvegarde
+// réussie avait donc l'air d'un incident. Le ton se lit dans le message lui-même (tonDuMessage,
+// js/00) ; le ⚠ n'est plus ajouté qu'aux vraies erreurs — les autres portent déjà leur symbole.
+const TONS_MESSAGE = {
+  erreur: { fond: '#7f1d1d', bord: '#f87171', texte: '#fecaca', prefixe: '⚠ ', duree: 6000 },
+  succes: { fond: '#14532d', bord: '#4ade80', texte: '#dcfce7', prefixe: '', duree: 4000 },
+  info: { fond: '#1e3a5f', bord: '#38bdf8', texte: '#e0f2fe', prefixe: '', duree: 5000 },
+};
 function showError(msg) {
+  const nomTon = typeof tonDuMessage === 'function' ? tonDuMessage(msg) : 'erreur';
+  const ton = TONS_MESSAGE[nomTon] || TONS_MESSAGE.erreur;
   const loginEl = document.getElementById('login-error');
   if (loginEl && !document.getElementById('app').classList.contains('active')) {
-    loginEl.textContent = '⚠ ' + msg;
+    loginEl.textContent = ton.prefixe + msg;
     loginEl.classList.remove('hidden');
     return;
   }
@@ -591,13 +602,16 @@ function showError(msg) {
   if (!toast) {
     toast = document.createElement('div');
     toast.id = 'global-error-toast';
-    toast.style.cssText = 'position:fixed;bottom:24px;right:24px;background:#7f1d1d;border:1px solid #f87171;color:#fecaca;padding:14px 20px;border-radius:10px;font-size:13px;font-weight: 600;z-index:9999;max-width:380px;box-shadow:0 8px 24px rgba(0,0,0,0.4)';
     document.body.appendChild(toast);
   }
-  toast.textContent = '⚠ ' + msg;
+  // Les couleurs sont réappliquées à chaque fois : le même élément sert aux trois tons.
+  toast.style.cssText = `position:fixed;bottom:24px;right:24px;background:${ton.fond};border:1px solid ${ton.bord};color:${ton.texte};padding:14px 20px;border-radius:10px;font-size:13px;font-weight: 600;z-index:9999;max-width:380px;box-shadow:0 8px 24px rgba(0,0,0,0.4)`;
+  // Un lecteur d'écran n'interrompt pas la lecture pour une confirmation.
+  toast.setAttribute('role', nomTon === 'erreur' ? 'alert' : 'status');
+  toast.textContent = ton.prefixe + msg;
   toast.style.display = 'block';
   clearTimeout(window._errorToastTimeout);
-  window._errorToastTimeout = setTimeout(() => { toast.style.display = 'none'; }, 6000);
+  window._errorToastTimeout = setTimeout(() => { toast.style.display = 'none'; }, ton.duree);
 }
 
 async function doLogin() {

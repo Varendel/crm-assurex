@@ -12,10 +12,17 @@
 <link rel="icon" href="icon-192.png?v=2" type="image/png"/>
 <link rel="apple-touch-icon" href="icon-180.png?v=2"/>
 <script src="js/00-journal-erreurs.js?v=1789804800"></script>
-<script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.6/dist/pizzip.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.69.2/docxtemplater.min.js"></script>
+<!-- 25.09.2026 — Empreintes SRI (Subresource Integrity) sur les quatre bibliothèques externes.
+     Sans elles, le CRM exécutait ce que ces quatre serveurs voulaient bien lui servir : un CDN
+     compromis, et du code arbitraire tourne dans une page qui voit 256 dossiers clients. Le
+     navigateur vérifie désormais l'empreinte avant d'exécuter, et refuse tout fichier modifié.
+     `crossorigin` est indispensable : sans lui, le navigateur ne peut pas lire la réponse pour
+     la vérifier. En cas de mise à jour de version, RECALCULER l'empreinte — sinon le script est
+     bloqué et la fonction concernée disparaît en silence. -->
+<script src="https://alcdn.msauth.net/browser/2.38.0/js/msal-browser.min.js" integrity="sha384-mz+8Q3jA4XBFbnyAsyQegn/0LHvziH7qHLBa9GzcU3HzeWj9J16SXM5S+TsmPBy0" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" integrity="sha384-vtjasyidUo0kW94K5MXDXntzOJpQgBKXmE7e2Ga4LG0skTTLeBi97eFAXsqewJjw" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.6/dist/pizzip.min.js" integrity="sha384-rnjExmjCaDWaowRcCCOk56i8955lWoSW72U8x5fXl5ZlK5WdLw6pysbY/7nbfwMJ" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.69.2/docxtemplater.min.js" integrity="sha384-OjRz4GWWPyoh8HN76BHOY+PZIlz2RmRiB8CUVgehCP7lmbJavf7ZPW0T+7p+bm0P" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script>
   // Applique le thème enregistré AVANT le premier rendu (évite le flash de couleurs).
   (function() {
@@ -354,7 +361,7 @@
   <script src="js/147-rdv-opportunite.js?v=1792001300"></script>
   <script src="js/148-envoi-comparatif.js?v=1792003500"></script>
   <script src="js/149-mini-rex-opp.js?v=1792003600"></script>
-  <script src="version.js?v=1790329142"></script>
+  <script src="version.js?v=1790330793"></script>
   <script src="js/150-version-en-ligne.js?v=1792002700"></script>
   <script src="js/151-recherche-recents.js?v=1792002600"></script>
   <script src="js/152-relances-offres.js?v=1792002600"></script>

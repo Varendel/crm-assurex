@@ -1,3 +1,3 @@
 // Réécrit automatiquement à chaque commit par .githooks/pre-commit — ne pas modifier à la main.
 // Le numéro est le rang du commit : il ne recule jamais, et se lit sous Assurex dans le menu.
-const CRM_VERSION = { n: 828, date: '25.09 11:39' };
+const CRM_VERSION = { n: 829, date: '25.09 12:06' };

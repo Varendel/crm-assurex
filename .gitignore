@@ -3,3 +3,10 @@
 # qui est public : 1850 fichiers de bibliothèques tierces noieraient l'historique du CRM.
 node_modules/
 package-lock.json
+
+# Ceinture et bretelles. outils/sauvegarde.js refuse déjà d'écrire dans le dépôt, mais une
+# sauvegarde contient le fichier clients entier : si une copie atterrissait ici par accident,
+# elle ne doit pas pouvoir partir dans un commit vers un dépôt public.
+sauvegardes/
+Sauvegardes*/
+*.sauvegarde.json

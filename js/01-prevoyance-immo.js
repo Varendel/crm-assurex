@@ -550,7 +550,99 @@ const TAUX_COMMISSION = {
     defaut: 15.00,                         // les branches non observées : la moyenne du marché non-vie,
                                            // et non les 10 % de repli qui se sont révélés très faux ici
   },
+
+  // ── ALLIANZ SUISSE (contrat de collaboration signé le 02.05.2025) ────────────────────────────
+  // Agence générale Jean-Michel Parra, Lausanne. Intermédiaire non lié, FINMA F01495413.
+  //
+  // Allianz ne publie pas un taux par branche : elle multiplie un barème de base par un FACTEUR
+  // DE RÉMUNÉRATION propre à chaque intermédiaire, inscrit en page 1 du contrat. Ceux d'OZ Assure :
+  //     Non-vie 1.8 · Vie individuelle 0.9 · Vie collective 1.0
+  // Une estimation Allianz qui ignore ce facteur est fausse d'entrée.
+  allianz: {
+    edition_contrat: '02.05.2025',
+    facteur_nv: 1.8, facteur_vi: 0.9, facteur_vc: 1.0,
+
+    // Vie individuelle : barème V30/V32, version 1.4, valable dès le 01.01.2024.
+    // commission = base de prime × facteur produit × (taux ‰ / 1000) × facteur de rémunération VI
+    // Bases : PAN = prime annuelle nette · PUN = prime unique · VNP = valeur nette des primes,
+    // c'est-à-dire prime annuelle × durée (plafonnée à la durée max) — le capital de production.
+    // « Durée ristourne » = années pendant lesquelles Allianz reprend la commission si le contrat
+    // tombe ; elle ne change pas le montant, elle dit combien de temps il reste à risque.
+    vie: {
+      bareme: 'V30/V32 v1.4 (01.01.2024)',
+      taux_pour_mille: 50,
+      produits: {
+        smart_invest:        { facteur: 1.00, base: 'PAN', duree_max: 35, ristourne: 5 },
+        fonds_pu:            { facteur: 0.95, base: 'PUN', duree_max: 0,  ristourne: 0 },
+        fonds_pp:            { facteur: 0.95, base: 'PAN', duree_max: 30, ristourne: 3 },
+        fonds_pp_vnp:        { facteur: 1.00, base: 'VNP', duree_max: 30, ristourne: 3 },
+        fonds_enfants:       { facteur: 0.95, base: 'VNP', duree_max: 30, ristourne: 3 },
+        flex_saving:         { facteur: 1.35, base: 'VNP', duree_max: 30, ristourne: 5 },
+        balance_invest_pp:   { facteur: 0.85, base: 'VNP', duree_max: 30, ristourne: 3 },
+        comfort_saving:      { facteur: 0.60, base: 'VNP', duree_max: 30, ristourne: 5 },
+        mixte_pu:            { facteur: 0.70, base: 'PUN', duree_max: 0,  ristourne: 0 },
+        mixte_pp:            { facteur: 0.80, base: 'PAN', duree_max: 30, ristourne: 3 },
+        objectif_epargne_pp: { facteur: 0.80, base: 'PAN', duree_max: 30, ristourne: 3 },
+        enfants_pp:          { facteur: 0.80, base: 'PAN', duree_max: 30, ristourne: 3 },
+        rente_ig:            { facteur: 1.20, base: 'PAN', duree_max: 30, ristourne: 3 },
+        deces_constant:      { facteur: 1.20, base: 'PAN', duree_max: 30, ristourne: 3 },
+        deces_decroissant:   { facteur: 1.20, base: 'PAN', duree_max: 30, ristourne: 3 },
+        liberation_primes:   { facteur: 0.50, base: 'PAN', duree_max: 30, ristourne: 3 },
+        rente_survivants:    { facteur: 1.20, base: 'PAN', duree_max: 30, ristourne: 3 },
+        defaut:              { facteur: 0.80, base: 'PAN', duree_max: 30, ristourne: 3 },
+      },
+    },
+
+    // Non-vie : le barème T03 n'est PAS dans le dossier (constaté le 25.09.2026). Le contrat le
+    // cite en annexe 16.1b, téléchargeable chez Allianz. Tant qu'il manque, on n'invente pas un
+    // taux de base : on retient ce qu'Allianz a RÉELLEMENT versé, relevé sur le compte courant OZ.
+    // Ces taux incluent donc déjà le facteur 1.8.
+    // Allianz verse en deux lignes par contrat (base + complément d'environ 12 %) : les taux
+    // ci-dessous somment les deux, c'est-à-dire ce qui arrive sur le compte.
+    non_vie: {
+      bareme_manquant: 'T03',
+      vehicule_rc: 12.30,      // médiane de 3 versements : 12.17 · 12.30 · 15.28 %
+      rc_entreprise: 31.12,    // 1 versement (Bizzoni Fabiana Sàrl, 3 300.- → 1 026.86)
+      laa: 8.20,               // 1 versement (Essor Fitness, 943.- → 77.35)
+      defaut: 12.30,           // la médiane de tout ce qui a été observé, faute de mieux
+    },
+  },
 };
+
+// ── Commission Allianz Vie individuelle (barème V30) ────────────────────────────────────────────
+// La durée ne sert QUE pour les bases VNP : sur une base PAN, Allianz rémunère la prime d'UNE
+// année, pas le capital de production — confondre les deux multiplie l'estimation par trente.
+function allianzCommissionVie(cleProduit, primeAnnuelle, dureeAnnees) {
+  const A = TAUX_COMMISSION.allianz;
+  const p = A.vie.produits[cleProduit] || A.vie.produits.defaut;
+  const prime = Number(primeAnnuelle) || 0;
+  if (!prime) return null;
+  let base = prime, libelleBase = 'prime annuelle nette';
+  if (p.base === 'VNP') {
+    const duree = Math.max(1, Math.min(Number(dureeAnnees) || 1, p.duree_max || 30));
+    base = prime * duree;
+    libelleBase = `valeur nette des primes (CHF ${prime} × ${duree} ans)`;
+  } else if (p.base === 'PUN') {
+    libelleBase = 'prime unique';
+  }
+  const montant = Math.round(base * p.facteur * (A.vie.taux_pour_mille / 1000) * A.facteur_vi * 100) / 100;
+  return {
+    montant,
+    detail: `Allianz ${A.vie.bareme} — ${libelleBase} × facteur produit ${p.facteur} × ${A.vie.taux_pour_mille} ‰ × facteur de rémunération VI ${A.facteur_vi} = CHF ${montant}`
+      + (p.ristourne ? ` (ristourne ${p.ristourne} ans)` : ''),
+  };
+}
+
+// Le taux non-vie retenu pour un libellé de produit. Toujours un taux OBSERVÉ, jamais calculé :
+// le barème T03 manque au dossier.
+function allianzTauxNonVie(produitLabel) {
+  const N = TAUX_COMMISSION.allianz.non_vie;
+  const p = String(produitLabel || '');
+  if (/v[ée]hicule|casco|flotte|plaque/i.test(p)) return { taux: N.vehicule_rc, nom: 'véhicule' };
+  if (/\blaa\b|accident/i.test(p)) return { taux: N.laa, nom: 'LAA' };
+  if (/\brc\b|responsabilit|exploitation|commerce|professionnelle|m[ée]nage/i.test(p)) return { taux: N.rc_entreprise, nom: 'RC entreprise' };
+  return { taux: N.defaut, nom: 'branche non observée' };
+}
 
 // ═══ CONSTANTES LÉGALES LPP (état au 01.01.2026 — inchangées depuis 2025, réforme rejetée) ═══
 const LPP_LEGAL = {

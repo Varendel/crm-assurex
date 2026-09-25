@@ -124,24 +124,65 @@ function couResiliationHtml(ct) {
   return ` · <span class="${classe}" title="${couEsc(titre)}">⏳ ${texte}</span>`;
 }
 
+// ── Une police = une ligne (25.09.2026) ─────────────────────────────────────────────────────────
+// « Casco partielle c'est le même contrat. Change l'affichage qui garde l'harmonie. »
+// Le CRM fiche séparément la RC véhicule et les casco parce que leurs taux de commission diffèrent,
+// mais chez l'assureur c'est une seule police (AXA 27.265.598). La carte les empilait donc en deux
+// lignes qui répétaient logo, compagnie, numéro et délai de résiliation. On les réunit sur une
+// ligne, les garanties énoncées côte à côte.
+function couClePolice(ct) {
+  const p = String(ct.numero_police || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+  // Sans numéro, chaque contrat reste sa propre ligne — on ne fusionne jamais à l'aveugle.
+  return p.length >= 4 ? `${(ct.compagnie || '').toLowerCase().trim()}|${p}` : `seul:${ct.id}`;
+}
+
+function couGrouperParPolice(contrats) {
+  const par = new Map();
+  for (const ct of contrats) {
+    const k = couClePolice(ct);
+    if (!par.has(k)) par.set(k, []);
+    par.get(k).push(ct);
+  }
+  return [...par.values()];
+}
+
+// « RC véhicule (obligatoire) » + « Casco partielle » tiennent mal sur une ligne : la parenthèse
+// explicative saute dès qu'il y a plusieurs garanties, le reste est identique.
+function couTitreGroupe(g) {
+  if (g.length === 1) return g[0].produit || 'Contrat';
+  const vus = new Set();
+  return g.map(ct => String(ct.produit || 'Contrat').replace(/\s*\([^)]*\)\s*$/, '').trim())
+    .filter(p => p && !vus.has(p.toLowerCase()) && vus.add(p.toLowerCase()))
+    .join(' + ');
+}
+
 function couCarteHtml(c) {
   const prime = c.contrats.reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
+  const groupes = couGrouperParPolice(c.contrats);
   return `<div class="cou-carte pleine">
     <div class="cou-carte-tete">
       <span class="cou-ico">${couIcone(c.label)}</span>
       <span class="cou-nom">${couEsc(c.label)}</span>
-      ${c.contrats.length > 1 ? `<span class="cou-n">${c.contrats.length}</span>` : ''}
+      ${groupes.length > 1 ? `<span class="cou-n">${groupes.length}</span>` : ''}
       ${prime ? `<span class="cou-prime">CHF ${couCHF(prime)}</span>` : ''}
     </div>
-    <ul class="cou-liste">${c.contrats.map(ct => `
+    <ul class="cou-liste">${groupes.map(g => {
+      const ct = g[0];
+      // Le délai affiché est le plus proche du groupe : c'est lui qui commande la lettre à écrire.
+      const avecDelai = g.filter(x => couResiliationHtml(x))
+        .sort((a, b) => String(couLimiteResiliation(a)).localeCompare(String(couLimiteResiliation(b))));
+      const resil = avecDelai.length ? couResiliationHtml(avecDelai[0]) : '';
+      const titre = couTitreGroupe(g);
+      return `
       <li ${typeof showDetailContrat === 'function' ? `onclick="showDetailContrat('${ct.id}')" role="button" tabindex="0"
         onkeydown="if(event.key==='Enter'){showDetailContrat('${ct.id}')}"` : ''}>
         ${ct.compagnie && typeof pictoCompagnie === 'function' ? `<span class="cou-logo" title="${couEsc(ct.compagnie)}">${pictoCompagnie(ct.compagnie, 22)}</span>` : ''}
         <span class="cou-texte">
-          <b>${couEsc(ct.produit || 'Contrat')}</b>
-          <small>${couEsc(ct.compagnie || '')}${ct.numero_police ? ' · ' + couEsc(ct.numero_police) : ''}${couResiliationHtml(ct)}</small>
+          <b title="${couEsc(g.map(x => x.produit || 'Contrat').join(' · '))}">${couEsc(titre)}</b>
+          <small>${couEsc(ct.compagnie || '')}${ct.numero_police ? ' · ' + couEsc(ct.numero_police) : ''}${resil}</small>
         </span>
-      </li>`).join('')}</ul>
+      </li>`;
+    }).join('')}</ul>
   </div>`;
 }
 

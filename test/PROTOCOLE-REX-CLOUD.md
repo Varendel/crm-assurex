@@ -182,7 +182,12 @@ le cloisonnement est validé.
 | 5.1 | Protection contre les mots de passe compromis | ❌ désactivée | activée avant ouverture à de vrais clients |
 | 5.2 | Sauvegardes restaurables | ❌ absentes (offre gratuite) | Supabase Pro — **le plus grave de la liste** |
 | 5.3 | Fonctions `SECURITY DEFINER` exécutables par `anon` | 13 | chacune justifiée par un usage public réel |
-| 5.4 | Envoi des accès client | mot de passe en clair par e-mail | lien d'activation à usage unique (incident n° 6) |
+| 5.4 | Envoi des accès client | ✅ lien d'activation à usage unique (25.09.2026) | — |
+| 5.5 | URL de retour dans Redirect URLs | **à vérifier** | l'adresse du CRM doit y figurer, sinon le lien d'activation ramène le client sur le Site URL du projet |
+
+Le 5.5 est la seule chose qui manque pour que le lien d'activation fonctionne de bout en bout :
+Supabase > Authentication > URL Configuration > **Redirect URLs**, y ajouter l'adresse exacte du
+CRM suivie de `?espace=client`. Sans elle, le compte est bien créé mais le client atterrit ailleurs.
 
 Le 5.2 ne concerne pas que l'espace client, mais c'est le risque le plus lourd du projet :
 aujourd'hui, une suppression accidentelle est définitive.

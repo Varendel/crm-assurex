@@ -204,9 +204,10 @@ async function ouvrirAccesEspaceClient(clientId) {
         <button type="button" class="btn-secondary" onclick="document.getElementById('modal-acces-client').remove()">Fermer</button>
         ${acces && acces.actif ? `<button type="button" class="btn-secondary" onclick="ecAction('${clientId}','desactiver')">⏸ Désactiver</button>` : ''}
         ${acces && !acces.actif ? `<button type="button" class="btn-secondary" onclick="ecAction('${clientId}','reactiver')">▶ Réactiver</button>` : ''}
-        <button type="button" class="btn-save" id="ec-btn" onclick="ecAction('${clientId}','${acces ? 'reinitialiser' : 'creer'}')">${acces ? '🔁 Nouveau mot de passe' : '✓ Créer l’accès'}</button>
+        <button type="button" class="btn-save" id="ec-btn" onclick="ecAction('${clientId}','${acces ? 'reinitialiser' : 'creer'}')">${acces ? '🔁 Nouveau lien d’activation' : '✓ Créer l’accès'}</button>
       </div>
-      <div class="ec-note">Le mot de passe n’est affiché qu’une fois et n’est stocké nulle part : transmets-le au client, il pourra le changer depuis la page de connexion.</div>
+      <div class="ec-note">Aucun mot de passe n’est généré : le client reçoit un lien à usage unique et choisit le sien.
+        Nous ne le connaîtrons jamais — c’est ce qui garantit qu’une connexion à son espace est bien la sienne.</div>
     </div>`, { padding: '16px' });
 }
 
@@ -214,8 +215,8 @@ async function ouvrirAccesEspaceClient(clientId) {
 // réellement quelque chose, toujours après confirmation explicite (jamais automatique).
 async function ecEnvoyerAcces() {
   const ctx = window._ecEnvoi;
-  if (!ctx) { showError('Rien à envoyer — recrée l’accès pour obtenir un mot de passe.'); return; }
-  if (!confirm(`Envoyer les accès REX CLOUD à ${ctx.email} depuis ton compte Outlook ?\n\nLe mot de passe figure en clair dans le message : c'est le seul envoi, il ne sera plus affiché ensuite.`)) return;
+  if (!ctx) { showError('Rien à envoyer — recrée l’accès pour obtenir un lien d’activation.'); return; }
+  if (!confirm(`Envoyer le lien d’activation REX CLOUD à ${ctx.email} depuis ton compte Outlook ?\n\nLe message ne contient aucun mot de passe : le client choisira le sien en suivant le lien.`)) return;
   // 22.09.2026 (audit, point 2) : envoi via envoyerCourriel (js/143). La confirmation reste celle
   // du dessus — elle prévient que le mot de passe part en clair — d'où confirmer: false.
   const res = await envoyerCourriel({
@@ -242,26 +243,31 @@ async function ecAction(clientId, action) {
     const r = await fetch(EC_FONCTION_URL, {
       method: 'POST',
       headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action, client_id: clientId, email }),
+      // `retour` : l'adresse où Supabase ramène le client après le lien. Elle doit figurer dans
+      // Authentication > URL Configuration > Redirect URLs, sinon il atterrit sur le Site URL.
+      body: JSON.stringify({ action, client_id: clientId, email, retour: `${location.origin}${location.pathname}?espace=client` }),
     });
     const data = await r.json();
     if (!r.ok || data.error) { showError('Accès non créé : ' + (data.error || r.status)); if (btn) { btn.disabled = false; btn.textContent = '✓ Créer l’accès'; } return; }
-    if (data.mot_de_passe) {
-      const c = allClients.find(x => x.id === clientId);
-      const lien = `${location.origin}${location.pathname}?espace=client`;
-      const message = `Bonjour,\n\nVotre espace ${EC_MARQUE} est ouvert : ${lien}\n\nIdentifiant : ${data.email}\nMot de passe : ${data.mot_de_passe}\n\nVous y retrouvez vos contrats, vos échéances et vos rendez-vous, à jour en permanence. Je reste à votre disposition.\n\nJonathan Özkan — Assurex Sàrl`;
-      if (zone) zone.innerHTML = `<div class="ec-mdp"><div class="ec-mdp-tete">Mot de passe (affiché une seule fois)</div>
-        <code>${ecEsc(data.mot_de_passe)}</code>
+    // 25.09.2026 — plus de mot de passe (incident n° 6). Ce qui revient est un lien d'activation à
+    // usage unique : le client s'en sert pour poser SON mot de passe, que personne d'autre ne
+    // connaîtra — pas même nous. Un secret qu'on peut lire est un secret qu'on peut perdre.
+    if (data.lien_activation) {
+      const message = `Bonjour,\n\nVotre espace ${EC_MARQUE} est prêt.\n\nSuivez ce lien pour choisir votre mot de passe et y entrer :\n${data.lien_activation}\n\nLe lien ne fonctionne qu'une fois et il expire. Si vous le laissez passer, demandez-m'en un nouveau, c'est immédiat.\nVous serez le seul à connaître ce mot de passe.\n\nVous y retrouverez vos contrats, vos échéances et vos rendez-vous, à jour en permanence. Je reste à votre disposition.\n\nJonathan Özkan — Assurex Sàrl`;
+      if (zone) zone.innerHTML = `<div class="ec-mdp"><div class="ec-mdp-tete">Lien d’activation — à usage unique</div>
+        <code class="ec-lien">${ecEsc(data.lien_activation)}</code>
         <div class="ec-mdp-actions">
           <button type="button" class="btn-save" onclick="ecEnvoyerAcces()">📨 Envoyer via Outlook…</button>
-          <button type="button" class="btn-secondary" onclick="navigator.clipboard.writeText('${data.mot_de_passe.replace(/'/g, "\\'")}').then(()=>showError('✓ Mot de passe copié'))">📋 Copier le mot de passe</button>
+          <button type="button" class="btn-secondary" onclick="navigator.clipboard.writeText(${JSON.stringify(data.lien_activation).replace(/"/g, '&quot;')}).then(()=>showError('✓ Lien copié'))">📋 Copier le lien</button>
           <button type="button" class="btn-secondary" onclick="navigator.clipboard.writeText(${JSON.stringify(message).replace(/"/g, '&quot;')}).then(()=>showError('✓ Message copié'))">✉️ Copier le message</button>
           <a class="btn-secondary" href="mailto:${encodeURIComponent(data.email)}?subject=${encodeURIComponent('Votre espace REX CLOUD')}&body=${encodeURIComponent(message)}">📧 Ouvrir dans mon client mail</a>
         </div>
-        <div class="ec-note">Rien n’est envoyé automatiquement : choisis comment transmettre ces accès.</div></div>`;
+        <div class="ec-note">Aucun mot de passe n’est créé ni transmis : le client choisit le sien en suivant le lien.
+          ${data.reinitialise ? 'L’ancien mot de passe ne fonctionne <b>déjà plus</b>.' : ''}
+          Rien n’est envoyé automatiquement.</div></div>`;
       // Mémorisé pour l'envoi Outlook, jamais enregistré ailleurs (perdu dès que la fenêtre se ferme)
       window._ecEnvoi = { email: data.email, message, nom: ecNomClient(allClients.find(x => x.id === clientId)) };
-      if (typeof logAction === 'function') logAction(action === 'creer' ? 'creer_acces_client' : 'reinit_mdp_client', 'acces_clients', clientId, data.email);
+      if (typeof logAction === 'function') logAction(action === 'creer' ? 'creer_acces_client' : 'lien_activation_client', 'acces_clients', clientId, data.email);
     } else {
       showError('✓ Accès mis à jour.');
       document.getElementById('modal-acces-client')?.remove();
@@ -272,5 +278,5 @@ async function ecAction(clientId, action) {
   } catch (e) {
     showError('Erreur : ' + e.message);
   }
-  if (btn) { btn.disabled = false; btn.textContent = '🔁 Nouveau mot de passe'; }
+  if (btn) { btn.disabled = false; btn.textContent = '🔁 Nouveau lien d’activation'; }
 }

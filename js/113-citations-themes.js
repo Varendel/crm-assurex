@@ -169,6 +169,18 @@ function rctAppliquer() { if (typeof rexAfficherCitation === 'function') rexAffi
   }
 })();
 
+// EB Garamond, pour le parchemin et lui seul. Chargée ici plutôt que dans index.html : elle ne
+// sert qu'à cet objet, et une citation ne s'affiche pas à chaque écran. Le texte reste lisible
+// pendant le chargement (display=swap) — il s'affiche en Palatino puis bascule.
+(function rctPolice() {
+  if (document.getElementById('rct-police')) return;
+  const l = document.createElement('link');
+  l.id = 'rct-police';
+  l.rel = 'stylesheet';
+  l.href = 'https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap';
+  document.head.appendChild(l);
+})();
+
 // Le style, posé une fois : quelques règles, pas un fichier de plus.
 (function rctStyles() {
   if (document.getElementById('rct-styles')) return;
@@ -192,34 +204,81 @@ function rctAppliquer() { if (typeof rexAfficherCitation === 'function') rexAffi
     .rct-pied button { border: 0; background: none; color: #94A3B8; font: inherit; font-size: 11.5px; cursor: pointer; text-decoration: underline; }
     .rct-pied .rct-ok { text-decoration: none; background: #00CFFF; color: #06243A; border-radius: 999px; padding: 4px 12px; font-weight: 600; }
 
-    /* ── Le parchemin (21.09.2026) : « les citations s'ouvrent dans un parchemin à l'ancienne,
-       adapté au texte ». La largeur suit la citation (une devise courte donne un rouleau étroit),
-       deux rouleaux en bois clair tiennent le haut et le bas, et la feuille se déroule à
-       l'apparition. Même rendu en thème clair et sombre : c'est un objet, pas un fond d'écran. */
+    /* ── Le parchemin (21.09.2026, refait le 25.09.2026) ─────────────────────────────────────────
+       « Les citations s'ouvrent dans un parchemin à l'ancienne, adapté au texte », puis
+       « utilise un meilleur rendu, change aussi la police, trouve mieux ».
+
+       Ce qui manquait à la première version : la MATIÈRE. Trois dégradés plats donnaient une
+       couleur de parchemin, pas du parchemin. Un vélin, ça a des fibres qui courent en travers,
+       des taches d'âge qui ne sont jamais au centre, et une feuille qui s'enroule sous la tige.
+       Les fibres viennent d'un bruit SVG étiré à l'horizontale (feTurbulence) : une seule image
+       vectorielle, nette à tous les grossissements, et qui ne pèse rien.
+
+       LA POLICE. Elle suivait --police-titres, c'est-à-dire le thème que l'agent a choisi pour le
+       CRM : un parchemin en Inter, ça ne veut rien dire. Le parchemin est un OBJET — il garde sa
+       typographie quoi qu'on règle ailleurs, comme il garde son aspect en thème clair et sombre.
+       EB Garamond : c'est la reprise du caractère gravé par Claude Garamond à Paris vers 1540,
+       donc exactement l'écriture de l'époque qu'on imite, et son italique — la citation est en
+       italique — est l'une des plus belles qui soient. Palatino reste en secours. */
     #rex-citation .rex-citation-bulle {
+      --rct-encre: #3A2A15;
       width: max-content; max-width: min(360px, calc(100vw - 120px));
-      margin: 12px 4px; padding: 24px 32px 22px 26px; border: 0; border-radius: 3px;
+      margin: 14px 4px; padding: 26px 32px 24px 28px; border: 0; border-radius: 2px;
       background:
-        radial-gradient(ellipse at 25% 18%, rgba(255, 251, 236, .85), transparent 55%),
-        radial-gradient(ellipse at 80% 85%, rgba(160, 110, 40, .18), transparent 60%),
-        linear-gradient(180deg, #F5E6BF 0%, #EDD9A8 55%, #E3C88E 100%);
-      color: #3B2A14;
-      font-family: var(--police-titres, "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif);
-      box-shadow: inset 0 0 26px rgba(120, 80, 20, .33), inset 0 0 2px rgba(90, 60, 20, .45), 0 16px 32px rgba(40, 25, 5, .32);
-      animation: rctDerouler .75s cubic-bezier(.2, .8, .2, 1) both;
+        /* Fibres du vélin : un bruit très étiré en largeur, donc des filaments horizontaux. */
+        url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'><filter id='v'><feTurbulence type='fractalNoise' baseFrequency='0.95 0.035' numOctaves='3' seed='11'/><feColorMatrix values='0 0 0 0 0.40 0 0 0 0 0.28 0 0 0 0 0.10 0 0 0 0.55 0'/></filter><rect width='260' height='260' filter='url(%23v)'/></svg>"),
+        /* Taches d'âge : jamais centrées, jamais de la même taille. */
+        radial-gradient(ellipse 60% 40% at 18% 12%, rgba(255, 252, 238, .80), transparent 70%),
+        radial-gradient(ellipse 34% 22% at 88% 24%, rgba(150, 102, 34, .16), transparent 72%),
+        radial-gradient(ellipse 46% 30% at 72% 92%, rgba(132, 88, 26, .20), transparent 74%),
+        radial-gradient(ellipse 22% 16% at 8% 74%, rgba(160, 118, 48, .13), transparent 76%),
+        linear-gradient(176deg, #F7E9C6 0%, #EFDCAE 48%, #E5CB93 82%, #DCBF83 100%);
+      background-size: 260px 260px, auto, auto, auto, auto, auto;
+      color: var(--rct-encre);
+      font-family: "EB Garamond", "Palatino Linotype", Palatino, "Book Antiqua", Georgia, serif;
+      box-shadow:
+        /* L'enroulement sous les tiges : la feuille s'assombrit en haut et en bas. */
+        inset 0 11px 14px -9px rgba(94, 62, 16, .55),
+        inset 0 -11px 14px -9px rgba(94, 62, 16, .55),
+        inset 0 0 30px rgba(120, 80, 20, .26),
+        inset 0 0 1px rgba(90, 60, 20, .50),
+        0 18px 34px rgba(40, 25, 5, .34);
+      animation: rctDerouler .8s cubic-bezier(.22, .78, .2, 1) both;
     }
-    #rex-citation .rex-citation-bulle:hover { transform: none; box-shadow: inset 0 0 26px rgba(120, 80, 20, .33), inset 0 0 2px rgba(90, 60, 20, .45), 0 18px 36px rgba(40, 25, 5, .38); }
+    #rex-citation .rex-citation-bulle:hover { transform: none; }
+    /* Les tiges : un bois tourné, avec ses veines et ses embouts qui dépassent. */
     #rex-citation .rex-citation-bulle::before, #rex-citation .rex-citation-bulle::after {
-      content: ''; position: absolute; left: -9px; right: -9px; height: 15px; border-radius: 8px; pointer-events: none;
-      background: linear-gradient(180deg, #B98F4A 0%, #F2E0B2 42%, #D9B872 62%, #9C7536 100%);
-      box-shadow: 0 2px 4px rgba(50, 30, 5, .35);
+      content: ''; position: absolute; left: -11px; right: -11px; height: 14px; border-radius: 7px; pointer-events: none;
+      background:
+        repeating-linear-gradient(90deg, rgba(90, 58, 16, .16) 0 2px, transparent 2px 9px),
+        linear-gradient(180deg, #A87C3C 0%, #E9D2A0 34%, #F6E8C4 46%, #C9A25E 66%, #8A6428 100%);
+      box-shadow:
+        0 2px 5px rgba(50, 30, 5, .38),
+        inset 0 0 0 1px rgba(80, 52, 14, .22),
+        /* Les deux embouts, un peu plus sombres que la tige. */
+        -4px 0 0 -1px #8A6428, 4px 0 0 -1px #8A6428;
     }
-    #rex-citation .rex-citation-bulle::before { top: -8px; }
-    #rex-citation .rex-citation-bulle::after { bottom: -8px; }
-    #rex-citation .rex-citation-texte { font-size: 15.5px; line-height: 1.55; font-style: italic; font-weight: 400; text-align: center; text-wrap: balance; }
-    #rex-citation.grande .rex-citation-texte { font-size: 16.5px; }
-    #rex-citation .rex-citation-trad { color: #6B5230; text-align: center; font-size: 13px; }
-    #rex-citation .rex-citation-auteur { color: #7A4A12; font-variant: small-caps; letter-spacing: .04em; font-size: 13px; text-align: right; margin-top: 10px; }
+    #rex-citation .rex-citation-bulle::before { top: -9px; }
+    #rex-citation .rex-citation-bulle::after { bottom: -9px; }
+    #rex-citation .rex-citation-texte {
+      font-size: 17px; line-height: 1.5; font-style: italic; font-weight: 400;
+      text-align: center; text-wrap: balance; letter-spacing: .005em;
+    }
+    #rex-citation.grande .rex-citation-texte { font-size: 18.5px; }
+    #rex-citation .rex-citation-trad { color: #6A5130; text-align: center; font-size: 13.5px; font-style: italic; margin-top: 4px; }
+    /* Un filet et un losange séparent la citation de son auteur, comme sur une page gravée. */
+    #rex-citation .rex-citation-auteur {
+      color: #7A4A12; font-variant: small-caps; letter-spacing: .07em; font-size: 13.5px;
+      text-align: right; margin-top: 13px; padding-top: 9px; position: relative;
+    }
+    #rex-citation .rex-citation-auteur::before {
+      content: '◆'; position: absolute; top: 1px; left: 50%; transform: translateX(-50%);
+      font-size: 7px; color: rgba(122, 74, 18, .55); letter-spacing: 0;
+    }
+    #rex-citation .rex-citation-auteur::after {
+      content: ''; position: absolute; top: 5px; left: 0; right: 0; height: 1px;
+      background: linear-gradient(90deg, transparent, rgba(122, 74, 18, .30) 22%, rgba(122, 74, 18, .30) 78%, transparent);
+    }
     #rex-citation .rex-citation-fermer { color: #7A5A2A; }
     #rex-citation .rex-citation-fermer:hover { background: rgba(122, 74, 18, .12); }
     #rex-citation .rct-bouton { border-color: rgba(122, 74, 18, .4); background: rgba(122, 74, 18, .08); color: #7A4A12; font-family: system-ui, sans-serif; }
@@ -246,9 +305,13 @@ function rctAppliquer() { if (typeof rexAfficherCitation === 'function') rexAffi
       #rex-citation .rex-citation-bulle::before, #rex-citation .rex-citation-bulle::after { left: -5px; right: -5px; height: 9px; border-radius: 5px; }
       #rex-citation .rex-citation-bulle::before { top: -4px; }
       #rex-citation .rex-citation-bulle::after { bottom: -4px; }
-      #rex-citation .rex-citation-texte, #rex-citation.grande .rex-citation-texte { font-size: 13px; line-height: 1.42; }
-      #rex-citation .rex-citation-trad { font-size: 11.5px; }
-      #rex-citation .rex-citation-auteur { font-size: 11px; margin-top: 5px; }
+      /* EB Garamond a un œil plus petit que Palatino : à taille égale elle paraît plus fine.
+         On remonte donc d'un demi-point sur téléphone plutôt que de garder les 13 px d'avant. */
+      #rex-citation .rex-citation-texte, #rex-citation.grande .rex-citation-texte { font-size: 14px; line-height: 1.42; }
+      #rex-citation .rex-citation-trad { font-size: 12px; }
+      #rex-citation .rex-citation-auteur { font-size: 11.5px; margin-top: 7px; padding-top: 6px; }
+      #rex-citation .rex-citation-auteur::before { font-size: 6px; }
+      #rex-citation .rex-citation-auteur::after { top: 3px; }
       #rex-citation .rex-citation-fermer { top: 3px; right: 4px; font-size: 16px; }
       #rex-citation img, #rex-citation.grande img { width: 40px; height: 40px; }
       #rex-citation .rct-bouton { font-size: 10.5px !important; padding: 2px 9px !important; margin-top: 5px; min-height: 0 !important; min-width: 0 !important; line-height: 1.4; }

@@ -628,7 +628,12 @@ function viewNouveauContrat() {
         <input class="form-input" id="ct-prime-risque-frais" type="number" placeholder="Hors part épargne" oninput="updateCommissionPreview()"/>
         <div style="font-size:10px;color:var(--text-muted);margin-top:3px">Swiss Life rémunère uniquement sur risque + frais, pas sur la part épargne de la prime totale ci-dessus.</div>
       </div>
-      <div class="form-field"><label class="form-label">Périodicité</label><select class="form-select" id="ct-periodicite" onchange="updateCommissionPreview()">
+      <!-- 25.09.2026 — « il faudra ajouter paiement de la prime à renseigner ; trimestre, semestre,
+           annuel en entreprise ». Le champ existait, sous le nom « Périodicité » : personne ne
+           faisait le lien. Une colonne contrats.paiement_prime avait même été créée à côté et
+           n'a jamais été remplie. C'est bien contrats.periodicite qui fait foi — elle pilote la
+           prévision d'encaissement (js/19) — on lui donne juste le nom que Jonathan emploie. -->
+      <div class="form-field"><label class="form-label">Paiement de la prime</label><select class="form-select" id="ct-periodicite" onchange="updateCommissionPreview()">
         <option value="12">Mensuelle</option>
         <option value="4">Trimestrielle</option>
         <option value="2">Semestrielle</option>

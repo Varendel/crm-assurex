@@ -1935,7 +1935,7 @@ function prefillChampsDemandeOffre(existante) {
   setVal('do-avs-h', b.avs_h); setVal('do-avs-f', b.avs_f);
   setVal('do-ap-h', b.ap_h); setVal('do-ap-f', b.ap_f);
   setVal('do-anp-h', b.anp_h); setVal('do-anp-f', b.anp_f); setVal('do-exc-avs-h', b.exc_avs_h); setVal('do-exc-avs-f', b.exc_avs_f);
-  setVal('do-masse-chef', b.masse_chef);
+  setVal('do-masse-chef', b.masse_chef); setVal('do-paiement-prime', b.paiement_prime);
   setChk('do-perte-gain', ap.perte_gain); setChk('do-pg-14j', ap.pg_14j); setChk('do-pg-30j', ap.pg_30j); setChk('do-pg-60j', ap.pg_60j);
   setChk('do-laa', ap.laa); setChk('do-laaf', ap.laaf); setChk('do-laac', ap.laac); setChk('do-semi-privee', ap.semi_privee); setChk('do-lpp', ap.lpp);
   setChk('do-3a', av.a3a); setChk('do-3a-indep', av.a3a_indep); setChk('do-3b', av.a3b); setChk('do-risque-pure', av.risque_pure);
@@ -2235,6 +2235,9 @@ async function genererEmailDemandeOffre() {
     ca ? `Chiffre d'affaires : CHF ${Number(ca).toLocaleString('fr-CH')}` : '',
     ligneMasseSalariale,
     nbCollab ? `Nombre de collaborateurs : ${nbCollab}` : '',
+    // 25.09.2026 : le fractionnement change le tarif chez la plupart des compagnies. Demandé par
+    // Jonathan (« trimestre, semestre, annuel en entreprise ») — transmis seulement s'il est saisi.
+    val('do-paiement-prime') ? `Paiement de la prime souhaité : ${({ annuel: 'annuel', semestriel: 'semestriel', trimestriel: 'trimestriel', mensuel: 'mensuel' })[val('do-paiement-prime')] || val('do-paiement-prime')}` : '',
   ].filter(Boolean).join('\n');
 
   // Modèle mis en page sur demande de Jonathan le 06.08.2026 (paragraphes séparés par des lignes
@@ -2424,7 +2427,7 @@ function construireBodyDemandeOffre() {
 
   const donnees = {
     identite: { contact: val('do-contact'), adresse: val('do-adresse'), tel: val('do-tel'), email: val('do-email'), avs: val('do-avs'), activite: val('do-activite'), lieu_risque: val('do-lieu-risque'), suva: val('do-suva'), independant: val('do-independant') },
-    base_calcul: { ca: val('do-ca'), nb_collab: val('do-nb-collab'), avs_h: val('do-avs-h'), avs_f: val('do-avs-f'), ap_h: val('do-ap-h'), ap_f: val('do-ap-f'), anp_h: val('do-anp-h'), anp_f: val('do-anp-f'), exc_avs_h: val('do-exc-avs-h'), exc_avs_f: val('do-exc-avs-f'), masse_chef: val('do-masse-chef') },
+    base_calcul: { ca: val('do-ca'), nb_collab: val('do-nb-collab'), avs_h: val('do-avs-h'), avs_f: val('do-avs-f'), ap_h: val('do-ap-h'), ap_f: val('do-ap-f'), anp_h: val('do-anp-h'), anp_f: val('do-anp-f'), exc_avs_h: val('do-exc-avs-h'), exc_avs_f: val('do-exc-avs-f'), masse_chef: val('do-masse-chef'), paiement_prime: val('do-paiement-prime') },
     assurances_personnes: { perte_gain: chk('do-perte-gain'), pg_14j: chk('do-pg-14j'), pg_30j: chk('do-pg-30j'), pg_60j: chk('do-pg-60j'), laa: chk('do-laa'), laaf: chk('do-laaf'), laac: chk('do-laac'), semi_privee: chk('do-semi-privee'), lpp: chk('do-lpp') },
     assurances_vie: { a3a: chk('do-3a'), a3a_indep: chk('do-3a-indep'), a3b: chk('do-3b'), risque_pure: chk('do-risque-pure'), versement_unique: chk('do-versement-unique'), budget_epargne: val('do-budget-epargne'), pa: val('do-pa') },
     assurances_choses: { inventaire: val('do-inventaire'), rc_commerce: chk('do-rc-commerce'), prejudice_fortune: chk('do-prejudice-fortune'), cyber: chk('do-cyber'), construction: chk('do-construction'), technique: chk('do-technique'), perte_exploit: chk('do-perte-exploit') },

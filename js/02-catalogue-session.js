@@ -57,6 +57,17 @@ function irVersClient(event, id) {
   return false;
 }
 
+// Le rythme de paiement de la prime — contrats.periodicite, en nombre d'échéances par an.
+// Nommé « Paiement de la prime » dans les écrans depuis le 25.09.2026 : « Périodicité » ne parlait
+// à personne. Une colonne contrats.paiement_prime existe en base, créée puis jamais remplie ni
+// lue : c'est periodicite qui fait foi, ici comme dans la prévision d'encaissement (js/19).
+const LIBELLES_PAIEMENT_PRIME = { 1: 'Annuel', 2: 'Semestriel', 4: 'Trimestriel', 12: 'Mensuel' };
+function libellePaiementPrime(periodicite) {
+  const n = Number(periodicite);
+  if (!n || !LIBELLES_PAIEMENT_PRIME[n]) return 'Annuel (par défaut)';
+  return LIBELLES_PAIEMENT_PRIME[n];
+}
+
 function estEntreprise(c) {
   return !!(c && c.segment && c.segment.trim().toLowerCase() === 'entreprise');
 }

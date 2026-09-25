@@ -36,13 +36,20 @@ const DPS_TYPES = {
   permis_conduire: { label: 'Permis de conduire', icone: '🚗', mots: /permis.?(de.?)?conduire|f(ü|ue)hrerausweis|driving|\bpc\b|\bpermis\b(?!.?(de.?)?(circulation|s[ée]jour|[bcgl]\b))/i },
   permis_sejour: { label: 'Permis de séjour', icone: '🛂', mots: /s[ée]jour|permis.?[bcgl]\b|titre.?de.?s|ausl(ä|ae)nder|aufenthalt/i },
   permis_circulation: { label: 'Permis de circulation', icone: '📘', mots: /circulation|carte.?grise|fahrzeugausweis|\bpermis.?circ/i },
+  // 25.09.2026 — « ajoute pour la recherche la catégorie mandats ». Placée AVANT « police » :
+  // dpsTypeNom retient le premier type qui correspond, et « Mandat de gestion — contrat cadre »
+  // partirait sinon en police. Les révocations comptent aussi : c'est un document de mandat, et
+  // c'est précisément celui qu'on cherche quand un client s'en va.
+  mandat: { label: 'Mandat de courtage', icone: '🖊️', mots: /\bmandat|courtage|brokerage|maklervollmacht|procuration|vollmacht|r[ée]vocation/i },
   police: { label: 'Police', icone: '📄', mots: /police|policy|contrat|vertrag|offre|proposition|avenant/i },
   attestation: { label: 'Attestation', icone: '✅', mots: /attestation|certificat|bestätigung/i },
   autre: { label: 'Autre document', icone: '📎', mots: null },
 };
 (function dpsTypesDansDcx() {
   if (typeof DCX_TYPES === 'undefined') return;
-  for (const [k, v] of Object.entries(DPS_TYPES)) if (!DCX_TYPES[k]) DCX_TYPES[k] = { label: v.label, icone: v.icone };
+  // « mandat » est exclu : il ne part jamais dans documents_compagnies (voir dpsDeposerMandat),
+  // et l'offrir dans le choix de type d'un document de compagnie ne ferait qu'égarer.
+  for (const [k, v] of Object.entries(DPS_TYPES)) if (k !== 'mandat' && !DCX_TYPES[k]) DCX_TYPES[k] = { label: v.label, icone: v.icone };
 })();
 
 window._dps = window._dps || { dossier: null, nomDossier: '', fichiers: [], clientId: null, filtre: 'tous', texte: '', choix: {}, lectures: {} };
@@ -195,7 +202,8 @@ function dpsAnalyser(x) {
 function dpsCle(x) { return `${x.chemin}/${x.nom}/${x.taille}/${x.date}`; }
 function dpsTypeDepuisLecture(t) {
   return ({ identite: 'identite', passeport: 'identite', permis_conduire: 'permis_conduire', permis_sejour: 'permis_sejour',
-    permis_circulation: 'permis_circulation', police: 'police', attestation: 'attestation' })[t] || 'autre';
+    permis_circulation: 'permis_circulation', police: 'police', attestation: 'attestation',
+    mandat: 'mandat', mandat_courtage: 'mandat', procuration: 'mandat' })[t] || 'autre';
 }
 
 // ── La fenêtre ─────────────────────────────────────────────────────────────────────────────────
@@ -366,6 +374,35 @@ async function dpsLireContenu(kEnc, bouton) {
   dpsPeindre();
 }
 
+// Dépôt d'un mandat : même chemin de stockage et même table que « Uploader un document signé »
+// (js/08) et que l'import de dossier (js/123), pour qu'un mandat trouvé ici soit indistinguable
+// d'un mandat déposé à la main. Renvoie null si tout va bien, le message d'échec sinon.
+async function dpsDeposerMandat(x, nomClient) {
+  const f = x.fichier;
+  const ext = (f.name.split('.').pop() || 'pdf').toLowerCase();
+  const slug = (nomClient || 'client').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_|_$/g, '') || 'client';
+  const jour = new Date().toISOString().slice(0, 10);
+  const chemin = `mandats/${window._dps.clientId}/Mandat_de_courtage_${slug}_${jour}_${Date.now().toString(36)}.${ext}`;
+  const type = f.type || (ext === 'pdf' ? 'application/pdf' : 'image/' + ext.replace('jpg', 'jpeg'));
+  try {
+    const token = await getValidAccessToken() || SUPABASE_KEY;
+    const up = await fetch(`${SUPABASE_URL}/storage/v1/object/documents/${chemin}`, {
+      method: 'POST', headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, 'Content-Type': type }, body: f });
+    if (!up.ok) throw new Error('stockage ' + up.status);
+    const r = await dbPost('mandats_signes', {
+      client_id: window._dps.clientId, signe: true,
+      cree_par: (typeof supaSession !== 'undefined' && supaSession && supaSession.email) || null,
+      fichier_url: chemin,
+      fichier_nom: `Mandat de courtage — ${nomClient} (déposé : ${f.name})`,
+      // La date du fichier, pas celle du dépôt : c'est la plus proche de la signature.
+      created_at: new Date(f.lastModified || Date.now()).toISOString(),
+    });
+    if (r && r.error) throw new Error(errMsg(r));
+    if (typeof _couMandats !== 'undefined') _couMandats.delete(window._dps.clientId);
+    return null;
+  } catch (e) { return `${f.name} (${String(e.message || e).slice(0, 60)})`; }
+}
+
 // ── Ajouter à la fiche ─────────────────────────────────────────────────────────────────────────
 async function dpsAjouter() {
   const S = window._dps;
@@ -379,6 +416,14 @@ async function dpsAjouter() {
   for (const k of cles) {
     const x = dpsTrouver(k);
     if (!x) continue;
+    // Un mandat n'est pas un document de compagnie : il vit dans mandats_signes, c'est lui qui
+    // alimente la carte « Documents & mandats signés », la pastille mandat des couvertures et la
+    // liste des clients sans mandat. Rangé ailleurs, il n'aurait compté nulle part.
+    if (S.choix[k].type === 'mandat') {
+      const e = await dpsDeposerMandat(x, nomClient);
+      if (e) echecs.push(e); else ok++;
+      continue;
+    }
     const r = await dcxDeposerUnFichier(x.fichier);
     if (!r.ok) { echecs.push(`${r.nom} (${r.erreur})`); continue; }
     const type = S.choix[k].type || 'autre';

@@ -749,6 +749,13 @@ function showDetailContrat(contratId) {
             <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px">Apporteur</div>
             <div style="font-size:13px;font-weight: 600;color:var(--text)">${agent ? agent.prenom + ' ' + agent.nom : (signataire ? signataire.prenom + ' ' + signataire.nom : '—')}</div>
           </div>
+          <!-- 25.09.2026 : le rythme de paiement était saisissable mais invisible une fois le
+               contrat enregistré. C'est pourtant lui qui dit quand la prime tombe, et la prévision
+               d'encaissement s'en sert (js/19). -->
+          <div style="background:var(--surface-alt);border-radius:10px;padding:10px 14px;grid-column:span 2">
+            <div style="font-size:10px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.5px;margin-bottom:3px">Paiement de la prime</div>
+            <div style="font-size:13px;font-weight: 600;color:var(--text)">${libellePaiementPrime(ct.periodicite)}${Number(ct.periodicite) > 1 ? ` · CHF ${fmtCHF(Math.round(Number(ct.prime_annuelle || 0) / Number(ct.periodicite) * 100) / 100)} par échéance` : ''}</div>
+          </div>
         </div>
 
         <!-- Commission — masqué pour la session RH (hors périmètre financier) -->

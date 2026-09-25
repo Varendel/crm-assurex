@@ -30,6 +30,10 @@ function dxEsc(v) { return String(v ?? '').replace(/&/g, '&amp;').replace(/</g, 
 function dxCk(id, label) { return `<label class="dx-ck"><input type="checkbox" id="${id}" onchange="dxApercu()"/><span>${label}</span></label>`; }
 function dxChamp(id, label, attrs) { return `<div class="form-field"><label class="form-label" for="${id}">${label}</label><input class="form-input" id="${id}" ${attrs || ''} oninput="dxApercu()"/></div>`; }
 function dxOuiNon(id, label) { return `<div class="form-field"><label class="form-label" for="${id}">${label}</label><select class="form-select" id="${id}" onchange="dxApercu()"><option value="">—</option><option value="oui">Oui</option><option value="non">Non</option></select></div>`; }
+function dxListe(id, label, options) {
+  return `<div class="form-field"><label class="form-label" for="${id}">${label}</label><select class="form-select" id="${id}" onchange="dxApercu()">
+    <option value="">—</option>${options.map(([v, l]) => `<option value="${dxEsc(v)}">${dxEsc(l)}</option>`).join('')}</select></div>`;
+}
 
 async function viewDemandeOffreSimple() {
   const editId = demandeOffreEnEditionId;
@@ -144,6 +148,10 @@ async function viewDemandeOffreSimple() {
                 <div class="form-grid">
                   ${dxChamp('do-ca', "Chiffre d'affaires (CHF)", 'inputmode="decimal"')}
                   ${dxChamp('do-nb-collab', 'Nombre de collaborateurs', 'inputmode="numeric"')}
+                  <!-- 25.09.2026 : « il faudra ajouter paiement de la prime à renseigner —
+                       trimestre, semestre, annuel en entreprise. » La compagnie tarife
+                       différemment selon le fractionnement : autant le lui dire d'emblée. -->
+                  ${dxListe('do-paiement-prime', 'Paiement de la prime', [['annuel', 'Annuel'], ['semestriel', 'Semestriel'], ['trimestriel', 'Trimestriel'], ['mensuel', 'Mensuel']])}
                 </div>
               </div>
               <!-- La ventilation AP / ANP / excédentaire n'a de sens que si on demande de l'accident :

@@ -546,7 +546,7 @@ async function showEditContrat(contratId, returnTo) {
             <span id="ect-prime-total-affiche" style="font-size:17px;font-weight: 600;color:var(--accent)">CHF 0</span>
           </div>
         </div>
-        <div class="form-field"><label class="form-label">Périodicité</label>
+        <div class="form-field"><label class="form-label">Paiement de la prime</label>
           <select class="form-select" id="ect-periodicite" onchange="updateApercuPrimeAnnuelle()">
             ${perioOpts.map(o => `<option value="${o.value}" ${String(o.value)===String(perioActuelle)?'selected':''}>${o.label}</option>`).join('')}
           </select>

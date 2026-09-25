@@ -54,6 +54,20 @@
 .csv-coord a:hover { text-decoration: underline; }
 .csv-vide { font-size: var(--t-s, 12.5px); color: var(--c-alerte, #F59E0B); font-style: italic; }
 
+/* Adresse postale (25.09.2026) — un bouton et non un lien : elle ne s'ouvre pas, elle se copie.
+   Affichée sur une ligne pour tenir dans la carte ; c'est la version à sauts de ligne qui part
+   dans le presse-papiers. */
+.csv-adresse {
+  display: inline-flex; align-items: center; gap: 7px; align-self: flex-start; max-width: 100%;
+  font: inherit; font-size: var(--t-s, 12.5px); color: var(--text-muted);
+  background: none; border: 0; padding: 0; cursor: pointer; text-align: left;
+}
+.csv-adresse span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.csv-adresse:hover { color: var(--text); }
+.csv-adresse:hover span { text-decoration: underline; }
+.csv-facultatif { text-transform: none; letter-spacing: 0; font-weight: 400; opacity: .75; }
+.csv-adresse-saisie { resize: vertical; min-height: 68px; line-height: 1.5; font-family: inherit; }
+
 .csv-act {
   flex-shrink: 0; padding: 6px 12px; border-radius: var(--r-s, 10px); cursor: pointer;
   font-family: inherit; font-size: var(--t-xs, 11px); font-weight: 500; white-space: nowrap;

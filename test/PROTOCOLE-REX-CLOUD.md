@@ -45,47 +45,81 @@ curl -s "https://gutlkjovmsyazwcomoyt.supabase.co/rest/v1/contrats?client_id=eq.
 
 **Attendu : `[]` pour chacune.** Une seule ligne renvoyée est ⛔ bloquant.
 
-| Table | Résultat attendu | Constaté |
+| Table | Résultat attendu | Constaté 25.09.2026 |
 |---|---|---|
-| `clients` | `[]` | |
-| `contrats` | `[]` | |
-| `vehicules` | `[]` | |
-| `rendez_vous` | `[]` | |
-| `mandats_signes` | `[]` | |
-| `messages_clients` | `[]` | |
-| `demandes_transfert` | `[]` | |
-| `documents_compagnies` | `[]` | |
+| `clients` | `[]` | ✅ 1 ligne visible sur 255 — la sienne |
+| `contrats` | `[]` | ✅ 5 visibles sur 316 — les siens ; 0 pour AGV TONI SA |
+| `vehicules` | `[]` | ✅ 0 |
+| `rendez_vous` | `[]` | ✅ 0 |
+| `mandats_signes` | `[]` | ✅ 5, **tous à lui** (0 appartenant à un autre) |
+| `messages_clients` | `[]` | ✅ 1 — le sien |
+| `demandes_transfert` | `[]` | ✅ 0 |
+| `documents_compagnies` | `[]` | ✅ 0 |
+
+**Contrôle du 25.09.2026** — mené en base en prenant l'identité du seul compte client existant
+(`jonathanozkan@gmail.com`), puis en demandant les données d'un autre client :
+
+```sql
+begin;
+set local role authenticated;
+set local request.jwt.claims = '{"sub":"<auth_user_id>","role":"authenticated","email":"<email>"}';
+select count(*) from contrats;                       -- doit rendre SES contrats, pas tous
+select count(*) from contrats where client_id='<autre_client>';  -- doit rendre 0
+rollback;
+```
+
+C'est la méthode à reprendre : elle ne demande **pas** de second compte et se déroule en une
+minute. La table du § 1.2 reste utile pour un contrôle de bout en bout dans le navigateur.
 
 ### 2.2 Les tables qui ne le regardent pas du tout
 
 Toujours avec un jeton client, sans filtre :
 
-| Table | Résultat attendu | Constaté |
+| Table | Résultat attendu | Constaté 25.09.2026 |
 |---|---|---|
-| `commissions_attente` | `[]` | |
-| `bordereaux` | `[]` | |
-| `agents` | `[]` ou sa seule fiche si elle existe | |
-| `fiches_paie` | `[]` | |
-| `acces_clients` | sa propre ligne, **une seule** | |
+| `commissions_attente` | `[]` | ✅ 0 |
+| `bordereaux` | `[]` | ✅ 0 |
+| `agents` | `[]` ou sa seule fiche si elle existe | ✅ 0 |
+| `journal_erreurs` | `[]` | ✅ 0 |
+| `acces_clients` | sa propre ligne, **une seule** | ✅ 1 |
 
 ### 2.3 Écriture
 
-| # | Essai | Attendu |
-|---|---|---|
-| 2.3.1 | `PATCH` sur un contrat (le sien) | refusé |
-| 2.3.2 | `PATCH` sur `acces_clients` (sa ligne) | refusé — la trace de connexion passe par `marquer_acces_client`, pas par un PATCH |
-| 2.3.3 | `POST` d'un message dans `messages_clients` avec le `client_id` de l'autre | refusé |
-| 2.3.4 | `POST` d'un message pour lui-même | accepté |
+| # | Essai | Attendu | Constaté 25.09.2026 |
+|---|---|---|---|
+| 2.3.1 | `PATCH` sur un contrat (le sien) | refusé | ✅ refusé |
+| 2.3.2 | `PATCH` sur `acces_clients` (sa ligne) | refusé — la trace de connexion passe par `marquer_acces_client`, pas par un PATCH | ✅ refusé (0 ligne touchée) |
+| 2.3.3 | `POST` d'un message dans `messages_clients` avec le `client_id` de l'autre | refusé | ✅ refusé |
+| 2.3.4 | `POST` d'un message pour lui-même | accepté | à vérifier dans le navigateur |
 
 ### 2.4 Le stockage
 
 Les documents vivent dans le bucket `documents`, chemins `mandats/<client_id>/…`.
 
-| # | Essai | Attendu |
-|---|---|---|
-| 2.4.1 | télécharger un fichier de son propre dossier | accepté |
-| 2.4.2 | télécharger un fichier du dossier de l'autre client (chemin deviné) | refusé |
-| 2.4.3 | lister le bucket | refusé ou limité à son dossier |
+**Constaté le 25.09.2026 : un compte client n'a AUCUN droit sur le stockage.** Les quatre
+politiques de `storage.objects` portent toutes la condition `bucket_id = 'documents' AND NOT
+est_client()`. C'est volontaire et c'est la bonne conception : le client ne touche jamais au
+bucket.
+
+Il passe par la fonction `document-client`, qui a été relue le 25.09.2026. Sa ligne décisive :
+
+```ts
+const { data: acces } = await admin.from("acces_clients")
+  .select("client_id, actif").eq("auth_user_id", appelant.id).maybeSingle();
+```
+
+Le `client_id` est **déduit du jeton de l'appelant, jamais lu dans le corps de la requête**. Avant
+de signer un lien, elle vérifie `contrat.client_id !== acces.client_id` et refuse sinon. Le lien
+signé vaut 300 secondes. Un accès désactivé est refusé.
+
+| # | Essai | Attendu | Constaté 25.09.2026 |
+|---|---|---|---|
+| 2.4.1 | lecture directe de `storage.objects` par un client | refusé | ✅ refusé par politique |
+| 2.4.2 | `document-client` action `telecharger` sur un contrat d'un autre client | 404 | ✅ contrôlé dans le code |
+| 2.4.3 | `document-client` avec un accès désactivé | 403 | ✅ contrôlé dans le code |
+
+Le 2.4.2 reste à jouer une fois pour de vrai depuis le navigateur : la relecture du code prouve
+l'intention, pas l'exécution.
 
 ### 2.5 État de la RLS
 
@@ -159,4 +193,8 @@ aujourd'hui, une suppression accidentelle est définitive.
 
 | Date | Version (`version.js`) | Par | Bloquants | Mise en ligne |
 |---|---|---|---|---|
-| | | | | |
+| 25.09.2026 | 1792352000 | Claude (§ 2 et § 5 uniquement) | **0 sur le cloisonnement** · 2 réglages de compte à faire | en attente du § 3 |
+
+**Ce qui a été contrôlé le 25.09.2026 :** § 2 en entier (cloisonnement lecture, écriture, stockage,
+état RLS) et § 5 (réglages du compte). **Ce qui ne l'a pas été :** § 3 (ce que le client voit
+à l'écran) et § 4 (comportement en panne) — ils demandent d'ouvrir l'espace dans un navigateur.

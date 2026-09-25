@@ -104,6 +104,8 @@ function csvCieHtml(cie, contacts) {
             ? `<a href="mailto:${csvEsc(c.email)}">${typeof ico === 'function' ? ico('courriel', 15) : ''}<span>${csvEsc(c.email)}</span></a>`
             : '<span class="csv-vide">adresse à renseigner</span>'}
           ${c.telephone ? `<a href="tel:${csvEsc(String(c.telephone).replace(/\s/g, ''))}">${typeof ico === 'function' ? ico('telephone', 15) : ''}<span>${csvEsc(c.telephone)}</span></a>` : ''}
+          ${c.adresse ? `<button type="button" class="csv-adresse" title="Copier l’adresse postale"
+            onclick="csvCopierAdresse('${c.id}', this)">✉️ <span>${csvEsc(String(c.adresse).split('\n').filter(Boolean).join(' · '))}</span></button>` : ''}
         </div>
         <button type="button" class="csv-act" onclick="csvOuvrir('${c.id}')">Modifier</button>
       </article>`;
@@ -114,6 +116,25 @@ function csvCieHtml(cie, contacts) {
         onclick="csvOuvrir(null, '${csvEsc(cie).replace(/'/g, '&#39;')}', '${m}')">ajouter le ${csvService(m).nom.toLowerCase()}</button>`).join(', ')}.
     </p>` : ''}
   </section>`;
+}
+
+// Copier l'adresse telle qu'elle doit être collée sur une enveloppe : avec ses sauts de ligne.
+// La carte l'affiche sur une ligne pour tenir dans la largeur, mais c'est la version d'origine
+// qui part dans le presse-papiers — recoller « Case postale 120 · 1001 Lausanne » sur une
+// enveloppe demanderait de le remettre en forme à la main.
+async function csvCopierAdresse(id, bouton) {
+  const c = (window._contactsCompagnies || []).find(x => x.id === id);
+  if (!c || !c.adresse) return;
+  try {
+    await navigator.clipboard.writeText(String(c.adresse).trim());
+    const avant = bouton.innerHTML;
+    bouton.innerHTML = '✓ <span>adresse copiée</span>';
+    setTimeout(() => { bouton.innerHTML = avant; }, 1600);
+  } catch (e) {
+    // Presse-papiers refusé (page non sécurisée, permission) : on montre l'adresse à recopier
+    // plutôt que de laisser croire que la copie a eu lieu.
+    showError(`Copie impossible — l’adresse : ${String(c.adresse).replace(/\n/g, ', ')}`);
+  }
 }
 
 // ── Le formulaire ───────────────────────────────────────────────────────────────────────────────
@@ -156,6 +177,13 @@ function csvOuvrir(id, compagnie, service) {
           <input class="form-input" id="csv-remarque" value="${v(existant && existant.remarque)}" placeholder="Ex. ne traite pas les flottes"/></div>
       </div>
 
+      <!-- 25.09.2026 : un courrier de résiliation, un mandat posté ou un recommandé partent à une
+           adresse, pas à une boîte e-mail. Champ sur plusieurs lignes : les adresses d'assureurs
+           suisses ne tiennent pas dans un gabarit unique (case postale, service, siège alémanique). -->
+      <label class="csv-label" for="csv-adresse">Adresse postale <span class="csv-facultatif">telle qu’elle doit figurer sur l’enveloppe</span></label>
+      <textarea class="form-input csv-adresse-saisie" id="csv-adresse" rows="3"
+        placeholder="Ex.&#10;Vaudoise Générale&#10;Service sinistres — Case postale 120&#10;1001 Lausanne">${v(existant && existant.adresse)}</textarea>
+
       <div class="csv-actions">
         ${existant ? `<button type="button" class="csv-act csv-act-sup" onclick="csvSupprimer('${existant.id}')">Retirer ce service</button>` : ''}
         <button type="button" class="btn-secondary" onclick="document.getElementById('modal-csv').remove()">Annuler</button>
@@ -178,6 +206,7 @@ async function csvEnregistrer(id) {
     email: t('csv-email'),
     telephone: t('csv-tel'),
     remarque: t('csv-remarque'),
+    adresse: t('csv-adresse'),
     ordre: CSV_ORDRE[service] ?? 9,
   };
   const r = id ? await dbPatch('compagnies_contacts', id, corps) : await dbPost('compagnies_contacts', corps);

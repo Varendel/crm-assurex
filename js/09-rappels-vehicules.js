@@ -385,8 +385,29 @@ async function importPolicePdfAI(input) {
       headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'parse_police', pdf_base64: base64 }),
     });
-    const data = await r.json();
-    if (!r.ok || data.error) throw new Error(data.error || 'Erreur inconnue');
+    let data = await r.json().catch(() => ({}));
+
+    // 25.09.2026 — polices scannées (point 4). parse_police lit le TEXTE du PDF : une police
+    // scannée n'en a pas, et revenait vide sans rien dire de plus utile que « Erreur inconnue ».
+    // On bascule alors sur le modèle de vision (ocr-decompte, action « police »), qui lit une
+    // page scannée comme une page de texte. Le repli se déclenche aussi quand la réponse est
+    // techniquement valable mais ne contient rien d'exploitable — c'est le cas typique du scan.
+    const riendedans = d => !d || (!d.numero_police && !d.compagnie && !d.client_nom && !d.produit);
+    if (!r.ok || data.error || riendedans(data)) {
+      const motif = (!r.ok || data.error) ? (data.error || `erreur ${r.status}`) : 'aucune donnée lisible dans le texte du PDF';
+      statusEl.textContent = '🔍 Aucun texte dans ce PDF — lecture du scan en cours…';
+      const r2 = await fetch(`${SUPABASE_URL}/functions/v1/ocr-decompte`, {
+        method: 'POST',
+        headers: { apikey: SUPABASE_KEY, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'police', fichier_base64: base64, type_mime: file.type || 'application/pdf' }),
+      });
+      const data2 = await r2.json().catch(() => ({}));
+      if (!r2.ok || data2.error || riendedans(data2)) {
+        throw new Error(`${motif} — et la lecture du scan n'a rien donné non plus${data2.error ? ' (' + data2.error + ')' : ''}`);
+      }
+      data = data2;
+      if (data.remarques) console.warn('[police scannée] remarques du modèle :', data.remarques);
+    }
 
     // Pré-remplir le formulaire avec les données extraites
     if (data.compagnie) document.getElementById('ct-compagnie').value = data.compagnie;

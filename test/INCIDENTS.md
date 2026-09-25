@@ -19,6 +19,13 @@ Statuts : `Ouvert` · `Corrigé, non couvert` · `Clos` (correctif + test)
 | 8 | 24.09.2026 | Kanban des opportunités | Les couleurs d'état ne sont jamais apparues, malgré deux passes | Conséquence de 5(a) : le fichier entier était invalide. Aucune alerte visible — le navigateur abandonne un script en erreur en silence | Clos |
 | 9 | 23.09.2026 | Import automatique d'offres | Une demande d'offre créée **par fichier importé** au lieu d'être rattachée à celle du prospect — la comparaison se retrouve coupée en deux (cas Personeni : Vaudoise seule d'un côté, Mobilière + GM de l'autre) | L'import ne cherche pas s'il existe déjà une demande pour ce client / prospect avant de créer | Ouvert — données Personeni laissées telles quelles, affaire signée |
 | 6 | 19.09.2026 | Espace client → envoi des accès | Le mot de passe part en clair par e-mail et reste dans la boîte du destinataire | Génération du mot de passe côté CRM puis envoi tel quel, au lieu d'un lien d'activation à usage unique | Ouvert |
+| 10 | 25.09.2026 | Entrées d'argent | « Ici il est écrit que j'ai encaissé 9k AGV en avril, c'est faux » | La ligne « Encaissé » additionnait `montant_final ?? montant_estime` : faute de versement reçu, l'estimation **annuelle** était affichée comme encaissée, alors que la Vaudoise paie trimestre par trimestre. 89 lignes `versé_oz` sur 240 étaient dans ce cas, soit 41 837.— comptés comme du cash | Corrigé, non couvert |
+| 11 | 25.09.2026 | Import de mandats (`js/123`) | « Le fichier de dépôt fonctionne mais les mandats ne sont pas reconnus » | `parts[1]` en dur : juste seulement si on sélectionne exactement le dossier `Mandats`. Un niveau au-dessus, les 44 fichiers tombaient dans un seul paquet nommé « Mandats » qui ne correspond à aucune fiche | Corrigé, non couvert |
+| 12 | 25.09.2026 | Fiche client → onglet Prévoyance | « Les RIG Sauthier ne sortent pas dans prévoyance » | L'onglet n'affichait **aucun** contrat : quatre cases cochées à la main, les bilans, une carte Santé. Ses deux rentes IG Zurich et ses deux 3a n'existaient que dans l'onglet Contrats | Corrigé, non couvert |
+| 13 | 25.09.2026 | Rapprochement des décomptes | Départage à numéro de police égal impossible sur la police GM 7623523 (complémentaire santé **et** RC + inventaire du ménage) | `marqueursBranche` ne connaissait que le véhicule : aucun marqueur ne sortait et le premier contrat chargé l'emportait, au hasard | Clos (`departage-police.test.js`) |
+| 14 | 25.09.2026 | Journal des erreurs | 41 entrées « ⏳ Upload en cours… » noyaient les 153 vraies erreurs | `showError` sert à tout : erreurs, 131 confirmations « ✓ », 11 attentes « ⏳ ». Tout s'affichait en rouge avec un ⚠ et tout partait au journal | Clos (`ton-message.test.js`) |
+| 15 | 25.09.2026 | Recherche dans le dossier de dépôt (`js/114`) | Le bouton « Chercher dans le dossier de dépôt » introuvable | La greffe cherchait le **libellé exact** du bouton « Déposer un document » de `js/59` dans le HTML rendu ; `indexOf` à −1 rendait le HTML inchangé et le bouton s'évaporait sans erreur ni trace | Corrigé, non couvert |
+| 16 | 25.09.2026 | Fonction `ocr-decompte` (déploiement) | Version 9 déployée avec le contenu `PLACEHOLDER` — la fonction était **cassée en production** pendant une minute | Déploiement lancé avec un fichier factice au lieu du contenu réel. La version 10, identique au fichier du dépôt, a été redéployée et vérifiée par relecture de la source en ligne | Clos — toujours relire la source déployée après un déploiement |
 
 ## Ce qui reste à couvrir par un test
 
@@ -32,7 +39,11 @@ Fonctions critiques encore sans filet, par ordre de risque — le risque étant
    contenu de l'e-mail généré.
 3. **Rapprochement des décomptes** — aucun test. Départage à numéro de police égal,
    lignes « D » dont la somme doit égaler le total.
-4. **Import de police (`parse_police`)** — aucun test.
+4. **Import de police (`parse_police`)** — aucun test. Et surtout : la fonction `clever-worker`,
+   qui porte `parse_police`, **n'est pas versionnée** dans ce dépôt. Son code n'existe que sur
+   Supabase, et l'API ne sait pas le relire (« Failed to retrieve function bundle »). Une seule
+   fausse manœuvre de déploiement et il est perdu. À rapatrier dans `supabase/functions/`.
+   Le repli OCR ajouté le 25.09.2026 vit, lui, dans `ocr-decompte` (action « police »), versionnée.
 5. **Espace client** — aucun test. Cloisonnement des données entre clients (RLS).
 
 ## Méthode de test en chaîne

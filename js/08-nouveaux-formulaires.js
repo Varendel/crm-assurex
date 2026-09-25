@@ -563,11 +563,11 @@ async function showEditContrat(contratId, returnTo) {
         <div class="form-field" style="grid-column:span 2"><div id="ect-apercu-annuel" style="font-size:12px;color:var(--text-muted);padding:6px 12px;background:var(--surface-alt);border-radius:8px">Prime annuelle calculée : CHF ${fmtCHF((ct.prime_annuelle||0))}</div></div>
         <div class="form-field"><label class="form-label">Agent / Apporteur</label><select class="form-select" id="ect-apporteur">
           <option value="">— Aucun / pas de partage —</option>
-          ${allAgents.map(a => `<option value="${a.id}" ${ct.apporteur_id===a.id?'selected':''}>${a.prenom} ${a.nom}${a.role==='signataire'?' (moi-même)':''}</option>`).join('')}
+          ${agentsApporteurs().map(a => `<option value="${a.id}" ${ct.apporteur_id===a.id?'selected':''}>${a.prenom} ${a.nom}${a.role==='signataire'?' (moi-même)':''}</option>`).join('')}
         </select></div>
         <div class="form-field"><label class="form-label">Co-apporteur (si client apporté à 2 — répartition 1/3 chacun + 1/3 signataire)</label><select class="form-select" id="ect-co-apporteur">
           <option value="">— Aucun —</option>
-          ${allAgents.filter(a => a.role !== 'signataire').map(a => `<option value="${a.id}" ${ct.co_apporteur_id===a.id?'selected':''}>${a.prenom} ${a.nom}</option>`).join('')}
+          ${agentsApporteurs().filter(a => a.role !== 'signataire').map(a => `<option value="${a.id}" ${ct.co_apporteur_id===a.id?'selected':''}>${a.prenom} ${a.nom}</option>`).join('')}
         </select></div>
         <div class="form-field"><label class="form-label">Statut</label>
           <select class="form-select" id="ect-statut">

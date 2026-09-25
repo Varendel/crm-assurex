@@ -2770,11 +2770,11 @@ function viewNouvelleOpportunite() {
       if (rows.length > 0) {
         allAgents = rows;
         const sel = document.getElementById('o-agent');
-        if (sel) sel.innerHTML = '<option value="">— Sélectionner —</option>' + allAgents.map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
+        if (sel) sel.innerHTML = '<option value="">— Sélectionner —</option>' + agentsApporteurs().map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('');
       }
     });
   }
-  const agentOptions = allAgents.map(a => `<option value="${a.id}" ${opp && opp.apporteur_id === a.id ? 'selected' : ''}>${a.prenom} ${a.nom}</option>`).join('');
+  const agentOptions = agentsApporteurs().map(a => `<option value="${a.id}" ${opp && opp.apporteur_id === a.id ? 'selected' : ''}>${a.prenom} ${a.nom}</option>`).join('');
   const stadesOptions = ['Contact','Analyse','Proposition','Négociation','Gagné','Perdu'];
   const qa = (s) => (s || '').toString().replace(/"/g, '&quot;');
   if (opp) setTimeout(() => renderDemandeOffreLieeOpportunite(opp.id), 0);

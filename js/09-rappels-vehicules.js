@@ -708,11 +708,11 @@ function viewNouveauContrat() {
         <div style="font-size:10.5px;color:var(--text-muted);margin-top:4px">Vie / 3a : % versé par la compagnie sur chaque prime d'épargne payée (Swiss Life : 1 %). Laisse vide si aucune.</div></div>
       <div class="form-field"><label class="form-label">Agent / Apporteur</label><select class="form-select" id="ct-apporteur">
         <option value="">— Aucun / pas de partage —</option>
-        ${allAgents.map(a => `<option value="${a.id}" ${contratClientId && allClients.find(c=>c.id===contratClientId)?.apporteur_id===a.id ? 'selected' : ''}>${a.prenom} ${a.nom}${a.role==='signataire'?' (moi-même)':''}</option>`).join('')}
+        ${agentsApporteurs().map(a => `<option value="${a.id}" ${contratClientId && allClients.find(c=>c.id===contratClientId)?.apporteur_id===a.id ? 'selected' : ''}>${a.prenom} ${a.nom}${a.role==='signataire'?' (moi-même)':''}</option>`).join('')}
       </select></div>
       <div class="form-field"><label class="form-label">Co-apporteur (si client apporté à 2 — répartition 1/3 chacun + 1/3 signataire)</label><select class="form-select" id="ct-co-apporteur">
         <option value="">— Aucun —</option>
-        ${allAgents.filter(a => a.role !== 'signataire').map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('')}
+        ${agentsApporteurs().filter(a => a.role !== 'signataire').map(a => `<option value="${a.id}">${a.prenom} ${a.nom}</option>`).join('')}
       </select></div>
       <!-- Ce champ écrasait SILENCIEUSEMENT tout le calcul dès qu'il était rempli, et restait
            visible en permanence entre deux champs ordinaires. Replié : à un clic pour le

@@ -121,7 +121,7 @@ function htmlEnteteFicheClient(c, ctx) {
       <div class="fcx-rel-texte"><span class="fcx-rel-label">Apporteur interne</span>
         <select aria-label="Apporteur interne" onchange="changerAgentClient('${c.id}', this.value)">
           <option value="">— Aucun / pas de partage —</option>
-          ${allAgents.map(a => `<option value="${a.id}" ${c.apporteur_id === a.id ? 'selected' : ''}>${fcxEsc(a.prenom)} ${fcxEsc(a.nom)}${a.role === 'signataire' ? ' (moi-même)' : ''}</option>`).join('')}
+          ${agentsApporteurs().map(a => `<option value="${a.id}" ${c.apporteur_id === a.id ? 'selected' : ''}>${fcxEsc(a.prenom)} ${fcxEsc(a.nom)}${a.role === 'signataire' ? ' (moi-même)' : ''}</option>`).join('')}
         </select>
         <small>Détermine le partage de commission</small>
       </div>

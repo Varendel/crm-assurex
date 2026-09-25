@@ -1583,7 +1583,12 @@ function viewAgents() {
               <select id="edit-role-${a.id}" class="form-input">
                 <option value="signataire" ${a.role === 'signataire' ? 'selected' : ''}>Signataire</option>
                 <option value="apporteur" ${a.role === 'apporteur' ? 'selected' : ''}>Apporteur</option>
+                <!-- 25.09.2026 : le rôle RH existait dans le CRM (USER_ROLES, js/02) mais pas dans
+                     ce menu. Résultat, ouvrir puis enregistrer la fiche de rh@cofidex.ch la
+                     basculait en « signataire » — c'est-à-dire lui ouvrait tous les chiffres. -->
+                <option value="rh" ${a.role === 'rh' ? 'selected' : ''}>RH — saisie seule, non apporteur</option>
               </select>
+              <div style="font-size:10px;color:var(--text-muted);margin-top:3px">Un rôle RH ne touche aucune commission : il ne peut pas être choisi comme apporteur et ne voit ni primes, ni pipeline, ni comptabilité.</div>
             </div>
           </div>
           <button class="btn-save" onclick="saveAgent('${a.id}')">💾 Enregistrer</button>

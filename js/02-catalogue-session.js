@@ -697,6 +697,16 @@ function estRoleRH() {
   return !!(currentUser && currentUser.role === 'rh');
 }
 
+// Les agents que l'on peut désigner comme apporteur ou co-apporteur d'une affaire.
+// Un rôle RH est exclu (25.09.2026) : il saisit des dossiers mais ne prend aucune commission, et
+// l'inscrire comme apporteur ferait partir une part vers quelqu'un qui n'y a pas droit.
+// Il reste bien dans allAgents — il lui faut sa fiche pour la page Agents et pour retrouver
+// sa disposition de pages (agents.preferences_pages, js/160).
+function agentsApporteurs(liste) {
+  const l = Array.isArray(liste) ? liste : (typeof allAgents !== 'undefined' ? allAgents : []);
+  return l.filter(a => a && a.role !== 'rh');
+}
+
 // ═══ SESSION SUPABASE AUTH ═══
 let supaSession = null; // { access_token, refresh_token, expires_at, email }
 

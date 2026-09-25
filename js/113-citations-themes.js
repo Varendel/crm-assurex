@@ -223,7 +223,7 @@ function rctAppliquer() { if (typeof rexAfficherCitation === 'function') rexAffi
     #rex-citation .rex-citation-bulle {
       --rct-encre: #3A2A15;
       width: max-content; max-width: min(360px, calc(100vw - 120px));
-      margin: 14px 4px; padding: 26px 32px 24px 28px; border: 0; border-radius: 2px;
+      margin: 14px 4px; padding: 32px 32px 30px 28px; border: 0; border-radius: 2px;
       background:
         /* Fibres du vélin : un bruit très étiré en largeur, donc des filaments horizontaux. */
         url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='260' height='260'><filter id='v'><feTurbulence type='fractalNoise' baseFrequency='0.95 0.035' numOctaves='3' seed='11'/><feColorMatrix values='0 0 0 0 0.40 0 0 0 0 0.28 0 0 0 0 0.10 0 0 0 0.55 0'/></filter><rect width='260' height='260' filter='url(%23v)'/></svg>"),
@@ -260,12 +260,28 @@ function rctAppliquer() { if (typeof rexAfficherCitation === 'function') rexAffi
     }
     #rex-citation .rex-citation-bulle::before { top: -9px; }
     #rex-citation .rex-citation-bulle::after { bottom: -9px; }
+    /* ── L'encre dans le vélin (25.09.2026) ──────────────────────────────────────────────────────
+       « Rends l'écriture sur parchemin fondante mais lisible avec le rouleau. »
+       Le texte était posé SUR le parchemin, opaque, comme une étiquette collée. De l'encre, ça
+       pénètre : elle assombrit la fibre au lieu de la couvrir. C'est exactement ce que fait
+       le mode multiply — chaque lettre multiplie la couleur du support, donc elle prend ses fibres et
+       et ses taches au lieu de les masquer. Sur un fond clair, la lettre reste franchement sombre :
+       on gagne la matière sans rien perdre de la lisibilité.
+       Le léger halo (text-shadow) est la bavure de la plume : à peine un demi-pixel, il suffit à
+       enlever au texte son air imprimé.
+       Et pour rester lisible AVEC le rouleau : les marges du haut et du bas s'élargissent, pour
+       que la première et la dernière ligne ne tombent plus dans l'ombre de l'enroulement. */
+    #rex-citation .rex-citation-texte,
+    #rex-citation .rex-citation-trad,
+    #rex-citation .rex-citation-auteur { mix-blend-mode: multiply; }
     #rex-citation .rex-citation-texte {
-      font-size: 17px; line-height: 1.5; font-style: italic; font-weight: 400;
+      font-size: 17px; line-height: 1.52; font-style: italic; font-weight: 400;
       text-align: center; text-wrap: balance; letter-spacing: .005em;
+      color: rgba(48, 32, 12, .94);
+      text-shadow: 0 0 .6px rgba(104, 70, 26, .42);
     }
     #rex-citation.grande .rex-citation-texte { font-size: 18.5px; }
-    #rex-citation .rex-citation-trad { color: #6A5130; text-align: center; font-size: 13.5px; font-style: italic; margin-top: 4px; }
+    #rex-citation .rex-citation-trad { color: rgba(88, 62, 30, .88); text-align: center; font-size: 13.5px; font-style: italic; margin-top: 4px; }
     /* Un filet et un losange séparent la citation de son auteur, comme sur une page gravée. */
     #rex-citation .rex-citation-auteur {
       color: #7A4A12; font-variant: small-caps; letter-spacing: .07em; font-size: 13.5px;
@@ -301,7 +317,7 @@ function rctAppliquer() { if (typeof rexAfficherCitation === 'function') rexAffi
        citation se lit sans masquer les boutons du bas. */
     @media (max-width: 620px) {
       #rex-citation { right: 8px; bottom: calc(72px + env(safe-area-inset-bottom, 0px)); gap: 4px; max-width: calc(100vw - 16px); }
-      #rex-citation .rex-citation-bulle { max-width: min(280px, calc(100vw - 70px)); margin: 6px 2px; padding: 11px 22px 10px 13px; }
+      #rex-citation .rex-citation-bulle { max-width: min(280px, calc(100vw - 70px)); margin: 6px 2px; padding: 15px 22px 14px 13px; }
       #rex-citation .rex-citation-bulle::before, #rex-citation .rex-citation-bulle::after { left: -5px; right: -5px; height: 9px; border-radius: 5px; }
       #rex-citation .rex-citation-bulle::before { top: -4px; }
       #rex-citation .rex-citation-bulle::after { bottom: -4px; }

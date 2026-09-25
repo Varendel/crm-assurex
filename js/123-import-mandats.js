@@ -62,9 +62,26 @@ function impMeilleureFiche(dossier) {
   return { client: best.c, sur: best.s >= 0.8 && best.s - second > 0.15 };
 }
 
+// Quel segment du chemin porte le nom du client ? Avant, on prenait bêtement parts[1], ce qui
+// n'est juste que si tu choisis exactement le dossier « Mandats ». Si tu choisis le niveau
+// au-dessus, parts[1] vaut « Mandats » et tous les fichiers se retrouvent dans un seul paquet
+// qui ne correspond à aucune fiche : d'où les mandats « non reconnus ».
+// On repart donc du dossier parent du fichier et on remonte tant qu'on tombe sur un nom
+// générique (Mandats, Contrats, Divers documents clients, Scans…).
+const IMP_DOSSIER_GENERIQUE = /^(mandats?|contrats?|offres?|polices?|documents?|divers|scans?|sign[ée]s?|archives?|pdf|\d{4})\b|document|contrat|courtage/i;
+function impDossierClient(parts) {
+  // Si tu choisis directement le dossier d'un client (« Mandats\AGV TONI SA »), le nom du client
+  // est parts[0] : on descend jusqu'à 0 dans ce cas seulement, sinon parts[0] est le dossier choisi.
+  const min = parts.length === 2 ? 0 : 1;
+  for (let i = parts.length - 2; i >= min; i--) {
+    if (!IMP_DOSSIER_GENERIQUE.test(parts[i])) return parts[i];
+  }
+  return null;
+}
+
 function impFichiersRetenus(liste) {
   return liste.filter(f => /mandat/i.test(f.name) && /\.(pdf|jpe?g|png|heic|webp)$/i.test(f.name)
-    && !/^\./.test(f.name) && !/annulation|r[ée]siliation|courrier/i.test(f.name));
+    && !/^\._/.test(f.name) && !/annulation|r[ée]siliation|courrier/i.test(f.name));
 }
 
 // Parmi plusieurs mandats d'un même dossier, on propose celui qui dit « Assurex » (ou « OZ » pour
@@ -101,8 +118,9 @@ async function impAnalyser(files) {
   const parDossier = new Map();
   for (const f of files) {
     const parts = (f.webkitRelativePath || f.name).split('/');
-    if (parts.length < 3) continue;                     // fichier posé à la racine : pas de client
-    const dossier = parts[1];
+    if (parts.length < 2) continue;                     // fichier posé à la racine : pas de client
+    const dossier = impDossierClient(parts);
+    if (!dossier) continue;
     if (!parDossier.has(dossier)) parDossier.set(dossier, []);
     parDossier.get(dossier).push(f);
   }

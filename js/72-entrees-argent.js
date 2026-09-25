@@ -124,9 +124,17 @@ function eaCollecter() {
       if (!date) { eaSansDate.push({ ...commun, montant: montantEnc,
         entite: ca.statut === 'versé_oz' ? 'OZ' : 'Assurex' }); continue; }
       if (date < du || date > au) continue;
+      // 25.09.2026 — « Ici il est écrit que j'ai encaissé 9k AGV en avril, c'est faux. »
+      // La commission de perte de gain AGV s'affichait à 9'033 (= 7,5 % de la prime annuelle
+      // 120'444.30, l'ESTIMATION Vaudoise) alors que le décompte du 30.04 portait 2'250 — le
+      // trimestre réellement encaissé. Quand `montant_final` manque, le montant repris est une
+      // estimation : elle a sa place à l'écran, mais elle ne doit pas se lire comme de l'argent
+      // reçu. L'état le dit maintenant, et les totaux la séparent.
+      const estimation = ca.montant_final == null;
       lignes.push({ ...commun, date, montant: montantEnc,
-        etat: ca.statut === 'versé_oz' ? 'Encaissé (OZ)' : 'Encaissé', entite: ca.statut === 'versé_oz' ? 'OZ' : 'Assurex',
-        reel: ca.montant_final != null, retard: false });
+        etat: (ca.statut === 'versé_oz' ? 'Encaissé (OZ)' : 'Encaissé') + (estimation ? ' — montant à confirmer' : ''),
+        entite: ca.statut === 'versé_oz' ? 'OZ' : 'Assurex',
+        reel: !estimation, retard: false });
       continue;
     }
 
@@ -194,7 +202,13 @@ function eaContenu() {
   const encaisse = L.filter(l => l.etat.startsWith('Encaissé'));
   const attendu = L.filter(l => !l.etat.startsWith('Encaissé'));
   const retard = L.filter(l => l.retard);
-  const estimations = attendu.filter(l => !l.reel);
+  // 25.09.2026 : le compteur d'estimations ne regardait que les lignes ATTENDUES. Les 89 lignes
+  // encaissées sans montant réel — 41'837.- présentés comme de l'argent reçu — n'étaient donc
+  // signalées nulle part. L'indicateur « Encaissé » ne porte plus que les montants documentés
+  // par un décompte ; le reste est annoncé à côté, sans être additionné.
+  const encaisseDocumente = encaisse.filter(l => l.reel);
+  const encaisseAConfirmer = encaisse.filter(l => !l.reel);
+  const estimations = L.filter(l => !l.reel);
   const kpi = (l, v, s, ton) => `<div class="dbx-kpi ${ton || ''}"><span class="dbx-kpi-label">${l}</span><span class="dbx-kpi-valeur">${v}</span><span class="dbx-kpi-sous">${s}</span></div>`;
   const chf = n => 'CHF ' + Number(n).toLocaleString('fr-CH');
 
@@ -206,7 +220,10 @@ function eaContenu() {
   </div>
 
   <div class="dbx-kpis">
-    ${kpi('Encaissé', chf(somme(encaisse)), `${encaisse.length} ligne(s)`)}
+    ${kpi('Encaissé', chf(somme(encaisseDocumente)),
+      `${encaisseDocumente.length} ligne(s) sur décompte`
+      + (encaisseAConfirmer.length ? ` · + ${chf(somme(encaisseAConfirmer))} à confirmer (${encaisseAConfirmer.length})` : ''),
+      encaisseAConfirmer.length ? 'cf-alerte' : '')}
     ${kpi('Attendu', chf(somme(attendu)), `${attendu.length} ligne(s)`)}
     ${kpi('En retard', chf(somme(retard)), retard.length ? 'date prévue dépassée' : 'rien en retard', retard.length ? 'cf-alerte' : '')}
     ${kpi('Total', chf(somme(L)), `${estimations.length} estimation(s) sur ${L.length}`)}
@@ -336,7 +353,11 @@ function eaImprimer() {
   const { parMois } = eaSyntheses(L);
   const chf = n => Number(Math.round(n)).toLocaleString('fr-CH');
   const total = L.reduce((s, l) => s + l.montant, 0);
-  const encaisse = L.filter(l => l.etat.startsWith('Encaissé')).reduce((s, l) => s + l.montant, 0);
+  const lignesEnc = L.filter(l => l.etat.startsWith('Encaissé'));
+  // Même distinction qu'à l'écran : un document imprimé qui annonce « encaissé » engage encore
+  // plus qu'un affichage, il ne doit additionner que ce qu'un décompte confirme.
+  const encaisse = lignesEnc.filter(l => l.reel).reduce((s, l) => s + l.montant, 0);
+  const aConfirmer = lignesEnc.filter(l => !l.reel).reduce((s, l) => s + l.montant, 0);
   const periode = (EA_PERIODES.find(p => p.id === window._ea.periode) || {}).nom || '';
 
   const zone = document.createElement('div');
@@ -348,8 +369,8 @@ function eaImprimer() {
       <img src="assets/logos/assurex.png" alt="Assurex"/>
     </header>
     <table class="ea-imp-synthese">
-      <tr><th>Encaissé</th><th>Attendu</th><th>Total</th><th>Lignes</th></tr>
-      <tr><td>CHF ${chf(encaisse)}</td><td>CHF ${chf(total - encaisse)}</td><td><b>CHF ${chf(total)}</b></td><td>${L.length}</td></tr>
+      <tr><th>Encaissé (sur décompte)</th><th>Encaissé à confirmer</th><th>Attendu</th><th>Total</th><th>Lignes</th></tr>
+      <tr><td>CHF ${chf(encaisse)}</td><td>CHF ${chf(aConfirmer)}</td><td>CHF ${chf(total - encaisse - aConfirmer)}</td><td><b>CHF ${chf(total)}</b></td><td>${L.length}</td></tr>
     </table>
     <table class="ea-imp-table">
       <thead><tr><th>Date</th><th>Client</th><th>Compagnie</th><th>Produit</th><th>Police</th>

@@ -203,6 +203,39 @@ function renderLigneContratClient(ct, estSousCouverture) {
       </div>`;
 }
 
+// ── Ce que coûte une police entière (25.09.2026) ───────────────────────────────────────────────
+// Le CRM fiche séparément les briques d'une même police — RC véhicule, casco partielle, casco
+// complète chez AXA ; LAA et perte de gain chez SWICA — parce que leurs taux de commission
+// diffèrent. Elles étaient donc empilées en trois lignes de prime, et le montant que le client
+// paie réellement pour cette police n'était écrit nulle part : il fallait l'additionner de tête.
+// Une ligne de total ferme le groupe, et récapitule d'un trait les garanties et les modules des
+// contrats réunis — les modules n'étaient visibles que brique par brique.
+function renderTotalPoliceClient(groupe) {
+  if (!Array.isArray(groupe) || groupe.length < 2) return '';
+  const total = groupe.reduce((s, ct) => s + Number(ct.prime_annuelle || 0), 0);
+  const vus = new Set();
+  const garanties = groupe.map(ct => String(ct.produit || '').replace(/\s*\([^)]*\)\s*$/, '').trim())
+    .filter(p => p && !vus.has(p.toLowerCase()) && vus.add(p.toLowerCase()));
+  // Les modules sont saisis en texte libre séparé par des virgules, brique par brique : on les
+  // remet à plat et on retire les doublons (« Dommages naturels » revient souvent sur deux briques).
+  const vusM = new Set();
+  const modules = groupe.flatMap(ct => String(ct.modules || '').split(',').map(m => m.trim()))
+    .filter(m => m && !/^Police externe/i.test(m) && !vusM.has(m.toLowerCase()) && vusM.add(m.toLowerCase()));
+  const police = (groupe[0].numero_police || '').trim();
+  return `<div class="table-row" style="grid-template-columns:1fr 120px 100px 110px 100px 80px;background:var(--surface-alt);border-left:3px solid var(--border)">
+        <div style="margin-left:20px;padding-left:10px">
+          <div style="font-size:11.5px;font-weight: 600;color:var(--text)">Total de la police${police ? ' № ' + police : ''}</div>
+          <div style="font-size:10.5px;color:var(--text-muted);margin-top:2px;line-height:1.5">${groupe.length} garanties · ${garanties.join(' + ')}</div>
+          ${modules.length ? `<div style="font-size:10.5px;color:var(--text-muted);margin-top:2px;line-height:1.5">🔗 ${modules.join(' · ')}</div>` : ''}
+        </div>
+        <div></div>
+        <div></div>
+        <div style="font-weight: 600;color:var(--c-alerte-texte)">CHF ${fmtCHF(total)}</div>
+        <div style="font-size:10.5px;color:var(--text-muted)">CHF ${fmtCHF(Math.round(total / 12 * 100) / 100)}/mois</div>
+        <div></div>
+      </div>`;
+}
+
 // Constellation familiale — schéma visuel père/mère → client → enfants, construit à partir des
 // liens pere_id/mere_id stockés sur la table clients (voir sélecteurs "Lien familial" dans le
 // formulaire de création client privé, js/07). Uniquement pour les clients privés. Demande de
@@ -689,7 +722,7 @@ async function showClient(id) {
         <button class="btn-add" onclick="contratClientId='${c.id}'; navigate('nouveau-contrat')">+ Nouveau contrat</button>
       </div>
       ${contrats.length > 0 ? `<div class="table-wrap"><div class="table-header" style="grid-template-columns:1fr 120px 100px 110px 100px 40px"><div>Produit</div><div>Compagnie</div><div>Échéance</div><div>Prime/an</div><div>Statut</div><div></div></div>
-      ${grouperContratsParPolice(contrats).map(groupe => groupe.map((ct, idx) => renderLigneContratClient(ct, idx > 0)).join('')).join('')}</div>` : '<div class="table-empty">Aucun contrat.</div>'}
+      ${grouperContratsParPolice(contrats).map(groupe => groupe.map((ct, idx) => renderLigneContratClient(ct, idx > 0)).join('') + renderTotalPoliceClient(groupe)).join('')}</div>` : '<div class="table-empty">Aucun contrat.</div>'}
     </div>
 
     <div id="tab-factures" class="hidden">

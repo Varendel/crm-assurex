@@ -28,6 +28,20 @@ Statuts : `Ouvert` · `Corrigé, non couvert` · `Clos` (correctif + test)
 | 17 | 25.09.2026 | Formulaires de contrat | « Attention, une périodicité annuelle peut être payée trimestriellement » | `contrats.periodicite` n'est **pas** un rythme de paiement : c'est un facteur de conversion du montant saisi (`prime_annuelle = montant × periodicite`). Le renommer « Paiement de la prime » (même jour, par moi) aurait transformé une prime annuelle de 1 200.— payée en quatre fois en une prime annuelle de 4 800.—. La colonne `contrats.paiement_prime`, créée puis laissée vide, existait précisément pour porter le rythme réel | Clos (`paiement-prime.test.js`) |
 | 16 | 25.09.2026 | Fonction `ocr-decompte` (déploiement) | Version 9 déployée avec le contenu `PLACEHOLDER` — la fonction était **cassée en production** pendant une minute | Déploiement lancé avec un fichier factice au lieu du contenu réel. La version 10, identique au fichier du dépôt, a été redéployée et vérifiée par relecture de la source en ligne | Clos — toujours relire la source déployée après un déploiement |
 
+## Protocoles de mise en ligne
+
+Deux listes à dérouler avant chaque déploiement, séparées parce qu'elles ne cherchent pas la
+même chose :
+
+- **[PROTOCOLE-REX-CLOUD.md](PROTOCOLE-REX-CLOUD.md)** — l'espace client, seule porte ouverte sur
+  l'extérieur. Son cœur est le § 2 : prouver **au niveau de la base** qu'un client ne peut pas
+  lire les données d'un autre. Les filtres de `js/48` sont posés par le navigateur et ne prouvent
+  rien ; `test/rex-cloud.test.js` vérifie que le CRM demande ce qu'il faut, la RLS seule décide
+  de ce que la base répond.
+- **[PROTOCOLE-ERREURS.md](PROTOCOLE-ERREURS.md)** — ce qui se passe quand ça ne marche pas.
+  Son § 5 est le plus important : un montant faux ne déclenche aucune erreur, et c'est la seule
+  section qui puisse l'attraper.
+
 ## Ce qui reste à couvrir par un test
 
 Fonctions critiques encore sans filet, par ordre de risque — le risque étant
@@ -45,7 +59,13 @@ Fonctions critiques encore sans filet, par ordre de risque — le risque étant
    Supabase, et l'API ne sait pas le relire (« Failed to retrieve function bundle »). Une seule
    fausse manœuvre de déploiement et il est perdu. À rapatrier dans `supabase/functions/`.
    Le repli OCR ajouté le 25.09.2026 vit, lui, dans `ocr-decompte` (action « police »), versionnée.
-5. **Espace client** — aucun test. Cloisonnement des données entre clients (RLS).
+5. **Espace client** — partiellement couvert depuis le 25.09.2026. `rex-cloud.test.js` prouve que
+   chaque requête de l'espace porte le `client_id` de la ligne d'accès et aucun autre. Il ne
+   prouve RIEN sur le cloisonnement réel : ces filtres sont posés par le navigateur, la RLS seule
+   fait barrage. Se contrôle à la main, § 2 de PROTOCOLE-REX-CLOUD.md.
+6. **Pannes de chargement de l'espace client** — `ecEntrerEspaceClient` enveloppe chaque
+   chargement d'un `.catch(() => [])`. Une panne s'affiche donc comme un espace vide : le client
+   lit « aucun contrat » au lieu d'« impossible de charger ». Ouvert.
 
 ## Méthode de test en chaîne
 

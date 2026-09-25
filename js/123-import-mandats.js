@@ -209,6 +209,10 @@ async function impImporter() {
   window.htmlDocumentsMandatsClient = function (c, liste) {
     const h = origine.apply(this, arguments);
     return h.replace('<div class="mdx-carte-boutons">',
-      '<div class="mdx-carte-boutons"><button type="button" class="btn-secondary" onclick="impOuvrir()" title="Importer tous les mandats d’un dossier (un sous-dossier par client)">📁 Importer un dossier</button>');
+      // 25.09.2026 — « à mon avis ces deux fonctions sont identiques ». Elles ne le sont pas, mais
+      // « Importer un dossier » et « Chercher dans le dossier de dépôt » se ressemblaient assez
+      // pour qu'on le croie. Le libellé dit maintenant la portée : ici TOUS les clients d'un coup,
+      // là-bas (js/114) une pièce pour CE client.
+      '<div class="mdx-carte-boutons"><button type="button" class="btn-secondary" onclick="impOuvrir()" title="Un dossier qui range un sous-dossier par client (Mandats, Mandats Privés…) : les mandats sont répartis sur toutes les fiches d’un coup">📁 Importer les mandats — tous clients</button>');
   };
 })();

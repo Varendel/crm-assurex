@@ -448,7 +448,9 @@ async function dpsAjouter() {
     const html = origine.apply(this, arguments);
     const repere = `<button type="button" class="btn-secondary" onclick="dcxParcourir('${c.id}')">`;
     const i = html.indexOf(repere);
-    const bouton = `<button type="button" class="btn-save dps-bouton" onclick="dpsOuvrir('${c.id}')">🔎 Chercher dans le dossier de dépôt</button>`;
+    // Le libellé dit la portée, pour ne plus le confondre avec « Importer les mandats » (js/123),
+    // qui traite tous les clients d'un coup depuis un dossier rangé par client.
+    const bouton = `<button type="button" class="btn-save dps-bouton" onclick="dpsOuvrir('${c.id}')" title="Lire le dossier où arrivent les scans, en vrac, et y repérer les pièces de ce client : identité, permis, police, mandat">🔎 Chercher une pièce pour ce client</button>`;
     if (i >= 0) return html.slice(0, i) + `<span class="dps-boutons">${bouton}` + html.slice(i).replace('</button>', '</button></span>');
     // 25.09.2026 — « il m'a semblé tomber sur un bouton tout à l'heure, je le retrouve plus ».
     // On se greffait sur le libellé exact du bouton « Déposer un document » de js/59 : le jour où

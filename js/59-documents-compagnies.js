@@ -543,6 +543,7 @@ function dcxOngletDocuments(c, contrats, mandats, rappels) {
       <span class="dcx-doc-sous">${dcxEsc(d.sous || '')}</span>
     </button>
     ${d.apercu ? `<button type="button" class="dcx-loupe" onclick="${d.apercu}" title="Aperçu rapide">🔍</button>` : '<span></span>'}
+    ${d.lien && typeof dlcCelluleHtml === 'function' ? dlcCelluleHtml(d.lien) : '<span></span>'}
     ${d.ecohub ? dcxPastilleEcohub() : d.etat ? `<span class="dcx-doc-etat ${d.ok ? 'ok' : ''}">${dcxEsc(d.etat)}</span>` : '<span></span>'}
     ${d.publiable
       ? `<button type="button" class="dcx-publier ${d.publiable.visible ? 'on' : ''}"
